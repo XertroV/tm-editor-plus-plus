@@ -1,0 +1,9 @@
+[meta]
+name     = "Editor++"
+author   = "XertroV"
+category = "Map Editor"
+version  = "0.5.0"
+
+[script]
+#__DEFINES__
+dependencies = ["Camera"]
