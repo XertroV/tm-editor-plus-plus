@@ -1,8 +1,9 @@
 class BlockSelectionTab : Tab {
     BlockSelectionTab(TabGroup@ parent) {
         super(parent, "Selected Block", Icons::FolderOpenO + Icons::Cube);
-        SetGhostVariantTab(Children);
         canPopOut = false;
+        // child tabs
+        SetGhostVariantTab(Children);
     }
 
     void DrawInner() override {

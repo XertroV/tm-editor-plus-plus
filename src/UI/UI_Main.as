@@ -107,11 +107,12 @@ TabGroup@ CreateRootTabGroup() {
     PickedBlockTab(root);
     PickedItemTab(root);
     auto bs = BlockSelectionTab(root);
+    ItemSelectionTab(root);
 
     // Tab(root, "Picked Block", Icons::Crosshairs + Icons::Cube);
     // Tab(root, "Picked Item", Icons::Crosshairs + Icons::Tree);
     // Tab(root, "Selected Block", Icons::FolderOpenO + Icons::Cube);
-    Tab(root, "Selected Item", Icons::FolderOpenO + Icons::Tree);
+    // Tab(root, "Selected Item", Icons::FolderOpenO + Icons::Tree);
     Tab(root, "Favorites", Icons::StarO);
 
     return root;

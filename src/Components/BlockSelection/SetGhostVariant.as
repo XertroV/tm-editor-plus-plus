@@ -1,6 +1,6 @@
 class SetGhostVariantTab : Tab {
     SetGhostVariantTab(TabGroup@ parent) {
-        super(parent, "Ghost Block Variant", "");
+        super(parent, "Ghost/Free Block Variant", "");
     }
 
     void DrawInner() override {
@@ -10,7 +10,7 @@ class SetGhostVariantTab : Tab {
 
     void _DrawGhostBlockVariant(CGameCtnEditorFree@ editor) {
         if (editor.CurrentGhostBlockInfo is null) {
-            UI::Text("Select a block in ghost block mode.");
+            UI::Text("Select a block in ghost/free block mode.");
             return;
         }
         auto currBlock = editor.CurrentGhostBlockInfo;
@@ -35,7 +35,7 @@ class SetGhostVariantTab : Tab {
                 : currBlock.AdditionalVariantsAir.Length;
 
             editor.GhostBlockForcedVariantIndex = Math::Clamp(UI::InputInt("Variant", forcedVariant), 0, maxVariantIx);
-            auto newFGEA = UI::Checkbox("Forced Ground Else Air", editor.GhostBlockForcedGroundElseAir);
+            auto newFGEA = UI::Checkbox("Force Ground? (Else Air)", editor.GhostBlockForcedGroundElseAir);
             if (newFGEA != editor.GhostBlockForcedGroundElseAir) {
                 editor.GhostBlockForcedVariantIndex = Math::Min(forcedVariant, newFGEA ? nbGroundVariants : nbAirVariants);
                 editor.GhostBlockForcedGroundElseAir = newFGEA;
