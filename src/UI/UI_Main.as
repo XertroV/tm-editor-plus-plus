@@ -61,6 +61,9 @@ namespace MenuBar {
                 if (UI::MenuItem("  To All")) {}
                 if (UI::MenuItem("  To Items")) {}
                 if (UI::MenuItem("  To Blocks")) {}
+                if (UI::MenuItem("Refresh Item.gbx Files")) {
+                    startnew(Editor::RefreshItemGbxFiles);
+                }
                 UI::EndMenu();
             }
 

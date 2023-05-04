@@ -1,6 +1,12 @@
 class ItemLayoutTab : Tab {
     ItemLayoutTab(TabGroup@ parent) {
         super(parent, "Layout", "");
+        RegisterItemChangedCallback(ProcessNewSelectedItem(this.OnNewItemSelected));
+    }
+
+    bool OnNewItemSelected(CGameItemModel@ im) {
+        activeIx = 0;
+        return false;
     }
 
     void DrawInner() override {
@@ -13,8 +19,9 @@ class ItemLayoutTab : Tab {
         DrawLayouts(selectedItemModel.AsItemModel().DefaultPlacementParam_Content.PlacementClass);
     }
 
+    int activeIx = 0;
+
     void DrawLayouts(NPlugItemPlacement_SClass@ pc) {
-        int activeIx = 0;
         /**
         * ix=3 of pc.GroupCurPatchLayouts seems to be the active layout. all the rest seem the same
         */
@@ -41,6 +48,9 @@ class ItemLayoutTab : Tab {
                 LayoutsStr += (i > 0 ? "," : "") + pc.GroupCurPatchLayouts[i];
             }
         }
+
+        activeIx = Math::Min(activeIx, pc.PatchLayouts.Length - 1);
+
         UI::Text("Current Layout: ("+activeIx+"); GCPLs: " + LayoutsStr);
         AddSimpleTooltip("When you cycle through layouts (right click) one of\nthese numbers will change. This tells you the layout index.");
         activeIx = Math::Clamp(UI::InputInt("Active Layout Index", activeIx, 1), 0, pc.PatchLayouts.Length);

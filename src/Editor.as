@@ -7,6 +7,7 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     UpdatePickedBlockProps(editor);
     UpdateSelectedBlockItem(editor);
 
+    CheckForNewSelectedItem(editor);
     CheckForNewBlocks(editor);
     CheckForNewItems(editor);
     // todo: callbacks for changes in new items or things
@@ -67,5 +68,27 @@ namespace Editor {
         } catch {
             warn("exception setting item placement mode: " + getExceptionInfo());
         }
+    }
+
+    void RefreshItemGbxFiles() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        auto map = editor.Challenge;
+        auto collection = map.Collection;
+        Fids::UpdateTree(collection.FolderItem);
+        editor.PluginMapType.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Image, 7);
+        editor.PluginMapType.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Skins, 7);
+        editor.PluginMapType.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::ItemCollection, 7);
+        editor.MainPLugin.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::ItemCollection, 7);
+        editor.MainPLugin.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Skins, 7);
+        editor.MainPLugin.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Image, 7);
+        auto chapter = GetApp().GlobalCatalog.Chapters[3];
+        if (chapter.CollectionFid !is null) {
+            Fids::UpdateTree(chapter.CollectionFid.ParentFolder);
+        }
+        auto itemsFolder = Fids::GetUserFolder("Items");
+        Fids::UpdateTree(itemsFolder);
+
+        trace('refreshed');
     }
 }

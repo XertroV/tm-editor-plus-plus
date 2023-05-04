@@ -4,6 +4,7 @@ class BlockSelectionTab : Tab {
         canPopOut = false;
         // child tabs
         SetGhostVariantTab(Children);
+        BlockPlacementTagTab(Children);
     }
 
     void DrawInner() override {
@@ -22,5 +23,54 @@ class BlockSelectionTab : Tab {
 
         UI::SameLine();
         UI::Text(bi.AsBlockInfo().Name);
+    }
+}
+
+
+
+
+
+class BlockPlacementTagTab : Tab {
+    // try changing material modifier or placement tag or something
+    BlockPlacementTagTab(TabGroup@ parent) {
+        super(parent, "Placement Tag", "");
+    }
+
+    bool hasPlacement = false;
+    NPlugItemPlacement_STag@ ipTag = null;
+    NPlugItemPlacement_STag@ tmpIpTag = null;
+    CGameCtnBlockInfo@ biFrom = null;
+    CGameCtnBlockInfo@ biTo = null;
+
+    void DrawInner() override {
+        if (selectedGhostBlockInfo is null) {
+            UI::Text("Select a block.");
+            return;
+        }
+        // auto bi = selectedGhostBlockInfo.AsBlockInfo();
+        // if (biTo !is null) {
+        //     if (UI::Button("Restore Placement")) {
+        //         hasPlacement = false;
+        //         @biTo.MatModifierPlacementTag = tmpIpTag;
+        //         @biTo = null;
+        //         @biFrom = null;
+        //         @tmpIpTag = null;
+        //         @ipTag = null;
+        //     }
+        // } else if (!hasPlacement) {
+        //     UI::Text("Copy placement from " + bi.Name);
+        //     if (UI::Button("Copy##placementtag")) {
+        //         hasPlacement = true;
+        //         @biFrom = bi;
+        //         @ipTag = bi.MatModifierPlacementTag;
+        //     }
+        // } else {
+        //     UI::Text("Copy placement to " + bi.Name);
+        //     if (UI::Button("Overwrite##placementtag")) {
+        //         @tmpIpTag = bi.MatModifierPlacementTag;
+        //         @biTo = bi;
+        //         @bi.MatModifierPlacementTag = ipTag;
+        //     }
+        // }
     }
 }

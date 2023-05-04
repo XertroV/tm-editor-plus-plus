@@ -1,8 +1,11 @@
 funcdef bool ProcessItem(CGameCtnAnchoredObject@ item);
 funcdef bool ProcessBlock(CGameCtnBlock@ block);
+funcdef bool ProcessNewSelectedItem(CGameItemModel@ itemModel);
 
 ProcessItem@[] itemCallbacks;
 ProcessBlock@[] blockCallbacks;
+ProcessNewSelectedItem@[] selectedItemChangedCbs;
+// CoroutineFunc@[] selectedBlockChangedCbs;
 
 void RegisterNewItemCallback(ProcessItem@ f) {
     if (f !is null) {
@@ -15,6 +18,18 @@ void RegisterNewBlockCallback(ProcessBlock@ f) {
         blockCallbacks.InsertLast(f);
     }
 }
+
+void RegisterItemChangedCallback(ProcessNewSelectedItem@ f) {
+    if (f !is null) {
+        selectedItemChangedCbs.InsertLast(f);
+    }
+}
+
+// void RegisterBlockChangedCallback(CoroutineFunc@ f) {
+//     if (f !is null) {
+//         selectedBlockChangedCbs.InsertLast(f);
+//     }
+// }
 
 uint m_LastNbBlocks = 0;
 uint m_LastNbItems = 0;
@@ -66,5 +81,24 @@ void CheckForNewItems(CGameCtnEditorFree@ editor) {
 void OnNewItem(CGameCtnAnchoredObject@ item) {
     for (uint i = 0; i < itemCallbacks.Length; i++) {
         itemCallbacks[i](item);
+    }
+}
+
+uint _lastSelectedBlockInfoId = 0;
+uint _lastSelectedItemModelId = 0;
+
+void CheckForNewSelectedItem(CGameCtnEditorFree@ editor) {
+    if (editor is null) return;
+    if (editor.CurrentItemModel is null) return;
+    auto im = editor.CurrentItemModel;
+    if (im.Id.Value != _lastSelectedItemModelId) {
+        _lastSelectedItemModelId = im.Id.Value;
+        OnSelectedItemChanged(im);
+    }
+}
+
+void OnSelectedItemChanged(CGameItemModel@ itemModel) {
+    for (uint i = 0; i < selectedItemChangedCbs.Length; i++) {
+        selectedItemChangedCbs[i](itemModel);
     }
 }

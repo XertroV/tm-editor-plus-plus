@@ -93,6 +93,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             nvgMoveToWorldPos(pos);
             nvgDrawCoordHelpers(m);
             // nvgDrawCoordHelpers(m * mat4::Translate(vec3(16, 2, 16)));
+            nvgCircleWorldPos(Editor::GetCtnBlockMidpoint(block));
         }
 
         UI::Separator();
@@ -117,6 +118,9 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
                 }
                 UI::EndCombo();
             }
+            if (!block.IsGhostBlock()) {
+                UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free, non-ghost blocks *might* cause a crash if *other* plugins keep a reference to this block around. Other plugin devs should consult the Editor++ documentation.");
+            }
         }
         auto preCol = block.MapElemColor;
         block.MapElemColor = DrawEnumColorChooser(block.MapElemColor);
@@ -139,25 +143,6 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
                 @FocusedBlock = ReferencedNod(block);
             }
         }
-
-        // UI::BeginDisabled(!m_BlockChanged);
-        // if (UI::Button("Refresh All##blocks" + idNonce)) {
-        //     trace('refreshing blocks; changed:');
-        //     @lastPickedBlock = null;
-        //     @block = null;
-        //     Editor::RefreshBlocksAndItems(editor);
-        //     trace('refresh done');
-        //     if (m_BlockChanged) {
-        //         @lastPickedBlock = ReferencedNod(editor.Challenge.Blocks[editor.Challenge.Blocks.Length - 1]);
-        //         UpdatePickedBlockCachedValues();
-        //         trace('updated last picked block');
-        //         @block = lastPickedBlock.AsBlock();
-        //     } else {
-        //         trace('block not changed');
-        //     }
-        // }
-        // AddSimpleTooltip("Note! This may not reliably find the block again. \\$f80Warning: \\$zAll pinned blocks will be cleared. \\$888Todo: use block coords to find block again.");
-        // UI::EndDisabled();
 
         if (block is null) return;
 

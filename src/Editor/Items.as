@@ -44,6 +44,20 @@ namespace Editor {
         return 1;
     }
 
+    // find an item and do not yeild
+    CGameItemModel@ FindItemByName(const string &in name) {
+        auto itemsCatalog = GetApp().GlobalCatalog.Chapters[3];
+        for (int i = itemsCatalog.Articles.Length - 1; i > 1; i--) {
+            auto item = itemsCatalog.Articles[i];
+            if (item.Name == name) {
+                if (item.LoadedNod is null) {
+                    item.Preload();
+                }
+                return cast<CGameItemModel>(item.LoadedNod);
+            }
+        }
+        return null;
+    }
 
     /* After items are added to .AnchoredObjects, call this to get the editor to recognize them.
        May not work for >10 items, but seems fine.

@@ -48,7 +48,12 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         CopiableLabeledValue("Pos", item.AbsolutePositionInMap.ToString());
         CopiableLabeledValue("P,Y,R (Rad)", Editor::GetItemRotation(item).ToString());
         CopiableLabeledValue("Coord", item.BlockUnitCoord.ToString());
-
+        if (int(item.BlockUnitCoord.x) < 0) {
+            if (UI::Button("Fix block unit coord (todo: dissociate)")) {
+                item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
+                // todo: dissociate item too
+            }
+        }
         UI::Separator();
 
         if (ShowHelpers) {
@@ -183,12 +188,12 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
     void DrawVariantInfo(uint ix, NPlugItem_SVariant@ variant) {
         UI::AlignTextToFramePadding();
-        string msg = variant.EntityModelFidForReload !is null ? string(variant.EntityModelFidForReload.FileName) : "??";
-        msg += " :: ";
+        string fileName = variant.EntityModelFidForReload !is null ? string(variant.EntityModelFidForReload.FileName) : "??";
+        string msg = fileName + " :: ";
         msg += variant.EntityModel !is null ? Reflection::TypeOf(variant.EntityModel).Name : "null?";
         UI::Text("" + ix + ". " + msg);
         UI::SameLine();
-        variant.HiddenInManualCycle = UI::Checkbox("##variant.HiddenInManualCycle", variant.HiddenInManualCycle);
+        variant.HiddenInManualCycle = UI::Checkbox("##.HiddenInManualCycle"+fileName, variant.HiddenInManualCycle);
         AddSimpleTooltip(".HiddenInManualCycle");
     }
 
