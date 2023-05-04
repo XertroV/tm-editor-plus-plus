@@ -56,6 +56,14 @@ namespace MenuBar {
                 UI::EndMenu();
             }
 
+            if (UI::BeginMenu("Advanced")) {
+                UI::TextDisabled("Clear References:");
+                if (UI::MenuItem("  To All")) {}
+                if (UI::MenuItem("  To Items")) {}
+                if (UI::MenuItem("  To Blocks")) {}
+                UI::EndMenu();
+            }
+
             if (UI::BeginMenu("Help")) {
                 if (UI::MenuItem("Video Tutorial")) {
                     OpenBrowserURL("https://youtube.com/watch?v=asdf");
@@ -109,7 +117,14 @@ TabGroup@ CreateRootTabGroup() {
     BlockSelectionTab(root);
     ItemSelectionTab(root);
 
+    Tab(root, "Checkpoints", Icons::ClockO);
+    // - filtered view of blocks/items show just checkpoints
+    // - set linked order
+    //   -- for next, selected, picked
+    Tab(root, "Blocks & Items", Icons::StarO);
     Tab(root, "Favorites", Icons::StarO);
+    Tab(root, "Apply Transformation", "f(x)");
+    Tab(root, "Set B/I Properties", Icons::PencilSquareO);
 
     return root;
 }
