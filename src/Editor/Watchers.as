@@ -124,37 +124,13 @@ void UpdateSelectedBlockItem(CGameCtnEditorFree@ editor) {
 
 // East + 75deg is nearly north.
 void CheckForPickedItem_CopyRotation(CGameCtnEditorFree@ editor) {
-    if (editor is null) return;
-    if (editor.PickedObject is null) return;
-    if (editor.Cursor is null) return;
-
-    auto po = editor.PickedObject;
-    auto cursor = editor.Cursor;
-    cursor.Pitch = po.Pitch;
-    cursor.Roll = po.Roll;
-    auto yaw = ((po.Yaw + Math::PI * 2.) % (Math::PI * 2.));
-    cursor.Dir = yaw < Math::PI
-        ? yaw < Math::PI/2.
-            ? CGameCursorBlock::ECardinalDirEnum::North
-            : CGameCursorBlock::ECardinalDirEnum::West
-        : yaw < Math::PI/2.*3.
-            ? CGameCursorBlock::ECardinalDirEnum::South
-            : CGameCursorBlock::ECardinalDirEnum::East
-        ;
-    auto yQuarter = yaw % (Math::PI / 2.);
-    // multiply by 1.001 so we avoid rounding errors from yaw ranges -- actually not sure if we need it
-    int yawStep = Math::Clamp(int(Math::Floor(yQuarter / Math::PI * 2. * 6. * 1.001) % 6), 0, 5);
-    cursor.AdditionalDir = CGameCursorBlock::EAdditionalDirEnum(yawStep);
+    if (editor is null || editor.PickedObject is null) return;
+    EditorRotation(Editor::GetItemRotation(editor.PickedObject)).SetCursor(editor.Cursor);
 }
 
 void CheckForPickedBlock_CopyRotation(CGameCtnEditorFree@ editor) {
     if (editor is null || editor.PickedBlock is null) return;
-    auto cursor = editor.Cursor;
-    auto er = EditorRotation(Editor::GetBlockRotation(editor.PickedBlock));
-    cursor.Pitch = er.Pitch;
-    cursor.Roll = er.Roll;
-    cursor.Dir = er.Dir;
-    cursor.AdditionalDir = er.AdditionalDir;
+    EditorRotation(Editor::GetBlockRotation(editor.PickedBlock)).SetCursor(editor.Cursor);
 }
 
 void EnsureSnappedLoc(CGameCtnEditorFree@ editor) {
@@ -182,19 +158,29 @@ class EditorRotation {
     EditorRotation(CGameCursorBlock@ cursor) {
         SetFromCursorProps(cursor.Pitch, cursor.Roll, cursor.Dir, cursor.AdditionalDir);
     }
+    EditorRotation(CGameCursorBlock@ cursor) {
+        SetFromCursorProps(cursor.Pitch, cursor.Roll, cursor.Dir, cursor.AdditionalDir);
+    }
 
     EditorRotation(float pitch, float roll, CGameCursorBlock::ECardinalDirEnum dir, CGameCursorBlock::EAdditionalDirEnum additionalDir) {
         SetFromCursorProps(pitch, roll, dir, additionalDir);
     }
 
-    void SetFromCursorProps(float pitch, float roll, CGameCursorBlock::ECardinalDirEnum dir, CGameCursorBlock::EAdditionalDirEnum additionalDir) {
+    protected void SetFromCursorProps(float pitch, float roll, CGameCursorBlock::ECardinalDirEnum dir, CGameCursorBlock::EAdditionalDirEnum additionalDir) {
         this.dir = dir;
         this.additionalDir = additionalDir;
         euler = vec3(pitch, 0, roll);
         CalcYawFromDir();
     }
 
-    void CalcYawFromDir() {
+    void SetCursor(CGameCursorBlock@ cursor) {
+        cursor.Pitch = Pitch;
+        cursor.Roll = Roll;
+        cursor.Dir = Dir;
+        cursor.AdditionalDir = AdditionalDir;
+    }
+
+    protected void CalcYawFromDir() {
         if (dir == CGameCursorBlock::ECardinalDirEnum::East)
             euler.y = Math::PI * 3. / 2.;
         else if (dir == CGameCursorBlock::ECardinalDirEnum::South)
@@ -206,7 +192,7 @@ class EditorRotation {
         euler.y += float(int(additionalDir)) / 6. * Math::PI / 2.;
     }
 
-    void CalcDirFromPry() {
+    protected void CalcDirFromPry() {
         auto yaw = ((euler.y + Math::PI * 2.) % (Math::PI * 2.));
         dir = yaw < Math::PI
             ? yaw < Math::PI/2.
