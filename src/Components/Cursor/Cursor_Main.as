@@ -42,7 +42,7 @@ class CursorPropsTab : Tab {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
         S_CopyPickedItemRotation = UI::Checkbox("Copy Rotations from Picked Items (ctrl+hover)", S_CopyPickedItemRotation);
-        S_CopyPickedBlockRotation = UI::Checkbox("Copy Rotations from Picked Blocks (ctrl+hover)", S_CopyPickedItemRotation);
+        S_CopyPickedBlockRotation = UI::Checkbox("Copy Rotations from Picked Blocks (ctrl+hover)", S_CopyPickedBlockRotation);
         UI::Text("Cursor:");
         // this only works for blocks and is to do with freeblock positioning i think
         // g_UseSnappedLoc = UI::Checkbox("Force Snapped Location", g_UseSnappedLoc);

@@ -147,6 +147,16 @@ void CheckForPickedItem_CopyRotation(CGameCtnEditorFree@ editor) {
     cursor.AdditionalDir = CGameCursorBlock::EAdditionalDirEnum(yawStep);
 }
 
+void CheckForPickedBlock_CopyRotation(CGameCtnEditorFree@ editor) {
+    if (editor is null || editor.PickedBlock is null) return;
+    auto cursor = editor.Cursor;
+    auto er = EditorRotation(Editor::GetBlockRotation(editor.PickedBlock));
+    cursor.Pitch = er.Pitch;
+    cursor.Roll = er.Roll;
+    cursor.Dir = er.Dir;
+    cursor.AdditionalDir = er.AdditionalDir;
+}
+
 void EnsureSnappedLoc(CGameCtnEditorFree@ editor) {
     if (editor is null) return;
     if (editor.Cursor is null) return;
@@ -158,6 +168,11 @@ class EditorRotation {
     vec3 euler;
     CGameCursorBlock::ECardinalDirEnum dir;
     CGameCursorBlock::EAdditionalDirEnum additionalDir;
+
+    EditorRotation(vec3 euler) {
+        this.euler = euler;
+        CalcDirFromPry();
+    }
 
     EditorRotation(float pitch, float yaw, float roll) {
         euler = vec3(pitch, yaw, roll);

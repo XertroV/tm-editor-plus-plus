@@ -1,5 +1,6 @@
 void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     if (S_CopyPickedItemRotation) CheckForPickedItem_CopyRotation(editor);
+    if (S_CopyPickedBlockRotation) CheckForPickedBlock_CopyRotation(editor);
     if (g_UseSnappedLoc) EnsureSnappedLoc(editor);
 
     UpdatePickedItemProps(editor);
