@@ -49,10 +49,10 @@ class ItemCustomLayoutTab : Tab {
         if (TmpPlacementParam !is null && TmpItemPlacementReplaced !is null) {
             trace('resetting temporary item placement');
             @TmpItemPlacementReplaced.DefaultPlacementParam_Content = TmpPlacementParam;
-            @TmpItemPlacementReplaced.EntityModel = TmpEntityModel;
+            // @TmpItemPlacementReplaced.EntityModel = TmpEntityModel;
             TmpItemPlacementReplaced.MwRelease();
             TmpPlacementParam.MwRelease();
-            TmpEntityModel.MwRelease();
+            // TmpEntityModel.MwRelease();
         }
         @TmpPlacementParam = null;
         @TmpItemPlacementReplaced = null;
@@ -67,10 +67,10 @@ class ItemCustomLayoutTab : Tab {
         if (item !is null) {
             @TmpPlacementParam = currentItem.DefaultPlacementParam_Content;
             @TmpItemPlacementReplaced = currentItem;
-            @TmpEntityModel = currentItem.EntityModel;
+            // @TmpEntityModel = currentItem.EntityModel;
             TmpItemPlacementReplaced.MwAddRef();
             TmpPlacementParam.MwAddRef();
-            TmpEntityModel.MwAddRef();
+            // TmpEntityModel.MwAddRef();
             @currentItem.DefaultPlacementParam_Content = item.DefaultPlacementParam_Content;
             @currentItem.EntityModel = @item.EntityModel;
         } else {
