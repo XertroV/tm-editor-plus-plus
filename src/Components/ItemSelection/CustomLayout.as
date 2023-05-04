@@ -15,7 +15,7 @@ class ItemCustomLayoutTab : Tab {
     void DrawInner() override {
         UI::TextWrapped("Custom items can be used with layouts by temporary replacing the custom item's layout with one from a Nadeo object (e.g., flags, or signs). However, you cannot save the map until the custom item's original layout is restored. Test this in a new map first to get a feel for it since it might be a little dangerous.");
         UI::TextWrapped("\\$fa0Note! The item's original placement options/layouts will be set back to normal automatically when the current item changes.");
-        UI::TextWrapped("\\$fa0Warning! \\$zGame crashes may occur (though they shouldn't) -- after you are done using this tool, I suggest you save the map and reload it.");
+        // UI::TextWrapped("\\$fa0Warning! \\$zGame crashes may occur (though they shouldn't) -- after you are done using this tool, I suggest you save the map and reload it.");
         CGameItemModel@ currentItem = null;
         if (selectedItemModel !is null) {
             @currentItem = selectedItemModel.AsItemModel();
@@ -36,7 +36,7 @@ class ItemCustomLayoutTab : Tab {
                 ResetTmpPlacement();
                 appliedCustomItemLayout = true;
             }
-            UI::TextWrapped("\\$fa0 Warning! You MUST click this before changing items or your game will crash!");
+            // UI::TextWrapped("\\$fa0 Warning! You MUST click this before changing items or your game will crash!");
         }
     }
 

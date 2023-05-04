@@ -120,8 +120,8 @@ TabGroup@ CreateRootTabGroup() {
     PickedItemTab(root);
     BlockSelectionTab(root);
     ItemSelectionTab(root);
+    CheckpointsTab(root);
 
-    Tab(root, "Checkpoints", Icons::ClockO);
     // - filtered view of blocks/items show just checkpoints
     // - set linked order
     //   -- for next, selected, picked
