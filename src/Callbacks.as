@@ -31,7 +31,7 @@ void CheckForNewBlocks(CGameCtnEditorFree@ editor) {
         trace('Detected new blocks: ' + newBlocks);
         if (newBlocks > 0) {
             auto startIx = int(editor.Challenge.Blocks.Length) - newBlocks;
-            for (int i = startIx; i < editor.Challenge.Blocks.Length; i++) {
+            for (uint i = startIx; i < editor.Challenge.Blocks.Length; i++) {
                 OnNewBlock(editor.Challenge.Blocks[i]);
             }
         }
@@ -56,7 +56,7 @@ void CheckForNewItems(CGameCtnEditorFree@ editor) {
         trace('Detected new items: ' + newItems);
         if (newItems > 0) {
             auto startIx = int(editor.Challenge.AnchoredObjects.Length) - newItems;
-            for (int i = startIx; i < editor.Challenge.AnchoredObjects.Length; i++) {
+            for (uint i = startIx; i < editor.Challenge.AnchoredObjects.Length; i++) {
                 OnNewItem(editor.Challenge.AnchoredObjects[i]);
             }
         }

@@ -16,7 +16,7 @@ class ItemPlacementTab : Tab {
         }
 
         // main placement
-        DrawMainPlacement(pp_content.PlacementClass);
+        DrawMainPlacement(pp_content.PlacementClass, Editor::GetItemNbVariants(curr));
 
         DrawMagnetOptions();
 
@@ -49,7 +49,10 @@ class ItemPlacementTab : Tab {
         UI::Text("\\$888Note: still more properties can be added.");
     }
 
-    void DrawMainPlacement(NPlugItemPlacement_SClass@ pc) {
+    void DrawMainPlacement(NPlugItemPlacement_SClass@ pc, uint nbVars) {
+        LabeledValue("SizeGroup.Name", pc.SizeGroup.GetName());
+        UI::TextWrapped("CompatibleIdGroups: " + CompatibleIdGroupsStr(pc));
+        UI::TextWrapped("GroupCurPatchLayouts: " + GroupCurPatchLayoutsStr(pc));
         pc.AlwaysUp = UI::Checkbox("Always Up", pc.AlwaysUp);
         AddSimpleTooltip("When false, the item will be perpendicular to the surface.\nUseful for sloped blocks. (Default: true)");
         pc.AlignToInterior = UI::Checkbox("Align To Interior", pc.AlignToInterior);
@@ -58,10 +61,39 @@ class ItemPlacementTab : Tab {
         AddSimpleTooltip("When true, items will always face this direction. (Default: false)");
         pc.WorldDir = UI::InputFloat3("World Dir", pc.WorldDir);
         AddSimpleTooltip("Vector of the direction to face. Y=Up. (Default: 0,0,1)");
+        if (nbVars > 1) {
+            pc.CurVariant = Math::Clamp(UI::InputInt("Current Variant", pc.CurVariant), 0, Math::Max(1, nbVars) - 1);
+        }
+    }
+
+    string GroupCurPatchLayoutsStr(NPlugItemPlacement_SClass@ pc) {
+        string ret = "{ ";
+        for (uint i = 0; i < pc.GroupCurPatchLayouts.Length; i++) {
+            if (i > 0) {
+                ret += ", ";
+            }
+            ret += tostring(pc.GroupCurPatchLayouts[i]);
+        }
+        ret += " }";
+        return ret;
+    }
+
+    string CompatibleIdGroupsStr(NPlugItemPlacement_SClass@ pc) {
+        string ret = "{ ";
+        for (uint i = 0; i < pc.CompatibleIdGroups.Length; i++) {
+            if (i > 0) {
+                ret += ", ";
+            }
+            ret += pc.CompatibleIdGroups[i].GetName();
+            // ret += "(" + pc.CompatibleIdGroups[i].Value + ", "
+            //     + pc.CompatibleIdGroups[i].GetName() + ")";
+        }
+        ret += " }";
+        return ret;
     }
 
     void DrawMagnetOptions() {
-        if (UI::CollapsingHeader("Item to Item Snaping")) {
+        if (UI::CollapsingHeader("Item to Item Snaping (Magnet)")) {
             auto ef = cast<CGameCtnEditorFree>(GetApp().Editor).ExperimentalFeatures;
             ef.MagnetSnapDistance = UI::SliderFloat("Item Snap Dist.", ef.MagnetSnapDistance, 0., 64.);
             AddSimpleTooltip("Default: 1.25");

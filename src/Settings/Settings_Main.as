@@ -17,3 +17,6 @@ bool S_DrawPickedBlockHelpers = true;
 
 [Setting hidden]
 bool S_DrawPickedBlockBox = true;
+
+[Setting hidden]
+int S_MainSelectedTab = 0;

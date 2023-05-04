@@ -47,8 +47,8 @@ class CursorPropsTab : Tab {
         // this only works for blocks and is to do with freeblock positioning i think
         // g_UseSnappedLoc = UI::Checkbox("Force Snapped Location", g_UseSnappedLoc);
         auto cursor = editor.Cursor;
-        cursor.Pitch = UI::InputFloat("Pitch (Rad)", cursor.Pitch, Math::PI / 24.);
-        cursor.Roll = UI::InputFloat("Roll (Rad)", cursor.Roll, Math::PI / 24.);
+        cursor.Pitch = Math::ToRad(UI::InputFloat("Pitch (Deg)", Math::ToDeg(cursor.Pitch), Math::PI / 24.));
+        cursor.Roll = Math::ToRad(UI::InputFloat("Roll (Deg)", Math::ToDeg(cursor.Roll), Math::PI / 24.));
 
         if (UI::BeginCombo("Dir", tostring(cursor.Dir))) {
             for (uint i = 0; i < 4; i++) {

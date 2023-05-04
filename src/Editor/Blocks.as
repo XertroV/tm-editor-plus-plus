@@ -92,4 +92,62 @@ namespace Editor {
     mat4 GetBlockMatrix(CGameCtnBlock@ block) {
         return mat4::Translate(GetBlockLocation(block)) * EulerToMat(GetBlockRotation(block));
     }
+
+    CGameCtnBlock@ RefreshSingleBlockAfterModified(CGameCtnEditorFree@ editor, CGameCtnBlock@ block) {
+        auto desc = BlockDesc(block);
+        @block = null;
+        Editor::RefreshBlocksAndItems(editor);
+        @block = Editor::FindReplacementBlockAfterUpdate(editor, desc);
+        return block;
+    }
+
+    CGameCtnBlock@ FindReplacementBlockAfterUpdate(CGameCtnEditorFree@ editor, BlockDesc@ desc) {
+        auto map = editor.Challenge;
+        if (map is null || map.Blocks.Length == 0) return null;
+        for (int i = map.Blocks.Length - 1; i >= 0; i--) {
+            if (!desc.Matches(map.Blocks[i])) continue;
+            // match!?
+            trace('found match: ' + i + " / " + (map.Blocks.Length - 1));
+            return map.Blocks[i];
+        }
+        trace('did not find block (checked: ' + map.Blocks.Length + ")");
+        return null;
+    }
+}
+
+
+class BlockDesc {
+    nat3 Coord;
+    vec3 Pos;
+    vec3 Rot;
+    bool IsGhost;
+    bool IsGround;
+    CGameCtnBlock::ECardinalDirections Dir;
+    uint DescIdVal;
+    uint VariantIndex;
+
+    BlockDesc(CGameCtnBlock@ block) {
+        Coord = block.Coord;
+        Pos = Editor::GetBlockLocation(block);
+        Rot = Editor::GetBlockRotation(block);
+        IsGhost = block.IsGhostBlock();
+        IsGround = block.IsGround;
+        Dir = block.BlockDir;
+        DescIdVal = block.DescId.Value;
+        VariantIndex = block.BlockInfoVariantIndex;
+    }
+
+    bool Matches(CGameCtnBlock@ block) {
+        if (block is null) return false;
+
+        return DescIdVal == block.DescId.Value
+            && Math::Vec3Eq(Pos, Editor::GetBlockLocation(block))
+            && Math::Nat3Eq(Coord, block.Coord)
+            && IsGhost == block.IsGhostBlock()
+            && IsGround == block.IsGround
+            && Dir == block.Dir
+            && VariantIndex == block.BlockInfoVariantIndex
+            && Math::Vec3Eq(Rot, Editor::GetBlockRotation(block))
+            ;
+    }
 }

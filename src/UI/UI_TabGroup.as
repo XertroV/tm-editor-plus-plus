@@ -6,16 +6,10 @@ class TabGroup {
     string fullName;
     bool IsRoot = false;
 
-    TabGroup() {
-        // root
-        groupName = "Root";
-        fullName = "";
-        IsRoot = true;
-    }
-
     TabGroup(const string &in name, Tab@ parent) {
         groupName = name;
         @Parent = parent;
+        if (parent is null) return;
         fullName = parent.fullName;
         if (name.Length > 0 && name != parent.tabName) {
             fullName += " > " + name;
@@ -61,7 +55,9 @@ class TabGroup {
     bool sideBarExpanded = true;
     vec2 framePadding;
     vec2 regionSize;
-    int selectedTabIx = 0;
+    int _selectedTabIx = 0;
+    int get_selectedTabIx() { return _selectedTabIx; }
+    void set_selectedTabIx(int value) { _selectedTabIx = value; }
 
     void DrawTabsAsSidebar(const string &in title = "") {
         framePadding = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
@@ -78,7 +74,7 @@ class TabGroup {
             if (UI::Button(Icons::Bars + "##expand-" + fullName)) {
                 sideBarExpanded = !sideBarExpanded;
             }
-            for (uint i = 0; i < tabs.Length; i++) {
+            for (int i = 0; i < int(tabs.Length); i++) {
                 auto tab = tabs[i];
                 if (UI::Selectable(sideBarExpanded ? tab.tabIconAndName : tab.tabIcon, selectedTabIx == i)) {
                     selectedTabIx = i;
@@ -103,5 +99,22 @@ class TabGroup {
         for (uint i = 0; i < tabs.Length; i++) {
             tabs[i].DrawWindow();
         }
+    }
+}
+
+class RootTabGroupCls : TabGroup {
+    RootTabGroupCls() {
+        super("Root", null);
+        // root
+        groupName = "Root";
+        fullName = "";
+        IsRoot = true;
+    }
+
+    int get_selectedTabIx() override property {
+        return Math::Min(tabs.Length - 1, S_MainSelectedTab);
+    }
+    void set_selectedTabIx(int value) override property {
+        S_MainSelectedTab = value;
     }
 }

@@ -55,3 +55,6 @@ void LabeledValue(const string &in label, float value) {
 void LabeledValue(const string &in label, int value) {
     ClickableLabel(label, tostring(value));
 }
+void LabeledValue(const string &in label, const string &in value) {
+    ClickableLabel(label, value);
+}

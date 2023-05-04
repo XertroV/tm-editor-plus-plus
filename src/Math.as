@@ -34,4 +34,8 @@ namespace Math {
     bool Vec3Eq(vec3 a, vec3 b) {
         return a.x == b.x && a.y == b.y && a.z == b.z;
     }
+
+    bool Nat3Eq(nat3 a, nat3 b) {
+        return a.x == b.x && a.y == b.y && a.z == b.z;
+    }
 }

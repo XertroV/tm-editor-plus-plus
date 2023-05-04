@@ -16,10 +16,16 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
 
 
 namespace Editor {
-    void RefreshBlocksAndItems(CGameCtnEditorFree@ editor) {
+    void RefreshBlocksAndItems(CGameCtnEditorFree@ editor, bool autosave = true) {
         auto pmt = editor.PluginMapType;
-        pmt.AutoSave();
+        if (autosave) {
+            pmt.AutoSave();
+        }
         pmt.Undo();
+        if (!autosave) {
+            // undo last autosave
+            // pmt.AutoSave();
+        }
         pmt.Redo();
     }
 

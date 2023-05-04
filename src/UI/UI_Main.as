@@ -17,7 +17,7 @@
 
 
 
-TabGroup@ RootTabGroup = CreateRootTabGroup();
+TabGroup@ RootTabGroup_Editor = CreateRootTabGroup();
 
 
 void UI_Main_Render() {
@@ -30,11 +30,11 @@ void UI_Main_Render() {
     UI::PushStyleColor(UI::Col::FrameBg, vec4(.2, .2, .2, .5));
     if (UI::Begin(MenuTitle, ShowWindow, UI::WindowFlags::MenuBar)) {
         MenuBar::Draw();
-        // RootTabGroup.DrawTabsAsSidebar("Editor++");
-        RootTabGroup.DrawTabsAsSidebar();
+        // RootTabGroup_Editor.DrawTabsAsSidebar("Editor++");
+        RootTabGroup_Editor.DrawTabsAsSidebar();
     }
     UI::End();
-    RootTabGroup.DrawWindows();
+    RootTabGroup_Editor.DrawWindows();
 
     UI::PopStyleColor();
 }
@@ -109,8 +109,9 @@ namespace MenuBar {
 
 
 TabGroup@ CreateRootTabGroup() {
-    auto root = TabGroup();
+    auto root = RootTabGroupCls();
     MapEditPropsTab(root);
+    Tab(root, "Blocks & Items", Icons::Cubes + Icons::Tree);
     CursorTab(root);
     PickedBlockTab(root);
     PickedItemTab(root);
@@ -121,10 +122,12 @@ TabGroup@ CreateRootTabGroup() {
     // - filtered view of blocks/items show just checkpoints
     // - set linked order
     //   -- for next, selected, picked
-    Tab(root, "Blocks & Items", Icons::StarO);
-    Tab(root, "Favorites", Icons::StarO);
+    Tab(root, "Inventory", Icons::FolderOpenO);
+    Tab(root, "Favorites", Icons::FolderOpenO + Icons::StarO);
     Tab(root, "Apply Transformation", "f(x)");
     Tab(root, "Set B/I Properties", Icons::PencilSquareO);
+    Tab(root, "Editor Settings", Icons::Cogs);
+    Tab(root, "Medals & Validation (Plugin)", "\\$fb4"+Icons::Circle+"\\$z");
 
     return root;
 }

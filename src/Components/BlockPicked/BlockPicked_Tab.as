@@ -1,37 +1,44 @@
 class FocusedBlockTab : Tab, NudgeItemBlock {
+    private ReferencedNod@ pinnedBlock;
+
     FocusedBlockTab(TabGroup@ parent) {
         super(parent, "Picked Block", Icons::Crosshairs + Icons::Cube);
         removable = true;
     }
 
-    CGameCtnBlock@ get_FocusedBlock() {
-        throw("override me");
-        return null;
+    ReferencedNod@ get_FocusedBlock() {
+        return pinnedBlock;
     }
 
-    // cache stuff to try and refind blocks on refresh
-    private vec3 fb_Pos;
-    private vec3 fb_Rot;
-    private bool fb_IsGhost;
-    private bool fb_IsGround;
-    private string fb_BlockName;
-    void CacheFocusedBlockProps() {
-        auto block = FocusedBlock;
-        fb_Pos = Editor::GetBlockLocation(block);
-        fb_Rot = Editor::GetBlockRotation(block);
-        fb_IsGhost = block.IsGhostBlock();
-        fb_IsGround = block.IsGround;
-        fb_BlockName = block.BlockInfo.Name;
+    void set_FocusedBlock(ReferencedNod@ value) {
+        @pinnedBlock = value;
     }
 
-    bool CachedMatchesBlock(CGameCtnBlock@ block) {
-        return block.BlockInfo.Name == fb_BlockName
-            && Math::Vec3Eq(fb_Pos, Editor::GetBlockLocation(block))
-            && Math::Vec3Eq(fb_Rot, Editor::GetBlockRotation(block))
-            && fb_IsGround == block.IsGround
-            && fb_IsGhost == block.IsGhostBlock()
-            ;
-    }
+    // ! use block desc instead
+
+    // // cache stuff to try and refind blocks on refresh
+    // private vec3 fb_Pos;
+    // private vec3 fb_Rot;
+    // private bool fb_IsGhost;
+    // private bool fb_IsGround;
+    // private string fb_BlockName;
+    // void CacheFocusedBlockProps() {
+    //     auto block = FocusedBlock.AsBlock();
+    //     fb_Pos = Editor::GetBlockLocation(block);
+    //     fb_Rot = Editor::GetBlockRotation(block);
+    //     fb_IsGhost = block.IsGhostBlock();
+    //     fb_IsGround = block.IsGround;
+    //     fb_BlockName = block.BlockInfo.Name;
+    // }
+
+    // bool CachedMatchesBlock(CGameCtnBlock@ block) {
+    //     return block.BlockInfo.Name == fb_BlockName
+    //         && Math::Vec3Eq(fb_Pos, Editor::GetBlockLocation(block))
+    //         && Math::Vec3Eq(fb_Rot, Editor::GetBlockRotation(block))
+    //         && fb_IsGround == block.IsGround
+    //         && fb_IsGhost == block.IsGhostBlock()
+    //         ;
+    // }
 
 
     private bool showHelpers = true;
@@ -53,12 +60,12 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
     protected bool m_BlockChanged = false;
 
     void DrawInner() override {
-        auto block = FocusedBlock;
         CGameCtnEditorFree@ editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (block is null || editor is null) {
+        if (FocusedBlock is null || FocusedBlock.AsBlock() is null || editor is null) {
             UI::Text("No picked block. Ctrl+Hover to pick a block.");
             return;
         }
+        auto block = FocusedBlock.AsBlock();
         auto pos = Editor::GetBlockLocation(block);
         auto rot = Editor::GetBlockRotation(block);
 
@@ -111,30 +118,46 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
                 UI::EndCombo();
             }
         }
+        auto preCol = block.MapElemColor;
         block.MapElemColor = DrawEnumColorChooser(block.MapElemColor);
 
-        m_BlockChanged = m_BlockChanged
+        m_BlockChanged = preCol != block.MapElemColor
             || !Math::Vec3Eq(prePos, Editor::GetBlockLocation(block))
             || !Math::Vec3Eq(preRot, Editor::GetBlockRotation(block));
 
-        UI::BeginDisabled(!m_BlockChanged);
-        if (UI::Button("Refresh All##blocks" + idNonce)) {
-            trace('refreshing blocks; changed:');
-            @lastPickedBlock = null;
-            @block = null;
-            Editor::RefreshBlocksAndItems(editor);
-            trace('refresh done');
-            if (m_BlockChanged) {
-                @lastPickedBlock = ReferencedNod(editor.Challenge.Blocks[editor.Challenge.Blocks.Length - 1]);
-                UpdatePickedBlockCachedValues();
-                trace('updated last picked block');
-                @block = lastPickedBlock.AsBlock();
+        if (m_BlockChanged) {
+            trace('Updating picked/pinned block');
+            // ensure we dereference the block by nullifying FocusedBlock first -- can cause a crash when changing normal block positions (seems okay otherwise), apparently b/c the block memory is cleared when it otherwise wouldn't be
+            @FocusedBlock = null;
+            // // add a reference for testing -- will leak memory but not much
+            // block.MwAddRef();
+            @block = Editor::RefreshSingleBlockAfterModified(editor, block);
+            trace('Return block null? ' + tostring(block is null));
+            if (block is null) {
+                @FocusedBlock = null;
             } else {
-                trace('block not changed');
+                @FocusedBlock = ReferencedNod(block);
             }
         }
-        AddSimpleTooltip("Note! This may not reliably find the block again. \\$f80Warning: \\$zAll pinned blocks will be cleared. \\$888Todo: use block coords to find block again.");
-        UI::EndDisabled();
+
+        // UI::BeginDisabled(!m_BlockChanged);
+        // if (UI::Button("Refresh All##blocks" + idNonce)) {
+        //     trace('refreshing blocks; changed:');
+        //     @lastPickedBlock = null;
+        //     @block = null;
+        //     Editor::RefreshBlocksAndItems(editor);
+        //     trace('refresh done');
+        //     if (m_BlockChanged) {
+        //         @lastPickedBlock = ReferencedNod(editor.Challenge.Blocks[editor.Challenge.Blocks.Length - 1]);
+        //         UpdatePickedBlockCachedValues();
+        //         trace('updated last picked block');
+        //         @block = lastPickedBlock.AsBlock();
+        //     } else {
+        //         trace('block not changed');
+        //     }
+        // }
+        // AddSimpleTooltip("Note! This may not reliably find the block again. \\$f80Warning: \\$zAll pinned blocks will be cleared. \\$888Todo: use block coords to find block again.");
+        // UI::EndDisabled();
 
         if (block is null) return;
 
@@ -167,25 +190,22 @@ class PickedBlockTab : FocusedBlockTab {
         S_DrawPickedBlockBox = value;
     }
 
-    CGameCtnBlock@ get_FocusedBlock() override property {
-        if (lastPickedBlock is null)
-            return null;
-        return lastPickedBlock.AsBlock();
+    ReferencedNod@ get_FocusedBlock() override property {
+        return lastPickedBlock;
+    }
+
+    void set_FocusedBlock(ReferencedNod@ value) override property {
+        @lastPickedBlock = value;
+        if (value !is null) {
+            UpdatePickedBlockCachedValues();
+        }
     }
 }
 
 class PinnedBlockTab : FocusedBlockTab {
-    ReferencedNod@ pinnedBlock;
-
     PinnedBlockTab(TabGroup@ parent, CGameCtnBlock@ block) {
         super(parent);
         removable = false;
-        @pinnedBlock = ReferencedNod(block);
-    }
-
-    CGameCtnBlock@ get_FocusedBlock() override property {
-        if (pinnedBlock is null)
-            return null;
-        return pinnedBlock.AsBlock();
+        @FocusedBlock = ReferencedNod(block);
     }
 }

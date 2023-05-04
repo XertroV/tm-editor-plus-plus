@@ -42,6 +42,10 @@ void UpdatePickedBlockProps(CGameCtnEditorFree@ editor) {
 }
 
 void UpdatePickedBlockCachedValues() {
+    if (lastPickedBlock is null || lastPickedBlock.AsBlock() is null) {
+        trace("UpdatePickedBlockCachedValues: block null");
+        return;
+    }
     auto pb = lastPickedBlock.AsBlock();
     lastPickedBlockName = pb.BlockInfo.Name;
     lastPickedBlockCoord = pb.Coord;

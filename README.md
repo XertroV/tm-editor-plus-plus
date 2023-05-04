@@ -21,8 +21,14 @@ todo:
 - groups of blocks/items
 - refind block/item based on coords/props
 - save state in some way to persist between editor sessions
+- when creating items, set the block coord
+- scroll on vec3 inputs to change value
 - (todo: fill list out more)
 
 research:
 - convert normal block to free block?
 - item inventory refresh via blendermania
+
+else:
+- export all functions in namespace
+-

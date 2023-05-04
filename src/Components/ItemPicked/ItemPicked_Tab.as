@@ -1,12 +1,17 @@
 class FocusedItemTab : Tab, NudgeItemBlock {
+    private ReferencedNod@ pinnedItem;
+
     FocusedItemTab(TabGroup@ parent, const string &in name) {
         super(parent, name, Icons::Crosshairs + Icons::Cube);
         removable = true;
     }
 
-    CGameCtnAnchoredObject@ get_FocusedItem() {
-        throw("override me");
-        return null;
+    ReferencedNod@ get_FocusedItem() {
+        return pinnedItem;
+    }
+
+    void set_FocusedItem(ReferencedNod@ value) {
+        @pinnedItem = value;
     }
 
     private bool showHelpers = true;
@@ -28,20 +33,21 @@ class FocusedItemTab : Tab, NudgeItemBlock {
     protected bool m_ItemChanged = false;
     float cursorCoordHelpersSize = 10.;
 
+    string nullItemError = "No item.";
+
     void DrawInner() override {
-        auto item = FocusedItem;
         CGameCtnEditorFree@ editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (item is null || editor is null) {
-            UI::Text("No picked Item. Ctrl+Hover to pick a Item.");
+        if (FocusedItem is null || FocusedItem.AsItem() is null || editor is null) {
+            UI::Text(nullItemError);
             return;
         }
+        auto item = FocusedItem.AsItem();
+
 
         CopiableLabeledValue("Name", item.ItemModel.IdName);
         CopiableLabeledValue("Pos", item.AbsolutePositionInMap.ToString());
         CopiableLabeledValue("P,Y,R (Rad)", Editor::GetItemRotation(item).ToString());
-
-        LabeledValue("Is Flying", item.IsFlying);
-        LabeledValue("Variant", item.IVariant);
+        CopiableLabeledValue("Coord", item.BlockUnitCoord.ToString());
 
         UI::Separator();
 
@@ -62,19 +68,69 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         UI::AlignTextToFramePadding();
         UI::Text("Edit Picked Item Properties (Helper dot shows position)");
 
+        vec3 initPos = item.AbsolutePositionInMap;
+        vec3 initRot = Editor::GetItemRotation(item);
+        auto initColor = item.MapElemColor;
+        auto initFlying = item.IsFlying;
+        auto initIVar = item.IVariant;
+
         item.AbsolutePositionInMap = UI::InputFloat3("Pos.##picked-item-pos", item.AbsolutePositionInMap);
-        Editor::SetItemRotation(item, UX::InputAngles3("Rot (Deg)##picked-item-rot", Editor::GetItemRotation(item)));
+
+        vec3 outRot = UX::InputAngles3("Rot (Deg)##picked-item-rot", initRot);
+        Editor::SetItemRotation(item, outRot);
+
         item.MapElemColor = DrawEnumColorChooser(item.MapElemColor);
 
-        if (UI::Button("Refresh All##items")) {
-            auto nbRefs = Reflection::GetRefCount(item);
-            Editor::RefreshBlocksAndItems(editor);
-            if (nbRefs != Reflection::GetRefCount(item)) {
-                @lastPickedItem = ReferencedNod(editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1]);
-                UpdatePickedItemCachedValues();
-                @item = lastPickedItem.AsItem();
-            }
+        item.IsFlying = UI::Checkbox("Is Flying", item.IsFlying);
+        DrawEditVariants(item);
+
+        auto skipForceRefresh = initColor != item.MapElemColor
+            || !Math::Vec3Eq(initPos, item.AbsolutePositionInMap)
+            || !Math::Vec3Eq(initRot, outRot);
+
+        auto changed = skipForceRefresh
+            || initFlying != item.IsFlying
+            || initIVar != item.IVariant
+            ;
+
+        if (changed) {
+            @item = Editor::RefreshSingleItemAfterModified(editor, item, !skipForceRefresh);
+            @FocusedItem = ReferencedNod(item);
+            // if (!skipForceRefresh)
+            //     RotateItemColorForRefresh(editor, item);
+            // // auto col = item.MapElemColor;
+            // // item.MapElemColor = CGameCtnAnchoredObject::EMapElemColor::Red;
+            // // item.MapElemColor = CGameCtnAnchoredObject::EMapElemColor::Blue;
+            // // item.MapElemColor = col;
+            // auto nbRefs = Reflection::GetRefCount(item);
+            // auto lastItem = editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1];
+            // trace('last item ref count: ' + Reflection::GetRefCount(lastItem));
+            // trace('nb item: ' + editor.Challenge.AnchoredObjects.Length + ', ' + nbRefs);
+            // Editor::RefreshBlocksAndItems(editor);
+            // trace('nb item: ' + editor.Challenge.AnchoredObjects.Length + ', ' + Reflection::GetRefCount(item));
+            // @lastItem = editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1];
+            // trace('last item ref count: ' + Reflection::GetRefCount(lastItem));
+            // if (nbRefs != Reflection::GetRefCount(item)) {
+            //     @FocusedItem = ReferencedNod(Editor::FindReplacementItemAfterUpdate(editor, item));
+            //     if (!skipForceRefresh)
+            //         @FocusedItem = ReferencedNod(RestoreItemColorAfterRefresh(editor, FocusedItem.AsItem()));
+            //     @item = FocusedItem.AsItem();
+            // } else {
+            //     trace('item ref count didnt change: ' + nbRefs);
+            // }
+            // @lastItem = editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1];
+            // trace('last item ref count: ' + Reflection::GetRefCount(lastItem));
         }
+
+        // if (UI::Button("Refresh All##items")) {
+        //     auto nbRefs = Reflection::GetRefCount(item);
+        //     Editor::RefreshBlocksAndItems(editor);
+        //     if (nbRefs != Reflection::GetRefCount(item)) {
+        //         @lastPickedItem = ReferencedNod(editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1]);
+        //         UpdatePickedItemCachedValues();
+        //         @item = lastPickedItem.AsItem();
+        //     }
+        // }
 
         UI::Separator();
 
@@ -112,6 +168,30 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         }
     }
 
+    void DrawEditVariants(CGameCtnAnchoredObject@ item) {
+        auto commonItemEntModel = cast<CGameCommonItemEntityModel>(item.ItemModel.EntityModel);
+        auto variantList = cast<NPlugItem_SVariantList>(item.ItemModel.EntityModel);
+        if (variantList !is null) {
+            auto nbVars = variantList.Variants.Length;
+            LabeledValue("Nb Variants", nbVars);
+            item.IVariant = Math::Clamp(UI::InputInt("Variant", item.IVariant), 0, nbVars - 1);
+            for (uint i = 0; i < variantList.Variants.Length; i++) {
+                DrawVariantInfo(i, variantList.Variants[i]);
+            }
+        }
+    }
+
+    void DrawVariantInfo(uint ix, NPlugItem_SVariant@ variant) {
+        UI::AlignTextToFramePadding();
+        string msg = variant.EntityModelFidForReload !is null ? string(variant.EntityModelFidForReload.FileName) : "??";
+        msg += " :: ";
+        msg += variant.EntityModel !is null ? Reflection::TypeOf(variant.EntityModel).Name : "null?";
+        UI::Text("" + ix + ". " + msg);
+        UI::SameLine();
+        variant.HiddenInManualCycle = UI::Checkbox("##variant.HiddenInManualCycle", variant.HiddenInManualCycle);
+        AddSimpleTooltip(".HiddenInManualCycle");
+    }
+
     vec3 m_Calc_AbsPosition = vec3();
     vec3 m_Calc_RelPosition = vec3();
 }
@@ -120,6 +200,7 @@ class PickedItemTab : FocusedItemTab {
     PickedItemTab(TabGroup@ parent) {
         super(parent, "Picked Item");
         removable = false;
+        nullItemError = "No picked Item. Ctrl+Hover to pick a Item.";
     }
 
     bool get_ShowHelpers() override property {
@@ -130,24 +211,19 @@ class PickedItemTab : FocusedItemTab {
         S_DrawPickedItemHelpers = value;
     }
 
-    CGameCtnAnchoredObject@ get_FocusedItem() override property {
-        if (lastPickedItem is null)
-            return null;
-        return lastPickedItem.AsItem();
+    ReferencedNod@ get_FocusedItem() override property {
+        return lastPickedItem;
+    }
+
+    void set_FocusedItem(ReferencedNod@ value) override property {
+        @lastPickedItem = value;
+        UpdatePickedItemCachedValues();
     }
 }
 
 class PinnedItemTab : FocusedItemTab {
-    ReferencedNod@ pinnedItem;
-
     PinnedItemTab(TabGroup@ parent, CGameCtnAnchoredObject@ Item) {
         super(parent, Item.ItemModel.Name + "@" + Item.AbsolutePositionInMap.ToString());
-        @pinnedItem = ReferencedNod(Item);
-    }
-
-    CGameCtnAnchoredObject@ get_FocusedItem() override property {
-        if (pinnedItem is null)
-            return null;
-        return pinnedItem.AsItem();
+        @FocusedItem = ReferencedNod(Item);
     }
 }
