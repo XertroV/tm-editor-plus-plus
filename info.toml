@@ -3,6 +3,7 @@ name     = "Editor++"
 author   = "XertroV"
 category = "Map Editor"
 version  = "0.5.0"
+siteid   = 377
 
 [script]
 #__DEFINES__

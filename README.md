@@ -25,3 +25,4 @@ todo:
 
 research:
 - convert normal block to free block?
+- item inventory refresh via blendermania
