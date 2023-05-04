@@ -20,7 +20,7 @@ void UpdatePickedItemCachedValues() {
     auto po = lastPickedItem.AsItem();
     lastPickedItemName = po.ItemModel.IdName;
     lastPickedItemPos = po.AbsolutePositionInMap;
-    @lastPickedItemRot = EditorRotation(po.Pitch, po.Roll, po.Yaw);
+    @lastPickedItemRot = EditorRotation(po.Pitch, po.Yaw, po.Roll);
 }
 
 string lastPickedBlockName;
@@ -80,6 +80,47 @@ void UpdateSelectedBlockItem(CGameCtnEditorFree@ editor) {
 
 
 
+// class ItemBB {
+//     ItemBB(const string &in name, CGameCursorBlock@ cursor, vec3 position, vec3 rotation) {
+//         auto plugTree = Editor::GetCursorPlugTree(cursor);
+//         auto unRotate = mat4::Inverse(EulerToMat(rotation));
+//         vec3 pos = (unRotate * plugTree.BoundingBoxCenter).xyz;
+//         vec3 halfDiag = (unRotate * plugTree.BoundingBoxHalfDiag).xyz;
+//         // vec3 min = (unRotate * plugTree.BoundingBoxMin).xyz;
+//         // vec3 max = (unRotate * plugTree.BoundingBoxMax).xyz;
+
+//     }
+// }
+// dictionary ItemBBLookup;
+
+
+// void CheckItemBoundingBoxCache(CGameCtnEditorFree@ editor) {
+//     auto cursor = editor.Cursor;
+//     auto currItemMode = Editor::GetItemPlacementMode();
+//     if (currItemMode == Editor::ItemMode::None) {
+//         return;
+//     }
+//     string itemName;
+//     vec3 rotation;
+//     vec3 position;
+//     if (editor.PickedObject !is null) {
+//         itemName = editor.PickedObject.ItemModel.IdName;
+//         rotation = Editor::GetItemRotation(editor.PickedObject);
+//         position = editor.PickedObject.AbsolutePositionInMap;
+//     } else if (editor.CurrentItemModel !is null) {
+//         itemName = editor.CurrentItemModel.IdName;
+//         rotation = EditorRotation(cursor).euler;
+//         position = editor.ItemCursor.CurrentPos;
+//     } else {
+//         return;
+//     }
+//     if (ItemBBLookup.Exists(itemName)) {
+//         // return;
+//     }
+//     @ItemBBLookup[itemName] = ItemBB(itemName, cursor, position, rotation);
+// }
+
+
 
 // East + 75deg is nearly north.
 void CheckForPickedItem_CopyRotation(CGameCtnEditorFree@ editor) {
@@ -114,36 +155,44 @@ void EnsureSnappedLoc(CGameCtnEditorFree@ editor) {
 
 
 class EditorRotation {
-    vec3 pry;
+    vec3 euler;
     CGameCursorBlock::ECardinalDirEnum dir;
     CGameCursorBlock::EAdditionalDirEnum additionalDir;
 
-    EditorRotation(float pitch, float roll, float yaw) {
-        pry = vec3(pitch, roll, yaw);
+    EditorRotation(float pitch, float yaw, float roll) {
+        euler = vec3(pitch, yaw, roll);
         CalcDirFromPry();
     }
 
+    EditorRotation(CGameCursorBlock@ cursor) {
+        SetFromCursorProps(cursor.Pitch, cursor.Roll, cursor.Dir, cursor.AdditionalDir);
+    }
+
     EditorRotation(float pitch, float roll, CGameCursorBlock::ECardinalDirEnum dir, CGameCursorBlock::EAdditionalDirEnum additionalDir) {
+        SetFromCursorProps(pitch, roll, dir, additionalDir);
+    }
+
+    void SetFromCursorProps(float pitch, float roll, CGameCursorBlock::ECardinalDirEnum dir, CGameCursorBlock::EAdditionalDirEnum additionalDir) {
         this.dir = dir;
         this.additionalDir = additionalDir;
-        pry = vec3(pitch, roll, 0);
+        euler = vec3(pitch, 0, roll);
         CalcYawFromDir();
     }
 
     void CalcYawFromDir() {
         if (dir == CGameCursorBlock::ECardinalDirEnum::East)
-            pry.z = Math::PI * 3. / 2.;
+            euler.y = Math::PI * 3. / 2.;
         else if (dir == CGameCursorBlock::ECardinalDirEnum::South)
-            pry.z = Math::PI;
+            euler.y = Math::PI;
         else if (dir == CGameCursorBlock::ECardinalDirEnum::West)
-            pry.z = Math::PI / 2.;
+            euler.y = Math::PI / 2.;
         else if (dir == CGameCursorBlock::ECardinalDirEnum::North)
-            pry.z = 0;
-        pry.z += float(int(additionalDir)) / 6. * Math::PI / 2.;
+            euler.y = 0;
+        euler.y += float(int(additionalDir)) / 6. * Math::PI / 2.;
     }
 
     void CalcDirFromPry() {
-        auto yaw = ((pry.z + Math::PI * 2.) % (Math::PI * 2.));
+        auto yaw = ((euler.y + Math::PI * 2.) % (Math::PI * 2.));
         dir = yaw < Math::PI
             ? yaw < Math::PI/2.
                 ? CGameCursorBlock::ECardinalDirEnum::North
@@ -159,13 +208,13 @@ class EditorRotation {
     }
 
     float get_Pitch() {
-        return pry.x;
+        return euler.x;
     }
     float get_Roll() {
-        return pry.y;
+        return euler.z;
     }
     float get_Yaw() {
-        return pry.z;
+        return euler.y;
     }
     CGameCursorBlock::ECardinalDirEnum get_Dir() {
         return dir;
@@ -174,9 +223,6 @@ class EditorRotation {
         return additionalDir;
     }
     const string ToString() const {
-        return pry.ToString();
-    }
-    const string PYRToString() const {
-        return vec3(pry.x, pry.z, pry.y).ToString();
+        return euler.ToString();
     }
 }

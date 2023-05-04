@@ -21,6 +21,6 @@ class ItemSelectionTab : Tab {
             return;
 
         UI::SameLine();
-        UI::Text(selectedItemModel.AsItemModel().Name);
+        UI::Text(selectedItemModel.AsItemModel().IdName);
     }
 }

@@ -111,9 +111,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
                 UI::EndCombo();
             }
         }
-        DrawBlockColorChooser();
-
-
+        block.MapElemColor = DrawEnumColorChooser(block.MapElemColor);
 
         m_BlockChanged = m_BlockChanged
             || !Math::Vec3Eq(prePos, Editor::GetBlockLocation(block))
@@ -146,19 +144,6 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             DrawNudgeFor(block);
         } else {
             UI::Text("Cannot nudge non-free blocks.");
-        }
-    }
-
-    void DrawBlockColorChooser() {
-        auto block = FocusedBlock;
-        if (UI::BeginCombo("Color", tostring(block.MapElemColor))) {
-            auto last = CGameCtnBlock::EMapElemColor::Black;
-            for (int i = 0; i <= int(last); i++) {
-                if (UI::Selectable(tostring(CGameCtnBlock::EMapElemColor(i)), int(block.MapElemColor) == i)) {
-                    block.MapElemColor = CGameCtnBlock::EMapElemColor(i);
-                }
-            }
-            UI::EndCombo();
         }
     }
 }

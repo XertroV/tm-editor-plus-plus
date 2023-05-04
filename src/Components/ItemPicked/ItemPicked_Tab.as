@@ -38,7 +38,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
         CopiableLabeledValue("Name", item.ItemModel.IdName);
         CopiableLabeledValue("Pos", item.AbsolutePositionInMap.ToString());
-        CopiableLabeledValue("P,Y,R (Rad)", EditorRotation(item.Pitch, item.Roll, item.Yaw).PYRToString());
+        CopiableLabeledValue("P,Y,R (Rad)", Editor::GetItemRotation(item).ToString());
 
         LabeledValue("Is Flying", item.IsFlying);
         LabeledValue("Variant", item.IVariant);
@@ -64,6 +64,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
         item.AbsolutePositionInMap = UI::InputFloat3("Pos.##picked-item-pos", item.AbsolutePositionInMap);
         Editor::SetItemRotation(item, UX::InputAngles3("Rot (Deg)##picked-item-rot", Editor::GetItemRotation(item)));
+        item.MapElemColor = DrawEnumColorChooser(item.MapElemColor);
 
         if (UI::Button("Refresh All##items")) {
             auto nbRefs = Reflection::GetRefCount(item);
