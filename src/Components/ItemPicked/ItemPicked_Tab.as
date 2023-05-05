@@ -201,9 +201,11 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             LabeledValue("Current", fileName);
 
             if (UI::CollapsingHeader("Variant Details")) {
+                UI::Indent();
                 for (uint i = 0; i < variantList.Variants.Length; i++) {
                     DrawVariantInfo(i, variantList.Variants[i]);
                 }
+                UI::Unindent();
             }
         }
     }

@@ -93,12 +93,13 @@ namespace Editor {
         return mat4::Translate(GetBlockLocation(block)) * EulerToMat(GetBlockRotation(block));
     }
 
-    CGameCtnBlock@ RefreshSingleBlockAfterModified(CGameCtnEditorFree@ editor, CGameCtnBlock@ block) {
-        auto desc = BlockDesc(block);
-        @block = null;
+    // for normal/ghost blocks, ensure you have no references to the block in questiton!
+    CGameCtnBlock@ RefreshSingleBlockAfterModified(CGameCtnEditorFree@ editor, BlockDesc@ desc) {
+        // auto desc = BlockDesc(block);
+        // @block = null;
         Editor::RefreshBlocksAndItems(editor);
-        @block = Editor::FindReplacementBlockAfterUpdate(editor, desc);
-        return block;
+        return Editor::FindReplacementBlockAfterUpdate(editor, desc);
+        // return block;
     }
 
     CGameCtnBlock@ FindReplacementBlockAfterUpdate(CGameCtnEditorFree@ editor, BlockDesc@ desc) {

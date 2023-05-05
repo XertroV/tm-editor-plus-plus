@@ -4,6 +4,7 @@ author   = "XertroV"
 category = "Map Editor"
 version  = "0.5.0"
 siteid   = 377
+blocks   = ["item-placement-toolbox", "item-placement-toolbox-dev"]
 
 [script]
 #__DEFINES__

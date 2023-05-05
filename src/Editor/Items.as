@@ -172,6 +172,14 @@ namespace Editor {
         }
         return item;
     }
+
+
+    // // test; Stadium\\Blah
+    // void LoadItemInInventoryFromPath(CGameCtnEditorFree@ editor, const string &in path) {
+    //     auto pmt = editor.PluginMapType;
+    //     auto mb = pmt.GetMacroblockModelFromFilePath(path);
+    //     trace('mb is null: ' + tostring(mb is null));
+    // }
 }
 
 namespace EditorPriv {

@@ -102,11 +102,19 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
         vec3 prePos = Editor::GetBlockLocation(block);
         vec3 preRot = Editor::GetBlockRotation(block);
+        bool safeToRefresh = true;
 
         if (Editor::IsBlockFree(block)) {
             Editor::SetBlockLocation(block, UI::InputFloat3("Pos.##pos" + idNonce, Editor::GetBlockLocation(block)));
             Editor::SetBlockRotation(block, UX::InputAngles3("Rot (Deg)##rot" + idNonce, Editor::GetBlockRotation(block)));
         } else {
+            if (!block.IsGhostBlock()) {
+                // UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free, non-ghost blocks *might* cause a crash if *other* plugins keep a reference to this block around. Other plugin devs should consult the Editor++ documentation.");
+                UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free, non-ghost blocks *might* cause a crash. You *must* save and load the map after changing these. \\$f80No live updates!");
+                UI::TextWrapped("Blocks on pillars seem to cause crashes always.");
+                // safeToRefresh = false;
+            }
+
             block.CoordX = UI::InputInt("CoordX##" + idNonce, block.CoordX);
             block.CoordY = UI::InputInt("CoordY##" + idNonce, block.CoordY);
             block.CoordZ = UI::InputInt("CoordZ##" + idNonce, block.CoordZ);
@@ -118,9 +126,6 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
                 }
                 UI::EndCombo();
             }
-            if (!block.IsGhostBlock()) {
-                UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free, non-ghost blocks *might* cause a crash if *other* plugins keep a reference to this block around. Other plugin devs should consult the Editor++ documentation.");
-            }
         }
         auto preCol = block.MapElemColor;
         block.MapElemColor = DrawEnumColorChooser(block.MapElemColor);
@@ -129,13 +134,17 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             || !Math::Vec3Eq(prePos, Editor::GetBlockLocation(block))
             || !Math::Vec3Eq(preRot, Editor::GetBlockRotation(block));
 
-        if (m_BlockChanged) {
+        if (m_BlockChanged && safeToRefresh) {
             trace('Updating picked/pinned block');
             // ensure we dereference the block by nullifying FocusedBlock first -- can cause a crash when changing normal block positions (seems okay otherwise), apparently b/c the block memory is cleared when it otherwise wouldn't be
+            FocusedBlock.NullifyNoRelease();
             @FocusedBlock = null;
             // // add a reference for testing -- will leak memory but not much
             // block.MwAddRef();
-            @block = Editor::RefreshSingleBlockAfterModified(editor, block);
+            trace('cleared focus block, refreshing now');
+            auto desc = BlockDesc(block);
+            @block = null;
+            @block = Editor::RefreshSingleBlockAfterModified(editor, desc);
             trace('Return block null? ' + tostring(block is null));
             if (block is null) {
                 @FocusedBlock = null;

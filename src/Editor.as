@@ -18,6 +18,7 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
 
 namespace Editor {
     void RefreshBlocksAndItems(CGameCtnEditorFree@ editor, bool autosave = true) {
+        UpdateNewlyAddedItems(editor);
         auto pmt = editor.PluginMapType;
         if (autosave) {
             pmt.AutoSave();
@@ -70,7 +71,10 @@ namespace Editor {
         }
     }
 
+    // ! does not work
     void RefreshItemGbxFiles() {
+        return;
+
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
         auto map = editor.Challenge;
@@ -88,6 +92,22 @@ namespace Editor {
         }
         auto itemsFolder = Fids::GetUserFolder("Items");
         Fids::UpdateTree(itemsFolder);
+
+        auto path = "zzz_ImportedItems\\Simple Transitions & Magnets Bobsleigh Stuff [1.1]\\Items\\SimpleTransitions&MagnetsBobsleighStuff\\Magnets\\RoadTechToIceDownMagnet.Item.Gbx";
+        auto itemFid = Fids::GetUser("Items\\" + path);
+        auto item = cast<CGameItemModel>(itemFid.Nod);
+        if (item is null)
+            @item = cast<CGameItemModel>(Fids::Preload(itemFid));
+        print(item.IdName);
+        item.MwAddRef();
+        item.MwAddRef();
+
+        if (lastPickedItem !is null) {
+            auto replaceOn = lastPickedItem.AsItem();
+            auto offs = GetOffset("CGameCtnAnchoredObject", "ItemModel");
+            Dev::SetOffset(replaceOn, offs, item);
+            // @replaceOn. = item;
+        }
 
         trace('refreshed');
     }
