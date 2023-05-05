@@ -1,6 +1,6 @@
 class ItemSelectionTab : Tab {
     ItemSelectionTab(TabGroup@ parent) {
-        super(parent, "Selected Item", Icons::FolderOpenO + Icons::Tree);
+        super(parent, "Current Item", Icons::FolderOpenO + Icons::Tree);
         canPopOut = false;
         // child tabs
         ItemPlacementTab(Children);

@@ -1,6 +1,6 @@
 class BlockSelectionTab : Tab {
     BlockSelectionTab(TabGroup@ parent) {
-        super(parent, "Selected Block", Icons::FolderOpenO + Icons::Cube);
+        super(parent, "Current Block", Icons::FolderOpenO + Icons::Cube);
         canPopOut = false;
         // child tabs
         SetGhostVariantTab(Children);

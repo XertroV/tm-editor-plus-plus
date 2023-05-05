@@ -48,10 +48,23 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         CopiableLabeledValue("Pos", item.AbsolutePositionInMap.ToString());
         CopiableLabeledValue("P,Y,R (Rad)", Editor::GetItemRotation(item).ToString());
         CopiableLabeledValue("Coord", item.BlockUnitCoord.ToString());
-        if (int(item.BlockUnitCoord.x) < 0) {
-            if (UI::Button("Fix block unit coord (todo: dissociate)")) {
+        auto assocBlock = Editor::GetItemsBlockAssociation(item);
+        if (int(item.BlockUnitCoord.x) < 0 && assocBlock is null) {
+            if (UI::Button("Fix block unit coord")) {
                 item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
-                // todo: dissociate item too
+            }
+        }
+        if (assocBlock is null) {
+            UI::TextDisabled("No associated block.");
+        } else {
+            if (UI::CollapsingHeader("Associated Block")) {
+                UI::Indent();
+                CopiableLabeledValue("Name", assocBlock.DescId.GetName());
+                CopiableLabeledValue("Coord", assocBlock.Coord.ToString());
+                if (UI::Button("Remove Association")) {
+                    Editor::DissociateItem(item);
+                }
+                UI::Unindent();
             }
         }
         UI::Separator();
@@ -174,14 +187,23 @@ class FocusedItemTab : Tab, NudgeItemBlock {
     }
 
     void DrawEditVariants(CGameCtnAnchoredObject@ item) {
-        auto commonItemEntModel = cast<CGameCommonItemEntityModel>(item.ItemModel.EntityModel);
+        // auto commonItemEntModel = cast<CGameCommonItemEntityModel>(item.ItemModel.EntityModel);
         auto variantList = cast<NPlugItem_SVariantList>(item.ItemModel.EntityModel);
         if (variantList !is null) {
             auto nbVars = variantList.Variants.Length;
-            LabeledValue("Nb Variants", nbVars);
             item.IVariant = Math::Clamp(UI::InputInt("Variant", item.IVariant), 0, nbVars - 1);
-            for (uint i = 0; i < variantList.Variants.Length; i++) {
-                DrawVariantInfo(i, variantList.Variants[i]);
+
+            auto currVar = variantList.Variants[item.IVariant];
+            string fileName = currVar.EntityModelFidForReload !is null ? string(currVar.EntityModelFidForReload.FileName) : "??";
+
+            LabeledValue("Nb Variants", nbVars);
+            UI::SameLine();
+            LabeledValue("Current", fileName);
+
+            if (UI::CollapsingHeader("Variant Details")) {
+                for (uint i = 0; i < variantList.Variants.Length; i++) {
+                    DrawVariantInfo(i, variantList.Variants[i]);
+                }
             }
         }
     }

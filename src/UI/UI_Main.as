@@ -131,6 +131,7 @@ TabGroup@ CreateRootTabGroup() {
     Tab(root, "Set B/I Properties", Icons::PencilSquareO);
     Tab(root, "Editor Settings", Icons::Cogs);
     Tab(root, "Medals & Validation (Plugin)", "\\$fb4"+Icons::Circle+"\\$z");
+    Tab(root, "Ranomizer", "\\$bff"+Icons::Random+"\\$z");
 
     return root;
 }

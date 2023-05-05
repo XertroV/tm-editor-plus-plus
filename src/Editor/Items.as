@@ -1,4 +1,6 @@
 namespace Editor {
+    uint16 LinkedBlockEntryOffset = GetOffset("CGameCtnAnchoredObject", "Scale") + 0x10;
+
     vec3 GetItemLocation(CGameCtnAnchoredObject@ item) {
         return item.AbsolutePositionInMap;
     }
@@ -35,6 +37,32 @@ namespace Editor {
         return mat4::Translate(item.AbsolutePositionInMap) * EulerToMat(GetItemRotation(item));
     }
 
+    /*
+        Item Association:
+        - At .Scale+0x10 there's a pointer to a short (0x20b) structure that looks to be part of a linked list
+        - at that pointer +0x0 there's a pointer to the associated block.
+    */
+
+    // Gets the block that this item is associated with / placed on.
+    CGameCtnBlock@ GetItemsBlockAssociation(CGameCtnAnchoredObject@ item) {
+        auto linkedListEntry = Dev::GetOffsetNod(item, LinkedBlockEntryOffset);
+        if (linkedListEntry is null) return null;
+        return cast<CGameCtnBlock>(Dev::GetOffsetNod(linkedListEntry, 0x0));
+    }
+
+    bool DissociateItem(CGameCtnAnchoredObject@ item, bool setBlockUintCoord = true, bool setCoordFromBlockElseItemPos = true) {
+        auto linkedListEntry = Dev::GetOffsetNod(item, LinkedBlockEntryOffset);
+        if (linkedListEntry is null) return false;
+        Dev::SetOffset(item, LinkedBlockEntryOffset, uint64(0));
+        auto block = cast<CGameCtnBlock>(Dev::GetOffsetNod(linkedListEntry, 0x0));
+        if (block !is null && setBlockUintCoord) {
+            item.BlockUnitCoord = setCoordFromBlockElseItemPos
+                ? block.Coord
+                : PosToCoord(item.AbsolutePositionInMap);
+        }
+        item.IsFlying = true;
+        return true;
+    }
 
     uint GetItemNbVariants(CGameItemModel@ itemModel) {
         auto variantList = cast<NPlugItem_SVariantList>(itemModel.EntityModel);
