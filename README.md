@@ -22,6 +22,7 @@ todo:
 - refind block/item based on coords/props
 - save state in some way to persist between editor sessions
 - when creating items, set the block coord
+- find/replace blocks/items
 - scroll on vec3 inputs to change value
 - (todo: fill list out more)
 

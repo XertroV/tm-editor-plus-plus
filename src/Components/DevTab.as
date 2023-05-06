@@ -48,7 +48,7 @@ class DevItemsTab : Tab {
             while (clip.Step()) {
                 for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                     UI::PushID(i);
-                    DrawDevItemInfo(map.AnchoredObjects[i]);
+                    DrawDevItemInfo(i, map.AnchoredObjects[i]);
                     UI::PopID();
                 }
             }
@@ -58,18 +58,24 @@ class DevItemsTab : Tab {
     }
 
     void SetupMainTableColumns() {
-        UI::TableSetupColumn("Nod ID");
-        UI::TableSetupColumn("Save ID", UI::TableColumnFlags::WidthFixed, 90.);
-        UI::TableSetupColumn("Block ID");
+        float bigNumberColWidth = 90;
+        float smlNumberColWidth = 65;
+        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, 50.);
+        UI::TableSetupColumn("Nod ID", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
+        UI::TableSetupColumn("Save ID", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
+        UI::TableSetupColumn("Block ID", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
+        UI::TableSetupColumn("Ref Count", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
-        UI::TableSetupColumn("Ref Count");
-        UI::TableSetupColumn("Explore");
+        UI::TableSetupColumn("Explore", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
     }
 
-    private int nbCols = 6;
-    void DrawDevItemInfo(CGameCtnAnchoredObject@ item) {
+    private int nbCols = 7;
+    void DrawDevItemInfo(int i, CGameCtnAnchoredObject@ item) {
         auto blockId = Editor::GetItemUniqueBlockID(item);
         UI::TableNextRow();
+
+        UI::TableNextColumn();
+        UI::Text(tostring(i));
 
         UI::TableNextColumn();
         UI::Text(tostring(Editor::GetItemUniqueNodID(item)));
@@ -81,10 +87,10 @@ class DevItemsTab : Tab {
         UI::Text(tostring(blockId));
 
         UI::TableNextColumn();
-        UI::Text(item.ItemModel.IdName);
+        UI::Text(tostring(Reflection::GetRefCount(item)));
 
         UI::TableNextColumn();
-        UI::Text(tostring(Reflection::GetRefCount(item)));
+        UI::Text(item.ItemModel.IdName);
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Cube + "##" + blockId)) {
@@ -139,7 +145,7 @@ class DevBlockTab : Tab {
 
         uint nbBlocksToDraw = GetNbBlocks(map) - nbBlocksToSkip;
 
-        if (UI::BeginTable("dev blocks list", nbCols, UI::TableFlags::SizingStretchProp | UI::TableFlags::ScrollY)) {
+        if (UI::BeginTable("dev blocks list|bb:"+tostring(useBakedBlocks), nbCols, UI::TableFlags::ScrollY)) {
             SetupMainTableColumns();
             UI::TableHeadersRow();
 
@@ -150,7 +156,7 @@ class DevBlockTab : Tab {
             while (clip.Step()) {
                 for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                     UI::PushID(i);
-                    DrawDevBlockInfo(GetBlock(map, nbBlocksToSkip + i));
+                    DrawDevBlockInfo(nbBlocksToSkip + i, GetBlock(map, nbBlocksToSkip + i));
                     UI::PopID();
                 }
             }
@@ -160,20 +166,27 @@ class DevBlockTab : Tab {
     }
 
     void SetupMainTableColumns() {
-        UI::TableSetupColumn(".Blocks Ix");
-        UI::TableSetupColumn("Save ID", UI::TableColumnFlags::WidthFixed, 90.);
-        UI::TableSetupColumn("Block ID");
-        UI::TableSetupColumn("Block MwId");
-        UI::TableSetupColumn("Placed Ix", UI::TableColumnFlags::WidthFixed, 90.);
+        float numberColWidth = 90;
+        float smlNumberColWidth = 70;
+        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, 50.);
+        UI::TableSetupColumn(".Blocks Ix", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        UI::TableSetupColumn("Save ID", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        UI::TableSetupColumn("Block ID", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("Block MwId", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("Placed Ix", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        UI::TableSetupColumn("Ref Count", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
-        UI::TableSetupColumn("Ref Count");
-        UI::TableSetupColumn("Explore");
+        UI::TableSetupColumn("Explore", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+
     }
 
-    private int nbCols = 8;
-    void DrawDevBlockInfo(CGameCtnBlock@ block) {
+    private int nbCols = 9;
+    void DrawDevBlockInfo(int i, CGameCtnBlock@ block) {
         auto blockId = Editor::GetBlockUniqueID(block);
         UI::TableNextRow();
+
+        UI::TableNextColumn();
+        UI::Text(tostring(i));
 
         UI::TableNextColumn();
         UI::Text(tostring(Editor::GetBlockMapBlocksIndex(block)));
@@ -191,10 +204,10 @@ class DevBlockTab : Tab {
         UI::Text(tostring(Editor::GetBlockPlacedCountIndex(block)));
 
         UI::TableNextColumn();
-        UI::Text(block.DescId.GetName());
+        UI::Text(tostring(Reflection::GetRefCount(block)));
 
         UI::TableNextColumn();
-        UI::Text(tostring(Reflection::GetRefCount(block)));
+        UI::Text(block.DescId.GetName());
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Cube + "##" + blockId)) {
