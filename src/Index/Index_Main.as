@@ -5,6 +5,11 @@ class Index {
     IndexEntry@[] waypoints;
     // IdName => IndexEntry@[]
     dictionary typeIdToEntries;
+    bool isStale = false;
+
+    void MarkStale() {
+        isStale = true;
+    }
 
     IndexEntry@[]@ GetEntriesByType(const string &in IdName) {
         if (!typeIdToEntries.Exists(IdName)) {
@@ -14,6 +19,7 @@ class Index {
     }
 
     void AddIndexEntry(IndexEntry@ entry) {
+        entry.SetIndex(this);
         auto blockEntry = cast<BlockIndexEntry>(entry);
         auto itemEntry = cast<ItemIndexEntry>(entry);
         entries.InsertLast(entry);
@@ -32,15 +38,19 @@ class Index {
     }
 }
 
-class IndexEntry {
+class IndexEntry : ReferencedNod {
     string IdName;
-    ReferencedNod@ nod = null;
     bool IsWaypoint;
+    Index@ index;
 
     IndexEntry(CMwNod@ _nod, const string &in IdName, bool IsWaypoint) {
-        @nod = ReferencedNod(_nod);
+        super(_nod);
         this.IdName = IdName;
         this.IsWaypoint = IsWaypoint;
+    }
+
+    void SetIndex(Index@ index) {
+        @this.index = index;
     }
 
     void ClearNod() {
@@ -49,8 +59,7 @@ class IndexEntry {
 
     // used in certain cases where it's not safe to access the memory
     void NullifyNod() {
-        nod.NullifyNoRelease();
-        @nod = null;
+        NullifyNoRelease();
     }
 
     // before we update/refresh in-map blocks/items, we want to cache their pos/rot/etc so we can find them again.

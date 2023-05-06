@@ -114,6 +114,31 @@ namespace Editor {
         trace('did not find block (checked: ' + map.Blocks.Length + ")");
         return null;
     }
+
+    // the index of the block in the main blocks array
+    uint GetBlockMapBlocksIndex(CGameCtnBlock@ block) {
+        return Dev::GetOffsetUint32(block, 0x8c);
+    }
+
+    // set on save, similar to items
+    uint GetBlockUniqueSaveID(CGameCtnBlock@ block) {
+        return Dev::GetOffsetUint32(block, 0x90);
+    }
+
+    // Block ID -- incremented by items and blocks
+    uint GetBlockUniqueID(CGameCtnBlock@ block) {
+        return Dev::GetOffsetUint32(block, 0x98);
+    }
+
+    // unknown ID, increments with block ID
+    uint GetBlockMwIDRaw(CGameCtnBlock@ block) {
+        return Dev::GetOffsetUint32(block, 0xA4);
+    }
+
+    // Count of *placed* blocks (excludes grass), starts at 0 and increments
+    uint GetBlockPlacedCountIndex(CGameCtnBlock@ block) {
+        return Dev::GetOffsetUint32(block, 0xAC);
+    }
 }
 
 

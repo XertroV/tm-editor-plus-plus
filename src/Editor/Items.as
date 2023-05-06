@@ -105,22 +105,33 @@ namespace Editor {
         trace('UpdateNewlyAddedItems removed: ' + removed);
     }
 
+    const uint ItemItemModelOffset = GetOffset("CGameCtnAnchoredObject", "ItemModel");
+    const uint ItemUniqueNodIDOffset = ItemItemModelOffset + 0xC;
+    const uint ItemUniqueUnknownIDOffset = ItemItemModelOffset + 0x10;
+    const uint ItemUniqueBlockIDOffset = ItemItemModelOffset + 0x14;
+    //
+    uint GetItemUniqueNodID(CGameCtnAnchoredObject@ item) {
+        return Dev::GetOffsetUint32(item, ItemUniqueNodIDOffset);
+    }
+    // unknown ID, set on save
+    uint GetItemUniqueSaveID(CGameCtnAnchoredObject@ item) {
+        return Dev::GetOffsetUint32(item, ItemUniqueUnknownIDOffset);
+    }
+    uint GetItemUniqueBlockID(CGameCtnAnchoredObject@ item) {
+        return Dev::GetOffsetUint32(item, ItemUniqueBlockIDOffset);
+    }
+
     // when there are duplicate blockIds this is may not save and occasionally results in crash-on-saves (but not autosaves)
     CGameCtnAnchoredObject@ DuplicateAndAddItem(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem, bool updateItemsAfter = false) {
         auto item = CGameCtnAnchoredObject();
-        auto itemTy = Reflection::GetType("CGameCtnAnchoredObject");
-        auto itemModelMember = itemTy.GetMember("ItemModel");
-        // trace('ItemModel offset: ' + itemModelMember.Offset);
-        auto nodIdOffset = itemModelMember.Offset + 0xC;
-        auto blockIdOffset = itemModelMember.Offset + 0x14;
 
         // new item nod id
-        auto ni_ID = Dev::GetOffsetUint32(item, nodIdOffset);
+        auto ni_ID = Dev::GetOffsetUint32(item, ItemUniqueNodIDOffset);
 
         // copy most of the bytes from the prior item -- excludes last 0x10 bytes: [nod id, some other id, block id]
-        Dev_SetOffsetBytes(item, 0x0, Dev_GetOffsetBytes(origItem, 0x0, itemModelMember.Offset + 0x8));
+        Dev_SetOffsetBytes(item, 0x0, Dev_GetOffsetBytes(origItem, 0x0, ItemItemModelOffset + 0x8));
         // this is required to be set for picking to work correctly -- typically they're in the range of like 7k, but setting this to the new items ID doesn't seem to be a problem -- this is probs the block id, b/c we don't get any duplicate complaints when setting this value.
-        Dev::SetOffset(item, blockIdOffset, ni_ID);
+        Dev::SetOffset(item, ItemUniqueBlockIDOffset, ni_ID);
 
         // mark flying and add a reference, then add to list of items
         item.IsFlying = true;

@@ -25,6 +25,10 @@ void RenderEarly() {
         )
     );
     EnteringEditor = EnteringEditor && IsInEditor;
+
+    if (EnteringEditor) {
+        EditorPriv::ResetRefreshUnsafe();
+    }
 }
 
 

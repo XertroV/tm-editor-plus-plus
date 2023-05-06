@@ -41,7 +41,6 @@ void UI_Main_Render() {
 
 
 namespace MenuBar {
-
     string m_MenuSearch;
 
     void Draw() {
@@ -61,9 +60,9 @@ namespace MenuBar {
                 if (UI::MenuItem("  To All")) {}
                 if (UI::MenuItem("  To Items")) {}
                 if (UI::MenuItem("  To Blocks")) {}
-                if (UI::MenuItem("Refresh Item.gbx Files")) {
-                    startnew(Editor::RefreshItemGbxFiles);
-                }
+                // if (UI::MenuItem("Refresh Item.gbx Files")) {
+                //     // startnew(Editor::RefreshItemGbxFiles);
+                // }
                 UI::EndMenu();
             }
 
@@ -73,8 +72,7 @@ namespace MenuBar {
                 }
 
                 if (UI::MenuItem("Plugin Support Thread")) {
-                    NotifyWarning("todo: link to plugin thread");
-                    // OpenBrowserURL("");
+                    OpenBrowserURL("https://discord.com/channels/276076890714800129/1103713844288819311");
                 }
 
                 UI::EndMenu();
@@ -133,6 +131,10 @@ TabGroup@ CreateRootTabGroup() {
     Tab(root, "Medals & Validation (Plugin)", "\\$fb4"+Icons::Circle+"\\$z");
     Tab(root, "Ranomizer", "\\$bff"+Icons::Random+"\\$z");
     Tab(root, "Validation Runs", "");
+
+#if SIG_DEVELOPER
+    DevMainTab(root);
+#endif
 
     return root;
 }

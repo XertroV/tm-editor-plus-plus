@@ -14,20 +14,37 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     // Jitter_CheckNewItems();
 }
 
+namespace EditorPriv {
+    bool _RefreshUnsafe = false;
 
+    // Should be called only when editor is fully null
+    void ResetRefreshUnsafe() {
+        _RefreshUnsafe = false;
+    }
+}
 
 namespace Editor {
+    // disables any refresh features until the map is reloaded
+    void MarkRefreshUnsafe() {
+        if (IsRefreshSafe())
+            warn("Marking refresh unsafe");
+        EditorPriv::_RefreshUnsafe = true;
+    }
+
+    bool IsRefreshSafe() {
+        return !EditorPriv::_RefreshUnsafe;
+    }
+
     void RefreshBlocksAndItems(CGameCtnEditorFree@ editor, bool autosave = true) {
-        UpdateNewlyAddedItems(editor);
+        if (!IsRefreshSafe()) {
+            warn("Refusing to refresh blocks/items as it has been marked unsafe.");
+            return;
+        }
         auto pmt = editor.PluginMapType;
         if (autosave) {
             pmt.AutoSave();
         }
         pmt.Undo();
-        if (!autosave) {
-            // undo last autosave
-            // pmt.AutoSave();
-        }
         pmt.Redo();
     }
 
@@ -72,43 +89,43 @@ namespace Editor {
     }
 
     // ! does not work
-    void RefreshItemGbxFiles() {
-        return;
+    // void RefreshItemGbxFiles() {
+    //     return;
 
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return;
-        auto map = editor.Challenge;
-        auto collection = map.Collection;
-        Fids::UpdateTree(collection.FolderItem);
-        editor.PluginMapType.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Image, 7);
-        editor.PluginMapType.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Skins, 7);
-        editor.PluginMapType.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::ItemCollection, 7);
-        editor.MainPLugin.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::ItemCollection, 7);
-        editor.MainPLugin.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Skins, 7);
-        editor.MainPLugin.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Image, 7);
-        auto chapter = GetApp().GlobalCatalog.Chapters[3];
-        if (chapter.CollectionFid !is null) {
-            Fids::UpdateTree(chapter.CollectionFid.ParentFolder);
-        }
-        auto itemsFolder = Fids::GetUserFolder("Items");
-        Fids::UpdateTree(itemsFolder);
+    //     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    //     if (editor is null) return;
+    //     auto map = editor.Challenge;
+    //     auto collection = map.Collection;
+    //     Fids::UpdateTree(collection.FolderItem);
+    //     editor.PluginMapType.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Image, 7);
+    //     editor.PluginMapType.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Skins, 7);
+    //     editor.PluginMapType.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::ItemCollection, 7);
+    //     editor.MainPLugin.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::ItemCollection, 7);
+    //     editor.MainPLugin.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Skins, 7);
+    //     editor.MainPLugin.DataFileMgr.Media_RefreshFromDisk(CGameDataFileManagerScript::EMediaType::Image, 7);
+    //     auto chapter = GetApp().GlobalCatalog.Chapters[3];
+    //     if (chapter.CollectionFid !is null) {
+    //         Fids::UpdateTree(chapter.CollectionFid.ParentFolder);
+    //     }
+    //     auto itemsFolder = Fids::GetUserFolder("Items");
+    //     Fids::UpdateTree(itemsFolder);
 
-        auto path = "zzz_ImportedItems\\Simple Transitions & Magnets Bobsleigh Stuff [1.1]\\Items\\SimpleTransitions&MagnetsBobsleighStuff\\Magnets\\RoadTechToIceDownMagnet.Item.Gbx";
-        auto itemFid = Fids::GetUser("Items\\" + path);
-        auto item = cast<CGameItemModel>(itemFid.Nod);
-        if (item is null)
-            @item = cast<CGameItemModel>(Fids::Preload(itemFid));
-        print(item.IdName);
-        item.MwAddRef();
-        item.MwAddRef();
+    //     auto path = "zzz_ImportedItems\\Simple Transitions & Magnets Bobsleigh Stuff [1.1]\\Items\\SimpleTransitions&MagnetsBobsleighStuff\\Magnets\\RoadTechToIceDownMagnet.Item.Gbx";
+    //     auto itemFid = Fids::GetUser("Items\\" + path);
+    //     auto item = cast<CGameItemModel>(itemFid.Nod);
+    //     if (item is null)
+    //         @item = cast<CGameItemModel>(Fids::Preload(itemFid));
+    //     print(item.IdName);
+    //     item.MwAddRef();
+    //     item.MwAddRef();
 
-        if (lastPickedItem !is null) {
-            auto replaceOn = lastPickedItem.AsItem();
-            auto offs = GetOffset("CGameCtnAnchoredObject", "ItemModel");
-            Dev::SetOffset(replaceOn, offs, item);
-            // @replaceOn. = item;
-        }
+    //     if (lastPickedItem !is null) {
+    //         auto replaceOn = lastPickedItem.AsItem();
+    //         auto offs = GetOffset("CGameCtnAnchoredObject", "ItemModel");
+    //         Dev::SetOffset(replaceOn, offs, item);
+    //         // @replaceOn. = item;
+    //     }
 
-        trace('refreshed');
-    }
+    //     trace('refreshed');
+    // }
 }

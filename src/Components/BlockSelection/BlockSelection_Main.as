@@ -4,7 +4,7 @@ class BlockSelectionTab : Tab {
         canPopOut = false;
         // child tabs
         SetGhostVariantTab(Children);
-        BlockPlacementTagTab(Children);
+        // BlockPlacementTagTab(Children);
     }
 
     void DrawInner() override {
@@ -29,7 +29,10 @@ class BlockSelectionTab : Tab {
 
 
 
-
+/**
+ * This might, after angelscript supports modifying MwSArrays,
+ * let us put sprint trees on snow or something, as though they were snow trees.
+ */
 class BlockPlacementTagTab : Tab {
     // try changing material modifier or placement tag or something
     BlockPlacementTagTab(TabGroup@ parent) {

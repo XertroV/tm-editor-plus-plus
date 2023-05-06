@@ -31,4 +31,6 @@ research:
 
 else:
 - export all functions in namespace
--
+
+test:
+- when refresh marked as unsafe, does adding items via the items update method work?

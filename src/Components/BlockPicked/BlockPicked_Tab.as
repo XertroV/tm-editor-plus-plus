@@ -112,7 +112,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
                 // UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free, non-ghost blocks *might* cause a crash if *other* plugins keep a reference to this block around. Other plugin devs should consult the Editor++ documentation.");
                 UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free, non-ghost blocks *might* cause a crash. You *must* save and load the map after changing these. \\$f80No live updates!");
                 UI::TextWrapped("Blocks on pillars seem to cause crashes always.");
-                // safeToRefresh = false;
+                safeToRefresh = false;
             }
 
             block.CoordX = UI::InputInt("CoordX##" + idNonce, block.CoordX);
@@ -144,13 +144,16 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             trace('cleared focus block, refreshing now');
             auto desc = BlockDesc(block);
             @block = null;
-            @block = Editor::RefreshSingleBlockAfterModified(editor, desc);
+            // @block = Editor::RefreshSingleBlockAfterModified(editor, desc);
+            Editor::RefreshBlocksAndItems(editor);
             trace('Return block null? ' + tostring(block is null));
             if (block is null) {
                 @FocusedBlock = null;
             } else {
                 @FocusedBlock = ReferencedNod(block);
             }
+        } else if (m_BlockChanged && !safeToRefresh) {
+            Editor::MarkRefreshUnsafe();
         }
 
         if (block is null) return;
