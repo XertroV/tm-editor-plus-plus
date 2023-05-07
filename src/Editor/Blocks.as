@@ -229,10 +229,10 @@ class BlockDesc {
         return true
             && Math::Nat3Eq(Coord, block.Coord)
             && Math::Vec3Eq(Pos, Editor::GetBlockLocation(block))
-            // && IsGhost == block.IsGhostBlock()
-            // && IsGround == block.IsGround
-            // && Dir == block.Dir
-            // && Math::Vec3Eq(Rot, Editor::GetBlockRotation(block))
+            && IsGhost == block.IsGhostBlock()
+            && IsGround == block.IsGround
+            && Dir == block.Dir
+            && Math::Vec3Eq(Rot, Editor::GetBlockRotation(block))
             ;
     }
 

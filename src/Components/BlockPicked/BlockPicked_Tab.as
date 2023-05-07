@@ -69,6 +69,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         BlockDesc@ preDesc = BlockDesc(block);
         // Editor::UpdateBakedBlocksMatching(editor, preDesc, preDesc);
 
+        m_BlockChanged = false;
+
         CopiableLabeledValue("Coord", block.Coord.ToString());
         CopiableLabeledValue("Pos", preDesc.Pos.ToString());
         CopiableLabeledValue("Rot", Math::ToDeg(preDesc.Rot).ToString());
@@ -100,7 +102,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
         UI::Text("Set Block Props:");
 
-        bool safeToRefresh = false;
+        bool safeToRefresh = true;
 
         if (Editor::IsBlockFree(block)) {
             Editor::SetBlockLocation(block, UI::InputFloat3("Pos.##pos" + idNonce, Editor::GetBlockLocation(block)));
@@ -111,7 +113,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
                 // UI::TextWrapped("Blocks on pillars seem to cause crashes always.");
             // }
             UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free blocks *might* cause a crash. You *must* save and load the map after changing these. \\$f80No live updates!");
-            safeToRefresh = false;
+            // safeToRefresh = false;
 
             block.CoordX = UI::InputInt("CoordX##" + idNonce, block.CoordX);
             block.CoordY = UI::InputInt("CoordY##" + idNonce, block.CoordY);
@@ -129,21 +131,22 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         block.MapElemColor = DrawEnumColorChooser(block.MapElemColor);
         block.MapElemLmQuality = DrawEnumLmQualityChooser(block.MapElemLmQuality);
 
+        UI::Separator();
+        if (Editor::IsBlockFree(block)) {
+            UI::Text("Nudge block:");
+            m_BlockChanged = DrawNudgeFor(block) || m_BlockChanged;
+        } else {
+            UI::Text("Cannot nudge non-free blocks.");
+        }
+
         auto @desc = BlockDesc(block);
 
-        m_BlockChanged = preDesc.Color != block.MapElemColor
+        m_BlockChanged = m_BlockChanged
+            || preDesc.Color != block.MapElemColor
             || !Math::Vec3Eq(preDesc.Pos, desc.Pos)
             || !Math::Vec3Eq(preDesc.Rot, desc.Rot)
             ;
 
-
-        UI::Separator();
-        if (Editor::IsBlockFree(block)) {
-            UI::Text("Nudge block:");
-            m_BlockChanged = m_BlockChanged || DrawNudgeFor(block);
-        } else {
-            UI::Text("Cannot nudge non-free blocks.");
-        }
 
         if (m_BlockChanged) trace('block changed');
 

@@ -67,6 +67,12 @@ class ViewAllBlocksTab : BlockItemListTab {
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             // ExploreNod("Block " + blockId + ".", block);
+            Notify("todo");
+        }
+        UI::SameLine();
+        if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
+            Notify("todo");
+
         }
     }
 }
@@ -116,6 +122,11 @@ class ViewAllItemsTab : BlockItemListTab {
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             // ExploreNod("Item " + blockId + ".", item);
+            Notify("todo");
+        }
+        UI::SameLine();
+        if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
+            Notify("todo");
         }
     }
 }

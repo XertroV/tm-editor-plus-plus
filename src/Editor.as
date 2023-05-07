@@ -40,14 +40,27 @@ namespace Editor {
             warn("Refusing to refresh blocks/items as it has been marked unsafe.");
             return;
         }
+        trace('refreshing blocks and items: 1');
         auto pmt = editor.PluginMapType;
+        pmt.SaveMap("Autosaves\\Autosave_Editor++.Map.Gbx");
         // autosave appears to set an undo point and updates baked blocks
         // it will trigger 'saving' the new block coords, too
+        trace('refreshing blocks and items: 2 autosave');
         pmt.AutoSave();
-        pmt.Undo();
-        pmt.Redo();
-        // doing this twice fixes baked blocks and placed ix, but we have an extra undo point. worth it.
+        trace('place test block');
+        auto tmpBlockI = pmt.GetBlockModelFromName("RoadTechStraight");
+        auto tmpC = int3(0, editor.Challenge.Size.y - 8, 0);
+        pmt.PlaceGhostBlock(tmpBlockI, tmpC, CGameEditorPluginMap::ECardinalDirections::North);
+        // trace('refreshing blocks and items: 2.5 autosave');
         // pmt.AutoSave();
+        trace('refreshing blocks and items: 3 undo');
+        pmt.Undo();
+        trace('refreshing blocks and items: 4 redo');
+        pmt.Redo();
+        trace('done');
+        pmt.RemoveGhostBlock(tmpBlockI, tmpC, CGameEditorPluginMap::ECardinalDirections::North);
+        // doing this twice fixes baked blocks and placed ix, but we have an extra undo point. worth it.
+        pmt.AutoSave();
     }
 
     enum ItemMode {

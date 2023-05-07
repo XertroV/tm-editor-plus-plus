@@ -119,10 +119,11 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
         if (DrawNudgeFor(item)) {
             changed = true;
+            skipForceRefresh = true;
         }
 
         if (changed) {
-            @FocusedItem = null;
+            trace('Updating modified item');
             @FocusedItem = ReferencedNod(Editor::RefreshSingleItemAfterModified(editor, item, !skipForceRefresh));
             @item = FocusedItem.AsItem();
         }
