@@ -112,8 +112,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
                 // UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free, non-ghost blocks *might* cause a crash if *other* plugins keep a reference to this block around. Other plugin devs should consult the Editor++ documentation.");
                 // UI::TextWrapped("Blocks on pillars seem to cause crashes always.");
             // }
-            UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free blocks *might* cause a crash. You *must* save and load the map after changing these. \\$f80No live updates!");
-            // safeToRefresh = false;
+            UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free blocks *might* cause a crash when refreshing. You *must* save and load the map after changing these. \\$f80No live updates!");
+            safeToRefresh = false;
 
             block.CoordX = UI::InputInt("CoordX##" + idNonce, block.CoordX);
             block.CoordY = UI::InputInt("CoordY##" + idNonce, block.CoordY);

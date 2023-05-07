@@ -21,7 +21,7 @@ class ViewAllBlocksTab : BlockItemListTab {
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
         float numberColWidth = 90;
         float smlNumberColWidth = 70;
-        float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
+        float exploreColWidth = numberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
         UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
         UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, numberColWidth);
@@ -69,6 +69,7 @@ class ViewAllBlocksTab : BlockItemListTab {
             // ExploreNod("Item " + blockId + ".", item);
             Notify("todo");
         }
+        UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             // ExploreNod("Block " + blockId + ".", block);
             Notify("todo");
@@ -90,7 +91,7 @@ class ViewAllItemsTab : BlockItemListTab {
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
         float bigNumberColWidth = 90;
         float smlNumberColWidth = 65;
-        float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
+        float exploreColWidth = bigNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
         UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
         UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
