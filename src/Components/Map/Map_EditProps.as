@@ -43,29 +43,13 @@ class MapEditPropsTab : Tab {
         UI::Indent();
         newSizeY = Math::Clamp(UI::InputInt("Size.Y", newSizeY), 8, 255);
         if (UI::Button("Update Map Height")) {
-            Editor_Map::SetNewMapHeight(map, newSizeY);
+            Editor::SetNewMapHeight(map, newSizeY);
         }
         AddSimpleTooltip("You may need to save and reload the map to avoid camera bugs.");
         UI::SameLine();
         UI::TextDisabled("Use gbxexplorer.net to change X/Z");
 
         UI::Unindent();
-
-        // UI::AlignTextToFramePadding();
-        // UI::Text("New Size:");
-        // UI::SameLine();
-        // if (UI::Button("Reset##new-map-size")) {
-        //     newSizeX = map.Size.x;
-        //     newSizeY = map.Size.y;
-        //     newSizeZ = map.Size.z;
-        // }
-        // newSizeX = UI::InputInt("Size.X", newSizeX);
-        // newSizeY = UI::InputInt("Size.Y", newSizeY);
-        // newSizeZ = UI::InputInt("Size.Z", newSizeZ);
-        // if (UI::Button("Update Map Size")) {
-        //     Editor_Map::SetSizeSaveReload(map, nat3(newSizeX, newSizeY, newSizeZ));
-        // }
-        // AddSimpleTooltip("This will save and reload the map!");
 
         UI::Separator();
     }

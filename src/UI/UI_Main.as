@@ -40,6 +40,21 @@ void UI_Main_Render() {
         UI::End();
     }
 
+    if (!Editor::IsRefreshSafe()) {
+        vec2 size = vec2(300, 120);
+        vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        pos.y = 60;
+        UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);
+        UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
+        if (UI::Begin("Map Unsafe! Save+Reload.", UI::WindowFlags::NoCollapse | UI::WindowFlags::NoResize)) {
+            UI::TextWrapped("\\$f80" + Icons::ExclamationTriangle + "\\$z Map currently unsafe! Please save and reload as soon as you can.");
+            if (UI::Button("Save and Reload Map Now")) {
+                startnew(Editor::SaveAndReloadMap);
+            }
+        }
+        UI::End();
+    }
+
     UI::PopStyleColor();
 }
 
@@ -60,7 +75,13 @@ namespace MenuBar {
             }
 
             if (UI::BeginMenu("Advanced")) {
-                if (UI::MenuItem("Safe to refresh Blocks & Items", "", Editor::IsRefreshSafe())) {
+                if (UI::MenuItem("Save and reload map")) {
+                    startnew(Editor::SaveAndReloadMap);
+                }
+
+                UI::Separator();
+
+                if (UI::MenuItem(Icons::ExclamationTriangle + " Safe to refresh Blocks & Items", "", Editor::IsRefreshSafe())) {
                     EditorPriv::_RefreshUnsafe = !EditorPriv::_RefreshUnsafe;
                 }
                 UI::BeginDisabled(!Editor::IsRefreshSafe());
@@ -69,10 +90,9 @@ namespace MenuBar {
                 }
                 UI::EndDisabled();
 
+                UI::Separator();
+
                 UI::BeginDisabled();
-                if (UI::MenuItem("Save and reload map")) {
-                    // Editor::RefreshBlocksAndItems(cast<CGameCtnEditorFree>(GetApp().Editor));
-                }
                 UI::TextDisabled("Clear References:");
                 if (UI::MenuItem("  To All")) {}
                 if (UI::MenuItem("  To Items")) {}
@@ -131,27 +151,32 @@ TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
     MapEditPropsTab(root);
     BI_MainTab(root);
-    Tab(root, "\\$888Pinned B&I", Icons::MapO + Icons::MapMarker);
+    TodoTab(root, "Pinned B&I", Icons::MapO + Icons::MapMarker, "lists of pinned blocks and items");
     CursorTab(root);
     PickedBlockTab(root);
     PickedItemTab(root);
-    Tab(root, "\\$888Inventory", Icons::FolderOpenO);
+    TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
     BlockSelectionTab(root);
     ItemSelectionTab(root);
 
     // - filtered view of blocks/items show just checkpoints
     // - set linked order
     //   -- for next, selected, picked
-    Tab(root, "\\$888Favorites", Icons::FolderOpenO + Icons::StarO);
+    TodoTab(root, "Favorites", Icons::FolderOpenO + Icons::StarO, "show favorited inventory items.");
 
     CheckpointsTab(root);
 
-    Tab(root, "\\$888Apply Transformation", "f(x)");
-    Tab(root, "\\$888Set B/I Properties", Icons::PencilSquareO);
-    Tab(root, "\\$888Editor Settings", Icons::Cogs);
-    Tab(root, "\\$888Medals & Validation (Plugin)", "\\$fb4"+Icons::Circle+"\\$z");
-    Tab(root, "\\$888Ranomizer", "\\$bff"+Icons::Random+"\\$z");
-    Tab(root, "\\$888Validation Runs", Icons::Car);
+    TodoTab(root, "Repeat Items", Icons::Magic + Icons::Repeat, "repeat items like IPT");
+    TodoTab(root, "Dissociate Items", Icons::Magic + Icons::ChainBroken, "dissociate items like IPT");
+    TodoTab(root, "Jitter", Icons::Magic + Icons::Arrows, "jitter items like IPT");
+
+    TodoTab(root, "Apply Transformation", "f(x)", "apply a transformation to a Source of blocks/items");
+
+    TodoTab(root, "Set B/I Properties", Icons::PencilSquareO, "mass-apply properties like color or LM quality.");
+    TodoTab(root, "Editor Settings", Icons::Cogs, "change hidden and regular editor settings");
+    TodoTab(root, "Medals & Validation (Plugin)", "\\$fb4"+Icons::Circle+"\\$z", "be a demo plugin and do the same thing as Medals Editor");
+    TodoTab(root, "Ranomizer", "\\$bff"+Icons::Random+"\\$z", "randomize the type of blocks/items for newly placed ones, or existing ones, according to some filter / conditions.");
+    TodoTab(root, "Validation Runs", Icons::Car, 'track validation runs so you dont lose validation times');
 
 #if SIG_DEVELOPER
     DevMainTab(root);

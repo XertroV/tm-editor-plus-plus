@@ -115,3 +115,19 @@ class Tab {
         UI::End();
     }
 }
+
+
+
+
+class TodoTab : Tab {
+    string description;
+
+    TodoTab(TabGroup@ parent, const string&in tabName, const string&in icon, const string &in desc = "??") {
+        super(parent, "\\$888" + tabName, icon);
+        description = desc;
+    }
+
+    void DrawInner() override {
+        UI::TextWrapped("Todo. This tab will " + description);
+    }
+}
