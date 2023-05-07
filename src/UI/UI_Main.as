@@ -60,23 +60,34 @@ namespace MenuBar {
             }
 
             if (UI::BeginMenu("Advanced")) {
+                if (UI::MenuItem("Safe to refresh Blocks & Items", "", Editor::IsRefreshSafe())) {
+                    EditorPriv::_RefreshUnsafe = !EditorPriv::_RefreshUnsafe;
+                }
+                UI::BeginDisabled(!Editor::IsRefreshSafe());
                 if (UI::MenuItem("Refresh placed Blocks & Items")) {
                     Editor::RefreshBlocksAndItems(cast<CGameCtnEditorFree>(GetApp().Editor));
+                }
+                UI::EndDisabled();
+
+                UI::BeginDisabled();
+                if (UI::MenuItem("Save and reload map")) {
+                    // Editor::RefreshBlocksAndItems(cast<CGameCtnEditorFree>(GetApp().Editor));
                 }
                 UI::TextDisabled("Clear References:");
                 if (UI::MenuItem("  To All")) {}
                 if (UI::MenuItem("  To Items")) {}
                 if (UI::MenuItem("  To Blocks")) {}
-                // if (UI::MenuItem("Refresh Item.gbx Files")) {
-                //     // startnew(Editor::RefreshItemGbxFiles);
-                // }
+                UI::EndDisabled();
+
                 UI::EndMenu();
             }
 
             if (UI::BeginMenu("Help")) {
+                UI::BeginDisabled();
                 if (UI::MenuItem("Video Tutorial")) {
                     OpenBrowserURL("https://youtube.com/watch?v=asdf");
                 }
+                UI::EndDisabled();
 
                 if (UI::MenuItem("Plugin Support Thread")) {
                     OpenBrowserURL("https://discord.com/channels/276076890714800129/1103713844288819311");

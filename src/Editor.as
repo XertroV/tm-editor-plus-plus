@@ -42,7 +42,7 @@ namespace Editor {
         }
         trace('refreshing blocks and items: 1');
         auto pmt = editor.PluginMapType;
-        pmt.SaveMap("Autosaves\\Autosave_Editor++.Map.Gbx");
+        // pmt.SaveMap("Autosaves\\Autosave_Editor++.Map.Gbx");
         // autosave appears to set an undo point and updates baked blocks
         // it will trigger 'saving' the new block coords, too
         trace('refreshing blocks and items: 2 autosave');

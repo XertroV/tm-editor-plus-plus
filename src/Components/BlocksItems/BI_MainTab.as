@@ -65,6 +65,10 @@ class ViewAllBlocksTab : BlockItemListTab {
 
 
         UI::TableNextColumn();
+        if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
+            // ExploreNod("Item " + blockId + ".", item);
+            Notify("todo");
+        }
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             // ExploreNod("Block " + blockId + ".", block);
             Notify("todo");
@@ -120,6 +124,11 @@ class ViewAllItemsTab : BlockItemListTab {
         UI::Text(tostring(item.MapElemLmQuality));
 
         UI::TableNextColumn();
+        if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
+            // ExploreNod("Item " + blockId + ".", item);
+            Notify("todo");
+        }
+        UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             // ExploreNod("Item " + blockId + ".", item);
             Notify("todo");
