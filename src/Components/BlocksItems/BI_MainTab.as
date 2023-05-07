@@ -11,75 +11,72 @@ class BI_MainTab : Tab {
     }
 }
 
-class ViewAllBlocksTab : Tab {
-    bool useBakedBlocks = false;
-
+class ViewAllBlocksTab : BlockItemListTab {
     ViewAllBlocksTab(TabGroup@ p, bool isBaked = false) {
-        super(p, isBaked ? "All Baked Blocks " : "All Blocks", Icons::Cubes);
-        useBakedBlocks = isBaked;
+        super(p, isBaked ? "All Baked Blocks " : "All Blocks", Icons::Cubes, isBaked ? BIListTabType::BakedBlocks : BIListTabType::Blocks);
+        nbCols = 9;
     }
 
-    int get_WindowFlags() override property {
-        return UI::WindowFlags::None;
+    void SetupMainTableColumns(bool offsetScrollbar = false) override {
+        float numberColWidth = 90;
+        float smlNumberColWidth = 70;
+        float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
+        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
+        UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
+        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        UI::TableSetupColumn("LM Quality", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("Tools", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
+    void DrawObjectInfo(CGameCtnChallenge@ map, int i) override {
+        auto block = GetBlock(map, i);
 
-    void DrawInner() override {
-        ;
+        auto blockId = Editor::GetBlockUniqueID(block);
+        UI::TableNextRow();
+
+        UI::TableNextColumn();
+        UI::Text(tostring(i));
+
+        UI::TableNextColumn();
+        UI::Text(block.DescId.GetName());
+
+        UI::TableNextColumn();
+        UI::Text(tostring(Editor::GetBlockMapBlocksIndex(block)));
+
+        UI::TableNextColumn();
+        UI::Text(tostring(Editor::GetBlockUniqueSaveID(block)));
+
+        UI::TableNextColumn();
+        UI::Text(tostring(blockId));
+
+        UI::TableNextColumn();
+        UI::Text(tostring(Editor::GetBlockMwIDRaw(block)));
+
+        UI::TableNextColumn();
+        UI::Text(tostring(Editor::GetBlockPlacedCountIndex(block)));
+
+        UI::TableNextColumn();
+        UI::Text(tostring(Reflection::GetRefCount(block)));
+
+
+        UI::TableNextColumn();
+        if (UX::SmallButton(Icons::Cube + "##" + blockId)) {
+            // ExploreNod("Block " + blockId + ".", block);
+        }
     }
 }
 
-class ViewAllItemsTab : Tab {
+class ViewAllItemsTab : BlockItemListTab {
     ViewAllItemsTab(TabGroup@ p) {
-        super(p, "All Items", Icons::Tree);
+        super(p, "All Items", Icons::Tree, BIListTabType::Items);
+        nbCols = 7;
     }
 
-    int get_WindowFlags() override property {
-        return UI::WindowFlags::None;
-    }
-
-
-    bool autoscroll = false;
-    void DrawInner() override {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto map = editor.Challenge;
-
-        UI::AlignTextToFramePadding();
-        UI::Text("Total: " + map.AnchoredObjects.Length + "   |");
-        UI::SameLine();
-
-        autoscroll = UI::Checkbox("Autoscroll", autoscroll);
-
-        DrawColumnHeadersOnlyTable();
-        if (UI::BeginTable("all items list", nbCols, UI::TableFlags::SizingStretchProp | UI::TableFlags::ScrollY)) {
-            SetupMainTableColumns();
-
-            if (autoscroll) {
-                UI::SetScrollY(UI::GetScrollMaxY());
-            }
-            UI::ListClipper clip(map.AnchoredObjects.Length);
-            while (clip.Step()) {
-                for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
-                    UI::PushID(i);
-                    DrawObjectInfo(i, map.AnchoredObjects[i]);
-                    UI::PopID();
-                }
-            }
-
-            UI::EndTable();
-        }
-    }
-
-    void DrawColumnHeadersOnlyTable() {
-        if (UI::BeginTable("all-items-headings", nbCols, UI::TableFlags::None)) {
-            SetupMainTableColumns(true);
-            UI::TableHeadersRow();
-            UI::EndTable();
-        }
-    }
-
-    private int nbCols = 7;
-    void SetupMainTableColumns(bool offsetScrollbar = false) {
+    void SetupMainTableColumns(bool offsetScrollbar = false) override {
         float bigNumberColWidth = 90;
         float smlNumberColWidth = 65;
         float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
@@ -92,7 +89,8 @@ class ViewAllItemsTab : Tab {
         UI::TableSetupColumn("Tools", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
-    void DrawObjectInfo(int i, CGameCtnAnchoredObject@ item) {
+    void DrawObjectInfo(CGameCtnChallenge@ map, int i) override {
+        auto item = GetItem(map, i);
         auto blockId = Editor::GetItemUniqueBlockID(item);
         UI::TableNextRow();
 

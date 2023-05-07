@@ -21,56 +21,17 @@ class DevMainTab : Tab {
 
 
 
-class DevItemsTab : Tab {
+class DevItemsTab : BlockItemListTab {
     DevItemsTab(TabGroup@ p) {
-        super(p, "Items (Dev)", Icons::Tree);
+        super(p, "Items (Dev)", Icons::Tree, BIListTabType::Items);
+        nbCols = 7;
     }
 
     int get_WindowFlags() override property {
         return UI::WindowFlags::None;
     }
 
-    bool autoscroll = false;
-    void DrawInner() override {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto map = editor.Challenge;
-
-        UI::AlignTextToFramePadding();
-        UI::Text("Total: " + map.AnchoredObjects.Length + "   |");
-        UI::SameLine();
-
-        autoscroll = UI::Checkbox("Autoscroll", autoscroll);
-
-        DrawColumnHeadersOnlyTable();
-        if (UI::BeginTable("dev items list", nbCols, UI::TableFlags::SizingStretchProp | UI::TableFlags::ScrollY)) {
-            SetupMainTableColumns();
-            // UI::TableHeadersRow();
-
-            if (autoscroll) {
-                UI::SetScrollY(UI::GetScrollMaxY());
-            }
-            UI::ListClipper clip(map.AnchoredObjects.Length);
-            while (clip.Step()) {
-                for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
-                    UI::PushID(i);
-                    DrawDevItemInfo(i, map.AnchoredObjects[i]);
-                    UI::PopID();
-                }
-            }
-
-            UI::EndTable();
-        }
-    }
-
-    void DrawColumnHeadersOnlyTable() {
-        if (UI::BeginTable("dev-items-headings", nbCols, UI::TableFlags::None)) {
-            SetupMainTableColumns(true);
-            UI::TableHeadersRow();
-            UI::EndTable();
-        }
-    }
-
-    void SetupMainTableColumns(bool offsetScrollbar = false) {
+    void SetupMainTableColumns(bool offsetScrollbar = false) override {
         float bigNumberColWidth = 90;
         float smlNumberColWidth = 65;
         float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
@@ -83,8 +44,9 @@ class DevItemsTab : Tab {
         UI::TableSetupColumn("Explore", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
-    private int nbCols = 7;
-    void DrawDevItemInfo(int i, CGameCtnAnchoredObject@ item) {
+    void DrawObjectInfo(CGameCtnChallenge@ map, int i) override {
+        auto item = GetItem(map, i);
+
         auto blockId = Editor::GetItemUniqueBlockID(item);
         UI::TableNextRow();
 
@@ -113,97 +75,13 @@ class DevItemsTab : Tab {
     }
 }
 
-class DevBlockTab : Tab {
-    bool useBakedBlocks = false;
+class DevBlockTab : BlockItemListTab {
     DevBlockTab(TabGroup@ p, bool baked = false) {
-        super(p, baked ? "Baked Blocks (Dev)" : "Blocks (Dev)", Icons::Cube);
-        useBakedBlocks = baked;
-        RegisterOnEditorLoadCallback(CoroutineFunc(OnEditorLoad));
+        super(p, baked ? "Baked Blocks (Dev)" : "Blocks (Dev)", Icons::Cube, baked ? BIListTabType::BakedBlocks : BIListTabType::Blocks);
+        nbCols = 9;
     }
 
-    bool recheckSkip = true;
-    void OnEditorLoad() {
-        recheckSkip = true;
-    }
-
-    int get_WindowFlags() override property {
-        return UI::WindowFlags::None;
-    }
-
-    int GetNbBlocks(CGameCtnChallenge@ map) {
-        if (useBakedBlocks) {
-            return map.BakedBlocks.Length;
-        }
-        return map.Blocks.Length;
-    }
-
-    CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) {
-        if (i >= GetNbBlocks(map)) {
-            return null;
-        }
-        if (useBakedBlocks) {
-            return map.BakedBlocks[i];
-        }
-        return map.Blocks[i];
-    }
-
-    bool autoscroll = false;
-    bool skipXZStarting = true;
-    void DrawInner() override {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto map = editor.Challenge;
-        auto sizeXZ = map.Size.x * map.Size.z - 4;
-        auto nbBlocks = GetNbBlocks(map);
-        uint nbBlocksToSkip = Math::Min(nbBlocks - 4, sizeXZ);
-
-        UI::AlignTextToFramePadding();
-        UI::Text("Total: " + nbBlocks + "   |");
-        UI::SameLine();
-
-        autoscroll = UI::Checkbox("Autoscroll", autoscroll);
-        UI::SameLine();
-
-        if (recheckSkip) {
-            recheckSkip = false;
-            skipXZStarting = GetBlock(map, 0).DescId.GetName() == "Grass";
-        }
-        skipXZStarting = UI::Checkbox("Skip first " + sizeXZ + " blocks", skipXZStarting);
-        if (!skipXZStarting) {
-            nbBlocksToSkip = 0;
-        }
-
-        uint nbBlocksToDraw = nbBlocks - nbBlocksToSkip;
-
-        DrawColumnHeadersOnlyTable();
-        if (UI::BeginTable("dev blocks list|bb:"+tostring(useBakedBlocks), nbCols, UI::TableFlags::ScrollY)) {
-            SetupMainTableColumns();
-            // UI::TableHeadersRow();
-
-            if (autoscroll) {
-                UI::SetScrollY(UI::GetScrollMaxY());
-            }
-            UI::ListClipper clip(nbBlocksToDraw);
-            while (clip.Step()) {
-                for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
-                    UI::PushID(i);
-                    DrawDevBlockInfo(nbBlocksToSkip + i, GetBlock(map, nbBlocksToSkip + i));
-                    UI::PopID();
-                }
-            }
-
-            UI::EndTable();
-        }
-    }
-
-    void DrawColumnHeadersOnlyTable() {
-        if (UI::BeginTable("dev-blocks-headings", nbCols, UI::TableFlags::None)) {
-            SetupMainTableColumns(true);
-            UI::TableHeadersRow();
-            UI::EndTable();
-        }
-    }
-
-    void SetupMainTableColumns(bool offsetScrollbar = false) {
+    void SetupMainTableColumns(bool offsetScrollbar = false) override {
         float numberColWidth = 90;
         float smlNumberColWidth = 70;
         float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
@@ -218,8 +96,8 @@ class DevBlockTab : Tab {
         UI::TableSetupColumn("Explore", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
-    private int nbCols = 9;
-    void DrawDevBlockInfo(int i, CGameCtnBlock@ block) {
+    void DrawObjectInfo(CGameCtnChallenge@ map, int i) override {
+        auto block = GetBlock(map, i);
         auto blockId = Editor::GetBlockUniqueID(block);
         UI::TableNextRow();
 

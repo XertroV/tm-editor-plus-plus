@@ -116,15 +116,17 @@ TabGroup@ CreateRootTabGroup() {
     CursorTab(root);
     PickedBlockTab(root);
     PickedItemTab(root);
+    Tab(root, "Inventory", Icons::FolderOpenO);
     BlockSelectionTab(root);
     ItemSelectionTab(root);
-    CheckpointsTab(root);
 
     // - filtered view of blocks/items show just checkpoints
     // - set linked order
     //   -- for next, selected, picked
-    Tab(root, "Inventory", Icons::FolderOpenO);
     Tab(root, "Favorites", Icons::FolderOpenO + Icons::StarO);
+
+    CheckpointsTab(root);
+
     Tab(root, "Apply Transformation", "f(x)");
     Tab(root, "Set B/I Properties", Icons::PencilSquareO);
     Tab(root, "Editor Settings", Icons::Cogs);
