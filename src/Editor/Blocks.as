@@ -93,7 +93,9 @@ namespace Editor {
         return mat4::Translate(GetBlockLocation(block)) * EulerToMat(GetBlockRotation(block));
     }
 
-    // for normal/ghost blocks, ensure you have no references to the block in questiton!
+    /* for normal/ghost blocks, ensure you have no references to the block in questiton!
+       Additionally: take a block desc object before hand and use the replicate props function
+    */
     CGameCtnBlock@ RefreshSingleBlockAfterModified(CGameCtnEditorFree@ editor, BlockDesc@ desc) {
         // auto desc = BlockDesc(block);
         // @block = null;
@@ -113,6 +115,11 @@ namespace Editor {
         }
         trace('did not find block (checked: ' + map.Blocks.Length + ")");
         return null;
+    }
+
+    CGameCtnBlock@[] FindBakedBlocksMatching(CGameCtnEditorFree@ editor, BlockDesc@ desc) {
+        // todo
+        return {};
     }
 
     // the index of the block in the main blocks array
@@ -151,6 +158,7 @@ class BlockDesc {
     CGameCtnBlock::ECardinalDirections Dir;
     uint DescIdVal;
     uint VariantIndex;
+    uint _BlockId;
 
     BlockDesc(CGameCtnBlock@ block) {
         Coord = block.Coord;
@@ -161,6 +169,7 @@ class BlockDesc {
         Dir = block.BlockDir;
         DescIdVal = block.DescId.Value;
         VariantIndex = block.BlockInfoVariantIndex;
+        _BlockId = Editor::GetBlockUniqueID(block);
     }
 
     bool Matches(CGameCtnBlock@ block) {

@@ -111,7 +111,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             if (!block.IsGhostBlock()) {
                 // UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free, non-ghost blocks *might* cause a crash if *other* plugins keep a reference to this block around. Other plugin devs should consult the Editor++ documentation.");
                 UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free, non-ghost blocks *might* cause a crash. You *must* save and load the map after changing these. \\$f80No live updates!");
-                UI::TextWrapped("Blocks on pillars seem to cause crashes always.");
+                // UI::TextWrapped("Blocks on pillars seem to cause crashes always.");
                 safeToRefresh = false;
             }
 

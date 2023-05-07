@@ -33,13 +33,19 @@ class DevItemsTab : Tab {
 
     bool autoscroll = false;
     void DrawInner() override {
-        autoscroll = UI::Checkbox("Autoscroll", autoscroll);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
 
+        UI::AlignTextToFramePadding();
+        UI::Text("Total: " + map.AnchoredObjects.Length + "   |");
+        UI::SameLine();
+
+        autoscroll = UI::Checkbox("Autoscroll", autoscroll);
+
+        DrawColumnHeadersOnlyTable();
         if (UI::BeginTable("dev items list", nbCols, UI::TableFlags::SizingStretchProp | UI::TableFlags::ScrollY)) {
             SetupMainTableColumns();
-            UI::TableHeadersRow();
+            // UI::TableHeadersRow();
 
             if (autoscroll) {
                 UI::SetScrollY(UI::GetScrollMaxY());
@@ -57,16 +63,25 @@ class DevItemsTab : Tab {
         }
     }
 
-    void SetupMainTableColumns() {
+    void DrawColumnHeadersOnlyTable() {
+        if (UI::BeginTable("dev-items-headings", nbCols, UI::TableFlags::None)) {
+            SetupMainTableColumns(true);
+            UI::TableHeadersRow();
+            UI::EndTable();
+        }
+    }
+
+    void SetupMainTableColumns(bool offsetScrollbar = false) {
         float bigNumberColWidth = 90;
         float smlNumberColWidth = 65;
-        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, 50.);
+        float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
+        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
         UI::TableSetupColumn("Nod ID", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
         UI::TableSetupColumn("Save ID", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
         UI::TableSetupColumn("Block ID", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
         UI::TableSetupColumn("Ref Count", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
-        UI::TableSetupColumn("Explore", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("Explore", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
     private int nbCols = 7;
@@ -104,6 +119,12 @@ class DevBlockTab : Tab {
     DevBlockTab(TabGroup@ p, bool baked = false) {
         super(p, baked ? "Baked Blocks (Dev)" : "Blocks (Dev)", Icons::Cube);
         useBakedBlocks = baked;
+        RegisterOnEditorLoadCallback(CoroutineFunc(OnEditorLoad));
+    }
+
+    bool recheckSkip = true;
+    void OnEditorLoad() {
+        recheckSkip = true;
     }
 
     int get_WindowFlags() override property {
@@ -130,24 +151,34 @@ class DevBlockTab : Tab {
     bool autoscroll = false;
     bool skipXZStarting = true;
     void DrawInner() override {
-        autoscroll = UI::Checkbox("Autoscroll", autoscroll);
-        UI::SameLine();
-
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
         auto sizeXZ = map.Size.x * map.Size.z - 4;
-        uint nbBlocksToSkip = Math::Min(GetNbBlocks(map) - 4, sizeXZ);
+        auto nbBlocks = GetNbBlocks(map);
+        uint nbBlocksToSkip = Math::Min(nbBlocks - 4, sizeXZ);
 
+        UI::AlignTextToFramePadding();
+        UI::Text("Total: " + nbBlocks + "   |");
+        UI::SameLine();
+
+        autoscroll = UI::Checkbox("Autoscroll", autoscroll);
+        UI::SameLine();
+
+        if (recheckSkip) {
+            recheckSkip = false;
+            skipXZStarting = GetBlock(map, 0).DescId.GetName() == "Grass";
+        }
         skipXZStarting = UI::Checkbox("Skip first " + sizeXZ + " blocks", skipXZStarting);
         if (!skipXZStarting) {
             nbBlocksToSkip = 0;
         }
 
-        uint nbBlocksToDraw = GetNbBlocks(map) - nbBlocksToSkip;
+        uint nbBlocksToDraw = nbBlocks - nbBlocksToSkip;
 
+        DrawColumnHeadersOnlyTable();
         if (UI::BeginTable("dev blocks list|bb:"+tostring(useBakedBlocks), nbCols, UI::TableFlags::ScrollY)) {
             SetupMainTableColumns();
-            UI::TableHeadersRow();
+            // UI::TableHeadersRow();
 
             if (autoscroll) {
                 UI::SetScrollY(UI::GetScrollMaxY());
@@ -165,10 +196,19 @@ class DevBlockTab : Tab {
         }
     }
 
-    void SetupMainTableColumns() {
+    void DrawColumnHeadersOnlyTable() {
+        if (UI::BeginTable("dev-blocks-headings", nbCols, UI::TableFlags::None)) {
+            SetupMainTableColumns(true);
+            UI::TableHeadersRow();
+            UI::EndTable();
+        }
+    }
+
+    void SetupMainTableColumns(bool offsetScrollbar = false) {
         float numberColWidth = 90;
         float smlNumberColWidth = 70;
-        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, 50.);
+        float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
+        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
         UI::TableSetupColumn(".Blocks Ix", UI::TableColumnFlags::WidthFixed, numberColWidth);
         UI::TableSetupColumn("Save ID", UI::TableColumnFlags::WidthFixed, numberColWidth);
         UI::TableSetupColumn("Block ID", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
@@ -176,8 +216,7 @@ class DevBlockTab : Tab {
         UI::TableSetupColumn("Placed Ix", UI::TableColumnFlags::WidthFixed, numberColWidth);
         UI::TableSetupColumn("Ref Count", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
-        UI::TableSetupColumn("Explore", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-
+        UI::TableSetupColumn("Explore", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
     private int nbCols = 9;

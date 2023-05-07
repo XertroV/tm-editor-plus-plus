@@ -2,10 +2,17 @@ funcdef bool ProcessItem(CGameCtnAnchoredObject@ item);
 funcdef bool ProcessBlock(CGameCtnBlock@ block);
 funcdef bool ProcessNewSelectedItem(CGameItemModel@ itemModel);
 
+CoroutineFunc@[] onEditorLoadCbs;
 ProcessItem@[] itemCallbacks;
 ProcessBlock@[] blockCallbacks;
 ProcessNewSelectedItem@[] selectedItemChangedCbs;
 // CoroutineFunc@[] selectedBlockChangedCbs;
+
+void RegisterOnEditorLoadCallback(CoroutineFunc@ f) {
+    if (f !is null) {
+        onEditorLoadCbs.InsertLast(f);
+    }
+}
 
 void RegisterNewItemCallback(ProcessItem@ f) {
     if (f !is null) {
@@ -30,6 +37,12 @@ void RegisterItemChangedCallback(ProcessNewSelectedItem@ f) {
 //         selectedBlockChangedCbs.InsertLast(f);
 //     }
 // }
+
+void RunOnEditorLoadCbs() {
+    for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
+        onEditorLoadCbs[i]();
+    }
+}
 
 uint m_LastNbBlocks = 0;
 uint m_LastNbItems = 0;
