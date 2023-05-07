@@ -1,5 +1,4 @@
-
-class Tab {
+shared class Tab {
     string idNonce = "tab-" + Math::Rand(0, 2000000000);
 
     // bool canCloseTab = false;

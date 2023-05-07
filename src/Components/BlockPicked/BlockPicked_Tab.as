@@ -65,6 +65,10 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             UI::Text("No picked block. Ctrl+Hover to pick a block.");
             return;
         }
+
+        UI::TextWrapped("\\$f80Warning! \\$zRefreshing blocks can sometimes result in a crash. To disable auto-refresh, uncheck 'Save to refresh' under the 'Advanced' menu. Some maps are prone to this, but most are okay.");
+        UI::Separator();
+
         auto block = FocusedBlock.AsBlock();
         BlockDesc@ preDesc = BlockDesc(block);
         // Editor::UpdateBakedBlocksMatching(editor, preDesc, preDesc);

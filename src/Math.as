@@ -1,21 +1,21 @@
 namespace Math {
-    vec2 ToDeg(vec2 rads) {
+    shared vec2 ToDeg(vec2 rads) {
         return vec2(ToDeg(rads.x), ToDeg(rads.y));
     }
 
-    vec3 ToDeg(vec3 rads) {
+    shared vec3 ToDeg(vec3 rads) {
         return vec3(ToDeg(rads.x), ToDeg(rads.y), ToDeg(rads.z));
     }
 
-    vec2 ToRad(vec2 degs) {
+    shared vec2 ToRad(vec2 degs) {
         return vec2(ToRad(degs.x), ToRad(degs.y));
     }
 
-    vec3 ToRad(vec3 degs) {
+    shared vec3 ToRad(vec3 degs) {
         return vec3(ToRad(degs.x), ToRad(degs.y), ToRad(degs.z));
     }
 
-    vec3 Max(vec3 a, vec3 b) {
+    shared vec3 Max(vec3 a, vec3 b) {
         return vec3(
             Math::Max(a.x, b.x),
             Math::Max(a.y, b.y),
@@ -23,7 +23,7 @@ namespace Math {
         );
     }
 
-    vec3 Min(vec3 a, vec3 b) {
+    shared vec3 Min(vec3 a, vec3 b) {
         return vec3(
             Math::Min(a.x, b.x),
             Math::Min(a.y, b.y),
@@ -31,12 +31,12 @@ namespace Math {
         );
     }
 
-    bool Vec3Eq(vec3 a, vec3 b) {
+    shared bool Vec3Eq(vec3 a, vec3 b) {
         return a.x == b.x && a.y == b.y && a.z == b.z;
         // return (a-b).LengthSquared() < 0.000001;
     }
 
-    bool Nat3Eq(nat3 a, nat3 b) {
+    shared bool Nat3Eq(nat3 a, nat3 b) {
         return a.x == b.x && a.y == b.y && a.z == b.z;
     }
 }

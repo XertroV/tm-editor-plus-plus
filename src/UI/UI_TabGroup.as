@@ -1,4 +1,4 @@
-class TabGroup {
+shared class TabGroup {
     Tab@ Parent = null;
 
     Tab@[] tabs;
@@ -63,13 +63,13 @@ class TabGroup {
         framePadding = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
         regionSize = UI::GetContentRegionAvail();
         auto sbWidth = (sideBarExpanded ? 170. : 60.) + framePadding.x * 2.;
-        UI::PushStyleColor(UI::Col::Border, cWhite);
+        UI::PushStyleColor(UI::Col::Border, vec4(1));
         if (UI::BeginChild("sidebar-left|" + fullName, vec2(sbWidth, 0), true)) {
             if (title.Length > 0) {
-                UI::PushFont(g_Heading);
+                // UI::PushFont(g_Heading);
                 UI::AlignTextToFramePadding();
                 UI::Text(title);
-                UI::PopFont();
+                // UI::PopFont();
             }
             if (UI::Button(Icons::Bars + "##expand-" + fullName)) {
                 sideBarExpanded = !sideBarExpanded;

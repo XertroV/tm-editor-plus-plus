@@ -41,6 +41,10 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             UI::Text(nullItemError);
             return;
         }
+
+        UI::TextWrapped("\\$f80Warning! \\$zRefreshing items can sometimes result in a crash. To disable auto-refresh, uncheck 'Save to refresh' under the 'Advanced' menu. Some maps are prone to this, but most are okay.");
+        UI::Separator();
+
         auto item = FocusedItem.AsItem();
 
         vec3 initPos = item.AbsolutePositionInMap;
