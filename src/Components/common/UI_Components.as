@@ -27,3 +27,31 @@ CGameCtnAnchoredObject::EMapElemColor DrawEnumColorChooser(CGameCtnAnchoredObjec
     }
     return val;
 }
+
+CGameCtnAnchoredObject::EMapElemLightmapQuality DrawEnumLmQualityChooser(CGameCtnAnchoredObject::EMapElemLightmapQuality lmq) {
+    auto val = lmq;
+    if (UI::BeginCombo("LM Quality", tostring(lmq))) {
+        auto last = CGameCtnAnchoredObject::EMapElemLightmapQuality::Lowest;
+        for (int i = 0; i <= int(last); i++) {
+            if (UI::Selectable(tostring(CGameCtnAnchoredObject::EMapElemLightmapQuality(i)), int(lmq) == i)) {
+                val = CGameCtnAnchoredObject::EMapElemLightmapQuality(i);
+            }
+        }
+        UI::EndCombo();
+    }
+    return val;
+}
+
+CGameCtnBlock::EMapElemLightmapQuality DrawEnumLmQualityChooser(CGameCtnBlock::EMapElemLightmapQuality lmq) {
+    auto val = lmq;
+    if (UI::BeginCombo("LM Quality", tostring(lmq))) {
+        auto last = CGameCtnBlock::EMapElemLightmapQuality::Lowest;
+        for (int i = 0; i <= int(last); i++) {
+            if (UI::Selectable(tostring(CGameCtnBlock::EMapElemLightmapQuality(i)), int(lmq) == i)) {
+                val = CGameCtnBlock::EMapElemLightmapQuality(i);
+            }
+        }
+        UI::EndCombo();
+    }
+    return val;
+}

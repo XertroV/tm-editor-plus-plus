@@ -71,7 +71,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
         CopiableLabeledValue("Coord", block.Coord.ToString());
         CopiableLabeledValue("Pos", pos.ToString());
-        CopiableLabeledValue("Rot", rot.ToString());
+        CopiableLabeledValue("Rot", Math::ToDeg(rot).ToString());
         LabeledValue("Is Ghost", block.IsGhostBlock());
         LabeledValue("Is Ground", block.IsGround);
         LabeledValue("Variant", block.BlockInfoVariantIndex);
@@ -129,6 +129,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         }
         auto preCol = block.MapElemColor;
         block.MapElemColor = DrawEnumColorChooser(block.MapElemColor);
+        block.MapElemLmQuality = DrawEnumLmQualityChooser(block.MapElemLmQuality);
 
         m_BlockChanged = preCol != block.MapElemColor
             || !Math::Vec3Eq(prePos, Editor::GetBlockLocation(block))

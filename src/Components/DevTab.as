@@ -14,7 +14,6 @@ class DevMainTab : Tab {
     void DrawInner() override {
         drawStuff = UI::Checkbox("Enable Dev Info", drawStuff);
         if (!drawStuff) return;
-
         Children.DrawTabs();
         return;
     }

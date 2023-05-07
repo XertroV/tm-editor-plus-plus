@@ -43,10 +43,15 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         }
         auto item = FocusedItem.AsItem();
 
+        vec3 initPos = item.AbsolutePositionInMap;
+        vec3 initRot = Editor::GetItemRotation(item);
+        auto initColor = item.MapElemColor;
+        auto initFlying = item.IsFlying;
+        auto initIVar = item.IVariant;
 
         CopiableLabeledValue("Name", item.ItemModel.IdName);
         CopiableLabeledValue("Pos", item.AbsolutePositionInMap.ToString());
-        CopiableLabeledValue("P,Y,R (Rad)", Editor::GetItemRotation(item).ToString());
+        CopiableLabeledValue("P,Y,R (Deg)", Math::ToDeg(initRot).ToString());
         CopiableLabeledValue("Coord", item.BlockUnitCoord.ToString());
         auto assocBlock = Editor::GetItemsBlockAssociation(item);
         if (int(item.BlockUnitCoord.x) < 0 && assocBlock is null) {
@@ -86,18 +91,13 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         UI::AlignTextToFramePadding();
         UI::Text("Edit Picked Item Properties (Helper dot shows position)");
 
-        vec3 initPos = item.AbsolutePositionInMap;
-        vec3 initRot = Editor::GetItemRotation(item);
-        auto initColor = item.MapElemColor;
-        auto initFlying = item.IsFlying;
-        auto initIVar = item.IVariant;
-
         item.AbsolutePositionInMap = UI::InputFloat3("Pos.##picked-item-pos", item.AbsolutePositionInMap);
 
         vec3 outRot = UX::InputAngles3("Rot (Deg)##picked-item-rot", initRot);
         Editor::SetItemRotation(item, outRot);
 
         item.MapElemColor = DrawEnumColorChooser(item.MapElemColor);
+        item.MapElemLmQuality = DrawEnumLmQualityChooser(item.MapElemLmQuality);
 
         item.IsFlying = UI::Checkbox("Is Flying", item.IsFlying);
         DrawEditVariants(item);
@@ -114,41 +114,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         if (changed) {
             @item = Editor::RefreshSingleItemAfterModified(editor, item, !skipForceRefresh);
             @FocusedItem = ReferencedNod(item);
-            // if (!skipForceRefresh)
-            //     RotateItemColorForRefresh(editor, item);
-            // // auto col = item.MapElemColor;
-            // // item.MapElemColor = CGameCtnAnchoredObject::EMapElemColor::Red;
-            // // item.MapElemColor = CGameCtnAnchoredObject::EMapElemColor::Blue;
-            // // item.MapElemColor = col;
-            // auto nbRefs = Reflection::GetRefCount(item);
-            // auto lastItem = editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1];
-            // trace('last item ref count: ' + Reflection::GetRefCount(lastItem));
-            // trace('nb item: ' + editor.Challenge.AnchoredObjects.Length + ', ' + nbRefs);
-            // Editor::RefreshBlocksAndItems(editor);
-            // trace('nb item: ' + editor.Challenge.AnchoredObjects.Length + ', ' + Reflection::GetRefCount(item));
-            // @lastItem = editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1];
-            // trace('last item ref count: ' + Reflection::GetRefCount(lastItem));
-            // if (nbRefs != Reflection::GetRefCount(item)) {
-            //     @FocusedItem = ReferencedNod(Editor::FindReplacementItemAfterUpdate(editor, item));
-            //     if (!skipForceRefresh)
-            //         @FocusedItem = ReferencedNod(RestoreItemColorAfterRefresh(editor, FocusedItem.AsItem()));
-            //     @item = FocusedItem.AsItem();
-            // } else {
-            //     trace('item ref count didnt change: ' + nbRefs);
-            // }
-            // @lastItem = editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1];
-            // trace('last item ref count: ' + Reflection::GetRefCount(lastItem));
         }
-
-        // if (UI::Button("Refresh All##items")) {
-        //     auto nbRefs = Reflection::GetRefCount(item);
-        //     Editor::RefreshBlocksAndItems(editor);
-        //     if (nbRefs != Reflection::GetRefCount(item)) {
-        //         @lastPickedItem = ReferencedNod(editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1]);
-        //         UpdatePickedItemCachedValues();
-        //         @item = lastPickedItem.AsItem();
-        //     }
-        // }
 
         UI::Separator();
 

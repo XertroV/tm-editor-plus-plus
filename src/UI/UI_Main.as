@@ -112,7 +112,7 @@ namespace MenuBar {
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
     MapEditPropsTab(root);
-    Tab(root, "Blocks & Items", Icons::Cubes + Icons::Tree);
+    BI_MainTab(root);
     CursorTab(root);
     PickedBlockTab(root);
     PickedItemTab(root);
