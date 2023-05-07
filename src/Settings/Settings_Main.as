@@ -20,3 +20,9 @@ bool S_DrawPickedBlockBox = true;
 
 [Setting hidden]
 int S_MainSelectedTab = 0;
+
+[Setting hidden]
+bool S_PickedBlockWindowOpen = false;
+
+[Setting hidden]
+bool S_PickedItemWindowOpen = false;

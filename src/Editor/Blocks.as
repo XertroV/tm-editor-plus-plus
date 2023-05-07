@@ -213,13 +213,13 @@ class BlockDesc {
         if (block is null) return false;
 
         return DescIdVal == block.DescId.Value
-            && Math::Vec3Eq(Pos, Editor::GetBlockLocation(block))
-            && Math::Nat3Eq(Coord, block.Coord)
+            && MathX::Vec3Eq(Pos, Editor::GetBlockLocation(block))
+            && MathX::Nat3Eq(Coord, block.Coord)
             && IsGhost == block.IsGhostBlock()
             && IsGround == block.IsGround
             && Dir == block.Dir
             && VariantIndex == block.BlockInfoVariantIndex
-            && Math::Vec3Eq(Rot, Editor::GetBlockRotation(block))
+            && MathX::Vec3Eq(Rot, Editor::GetBlockRotation(block))
             ;
     }
 
@@ -227,12 +227,12 @@ class BlockDesc {
         if (block is null) return false;
 
         return true
-            && Math::Nat3Eq(Coord, block.Coord)
-            && Math::Vec3Eq(Pos, Editor::GetBlockLocation(block))
+            && MathX::Nat3Eq(Coord, block.Coord)
+            && MathX::Vec3Eq(Pos, Editor::GetBlockLocation(block))
             && IsGhost == block.IsGhostBlock()
             && IsGround == block.IsGround
             && Dir == block.Dir
-            && Math::Vec3Eq(Rot, Editor::GetBlockRotation(block))
+            && MathX::Vec3Eq(Rot, Editor::GetBlockRotation(block))
             ;
     }
 

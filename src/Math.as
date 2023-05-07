@@ -1,18 +1,18 @@
-namespace Math {
+namespace MathX {
     shared vec2 ToDeg(vec2 rads) {
-        return vec2(ToDeg(rads.x), ToDeg(rads.y));
+        return vec2(Math::ToDeg(rads.x), Math::ToDeg(rads.y));
     }
 
     shared vec3 ToDeg(vec3 rads) {
-        return vec3(ToDeg(rads.x), ToDeg(rads.y), ToDeg(rads.z));
+        return vec3(Math::ToDeg(rads.x), Math::ToDeg(rads.y), Math::ToDeg(rads.z));
     }
 
     shared vec2 ToRad(vec2 degs) {
-        return vec2(ToRad(degs.x), ToRad(degs.y));
+        return vec2(Math::ToRad(degs.x), Math::ToRad(degs.y));
     }
 
     shared vec3 ToRad(vec3 degs) {
-        return vec3(ToRad(degs.x), ToRad(degs.y), ToRad(degs.z));
+        return vec3(Math::ToRad(degs.x), Math::ToRad(degs.y), Math::ToRad(degs.z));
     }
 
     shared vec3 Max(vec3 a, vec3 b) {

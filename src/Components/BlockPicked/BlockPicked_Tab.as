@@ -33,8 +33,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
     // bool CachedMatchesBlock(CGameCtnBlock@ block) {
     //     return block.BlockInfo.Name == fb_BlockName
-    //         && Math::Vec3Eq(fb_Pos, Editor::GetBlockLocation(block))
-    //         && Math::Vec3Eq(fb_Rot, Editor::GetBlockRotation(block))
+    //         && MathX::Vec3Eq(fb_Pos, Editor::GetBlockLocation(block))
+    //         && MathX::Vec3Eq(fb_Rot, Editor::GetBlockRotation(block))
     //         && fb_IsGround == block.IsGround
     //         && fb_IsGhost == block.IsGhostBlock()
     //         ;
@@ -77,7 +77,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
         CopiableLabeledValue("Coord", block.Coord.ToString());
         CopiableLabeledValue("Pos", preDesc.Pos.ToString());
-        CopiableLabeledValue("Rot", Math::ToDeg(preDesc.Rot).ToString());
+        CopiableLabeledValue("Rot", MathX::ToDeg(preDesc.Rot).ToString());
         LabeledValue("Is Ghost", block.IsGhostBlock());
         LabeledValue("Is Ground", block.IsGround);
         LabeledValue("Variant", block.BlockInfoVariantIndex);
@@ -117,6 +117,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
                 // UI::TextWrapped("Blocks on pillars seem to cause crashes always.");
             // }
             UI::TextWrapped("\\$f80Warning!\\$z Modifying non-free blocks *might* cause a crash when refreshing. You *must* save and load the map after changing these. \\$f80No live updates!");
+            UI::TextWrapped("(Note: direction and color seem to be almost always okay to refresh, so these will refresh.)");
             safeToRefresh = false;
 
             block.CoordX = UI::InputInt("CoordX##" + idNonce, block.CoordX);
@@ -126,6 +127,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
                 for (uint i = 0; i < 4; i++) {
                     if (UI::Selectable(tostring(CGameCtnBlock::ECardinalDirections(i)), uint(block.BlockDir) == i)) {
                         block.BlockDir = CGameCtnBlock::ECardinalDirections(i);
+                        safeToRefresh = true;
                     }
                 }
                 UI::EndCombo();
@@ -146,11 +148,14 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         auto @desc = BlockDesc(block);
 
         m_BlockChanged = m_BlockChanged
-            || preDesc.Color != block.MapElemColor
-            || !Math::Vec3Eq(preDesc.Pos, desc.Pos)
-            || !Math::Vec3Eq(preDesc.Rot, desc.Rot)
+            || !MathX::Vec3Eq(preDesc.Pos, desc.Pos)
+            || !MathX::Vec3Eq(preDesc.Rot, desc.Rot)
             ;
 
+        if (!m_BlockChanged && preDesc.Color != block.MapElemColor) {
+            safeToRefresh = true;
+            m_BlockChanged = true;
+        }
 
         if (m_BlockChanged) trace('block changed');
 
@@ -193,9 +198,6 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         }
     }
 }
-
-[Setting hidden]
-bool S_PickedBlockWindowOpen = false;
 
 class PickedBlockTab : FocusedBlockTab {
     PickedBlockTab(TabGroup@ parent) {

@@ -166,7 +166,8 @@ TabGroup@ CreateRootTabGroup() {
 
     CheckpointsTab(root);
 
-    TodoTab(root, "Repeat Items", Icons::Magic + Icons::Repeat, "repeat items like IPT");
+    Repeat::MainRepeatTab(root);
+    // TodoTab(root, "Repeat Items", Icons::Magic + Icons::Repeat, "repeat items like IPT");
     TodoTab(root, "Dissociate Items", Icons::Magic + Icons::ChainBroken, "dissociate items like IPT");
     TodoTab(root, "Jitter", Icons::Magic + Icons::Arrows, "jitter items like IPT");
 

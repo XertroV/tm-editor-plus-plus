@@ -157,7 +157,7 @@ namespace Editor {
         for (int i = map.AnchoredObjects.Length - 1; i >= 0; i--) {
             auto item = map.AnchoredObjects[i];
             if (item.ItemModel.Id.Value != modelId) continue;
-            if (!Math::Vec3Eq(pos, item.AbsolutePositionInMap)) continue;
+            if (!MathX::Vec3Eq(pos, item.AbsolutePositionInMap)) continue;
             if (item.IVariant != prevItem.IVariant) continue;
             if (item.Pitch != rot.x) continue;
             if (item.Yaw != rot.y) continue;

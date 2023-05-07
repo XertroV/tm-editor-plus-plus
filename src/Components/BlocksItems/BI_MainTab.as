@@ -116,7 +116,7 @@ class ViewAllItemsTab : BlockItemListTab {
         UI::Text(item.AbsolutePositionInMap.ToString());
 
         UI::TableNextColumn();
-        UI::Text(Math::ToDeg(Editor::GetItemRotation(item)).ToString());
+        UI::Text(MathX::ToDeg(Editor::GetItemRotation(item)).ToString());
 
         UI::TableNextColumn();
         UI::Text(tostring(item.MapElemColor));

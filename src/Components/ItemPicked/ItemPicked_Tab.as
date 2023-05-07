@@ -55,7 +55,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
         CopiableLabeledValue("Name", item.ItemModel.IdName);
         CopiableLabeledValue("Pos", item.AbsolutePositionInMap.ToString());
-        CopiableLabeledValue("P,Y,R (Deg)", Math::ToDeg(initRot).ToString());
+        CopiableLabeledValue("P,Y,R (Deg)", MathX::ToDeg(initRot).ToString());
         CopiableLabeledValue("Coord", item.BlockUnitCoord.ToString());
         auto assocBlock = Editor::GetItemsBlockAssociation(item);
         if (int(item.BlockUnitCoord.x) < 0 && assocBlock is null) {
@@ -107,8 +107,8 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         DrawEditVariants(item);
 
         auto skipForceRefresh = initColor != item.MapElemColor
-            || !Math::Vec3Eq(initPos, item.AbsolutePositionInMap)
-            || !Math::Vec3Eq(initRot, outRot);
+            || !MathX::Vec3Eq(initPos, item.AbsolutePositionInMap)
+            || !MathX::Vec3Eq(initRot, outRot);
 
         auto changed = skipForceRefresh
             || initFlying != item.IsFlying
@@ -132,9 +132,8 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             @item = FocusedItem.AsItem();
         }
 
-
         UI::Separator();
-        if (UI::CollapsingHeader("Relative/Absolute Position Calculator (useful for static respawns)")) {
+        if (UI::CollapsingHeader("Relative/Absolute Position Calculator (useful for static respawns) ")) {
             UI::Indent();
 
             UI::Text("Absolute to Relative");
@@ -200,9 +199,6 @@ class FocusedItemTab : Tab, NudgeItemBlock {
     vec3 m_Calc_AbsPosition = vec3();
     vec3 m_Calc_RelPosition = vec3();
 }
-
-[Setting hidden]
-bool S_PickedItemWindowOpen = false;
 
 class PickedItemTab : FocusedItemTab {
     PickedItemTab(TabGroup@ parent) {
