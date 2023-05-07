@@ -3,7 +3,7 @@ mixin class NudgeItemBlock {
     float m_RotStepSize = .01745;
 
     // draw preferably draw as final thing as can invalidate item/block reference
-    void DrawNudgeFor(CMwNod@ nod) {
+    bool DrawNudgeFor(CMwNod@ nod) {
         auto item = cast<CGameCtnAnchoredObject>(nod);
         auto block = cast<CGameCtnBlock>(nod);
 
@@ -87,20 +87,8 @@ mixin class NudgeItemBlock {
                     warn("Type: " + Reflection::TypeOf(nod).Name);
                 }
             }
-            // update and fix picked item (will be replaced)
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            Editor::RefreshBlocksAndItems(editor);
-
-            if (item !is null) {
-                // the updated item will be the last item in the array and has a new pointer
-                // items that weren't updated keep the same pointer
-                @lastPickedItem = ReferencedNod(editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1]);
-                UpdatePickedItemCachedValues();
-            } else if (block !is null) {
-                @lastPickedBlock = ReferencedNod(editor.Challenge.Blocks[editor.Challenge.Blocks.Length - 1]);
-                UpdatePickedBlockCachedValues();
-            }
+            return true;
         }
+        return false;
     }
-
 }

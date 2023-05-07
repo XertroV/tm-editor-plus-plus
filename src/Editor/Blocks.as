@@ -3,8 +3,8 @@ namespace Editor {
     uint16 FreeBlockPosOffset = GetOffset("CGameCtnBlock", "Dir") + 0x8;
     uint16 FreeBlockRotOffset = FreeBlockPosOffset + 0xC;
 
-    vec3 GetBlockLocation(CGameCtnBlock@ block) {
-        if (IsBlockFree(block)) {
+    vec3 GetBlockLocation(CGameCtnBlock@ block, bool forceFree = false) {
+        if (IsBlockFree(block) || forceFree) {
             // free block mode
             return Dev::GetOffsetVec3(block, FreeBlockPosOffset);
         }
@@ -36,6 +36,12 @@ namespace Editor {
             // not supported
             warn('not yet supported: set block location for non-free block');
         }
+    }
+
+    void SetBlockCoord(CGameCtnBlock@ block, nat3 coord) {
+        block.CoordX = coord.x;
+        block.CoordY = coord.y;
+        block.CoordZ = coord.z;
     }
 
     vec3 GetBlockRotation(CGameCtnBlock@ block) {
@@ -97,11 +103,9 @@ namespace Editor {
        Additionally: take a block desc object before hand and use the replicate props function
     */
     CGameCtnBlock@ RefreshSingleBlockAfterModified(CGameCtnEditorFree@ editor, BlockDesc@ desc) {
-        // auto desc = BlockDesc(block);
-        // @block = null;
         Editor::RefreshBlocksAndItems(editor);
+        // Editor::RefreshBlocksAndItems(editor);
         return Editor::FindReplacementBlockAfterUpdate(editor, desc);
-        // return block;
     }
 
     CGameCtnBlock@ FindReplacementBlockAfterUpdate(CGameCtnEditorFree@ editor, BlockDesc@ desc) {
@@ -117,9 +121,36 @@ namespace Editor {
         return null;
     }
 
-    CGameCtnBlock@[] FindBakedBlocksMatching(CGameCtnEditorFree@ editor, BlockDesc@ desc) {
-        // todo
-        return {};
+    CGameCtnBlock@[]@ FindBakedBlocksMatching(CGameCtnEditorFree@ editor, BlockDesc@ desc) {
+        CGameCtnBlock@[] blocks;
+        auto origBlockId = desc._BlockId;
+        // auto nextBlockId = origBlockId + 1;
+        auto nextBlockId = -1;
+
+        auto map = editor.Challenge;
+        if (map is null || map.BakedBlocks.Length == 0) return null;
+        for (int i = 0; i < map.BakedBlocks.Length; i++) {
+            auto _bid = Editor::GetBlockUniqueID(map.BakedBlocks[i]);
+            if (nextBlockId < 0 && desc.MatchesBB(map.BakedBlocks[i])) {
+                nextBlockId = _bid;
+            }
+            if (_bid == nextBlockId) {
+                blocks.InsertLast(map.BakedBlocks[i]);
+                nextBlockId++;
+            } else if (nextBlockId >= 0) {
+                break;
+            }
+            // if (!desc.Matches(map.BakedBlocks[i])) continue;
+        }
+        trace('found baked block matches: ' + blocks.Length + " / " + (map.BakedBlocks.Length - 1));
+        return blocks;
+    }
+
+    void UpdateBakedBlocksMatching(CGameCtnEditorFree@ editor, BlockDesc@ desc, BlockDesc@ newDesc) {
+        auto @blocks = FindBakedBlocksMatching(editor, desc);
+        for (uint i = 0; i < blocks.Length; i++) {
+            newDesc.SetBakedBlockProps(blocks[i]);
+        }
     }
 
     // the index of the block in the main blocks array
@@ -156,9 +187,12 @@ class BlockDesc {
     bool IsGhost;
     bool IsGround;
     CGameCtnBlock::ECardinalDirections Dir;
+    CGameCtnBlock::EMapElemColor Color;
+    CGameCtnBlock::EMapElemLightmapQuality LMQuality;
     uint DescIdVal;
     uint VariantIndex;
     uint _BlockId;
+    bool IsFree;
 
     BlockDesc(CGameCtnBlock@ block) {
         Coord = block.Coord;
@@ -169,6 +203,9 @@ class BlockDesc {
         Dir = block.BlockDir;
         DescIdVal = block.DescId.Value;
         VariantIndex = block.BlockInfoVariantIndex;
+        IsFree = Editor::IsBlockFree(block);
+        Color = block.MapElemColor;
+        LMQuality = block.MapElemLmQuality;
         _BlockId = Editor::GetBlockUniqueID(block);
     }
 
@@ -184,5 +221,32 @@ class BlockDesc {
             && VariantIndex == block.BlockInfoVariantIndex
             && Math::Vec3Eq(Rot, Editor::GetBlockRotation(block))
             ;
+    }
+
+    bool MatchesBB(CGameCtnBlock@ block) {
+        if (block is null) return false;
+
+        return true
+            && Math::Nat3Eq(Coord, block.Coord)
+            && Math::Vec3Eq(Pos, Editor::GetBlockLocation(block))
+            // && IsGhost == block.IsGhostBlock()
+            // && IsGround == block.IsGround
+            // && Dir == block.Dir
+            // && Math::Vec3Eq(Rot, Editor::GetBlockRotation(block))
+            ;
+    }
+
+    void SetBakedBlockProps(CGameCtnBlock@ block) {
+        if (block is null) return;
+        // can set: pos, coord, rot, dir, color, lm
+        // don't set: variant, ghost, ground, descid
+        if (IsFree) {
+            Editor::SetBlockLocation(block, Pos);
+        } else {
+            Editor::SetBlockCoord(block, Coord);
+        }
+        Editor::SetBlockRotation(block, Rot);
+        block.MapElemColor = Color;
+        block.MapElemLmQuality = LMQuality;
     }
 }

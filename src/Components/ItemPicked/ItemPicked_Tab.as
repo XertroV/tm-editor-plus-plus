@@ -111,17 +111,22 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             || initIVar != item.IVariant
             ;
 
-        if (changed) {
-            @item = Editor::RefreshSingleItemAfterModified(editor, item, !skipForceRefresh);
-            @FocusedItem = ReferencedNod(item);
-        }
 
         UI::Separator();
 
         UI::AlignTextToFramePadding();
         UI::Text("Nudge Picked Item:");
 
-        DrawNudgeFor(item);
+        if (DrawNudgeFor(item)) {
+            changed = true;
+        }
+
+        if (changed) {
+            @FocusedItem = null;
+            @FocusedItem = ReferencedNod(Editor::RefreshSingleItemAfterModified(editor, item, !skipForceRefresh));
+            @item = FocusedItem.AsItem();
+        }
+
 
         UI::Separator();
         if (UI::CollapsingHeader("Relative/Absolute Position Calculator (useful for static respawns)")) {
@@ -191,11 +196,26 @@ class FocusedItemTab : Tab, NudgeItemBlock {
     vec3 m_Calc_RelPosition = vec3();
 }
 
+[Setting hidden]
+bool S_PickedItemWindowOpen = false;
+
 class PickedItemTab : FocusedItemTab {
     PickedItemTab(TabGroup@ parent) {
         super(parent, "Picked Item");
         removable = false;
         nullItemError = "No picked Item. Ctrl+Hover to pick a Item.";
+    }
+
+    bool get_windowOpen() override property {
+        if (S_PickedItemWindowOpen == tabOpen) {
+            tabOpen = !S_PickedItemWindowOpen;
+        }
+        return S_PickedItemWindowOpen;
+    }
+
+    void set_windowOpen(bool value) override property {
+        tabOpen = !value;
+        S_PickedItemWindowOpen = value;
     }
 
     bool get_ShowHelpers() override property {

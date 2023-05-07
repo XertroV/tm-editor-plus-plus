@@ -35,17 +35,19 @@ namespace Editor {
         return !EditorPriv::_RefreshUnsafe;
     }
 
-    void RefreshBlocksAndItems(CGameCtnEditorFree@ editor, bool autosave = true) {
+    void RefreshBlocksAndItems(CGameCtnEditorFree@ editor) {
         if (!IsRefreshSafe()) {
             warn("Refusing to refresh blocks/items as it has been marked unsafe.");
             return;
         }
         auto pmt = editor.PluginMapType;
-        if (autosave) {
-            pmt.AutoSave();
-        }
+        // autosave appears to set an undo point and updates baked blocks
+        // it will trigger 'saving' the new block coords, too
+        pmt.AutoSave();
         pmt.Undo();
         pmt.Redo();
+        // doing this twice fixes baked blocks and placed ix, but we have an extra undo point. worth it.
+        // pmt.AutoSave();
     }
 
     enum ItemMode {

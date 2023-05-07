@@ -21,20 +21,24 @@ TabGroup@ RootTabGroup_Editor = CreateRootTabGroup();
 
 
 void UI_Main_Render() {
-    if (!ShowWindow || !IsInEditor || !UserHasPermissions) return;
+    if (!IsInEditor || !UserHasPermissions) return;
     if (!AreFontsLoaded) return;
-    vec2 size = vec2(700, 900);
-    vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
-    UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::FirstUseEver);
-    UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::FirstUseEver);
+
     UI::PushStyleColor(UI::Col::FrameBg, vec4(.2, .2, .2, .5));
-    if (UI::Begin(MenuTitle, ShowWindow, UI::WindowFlags::MenuBar)) {
-        MenuBar::Draw();
-        // RootTabGroup_Editor.DrawTabsAsSidebar("Editor++");
-        RootTabGroup_Editor.DrawTabsAsSidebar();
-    }
-    UI::End();
     RootTabGroup_Editor.DrawWindows();
+
+    if (ShowWindow) {
+        vec2 size = vec2(700, 900);
+        vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::FirstUseEver);
+        UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::FirstUseEver);
+        if (UI::Begin(MenuTitle, ShowWindow, UI::WindowFlags::MenuBar)) {
+            MenuBar::Draw();
+            // RootTabGroup_Editor.DrawTabsAsSidebar("Editor++");
+            RootTabGroup_Editor.DrawTabsAsSidebar();
+        }
+        UI::End();
+    }
 
     UI::PopStyleColor();
 }
@@ -56,6 +60,9 @@ namespace MenuBar {
             }
 
             if (UI::BeginMenu("Advanced")) {
+                if (UI::MenuItem("Refresh placed Blocks & Items")) {
+                    Editor::RefreshBlocksAndItems(cast<CGameCtnEditorFree>(GetApp().Editor));
+                }
                 UI::TextDisabled("Clear References:");
                 if (UI::MenuItem("  To All")) {}
                 if (UI::MenuItem("  To Items")) {}
@@ -113,26 +120,27 @@ TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
     MapEditPropsTab(root);
     BI_MainTab(root);
+    Tab(root, "\\$888Pinned B&I", Icons::MapO + Icons::MapMarker);
     CursorTab(root);
     PickedBlockTab(root);
     PickedItemTab(root);
-    Tab(root, "Inventory", Icons::FolderOpenO);
+    Tab(root, "\\$888Inventory", Icons::FolderOpenO);
     BlockSelectionTab(root);
     ItemSelectionTab(root);
 
     // - filtered view of blocks/items show just checkpoints
     // - set linked order
     //   -- for next, selected, picked
-    Tab(root, "Favorites", Icons::FolderOpenO + Icons::StarO);
+    Tab(root, "\\$888Favorites", Icons::FolderOpenO + Icons::StarO);
 
     CheckpointsTab(root);
 
-    Tab(root, "Apply Transformation", "f(x)");
-    Tab(root, "Set B/I Properties", Icons::PencilSquareO);
-    Tab(root, "Editor Settings", Icons::Cogs);
-    Tab(root, "Medals & Validation (Plugin)", "\\$fb4"+Icons::Circle+"\\$z");
-    Tab(root, "Ranomizer", "\\$bff"+Icons::Random+"\\$z");
-    Tab(root, "Validation Runs", "");
+    Tab(root, "\\$888Apply Transformation", "f(x)");
+    Tab(root, "\\$888Set B/I Properties", Icons::PencilSquareO);
+    Tab(root, "\\$888Editor Settings", Icons::Cogs);
+    Tab(root, "\\$888Medals & Validation (Plugin)", "\\$fb4"+Icons::Circle+"\\$z");
+    Tab(root, "\\$888Ranomizer", "\\$bff"+Icons::Random+"\\$z");
+    Tab(root, "\\$888Validation Runs", Icons::Car);
 
 #if SIG_DEVELOPER
     DevMainTab(root);

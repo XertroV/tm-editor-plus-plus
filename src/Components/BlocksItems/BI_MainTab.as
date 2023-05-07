@@ -1,6 +1,7 @@
 class BI_MainTab : Tab {
     BI_MainTab(TabGroup@ p) {
         super(p, "Blocks & Items", Icons::Cubes + Icons::Tree);
+        canPopOut = false;
         ViewAllBlocksTab(Children);
         ViewAllBlocksTab(Children, true);
         ViewAllItemsTab(Children);
@@ -23,10 +24,10 @@ class ViewAllBlocksTab : BlockItemListTab {
         float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
         UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
-        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, numberColWidth);
-        UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        UI::TableSetupColumn("Coord", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("LM Quality", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, numberColWidth);
         UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Tools", UI::TableColumnFlags::WidthFixed, exploreColWidth);
@@ -45,16 +46,16 @@ class ViewAllBlocksTab : BlockItemListTab {
         UI::Text(block.DescId.GetName());
 
         UI::TableNextColumn();
-        UI::Text(tostring(Editor::GetBlockMapBlocksIndex(block)));
+        UI::Text(tostring(Editor::GetBlockLocation(block)));
 
         UI::TableNextColumn();
-        UI::Text(tostring(Editor::GetBlockUniqueSaveID(block)));
+        UI::Text(tostring(block.Coord));
+        UI::TableNextColumn();
+        UI::Text(tostring(block.MapElemColor));
 
         UI::TableNextColumn();
-        UI::Text(tostring(blockId));
+        UI::Text(tostring(block.MapElemLmQuality));
 
-        UI::TableNextColumn();
-        UI::Text(tostring(Editor::GetBlockMwIDRaw(block)));
 
         UI::TableNextColumn();
         UI::Text(tostring(Editor::GetBlockPlacedCountIndex(block)));
@@ -64,7 +65,7 @@ class ViewAllBlocksTab : BlockItemListTab {
 
 
         UI::TableNextColumn();
-        if (UX::SmallButton(Icons::Cube + "##" + blockId)) {
+        if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             // ExploreNod("Block " + blockId + ".", block);
         }
     }
@@ -113,7 +114,7 @@ class ViewAllItemsTab : BlockItemListTab {
         UI::Text(tostring(item.MapElemLmQuality));
 
         UI::TableNextColumn();
-        if (UX::SmallButton(Icons::MapPin + "##" + blockId)) {
+        if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             // ExploreNod("Item " + blockId + ".", item);
         }
     }

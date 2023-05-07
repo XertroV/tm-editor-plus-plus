@@ -14,10 +14,8 @@ class Tab {
     bool removable = false;
     bool canPopOut = true;
     bool tabOpen = true;
-    bool windowOpen {
-        get { return !tabOpen; }
-        set { tabOpen = !value; }
-    }
+    bool get_windowOpen() { return !tabOpen; }
+    void set_windowOpen(bool value) { tabOpen = !value; }
 
     Tab(TabGroup@ parent, const string &in tabName, const string &in icon) {
         this.tabName = tabName;
@@ -43,7 +41,7 @@ class Tab {
 
     void DrawTogglePop() {
         if (UI::Button((tabOpen ? Icons::Expand : Icons::Compress) + "##" + fullName)) {
-            tabOpen = !tabOpen;
+            windowOpen = !windowOpen;
         }
         if (removable) {
             UI::SameLine();
@@ -87,7 +85,7 @@ class Tab {
     void _HeadingRight() {
         if (!tabOpen) {
             if (UI::Button("Return to Tab##"+fullName)) {
-                tabOpen = !tabOpen;
+                windowOpen = !windowOpen;
             }
         } else {
             if (canPopOut) {
