@@ -32,8 +32,8 @@ namespace Repeat {
                 @selected = lastPickedItem.AsItem();
             }
             UI::Text("Curr Item: " + (selected is null ? "None" : string(selected.ItemModel.IdName)));
-            // bad idea to let user disable them b/c there's no signal about what is active / will be done
-            // S_ShowRepeatHelpers = UI::Checkbox("Show Helpers", S_ShowRepeatHelpers);
+            // ~~bad idea to let user disable them b/c there's no signal about what is active / will be done~~
+            S_ShowRepeatHelpers = UI::Checkbox("Show Helpers", S_ShowRepeatHelpers);
 
             UI::Separator();
 

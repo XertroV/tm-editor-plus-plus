@@ -155,7 +155,8 @@ TabGroup@ CreateRootTabGroup() {
     CursorTab(root);
     PickedBlockTab(root);
     PickedItemTab(root);
-    TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
+    // TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
+    InventoryMainTab(root);
     BlockSelectionTab(root);
     ItemSelectionTab(root);
 
@@ -167,8 +168,9 @@ TabGroup@ CreateRootTabGroup() {
     CheckpointsTab(root);
 
     Repeat::MainRepeatTab(root);
+    DissociateItemsTab(root);
     // TodoTab(root, "Repeat Items", Icons::Magic + Icons::Repeat, "repeat items like IPT");
-    TodoTab(root, "Dissociate Items", Icons::Magic + Icons::ChainBroken, "dissociate items like IPT");
+    // TodoTab(root, "Dissociate Items", Icons::Magic + Icons::ChainBroken, "dissociate items like IPT");
     TodoTab(root, "Jitter", Icons::Magic + Icons::Arrows, "jitter items like IPT");
 
     TodoTab(root, "Apply Transformation", "f(x)", "apply a transformation to a Source of blocks/items");

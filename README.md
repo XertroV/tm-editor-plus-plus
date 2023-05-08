@@ -31,7 +31,8 @@ todo:
 - blocks: add duplication method
 - randomizer: change blocks and items to be random blocks / items
 - validation runs: track and record validation runs this session -- expose data for medals & validation tab
--
+- save and reload map: add caching camera coords and move camera
+- add cam movement API in general
 - (todo: fill list out more)
 
 research:

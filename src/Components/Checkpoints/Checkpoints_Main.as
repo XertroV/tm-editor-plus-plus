@@ -1,6 +1,6 @@
 class CheckpointsTab : Tab {
     CheckpointsTab(TabGroup@ parent) {
-        super(parent, "Checkpoints", Icons::ClockO);
+        super(parent, "Checkpoints", Icons::Magic + Icons::ClockO);
         SetLinkedCheckpointsTab(Children);
     }
 
