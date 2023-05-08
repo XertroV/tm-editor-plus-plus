@@ -92,6 +92,7 @@ namespace Editor {
     void SetItemPlacementMode(ItemMode mode) {
         try {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
             if (mode == ItemMode::Normal)
                 editor.ButtonNormalItemModeOnClick();
             if (mode == ItemMode::FreeGround)
@@ -101,6 +102,20 @@ namespace Editor {
         } catch {
             warn("exception setting item placement mode: " + getExceptionInfo());
         }
+    }
+
+    CGameEditorPluginMap::EPlaceMode GetPlacementMode(CGameCtnEditorFree@ editor) {
+        return editor.PluginMapType.PlaceMode;
+    }
+
+    bool IsInBlockPlacementMode(CGameCtnEditorFree@ editor) {
+        auto pm = GetPlacementMode(editor);
+        switch (pm) {
+            case CGameEditorPluginMap::EPlaceMode::FreeBlock: return true;
+            case CGameEditorPluginMap::EPlaceMode::GhostBlock: return true;
+            case CGameEditorPluginMap::EPlaceMode::Block: return true;
+        }
+        return false;
     }
 
     // ! does not work
