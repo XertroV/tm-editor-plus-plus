@@ -1,5 +1,5 @@
 
-const string PluginIcon = Icons::PlayCircle;
-const string MenuTitle = "\\$3f3" + PluginIcon + "\\$z " + Meta::ExecutingPlugin().Name;
+const string PluginIcon = "\\$ff3" + Icons::Bolt + "\\$3af" + Icons::Cogs;
+const string MenuTitle = PluginIcon + "\\$z " + Meta::ExecutingPlugin().Name;
 
 const float TAU = 6.28318530717958647692;

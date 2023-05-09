@@ -28,7 +28,7 @@ void UI_Main_Render() {
     RootTabGroup_Editor.DrawWindows();
 
     if (ShowWindow) {
-        vec2 size = vec2(700, 900);
+        vec2 size = vec2(800, 800);
         vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::FirstUseEver);
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::FirstUseEver);

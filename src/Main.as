@@ -63,6 +63,13 @@ void AwaitReturnToMenu() {
     }
 }
 
+void AwaitEditor() {
+    auto app = cast<CTrackMania>(GetApp());
+    while (cast<CGameCtnEditorFree>(app.Editor) is null) yield();
+    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
+}
+
 void CopyFile(const string &in f1, const string &in f2) {
     trace("Copying " + f1 + " to " + f2);
     IO::File outFile(f2, IO::FileMode::Write);

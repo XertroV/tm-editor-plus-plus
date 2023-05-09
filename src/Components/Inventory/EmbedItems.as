@@ -7,8 +7,7 @@ class ItemEmbedTab : Tab {
 
     void DrawInner() override {
         if (UI::Button("Reset##refrehs-items-step")) {
-            step = 1;
-            @step3Req = null;
+            ResetState();
         }
         UI::Separator();
         DrawStep1();
@@ -27,18 +26,19 @@ class ItemEmbedTab : Tab {
     uint nbItemsInLocalFolder = 0;
     string[] localItemPaths;
 
-
     void DrawStep1() {
         UI::BeginDisabled(step != 1);
         UI::Text("Step 1. Scan for items");
         UI::Text("Last refresh: " + Time::Format(Time::Now - lastRefresh, true, true, true));
         UI::Text("Nb Items Counted: " + nbItemsInLocalFolder);
+        UI::BeginDisabled(false);
         if (localItemPaths.Length > 0) {
-            UI::Text("First item: " + localItemPaths[0]);
+            CopiableLabeledValue("First item", localItemPaths[0]);
         }
         if (localItemPaths.Length > 1) {
-            UI::Text("2nd item: " + localItemPaths[1]);
+            CopiableLabeledValue("2nd item", localItemPaths[1]);
         }
+        UI::EndDisabled();
 
         if (UI::Button("Scan for Items")) {
             startnew(CoroutineFunc(RunStep1));
@@ -102,13 +102,15 @@ class ItemEmbedTab : Tab {
         UI::Text("Step 2. Scan Inventory for Differences");
         UI::Text("Nb Items Counted: " + nbCachedInvItems);
         if (cachedInvItemPaths.Length > 0) {
-            UI::Text("First item: " + cachedInvItemPaths[0]);
+            CopiableLabeledValue("First item", cachedInvItemPaths[0]);
         }
         UI::Text("Items missing from Inventory: " + missingItems.Length);
         if (missingItems.Length > 0) {
-            UI::Text("First missing item: " + missingItems[0]);
+            UI::BeginDisabled(false);
+            CopiableLabeledValue("First missing item", missingItems[0]);
             if (missingItems.Length > 1)
-                UI::Text("2nd. missing item: " + missingItems[1]);
+                CopiableLabeledValue("2nd. missing item", missingItems[1]);
+            UI::EndDisabled();
         }
 
         if (UI::Button("Scan Inventory")) {
@@ -120,6 +122,7 @@ class ItemEmbedTab : Tab {
     }
 
     void RunStep2() {
+        step3ReqError = "";
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto inv = editor.PluginMapType.Inventory;
         CGameCtnArticleNodeDirectory@ itemRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[3]);
@@ -186,11 +189,10 @@ class ItemEmbedTab : Tab {
     void DrawStep3() {
         UI::BeginDisabled(step != 3);
         UI::Text("Step 3. Request embed items to map");
+        UI::Text("Note: will also automatically save, request, and reload the map.");
+        UI::Text("New folders/items will appear as the last elements of their respective folders.");
 
-        // UI::Text("Status: " + (step3Req is null ? "Not started" :
-        //     !step3Req.Finished() ? "In Progress" :
-        //     step3Req.ResponseCode() != 200 ? "Error: " + step3Req.Error()
-        //     : "Done"));
+        UI::Text("Status: " + (step3ReqError.Length == 0 ? step3Req is null ? "Not started" : "In Progress" : "\\$f80Last Req Error:\\$z " + step3ReqError));
 
         UI::BeginDisabled(step3Req !is null);
         if (UI::Button("Get Updated Map")) {
@@ -201,6 +203,9 @@ class ItemEmbedTab : Tab {
         UI::EndDisabled();
     }
 
+    // reset at step 2
+    string step3ReqError = "";
+
     void RunStep3() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         Editor::SaveMapSameName(editor);
@@ -208,7 +213,7 @@ class ItemEmbedTab : Tab {
         string mapFileName = editor.Challenge.MapInfo.FileName;
         if (mapFileName.Length == 0) return;
         string mapFileFullName = IO::FromUserGameFolder("Maps/" + mapFileName);
-        CopyFile(mapFileFullName, mapFileFullName.SubStr(0, mapFileFullName.Length - 8) + "_backup.Map.Gbx");
+        CopyFile(mapFileFullName, mapFileFullName.SubStr(0, mapFileFullName.Length - 8) + ".Map.Gbx_backup_" + Time::Stamp);
         MemoryBuffer@ data = MemoryBuffer();
         data.Write(uint32(0));
         Json::Value@ items = Json::Array();
@@ -227,19 +232,34 @@ class ItemEmbedTab : Tab {
         data.Seek(0);
         string pl = data.ReadToBase64(data.GetSize());
         print('pl size: ' + data.GetSize() + ' / b64: ' + pl.Length);
-        // @step3Req = Net::HttpPost("http://localhost:8000/itemrefresh/create_map", pl);
-        @step3Req = Net::HttpPost("http://74.234.75.72:80/itemrefresh/create_map", pl);
-        sleep(5000);
-        trace('waited 5s');
-        while (!step3Req.Finished()) {
-            yield();
+        @step3Req = Net::HttpRequest();
+        step3Req.Method = Net::HttpMethod::Post;
+        // step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
+        step3Req.Url = "https://map-monitor.xk.io/itemrefresh/create_map";
+        step3Req.Body = pl;
+        step3Req.Start();
+        // @step3Req = Net::HttpPost(, pl);
+        // sleep(3000);
+        try {
+            while (!step3Req.Finished()) {
+                // long sleeps to avoid crash condition
+                sleep(500);
+            }
+        } catch {
+            step3ReqError = getExceptionInfo();
+            NotifyWarning("Exception making request: " + step3ReqError);
+            ResetState();
+            return;
         }
+        step3ReqError = "";
         trace('req done');
         if (step3Req.ResponseCode() != 200) {
-            warn('resp code: ' + step3Req.ResponseCode());
+            NotifyWarning('Error getting map: ' + step3Req.ResponseCode() + "; " + step3Req.Error());
+            ResetState();
             return;
         }
         auto app = cast<CGameManiaPlanet>(GetApp());
+        auto currCam = Editor::GetCurrentCamState(editor);
         app.BackToMainMenu();
         AwaitReturnToMenu();
         sleep(50);
@@ -252,6 +272,8 @@ class ItemEmbedTab : Tab {
         sleep(50);
         cast<CGameManiaPlanet>(GetApp()).ManiaTitleControlScriptAPI.EditMap(mapFileName, '', '');
         step++;
+        AwaitEditor();
+        Editor::SetCamAnimationGoTo(currCam);
     }
 
     void _WriteString(MemoryBuffer@ buf, const string &in str) {
@@ -273,7 +295,7 @@ class ItemEmbedTab : Tab {
 
     void DrawStep4() {
         UI::BeginDisabled(step != 4);
-        UI::Text("Step 4. Save, Load refresh map, Re-load this map");
+        UI::Text("Step 4. Save, Load refresh map, Re-load this map (should be automatic)");
         if (UI::Button("Load Refresh Map then reload this map")) {
             startnew(CoroutineFunc(RunStep4));
         }
@@ -282,6 +304,10 @@ class ItemEmbedTab : Tab {
 
     void RunStep4() {
         Editor::NoSaveAndReloadMap();
+        ResetState();
+    }
+
+    void ResetState() {
         step = 1;
         @step3Req = null;
     }

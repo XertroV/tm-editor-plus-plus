@@ -1,4 +1,8 @@
 namespace Editor {
+    CamState@ GetCurrentCamState(CGameCtnEditorFree@ editor) {
+        return CamState(editor.OrbitalCameraControl);
+    }
+
     void EnableCustomCameraInputs() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
@@ -34,6 +38,11 @@ namespace Editor {
         auto cam = editor.OrbitalCameraControl;
         @g_startCamState = CamState(cam);
         @g_endCamState = CamState(lookAngleHV.x, lookAngleHV.y, targetDist, position);
+        return true;
+    }
+
+    bool SetCamAnimationGoTo(CamState@ cam) {
+        SetCamAnimationGoTo(cam.LookUV, cam.Pos, cam.TargetDist);
         return true;
     }
 }

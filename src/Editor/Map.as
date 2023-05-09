@@ -32,12 +32,15 @@ namespace Editor {
             NotifyWarning("Map must be saved, first.");
             return;
         }
+        auto currCam = GetCurrentCamState(editor);
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
         app.BackToMainMenu();
         Log::Trace('back to menu');
         AwaitReturnToMenu();
         sleep(100);
         app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
+        AwaitEditor();
+        SetCamAnimationGoTo(currCam);
 
     }
 
@@ -49,12 +52,15 @@ namespace Editor {
             NotifyWarning("Map must be saved, first.");
             return;
         }
+        auto currCam = GetCurrentCamState(editor);
         string fileName = editor.Challenge.MapInfo.FileName;
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
         app.BackToMainMenu();
         Log::Trace('back to menu');
         AwaitReturnToMenu();
         app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
+        AwaitEditor();
+        SetCamAnimationGoTo(currCam);
     }
 
     void SaveAndReloadMapWithRefreshMap(const string &in refreshMapName) {
@@ -66,6 +72,7 @@ namespace Editor {
             NotifyWarning("Map must be saved, first.");
             return;
         }
+        auto currCam = GetCurrentCamState(editor);
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
         app.BackToMainMenu();
         Log::Trace('back to menu');
@@ -83,6 +90,8 @@ namespace Editor {
         sleep(1000);
         AwaitReturnToMenu();
         app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
+        AwaitEditor();
+        SetCamAnimationGoTo(currCam);
     }
 
 

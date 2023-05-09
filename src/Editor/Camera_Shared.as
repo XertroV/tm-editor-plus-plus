@@ -5,6 +5,10 @@ namespace Editor {
         float TargetDist = 0;
         vec3 Pos = vec3();
 
+        vec2 get_LookUV() {
+            return vec2(HAngle, VAngle);
+        }
+
         CamState() {}
 
         CamState(float HAngle, float VAngle, float TargetDist, vec3 Pos) {
