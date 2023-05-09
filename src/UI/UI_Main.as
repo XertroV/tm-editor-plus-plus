@@ -23,8 +23,12 @@ TabGroup@ RootTabGroup_Editor = CreateRootTabGroup();
 void UI_Main_Render() {
     if (!IsInEditor || !UserHasPermissions) return;
     if (!AreFontsLoaded) return;
+    if (IsInCurrentPlayground) return;
 
+    vec4 newCollapsedBg = UI::GetStyleColor(UI::Col::TitleBgCollapsed);
+    newCollapsedBg.w = .9;
     UI::PushStyleColor(UI::Col::FrameBg, vec4(.2, .2, .2, .5));
+    UI::PushStyleColor(UI::Col::TitleBgCollapsed, newCollapsedBg);
     RootTabGroup_Editor.DrawWindows();
 
     if (ShowWindow) {
@@ -55,7 +59,7 @@ void UI_Main_Render() {
         UI::End();
     }
 
-    UI::PopStyleColor();
+    UI::PopStyleColor(2);
 }
 
 

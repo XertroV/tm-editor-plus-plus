@@ -116,7 +116,8 @@ class RootTabGroupCls : TabGroup {
         super("Root", null);
         // root
         groupName = "Root";
-        fullName = "E++";
+        // fullName = "E++";
+        fullName = PluginIcon + "\\$z";
         IsRoot = true;
     }
 

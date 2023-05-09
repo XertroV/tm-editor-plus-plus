@@ -192,9 +192,11 @@ class ItemEmbedTab : Tab {
     void DrawStep3() {
         UI::BeginDisabled(step != 3);
         UI::Text("Step 3. Request embed items to map");
-        UI::Text("New folders/items will appear as the last elements of their respective folders.");
-        UI::Text("Note: will also automatically save, request, and reload the map.");
-        UI::Text("Note: Too many items may make the request fail; max: ~12mb incl map.");
+        UI::TextWrapped("New folders/items will appear as the last elements of their respective folders.");
+        UI::TextWrapped("Note: will also automatically save, request, and reload the map. (Creates a backup every time.)");
+        UI::TextWrapped("Note: Too many items may make the request fail; max: ~12mb incl map.");
+
+        UI::TextWrapped("\\$f80Warning:\\$z If you get msg like 'Error while retrieving map! Missing items:', click 'Load Anyway' and then 'No'. (If this doesn't work, you can experiment, and say something in the support thread.)");
 
         if (step == 3) {
             UI::SetNextItemOpen(true, UI::Cond::Appearing);
@@ -273,7 +275,9 @@ class ItemEmbedTab : Tab {
         @step3Req = Net::HttpRequest();
         step3Req.Method = Net::HttpMethod::Post;
         step3Req.Url = "https://map-monitor.xk.io/itemrefresh/create_map";
-        // step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
+#if DEV
+        step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
+#endif
         step3Req.Body = pl;
         step3Req.Start();
         // @step3Req = Net::HttpPost(, pl);
