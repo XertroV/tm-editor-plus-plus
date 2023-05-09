@@ -67,7 +67,7 @@ class ItemEmbedTab : Tab {
             if (IsItemFileName(ctn[i])) {
                 nbItemsInLocalFolder++;
                 localItemPaths.InsertLast(ctn[i].Replace('/', '\\').SubStr(itemsFolderPrefix.Length));
-                trace('cached; ' + ctn[i]);
+                // trace('cached; ' + ctn[i]);
             }
         }
     }
@@ -234,8 +234,8 @@ class ItemEmbedTab : Tab {
         print('pl size: ' + data.GetSize() + ' / b64: ' + pl.Length);
         @step3Req = Net::HttpRequest();
         step3Req.Method = Net::HttpMethod::Post;
-        // step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
         step3Req.Url = "https://map-monitor.xk.io/itemrefresh/create_map";
+        // step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
         step3Req.Body = pl;
         step3Req.Start();
         // @step3Req = Net::HttpPost(, pl);
