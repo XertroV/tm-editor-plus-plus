@@ -172,6 +172,7 @@ class ItemEmbedTab : Tab {
     void CacheItemDiff() {
         seenItems.DeleteAll();
         missingItems.RemoveRange(0, missingItems.Length);
+        selectedMissing.RemoveRange(0, selectedMissing.Length);
         for (uint i = 0; i < cachedInvItemPaths.Length; i++) {
             if (seenItems.Exists(cachedInvItemPaths[i])) {
                 warn("duplicate item in inventory list: " + cachedInvItemPaths[i]);
@@ -181,16 +182,50 @@ class ItemEmbedTab : Tab {
         for (uint i = 0; i < localItemPaths.Length; i++) {
             if (!seenItems.Exists(localItemPaths[i])) {
                 missingItems.InsertLast(localItemPaths[i]);
+                selectedMissing.InsertLast(true);
             }
         }
     }
 
+    bool[] selectedMissing;
     Net::HttpRequest@ step3Req;
     void DrawStep3() {
         UI::BeginDisabled(step != 3);
         UI::Text("Step 3. Request embed items to map");
-        UI::Text("Note: will also automatically save, request, and reload the map.");
         UI::Text("New folders/items will appear as the last elements of their respective folders.");
+        UI::Text("Note: will also automatically save, request, and reload the map.");
+        UI::Text("Note: Too many items may make the request fail; max: ~12mb incl map.");
+
+        if (step == 3) {
+            UI::SetNextItemOpen(true, UI::Cond::Appearing);
+            if (UI::CollapsingHeader("Select Items to Embed")) {
+                UI::Indent();
+
+                bool setAll = false, setTo = false;
+
+                if (selectedMissing.Length != missingItems.Length) {
+                    selectedMissing.Resize(missingItems.Length);
+                    setAll = true; setTo = true;
+                }
+
+                if (UI::Button("Select All##items-to-embed")) {
+                    setAll = true;
+                    setTo = true;
+                }
+                UI::SameLine();
+                if (UI::Button("Select None##items-to-embed")) {
+                    setAll = true;
+                    setTo = false;
+                }
+
+                for (uint i = 0; i < selectedMissing.Length; i++) {
+                    selectedMissing[i] = UI::Checkbox(missingItems[i], selectedMissing[i]);
+                    if (setAll) selectedMissing[i] = setTo;
+                }
+
+                UI::Unindent();
+            }
+        }
 
         UI::Text("Status: " + (step3ReqError.Length == 0 ? step3Req is null ? "Not started" : "In Progress" : "\\$f80Last Req Error:\\$z " + step3ReqError));
 
@@ -218,7 +253,10 @@ class ItemEmbedTab : Tab {
         data.Write(uint32(0));
         Json::Value@ items = Json::Array();
         for (uint i = 0; i < missingItems.Length; i++) {
-            items.Add(missingItems[i]);
+            if (selectedMissing[i]) {
+                items.Add(missingItems[i]);
+                trace('added embed request item: ' + missingItems[i]);
+            }
         }
         _WriteString(data, Json::Write(items));
         _WriteUint(data, items.Length);

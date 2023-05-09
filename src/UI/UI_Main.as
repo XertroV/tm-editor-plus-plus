@@ -184,6 +184,8 @@ TabGroup@ CreateRootTabGroup() {
     // TodoTab(root, "Ranomizer", "\\$bff"+Icons::Random+"\\$z", "randomize the type of blocks/items for newly placed ones, or existing ones, according to some filter / conditions.");
     TodoTab(root, "Validation Runs", Icons::Car, 'track validation runs so you dont lose validation times');
 
+    TodoTab(root, "For Devs", Icons::QuestionCircle, "-- ignore that.\n\nI want to make a decent export system for this plugin so it's exensible. The idea is that it's easy to add a new root tab, or add some feature to an existing tab group. Medals & validation is an example -- i'm going to use that as a test plugin to implement the interface. Some work has already been done, but testing volunteers and feedback/ideas would be great. Check out the code (particularly src/Editor/*.as), there's lots of stuff set up for export, like convenience functions and ones for reading/writing values, camera controls, in-map block/item refreshing, map saving and reloading, etc.");
+
 #if SIG_DEVELOPER
     DevMainTab(root);
 #endif

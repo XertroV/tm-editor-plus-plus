@@ -134,9 +134,13 @@ class TodoTab : Tab {
     TodoTab(TabGroup@ parent, const string&in tabName, const string&in icon, const string &in desc = "??") {
         super(parent, "\\$888" + tabName, icon);
         description = desc;
+        canPopOut = false;
     }
 
     void DrawInner() override {
         UI::TextWrapped("Todo. This tab will " + description);
+        UI::TextWrapped("Request features in the `Help > Plugin Support Thread` on the openplanet discord! It helps with prioritization and provides ideas for new features.");
+        // creates some min width:
+        // UI::Text("This tab full name is: " + fullName);
     }
 }
