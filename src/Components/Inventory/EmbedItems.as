@@ -254,16 +254,18 @@ class ItemEmbedTab : Tab {
         MemoryBuffer@ data = MemoryBuffer();
         data.Write(uint32(0));
         Json::Value@ items = Json::Array();
+        uint countItems = 0;
         for (uint i = 0; i < missingItems.Length; i++) {
             if (selectedMissing[i]) {
                 items.Add(missingItems[i]);
                 trace('added embed request item: ' + missingItems[i]);
+                countItems++;
             }
         }
         _WriteString(data, Json::Write(items));
         _WriteUint(data, items.Length);
-        for (uint i = 0; i < missingItems.Length; i++) {
-            _WriteFileBytes(data, itemsFolderPrefix + missingItems[i]);
+        for (uint i = 0; i < items.Length; i++) {
+            _WriteFileBytes(data, itemsFolderPrefix + string(items[i]));
         }
         yield();
         _WriteFileBytes(data, IO::FromUserGameFolder("Maps/" + mapFileName));
@@ -276,7 +278,7 @@ class ItemEmbedTab : Tab {
         step3Req.Method = Net::HttpMethod::Post;
         step3Req.Url = "https://map-monitor.xk.io/itemrefresh/create_map";
 #if DEV
-        // step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
+        step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
 #endif
         step3Req.Body = pl;
         step3Req.Start();
