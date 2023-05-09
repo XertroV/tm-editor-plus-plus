@@ -75,6 +75,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
         m_BlockChanged = false;
 
+        CopiableLabeledValue("Type", block.DescId.GetName());
         CopiableLabeledValue("Coord", block.Coord.ToString());
         CopiableLabeledValue("Pos", preDesc.Pos.ToString());
         CopiableLabeledValue("Rot", MathX::ToDeg(preDesc.Rot).ToString());

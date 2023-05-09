@@ -39,4 +39,22 @@ namespace MathX {
     shared bool Nat3Eq(nat3 a, nat3 b) {
         return a.x == b.x && a.y == b.y && a.z == b.z;
     }
+
+
+    shared float AngleLerp(float start, float stop, float t) {
+        float diff = stop - start;
+        while (diff > Math::PI) { diff -= TAU; }
+        while (diff < -Math::PI) { diff += TAU; }
+        return start + diff * t;
+    }
+
+    shared float SimplifyRadians(float a) {
+        uint count = 0;
+        while (Math::Abs(a) > TAU / 2.0 && count < 100) {
+            a += (a < 0 ? 1. : -1.) * TAU;
+            count++;
+        }
+        return a;
+    }
+
 }

@@ -26,3 +26,6 @@ bool S_PickedBlockWindowOpen = false;
 
 [Setting hidden]
 bool S_PickedItemWindowOpen = false;
+
+[Setting hidden]
+uint S_AnimationDuration = 250;

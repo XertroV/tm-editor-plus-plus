@@ -58,8 +58,9 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         CopiableLabeledValue("P,Y,R (Deg)", MathX::ToDeg(initRot).ToString());
         CopiableLabeledValue("Coord", item.BlockUnitCoord.ToString());
         auto assocBlock = Editor::GetItemsBlockAssociation(item);
-        if (int(item.BlockUnitCoord.x) < 0 && assocBlock is null) {
-            if (UI::Button("Fix block unit coord")) {
+        if (assocBlock is null) {
+            UI::SameLine();
+            if (UX::SmallButton("Set BlockUnitCoord from Pos")) {
                 item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
             }
         }

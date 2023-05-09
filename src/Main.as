@@ -32,6 +32,9 @@ void RenderEarly() {
     }
 }
 
+void Update(float dt) {
+    UpdateAnimAndCamera();
+}
 
 void Render() {
     if (!GameVersionSafe) return;

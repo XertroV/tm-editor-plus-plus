@@ -66,19 +66,18 @@ class ViewAllBlocksTab : BlockItemListTab {
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
-            // ExploreNod("Item " + blockId + ".", item);
-            Notify("todo");
+            Editor::SetAnimationGoTo(vec2(TAU / 8., TAU / 8.), Editor::GetCtnBlockMidpoint(block), 80.);
         }
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             // ExploreNod("Block " + blockId + ".", block);
             Notify("todo");
         }
-        UI::SameLine();
-        if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
-            Notify("todo");
+        // UI::SameLine();
+        // if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
+        //     Notify("todo");
 
-        }
+        // }
     }
 }
 
@@ -126,17 +125,30 @@ class ViewAllItemsTab : BlockItemListTab {
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
-            // ExploreNod("Item " + blockId + ".", item);
-            Notify("todo");
+            Editor::SetAnimationGoTo(vec2(TAU / 8., TAU / 8.), item.AbsolutePositionInMap, 80.);
         }
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             // ExploreNod("Item " + blockId + ".", item);
             Notify("todo");
         }
-        UI::SameLine();
-        if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
-            Notify("todo");
-        }
+        // // todo: not sure how to do item removal
+        // UI::SameLine();
+        // if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
+        //     startnew(CoroutineFuncUserdata(_RemoveItemLater), map);
+        //     _removeIx = i;
+        //     // map.AnchoredObjects.Remove(i);
+        //     // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        //     // Editor::UpdateNewlyAddedItems(editor);
+        //     // Editor::RefreshBlocksAndItems();
+        // }
     }
+
+    // uint _removeIx = 0;
+    // void _RemoveItemLater(ref@ _r) {
+    //     auto map = cast<CGameCtnChallenge>(_r);
+    //     auto item = map.AnchoredObjects[_removeIx];
+    //     map.AnchoredObjects.Remove(_removeIx);
+    //     item.MwRelease();
+    // }
 }

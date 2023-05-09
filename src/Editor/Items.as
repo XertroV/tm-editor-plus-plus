@@ -92,15 +92,11 @@ namespace Editor {
     */
     void UpdateNewlyAddedItems(CGameCtnEditorFree@ editor, bool withRefresh = false) {
         auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
+
         auto macroblock = pmt.GetMacroblockModelFromFilePath("Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx");
         trace('UpdateNewlyAddedItems macroblock is null: ' + (macroblock is null));
         auto placed = pmt.PlaceMacroblock_NoDestruction(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
         trace('UpdateNewlyAddedItems placed: ' + placed);
-
-        // if (placed && withRefresh) {
-        //     RefreshBlocksAndItems(editor);
-        // }
-
         bool removed = pmt.RemoveMacroblock(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
         trace('UpdateNewlyAddedItems removed: ' + removed);
     }

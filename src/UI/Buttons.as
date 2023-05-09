@@ -7,7 +7,7 @@ namespace UX {
     }
 
     bool SmallButton(const string &in label) {
-        UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(0));
+        UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(2, 0));
         bool ret = UI::Button(label);
         UI::PopStyleVar();
         return ret;

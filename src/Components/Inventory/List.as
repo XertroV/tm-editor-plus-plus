@@ -2,7 +2,7 @@ class InventoryMainTab : Tab {
     InventoryMainTab(TabGroup@ p) {
         super(p, "Inventory", Icons::FolderOpenO);
         BlocksInventoryBrowserTab(Children);
-        BlocksBrokenInventoryBrowserTab(Children);
+        // BlocksBrokenInventoryBrowserTab(Children);
         ItemsInventoryBrowserTab(Children);
         MacroblocksInventoryBrowserTab(Children);
         GenericInventoryBrowserTab(Children, "Grass", "", 2);
@@ -49,7 +49,7 @@ class GenericInventoryBrowserTab : Tab {
     }
 
     void DrawInvNodeTreeArticle(CGameCtnArticleNodeArticle@ node) {
-        // UI::TreeNodeFlags::Leaf
+#if SIG_DEVELOPER
         if (UI::Button(Icons::Cube + "##" + node.Name)) {
             ExploreNod("Article " + node.NodeName, node);
             // node.GetCollectorNod() points to .Article.LoadedNod (and probs loads it if need be)
@@ -59,6 +59,7 @@ class GenericInventoryBrowserTab : Tab {
             // }
         }
         UI::SameLine();
+#endif
         if (UI::Button(node.Name)) {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             // we must set the placement node to the correct type, first, otherwise we get a crash

@@ -13,8 +13,18 @@ namespace Editor {
         _SetMapSize(map, nat3(map.Size.x, newHeight, map.Size.z));
     }
 
-    void SaveAndReloadMap() {
-        Log::Trace('save and reload map');
+    bool SaveMapSameName(CGameCtnEditorFree@ editor) {
+        string fileName = editor.Challenge.MapInfo.FileName;
+        if (fileName.Length == 0) {
+            NotifyWarning("Map must be saved, first.");
+            return false;
+        }
+        editor.PluginMapType.SaveMap(fileName);
+        Log::Trace('saved map');
+        return true;
+    }
+
+    void NoSaveAndReloadMap() {
         auto app = cast<CTrackMania>(GetApp());
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         string fileName = editor.Challenge.MapInfo.FileName;
@@ -22,11 +32,55 @@ namespace Editor {
             NotifyWarning("Map must be saved, first.");
             return;
         }
-        editor.PluginMapType.SaveMap(fileName);
-        Log::Trace('saved');
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
         app.BackToMainMenu();
         Log::Trace('back to menu');
+        AwaitReturnToMenu();
+        sleep(100);
+        app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
+
+    }
+
+    void SaveAndReloadMap() {
+        Log::Trace('save and reload map');
+        auto app = cast<CTrackMania>(GetApp());
+        auto editor = cast<CGameCtnEditorFree>(app.Editor);
+        if (!SaveMapSameName(editor)) {
+            NotifyWarning("Map must be saved, first.");
+            return;
+        }
+        string fileName = editor.Challenge.MapInfo.FileName;
+        while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
+        app.BackToMainMenu();
+        Log::Trace('back to menu');
+        AwaitReturnToMenu();
+        app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
+    }
+
+    void SaveAndReloadMapWithRefreshMap(const string &in refreshMapName) {
+        Log::Trace('save and reload map');
+        auto app = cast<CTrackMania>(GetApp());
+        auto editor = cast<CGameCtnEditorFree>(app.Editor);
+        string fileName = editor.Challenge.MapInfo.FileName;
+        if (!SaveMapSameName(editor)) {
+            NotifyWarning("Map must be saved, first.");
+            return;
+        }
+        while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
+        app.BackToMainMenu();
+        Log::Trace('back to menu');
+        AwaitReturnToMenu();
+        Log::Trace("edit map 2");
+        sleep(1000);
+        app.ManiaTitleControlScriptAPI.EditMap(refreshMapName, "", "");
+        while (app.Editor is null) yield();
+        @editor = cast<CGameCtnEditorFree>(app.Editor);
+        while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
+        sleep(1000);
+        Log::Trace('back to menu');
+
+        app.BackToMainMenu();
+        sleep(1000);
         AwaitReturnToMenu();
         app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
     }

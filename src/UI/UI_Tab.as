@@ -57,7 +57,9 @@ shared class Tab {
             return;
         }
         if (UI::BeginTabItem(tabName, TabFlags)) {
-            DrawTabWrapInner();
+            if (UI::BeginChild(fullName))
+                DrawTabWrapInner();
+            UI::EndChild();
             UI::EndTabItem();
         }
     }

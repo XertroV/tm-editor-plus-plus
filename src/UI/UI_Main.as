@@ -157,6 +157,7 @@ TabGroup@ CreateRootTabGroup() {
     PickedItemTab(root);
     // TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
     InventoryMainTab(root);
+    ItemEmbedTab(root);
     BlockSelectionTab(root);
     ItemSelectionTab(root);
 
