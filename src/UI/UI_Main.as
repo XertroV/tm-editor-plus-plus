@@ -65,7 +65,7 @@ namespace MenuBar {
     void Draw() {
         if (UI::BeginMenuBar()) {
             if (UI::BeginMenu("Search")) {
-
+                UI::TextDisabled("Does nothing atm");
                 bool changed = false;
                 UI::InputText("##menu-search", m_MenuSearch, changed);
                 if (changed) UpdateMenuSearch();

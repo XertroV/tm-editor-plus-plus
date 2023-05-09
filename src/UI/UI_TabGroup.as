@@ -116,7 +116,7 @@ class RootTabGroupCls : TabGroup {
         super("Root", null);
         // root
         groupName = "Root";
-        fullName = "";
+        fullName = "E++";
         IsRoot = true;
     }
 
