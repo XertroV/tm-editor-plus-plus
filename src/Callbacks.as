@@ -38,9 +38,27 @@ void RegisterItemChangedCallback(ProcessNewSelectedItem@ f) {
 //     }
 // }
 
-void RunOnEditorLoadCbs() {
-    for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
-        onEditorLoadCbs[i]();
+
+namespace Event {
+    void RunOnEditorLoadCbs() {
+        for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
+            onEditorLoadCbs[i]();
+        }
+    }
+    void OnNewBlock(CGameCtnBlock@ block) {
+        for (uint i = 0; i < blockCallbacks.Length; i++) {
+            blockCallbacks[i](block);
+        }
+    }
+    void OnNewItem(CGameCtnAnchoredObject@ item) {
+        for (uint i = 0; i < itemCallbacks.Length; i++) {
+            itemCallbacks[i](item);
+        }
+    }
+    void OnSelectedItemChanged(CGameItemModel@ itemModel) {
+        for (uint i = 0; i < selectedItemChangedCbs.Length; i++) {
+            selectedItemChangedCbs[i](itemModel);
+        }
     }
 }
 
@@ -60,17 +78,12 @@ void CheckForNewBlocks(CGameCtnEditorFree@ editor) {
         if (newBlocks > 0) {
             auto startIx = int(editor.Challenge.Blocks.Length) - newBlocks;
             for (uint i = startIx; i < editor.Challenge.Blocks.Length; i++) {
-                OnNewBlock(editor.Challenge.Blocks[i]);
+                Event::OnNewBlock(editor.Challenge.Blocks[i]);
             }
         }
     }
 }
 
-void OnNewBlock(CGameCtnBlock@ block) {
-    for (uint i = 0; i < blockCallbacks.Length; i++) {
-        blockCallbacks[i](block);
-    }
-}
 
 void CheckForNewItems(CGameCtnEditorFree@ editor) {
     if (editor is null) return;
@@ -85,17 +98,12 @@ void CheckForNewItems(CGameCtnEditorFree@ editor) {
         if (newItems > 0) {
             auto startIx = int(editor.Challenge.AnchoredObjects.Length) - newItems;
             for (uint i = startIx; i < editor.Challenge.AnchoredObjects.Length; i++) {
-                OnNewItem(editor.Challenge.AnchoredObjects[i]);
+                Event::OnNewItem(editor.Challenge.AnchoredObjects[i]);
             }
         }
     }
 }
 
-void OnNewItem(CGameCtnAnchoredObject@ item) {
-    for (uint i = 0; i < itemCallbacks.Length; i++) {
-        itemCallbacks[i](item);
-    }
-}
 
 uint _lastSelectedBlockInfoId = 0;
 uint _lastSelectedItemModelId = 0;
@@ -106,12 +114,6 @@ void CheckForNewSelectedItem(CGameCtnEditorFree@ editor) {
     auto im = editor.CurrentItemModel;
     if (im.Id.Value != _lastSelectedItemModelId) {
         _lastSelectedItemModelId = im.Id.Value;
-        OnSelectedItemChanged(im);
-    }
-}
-
-void OnSelectedItemChanged(CGameItemModel@ itemModel) {
-    for (uint i = 0; i < selectedItemChangedCbs.Length; i++) {
-        selectedItemChangedCbs[i](itemModel);
+        Event::OnSelectedItemChanged(im);
     }
 }

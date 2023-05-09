@@ -28,7 +28,7 @@ void RenderEarly() {
 
     if (EnteringEditor) {
         EditorPriv::ResetRefreshUnsafe();
-
+        Event::RunOnEditorLoadCbs();
     }
 }
 

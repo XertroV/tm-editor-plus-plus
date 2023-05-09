@@ -170,9 +170,10 @@ TabGroup@ CreateRootTabGroup() {
 
     Repeat::MainRepeatTab(root);
     DissociateItemsTab(root);
+    JitterEffectTab(root);
     // TodoTab(root, "Repeat Items", Icons::Magic + Icons::Repeat, "repeat items like IPT");
     // TodoTab(root, "Dissociate Items", Icons::Magic + Icons::ChainBroken, "dissociate items like IPT");
-    TodoTab(root, "Jitter", Icons::Magic + Icons::Arrows, "jitter items like IPT");
+    // TodoTab(root, "Jitter", Icons::Magic + Icons::Arrows, "jitter items like IPT");
 
     TodoTab(root, "Apply Transformation", "f(x)", "apply a transformation to a Source of blocks/items");
 

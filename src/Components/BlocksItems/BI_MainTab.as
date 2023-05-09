@@ -66,7 +66,7 @@ class ViewAllBlocksTab : BlockItemListTab {
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
-            Editor::SetAnimationGoTo(vec2(TAU / 8., TAU / 8.), Editor::GetCtnBlockMidpoint(block), 80.);
+            Editor::SetAnimationGoTo(vec2(TAU / 8., TAU / 8.), Editor::GetCtnBlockMidpoint(block), 120.);
         }
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
@@ -125,7 +125,7 @@ class ViewAllItemsTab : BlockItemListTab {
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
-            Editor::SetAnimationGoTo(vec2(TAU / 8., TAU / 8.), item.AbsolutePositionInMap, 80.);
+            Editor::SetAnimationGoTo(vec2(TAU / 8., TAU / 8.), item.AbsolutePositionInMap, 120.);
         }
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
