@@ -29,7 +29,7 @@ class ViewAllBlocksTab : BlockItemListTab {
         UI::TableSetupColumn("Coord", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
         UI::TableSetupColumn("Dir", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-        UI::TableSetupColumn("LM Quality", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("LM", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Tools", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
@@ -91,7 +91,7 @@ class ViewAllItemsTab : BlockItemListTab {
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
         float bigNumberColWidth = 110;
         float stdNumberColWidth = 90;
-        float smlNumberColWidth = 65;
+        float smlNumberColWidth = 70;
         float exploreColWidth = stdNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
         UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
