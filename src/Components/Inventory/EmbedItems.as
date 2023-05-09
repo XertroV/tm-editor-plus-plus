@@ -276,7 +276,7 @@ class ItemEmbedTab : Tab {
         step3Req.Method = Net::HttpMethod::Post;
         step3Req.Url = "https://map-monitor.xk.io/itemrefresh/create_map";
 #if DEV
-        step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
+        // step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
 #endif
         step3Req.Body = pl;
         step3Req.Start();
