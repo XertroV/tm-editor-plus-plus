@@ -9,6 +9,14 @@ namespace Editor {
         item.AbsolutePositionInMap = loc;
     }
 
+    // always returns a sensible coord, even if BlockUnitCoord is not set. does not account for associated blocks
+    nat3 GetItemCoord(CGameCtnAnchoredObject@ item) {
+        if (int(item.BlockUnitCoord.x) < 0) {
+            return PosToCoord(item.AbsolutePositionInMap);
+        }
+        return item.BlockUnitCoord;
+    }
+
     vec3 GetItemRotation(CGameCtnAnchoredObject@ item) {
         return vec3(
             item.Pitch,

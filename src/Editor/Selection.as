@@ -22,9 +22,10 @@ namespace Editor {
         auto selectedBuf = Dev::GetOffsetNod(editor, SelectedBufOffset);
         nat3 coord = nat3(0);
         for (uint i = 0; i < nbSelected; i++) {
-            coord.x = Dev::GetOffsetUint32(selectedBuf, i * 0xC);
-            coord.y = Dev::GetOffsetUint32(selectedBuf, i * 0xC + 0x4);
-            coord.z = Dev::GetOffsetUint32(selectedBuf, i * 0xC + 0x8);
+            coord = Dev::GetOffsetNat3(selectedBuf, i * 0xC);
+            // coord.x = Dev::GetOffsetUint32(selectedBuf, i * 0xC);
+            // coord.y = Dev::GetOffsetUint32(selectedBuf, i * 0xC + 0x4);
+            // coord.z = Dev::GetOffsetUint32(selectedBuf, i * 0xC + 0x8);
             selectedCoords[coord.ToString()] = true;
         }
         // find items with those coords
@@ -32,12 +33,12 @@ namespace Editor {
         auto linkedBlockEntryOffset = GetOffset("CGameCtnAnchoredObject", "Scale") + 0x10;
         for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
             auto item = map.AnchoredObjects[i];
+            auto assocBlock = Editor::GetItemsBlockAssociation(item);
             auto linkedListEntry = Dev::GetOffsetNod(item, linkedBlockEntryOffset);
-            if (linkedListEntry is null && selectedCoords.Exists(item.BlockUnitCoord.ToString())) {
+            if (assocBlock is null && selectedCoords.Exists(Editor::GetItemCoord(item).ToString())) {
                 selectedItems.InsertLast(item);
-            } else if (linkedListEntry !is null) {
-                auto block = cast<CGameCtnBlock>(Dev::GetOffsetNod(linkedListEntry, 0x0));
-                if (block !is null && selectedCoords.Exists(block.Coord.ToString())) {
+            } else if (assocBlock !is null) {
+                if (assocBlock !is null && selectedCoords.Exists(Editor::GetBlockCoord(assocBlock).ToString())) {
                     selectedItems.InsertLast(item);
                 }
             }
@@ -45,7 +46,8 @@ namespace Editor {
         // blocks
         for (uint i = 0; i < map.Blocks.Length; i++) {
             auto block = map.Blocks[i];
-            if (block !is null && selectedCoords.Exists(block.Coord.ToString())) {
+            // can improve coord via always passing through get position -> to coord
+            if (block !is null && selectedCoords.Exists(Editor::GetBlockCoord(block).ToString())) {
                 selectedBlocks.InsertLast(block);
             }
         }

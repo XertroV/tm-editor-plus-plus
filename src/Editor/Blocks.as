@@ -38,6 +38,13 @@ namespace Editor {
         }
     }
 
+    nat3 GetBlockCoord(CGameCtnBlock@ block) {
+        if (Editor::IsBlockFree(block)) {
+            return PosToCoord(Editor::GetBlockLocation(block));
+        }
+        return block.Coord;
+    }
+
     void SetBlockCoord(CGameCtnBlock@ block, nat3 coord) {
         block.CoordX = coord.x;
         block.CoordY = coord.y;

@@ -46,7 +46,7 @@ class DissociateItemsTab : Tab {
         UI::Separator();
         UI::AlignTextToFramePadding();
         UI::TextWrapped("Selected Dissociation");
-        UI::TextWrapped("This will dissociate all items that are associated with blocks that are currently selected using the Copy tool.\n\\$f80Note: does not work yet for items on free blocks (normal / ghost only).");
+        UI::TextWrapped("This will dissociate all items that are associated with blocks that are currently selected using the Copy tool.");
 
         auto nbSelected = editor.PluginMapType.CopyPaste_GetSelectedCoordsCount();
         // auto nbSelected = Dev::GetOffsetUint32(editor, 0xB58);
