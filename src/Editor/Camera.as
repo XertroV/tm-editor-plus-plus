@@ -13,47 +13,35 @@ namespace Editor {
         cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType.EnableEditorInputsCustomProcessing = false;
     }
 
-    void SetTargetedPosition(vec3 pos) {
+    void SetCamTargetedPosition(vec3 pos) {
         cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType.CameraTargetPosition = pos;
     }
 
-    void SetTargetedDistance(float dist) {
+    void SetCamTargetedDistance(float dist) {
         cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType.CameraToTargetDistance = dist;
     }
 
-    void SetOrbitalAngle(float h, float v) {
+    void SetCamOrbitalAngle(float h, float v) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         editor.PluginMapType.CameraHAngle = h;
         editor.PluginMapType.CameraVAngle = v;
     }
 
-    bool SetAnimationGoTo(vec2 lookAngleHV, vec3 position, float targetDist) {
+    bool SetCamAnimationGoTo(vec2 lookAngleHV, vec3 position, float targetDist) {
         Editor::EnableCustomCameraInputs();
         @CameraAnimMgr = AnimMgr(false, S_AnimationDuration);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cam = editor.OrbitalCameraControl;
-        g_StartingHAngle = cam.m_CurrentHAngle;
-        g_StartingVAngle = cam.m_CurrentVAngle;
-        g_StartingPos = cam.m_TargetedPosition;
-        g_StartingTargetDist = cam.m_CameraToTargetDistance;
-        g_EndingHAngle = lookAngleHV.x; // * TAU / 4.0;
-        g_EndingVAngle = lookAngleHV.y; // * TAU / 4.0;
-        g_EndingPos = position;
-        g_EndingTargetDist = targetDist;
+        @g_startCamState = CamState(cam);
+        @g_endCamState = CamState(lookAngleHV.x, lookAngleHV.y, targetDist, position);
         return true;
     }
 }
 
 AnimMgr@ CameraAnimMgr = AnimMgr(true);
 
-float g_StartingHAngle = 0;
-float g_StartingVAngle = 0;
-float g_EndingHAngle = 0;
-float g_EndingVAngle = 0;
-float g_StartingTargetDist = 0;
-float g_EndingTargetDist = 0;
-vec3 g_StartingPos();
-vec3 g_EndingPos();
+Editor::CamState@ g_startCamState = Editor::CamState();
+Editor::CamState@ g_endCamState = Editor::CamState();
 
 
 void UpdateAnimAndCamera() {
@@ -64,11 +52,11 @@ void UpdateAnimAndCamera() {
 }
 
 void UpdateCameraProgress(float t) {
-    Editor::SetTargetedDistance(Math::Lerp(g_StartingTargetDist, g_EndingTargetDist, t));
-    Editor::SetTargetedPosition(Math::Lerp(g_StartingPos, g_EndingPos, t));
-    Editor::SetOrbitalAngle(
-        MathX::SimplifyRadians(MathX::AngleLerp(g_StartingHAngle, g_EndingHAngle, t)),
-        MathX::SimplifyRadians(MathX::AngleLerp(g_StartingVAngle, g_EndingVAngle, t))
+    Editor::SetCamTargetedDistance(Math::Lerp(g_startCamState.TargetDist, g_endCamState.TargetDist, t));
+    Editor::SetCamTargetedPosition(Math::Lerp(g_startCamState.Pos, g_endCamState.Pos, t));
+    Editor::SetCamOrbitalAngle(
+        MathX::SimplifyRadians(MathX::AngleLerp(g_startCamState.HAngle, g_endCamState.HAngle, t)),
+        MathX::SimplifyRadians(MathX::AngleLerp(g_startCamState.VAngle, g_endCamState.VAngle, t))
     );
 }
 
