@@ -1,4 +1,4 @@
-class JitterEffectTab : Tab {
+class JitterEffectTab : EffectTab {
     JitterEffectTab(TabGroup@ p) {
         super(p, "Jitter", Icons::Magic + Icons::Arrows);
         RegisterNewItemCallback(ProcessItem(OnNewItem));
@@ -7,14 +7,14 @@ class JitterEffectTab : Tab {
     }
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
-        if (!e_JitterActive) return false;
+        if (!_IsActive) return false;
         ApplyJitter(item);
         refreshThisFrame = true;
         return true;
     }
 
     bool OnNewBlock(CGameCtnBlock@ block) {
-
+        if (!_IsActive) return false;
         return false;
     }
 
@@ -30,7 +30,7 @@ class JitterEffectTab : Tab {
         }
     }
 
-    bool e_JitterActive = false;
+    bool _IsActive = false;
 
     bool jitterPos = true;
     vec3 jitterPosAmt = vec3(8, 1, 8);
@@ -47,7 +47,7 @@ class JitterEffectTab : Tab {
         UI::Text("Jitter applies a random offset to newly placed items' position and/or rotation.");
         // UI::TextWrapped("\\$f80Note!\\$z Refreshing items will not work for the most recently placed item! You must place an extra item, delete it, and then it will work as expected. You can also save and reload the map instead of using the refresh items button -- same restrictions apply.");
         UI::TextWrapped("\\$f80Note!\\$z Too much ctrl+z can undo the jitter (and a re-do is then required if jitter isn't active at the time of the undo).");
-        if (UI::Button(e_JitterActive ? "Deactivate##jitter" : "Activate##jitter")) {
+        if (UI::Button(_IsActive ? "Deactivate##jitter" : "Activate##jitter")) {
             ToggleJitter();
         }
         UI::SameLine();
@@ -73,10 +73,7 @@ class JitterEffectTab : Tab {
     }
 
     void ToggleJitter() {
-        e_JitterActive = !e_JitterActive;
-        // if (e_JitterActive) {
-        //     startnew(JitterWatcher);
-        // }
+        _IsActive = !_IsActive;
     }
 
     void ApplyJitter(CGameCtnAnchoredObject@ item) {

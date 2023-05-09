@@ -1,19 +1,17 @@
 [Setting hidden]
 bool S_SetBlockLocationOnDissociation = true;
 
-class DissociateItemsTab : Tab {
+class DissociateItemsTab : EffectTab {
     DissociateItemsTab(TabGroup@ p) {
         super(p, "Dissociate Items", Icons::Magic + Icons::ChainBroken);
         RegisterNewItemCallback(ProcessItem(this.OnNewItem));
     }
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
-        if (!e_DissociateNew) return false;
+        if (!_IsActive) return false;
         Editor::DissociateItem(item);
         return true;
     }
-
-    bool e_DissociateNew = false;
 
     uint lastNbSelected = 0;
 
@@ -31,8 +29,8 @@ class DissociateItemsTab : Tab {
 
         UI::AlignTextToFramePadding();
         UI::Text("Dissociate Newly Placed Items");
-        if (UI::Button(e_DissociateNew ? "Deactivate##dissociate" : "Activate##dissociate")) {
-            e_DissociateNew = !e_DissociateNew;
+        if (UI::Button(_IsActive ? "Deactivate##dissociate" : "Activate##dissociate")) {
+            _IsActive = !_IsActive;
         }
 
         UI::Separator();

@@ -16,6 +16,15 @@ shared class TabGroup {
         }
     }
 
+    bool AnyActive() {
+        for (uint i = 0; i < tabs.Length; i++) {
+            auto t = cast<EffectTab>(tabs[i]);
+            if (t is null) continue;
+            if (t._IsActive) return true;
+        }
+        return false;
+    }
+
     void AddTab(Tab@ t) {
         if (t.Parent !is null) {
             throw('tried to add a tab that already has a parent group.');
@@ -76,7 +85,7 @@ shared class TabGroup {
             }
             for (int i = 0; i < int(tabs.Length); i++) {
                 auto tab = tabs[i];
-                if (UI::Selectable(sideBarExpanded ? tab.tabIconAndName : tab.tabIcon, selectedTabIx == i)) {
+                if (UI::Selectable(sideBarExpanded ? tab.DisplayIconAndName : tab.DisplayIcon, selectedTabIx == i)) {
                     selectedTabIx = i;
                 }
             }

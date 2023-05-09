@@ -26,6 +26,14 @@ shared class Tab {
         @Children = TabGroup(tabName, this);
     }
 
+    const string get_DisplayIconAndName() {
+        return tabIconAndName;
+    }
+
+    const string get_DisplayIcon() {
+        return tabIcon;
+    }
+
     int get_TabFlags() {
         return UI::TabItemFlags::NoCloseWithMiddleMouseButton
             | UI::TabItemFlags::NoReorder
