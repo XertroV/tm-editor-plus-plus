@@ -171,6 +171,7 @@ TabGroup@ CreateRootTabGroup() {
     Repeat::MainRepeatTab(root);
     DissociateItemsTab(root);
     JitterEffectTab(root);
+    RandomizerTab(root);
     // TodoTab(root, "Repeat Items", Icons::Magic + Icons::Repeat, "repeat items like IPT");
     // TodoTab(root, "Dissociate Items", Icons::Magic + Icons::ChainBroken, "dissociate items like IPT");
     // TodoTab(root, "Jitter", Icons::Magic + Icons::Arrows, "jitter items like IPT");
@@ -180,7 +181,7 @@ TabGroup@ CreateRootTabGroup() {
     TodoTab(root, "Set B/I Properties", Icons::PencilSquareO, "mass-apply properties like color or LM quality.");
     TodoTab(root, "Editor Settings", Icons::Cogs, "change hidden and regular editor settings");
     TodoTab(root, "Medals & Validation (Plugin)", "\\$fb4"+Icons::Circle+"\\$z", "be a demo plugin and do the same thing as Medals Editor");
-    TodoTab(root, "Ranomizer", "\\$bff"+Icons::Random+"\\$z", "randomize the type of blocks/items for newly placed ones, or existing ones, according to some filter / conditions.");
+    // TodoTab(root, "Ranomizer", "\\$bff"+Icons::Random+"\\$z", "randomize the type of blocks/items for newly placed ones, or existing ones, according to some filter / conditions.");
     TodoTab(root, "Validation Runs", Icons::Car, 'track validation runs so you dont lose validation times');
 
 #if SIG_DEVELOPER
