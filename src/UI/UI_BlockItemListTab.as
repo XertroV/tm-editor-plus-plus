@@ -2,6 +2,9 @@ enum BIListTabType {
     Blocks, BakedBlocks, Items
 }
 
+const string cpYesMark = "\\$8f0" + Icons::Check;
+const string cpNoMark = "\\$c84" + Icons::Times;
+
 class BlockItemListTab : Tab {
     bool useBakedBlocks = false;
     BIListTabType ty = BIListTabType::Blocks;
@@ -59,6 +62,7 @@ class BlockItemListTab : Tab {
         return null;
     }
 
+    bool wholeListShown = false;
     bool autoscroll = false;
     bool skipXZStarting = true;
     protected int nbCols = 9;
@@ -93,6 +97,9 @@ class BlockItemListTab : Tab {
 
         DrawColumnHeadersOnlyTable();
 
+        wholeListShown = false;
+        bool sawFirst = false, sawLast = false;
+
         // UI::PushStyleColor(UI::Col::TableRowBg, vec4(.2,.2,.2,.7));
         UI::PushStyleColor(UI::Col::TableRowBgAlt, vec4(.2,.2,.2,.5));
         if (UI::BeginTable("bi-list|"+tostring(ty), nbCols, UI::TableFlags::ScrollY | UI::TableFlags::RowBg)) {
@@ -103,6 +110,8 @@ class BlockItemListTab : Tab {
             }
             UI::ListClipper clip(nbBlocksToDraw);
             while (clip.Step()) {
+                if (clip.DisplayStart == 1) sawFirst = true;
+                if (clip.DisplayEnd == nbBlocksToDraw) sawLast = true;
                 for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                     UI::PushID(i);
                     DrawObjectInfo(map, nbBlocksToSkip + i);
@@ -113,11 +122,13 @@ class BlockItemListTab : Tab {
             UI::EndTable();
         }
         UI::PopStyleColor(1);
+
+        wholeListShown = sawFirst && sawLast;
     }
 
     void DrawColumnHeadersOnlyTable() {
         if (UI::BeginTable("bi-list-headings"+tostring(ty), nbCols, UI::TableFlags::None)) {
-            SetupMainTableColumns(true);
+            SetupMainTableColumns(true && !wholeListShown);
             UI::TableHeadersRow();
             UI::EndTable();
         }

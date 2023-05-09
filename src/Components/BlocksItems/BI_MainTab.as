@@ -19,22 +19,24 @@ class ViewAllBlocksTab : BlockItemListTab {
     }
 
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
+        float bigNumberColWidth = 110;
         float numberColWidth = 90;
         float smlNumberColWidth = 70;
         float exploreColWidth = numberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
         UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
-        UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, numberColWidth);
-        UI::TableSetupColumn("Coord", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
+        UI::TableSetupColumn("Coord", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
+        UI::TableSetupColumn("Dir", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("LM Quality", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, numberColWidth);
-        UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Tools", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
     void DrawObjectInfo(CGameCtnChallenge@ map, int i) override {
         auto block = GetBlock(map, i);
+        bool isCP = block.WaypointSpecialProperty !is null;
 
         auto blockId = Editor::GetBlockUniqueID(block);
         UI::TableNextRow();
@@ -46,23 +48,22 @@ class ViewAllBlocksTab : BlockItemListTab {
         UI::Text(block.DescId.GetName());
 
         UI::TableNextColumn();
-        UI::Text(tostring(Editor::GetBlockLocation(block)));
+        UI::Text(FormatX::Vec3(Editor::GetBlockLocation(block)));
 
         UI::TableNextColumn();
-        UI::Text(tostring(block.Coord));
+        UI::Text(FormatX::Nat3(block.Coord));
+
+        UI::TableNextColumn();
+        UI::Text(tostring(block.BlockDir));
+
         UI::TableNextColumn();
         UI::Text(tostring(block.MapElemColor));
 
         UI::TableNextColumn();
         UI::Text(tostring(block.MapElemLmQuality));
 
-
         UI::TableNextColumn();
-        UI::Text(tostring(Editor::GetBlockPlacedCountIndex(block)));
-
-        UI::TableNextColumn();
-        UI::Text(tostring(Reflection::GetRefCount(block)));
-
+        UI::Text(isCP ? cpYesMark : cpNoMark);
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
@@ -84,25 +85,29 @@ class ViewAllBlocksTab : BlockItemListTab {
 class ViewAllItemsTab : BlockItemListTab {
     ViewAllItemsTab(TabGroup@ p) {
         super(p, "All Items", Icons::Tree, BIListTabType::Items);
-        nbCols = 7;
+        nbCols = 8;
     }
 
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
-        float bigNumberColWidth = 90;
+        float bigNumberColWidth = 110;
+        float stdNumberColWidth = 90;
         float smlNumberColWidth = 65;
-        float exploreColWidth = bigNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
+        float exploreColWidth = stdNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
         UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
         UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
         UI::TableSetupColumn("Rot", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
-        UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
+        UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("LM", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Tools", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
     void DrawObjectInfo(CGameCtnChallenge@ map, int i) override {
         auto item = GetItem(map, i);
         auto blockId = Editor::GetItemUniqueBlockID(item);
+        bool isCP = item.WaypointSpecialProperty !is null;
+
         UI::TableNextRow();
 
         UI::TableNextColumn();
@@ -112,16 +117,19 @@ class ViewAllItemsTab : BlockItemListTab {
         UI::Text(item.ItemModel.IdName);
 
         UI::TableNextColumn();
-        UI::Text(item.AbsolutePositionInMap.ToString());
+        UI::Text(FormatX::Vec3(item.AbsolutePositionInMap));
 
         UI::TableNextColumn();
-        UI::Text(MathX::ToDeg(Editor::GetItemRotation(item)).ToString());
+        UI::Text(FormatX::Vec3(MathX::ToDeg(Editor::GetItemRotation(item))));
 
         UI::TableNextColumn();
         UI::Text(tostring(item.MapElemColor));
 
         UI::TableNextColumn();
         UI::Text(tostring(item.MapElemLmQuality));
+
+        UI::TableNextColumn();
+        UI::Text(isCP ? cpYesMark : cpNoMark);
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {

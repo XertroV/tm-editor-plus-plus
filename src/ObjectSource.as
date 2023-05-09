@@ -3,7 +3,7 @@ enum SourceType {
 }
 
 enum SourceTargetType {
-    Blocks, Items
+    Blocks, Items, BakedBlocks
 }
 
 /**
