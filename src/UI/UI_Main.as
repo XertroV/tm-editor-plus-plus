@@ -107,7 +107,15 @@ namespace MenuBar {
             }
 
 #if SIG_DEVELOPER
-            if (UI::BeginMenu("Dev"))
+            if (UI::BeginMenu("Dev")) {
+                if (UI::MenuItem(Icons::Cube + " Editor"))
+                    ExploreNod(GetApp().Editor);
+                if (UI::MenuItem(Icons::Cube + " PluginMapType"))
+                    ExploreNod(cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType);
+                if (UI::MenuItem(Icons::Cube + " Editor.Challenge"))
+                    ExploreNod(cast<CGameCtnEditorFree>(GetApp().Editor).Challenge);
+                UI::EndMenu();
+            }
 #endif
 
 
