@@ -106,6 +106,11 @@ namespace MenuBar {
                 UI::EndMenu();
             }
 
+#if SIG_DEVELOPER
+            if (UI::BeginMenu("Dev"))
+#endif
+
+
             if (UI::BeginMenu("Help")) {
                 UI::BeginDisabled();
                 if (UI::MenuItem("Video Tutorial")) {
@@ -147,9 +152,6 @@ namespace MenuBar {
         // todo
     }
 }
-
-
-
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();

@@ -6,7 +6,13 @@ class ItemEmbedTab : Tab {
     uint step = 1;
 
     void DrawInner() override {
-        if (UI::Button("Reset##refrehs-items-step")) {
+        UI::SetNextItemOpen(true, UI::Cond::FirstUseEver);
+        if (UI::CollapsingHeader("About / Usage")) {
+            UI::Indent();
+            UI::TextWrapped("This will embed new items in the map if they are not in the inventory.\nUsage: download an item set via Item Exchange, then use this form. Note that the maximum request size (including the map) is ~12 MB.\nSaving the map will remove all embedded items that are not placed in the map. However, they will remain in the inventory until you fully exit the editor. In this way, you can add multiple new items without restarting the game.\nEmbedded items will by added to existing folders if they exist, otherwise will be the final entry in the item inventory (far right).");
+            UI::Unindent();
+        }
+        if (UI::Button("Reset##refresh-items-step")) {
             ResetState();
         }
         UI::Separator();
@@ -23,14 +29,13 @@ class ItemEmbedTab : Tab {
     uint lastRefresh = 0;
 
     CSystemFidsFolder@ itemsFolder;
-    uint nbItemsInLocalFolder = 0;
     string[] localItemPaths;
 
     void DrawStep1() {
         UI::BeginDisabled(step != 1);
         UI::Text("Step 1. Scan for items");
-        UI::Text("Last refresh: " + Time::Format(Time::Now - lastRefresh, true, true, true));
-        UI::Text("Nb Items Counted: " + nbItemsInLocalFolder);
+        UI::Text("Last refresh: " + Time::Format(Time::Now - lastRefresh, false, true, true));
+        UI::Text("Nb Items Counted: " + localItemPaths.Length);
         UI::BeginDisabled(false);
         if (localItemPaths.Length > 0) {
             CopiableLabeledValue("First item", localItemPaths[0]);
@@ -56,7 +61,6 @@ class ItemEmbedTab : Tab {
         itemsFolderPrefix = itemsFolder.FullDirName;
         // Fids::UpdateTree(itemsFolder);
         // cache items
-        nbItemsInLocalFolder = 0;
         localItemPaths.RemoveRange(0, localItemPaths.Length);
         CacheItemsFolder(itemsFolderPrefix.SubStr(0, itemsFolderPrefix.Length - 1));
     }
@@ -65,7 +69,6 @@ class ItemEmbedTab : Tab {
         auto ctn = IO::IndexFolder(folderPath, true);
         for (uint i = 0; i < ctn.Length; i++) {
             if (IsItemFileName(ctn[i])) {
-                nbItemsInLocalFolder++;
                 localItemPaths.InsertLast(ctn[i].Replace('/', '\\').SubStr(itemsFolderPrefix.Length));
                 // trace('cached; ' + ctn[i]);
             }
@@ -83,7 +86,6 @@ class ItemEmbedTab : Tab {
 
     void CacheItemFids(CSystemFidFile@ leaf) {
         if (IsItemFileName(leaf.FileName)) {
-            nbItemsInLocalFolder++;
             localItemPaths.InsertLast(string(leaf.FullFileName).SubStr(itemsFolderPrefix.Length));
             // trace('Caching local item: ' + leaf.FullFileName);
         }
@@ -94,13 +96,12 @@ class ItemEmbedTab : Tab {
         return suffix == ".item.gbx"; // || suffix == "block.gbx";
     }
 
-    uint nbCachedInvItems = 0;
     string[] cachedInvItemPaths;
 
     void DrawStep2() {
         UI::BeginDisabled(step != 2);
         UI::Text("Step 2. Scan Inventory for Differences");
-        UI::Text("Nb Items Counted: " + nbCachedInvItems);
+        UI::Text("Nb Items Counted: " + cachedInvItemPaths.Length);
         if (cachedInvItemPaths.Length > 0) {
             CopiableLabeledValue("First item", cachedInvItemPaths[0]);
         }
@@ -137,7 +138,6 @@ class ItemEmbedTab : Tab {
         if (customNode is null) {
             throw('could not find custom items node');
         }
-        nbCachedInvItems = 0;
         cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
         CacheInvItem(customNode);
         CacheItemDiff();
@@ -161,7 +161,6 @@ class ItemEmbedTab : Tab {
             warn('null collector nod for ' + node.Name);
             return;
         }
-        nbCachedInvItems++;
         // if we delete some files and refresh Fids, this can happen
         if (node.Article.CollectorFid is null) return;
         cachedInvItemPaths.InsertLast(string(node.Article.CollectorFid.FullFileName).SubStr(itemsFolderPrefix.Length));
@@ -192,13 +191,18 @@ class ItemEmbedTab : Tab {
     void DrawStep3() {
         UI::BeginDisabled(step != 3);
         UI::Text("Step 3. Request embed items to map");
+
+        if (missingItems.Length == 0) {
+            UI::Text("\\$f80No missing items detected.");
+        }
+
         UI::TextWrapped("New folders/items will appear as the last elements of their respective folders.");
         UI::TextWrapped("Note: will also automatically save, request, and reload the map. (Creates a backup every time.)");
         UI::TextWrapped("Note: Too many items may make the request fail; max: ~12mb incl map.");
 
         UI::TextWrapped("\\$f80Warning:\\$z If you get msg like 'Error while retrieving map! Missing items:', click 'Load Anyway' and then 'No'. (If this doesn't work, you can experiment, and say something in the support thread.)");
 
-        if (step == 3) {
+        if (step == 3 && missingItems.Length > 0) {
             UI::SetNextItemOpen(true, UI::Cond::Appearing);
             if (UI::CollapsingHeader("Select Items to Embed")) {
                 UI::Indent();
@@ -227,15 +231,15 @@ class ItemEmbedTab : Tab {
 
                 UI::Unindent();
             }
-        }
 
-        UI::Text("Status: " + (step3ReqError.Length == 0 ? step3Req is null ? "Not started" : "In Progress" : "\\$f80Last Req Error:\\$z " + step3ReqError));
+            UI::Text("Status: " + (step3ReqError.Length == 0 ? step3Req is null ? "Not started" : "In Progress" : "\\$f80Last Req Error:\\$z " + step3ReqError));
 
-        UI::BeginDisabled(step3Req !is null);
-        if (UI::Button("Get Updated Map")) {
-            startnew(CoroutineFunc(RunStep3));
+            UI::BeginDisabled(step3Req !is null);
+            if (UI::Button("Get Updated Map")) {
+                startnew(CoroutineFunc(RunStep3));
+            }
+            UI::EndDisabled();
         }
-        UI::EndDisabled();
 
         UI::EndDisabled();
     }
@@ -278,7 +282,7 @@ class ItemEmbedTab : Tab {
         step3Req.Method = Net::HttpMethod::Post;
         step3Req.Url = "https://map-monitor.xk.io/itemrefresh/create_map";
 #if DEV
-        step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
+        // step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
 #endif
         step3Req.Body = pl;
         step3Req.Start();
@@ -354,6 +358,10 @@ class ItemEmbedTab : Tab {
     void ResetState() {
         step = 1;
         @step3Req = null;
+        missingItems.RemoveRange(0, missingItems.Length);
+        cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
+        localItemPaths.RemoveRange(0, localItemPaths.Length);
+
     }
 }
 

@@ -79,7 +79,7 @@ class BlockItemListTab : Tab {
 
         autoscroll = UI::Checkbox("Autoscroll", autoscroll);
 
-        if (IsAnyBlocksTab) {
+        if (IsAnyBlocksTab && nbBlocks > sizeXZ) {
             UI::SameLine();
             if (recheckSkip) {
                 recheckSkip = false;

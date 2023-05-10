@@ -84,7 +84,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
 #if SIG_DEVELOPER
         if (UI::Button(Icons::Cube + "Explore Block")) {
-            ExploreNod(block.BlockInfo);
+            ExploreNod(block.DescId.GetName(), block);
         }
 #endif
         UI::NextColumn();
@@ -96,7 +96,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
 #if SIG_DEVELOPER
         if (UI::Button(Icons::Cube + " BlockInfo")) {
-            ExploreNod(block.BlockInfo);
+            ExploreNod("Info: " + block.DescId.GetName(), block.BlockInfo);
         }
 #endif
         UI::Columns(1);

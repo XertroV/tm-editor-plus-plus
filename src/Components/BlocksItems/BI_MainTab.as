@@ -117,11 +117,28 @@ class ViewAllBlocksTab : BlockItemListTab {
             // ExploreNod("Block " + blockId + ".", block);
             Notify("todo");
         }
-        // UI::SameLine();
-        // if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
-        //     Notify("todo");
+        if (!Editor::IsBlockFree(block)) {
+            UI::SameLine();
+            if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
+                startnew(CoroutineFuncUserdata(DeleteBlockSoon), block);
+            }
+        }
+    }
 
-        // }
+    void DeleteBlockSoon(ref@ ref) {
+        CGameCtnBlock@ block = cast<CGameCtnBlock>(ref);
+        if (block is null) return;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        editor.PluginMapType.AutoSave();
+        if (block.IsGhostBlock()) {
+            if (!editor.PluginMapType.RemoveGhostBlock(block.BlockInfo, Nat3ToInt3(block.Coord), block.Dir)) {
+                NotifyWarning("Unable to remove ghost block:\n Coord: " + block.Coord.ToString() + "\n Type: " + block.DescId.GetName() + "\n: Dir: " + tostring(block.Dir));
+            }
+        } else {
+            if (!editor.PluginMapType.RemoveBlock(Nat3ToInt3(block.Coord))) {
+                NotifyWarning("Unable to remove block at " + block.Coord.ToString());
+            }
+        }
     }
 }
 

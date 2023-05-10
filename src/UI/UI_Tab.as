@@ -1,12 +1,14 @@
 shared class Tab {
-    string idNonce = "tab-" + Math::Rand(0, 2000000000);
+    string idNonce = "tab-" + Math::Rand(0, TWO_BILLION);
 
     // bool canCloseTab = false;
     TabGroup@ Parent = null;
     TabGroup@ Children = null;
+    TabGroup@ WindowChildren = null;
 
     string tabName;
     string fullName;
+    uint windowExtraId = Math::Rand(0, TWO_BILLION);
     string tabIcon;
     string tabIconAndName;
 
@@ -15,6 +17,8 @@ shared class Tab {
     bool tabOpen = true;
     bool get_windowOpen() { return !tabOpen; }
     void set_windowOpen(bool value) { tabOpen = !value; }
+    bool expandWindowNextFrame = false;
+    bool windowExpanded = false;
 
     Tab(TabGroup@ parent, const string &in tabName, const string &in icon) {
         this.tabName = tabName;
@@ -24,6 +28,7 @@ shared class Tab {
         tabIcon = " " + icon;
         tabIconAndName = tabIcon + " " + tabName;
         @Children = TabGroup(tabName, this);
+        @WindowChildren = TabGroup(tabName, this);
     }
 
     const string get_DisplayIconAndName() {
@@ -93,6 +98,12 @@ shared class Tab {
 
     void _HeadingRight() {
         if (!tabOpen) {
+            if (!windowExpanded) {
+                if (UI::Button("Expand Window##"+fullName)) {
+                    expandWindowNextFrame = true;
+                }
+                UI::SameLine();
+            }
             if (UI::Button("Return to Tab##"+fullName)) {
                 windowOpen = !windowOpen;
             }
@@ -114,14 +125,26 @@ shared class Tab {
         UI::PopID();
     }
 
-    void DrawWindow() {
+    vec2 lastWindowPos;
+    bool DrawWindow() {
         Children.DrawWindows();
-        if (!windowOpen) return;
-        if (UI::Begin(fullName, windowOpen, WindowFlags)) {
+        WindowChildren.DrawWindowsAndRemoveTabsWhenClosed();
+        if (!windowOpen) return false;
+        if (expandWindowNextFrame && windowOpen) {
+            UI::SetNextWindowPos(int(lastWindowPos.x), int(lastWindowPos.y));
+            windowExtraId = Math::Rand(0, TWO_BILLION);
+        }
+        expandWindowNextFrame = false;
+        windowExpanded = false;
+        if (UI::Begin(fullName + "##" + windowExtraId, windowOpen, WindowFlags)) {
+            windowExpanded = true;
             // DrawTogglePop();
             DrawInnerWrapID();
         }
+        UI::Text("Test");
+        lastWindowPos = UI::GetWindowPos();
         UI::End();
+        return true;
     }
 }
 

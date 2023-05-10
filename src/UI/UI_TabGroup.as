@@ -109,6 +109,15 @@ shared class TabGroup {
             tabs[i].DrawWindow();
         }
     }
+
+    void DrawWindowsAndRemoveTabsWhenClosed() {
+        for (uint i = 0; i < tabs.Length; i++) {
+            if (!tabs[i].DrawWindow()) {
+                tabs.RemoveAt(i);
+                i--;
+            }
+        }
+    }
 }
 
 class RootTabGroupCls : TabGroup {

@@ -69,11 +69,11 @@ class CursorPropsTab : Tab {
             UI::EndCombo();
         }
 
-        if (UI::Button(Icons::StarO + "##add-fav-cursor")) {
-            cursorTab.cursorFavs.SaveFavorite(cursor);
-        }
+        // if (UI::Button(Icons::StarO + "##add-fav-cursor")) {
+            // cursorTab.cursorFavs.SaveFavorite(cursor);
+        // }
+        // UI::SameLine();
 
-        UI::SameLine();
         UI::SetCursorPos(UI::GetCursorPos() + vec2(10, 0));
 
         if (UI::Button("Reset##cursor")) {

@@ -31,7 +31,7 @@ class BlockVariantBrowserTab : Tab {
 #if SIG_DEVELOPER
         UI::SameLine();
         if (UI::Button(Icons::Cube + " Explore BlockInfo")) {
-            ExploreNod(bi);
+            ExploreNod("Info: " + bi.IdName, bi);
         }
 #endif
 

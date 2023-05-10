@@ -1,6 +1,6 @@
 class SetLinkedCheckpointsTab : EffectTab {
     SetLinkedCheckpointsTab(TabGroup@ parent) {
-        super(parent, "Auto Linked Checkpoints", Icons::Link);
+        super(parent, "Auto Link Checkpoints", Icons::Link);
         RegisterNewItemCallback(ProcessItem(this.OnNewItem));
         RegisterNewBlockCallback(ProcessBlock(this.OnNewBlock));
     }
@@ -34,6 +34,7 @@ class SetLinkedCheckpointsTab : EffectTab {
         _IsActive = UI::Checkbox("Set new CPs properties", _IsActive);
         UI::BeginDisabled(!_IsActive);
         m_linked = UI::Checkbox("Linked CP?", m_linked);
+        UI::SetNextItemWidth(170.0);
         m_order = UI::InputInt("CP Order", m_order);
         UI::EndDisabled();
     }
