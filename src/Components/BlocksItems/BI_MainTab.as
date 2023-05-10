@@ -5,6 +5,8 @@ class BI_MainTab : Tab {
         ViewAllBlocksTab(Children);
         ViewAllBlocksTab(Children, true);
         ViewAllItemsTab(Children);
+        ViewClassicBlocksTab(Children);
+        ViewGhostBlocksTab(Children);
     }
 
     void DrawInner() override {
@@ -12,9 +14,50 @@ class BI_MainTab : Tab {
     }
 }
 
+class ViewClassicBlocksTab : ViewAllBlocksTab {
+    ViewClassicBlocksTab(TabGroup@ p) {
+        super(p, "Classic Blocks", Icons::Cubes, BIListTabType::Blocks);
+        nbCols = 9;
+    }
+
+    int GetNbObjects(CGameCtnChallenge@ map) override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.PluginMapType.ClassicBlocks.Length;
+    }
+
+    CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.PluginMapType.ClassicBlocks[i];
+    }
+}
+
+class ViewGhostBlocksTab : ViewAllBlocksTab {
+    ViewGhostBlocksTab(TabGroup@ p) {
+        super(p, "Ghost Blocks", Icons::Cubes, BIListTabType::Blocks);
+        nbCols = 9;
+    }
+
+    int GetNbObjects(CGameCtnChallenge@ map) override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.PluginMapType.GhostBlocks.Length;
+    }
+
+    CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.PluginMapType.GhostBlocks[i];
+    }
+}
+
+
 class ViewAllBlocksTab : BlockItemListTab {
     ViewAllBlocksTab(TabGroup@ p, bool isBaked = false) {
         super(p, isBaked ? "All Baked Blocks " : "All Blocks", Icons::Cubes, isBaked ? BIListTabType::BakedBlocks : BIListTabType::Blocks);
+        nbCols = 9;
+    }
+
+    // Passthrough constructor
+    ViewAllBlocksTab(TabGroup@ p, const string &in title, const string &in icon, BIListTabType ty) {
+        super(p, title, icon, ty);
         nbCols = 9;
     }
 

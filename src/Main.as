@@ -1,6 +1,7 @@
 bool UserHasPermissions = false;
 
 void Main() {
+    LoadFonts();
     UserHasPermissions = Permissions::OpenAdvancedMapEditor();
     if (!UserHasPermissions) {
         NotifyWarning("This plugin requires the advanced map editor");

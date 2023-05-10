@@ -31,15 +31,22 @@ shared void SetClipboard(const string &in msg) {
     Notify("Copied: " + msg);
 }
 
-shared bool ClickableLabel(const string &in label, const string &in value, const string &in between = ": ") {
+shared funcdef bool LabeledValueF(const string &in l, const string &in v);
+
+shared bool ClickableLabel(const string &in label, const string &in value) {
+    return ClickableLabel(label, value, ": ");
+}
+shared bool ClickableLabel(const string &in label, const string &in value, const string &in between) {
     UI::Text(label + between + value);
     return UI::IsItemClicked();
 }
 
-shared void CopiableLabeledValue(const string &in label, const string &in value) {
+shared bool CopiableLabeledValue(const string &in label, const string &in value) {
     if (ClickableLabel(label, value)) {
         SetClipboard(value);
+        return true;
     }
+    return false;
 }
 
 
@@ -57,4 +64,13 @@ shared void LabeledValue(const string &in label, int value) {
 }
 shared void LabeledValue(const string &in label, const string &in value) {
     ClickableLabel(label, value);
+}
+shared void LabeledValue(const string &in label, nat3 &in value, bool clickToCopy = false) {
+    (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Nat3(value));
+}
+shared void LabeledValue(const string &in label, vec3 &in value, bool clickToCopy = false) {
+    (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Vec3(value));
+}
+shared void LabeledValue(const string &in label, int3 &in value, bool clickToCopy = false) {
+    (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Int3(value));
 }

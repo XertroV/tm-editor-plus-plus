@@ -5,6 +5,7 @@ class BlockSelectionTab : Tab {
         // child tabs
         SetGhostVariantTab(Children);
         // BlockPlacementTagTab(Children);
+        BlockVariantBrowserTab(Children);
     }
 
     void DrawInner() override {

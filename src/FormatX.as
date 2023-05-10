@@ -9,4 +9,7 @@ namespace FormatX {
             + Text::Format("%d, ", int(v.y))
             + Text::Format("%d>", int(v.z));
     }
+    shared string Int3(int3 v) {
+        return v.ToString();
+    }
 }

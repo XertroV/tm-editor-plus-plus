@@ -101,8 +101,8 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         vec3 outRot = UX::InputAngles3("Rot (Deg)##picked-item-rot", initRot);
         Editor::SetItemRotation(item, outRot);
 
-        item.MapElemColor = DrawEnumColorChooser(item.MapElemColor);
         item.MapElemLmQuality = DrawEnumLmQualityChooser(item.MapElemLmQuality);
+        item.MapElemColor = DrawEnumColorChooser(item.MapElemColor);
 
         item.IsFlying = UI::Checkbox("Is Flying", item.IsFlying);
         DrawEditVariants(item);

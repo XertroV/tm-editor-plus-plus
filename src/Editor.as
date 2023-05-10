@@ -108,7 +108,19 @@ namespace Editor {
         return editor.PluginMapType.PlaceMode;
     }
 
-    bool IsInBlockPlacementMode(CGameCtnEditorFree@ editor) {
+
+    CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) {
+        return editor.PluginMapType.EditMode;
+    }
+
+    // checks edit mode == Place
+    bool IsInPlacementMode(CGameCtnEditorFree@ editor) {
+        return Editor::GetEditMode(editor) == CGameEditorPluginMap::EditMode::Place;
+    }
+
+    // checks placement mode, with optional edit mode checking
+    bool IsInBlockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (checkEditMode && !IsInPlacementMode(editor)) return false;
         auto pm = GetPlacementMode(editor);
         switch (pm) {
             case CGameEditorPluginMap::EPlaceMode::FreeBlock: return true;
@@ -116,6 +128,33 @@ namespace Editor {
             case CGameEditorPluginMap::EPlaceMode::Block: return true;
         }
         return false;
+    }
+
+    // checks placement mode, with optional edit mode checking
+    bool IsInAnyItemPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        return (!checkEditMode || IsInPlacementMode(editor)) &&
+            GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Item;
+    }
+
+    ReferencedNod@ GetSelectedBlockInfoNodRef(CGameCtnEditorFree@ editor) {
+        auto pm = Editor::GetPlacementMode(editor);
+        switch (pm) {
+            case CGameEditorPluginMap::EPlaceMode::Block:
+                return selectedBlockInfo;
+            case CGameEditorPluginMap::EPlaceMode::GhostBlock:
+                return selectedGhostBlockInfo;
+            case CGameEditorPluginMap::EPlaceMode::FreeBlock:
+                return selectedGhostBlockInfo;
+        }
+        return selectedBlockInfo;
+    }
+
+    CGameCtnBlockInfo@ GetSelectedBlockInfo(CGameCtnEditorFree@ editor) {
+        auto nodRef = GetSelectedBlockInfoNodRef(editor);
+        if (nodRef !is null) {
+            return nodRef.AsBlockInfo();
+        }
+        return null;
     }
 
     // ! does not work

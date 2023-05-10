@@ -1,6 +1,6 @@
 class SetGhostVariantTab : Tab {
     SetGhostVariantTab(TabGroup@ parent) {
-        super(parent, "Ghost/Free Block Variant", "");
+        super(parent, "Set next Ghost/Free Block Variant", "");
     }
 
     void DrawInner() override {

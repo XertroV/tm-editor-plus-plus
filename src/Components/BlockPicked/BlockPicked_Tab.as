@@ -135,8 +135,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             }
         }
 
-        block.MapElemColor = DrawEnumColorChooser(block.MapElemColor);
         block.MapElemLmQuality = DrawEnumLmQualityChooser(block.MapElemLmQuality);
+        block.MapElemColor = DrawEnumColorChooser(block.MapElemColor);
 
         UI::Separator();
         if (Editor::IsBlockFree(block)) {
