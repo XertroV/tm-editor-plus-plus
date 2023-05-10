@@ -3,10 +3,12 @@
 Current features:
 
 - Edit map properties, including height
-- See all blocks and items with details, and focus the cam on them
+- See all blocks and items with details, and focus the cam on them, delete normal/ghost blocks
+- Create quick-access windows for folders of blocks/items
 - QoL improvements for the cursor, incl reset and manual set
 - Edit properties of arbitrary blocks and items, including location (*with live refresh*)
 - Embed items in the map so you can use them without restarting the game
+- Browse and edit BlockInfo and variants
 - Choose the variant and ground status of the selected block
 - Fine tune item placement params (or set them to whatever you want)
 - Edit item placement layouts for more/less items and customize the position
@@ -46,8 +48,9 @@ todo:
 - validation runs: track and record validation runs this session -- expose data for medals & validation tab
 - expose inventory selection via api
 - modify block variant props
-- (todo: fill list out more)
 - intercept undo or things that might crash with references to selected block
+- bettor 'cursor' editor-plugin as titleless window
+- (todo: fill list out more)
 
 research:
 - convert normal block to free block?
