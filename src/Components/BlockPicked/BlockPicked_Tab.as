@@ -75,14 +75,32 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
         m_BlockChanged = false;
 
+        UI::Columns(2);
+
         CopiableLabeledValue("Type", block.DescId.GetName());
         CopiableLabeledValue("Coord", block.Coord.ToString());
         CopiableLabeledValue("Pos", preDesc.Pos.ToString());
         CopiableLabeledValue("Rot", MathX::ToDeg(preDesc.Rot).ToString());
+
+#if SIG_DEVELOPER
+        if (UI::Button(Icons::Cube + "Explore Block")) {
+            ExploreNod(block.BlockInfo);
+        }
+#endif
+        UI::NextColumn();
+
         LabeledValue("Is Ghost", block.IsGhostBlock());
         LabeledValue("Is Ground", block.IsGround);
         LabeledValue("Variant", block.BlockInfoVariantIndex);
         LabeledValue("Mobil Variant", block.MobilVariantIndex);
+
+#if SIG_DEVELOPER
+        if (UI::Button(Icons::Cube + " BlockInfo")) {
+            ExploreNod(block.BlockInfo);
+        }
+#endif
+        UI::Columns(1);
+
 
         UI::Separator();
 
