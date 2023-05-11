@@ -147,6 +147,7 @@ namespace Editor {
     class MapCache {
         MapCache() {
             RefreshCacheSoon();
+            RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon));
         }
 
         // todo: BlockInMapI, ItemInMapI, dict for IdName => array<ObjInMapI>
@@ -167,6 +168,7 @@ namespace Editor {
             BlockTypesLower.RemoveRange(0, BlockTypesLower.Length);
 
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor is null) return;
             auto pmt = editor.PluginMapType;
 
             trace('Caching map ClassicBlocks...');

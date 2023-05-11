@@ -28,7 +28,6 @@ class GenericApplyTab : Tab {
         throw('override me');
     }
 
-
     SourceSelection currScope = SourceSelection::Everywhere;
 
     nat3 m_coordsMin;
@@ -180,7 +179,8 @@ class GenericApplyTab : Tab {
             cachedTargetsI.InsertLast(Editor::ItemInMap(i, items[i]));
             if (runApplication == 1) ApplyTo(items[i]);
         }
-        OnApplyDone();
+        if (runApplication == 1)
+            OnApplyDone();
     }
 
     // overload this to stop auto-refresh

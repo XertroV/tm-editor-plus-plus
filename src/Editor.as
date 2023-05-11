@@ -142,6 +142,22 @@ namespace Editor {
             || mode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock;
     }
 
+    void EnsureItemPlacementMode(CGameCtnEditorFree@ editor) {
+        if (!IsInAnyItemPlacementMode(editor, false)) {
+            editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
+        }
+    }
+    void EnsureBlockPlacementMode(CGameCtnEditorFree@ editor) {
+        if (!IsInBlockPlacementMode(editor, false)) {
+            editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Block;
+        }
+    }
+    void EnsureMacroblockPlacementMode(CGameCtnEditorFree@ editor) {
+        if (!IsInMacroblockPlacementMode(editor, false)) {
+            editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Macroblock;
+        }
+    }
+
     ReferencedNod@ GetSelectedBlockInfoNodRef(CGameCtnEditorFree@ editor) {
         auto pm = Editor::GetPlacementMode(editor);
         switch (pm) {
@@ -163,20 +179,11 @@ namespace Editor {
         return null;
     }
 
-    void EnsureItemPlacementMode(CGameCtnEditorFree@ editor) {
-        if (!IsInAnyItemPlacementMode(editor, false)) {
-            editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
+    CGameCtnBlock@ GetPickedBlock() {
+        if (lastPickedBlock !is null) {
+            return lastPickedBlock.AsBlock();
         }
-    }
-    void EnsureBlockPlacementMode(CGameCtnEditorFree@ editor) {
-        if (!IsInBlockPlacementMode(editor, false)) {
-            editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Block;
-        }
-    }
-    void EnsureMacroblockPlacementMode(CGameCtnEditorFree@ editor) {
-        if (!IsInMacroblockPlacementMode(editor, false)) {
-            editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Macroblock;
-        }
+        return null;
     }
 
     // ! does not work

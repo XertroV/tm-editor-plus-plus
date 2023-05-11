@@ -1,8 +1,9 @@
 namespace Editor {
-    shared class InventoryCache {
+    class InventoryCache {
         InventoryCache() {
             RefreshCacheSoon();
             itemsFolderPrefix = Fids::GetUserFolder("Items").FullDirName;
+            RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon));
         }
 
         void RefreshCache() {
@@ -12,6 +13,8 @@ namespace Editor {
             cachedInvBlockArticleNodes.RemoveRange(0, cachedInvBlockArticleNodes.Length);
             cachedInvItemArticleNodes.RemoveRange(0, cachedInvItemArticleNodes.Length);
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            // this can be called when outside the editor
+            if (editor is null) return;
             auto inv = editor.PluginMapType.Inventory;
             while (inv.RootNodes.Length < 4) yield();
             CGameCtnArticleNodeDirectory@ blockRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[1]);

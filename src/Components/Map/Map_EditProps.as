@@ -52,5 +52,7 @@ class MapEditPropsTab : Tab {
         UI::Unindent();
 
         UI::Separator();
+
+        UI::Text("Todo: add setting to save and camera pos in the thumbnail data slots.");
     }
 }

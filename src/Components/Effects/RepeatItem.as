@@ -14,7 +14,7 @@ namespace Repeat {
 
     class MainRepeatTab : Tab {
         MainRepeatTab(TabGroup@ p) {
-            super(p, "Repeat Items", Icons::Magic + Icons::Repeat);
+            super(p, "Repeat Items", Icons::Magic + Icons::Repeat + Icons::Tree);
             MatrixIter(Children);
             GridRepeat(Children);
         }
@@ -338,11 +338,6 @@ class RepeatMethod : Tab {
                 newItem.Pitch = rotV.x;
                 newItem.Yaw = rotV.y;
                 newItem.Roll = rotV.z;
-
-                // // doenst work for more than like 10-12 items
-                // if (i % 10 == 0) {
-                //     UpdateNewlyAddedItems(editor);
-                // }
             }
             Editor::UpdateNewlyAddedItems(editor);
             editor.PluginMapType.AutoSave();
