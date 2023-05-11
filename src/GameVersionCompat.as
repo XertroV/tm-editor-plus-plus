@@ -1,5 +1,5 @@
 bool GameVersionSafe = false;
-const string[] KnownSafeVersions = {"2023-03-31_13_17", "2023-04-28_17_34"};
+const string[] KnownSafeVersions = {"2023-03-31_13_17", "2023-04-28_17_34", "2023-05-05_21_05"};
 const string configUrl = "https://openplanet.dev/plugin/item-placement-toolbox/config/version-compat";
 
 /**
@@ -19,6 +19,7 @@ void CheckAndSetGameVersionSafe() {
 
 string TmGameVersion = "";
 void EnsureGameVersionCompatibility() {
+    if (GameVersionSafe) return;
     TmGameVersion = GetApp().SystemPlatform.ExeVersion;
     GameVersionSafe = KnownSafeVersions.Find(TmGameVersion) > -1;
     if (GameVersionSafe) return;
@@ -30,16 +31,21 @@ void WarnBadGameVersion() {
     NotifyWarning("Game version ("+TmGameVersion+") not marked as compatible with this version of the plugin -- will be inactive!\n\nChecking new versions is a manual process and avoids crashing your game after an update.");
 }
 
+bool requestStarted = true;
+bool requestEnded = true;
 
 bool GetStatusFromOpenplanet() {
     // string configUrl = "https://openplanet.dev/plugin/" + Meta::ExecutingPlugin().ID + "/config/version-compat";
     trace('Version Compat URL: ' + configUrl);
     auto req = Net::HttpGet(configUrl);
+    requestStarted = true;
+    requestEnded = false;
     while (!req.Finished()) yield();
     if (req.ResponseCode() != 200) {
         warn('getting plugin enabled status: code: ' + req.ResponseCode() + '; error: ' + req.Error() + '; body: ' + req.String());
-        return RetryGetStatus(1000);
+        return RetryGetStatus(2000);
     }
+    requestEnded = true;
     try {
         auto j = Json::Parse(req.String());
         auto myVer = Meta::ExecutingPlugin().Version;
@@ -48,7 +54,7 @@ bool GetStatusFromOpenplanet() {
         return j[myVer].HasKey(TmGameVersion);
     } catch {
         warn("exception: " + getExceptionInfo());
-        return RetryGetStatus(1000);
+        return RetryGetStatus(2000);
     }
 }
 
@@ -64,4 +70,14 @@ bool RetryGetStatus(uint delay) {
     }
     trace('retrying...');
     return GetStatusFromOpenplanet();
+}
+
+[SettingsTab name="Game Version Check" icon="ExclamationTriangle"]
+void OverrideGameSafetyCheck() {
+    UI::Text("Game version safe? " + tostring(GameVersionSafe));
+    UI::Text("Check request started: " + tostring(requestStarted));
+    UI::Text("Check request ended: " + tostring(requestEnded));
+    if (!GameVersionSafe && UI::Button("Disable safety features and run anyway")) {
+        GameVersionSafe = true;
+    }
 }
