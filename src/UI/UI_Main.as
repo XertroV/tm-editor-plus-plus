@@ -197,7 +197,7 @@ TabGroup@ CreateRootTabGroup() {
     DissociateItemsTab(root);
     JitterEffectTab(root);
     ColorApplyTab(root);
-    ApplyTranslationTab(root);
+    // ApplyTranslationTab(root);
 
     RandomizerTab(root);
 
