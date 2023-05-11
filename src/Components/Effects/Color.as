@@ -17,7 +17,6 @@ class ColorApplyTab : GenericApplyTab {
     void ApplyTo(CGameCtnBlock@ block) override {
         block.MapElemColor = CGameCtnBlock::EMapElemColor(m_color);
     }
-
     void ApplyTo(CGameCtnAnchoredObject@ item) override {
         item.MapElemColor = CGameCtnAnchoredObject::EMapElemColor(m_color);
     }
