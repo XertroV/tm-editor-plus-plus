@@ -12,6 +12,7 @@ namespace Editor {
         bool Exists = true;
         uint Id;
         string IdName;
+        mat4 mat;
         ObjInMap(uint index) {
             ix = index;
         }
@@ -33,6 +34,7 @@ namespace Editor {
             color = int(item.MapElemColor);
             Id = item.ItemModel.Id.Value;
             IdName = item.ItemModel.IdName;
+            mat = mat4::Translate(pos) * EulerToMat(rot);
         }
 
         bool IsStale(CGameEditorPluginMap@ pmt) override {
@@ -80,6 +82,7 @@ namespace Editor {
 
     class BlockInMap : ObjInMap {
         bool IsClassicElseGhost;
+        vec3 size;
         int dir;
         BlockInMap(uint i, CGameCtnBlock@ block) {
             super(i);
@@ -89,6 +92,8 @@ namespace Editor {
             Id = block.BlockInfo.Id.Value;
             IdName = block.BlockInfo.IdName;
             IsClassicElseGhost = !block.IsGhostBlock();
+            size = Editor::GetBlockSize(block);
+            mat = mat4::Translate(pos) * EulerToMat(rot);
         }
 
         bool IsStale(CGameEditorPluginMap@ pmt) override {
@@ -152,27 +157,76 @@ namespace Editor {
         const ItemInMap@[] get_Items() { return _Items; }
 
         void RefreshCache() {
-            _Blocks.RemoveRange(0, _Blocks.Length);
+            _ItemIdNameMap.DeleteAll();
+            _BlockIdNameMap.DeleteAll();
             _Items.RemoveRange(0, _Items.Length);
+            _Blocks.RemoveRange(0, _Blocks.Length);
+            ItemTypes.RemoveRange(0, ItemTypes.Length);
+            BlockTypes.RemoveRange(0, BlockTypes.Length);
+            ItemTypesLower.RemoveRange(0, ItemTypesLower.Length);
+            BlockTypesLower.RemoveRange(0, BlockTypesLower.Length);
+
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             auto pmt = editor.PluginMapType;
 
             trace('Caching map ClassicBlocks...');
             for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
-                _Blocks.InsertLast(BlockInMap(i, pmt.ClassicBlocks[i]));
+                AddBlock(BlockInMap(i, pmt.ClassicBlocks[i]));
             }
             yield();
             trace('Caching map GhostBlocks...');
             for (uint i = 0; i < pmt.GhostBlocks.Length; i++) {
-                _Blocks.InsertLast(BlockInMap(i, pmt.GhostBlocks[i]));
+                AddBlock(BlockInMap(i, pmt.GhostBlocks[i]));
             }
             yield();
             trace('Caching map items...');
             for (uint i = 0; i < pmt.Map.AnchoredObjects.Length; i++) {
-                _Items.InsertLast(ItemInMap(i, pmt.Map.AnchoredObjects[i]));
+                AddItem(ItemInMap(i, pmt.Map.AnchoredObjects[i]));
             }
             trace('Caching map complete. Indexing...');
             // todo
+            ItemTypes.SortAsc();
+            BlockTypes.SortAsc();
+            ItemTypesLower.SortAsc();
+            BlockTypesLower.SortAsc();
+        }
+
+        dictionary _ItemIdNameMap;
+        dictionary _BlockIdNameMap;
+        string[] BlockTypes;
+        string[] ItemTypes;
+        string[] BlockTypesLower;
+        string[] ItemTypesLower;
+
+        protected void AddBlock(BlockInMap@ b) {
+            _Blocks.InsertLast(b);
+            if (!_BlockIdNameMap.Exists(b.IdName)) {
+                @_BlockIdNameMap[b.IdName] = array<BlockInMap@>();
+                BlockTypes.InsertLast(b.IdName);
+                BlockTypesLower.InsertLast(b.IdName.ToLower());
+            }
+            GetBlocksByType(b.IdName).InsertLast(b);
+        }
+
+        protected void AddItem(ItemInMap@ b) {
+            if (!_ItemIdNameMap.Exists(b.IdName)) {
+                @_ItemIdNameMap[b.IdName] = array<ItemInMap@>();
+                ItemTypes.InsertLast(b.IdName);
+                ItemTypesLower.InsertLast(b.IdName.ToLower());
+            }
+            GetItemsByType(b.IdName).InsertLast(b);
+        }
+
+        BlockInMap@[]@ GetBlocksByType(const string &in type) {
+            if (_BlockIdNameMap.Exists(type))
+                return cast<array<BlockInMap@>>(_BlockIdNameMap[type]);
+            return {};
+        }
+
+        ItemInMap@[]@ GetItemsByType(const string &in type) {
+            if (_ItemIdNameMap.Exists(type))
+                return cast<array<ItemInMap@>>(_ItemIdNameMap[type]);
+            return {};
         }
 
         void RefreshCacheSoon() {

@@ -128,6 +128,7 @@ namespace Editor {
         return null;
     }
 
+    // may not work tthat well
     CGameCtnBlock@[]@ FindBakedBlocksMatching(CGameCtnEditorFree@ editor, BlockDesc@ desc) {
         CGameCtnBlock@[] blocks;
         auto origBlockId = desc._BlockId;

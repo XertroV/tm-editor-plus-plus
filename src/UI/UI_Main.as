@@ -94,15 +94,25 @@ namespace MenuBar {
                 }
                 UI::EndDisabled();
 
-                UI::Separator();
+                // UI::Separator();
 
-                UI::BeginDisabled();
-                UI::TextDisabled("Clear References:");
-                if (UI::MenuItem("  To All")) {}
-                if (UI::MenuItem("  To Items")) {}
-                if (UI::MenuItem("  To Blocks")) {}
-                UI::EndDisabled();
+                // UI::BeginDisabled();
+                // UI::TextDisabled("Clear References:");
+                // if (UI::MenuItem("  To All")) {}
+                // if (UI::MenuItem("  To Items")) {}
+                // if (UI::MenuItem("  To Blocks")) {}
+                // UI::EndDisabled();
 
+                UI::EndMenu();
+            }
+
+            if (UI::BeginMenu("Caches")) {
+                if (UI::MenuItem("Refresh Map Block/Item Cache")) {
+                    Editor::GetMapCache().RefreshCacheSoon();
+                }
+                if (UI::MenuItem("Refresh Inventory Cache")) {
+                    Editor::GetInventoryCache().RefreshCacheSoon();
+                }
                 UI::EndMenu();
             }
 

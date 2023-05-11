@@ -22,9 +22,23 @@ namespace MathX {
             Math::Max(a.z, b.z)
         );
     }
+    shared nat3 Max(nat3 a, nat3 b) {
+        return nat3(
+            Math::Max(a.x, b.x),
+            Math::Max(a.y, b.y),
+            Math::Max(a.z, b.z)
+        );
+    }
 
     shared vec3 Min(vec3 a, vec3 b) {
         return vec3(
+            Math::Min(a.x, b.x),
+            Math::Min(a.y, b.y),
+            Math::Min(a.z, b.z)
+        );
+    }
+    shared nat3 Min(nat3 a, nat3 b) {
+        return nat3(
             Math::Min(a.x, b.x),
             Math::Min(a.y, b.y),
             Math::Min(a.z, b.z)
@@ -57,4 +71,14 @@ namespace MathX {
         return a;
     }
 
+    shared bool Within(vec3 pos, vec3 min, vec3 max) {
+        return pos.x >= min.x && pos.x <= max.x
+            && pos.y >= min.y && pos.y <= max.y
+            && pos.z >= min.z && pos.z <= max.z;
+    }
+    shared bool Within(nat3 pos, nat3 min, nat3 max) {
+        return pos.x >= min.x && pos.x <= max.x
+            && pos.y >= min.y && pos.y <= max.y
+            && pos.z >= min.z && pos.z <= max.z;
+    }
 }

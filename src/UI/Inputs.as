@@ -35,10 +35,18 @@ namespace UX {
         return val;
     }
 
-    shared nat3 InputNat3(const string &in label, nat3 val) {
+    shared nat3 InputNat3XYZ(const string &in label, nat3 val) {
         auto x = UI::InputInt("(X) " + label, val.x);
         auto y = UI::InputInt("(Y) " + label, val.y);
         auto z = UI::InputInt("(Z) " + label, val.z);
         return nat3(x, y, z);
+    }
+
+    shared nat3 InputNat3(const string &in label, nat3 val) {
+        return Vec3ToNat3(UI::InputFloat3(label, Nat3ToVec3(val)));
+        // auto x = UI::InputInt("(X) " + label, val.x);
+        // auto y = UI::InputInt("(Y) " + label, val.y);
+        // auto z = UI::InputInt("(Z) " + label, val.z);
+        // return nat3(x, y, z);
     }
 }
