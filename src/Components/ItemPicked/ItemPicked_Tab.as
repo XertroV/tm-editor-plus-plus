@@ -77,6 +77,11 @@ class FocusedItemTab : Tab, NudgeItemBlock {
                 UI::Unindent();
             }
         }
+#if SIG_DEVELOPER
+        if (UI::Button(Icons::Cube + " Explore AnchoredObj##picked")) {
+            ExploreNod("Item " + Editor::GetItemUniqueBlockID(item), item);
+        }
+#endif
         UI::Separator();
 
         if (ShowHelpers) {

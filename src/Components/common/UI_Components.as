@@ -60,9 +60,27 @@ CGameCtnBlock::EMapElemLightmapQuality DrawEnumLmQualityChooser(CGameCtnBlock::E
 
 
 
-funcdef string EnumToStringF(int);
+shared funcdef string EnumToStringF(int);
 
-int DrawArbitraryEnum(const string &in label, int val, int nbVals, EnumToStringF@ eToStr) {
+// to hacky to be safe according to Miss
+// int DrawComboAnyEnum(const string &in label, int val, EnumToStringF@ eToStr, int maxValues = 100) {
+//     if (UI::BeginCombo(label, eToStr(val))) {
+//         string l;
+//         for (int i = 0; i < maxValues; i++) {
+//             l = eToStr(i);
+//             // if the label starts with a number, it is not the name of an enum value, so break
+//             if (l[0] <= 0x39 && l[0] >= 0x30) {
+//                 break;
+//             } else if (UI::Selectable(l, val == i)) {
+//                 val = i;
+//             }
+//         }
+//         UI::EndCombo();
+//     }
+//     return val;
+// }
+
+shared int DrawArbitraryEnum(const string &in label, int val, int nbVals, EnumToStringF@ eToStr) {
     if (UI::BeginCombo(label, eToStr(val))) {
         for (int i = 0; i < nbVals; i++) {
             if (UI::Selectable(eToStr(i), val == i)) {

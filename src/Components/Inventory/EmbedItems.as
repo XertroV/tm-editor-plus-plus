@@ -96,14 +96,15 @@ class ItemEmbedTab : Tab {
         return suffix == ".item.gbx"; // || suffix == "block.gbx";
     }
 
-    string[] cachedInvItemPaths;
+    // string[] cachedInvItemPaths;
 
     void DrawStep2() {
+        auto cache = Editor::GetInventoryCache();
         UI::BeginDisabled(step != 2);
         UI::Text("Step 2. Scan Inventory for Differences");
-        UI::Text("Nb Items Counted: " + cachedInvItemPaths.Length);
-        if (cachedInvItemPaths.Length > 0) {
-            CopiableLabeledValue("First item", cachedInvItemPaths[0]);
+        UI::Text("Nb Items Counted: " + cache.NbItems);
+        if (cache.ItemPaths.Length > 0) {
+            CopiableLabeledValue("First item", cache.ItemPaths[0]);
         }
         UI::Text("Items missing from Inventory: " + missingItems.Length);
         if (missingItems.Length > 0) {
@@ -138,32 +139,7 @@ class ItemEmbedTab : Tab {
         if (customNode is null) {
             throw('could not find custom items node');
         }
-        cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
-        CacheInvItem(customNode);
         CacheItemDiff();
-    }
-
-    void CacheInvItem(CGameCtnArticleNode@ node) {
-        auto dir = cast<CGameCtnArticleNodeDirectory>(node);
-        if (dir is null) {
-            CacheInvItem(cast<CGameCtnArticleNodeArticle>(node));
-        } else {
-            CacheInvItem(dir);
-        }
-    }
-    void CacheInvItem(CGameCtnArticleNodeDirectory@ node) {
-        for (uint i = 0; i < node.ChildNodes.Length; i++) {
-            CacheInvItem(node.ChildNodes[i]);
-        }
-    }
-    void CacheInvItem(CGameCtnArticleNodeArticle@ node) {
-        if (node.Article is null) {
-            warn('null collector nod for ' + node.Name);
-            return;
-        }
-        // if we delete some files and refresh Fids, this can happen
-        if (node.Article.CollectorFid is null) return;
-        cachedInvItemPaths.InsertLast(string(node.Article.CollectorFid.FullFileName).SubStr(itemsFolderPrefix.Length));
     }
 
     dictionary seenItems;
@@ -172,11 +148,12 @@ class ItemEmbedTab : Tab {
         seenItems.DeleteAll();
         missingItems.RemoveRange(0, missingItems.Length);
         selectedMissing.RemoveRange(0, selectedMissing.Length);
-        for (uint i = 0; i < cachedInvItemPaths.Length; i++) {
-            if (seenItems.Exists(cachedInvItemPaths[i])) {
-                warn("duplicate item in inventory list: " + cachedInvItemPaths[i]);
+        auto cache = Editor::GetInventoryCache();
+        for (uint i = 0; i < cache.ItemPaths.Length; i++) {
+            if (seenItems.Exists(cache.ItemPaths[i])) {
+                warn("duplicate item in inventory list: " + cache.ItemPaths[i]);
             }
-            seenItems[cachedInvItemPaths[i]] = true;
+            seenItems[cache.ItemPaths[i]] = true;
         }
         for (uint i = 0; i < localItemPaths.Length; i++) {
             if (!seenItems.Exists(localItemPaths[i])) {
@@ -359,11 +336,8 @@ class ItemEmbedTab : Tab {
         step = 1;
         @step3Req = null;
         missingItems.RemoveRange(0, missingItems.Length);
-        cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
+        // cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
         localItemPaths.RemoveRange(0, localItemPaths.Length);
-
+        Editor::GetInventoryCache().RefreshCacheSoon();
     }
 }
-
-const string RefreshMapFileName = "editor++-refresh-map.map.gbx";
-const string RefreshMapLocalPath = IO::FromUserGameFolder("Maps/" + RefreshMapFileName);

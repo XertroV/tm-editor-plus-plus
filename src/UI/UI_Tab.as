@@ -141,7 +141,6 @@ shared class Tab {
             // DrawTogglePop();
             DrawInnerWrapID();
         }
-        UI::Text("Test");
         lastWindowPos = UI::GetWindowPos();
         UI::End();
         return true;
