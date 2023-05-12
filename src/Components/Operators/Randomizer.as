@@ -1,6 +1,20 @@
+class RandomizerEffectsTab : MultiEffectTab {
+    RandomizerEffectsTab(TabGroup@ parent) {
+        super(parent, "Randomizer", Icons::Magic + Icons::Random);
+        SelectRandomBlockTab(Children);
+        SelectRandomItemTab(Children);
+        RandomizerTab(Children);
+        canPopOut = false;
+    }
+
+    void DrawInner() override {
+        Children.DrawTabsAsList();
+    }
+}
+
 class RandomizerTab : Tab {
     RandomizerTab(TabGroup@ p) {
-        super(p, "Randomizer", "\\$bff"+Icons::Random+"\\$z");
+        super(p, "Randomize Props", "\\$bff"+Icons::Random+"\\$z");
     }
 
     bool applyToItems = true;
@@ -13,11 +27,20 @@ class RandomizerTab : Tab {
 
     void DrawInner() override {
         UI::TextWrapped("Randomize properties for blocks/items");
-        UI::Separator();
+
+        UI::Columns(2);
+
         applyToItems = UI::Checkbox("Apply to Items", applyToItems);
         applyToBlocks = UI::Checkbox("Apply to Blocks", applyToBlocks);
         applyToBakedBlocks = UI::Checkbox("Apply to Baked Blocks", applyToBakedBlocks);
         randomizeColor = UI::Checkbox("Randomize Color", randomizeColor);
+
+        if (UI::Button("Randomize " + Icons::Random)) {
+            RunRandomize();
+        }
+
+        UI::NextColumn();
+
         randomizeLM = UI::Checkbox("Randomize LM Quality", randomizeLM);
         randomizeDir = UI::Checkbox("Randomize Block.Dir (N/S/E/W)", randomizeDir);
         UI::BeginDisabled();
@@ -25,10 +48,8 @@ class RandomizerTab : Tab {
         UI::Checkbox("Randomize Variant", false);
         UI::Checkbox("Randomize CP Linkage", false);
         UI::EndDisabled();
-        UI::Separator();
-        if (UI::Button("Randomize " + Icons::Random)) {
-            RunRandomize();
-        }
+
+        UI::Columns(1);
     }
 
     void RunRandomize() {
@@ -60,5 +81,69 @@ class RandomizerTab : Tab {
     void RandomizeItem(CGameCtnAnchoredObject@ item) {
         if (randomizeColor) item.MapElemColor = CGameCtnAnchoredObject::EMapElemColor(Math::Rand(0, 6));
         if (randomizeLM) item.MapElemLmQuality = CGameCtnAnchoredObject::EMapElemLightmapQuality(Math::Rand(0, 7));
+    }
+}
+
+
+
+class SelectRandomBlockTab : EffectTab {
+    SelectRandomBlockTab(TabGroup@ p) {
+        super(p, "Randomize Next Block", "");
+        RegisterNewBlockCallback(ProcessBlock(OnNewBlock));
+    }
+
+    bool OnNewBlock(CGameCtnBlock@ block) {
+        // randomize check
+        if (_IsActive) {
+            startnew(CoroutineFunc(SelectRandomBlock));
+        }
+        return false;
+    }
+
+    void DrawInner() override {
+        UI::TextWrapped("After placing a block, select a new random block.");
+        _IsActive = UI::Checkbox("Enable next block randomization", _IsActive);
+    }
+
+    void SelectRandomBlock() {
+        auto invCache = Editor::GetInventoryCache();
+        auto ix = Math::Rand(0, invCache.BlockInvNodes.Length);
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto pmt = editor.PluginMapType;
+        pmt.EditMode == CGameEditorPluginMap::EditMode::Place;
+        Editor::EnsureBlockPlacementMode(editor);
+        yield();
+        pmt.Inventory.SelectArticle(invCache.BlockInvNodes[ix]);
+    }
+}
+
+class SelectRandomItemTab : EffectTab {
+    SelectRandomItemTab(TabGroup@ p) {
+        super(p, "Randomize Next Item", "");
+        RegisterNewItemCallback(ProcessItem(OnNewItem));
+    }
+
+    bool OnNewItem(CGameCtnAnchoredObject@ item) {
+        // randomize check
+        if (_IsActive) {
+            startnew(CoroutineFunc(SelectRandomItem));
+        }
+        return false;
+    }
+
+    void DrawInner() override {
+        UI::TextWrapped("After placing an item, select a new random item.");
+        _IsActive = UI::Checkbox("Enable next item randomization", _IsActive);
+    }
+
+    void SelectRandomItem() {
+        auto invCache = Editor::GetInventoryCache();
+        auto ix = Math::Rand(0, invCache.ItemInvNodes.Length);
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto pmt = editor.PluginMapType;
+        pmt.EditMode == CGameEditorPluginMap::EditMode::Place;
+        Editor::EnsureItemPlacementMode(editor);
+        yield();
+        pmt.Inventory.SelectArticle(invCache.ItemInvNodes[ix]);
     }
 }

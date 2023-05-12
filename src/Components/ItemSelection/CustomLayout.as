@@ -8,7 +8,6 @@ class ItemCustomLayoutTab : Tab {
 
     CGameItemPlacementParam@ TmpPlacementParam = null;
     CGameItemModel@ TmpItemPlacementReplaced = null;
-    CMwNod@ TmpEntityModel = null;
 
     string[] SampleGameItemNames = {"Flag8m", "Screen2x1Small", "RoadSign", "Lamp", "LightTubeSmall8m", "TunnelSupportArch8m", "ObstaclePillar2m", "CypressTall", "CactusMedium", "CactusVerySmall", "Spring"};
 
@@ -50,10 +49,8 @@ class ItemCustomLayoutTab : Tab {
         if (TmpPlacementParam !is null && TmpItemPlacementReplaced !is null) {
             trace('resetting temporary item placement');
             @TmpItemPlacementReplaced.DefaultPlacementParam_Content = TmpPlacementParam;
-            // @TmpItemPlacementReplaced.EntityModel = TmpEntityModel;
             TmpItemPlacementReplaced.MwRelease();
             TmpPlacementParam.MwRelease();
-            // TmpEntityModel.MwRelease();
         }
         @TmpPlacementParam = null;
         @TmpItemPlacementReplaced = null;
@@ -68,12 +65,9 @@ class ItemCustomLayoutTab : Tab {
         if (item !is null) {
             @TmpPlacementParam = currentItem.DefaultPlacementParam_Content;
             @TmpItemPlacementReplaced = currentItem;
-            // @TmpEntityModel = currentItem.EntityModel;
             TmpItemPlacementReplaced.MwAddRef();
             TmpPlacementParam.MwAddRef();
-            // TmpEntityModel.MwAddRef();
             @currentItem.DefaultPlacementParam_Content = item.DefaultPlacementParam_Content;
-            @currentItem.EntityModel = @item.EntityModel;
         } else {
             NotifyWarning("Could not find item: " + nadeoItemName);
         }

@@ -106,6 +106,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         vec3 outRot = UX::InputAngles3("Rot (Deg)##picked-item-rot", initRot);
         Editor::SetItemRotation(item, outRot);
 
+        item.AnimPhaseOffset = DrawComboEPhaseOffset("Phase", item.AnimPhaseOffset);
         item.MapElemLmQuality = DrawEnumLmQualityChooser(item.MapElemLmQuality);
         item.MapElemColor = DrawEnumColorChooser(item.MapElemColor);
 
@@ -170,7 +171,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
     void DrawEditVariants(CGameCtnAnchoredObject@ item) {
         // auto commonItemEntModel = cast<CGameCommonItemEntityModel>(item.ItemModel.EntityModel);
         auto variantList = cast<NPlugItem_SVariantList>(item.ItemModel.EntityModel);
-        if (variantList !is null) {
+        if (variantList !is null && 0 <= item.IVariant && item.IVariant < variantList.Variants.Length) {
             auto nbVars = variantList.Variants.Length;
             item.IVariant = Math::Clamp(UI::InputInt("Variant", item.IVariant), 0, nbVars - 1);
 
@@ -188,6 +189,8 @@ class FocusedItemTab : Tab, NudgeItemBlock {
                 }
                 UI::Unindent();
             }
+        } else {
+            UI::TextDisabled("IVariant: " + item.IVariant);
         }
     }
 

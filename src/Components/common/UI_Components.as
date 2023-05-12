@@ -115,6 +115,13 @@ CGameEditorPluginMap::EPhaseOffset DrawComboEPhaseOffset(const string &in label,
         })
     );
 }
+CGameCtnAnchoredObject::EPhaseOffset DrawComboEPhaseOffset(const string &in label, CGameCtnAnchoredObject::EPhaseOffset val) {
+    return CGameCtnAnchoredObject::EPhaseOffset(
+        DrawArbitraryEnum(label, int(val), 8, function(int v) {
+            return tostring(CGameCtnAnchoredObject::EPhaseOffset(v));
+        })
+    );
+}
 
 CGameEditorPluginMap::EMapElemLightmapQuality DrawComboEMapElemLightmapQuality(const string &in label, CGameEditorPluginMap::EMapElemLightmapQuality val) {
     return CGameEditorPluginMap::EMapElemLightmapQuality(

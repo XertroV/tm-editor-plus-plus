@@ -114,8 +114,9 @@ class ViewAllBlocksTab : BlockItemListTab {
         }
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
-            // ExploreNod("Block " + blockId + ".", block);
-            Notify("todo");
+            Notify("Setting block ("+blockId+") as picked item.");
+            @lastPickedBlock = ReferencedNod(block);
+            UpdatePickedBlockCachedValues();
         }
         if (!Editor::IsBlockFree(block)) {
             UI::SameLine();
@@ -197,8 +198,9 @@ class ViewAllItemsTab : BlockItemListTab {
         }
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
-            // ExploreNod("Item " + blockId + ".", item);
-            Notify("todo");
+            Notify("Setting item ("+blockId+") as picked item.");
+            @lastPickedItem = ReferencedNod(item);
+            UpdatePickedItemCachedValues();
         }
         // // todo: not sure how to do item removal
         // UI::SameLine();

@@ -199,7 +199,7 @@ TabGroup@ CreateRootTabGroup() {
     ColorApplyTab(root);
     // ApplyTranslationTab(root);
 
-    RandomizerTab(root);
+    RandomizerEffectsTab(root);
 
     TodoTab(root, "Apply Transformation", "f(x)", "apply a transformation to a Source of blocks/items");
 
