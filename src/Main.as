@@ -10,12 +10,19 @@ void Main() {
     CheckAndSetGameVersionSafe();
 }
 
+uint lastInItemEditor = 0;
+
 void RenderEarly() {
     if (!UserHasPermissions) return;
     if (!GameVersionSafe) return;
     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    auto itemEditor = cast<CGameEditorItem>(GetApp().Editor);
     auto currPg = cast<CSmArenaClient>(GetApp().CurrentPlayground);
+
     IsInCurrentPlayground = currPg !is null;
+
+    IsInItemEditor = itemEditor !is null;
+    if (IsInItemEditor) lastInItemEditor = Time::Now;
 
     EnteringEditor = !IsInEditor;
     // we're in the editor if it's not null and we were in the editor, or if we weren't then we wait for the editor to be ready for a request
@@ -25,7 +32,7 @@ void RenderEarly() {
             && editor.PluginMapType.IsEditorReadyForRequest
         )
     );
-    EnteringEditor = EnteringEditor && IsInEditor;
+    EnteringEditor = EnteringEditor && IsInEditor && Time::Now - lastInItemEditor < 1000;
 
     if (EnteringEditor) {
         EditorPriv::ResetRefreshUnsafe();

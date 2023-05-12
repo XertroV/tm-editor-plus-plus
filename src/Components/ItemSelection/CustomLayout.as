@@ -4,7 +4,17 @@ class ItemCustomLayoutTab : Tab {
         RegisterItemChangedCallback(ProcessNewSelectedItem(this.OnItemChanged));
     }
 
+    ItemCustomLayoutTab(TabGroup@ parent, const string &in n, const string &in icon) {
+        super(parent, n, icon);
+    }
+
+    CGameItemModel@ GetItemModel() {
+        if (selectedItemModel is null) return null;
+        return selectedItemModel.AsItemModel();
+    }
+
     bool appliedCustomItemLayout = false;
+    string noItemError = "Choose an item.";
 
     CGameItemPlacementParam@ TmpPlacementParam = null;
     CGameItemModel@ TmpItemPlacementReplaced = null;
@@ -16,12 +26,9 @@ class ItemCustomLayoutTab : Tab {
         UI::TextWrapped("\\$4afNote:\\$z The item's original placement options/layouts will be set back to normal automatically when the current item changes.");
         UI::TextWrapped("\\$fa0Warning!\\$z Does not work with embedded items. They must be loaded in the inventory from the game's first start.");
         // UI::TextWrapped("\\$fa0Warning! \\$zGame crashes may occur (though they shouldn't) -- after you are done using this tool, I suggest you save the map and reload it.");
-        CGameItemModel@ currentItem = null;
-        if (selectedItemModel !is null) {
-            @currentItem = selectedItemModel.AsItemModel();
-        }
+        CGameItemModel@ currentItem = GetItemModel();
         if (currentItem is null) {
-            UI::Text("Choose an item.");
+            UI::Text(noItemError);
         } else if (TmpPlacementParam is null) {
             UI::AlignTextToFramePadding();
             UI::Text("Replace layout of " + currentItem.IdName);

@@ -4,19 +4,29 @@ class ItemLayoutTab : Tab {
         RegisterItemChangedCallback(ProcessNewSelectedItem(this.OnNewItemSelected));
     }
 
+    ItemLayoutTab(TabGroup@ p, const string &in name, const string &in icon) {
+        super(p, name, icon);
+    }
+
     bool OnNewItemSelected(CGameItemModel@ im) {
         activeIx = 0;
         return false;
     }
 
+    CGameItemModel@ GetItemModel() {
+        if (selectedItemModel is null) return null;
+        return selectedItemModel.AsItemModel();
+    }
+
+    string noItemError = "Select an item";
+
     void DrawInner() override {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (selectedItemModel is null) {
-            UI::Text("Select an item");
+        auto item = GetItemModel();
+        if (item is null) {
+            UI::Text(noItemError);
             return;
         }
-
-        DrawLayouts(selectedItemModel.AsItemModel().DefaultPlacementParam_Content.PlacementClass);
+        DrawLayouts(item.DefaultPlacementParam_Content.PlacementClass);
     }
 
     int activeIx = 0;

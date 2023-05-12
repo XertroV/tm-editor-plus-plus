@@ -18,12 +18,25 @@
 
 
 TabGroup@ RootTabGroup_Editor = CreateRootTabGroup();
-
+TabGroup@ RootTabGroup_ItemEditor = CreateItemEditorRT();
 
 void UI_Main_Render() {
-    if (!IsInEditor || !UserHasPermissions) return;
+    if (!UserHasPermissions) return;
     if (!AreFontsLoaded) return;
-    if (IsInCurrentPlayground) return;
+
+    auto tabToDraw = RootTabGroup_Editor;
+
+    if (IsInEditor && IsInCurrentPlayground) {
+        // draw playground UI
+        // @tabToDraw = ;
+        return;
+    } else if (IsInItemEditor) {
+        // draw item editor UI
+        // @tabToDraw = RootTabGroup_ItemEditor;
+        return;
+    } else if (!IsInEditor) {
+        return;
+    }
 
     vec4 newCollapsedBg = UI::GetStyleColor(UI::Col::TitleBgCollapsed);
     newCollapsedBg.w = .9;
@@ -39,7 +52,7 @@ void UI_Main_Render() {
         if (UI::Begin(MenuTitle, ShowWindow, UI::WindowFlags::MenuBar)) {
             MenuBar::Draw();
             // RootTabGroup_Editor.DrawTabsAsSidebar("Editor++");
-            RootTabGroup_Editor.DrawTabsAsSidebar();
+            tabToDraw.DrawTabsAsSidebar();
         }
         UI::End();
     }
@@ -170,6 +183,15 @@ namespace MenuBar {
         // todo
     }
 }
+
+
+TabGroup@ CreateItemEditorRT() {
+    auto root = RootTabGroupCls();
+    // ItemEditCurrentPropsTab(root);
+    // ItemEditMacroVariationsTab(root);
+    return root;
+}
+
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();

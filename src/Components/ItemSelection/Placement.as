@@ -3,20 +3,37 @@ class ItemPlacementTab : Tab {
         super(parent, "Placement", "");
     }
 
-    void DrawInner() override {
+    ItemPlacementTab(TabGroup@ parent, const string &in name, const string &in icon) {
+        super(parent, name, icon);
+    }
+
+    CGameItemModel@ GetItemModel() {
         if (selectedItemModel is null) {
-            UI::Text("no selcted item");
+            return null;
+        }
+        return selectedItemModel.AsItemModel();
+    }
+
+    string missingItemError = "No item selcted.";
+
+    void DrawInner() override {
+        auto item = GetItemModel();
+        if (item is null) {
+            UI::Text(missingItemError);
             return;
         }
-        auto curr = selectedItemModel.AsItemModel();
-        auto pp_content = curr.DefaultPlacementParam_Content;
+        DrawFullPlacementDetails(item);
+    }
+
+    void DrawFullPlacementDetails(CGameItemModel@ item) {
+        auto pp_content = item.DefaultPlacementParam_Content;
         if (pp_content is null) {
             UI::Text("\\$fb4PlacementParam_Content is null!");
             return;
         }
 
         // main placement
-        DrawMainPlacement(pp_content.PlacementClass, Editor::GetItemNbVariants(curr));
+        DrawMainPlacement(pp_content.PlacementClass, Editor::GetItemNbVariants(item));
 
         DrawMagnetOptions();
 
@@ -41,12 +58,19 @@ class ItemPlacementTab : Tab {
         AddSimpleTooltip("Unknown");
         pp_content.GhostMode = UI::Checkbox("GhostMode", pp_content.GhostMode);
         AddSimpleTooltip("Unknown");
+        pp_content.IsFreelyAnchorable = UI::Checkbox("IsFreelyAnchorable", pp_content.IsFreelyAnchorable);
+        AddSimpleTooltip("Unknown");
         pp_content.YawOnly = UI::Checkbox("YawOnly", pp_content.YawOnly);
         AddSimpleTooltip("In item mode: will only allow yaw to be changed. Note: keeps rotations set before YawOnly is checked -- it's like YawOnly just blocks the inputs to change Pitch and Roll, but doesn't reset prior rotations.");
 
+        pp_content.Cube_Center = UI::InputFloat3("Cube_Center", pp_content.Cube_Center);
+        AddSimpleTooltip("Usually 0,0,0");
+        pp_content.Cube_Size = UI::InputFloat("Cube_Size", pp_content.Cube_Size);
+        AddSimpleTooltip("Unclear if this does anything, often 0");
+
         // todo: more
 
-        UI::Text("\\$888Note: still more properties can be added.");
+        UI::Text("\\$888Note: possible future additions: PivotPositions, MagnetLocations, PivotRotations (mb deprecated).");
     }
 
     void DrawMainPlacement(NPlugItemPlacement_SClass@ pc, uint nbVars) {

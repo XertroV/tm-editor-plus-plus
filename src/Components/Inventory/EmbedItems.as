@@ -179,7 +179,7 @@ class ItemEmbedTab : Tab {
 
         UI::TextWrapped("\\$f80Warning:\\$z If you get msg like 'Error while retrieving map! Missing items:', click 'Load Anyway' and then 'No'. (If this doesn't work, you can experiment, and say something in the support thread.)");
 
-        if (step == 3) {
+        if (step == 3 && missingItems.Length > 0) {
             UI::SetNextItemOpen(true, UI::Cond::Appearing);
             if (UI::CollapsingHeader("Select Items to Embed")) {
                 UI::Indent();
