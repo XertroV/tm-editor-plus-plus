@@ -5,6 +5,7 @@ class GlobalPlacementOptionsTab : Tab {
 
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
         auto pmt = editor.PluginMapType;
         pmt.NextMapElemColor = CGameEditorPluginMap::EMapElemColor(DrawColorBtnChoice("NextMapElemColor", pmt.NextMapElemColor));
         pmt.NextItemPhaseOffset = DrawComboEPhaseOffset("NextItemPhaseOffset", pmt.NextItemPhaseOffset);

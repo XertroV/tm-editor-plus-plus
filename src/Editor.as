@@ -144,16 +144,19 @@ namespace Editor {
 
     void EnsureItemPlacementMode(CGameCtnEditorFree@ editor) {
         if (!IsInAnyItemPlacementMode(editor, false)) {
+            editor.PluginMapType.EditMode = CGameEditorPluginMap::EditMode::Place;
             editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
         }
     }
     void EnsureBlockPlacementMode(CGameCtnEditorFree@ editor) {
         if (!IsInBlockPlacementMode(editor, false)) {
+            editor.PluginMapType.EditMode = CGameEditorPluginMap::EditMode::Place;
             editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Block;
         }
     }
     void EnsureMacroblockPlacementMode(CGameCtnEditorFree@ editor) {
         if (!IsInMacroblockPlacementMode(editor, false)) {
+            editor.PluginMapType.EditMode = CGameEditorPluginMap::EditMode::Place;
             editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Macroblock;
         }
     }

@@ -162,6 +162,30 @@ CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType DrawComboEnumAutoTerrai
     );
 }
 
+EPlugSurfaceMaterialId DrawComboEPlugSurfaceMaterialId(const string &in label, EPlugSurfaceMaterialId val) {
+    return EPlugSurfaceMaterialId(
+        DrawArbitraryEnum(label, int(val), 81, function(int v) {
+            return tostring(EPlugSurfaceMaterialId(v));
+        })
+    );
+}
+
+EPlugSurfaceGameplayId DrawComboEPlugSurfaceGameplayId(const string &in label, EPlugSurfaceGameplayId val) {
+    return EPlugSurfaceGameplayId(
+        DrawArbitraryEnum(label, int(val), 21, function(int v) {
+            return tostring(EPlugSurfaceGameplayId(v));
+        })
+    );
+}
+
+EAxis DrawComboEAxis(const string &in label, EAxis val) {
+    return EAxis(
+        DrawArbitraryEnum(label, int(val), 3, function(int v) {
+            return tostring(EAxis(v));
+        })
+    );
+}
+
 int DrawColorBtnChoice(const string &in label, int val) {
     if (DrawBtnMbActive("Default##"+label, val == 0))
         val = 0;

@@ -26,7 +26,8 @@ class ReferencedNod {
 
     ReferencedNod(CMwNod@ _nod) {
         @nod = _nod;
-        nod.MwAddRef();
+        if (nod !is null)
+            nod.MwAddRef();
     }
 
     ~ReferencedNod() {

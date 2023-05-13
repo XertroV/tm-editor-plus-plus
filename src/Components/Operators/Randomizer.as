@@ -23,7 +23,8 @@ class RandomizerTab : Tab {
 
     bool randomizeColor = true;
     bool randomizeLM = false;
-    bool randomizeDir = true;
+    bool randomizeDir = false;
+    bool excludeCPs = true;
 
     void DrawInner() override {
         UI::TextWrapped("Randomize properties for blocks/items");
@@ -43,6 +44,8 @@ class RandomizerTab : Tab {
 
         randomizeLM = UI::Checkbox("Randomize LM Quality", randomizeLM);
         randomizeDir = UI::Checkbox("Randomize Block.Dir (N/S/E/W)", randomizeDir);
+        excludeCPs = UI::Checkbox("Exclude Checkpoints", excludeCPs);
+        AddSimpleTooltip("Altering checkpoints usually resets linked block status.");
         UI::BeginDisabled();
         UI::Text("future features?");
         UI::Checkbox("Randomize Variant", false);
@@ -74,11 +77,13 @@ class RandomizerTab : Tab {
     }
 
     void RandomizeBlock(CGameCtnBlock@ block) {
+        if (excludeCPs && block.WaypointSpecialProperty !is null) return;
         if (randomizeColor) block.MapElemColor = CGameCtnBlock::EMapElemColor(Math::Rand(0, 6));
         if (randomizeDir) block.BlockDir = CGameCtnBlock::ECardinalDirections(Math::Rand(0, 4));
         if (randomizeLM) block.MapElemLmQuality = CGameCtnBlock::EMapElemLightmapQuality(Math::Rand(0, 7));
     }
     void RandomizeItem(CGameCtnAnchoredObject@ item) {
+        if (excludeCPs && item.WaypointSpecialProperty !is null) return;
         if (randomizeColor) item.MapElemColor = CGameCtnAnchoredObject::EMapElemColor(Math::Rand(0, 6));
         if (randomizeLM) item.MapElemLmQuality = CGameCtnAnchoredObject::EMapElemLightmapQuality(Math::Rand(0, 7));
     }
@@ -110,7 +115,7 @@ class SelectRandomBlockTab : EffectTab {
         auto ix = Math::Rand(0, invCache.BlockInvNodes.Length);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto pmt = editor.PluginMapType;
-        pmt.EditMode == CGameEditorPluginMap::EditMode::Place;
+        pmt.EditMode = CGameEditorPluginMap::EditMode::Place;
         Editor::EnsureBlockPlacementMode(editor);
         yield();
         pmt.Inventory.SelectArticle(invCache.BlockInvNodes[ix]);
@@ -141,7 +146,7 @@ class SelectRandomItemTab : EffectTab {
         auto ix = Math::Rand(0, invCache.ItemInvNodes.Length);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto pmt = editor.PluginMapType;
-        pmt.EditMode == CGameEditorPluginMap::EditMode::Place;
+        pmt.EditMode = CGameEditorPluginMap::EditMode::Place;
         Editor::EnsureItemPlacementMode(editor);
         yield();
         pmt.Inventory.SelectArticle(invCache.ItemInvNodes[ix]);
