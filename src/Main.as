@@ -32,7 +32,7 @@ void RenderEarly() {
             && editor.PluginMapType.IsEditorReadyForRequest
         )
     );
-    EnteringEditor = EnteringEditor && IsInEditor && Time::Now - lastInItemEditor < 1000;
+    EnteringEditor = EnteringEditor && IsInEditor && (Time::Now - lastInItemEditor) > 1000;
 
     if (EnteringEditor) {
         EditorPriv::ResetRefreshUnsafe();

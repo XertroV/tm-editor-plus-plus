@@ -41,6 +41,7 @@ void RegisterItemChangedCallback(ProcessNewSelectedItem@ f) {
 
 namespace Event {
     void RunOnEditorLoadCbs() {
+        trace("Running OnEditorLoad callbacks");
         for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
             onEditorLoadCbs[i]();
         }
