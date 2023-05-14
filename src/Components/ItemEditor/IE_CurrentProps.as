@@ -148,7 +148,6 @@ class ItemEditEntityTab : Tab {
             ds.MaterialIds[0].GameplayId = DrawComboEPlugSurfaceGameplayId("GameplayId", ds.MaterialIds[0].GameplayId);
         }
 
-
         LabeledValue(".WaterModel is null", model.WaterModel is null);
         model.IsStatic = UI::Checkbox("IsStatic", model.IsStatic);
         model.DynamizeOnSpawn = UI::Checkbox("DynamizeOnSpawn", model.DynamizeOnSpawn);
@@ -156,18 +155,18 @@ class ItemEditEntityTab : Tab {
         model.Mass = UI::InputFloat("Mass", model.Mass);
         model.LightAliveDurationSc_Min = UI::InputFloat("LightAliveDurationSc_Min", model.LightAliveDurationSc_Min);
         model.LightAliveDurationSc_Max = UI::InputFloat("LightAliveDurationSc_Max", model.LightAliveDurationSc_Max);
-        if (UI::CollapsingHeader("StaticShape")) {
-            UI::Indent();
-            model.DynaShape_BoxSizeX = UI::InputFloat("DynaShape_BoxSizeX", model.DynaShape_BoxSizeX);
-            model.DynaShape_BoxSizeY = UI::InputFloat("DynaShape_BoxSizeY", model.DynaShape_BoxSizeY);
-            model.DynaShape_BoxSizeZ = UI::InputFloat("DynaShape_BoxSizeZ", model.DynaShape_BoxSizeZ);
-            model.StaticShape_BoxSizeX = UI::InputFloat("StaticShape_BoxSizeX", model.StaticShape_BoxSizeX);
-            model.StaticShape_BoxSizeY = UI::InputFloat("StaticShape_BoxSizeY", model.StaticShape_BoxSizeY);
-            model.StaticShape_BoxSizeZ = UI::InputFloat("StaticShape_BoxSizeZ", model.StaticShape_BoxSizeZ);
-            model.StaticShape_AABB.m_Center = UI::InputFloat3("StaticShape_AABB.m_Center", model.StaticShape_AABB.m_Center);
-            model.StaticShape_AABB.m_HalfDiag = UI::InputFloat3("StaticShape_AABB.m_HalfDiag", model.StaticShape_AABB.m_HalfDiag);
-            UI::Unindent();
-        }
+        // if (UI::CollapsingHeader("StaticShape")) {
+        //     UI::Indent();
+        //     model.DynaShape_BoxSizeX = UI::InputFloat("DynaShape_BoxSizeX", model.DynaShape_BoxSizeX);
+        //     model.DynaShape_BoxSizeY = UI::InputFloat("DynaShape_BoxSizeY", model.DynaShape_BoxSizeY);
+        //     model.DynaShape_BoxSizeZ = UI::InputFloat("DynaShape_BoxSizeZ", model.DynaShape_BoxSizeZ);
+        //     model.StaticShape_BoxSizeX = UI::InputFloat("StaticShape_BoxSizeX", model.StaticShape_BoxSizeX);
+        //     model.StaticShape_BoxSizeY = UI::InputFloat("StaticShape_BoxSizeY", model.StaticShape_BoxSizeY);
+        //     model.StaticShape_BoxSizeZ = UI::InputFloat("StaticShape_BoxSizeZ", model.StaticShape_BoxSizeZ);
+        //     model.StaticShape_AABB.m_Center = UI::InputFloat3("StaticShape_AABB.m_Center", model.StaticShape_AABB.m_Center);
+        //     model.StaticShape_AABB.m_HalfDiag = UI::InputFloat3("StaticShape_AABB.m_HalfDiag", model.StaticShape_AABB.m_HalfDiag);
+        //     UI::Unindent();
+        // }
     }
 
     uint16 transAnimFuncOffset = GetOffset("NPlugDyna_SKinematicConstraint", "TransAnimFunc");
@@ -197,6 +196,9 @@ class ItemEditEntityTab : Tab {
                 Notify("Note: you may need to save and re-edit the item for new easings to be loaded.");
                 IncrementEasingCountSetDefaults(model, offset);
             }
+            if (len > 1 && UI::Button("Remove Last Easing from Chain##"+label)) {
+                DecrementEasingCount(model, offset);
+            }
             for (uint i = 0; i < len; i++) {
                 if (i > 0) UI::Separator();
 
@@ -207,7 +209,7 @@ class ItemEditEntityTab : Tab {
 
                 type = uint8(DrawComboSubFuncEasings("Easing##"+i+label, SubFuncEasings(type)));
                 reverse = UI::Checkbox("Reverse##"+i+label, reverse);
-                duration = Math::Clamp(UI::InputInt("Duration##"+i+label, duration), 50, 2000000000);
+                duration = Math::Clamp(UI::InputInt("Duration##"+i+label, duration), 0, 2000000000);
 
                 Dev::SetOffset(model, sfOffset + 0x0, type);
                 Dev::SetOffset(model, sfOffset + 0x1, reverse ? 0x1 : 0x0);
@@ -215,6 +217,12 @@ class ItemEditEntityTab : Tab {
             }
             UI::Unindent();
         }
+    }
+
+    void DecrementEasingCount(NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
+        uint8 len = Dev::GetOffsetUint8(model, offset);
+        if (len <= 1) throw ('cannot decrement past 1');
+        Dev::SetOffset(model, offset, uint8(len - 1));
     }
 
     void IncrementEasingCountSetDefaults(NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
