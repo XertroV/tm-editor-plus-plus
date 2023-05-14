@@ -11,6 +11,7 @@ void Main() {
 }
 
 uint lastInItemEditor = 0;
+bool everEnteredEditor = false;
 
 void RenderEarly() {
     if (!UserHasPermissions) return;
@@ -32,11 +33,13 @@ void RenderEarly() {
             && editor.PluginMapType.IsEditorReadyForRequest
         )
     );
-    EnteringEditor = EnteringEditor && IsInEditor && (Time::Now - lastInItemEditor) > 1000;
+    EnteringEditor = EnteringEditor && IsInEditor &&
+        (!everEnteredEditor || (Time::Now - lastInItemEditor) > 1000);
 
     if (EnteringEditor) {
         EditorPriv::ResetRefreshUnsafe();
         Event::RunOnEditorLoadCbs();
+        everEnteredEditor = true;
     }
 }
 

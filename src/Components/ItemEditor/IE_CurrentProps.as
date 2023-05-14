@@ -91,10 +91,16 @@ class ItemEditCloneLayoutTab : Tab {
 
 class ItemEditEntityTab : Tab {
     ItemEditEntityTab(TabGroup@ p) {
-        super(p, "Entity", "");
+        super(p, "Edit Entity", "");
     }
 
+    bool safetyCheck = false;
+
     void DrawInner() override {
+        safetyCheck = UI::Checkbox("Enable this feature?", safetyCheck);
+        UI::TextWrapped("This feature can help customize custom moving items. However, note that it uses `Dev::` calls and might be unsafe. Seems okay tho.");
+        if (!safetyCheck) return;
+
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         auto item = ieditor.ItemModel;
         auto entity = item.EntityModel;
@@ -126,11 +132,11 @@ class ItemEditEntityTab : Tab {
     }
 
     void DrawVariantList(NPlugItem_SVariantList@ varList) {
-        UI::Text('todo');
+        UI::TextWrapped('Entity type: NPlugItem_SVariantList. Usually these are in-game items so we can\'t do much anyway. Please log a feature request if you want this.');
     }
 
     void DrawCommonItemEntModel(CGameCommonItemEntityModel@ entity) {
-        UI::Text('todo');
+        UI::TextWrapped('Entity type: CGameCommonItemEntityModel. Nothing much interesting to edit here, sorry.');
     }
 
 
@@ -183,12 +189,13 @@ class ItemEditEntityTab : Tab {
 
     void DrawSAnimFunc(const string &in label, NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
         if (model is null) return;
-        uint len = Dev::GetOffsetUint32(model, offset);
+        uint len = Dev::GetOffsetUint8(model, offset);
         auto arrStartOffset = offset + 0x4;
         if (UI::CollapsingHeader(label + " ("+len+")")) {
             UI::Indent();
             if (len < 4 && UI::Button("Add New Easing to Chain##"+label)) {
-                Notify("Todo");
+                Notify("Note: you may need to save and re-edit the item for new easings to be loaded.");
+                IncrementEasingCountSetDefaults(model, offset);
             }
             for (uint i = 0; i < len; i++) {
                 if (i > 0) UI::Separator();
@@ -208,6 +215,22 @@ class ItemEditEntityTab : Tab {
             }
             UI::Unindent();
         }
+    }
+
+    void IncrementEasingCountSetDefaults(NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
+        uint8 len = Dev::GetOffsetUint8(model, offset);
+        uint8 ix = len;
+        auto arrStartOffset = offset + 0x4;
+        // 4 maximum otherwise we overwrite other memory.
+        if (ix > 3) throw('cannot add more easings.');
+        auto sfOffset = arrStartOffset + ix * 0x8;
+        // set type, reverse, duration to known values
+        Dev::SetOffset(model, sfOffset, uint8(SubFuncEasings::QuadInOut));
+        Dev::SetOffset(model, sfOffset + 0x1, uint8(0));
+        Dev::SetOffset(model, sfOffset + 0x2, uint16(0));
+        Dev::SetOffset(model, sfOffset + 0x4, uint32(7500));
+        // finally, write new length
+        Dev::SetOffset(model, offset, uint32(len + 1));
     }
 }
 
