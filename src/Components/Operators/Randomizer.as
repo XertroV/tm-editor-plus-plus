@@ -21,6 +21,7 @@ class RandomizerTab : Tab {
     bool applyToBlocks = true;
     bool applyToBakedBlocks = false;
 
+    bool randomizeAnimPhase = true;
     bool randomizeColor = true;
     bool randomizeLM = false;
     bool randomizeDir = false;
@@ -35,6 +36,7 @@ class RandomizerTab : Tab {
         applyToBlocks = UI::Checkbox("Apply to Blocks", applyToBlocks);
         applyToBakedBlocks = UI::Checkbox("Apply to Baked Blocks", applyToBakedBlocks);
         randomizeColor = UI::Checkbox("Randomize Color", randomizeColor);
+        randomizeAnimPhase = UI::Checkbox("Randomize Anim Phase", randomizeAnimPhase);
 
         if (UI::Button("Randomize " + Icons::Random)) {
             RunRandomize();
@@ -86,6 +88,7 @@ class RandomizerTab : Tab {
         if (excludeCPs && item.WaypointSpecialProperty !is null) return;
         if (randomizeColor) item.MapElemColor = CGameCtnAnchoredObject::EMapElemColor(Math::Rand(0, 6));
         if (randomizeLM) item.MapElemLmQuality = CGameCtnAnchoredObject::EMapElemLightmapQuality(Math::Rand(0, 7));
+        if (randomizeAnimPhase) item.AnimPhaseOffset = CGameCtnAnchoredObject::EPhaseOffset(Math::Rand(0, 8));
     }
 }
 

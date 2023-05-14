@@ -242,102 +242,123 @@ class ItemEditEntityTab : Tab {
     }
 }
 
+#if DEV
 // ! Copy another items model does not work and crashes on save
 
-// class IE_CopyAnotherItemsModelTab : Tab {
-//     IE_CopyAnotherItemsModelTab(TabGroup@ p) {
-//         super(p, "Copy Model From", Icons::Clone);
-//         throw("Does not work, crashes on save");
-//     }
+class IE_CopyAnotherItemsModelTab : Tab {
+    IE_CopyAnotherItemsModelTab(TabGroup@ p) {
+        super(p, "Copy Model From", Icons::Clone);
+        // throw("Does not work, crashes on save");
+    }
 
-//     CGameItemModel@ GetItemModel() {
-//         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
-//         if (ieditor is null) return null;
-//         return ieditor.ItemModel;
-//     }
+    CGameItemModel@ GetItemModel() {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null) return null;
+        return ieditor.ItemModel;
+    }
 
-//     int copyFromItemIx = 0;
+    int copyFromItemIx = 0;
 
-//     void DrawInner() override {
-//         auto ent1 = DrawItemCheck();
-//         if (ent1 is null) return;
+    void DrawInner() override {
+        auto ent1 = DrawItemCheck();
+        if (ent1 is null) return;
 
-//         auto inv = Editor::GetInventoryCache();
-//         if (inv.ItemPaths.Length == 0) {
-//             UI::Text("No items in inventory cache, please enter the main editor first");
-//             return;
-//         }
+        auto inv = Editor::GetInventoryCache();
+        if (inv.ItemPaths.Length == 0) {
+            UI::Text("No items in inventory cache, please enter the main editor first");
+            return;
+        }
 
-//         if (UI::BeginCombo("Copy From", inv.ItemPaths[copyFromItemIx])) {
-//             for (uint i = 0; i < inv.ItemPaths.Length; i++) {
-//                 if (UI::Selectable(inv.ItemPaths[i], copyFromItemIx == i)) {
-//                     copyFromItemIx = i;
-//                 }
-//             }
-//             UI::EndCombo();
-//         }
+        if (UI::BeginCombo("Copy From", inv.ItemPaths[copyFromItemIx])) {
+            for (uint i = 0; i < inv.ItemPaths.Length; i++) {
+                if (UI::Selectable(inv.ItemPaths[i], copyFromItemIx == i)) {
+                    copyFromItemIx = i;
+                }
+            }
+            UI::EndCombo();
+        }
 
-//         // UI::BeginDisabled(running);
+        // UI::BeginDisabled(running);
 
-//         if (UI::Button("Copy mesh and shape")) {
-//             startnew(CoroutineFunc(RunCopy));
-//         }
+        if (UI::Button("Copy mesh and shape")) {
+            startnew(CoroutineFunc(RunCopy));
+        }
 
-//         // UI::EndDisabled();
-//     }
+        // UI::EndDisabled();
+    }
 
-//     void RunCopy() {
-//         try {
-//             auto inv = Editor::GetInventoryCache();
-//             auto itemNode = inv.ItemInvNodes[copyFromItemIx];
-//             if (!itemNode.Article.IsLoaded) {
-//                 itemNode.Article.Preload();
-//             }
-//             auto model = cast<CGameItemModel>(itemNode.Article.LoadedNod);
-//             if (model is null) throw('could not load item model');
-//             auto entity = cast<CGameCommonItemEntityModel>(model.EntityModel);
-//             if (entity is null) throw('Item entity model must be a CGameCommonItemEntityModel');
-//             auto staticObj = cast<CPlugStaticObjectModel>(entity.StaticObject);
-//             if (staticObj is null) throw('StaticObject not a CPlugStaticObjectModel');
-//             // Mesh - cplugsolid2model; shape: cplugsurface
-//             auto ent1 = DrawItemCheck(false);
-//             if (ent1 is null) throw('loaded items ent1 not found but was expected');
-//             staticObj.Shape.MwAddRef();
-//             staticObj.Shape.MwAddRef();
-//             staticObj.Mesh.MwAddRef();
-//             @ent1.StaticShape = staticObj.Shape;
-//             // @ent1.DynaShape = staticObj.Shape;
-//             @ent1.Mesh = staticObj.Mesh;
-//             Notify("Replaced item mesh and shape, pls save the item.");
-//         } catch {
-//             NotifyError("Exception copying mesh: " + getExceptionInfo());
-//         }
-//     }
+    void RunCopy() {
+        try {
+            auto inv = Editor::GetInventoryCache();
+            auto itemNode = inv.ItemInvNodes[copyFromItemIx];
+            if (!itemNode.Article.IsLoaded) {
+                itemNode.Article.Preload();
+            }
+            auto model = cast<CGameItemModel>(itemNode.Article.LoadedNod);
+            if (model is null) throw('could not load item model');
+            auto entity = cast<CGameCommonItemEntityModel>(model.EntityModel);
+            if (entity is null) throw('Item entity model must be a CGameCommonItemEntityModel');
+            auto staticObj = cast<CPlugStaticObjectModel>(entity.StaticObject);
+            if (staticObj is null) throw('StaticObject not a CPlugStaticObjectModel');
+            // Mesh - cplugsolid2model; shape: cplugsurface
+            auto ent1 = DrawItemCheck(false);
+            if (ent1 is null) throw('loaded items ent1 not found but was expected');
+            if (staticObj.Shape is null || staticObj.Mesh is null) {
+                ExploreNod(model);
+                NotifyError("static obj.shape or mesh is null!");
+                return;
+            }
+            print('not null here');
+            staticObj.Shape.MwAddRef();
+            staticObj.Shape.MwAddRef();
+            staticObj.Mesh.MwAddRef();
+            print('not null here 2');
 
-//     CPlugDynaObjectModel@ DrawItemCheck(bool drawErrors = true) {
-//         auto item = GetItemModel();
-//         if (item is null) {
-//             if (drawErrors) UI::Text("No item");
-//             return null;
-//         }
-//         auto entity = cast<CPlugPrefab>(item.EntityModel);
-//         if (entity is null) {
-//             if (drawErrors) UI::Text("Only CPlugPrefab supported, but it's a " + Reflection::TypeOf(item.EntityModel).Name);
-//             return null;
-//         }
-//         if (entity.Ents.Length != 2) {
-//             if (drawErrors) UI::Text("Need Ents.Length == 2");
-//             return null;
-//         }
+            if (ent1.DynaShape !is null)
+                ent1.DynaShape.MwAddRef();
+            if (ent1.StaticShape !is null)
+                ent1.StaticShape.MwAddRef();
+            if (ent1.Mesh !is null)
+                ent1.Mesh.MwAddRef();
+            Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "DynaShape"), staticObj.Shape);
+            Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), staticObj.Shape);
+            Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "Mesh"), staticObj.Mesh);
+            // @ent1.DynaShape = staticObj.Shape;
+            // @ent1.StaticShape = staticObj.Shape;
+            // @ent1.Mesh = staticObj.Mesh;
+            // @ent1.StaticShape = null;
+            // @ent1.DynaShape = staticObj.Shape;
+            Notify("Replaced item mesh and shape, pls save the item.");
+        } catch {
+            NotifyError("Exception copying mesh: " + getExceptionInfo());
+        }
+    }
 
-//         auto ent1 = cast<CPlugDynaObjectModel>(entity.Ents[0].Model);
-//         if (ent1 is null) {
-//             if (drawErrors) UI::Text("Ents[0] is not a CPlugDynaObjectModel");
-//             return null;
-//         }
-//         return ent1;
-//     }
-// }
+    CPlugDynaObjectModel@ DrawItemCheck(bool drawErrors = true) {
+        auto item = GetItemModel();
+        if (item is null) {
+            if (drawErrors) UI::Text("No item");
+            return null;
+        }
+        auto entity = cast<CPlugPrefab>(item.EntityModel);
+        if (entity is null) {
+            if (drawErrors) UI::Text("Only CPlugPrefab supported, but it's a " + Reflection::TypeOf(item.EntityModel).Name);
+            return null;
+        }
+        if (entity.Ents.Length != 2) {
+            if (drawErrors) UI::Text("Need Ents.Length == 2");
+            return null;
+        }
+
+        auto ent1 = cast<CPlugDynaObjectModel>(entity.Ents[0].Model);
+        if (ent1 is null) {
+            if (drawErrors) UI::Text("Ents[0] is not a CPlugDynaObjectModel");
+            return null;
+        }
+        return ent1;
+    }
+}
+#endif
 
 
 

@@ -188,7 +188,9 @@ namespace MenuBar {
 TabGroup@ CreateItemEditorRT() {
     auto root = RootTabGroupCls();
     ItemEditCurrentPropsTab(root);
-    // IE_CopyAnotherItemsModelTab(root);
+#if DEV
+    IE_CopyAnotherItemsModelTab(root);
+#endif
     // ItemEditMacroVariationsTab(root);
 #if SIG_DEVELOPER
     // IE_DevTab(root);
