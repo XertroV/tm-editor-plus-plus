@@ -68,4 +68,8 @@ class ReferencedNod {
     CGameCtnMacroBlockInfo@ AsMacroBlockInfo() {
         return cast<CGameCtnMacroBlockInfo>(this.nod);
     }
+
+    CGameItemPlacementParam@ AsPlacementParam() {
+        return cast<CGameItemPlacementParam>(this.nod);
+    }
 }

@@ -1,0 +1,102 @@
+0x40 bytes?
+
+0x18: ?? uint, uint ??
+0x20: ptr -> struct?
+    0x0 ->
+    0x8 ->
+0x28: ptr -> struct?
+    0x8 ->
+
+
+0x30: ?? uint, uint ??
+0x38: ?? uint, uint ??
+
+
+0xA8: -> buffer? 0xC size
+    -> CPlugVisualIndexedTriangles@ (no fid)
+        -> 0xC0 -> CPlugVertexStream (no fid)
+
+vanilla only?
+0xC8: -> buffer? (4)
+    -> CPlugMaterial@ (has fid)
+
+0xE8 -> string, Stadium\Media\Material\.atracker-dev
+
+0xF8 -> buffer (1)
+    -> CPlugMaterialUserInst@
+    (2) -> 60 B2 49 5E 1F 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 40 E5 49 5E 1F 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    (1) -> 90 2C 6E 1A 98 02 00 00 00 00 00 00 00 00 00 00 64 65 76 00 00 00 00 00
+
+0x138 -> buffer (0xC)
+    -> Buffer<NStruct(0x10)>
+
+0x148 -> buffer (4)
+    -> ???
+
+0x158 -> buffer(1/2)
+    -> ??? 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00
+        00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00
+    material ID things,
+
+vo?
+0x188 -> buffer (1)
+    ->
+vo?
+0x198 -> buffer (2)
+    -> unk
+
+
+0x1A8 -> buffer (3)
+    -> unk; materials? for custom item?; no
+    -> (1) 72 00 00 00 00 00 00 00
+
+0x1B8 -> buffer (3)
+    -> unk
+    -> (1) 44 00 00 00 01 00 00 00
+
+0x1E8 -> 0x1 (mb mat count? no)
+
+0x1F8 -> buffer (1)
+    -> material
+
+0x208 -> (1) -- set on custom items? buffer to mat but empty? next uint: 4, after that: 0
+    -> material
+
+~~0x268 -> like above~~
+~~0x338 -> ptr to CSystemFidFile (item file; gcameitemmodel)~~
+
+
+
+
+
+
+at 0x138, goes to: (400 chars -> 200 bytes (probs 192 -> 16 bytes each))
+00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00
+01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00
+02 00 00 00 02 00 00 00 01 00 00 00 01 00 00 00
+03 00 00 00 03 00 00 00 01 00 00 00 01 00 00 00
+04 00 00 00 00 00 00 00 02 00 00 00 01 00 00 00
+05 00 00 00 01 00 00 00 02 00 00 00 01 00 00 00
+06 00 00 00 02 00 00 00 02 00 00 00 01 00 00 00
+07 00 00 00 03 00 00 00 02 00 00 00 01 00 00 00
+08 00 00 00 01 00 00 00 04 00 00 00 01 00 00 00
+09 00 00 00 02 00 00 00 04 00 00 00 01 00 00 00
+0A 00 00 00 00 00 00 00 04 00 00 00 01 00 00 00
+0B 00 00 00 03 00 00 00 04 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00
+probably something like an index of cplugvisual -> materials or something
+
+
+at 0x158 otherwise
+
+
+
+
+
+
+material
+0x38? -> ptr struct
+    0x8 -> fid
+    0x10 -> cplugshaderapply
+        -> fid,
+        -> 0x38
+    0x30 -> cplugshaderappyl

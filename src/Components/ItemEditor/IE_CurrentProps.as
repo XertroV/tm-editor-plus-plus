@@ -4,7 +4,7 @@ class ItemEditCurrentPropsTab : Tab {
         ItemEditPlacementTab(Children);
         ItemEditLayoutTab(Children);
         // unable to save these items atm
-        // ItemEditCloneLayoutTab(Children);
+        ItemEditCloneLayoutTab(Children);
         ItemEditEntityTab(Children);
     }
 
@@ -42,8 +42,12 @@ class ItemEditLayoutTab : ItemLayoutTab {
 /*
 
     ! Does not work. Editor complains that it can't save the item.
+*/
+
 
 class ItemEditCloneLayoutTab : Tab {
+    ReferencedNod@ TmpItemPlacementRef = null;
+
     ItemEditCloneLayoutTab(TabGroup@ p) {
         super(p, "Clone Layout From", "");
     }
@@ -60,10 +64,11 @@ class ItemEditCloneLayoutTab : Tab {
 
     void DrawInner() override {
         UI::TextWrapped("Custom items can be used with layouts by replacing the custom item's layout with one from a Nadeo object (e.g., flags, or signs).");
+        UI::TextWrapped("\\$f80Important!\\$z Once you save the item and return to the editor, you \\$<\\$f80*cannot re-enter the editor, and must restart the game*\\$>. Reloading from disk *might* work, but didn't seem to during testing. Without restarting the game, you will get a crash when loading back into the editor.");
         CGameItemModel@ currentItem = GetItemModel();
         if (currentItem is null) {
             UI::Text(noItemError);
-        } else {
+        } else if (TmpItemPlacementRef is null) {
             UI::AlignTextToFramePadding();
             UI::Text("Replace layout of " + currentItem.IdName);
             for (uint i = 0; i < SampleGameItemNames.Length; i++) {
@@ -71,21 +76,53 @@ class ItemEditCloneLayoutTab : Tab {
                     SetCustomPlacementParams(currentItem, SampleGameItemNames[i]);
                 }
             }
+        } else {
+            UI::TextWrapped("Layout replaced. Please save the item and return to the main Editor.");
         }
     }
 
+    uint64 fidPointer = 0;
+
     void SetCustomPlacementParams(CGameItemModel@ currentItem, const string &in nadeoItemName) {
+        if (TmpItemPlacementRef !is null) {
+            NotifyError("SetCustomPlacementParams called while TmpItemPlacementRef is not null!! Refusing to set placement params.");
+            return;
+        }
         auto item = Editor::FindItemByName(nadeoItemName);
         if (item !is null) {
+            @TmpItemPlacementRef = ReferencedNod(item.DefaultPlacementParam_Content);
             @currentItem.DefaultPlacementParam_Content = item.DefaultPlacementParam_Content;
+            auto fidPointer = Dev::GetOffsetUint64(currentItem.DefaultPlacementParam_Content, 0x8);
+            print("Zeroing Fid: " + Text::FormatPointer(fidPointer));
+            Dev::SetOffset(currentItem.DefaultPlacementParam_Content, 0x8, uint64(0));
             NotifyWarning("Item layout successfully replaced. Please save the item.");
+            startnew(CoroutineFunc(WaitForLeftItemEditor));
         } else {
             NotifyWarning("Could not find item: " + nadeoItemName);
         }
     }
+
+    void WaitForLeftItemEditor() {
+        trace("Fixing placement param Fid: waiting to leave Item Editor");
+        while (true) {
+            yield();
+            auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+            if (ieditor is null) break;
+        }
+        trace("Fixing placement param Fid: Left Item Editor");
+        if (TmpItemPlacementRef is null) return;
+        trace("Fixing placement param Fid: tmpRef is set");
+        auto placementParam = TmpItemPlacementRef.AsPlacementParam();
+        if (placementParam is null) return;
+        trace("Fixing placement param Fid: got placement param");
+        Dev::SetOffset(placementParam, 0x8, fidPointer);
+        fidPointer = 0;
+        @TmpItemPlacementRef = null;
+        trace("Fixing placement param Fid: done");
+    }
 }
 
-*/
+//*/
 
 
 
@@ -141,20 +178,21 @@ class ItemEditEntityTab : Tab {
 
 
     void DrawCPlugDynaObjectModel(CPlugDynaObjectModel@ model) {
-        if (model.DynaShape.MaterialIds.Length > 0) {
-            auto ds = model.DynaShape;
-            // note, these can be updated from either StaticShape or DynaShape
-            ds.MaterialIds[0].PhysicId = DrawComboEPlugSurfaceMaterialId("PhysicId", ds.MaterialIds[0].PhysicId);
-            ds.MaterialIds[0].GameplayId = DrawComboEPlugSurfaceGameplayId("GameplayId", ds.MaterialIds[0].GameplayId);
-        }
+        // real materials are probs in the Mesh
+        // if (model.DynaShape.MaterialIds.Length > 0) {
+        //     auto ds = model.DynaShape;
+        //     // note, these can be updated from either StaticShape or DynaShape
+        //     ds.MaterialIds[0].PhysicId = DrawComboEPlugSurfaceMaterialId("PhysicId", ds.MaterialIds[0].PhysicId);
+        //     ds.MaterialIds[0].GameplayId = DrawComboEPlugSurfaceGameplayId("GameplayId", ds.MaterialIds[0].GameplayId);
+        // }
 
         LabeledValue(".WaterModel is null", model.WaterModel is null);
         model.IsStatic = UI::Checkbox("IsStatic", model.IsStatic);
         model.DynamizeOnSpawn = UI::Checkbox("DynamizeOnSpawn", model.DynamizeOnSpawn);
         model.LocAnimIsPhysical = UI::Checkbox("LocAnimIsPhysical", model.LocAnimIsPhysical);
-        model.Mass = UI::InputFloat("Mass", model.Mass);
-        model.LightAliveDurationSc_Min = UI::InputFloat("LightAliveDurationSc_Min", model.LightAliveDurationSc_Min);
-        model.LightAliveDurationSc_Max = UI::InputFloat("LightAliveDurationSc_Max", model.LightAliveDurationSc_Max);
+        // model.Mass = UI::InputFloat("Mass", model.Mass);
+        // model.LightAliveDurationSc_Min = UI::InputFloat("LightAliveDurationSc_Min", model.LightAliveDurationSc_Min);
+        // model.LightAliveDurationSc_Max = UI::InputFloat("LightAliveDurationSc_Max", model.LightAliveDurationSc_Max);
         // if (UI::CollapsingHeader("StaticShape")) {
         //     UI::Indent();
         //     model.DynaShape_BoxSizeX = UI::InputFloat("DynaShape_BoxSizeX", model.DynaShape_BoxSizeX);
@@ -243,7 +281,7 @@ class ItemEditEntityTab : Tab {
 }
 
 #if DEV
-// ! Copy another items model does not work and crashes on save
+// ! Copy another items model does not work ~~and crashes on save~~
 
 class IE_CopyAnotherItemsModelTab : Tab {
     IE_CopyAnotherItemsModelTab(TabGroup@ p) {
@@ -257,11 +295,32 @@ class IE_CopyAnotherItemsModelTab : Tab {
         return ieditor.ItemModel;
     }
 
+
+    void ExploreCustomMaterials() {
+        auto ent1 = cast<CPlugDynaObjectModel>(DrawItemCheck(false));
+        auto statEnt = cast<CPlugStaticObjectModel>(DrawItemCheck(false));
+        CPlugSolid2Model@ mesh;
+        if (ent1 != null) {
+            @mesh = ent1.Mesh;
+        } else if (statEnt !is null) {
+            @mesh = statEnt.Mesh;
+        }
+        auto nod = Dev::GetOffsetNod(Dev::GetOffsetNod(mesh, 0xF8), 0x0);
+        ExploreNod(nod);
+    }
+
+
     int copyFromItemIx = 0;
 
     void DrawInner() override {
         auto ent1 = DrawItemCheck();
         if (ent1 is null) return;
+
+
+        if (UI::Button("Explore Mesh Custom Material")) {
+            startnew(CoroutineFunc(ExploreCustomMaterials));
+        }
+
 
         auto inv = Editor::GetInventoryCache();
         if (inv.ItemPaths.Length == 0) {
@@ -276,6 +335,15 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 }
             }
             UI::EndCombo();
+        }
+
+        if (UI::Button("find Support Connector x6")) {
+            for (uint i = 0; i < inv.ItemPaths.Length; i++) {
+                if (inv.ItemPaths[i] == "SupportConnectorX6") {
+                    copyFromItemIx = i;
+                    break;
+                }
+            }
         }
 
         // UI::BeginDisabled(running);
@@ -296,67 +364,187 @@ class IE_CopyAnotherItemsModelTab : Tab {
             }
             auto model = cast<CGameItemModel>(itemNode.Article.LoadedNod);
             if (model is null) throw('could not load item model');
-            auto entity = cast<CGameCommonItemEntityModel>(model.EntityModel);
-            if (entity is null) throw('Item entity model must be a CGameCommonItemEntityModel');
-            auto staticObj = cast<CPlugStaticObjectModel>(entity.StaticObject);
-            if (staticObj is null) throw('StaticObject not a CPlugStaticObjectModel');
+            auto ciEntity = cast<CGameCommonItemEntityModel>(model.EntityModel);
+            auto varList = cast<NPlugItem_SVariantList>(model.EntityModel);
+            auto prefab = cast<CPlugPrefab>(model.EntityModel);
+            // if (ciEntity is null) throw('Item entity model must be a CGameCommonItemEntityModel');
+            CPlugStaticObjectModel@ staticObj;
+            if (ciEntity !is null) {
+                @staticObj = cast<CPlugStaticObjectModel>(ciEntity.StaticObject);
+            } else if (prefab !is null) {
+                @staticObj = cast<CPlugStaticObjectModel>(prefab.Ents[0].Model);
+            } else if (varList !is null) {
+                @prefab = cast<CPlugPrefab>(varList.Variants[0].EntityModel);
+                if (prefab is null) throw('varlist > prefab is null');
+                @staticObj = cast<CPlugStaticObjectModel>(prefab.Ents[0].Model);
+            }
+            if (staticObj is null) {
+                auto err = ("StaticObject could not be found! ci: #1, prefab: #2, varList: #3")
+                    .Replace("#1", tostring(ciEntity !is null))
+                    .Replace("#2", tostring(prefab !is null))
+                    .Replace("#3", tostring(varList !is null));
+                throw(err);
+            }
             // Mesh - cplugsolid2model; shape: cplugsurface
-            auto ent1 = DrawItemCheck(false);
-            if (ent1 is null) throw('loaded items ent1 not found but was expected');
+            auto ent1 = cast<CPlugDynaObjectModel>(DrawItemCheck(false));
+            auto statEnt = cast<CPlugStaticObjectModel>(DrawItemCheck(false));
+
+            if (ent1 is null && statEnt is null) throw('loaded items ent1 not found but was expected');
+
             if (staticObj.Shape is null || staticObj.Mesh is null) {
-                ExploreNod(model);
+                // ExploreNod(model);
                 NotifyError("static obj.shape or mesh is null!");
                 return;
             }
-            print('not null here');
+
             staticObj.Shape.MwAddRef();
             staticObj.Shape.MwAddRef();
             staticObj.Mesh.MwAddRef();
-            print('not null here 2');
 
-            if (ent1.DynaShape !is null)
-                ent1.DynaShape.MwAddRef();
-            if (ent1.StaticShape !is null)
-                ent1.StaticShape.MwAddRef();
-            if (ent1.Mesh !is null)
-                ent1.Mesh.MwAddRef();
-            Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "DynaShape"), staticObj.Shape);
-            Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), staticObj.Shape);
-            Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "Mesh"), staticObj.Mesh);
+            CPlugSolid2Model@ mesh;
+
+            if (ent1 !is null) {
+                if (ent1.DynaShape !is null)
+                    ent1.DynaShape.MwAddRef();
+                if (ent1.StaticShape !is null)
+                    ent1.StaticShape.MwAddRef();
+                if (ent1.Mesh !is null)
+                    ent1.Mesh.MwAddRef();
+
+                trace('setting offsets on ent1');
+
+                Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "DynaShape"), staticObj.Shape);
+                Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), staticObj.Shape);
+                Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "Mesh"), staticObj.Mesh);
+
+                @mesh = ent1.Mesh;
+            } else if (statEnt !is null) {
+                if (statEnt.Mesh !is null)
+                    statEnt.Mesh.MwAddRef();
+                if (statEnt.Shape !is null)
+                    statEnt.Shape.MwAddRef();
+
+                trace('setting offsets on statEnt');
+
+                Dev::SetOffset(statEnt, GetOffset("CPlugStaticObjectModel", "Shape"), staticObj.Shape);
+                Dev::SetOffset(statEnt, GetOffset("CPlugStaticObjectModel", "Mesh"), staticObj.Mesh);
+
+                // auto item = GetItemModel();
+                // if (item.EntityModelEdition !is null) {
+                //     item.EntityModelEdition.MwAddRef();
+                //     @item.EntityModelEdition = null;
+                // }
+
+                @mesh = statEnt.Mesh;
+            }
+
             // @ent1.DynaShape = staticObj.Shape;
             // @ent1.StaticShape = staticObj.Shape;
             // @ent1.Mesh = staticObj.Mesh;
             // @ent1.StaticShape = null;
             // @ent1.DynaShape = staticObj.Shape;
+
+            // for (uint i = 0; i < staticObj.Shape.Materials.Length; i++) {
+            //     auto mat = staticObj.Shape.Materials[i];
+            //     Dev::SetOffset(mat, 0x8, uint64(0));
+            // }
+
+            auto bufferPtr = Dev::GetOffsetUint64(mesh, 0xC8);
+            auto nbMats = Dev::GetOffsetUint32(mesh, 0xC8 + 0x8);
+            auto nbAndSize = Dev::GetOffsetUint64(mesh, 0xC8 + 0x8);
+            auto alloc = Dev::GetOffsetUint32(mesh, 0xC8 + 0xC);
+
+            auto bufStructPtr = Dev::GetOffsetUint64(mesh, 0x138);
+            auto bufStructLenSize = Dev::GetOffsetUint64(mesh, 0x138 + 0x8);
+
+
+            if (nbMats > alloc) {
+                NotifyWarning('nbMats > alloc');
+            // } else if (nbMats != staticObj.Shape.Materials.Length) {
+            //     NotifyWarning('nbMats != staticObj.Shape.Materials.Length');
+            } else if (nbMats > 0) {
+                // need to turn normal materials on the mesh into custom materials (we just ignore the custom materials user inst obj and path to materials folder)
+                Dev::SetOffset(mesh, 0xC8, uint64(0));
+                Dev::SetOffset(mesh, 0xC8 + 8, uint64(0));
+
+                // Dev::SetOffset(mesh, 0xE8, "Stadium\\Media\\Material\\");
+
+                Dev::SetOffset(mesh, 0x138, uint64(0));
+                Dev::SetOffset(mesh, 0x138 + 8, uint64(0));
+                Dev::SetOffset(mesh, 0x148, uint64(0));
+                Dev::SetOffset(mesh, 0x148 + 8, uint64(0));
+
+                // Dev::SetOffset(mesh, 0x158, bufStructPtr);
+                // Dev::SetOffset(mesh, 0x158 + 8, bufStructLenSize);
+
+                Dev::SetOffset(mesh, 0x1F8, bufferPtr);
+                Dev::SetOffset(mesh, 0x1F8 + 8, nbAndSize);
+                Dev::SetOffset(mesh, 0x208, bufferPtr);
+                Dev::SetOffset(mesh, 0x208 + 8, nbAndSize);
+                // auto buf = Dev::GetOffsetNod(ent1.Mesh, 0xC8);
+                // for (uint i = 0; i < nbMats; i++) {
+                //     auto mat = cast<CPlugMaterial>(Dev::GetOffsetNod(buf, i * 0x8));
+                //     auto fidPtr = Dev::GetOffsetUint64(mat, 0x8);
+                //     warn('zeroing FID: ' + Text::FormatPointer(fidPtr));
+                //     Dev::SetOffset(mat, 0x8, uint64(0));
+                // }
+            }
+
+            // // do this last as it changes the len of materials which we check earlier
+            // if (staticObj.Shape.Materials.Length > 0) {
+            //     staticObj.Shape.TransformMaterialsToMatIds();
+            // }
+
             Notify("Replaced item mesh and shape, pls save the item.");
         } catch {
             NotifyError("Exception copying mesh: " + getExceptionInfo());
+            NotifyError("Game may be in an unsafe state. Please save your work and restart when you can.");
         }
     }
 
-    CPlugDynaObjectModel@ DrawItemCheck(bool drawErrors = true) {
+    // returns CPlugDynaObjectModel or CPlugStaticObjectModel
+    CMwNod@ DrawItemCheck(bool drawErrors = true) {
         auto item = GetItemModel();
-        if (item is null) {
-            if (drawErrors) UI::Text("No item");
+        if (item is null || item.EntityModel is null) {
+            if (drawErrors) UI::Text("No item or EntityModel is null");
             return null;
         }
         auto entity = cast<CPlugPrefab>(item.EntityModel);
-        if (entity is null) {
-            if (drawErrors) UI::Text("Only CPlugPrefab supported, but it's a " + Reflection::TypeOf(item.EntityModel).Name);
-            return null;
-        }
-        if (entity.Ents.Length != 2) {
-            if (drawErrors) UI::Text("Need Ents.Length == 2");
+        auto commonIEntity = cast<CGameCommonItemEntityModel>(item.EntityModel);
+        if (entity is null && commonIEntity is null) {
+            if (drawErrors) UI::Text("Only CPlugPrefab / CGameCommonItemEntityModel supported, but it's a " + (item.EntityModel is null ? "null" : Reflection::TypeOf(item.EntityModel).Name));
             return null;
         }
 
-        auto ent1 = cast<CPlugDynaObjectModel>(entity.Ents[0].Model);
-        if (ent1 is null) {
-            if (drawErrors) UI::Text("Ents[0] is not a CPlugDynaObjectModel");
-            return null;
+        if (entity !is null) {
+            if (entity.Ents.Length > 2) {
+                if (drawErrors) UI::Text("Need Ents.Length == 2");
+                return null;
+            }
+            if (entity.Ents.Length == 1) {
+                return entity.Ents[0].Model;
+            }
+
+            auto ent1 = cast<CPlugDynaObjectModel>(entity.Ents[0].Model);
+            if (ent1 is null) {
+                if (drawErrors) UI::Text("Ents[0] is not a CPlugDynaObjectModel");
+                return null;
+            }
+            return ent1;
+        } else if (commonIEntity !is null) {
+            return commonIEntity.StaticObject;
         }
-        return ent1;
+        return null;
     }
+
+
+
+    /*
+    materials: GameData\Stadium\Media\Material\
+    create new MwId with name
+    set to those bits in cplugmaterialuserinst
+
+    */
 }
 #endif
 

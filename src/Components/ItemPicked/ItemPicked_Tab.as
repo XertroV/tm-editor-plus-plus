@@ -203,6 +203,12 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         UI::SameLine();
         variant.HiddenInManualCycle = UI::Checkbox("##.HiddenInManualCycle"+fileName, variant.HiddenInManualCycle);
         AddSimpleTooltip(".HiddenInManualCycle");
+#if DEV
+        UI::SameLine();
+        if (UI::Button(Icons::Cube+"##variant"+ix)) {
+            ExploreNod("Variant", variant.EntityModel);
+        }
+#endif
     }
 
     vec3 m_Calc_AbsPosition = vec3();
