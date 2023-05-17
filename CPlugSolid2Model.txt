@@ -1,4 +1,4 @@
-0x40 bytes?
+90BB000
 
 0x18: ?? uint, uint ??
 0x20: ptr -> struct?
@@ -10,6 +10,12 @@
 
 0x30: ?? uint, uint ??
 0x38: ?? uint, uint ??
+
+[may be uncleared for vanilla items / screen1x1 at least]
+0x40: -> ptr
+    CGameCtnArticle 301F
+0x48: -> ptr
+    CGameCtnArticle 301F
 
 
 0xA8: -> buffer? 0xC size
@@ -82,7 +88,8 @@ at 0x138, goes to: (400 chars -> 200 bytes (probs 192 -> 16 bytes each))
 08 00 00 00 01 00 00 00 04 00 00 00 01 00 00 00
 09 00 00 00 02 00 00 00 04 00 00 00 01 00 00 00
 0A 00 00 00 00 00 00 00 04 00 00 00 01 00 00 00
-0B 00 00 00 03 00 00 00 04 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00
+0B 00 00 00 03 00 00 00 04 00 00 00 01 00 00 00
+# 00 00 00 00 00 00 00 00
 probably something like an index of cplugvisual -> materials or something
 
 
@@ -93,10 +100,21 @@ at 0x158 otherwise
 
 
 
-material
+material 9079 0x8d3340
 0x38? -> ptr struct
     0x8 -> fid
     0x10 -> cplugshaderapply
         -> fid,
         -> 0x38
     0x30 -> cplugshaderappyl
+
+0x48 -> CPlugMaterial (huh?)
+0x50 -> CPlugMaterialCustom 903A (0xafc020)
+    0x38 -> 9079 (material) 0x8d3340
+    0x50 -> mwsarray? (2) (skin color? + shader?)
+    0x60 -> mwsarray? (9) 0x30 byte struct? (waypoint something? 0x20 -> fid b00a)
+    0x80 -> mwsarray? (7) 0x30 cplugshaderpass?
+0x58 -> Buffer<uint>?
+0x90 -> ":data:\Projects\Techno3\Media\Material\Tech3_Block_TDSN_CubeOut_DispIn.Material.gbx"
+
+0x150: END

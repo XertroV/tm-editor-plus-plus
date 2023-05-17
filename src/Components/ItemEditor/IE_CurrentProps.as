@@ -345,6 +345,22 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 }
             }
         }
+        if (UI::Button("find Screen1x1")) {
+            for (uint i = 0; i < inv.ItemPaths.Length; i++) {
+                if (inv.ItemPaths[i] == "Screen1x1") {
+                    copyFromItemIx = i;
+                    break;
+                }
+            }
+        }
+        if (UI::Button("find Screen16x9")) {
+            for (uint i = 0; i < inv.ItemPaths.Length; i++) {
+                if (inv.ItemPaths[i] == "Screen16x9") {
+                    copyFromItemIx = i;
+                    break;
+                }
+            }
+        }
 
         // UI::BeginDisabled(running);
 
@@ -356,7 +372,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
     }
 
     void RunCopy() {
-        try {
+        // try {
             auto inv = Editor::GetInventoryCache();
             auto itemNode = inv.ItemInvNodes[copyFromItemIx];
             if (!itemNode.Article.IsLoaded) {
@@ -457,12 +473,44 @@ class IE_CopyAnotherItemsModelTab : Tab {
             auto bufStructPtr = Dev::GetOffsetUint64(mesh, 0x138);
             auto bufStructLenSize = Dev::GetOffsetUint64(mesh, 0x138 + 0x8);
 
+            CPlugMaterialUserInst@[] mats;
 
             if (nbMats > alloc) {
-                NotifyWarning('nbMats > alloc');
+                NotifyWarning('nbMats > alloc, though this may be because it is not a vanilla item (safe to ignore this warning if it is already custom)');
             // } else if (nbMats != staticObj.Shape.Materials.Length) {
             //     NotifyWarning('nbMats != staticObj.Shape.Materials.Length');
             } else if (nbMats > 0) {
+                // create a MwBuffer<CPlugMaterialUserInst> and set in the mesh
+                trace('Creating custom materials');
+                auto matBufFakeNod = Dev::GetOffsetNod(mesh, 0xC8);
+                if (matBufFakeNod is null) {
+                    NotifyError("material buffer null?");
+                    return;
+                }
+                trace('Allocating buffer');
+                auto userMatBufPtr = Dev::Allocate(0x8 * nbMats + 0x20);
+                trace('Setting buffer pointer and size / alloc');
+                Dev::SetOffset(mesh, 0xF8, userMatBufPtr);
+                Dev::SetOffset(mesh, 0xF8 + 0x8, uint32(nbMats));
+                Dev::SetOffset(mesh, 0xF8 + 0xC, uint32(nbMats));
+                trace('Getting fake nod for user mat buffer');
+                auto userMatBufFakeNod = Dev::GetOffsetNod(mesh, 0xF8);
+                for (uint i = 0; i < nbMats; i++) {
+                    trace('Getting material ' + (i + 1));
+                    auto origMat = cast<CPlugMaterial>(Dev::GetOffsetNod(matBufFakeNod, i * 0x8));
+                    trace('Creating user mat ' + (i + 1));
+                    auto matUserInst = CPlugMaterialUserInst();
+                    matUserInst.MwAddRef();
+                    // how to set name? need to register a new mwid or something
+                    // matUserInst._Name =
+                    matUserInst._LinkFull = GetMaterialName(origMat);
+                    trace('Setting user mat props ' + (i + 1) + " (_LinkFull: "+matUserInst._LinkFull+")");
+                    trace('Setting user mat ptr in buffer ' + (i + 1));
+                    Dev::SetOffset(userMatBufFakeNod, 0x8 * i, matUserInst);
+                }
+                trace('Populated custom materials buffer');
+
+
                 // need to turn normal materials on the mesh into custom materials (we just ignore the custom materials user inst obj and path to materials folder)
                 Dev::SetOffset(mesh, 0xC8, uint64(0));
                 Dev::SetOffset(mesh, 0xC8 + 8, uint64(0));
@@ -474,8 +522,8 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 Dev::SetOffset(mesh, 0x148, uint64(0));
                 Dev::SetOffset(mesh, 0x148 + 8, uint64(0));
 
-                // Dev::SetOffset(mesh, 0x158, bufStructPtr);
-                // Dev::SetOffset(mesh, 0x158 + 8, bufStructLenSize);
+                Dev::SetOffset(mesh, 0x158, bufStructPtr);
+                Dev::SetOffset(mesh, 0x158 + 8, bufStructLenSize);
 
                 Dev::SetOffset(mesh, 0x1F8, bufferPtr);
                 Dev::SetOffset(mesh, 0x1F8 + 8, nbAndSize);
@@ -496,10 +544,15 @@ class IE_CopyAnotherItemsModelTab : Tab {
             // }
 
             Notify("Replaced item mesh and shape, pls save the item.");
-        } catch {
-            NotifyError("Exception copying mesh: " + getExceptionInfo());
-            NotifyError("Game may be in an unsafe state. Please save your work and restart when you can.");
-        }
+        // } catch {
+        //     NotifyError("Exception copying mesh: " + getExceptionInfo());
+        //     NotifyError("Game may be in an unsafe state. Please save your work and restart when you can.");
+        // }
+    }
+
+    string GetMaterialName(CPlugMaterial@ mat) {
+        auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(mat, 0x8));
+        return string(fid.ShortFileName);
     }
 
     // returns CPlugDynaObjectModel or CPlugStaticObjectModel
