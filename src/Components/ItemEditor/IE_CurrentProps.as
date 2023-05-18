@@ -435,7 +435,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
 
             if (staticObj.Shape is null || staticObj.Mesh is null) {
                 // ExploreNod(model);
-                NotifyError("static obj.shape or mesh is null!");
+                NotifyError("static obj.shape or mesh is null! shape null: " + (staticObj.Shape is null) + ", mesh null: " + staticObj.Mesh is null);
                 return;
             }
 
@@ -443,7 +443,8 @@ class IE_CopyAnotherItemsModelTab : Tab {
             staticObj.Shape.MwAddRef();
             staticObj.Mesh.MwAddRef();
 
-            CPlugSolid2Model@ mesh;
+            CPlugSolid2Model@ mesh = staticObj.Mesh;
+            CPlugSurface@ shape = staticObj.Shape;
 
             if (ent1 !is null) {
                 if (ent1.DynaShape !is null)
@@ -459,8 +460,6 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 // Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), staticObj.Shape);
                 Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), uint64(0));
                 Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "Mesh"), staticObj.Mesh);
-
-                @mesh = ent1.Mesh;
             } else if (statEnt !is null) {
                 if (statEnt.Mesh !is null)
                     statEnt.Mesh.MwAddRef();
@@ -477,8 +476,6 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 //     item.EntityModelEdition.MwAddRef();
                 //     @item.EntityModelEdition = null;
                 // }
-
-                @mesh = statEnt.Mesh;
             }
 
             // @ent1.DynaShape = staticObj.Shape;
@@ -546,30 +543,90 @@ class IE_CopyAnotherItemsModelTab : Tab {
                     Dev::SetOffset(userMatBufFakeNod, 0x18 * i, matUserInst);
                 }
                 trace('Populated custom materials buffer');
+            }
+            Dev::SetOffset(mesh, 0xE8, "Stadium\\Media\\Material\\");
 
-                Dev::SetOffset(mesh, 0xE8, "Stadium\\Media\\Material\\");
+            // need to turn normal materials on the mesh into custom materials (we just ignore the custom materials user inst obj and path to materials folder)
 
-                // need to turn normal materials on the mesh into custom materials (we just ignore the custom materials user inst obj and path to materials folder)
+            if (false) {
+                Dev::SetOffset(mesh, 0xC8, uint64(0));
+                Dev::SetOffset(mesh, 0xC8 + 8, uint64(0));
+                //
+                Dev::SetOffset(mesh, 0x138, uint64(0));
+                Dev::SetOffset(mesh, 0x138 + 8, uint64(0));
+                Dev::SetOffset(mesh, 0x148, uint64(0));
+                Dev::SetOffset(mesh, 0x148 + 8, uint64(0));
 
-                if (false) {
-                    Dev::SetOffset(mesh, 0xC8, uint64(0));
-                    Dev::SetOffset(mesh, 0xC8 + 8, uint64(0));
-                    //
-                    Dev::SetOffset(mesh, 0x138, uint64(0));
-                    Dev::SetOffset(mesh, 0x138 + 8, uint64(0));
-                    Dev::SetOffset(mesh, 0x148, uint64(0));
-                    Dev::SetOffset(mesh, 0x148 + 8, uint64(0));
+                Dev::SetOffset(mesh, 0x158, bufStructPtr);
+                Dev::SetOffset(mesh, 0x158 + 8, bufStructLenSize);
 
-                    Dev::SetOffset(mesh, 0x158, bufStructPtr);
-                    Dev::SetOffset(mesh, 0x158 + 8, bufStructLenSize);
+                Dev::SetOffset(mesh, 0x1F8, bufferPtr);
+                Dev::SetOffset(mesh, 0x1F8 + 8, nbAndSize);
+            }
 
-                    Dev::SetOffset(mesh, 0x1F8, bufferPtr);
-                    Dev::SetOffset(mesh, 0x1F8 + 8, nbAndSize);
+            // lights
+            auto lightBuffer = Dev::GetOffsetNod(mesh, 0x168);
+            auto lightBufferCount = Dev::GetOffsetUint32(mesh, 0x168 + 0x8);
+            auto userLightBuffer = Dev::GetOffsetNod(mesh, 0x168);
+            trace('lights: zeroing fid for ' + lightBufferCount);
+            if (lightBuffer !is null && lightBufferCount > 0) {
+                trace('light buffer not null');
+                auto light = cast<CPlugLight>(Dev::GetOffsetNod(lightBuffer, 0x58));
+                if (light is null) {
+                    trace('light null!?');
+                } else {
+                    trace('clear fid');
+                    // clear fid
+                    Dev::SetOffset(light, 0x8, uint64(0));
+                    // zero m_BitmapProjector
+                    trace('clear bitmap projector');
+                    Dev::SetOffset(light, GetOffset("CPlugLight", "m_BitmapProjector"), uint64(0));
+                        // zero light.m_GxLightModel.PlugLight
+                    auto lm = light.m_GxLightModel;
+                    auto lmAmb = cast<GxLightAmbient>(light.m_GxLightModel);
+                    auto lm2 = lmAmb;
+                    if (lm !is null && lm.PlugLight !is null) {
+                        trace('clear light.m_GxLightModel.PlugLight');
+                        Dev::SetOffset(lm, GetOffset("GxLight", "PlugLight"), uint64(0));
+                    }
+
+                    // this seems to not be required, but works except for moving itmes
+                    if (true) {
+                        trace('creating user lights');
+                        auto userLightBufPtr = Dev::Allocate(0x8 * lightBufferCount);
+                        Dev::SetOffset(mesh, 0x178, userLightBufPtr);
+                        Dev::SetOffset(mesh, 0x178 + 0x8, lightBufferCount);
+                        Dev::SetOffset(mesh, 0x178 + 0xC, lightBufferCount);
+                        trace('set and init buffer');
+                        auto userLightBufNod = Dev::GetOffsetNod(mesh, 0x178);
+                        trace('got user light buf ptrnod');
+                        for (uint i = 0; i < lightBufferCount; i++) {
+                            auto userLight = CPlugLightUserModel();
+                            userLight.Intensity = light.m_GxLightModel.Intensity;
+                            userLight.Color = light.m_GxLightModel.Color;
+                            Dev::SetOffset(userLightBufNod, 0x8 * i, userLight);
+                            trace('created CPlugLightUserModel ' + i);
+                        }
+                    }
                 }
 
-                // lights
-                Dev::SetOffset(mesh, 0x168, uint64(0));
-                Dev::SetOffset(mesh, 0x168 + 8, uint64(0));
+                trace('done lights');
+
+                if (false) {
+                    // zero the lights array
+                    Dev::SetOffset(mesh, 0x168, uint64(0));
+                    Dev::SetOffset(mesh, 0x168 + 8, uint64(0));
+                }
+            }
+
+            // possibly required for rotating only
+            if (shape.Materials.Length > 0) {
+                shape.UpdateSurfMaterialIdsFromMaterialIndexs();
+                shape.TransformMaterialsToMatIds();
+            }
+
+
+            if (false) {
 
 
                 // this seems to be a duplicate ref and the alloc is always 0

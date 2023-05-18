@@ -17,6 +17,8 @@
 0x48: -> ptr
     CGameCtnArticle 301F
 
+(henk asset pack light)
+0x78: -> CPlugSkel
 
 0xA8: -> buffer? 0xC size
     -> CPlugVisualIndexedTriangles@ (no fid)
@@ -36,22 +38,29 @@ vanilla only?
 0x138 -> buffer (0xC)
     -> Buffer<NStruct(0x10)>
 
+(note: not a pointer in custom item)
 0x148 -> buffer (4)
     -> ???
 
 0x158 -> buffer(1/2)
     -> ??? 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00
         00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00
+        (2): 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00
     material ID things,
 
 0x168 -> buffer (lights stuff)
     -> struct;
+        0x0 -> MwId? null in custom example (?Screen2x1SpotSmall)
+        some coords mb?
+        something that looked like an mwid but crashed the game (0x40000040)
         0x58 -> CPlugLight (has Fid)
-        0x70 -> CtnBlockUnit
+
+0x178 -> buffer CPlugLightUserModel
 
 vo?
-0x188 -> buffer (1)
-    ->
+0x188 -> buffer<uint> (1)
+    len 2 on lamps
+
 vo?
 0x198 -> buffer (2)
     -> unk
@@ -76,6 +85,15 @@ vo?
 ~~0x268 -> like above~~
 ~~0x338 -> ptr to CSystemFidFile (item file; gcameitemmodel)~~
 
+
+
+
+0x168 buffer to lights:
+FF FF FF FF 00 00 80 3F 00 00 00 80 00 00 00 00 00 00 00 00 0F 05 45 C3 01 00 C8 42 00 00 00 80 01 00 C8 C2 0F 05 45 C3 26 C9 08 40 78 C3 FC 40 54 39 37 39 01 00 00 00 01 00 00 00 00 00 00 00 00 00 80 03 00 00 00 00 E4 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 E0 5A 9B AA 9E 01 00 00
+FF FF FF FF 00 00 80 3F 00 00 00 80 00 00 00 00 00 00 00 00 0F 05 45 C3 01 00 C8 42 00 00 00 80 01 00 C8 C2 0F 05 45 C3 F9 CE 0F C0 78 C3 FC 40 54 39 37 39 01 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 C0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 30 55 9B AA 9E 01 00 00
+
+in cpluglight:
+- m_BitmapProjector null (only m_GxLightModel)
 
 
 
