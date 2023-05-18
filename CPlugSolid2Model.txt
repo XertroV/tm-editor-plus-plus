@@ -26,7 +26,7 @@ vanilla only?
 0xC8: -> buffer? (4)
     -> CPlugMaterial@ (has fid)
 
-0xE8 -> string, Stadium\Media\Material\.atracker-dev
+0xE8 -> string, Stadium\Media\Material\
 
 0xF8 -> buffer (1)
     -> CPlugMaterialUserInst@
@@ -43,6 +43,11 @@ vanilla only?
     -> ??? 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00
         00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00
     material ID things,
+
+0x168 -> buffer (lights stuff)
+    -> struct;
+        0x58 -> CPlugLight (has Fid)
+        0x70 -> CtnBlockUnit
 
 vo?
 0x188 -> buffer (1)

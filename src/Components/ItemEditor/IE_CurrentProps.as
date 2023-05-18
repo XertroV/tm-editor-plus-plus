@@ -305,8 +305,13 @@ class IE_CopyAnotherItemsModelTab : Tab {
         } else if (statEnt !is null) {
             @mesh = statEnt.Mesh;
         }
-        auto nod = Dev::GetOffsetNod(Dev::GetOffsetNod(mesh, 0xF8), 0x0);
-        ExploreNod(nod);
+        auto bufNod = Dev::GetOffsetNod(mesh, 0xF8);
+        auto count = Dev::GetOffsetUint32(mesh, 0xF8 + 0x8);
+        for (uint i = 0; i < count; i++) {
+            trace('exploring user mat ' + i);
+            auto nod = Dev::GetOffsetNod(bufNod, 0x18 * i);
+            ExploreNod("CustMat " + i, nod);
+        }
     }
 
 
@@ -317,10 +322,9 @@ class IE_CopyAnotherItemsModelTab : Tab {
         if (ent1 is null) return;
 
 
-        if (UI::Button("Explore Mesh Custom Material")) {
+        if (UI::Button("Explore Mesh Custom Materials")) {
             startnew(CoroutineFunc(ExploreCustomMaterials));
         }
-
 
         auto inv = Editor::GetInventoryCache();
         if (inv.ItemPaths.Length == 0) {
@@ -368,8 +372,30 @@ class IE_CopyAnotherItemsModelTab : Tab {
             startnew(CoroutineFunc(RunCopy));
         }
 
+        if (UI::Button("Copy EntityModel")) {
+            startnew(CoroutineFunc(CopyEntityModel));
+        }
+
         // UI::EndDisabled();
     }
+
+
+    void CopyEntityModel() {
+        auto inv = Editor::GetInventoryCache();
+        auto itemNode = inv.ItemInvNodes[copyFromItemIx];
+        if (!itemNode.Article.IsLoaded) {
+            itemNode.Article.Preload();
+        }
+        auto model = cast<CGameItemModel>(itemNode.Article.LoadedNod);
+        if (model is null) throw('could not load item model');
+        auto ciEntity = cast<CGameCommonItemEntityModel>(model.EntityModel);
+        auto varList = cast<NPlugItem_SVariantList>(model.EntityModel);
+        auto prefab = cast<CPlugPrefab>(model.EntityModel);
+
+        Notify("Does nothing atm");
+    }
+
+
 
     void RunCopy() {
         // try {
@@ -430,7 +456,8 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 trace('setting offsets on ent1');
 
                 Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "DynaShape"), staticObj.Shape);
-                Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), staticObj.Shape);
+                // Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), staticObj.Shape);
+                Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), uint64(0));
                 Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "Mesh"), staticObj.Mesh);
 
                 @mesh = ent1.Mesh;
@@ -488,7 +515,9 @@ class IE_CopyAnotherItemsModelTab : Tab {
                     return;
                 }
                 trace('Allocating buffer');
-                auto userMatBufPtr = Dev::Allocate(0x8 * nbMats + 0x20);
+                // this is something like a buffer of a struct of 0x18 length. If you have 2 custom materials, then the pointer to the 2nd is at 0x18.
+                // todo: check 3+ materials
+                auto userMatBufPtr = Dev::Allocate(0x18 * nbMats);
                 trace('Setting buffer pointer and size / alloc');
                 Dev::SetOffset(mesh, 0xF8, userMatBufPtr);
                 Dev::SetOffset(mesh, 0xF8 + 0x8, uint32(nbMats));
@@ -498,37 +527,55 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 for (uint i = 0; i < nbMats; i++) {
                     trace('Getting material ' + (i + 1));
                     auto origMat = cast<CPlugMaterial>(Dev::GetOffsetNod(matBufFakeNod, i * 0x8));
-                    trace('Creating user mat ' + (i + 1));
+                    auto origMatName = GetMaterialName(origMat);
+                    trace('Creating user mat ' + origMatName);
                     auto matUserInst = CPlugMaterialUserInst();
                     matUserInst.MwAddRef();
                     // how to set name? need to register a new mwid or something
-                    // matUserInst._Name =
-                    matUserInst._LinkFull = GetMaterialName(origMat);
-                    trace('Setting user mat props ' + (i + 1) + " (_LinkFull: "+matUserInst._LinkFull+")");
+                    matUserInst._Name = CreateMwIdWithName("m" + i);
+                    matUserInst._Link_OldCompat = CreateMwIdWithName(origMatName);
+                    matUserInst.Link = CreateMwIdWithName(origMatName);
+                    matUserInst.PhysicsID = 77;
+
+                    // crashes the game:
+                    // matUserInst.MaterialId = 0;
+                    // seems to break vanilla items (probs needs full path)
+                    // matUserInst._LinkFull = GetMaterialName(origMat);
+                    // trace('Setting user mat props ' + (i + 1) + " (_LinkFull: "+matUserInst._LinkFull+")");
                     trace('Setting user mat ptr in buffer ' + (i + 1));
-                    Dev::SetOffset(userMatBufFakeNod, 0x8 * i, matUserInst);
+                    Dev::SetOffset(userMatBufFakeNod, 0x18 * i, matUserInst);
                 }
                 trace('Populated custom materials buffer');
 
+                Dev::SetOffset(mesh, 0xE8, "Stadium\\Media\\Material\\");
 
                 // need to turn normal materials on the mesh into custom materials (we just ignore the custom materials user inst obj and path to materials folder)
-                Dev::SetOffset(mesh, 0xC8, uint64(0));
-                Dev::SetOffset(mesh, 0xC8 + 8, uint64(0));
 
-                // Dev::SetOffset(mesh, 0xE8, "Stadium\\Media\\Material\\");
+                if (false) {
+                    Dev::SetOffset(mesh, 0xC8, uint64(0));
+                    Dev::SetOffset(mesh, 0xC8 + 8, uint64(0));
+                    //
+                    Dev::SetOffset(mesh, 0x138, uint64(0));
+                    Dev::SetOffset(mesh, 0x138 + 8, uint64(0));
+                    Dev::SetOffset(mesh, 0x148, uint64(0));
+                    Dev::SetOffset(mesh, 0x148 + 8, uint64(0));
 
-                Dev::SetOffset(mesh, 0x138, uint64(0));
-                Dev::SetOffset(mesh, 0x138 + 8, uint64(0));
-                Dev::SetOffset(mesh, 0x148, uint64(0));
-                Dev::SetOffset(mesh, 0x148 + 8, uint64(0));
+                    Dev::SetOffset(mesh, 0x158, bufStructPtr);
+                    Dev::SetOffset(mesh, 0x158 + 8, bufStructLenSize);
 
-                Dev::SetOffset(mesh, 0x158, bufStructPtr);
-                Dev::SetOffset(mesh, 0x158 + 8, bufStructLenSize);
+                    Dev::SetOffset(mesh, 0x1F8, bufferPtr);
+                    Dev::SetOffset(mesh, 0x1F8 + 8, nbAndSize);
+                }
 
-                Dev::SetOffset(mesh, 0x1F8, bufferPtr);
-                Dev::SetOffset(mesh, 0x1F8 + 8, nbAndSize);
-                Dev::SetOffset(mesh, 0x208, bufferPtr);
-                Dev::SetOffset(mesh, 0x208 + 8, nbAndSize);
+                // lights
+                Dev::SetOffset(mesh, 0x168, uint64(0));
+                Dev::SetOffset(mesh, 0x168 + 8, uint64(0));
+
+
+                // this seems to be a duplicate ref and the alloc is always 0
+                // Dev::SetOffset(mesh, 0x208, bufferPtr);
+                // Dev::SetOffset(mesh, 0x208 + 8, nbAndSize);
+
                 // auto buf = Dev::GetOffsetNod(ent1.Mesh, 0xC8);
                 // for (uint i = 0; i < nbMats; i++) {
                 //     auto mat = cast<CPlugMaterial>(Dev::GetOffsetNod(buf, i * 0x8));
@@ -537,6 +584,17 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 //     Dev::SetOffset(mat, 0x8, uint64(0));
                 // }
             }
+
+            // CPlugGameSkin
+            auto skinPtr = Dev::GetOffsetUint64(model, 0xa0);
+            auto skin = Dev::GetOffsetNod(model, 0xa0);
+            if (skin !is null) {
+                trace('setting skin');
+                auto item = GetItemModel();
+                Dev::SetOffset(item, 0xa0, skinPtr);
+                skin.MwAddRef();
+            }
+
 
             // // do this last as it changes the len of materials which we check earlier
             // if (staticObj.Shape.Materials.Length > 0) {
@@ -548,6 +606,15 @@ class IE_CopyAnotherItemsModelTab : Tab {
         //     NotifyError("Exception copying mesh: " + getExceptionInfo());
         //     NotifyError("Game may be in an unsafe state. Please save your work and restart when you can.");
         // }
+    }
+
+    MwId CreateMwIdWithName(const string &in name) {
+        auto itemModel = GetItemModel();
+        auto initIdName = itemModel.IdName;
+        itemModel.IdName = name;
+        auto retMwIdValue = itemModel.Id.Value;
+        itemModel.IdName = initIdName;
+        return MwId(retMwIdValue);
     }
 
     string GetMaterialName(CPlugMaterial@ mat) {
