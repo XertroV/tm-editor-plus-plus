@@ -8,7 +8,6 @@
 
 0xf4: 0 custom, 58 00 cb 01 (sign)
 
-
 0xa0 -> CPlugGameSkin
 
 0x228 -> CSystemFidsFolder (Items, either system or local)
@@ -17,6 +16,8 @@
 0x240 -> CSystemFidFile (Cluster.Texture.Gbx; virtual; C:\Program Files (x86)\Steam\steamapps\common\Trackmania\GameData\Effects\Media\Texture\)
 
 
+0x288: entity model
+0x290: CSystemFidFile -> SupportTubePrefabClosed3D.Prefab.Gbx (for some prefab things)
 
 
 
@@ -41,12 +42,15 @@ anchored objects:
 0x84: 0x1 & isFlying, 0x2 & isAutoPiloted
 0x85: uint8 IVariant
 
+
 0xC0: mapElemColor
 0xC1: animPhaseOffset
 0xC2: mapElemLmQuality
 
 0xD4?
 0xEC? 0x18, 0xE2, 0x4a
+
+0xf8: pointer to CSystemPackDesc for skin
 
 0x120: is location initialized
 

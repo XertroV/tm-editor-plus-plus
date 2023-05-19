@@ -33,8 +33,9 @@ void RenderEarly() {
             && editor.PluginMapType.IsEditorReadyForRequest
         )
     );
-    EnteringEditor = EnteringEditor && IsInEditor &&
-        (!everEnteredEditor || (Time::Now - lastInItemEditor) > 1000);
+    // we didn't fire this on being in the item editor, but we sorta do need it to refresh the caches.
+    EnteringEditor = EnteringEditor && IsInEditor;
+        // && (!everEnteredEditor || (Time::Now - lastInItemEditor) > 1000);
 
     if (EnteringEditor) {
         EditorPriv::ResetRefreshUnsafe();

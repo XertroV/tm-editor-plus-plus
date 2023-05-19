@@ -3,9 +3,9 @@ class ItemEditCurrentPropsTab : Tab {
         super(p, "Item Properties", Icons::Tree + Icons::ListAlt);
         ItemEditPlacementTab(Children);
         ItemEditLayoutTab(Children);
-        // unable to save these items atm
         ItemEditCloneLayoutTab(Children);
         ItemEditEntityTab(Children);
+        ItemEditMisc(Children);
     }
 
     void DrawInner() override {
@@ -38,11 +38,6 @@ class ItemEditLayoutTab : ItemLayoutTab {
         return ieditor.ItemModel;
     }
 }
-
-/*
-
-    ! Does not work. Editor complains that it can't save the item.
-*/
 
 
 class ItemEditCloneLayoutTab : Tab {
@@ -280,6 +275,30 @@ class ItemEditEntityTab : Tab {
     }
 }
 
+
+class ItemEditMiscTab : Tab {
+    ItemEditMiscTab(TabGroup@ p) {
+        super(p, "Misc", "");
+    }
+
+    CGameItemModel@ GetItemModel() {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null) return null;
+        return ieditor.ItemModel;
+    }
+
+    string m_SkinDir = "Any\\Advertisement2x1\\";
+
+    void DrawInner() override {
+        auto item = GetItemModel();
+        LabeledValue("SkinDirectory", item.SkinDirectory);
+        if (UI::Button(""))
+
+        item.SkinDirNameCustom = UI::InputText("SkinDirNameCustom", item.SkinDirNameCustom);
+    }
+}
+
+
 #if DEV
 // ! Copy another items model does not work ~~and crashes on save~~
 
@@ -316,6 +335,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
 
 
     int copyFromItemIx = 0;
+    string m_itemSearch;
 
     void DrawInner() override {
         auto ent1 = DrawItemCheck();
@@ -332,6 +352,11 @@ class IE_CopyAnotherItemsModelTab : Tab {
             return;
         }
 
+        UI::TextWrapped("""
+        * Editor WILL crash when you exit. Make sure you save everything (preferably copies, and not over the original).
+        * MUST place the item in the map to load all parts of it.
+        """);
+
         if (UI::BeginCombo("Copy From", inv.ItemPaths[copyFromItemIx])) {
             for (uint i = 0; i < inv.ItemPaths.Length; i++) {
                 if (UI::Selectable(inv.ItemPaths[i], copyFromItemIx == i)) {
@@ -339,6 +364,20 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 }
             }
             UI::EndCombo();
+        }
+
+        bool enter = false;
+        m_itemSearch = UI::InputText("Search(exact)", m_itemSearch, enter, UI::InputTextFlags::EnterReturnsTrue);
+        if (enter) {
+            bool found = false;
+            for (uint i = 0; i < inv.ItemPaths.Length; i++) {
+                if (inv.ItemPaths[i] == m_itemSearch) {
+                    copyFromItemIx = i;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) Notify("Could not find item " + m_itemSearch + ".");
         }
 
         if (UI::Button("find Support Connector x6")) {
@@ -376,7 +415,27 @@ class IE_CopyAnotherItemsModelTab : Tab {
             startnew(CoroutineFunc(CopyEntityModel));
         }
 
+        if (UI::Button("Run Zero Fids")) {
+            startnew(CoroutineFunc(RunZeroFids));
+        }
+
         // UI::EndDisabled();
+    }
+
+    CGameItemModel@ GetInventorySelectionModel() {
+        auto inv = Editor::GetInventoryCache();
+        auto itemNode = inv.ItemInvNodes[copyFromItemIx];
+        // might load the full item?
+        itemNode.GetCollectorNod();
+        if (!itemNode.Article.IsLoaded) {
+            itemNode.Article.Preload();
+        }
+        return cast<CGameItemModel>(itemNode.Article.LoadedNod);
+    }
+
+    void RunZeroFids() {
+        auto model = GetInventorySelectionModel();
+        MeshDuplication::ZeroChildFids(model);
     }
 
 
@@ -392,7 +451,9 @@ class IE_CopyAnotherItemsModelTab : Tab {
         auto varList = cast<NPlugItem_SVariantList>(model.EntityModel);
         auto prefab = cast<CPlugPrefab>(model.EntityModel);
 
-        Notify("Does nothing atm");
+        if (prefab !is null) {
+
+        }
     }
 
 
@@ -435,7 +496,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
 
             if (staticObj.Shape is null || staticObj.Mesh is null) {
                 // ExploreNod(model);
-                NotifyError("static obj.shape or mesh is null! shape null: " + (staticObj.Shape is null) + ", mesh null: " + staticObj.Mesh is null);
+                NotifyError("static obj.shape or mesh is null! shape null: " + (staticObj.Shape is null) + ", mesh null: " + (staticObj.Mesh is null));
                 return;
             }
 
@@ -456,9 +517,10 @@ class IE_CopyAnotherItemsModelTab : Tab {
 
                 trace('setting offsets on ent1');
 
+                // not sure if setting static shape matters much
+                // Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), uint64(0));
+                Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), staticObj.Shape);
                 Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "DynaShape"), staticObj.Shape);
-                // Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), staticObj.Shape);
-                Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "StaticShape"), uint64(0));
                 Dev::SetOffset(ent1, GetOffset("CPlugDynaObjectModel", "Mesh"), staticObj.Mesh);
             } else if (statEnt !is null) {
                 if (statEnt.Mesh !is null)
@@ -489,24 +551,34 @@ class IE_CopyAnotherItemsModelTab : Tab {
             //     Dev::SetOffset(mat, 0x8, uint64(0));
             // }
 
-            auto bufferPtr = Dev::GetOffsetUint64(mesh, 0xC8);
+            // auto bufferPtr = Dev::GetOffsetUint64(mesh, 0xC8);
+            // auto nbAndSize = Dev::GetOffsetUint64(mesh, 0xC8 + 0x8);
             auto nbMats = Dev::GetOffsetUint32(mesh, 0xC8 + 0x8);
-            auto nbAndSize = Dev::GetOffsetUint64(mesh, 0xC8 + 0x8);
             auto alloc = Dev::GetOffsetUint32(mesh, 0xC8 + 0xC);
+            auto matBufFakeNod = Dev::GetOffsetNod(mesh, 0xC8);
 
-            auto bufStructPtr = Dev::GetOffsetUint64(mesh, 0x138);
-            auto bufStructLenSize = Dev::GetOffsetUint64(mesh, 0x138 + 0x8);
+            auto nbUserMats = Dev::GetOffsetUint32(mesh, 0xF8 + 0x8);
 
-            CPlugMaterialUserInst@[] mats;
+            // auto bufStructPtr = Dev::GetOffsetUint64(mesh, 0x138);
+            // auto bufStructLenSize = Dev::GetOffsetUint64(mesh, 0x138 + 0x8);
+
+
+            // shouldn't need to set anything here for custom items...
+            // if (nbMats == 0 || matBufFakeNod is null) {
+            //     @matBufFakeNod = Dev::GetOffsetNod(mesh, 0x1f8);
+            //     nbMats = Dev::GetOffsetUint32(mesh, 0x1f8 + 0x8);
+            //     alloc = Dev::GetOffsetUint32(mesh, 0x1f8 + 0xC);
+            // }
+
+            trace('s2m materials: nbMats / nbUserMats: ' + nbMats + ' / ' + nbUserMats);
 
             if (nbMats > alloc) {
                 NotifyWarning('nbMats > alloc, though this may be because it is not a vanilla item (safe to ignore this warning if it is already custom)');
             // } else if (nbMats != staticObj.Shape.Materials.Length) {
             //     NotifyWarning('nbMats != staticObj.Shape.Materials.Length');
-            } else if (nbMats > 0) {
+            } else if (nbMats > 0 && nbUserMats == 0) {
                 // create a MwBuffer<CPlugMaterialUserInst> and set in the mesh
                 trace('Creating custom materials');
-                auto matBufFakeNod = Dev::GetOffsetNod(mesh, 0xC8);
                 if (matBufFakeNod is null) {
                     NotifyError("material buffer null?");
                     return;
@@ -514,7 +586,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 trace('Allocating buffer');
                 // this is something like a buffer of a struct of 0x18 length. If you have 2 custom materials, then the pointer to the 2nd is at 0x18.
                 // todo: check 3+ materials
-                auto userMatBufPtr = Dev::Allocate(0x18 * nbMats);
+                auto userMatBufPtr = RequestMemory(0x18 * nbMats);
                 trace('Setting buffer pointer and size / alloc');
                 Dev::SetOffset(mesh, 0xF8, userMatBufPtr);
                 Dev::SetOffset(mesh, 0xF8 + 0x8, uint32(nbMats));
@@ -549,64 +621,65 @@ class IE_CopyAnotherItemsModelTab : Tab {
             // need to turn normal materials on the mesh into custom materials (we just ignore the custom materials user inst obj and path to materials folder)
 
             if (false) {
-                Dev::SetOffset(mesh, 0xC8, uint64(0));
-                Dev::SetOffset(mesh, 0xC8 + 8, uint64(0));
-                //
-                Dev::SetOffset(mesh, 0x138, uint64(0));
-                Dev::SetOffset(mesh, 0x138 + 8, uint64(0));
-                Dev::SetOffset(mesh, 0x148, uint64(0));
-                Dev::SetOffset(mesh, 0x148 + 8, uint64(0));
+                // Dev::SetOffset(mesh, 0xC8, uint64(0));
+                // Dev::SetOffset(mesh, 0xC8 + 8, uint64(0));
+                // //
+                // Dev::SetOffset(mesh, 0x138, uint64(0));
+                // Dev::SetOffset(mesh, 0x138 + 8, uint64(0));
+                // Dev::SetOffset(mesh, 0x148, uint64(0));
+                // Dev::SetOffset(mesh, 0x148 + 8, uint64(0));
 
-                Dev::SetOffset(mesh, 0x158, bufStructPtr);
-                Dev::SetOffset(mesh, 0x158 + 8, bufStructLenSize);
+                // Dev::SetOffset(mesh, 0x158, bufStructPtr);
+                // Dev::SetOffset(mesh, 0x158 + 8, bufStructLenSize);
 
-                Dev::SetOffset(mesh, 0x1F8, bufferPtr);
-                Dev::SetOffset(mesh, 0x1F8 + 8, nbAndSize);
+                // Dev::SetOffset(mesh, 0x1F8, bufferPtr);
+                // Dev::SetOffset(mesh, 0x1F8 + 8, nbAndSize);
             }
 
             // lights
             auto lightBuffer = Dev::GetOffsetNod(mesh, 0x168);
             auto lightBufferCount = Dev::GetOffsetUint32(mesh, 0x168 + 0x8);
-            auto userLightBuffer = Dev::GetOffsetNod(mesh, 0x168);
-            trace('lights: zeroing fid for ' + lightBufferCount);
-            if (lightBuffer !is null && lightBufferCount > 0) {
+            trace('lights: zeroing fids for ' + lightBufferCount);
+            if (lightBufferCount > 0 && lightBuffer !is null) {
                 trace('light buffer not null');
-                auto light = cast<CPlugLight>(Dev::GetOffsetNod(lightBuffer, 0x58));
-                if (light is null) {
-                    trace('light null!?');
-                } else {
-                    trace('clear fid');
-                    // clear fid
-                    Dev::SetOffset(light, 0x8, uint64(0));
-                    // zero m_BitmapProjector
-                    trace('clear bitmap projector');
-                    Dev::SetOffset(light, GetOffset("CPlugLight", "m_BitmapProjector"), uint64(0));
-                        // zero light.m_GxLightModel.PlugLight
-                    auto lm = light.m_GxLightModel;
-                    auto lmAmb = cast<GxLightAmbient>(light.m_GxLightModel);
-                    auto lm2 = lmAmb;
-                    if (lm !is null && lm.PlugLight !is null) {
-                        trace('clear light.m_GxLightModel.PlugLight');
-                        Dev::SetOffset(lm, GetOffset("GxLight", "PlugLight"), uint64(0));
-                    }
 
+                trace('allocating user lights');
+                auto userLightBufPtr = RequestMemory(0x8 * lightBufferCount);
+                Dev::SetOffset(mesh, 0x178, userLightBufPtr);
+                Dev::SetOffset(mesh, 0x178 + 0x8, lightBufferCount);
+                Dev::SetOffset(mesh, 0x178 + 0xC, lightBufferCount);
+                trace('set and init buffer');
+
+                for (uint i = 0; i < lightBufferCount; i++) {
+                    trace('light: ' + i);
+                    auto light = cast<CPlugLight>(Dev::GetOffsetNod(lightBuffer, 0x60 * i + 0x58));
+                    if (light is null) {
+                        trace('light null!?');
+                    } else {
+                        trace('clear fid');
+                        // clear fid
+                        Dev::SetOffset(light, 0x8, uint64(0));
+                        // zero m_BitmapProjector
+                        trace('clear bitmap projector');
+                        Dev::SetOffset(light, GetOffset("CPlugLight", "m_BitmapProjector"), uint64(0));
+                            // zero light.m_GxLightModel.PlugLight
+                        auto lm = light.m_GxLightModel;
+                        auto lmAmb = cast<GxLightAmbient>(light.m_GxLightModel);
+                        auto lm2 = lmAmb;
+                        if (lm !is null && lm.PlugLight !is null) {
+                            trace('clear light.m_GxLightModel.PlugLight');
+                            Dev::SetOffset(lm, GetOffset("GxLight", "PlugLight"), uint64(0));
+                        }
+                    }
                     // this seems to not be required, but works except for moving itmes
                     if (true) {
-                        trace('creating user lights');
-                        auto userLightBufPtr = Dev::Allocate(0x8 * lightBufferCount);
-                        Dev::SetOffset(mesh, 0x178, userLightBufPtr);
-                        Dev::SetOffset(mesh, 0x178 + 0x8, lightBufferCount);
-                        Dev::SetOffset(mesh, 0x178 + 0xC, lightBufferCount);
-                        trace('set and init buffer');
                         auto userLightBufNod = Dev::GetOffsetNod(mesh, 0x178);
                         trace('got user light buf ptrnod');
-                        for (uint i = 0; i < lightBufferCount; i++) {
-                            auto userLight = CPlugLightUserModel();
-                            userLight.Intensity = light.m_GxLightModel.Intensity;
-                            userLight.Color = light.m_GxLightModel.Color;
-                            Dev::SetOffset(userLightBufNod, 0x8 * i, userLight);
-                            trace('created CPlugLightUserModel ' + i);
-                        }
+                        auto userLight = CPlugLightUserModel();
+                        userLight.Intensity = light.m_GxLightModel.Intensity;
+                        userLight.Color = light.m_GxLightModel.Color;
+                        Dev::SetOffset(userLightBufNod, 0x8 * i, userLight);
+                        trace('created CPlugLightUserModel ' + i);
                     }
                 }
 
@@ -619,10 +692,12 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 }
             }
 
-            // possibly required for rotating only
+            trace('updating surf mat ids and mats to mat ids');
+            // possibly required for rotating
             if (shape.Materials.Length > 0) {
                 shape.UpdateSurfMaterialIdsFromMaterialIndexs();
                 shape.TransformMaterialsToMatIds();
+                trace('done updating surf mat ids and mat to mat ids');
             }
 
 
@@ -642,16 +717,25 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 // }
             }
 
+            trace('setting skin pointer if exists');
+
             // CPlugGameSkin
             auto skinPtr = Dev::GetOffsetUint64(model, 0xa0);
             auto skin = Dev::GetOffsetNod(model, 0xa0);
+            auto item = GetItemModel();
             if (skin !is null) {
                 trace('setting skin');
-                auto item = GetItemModel();
                 Dev::SetOffset(item, 0xa0, skinPtr);
                 skin.MwAddRef();
             }
 
+            if (model.MaterialModifier !is null) {
+                trace('mat modifier !is null, setting');
+                model.MaterialModifier.MwAddRef();
+                Dev::SetOffset(item, GetOffset("CGameItemModel", "MaterialModifier"), model.MaterialModifier);
+            } else {
+                trace('no mat modifier');
+            }
 
             // // do this last as it changes the len of materials which we check earlier
             // if (staticObj.Shape.Materials.Length > 0) {
@@ -676,6 +760,9 @@ class IE_CopyAnotherItemsModelTab : Tab {
 
     string GetMaterialName(CPlugMaterial@ mat) {
         auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(mat, 0x8));
+        if (fid is null) {
+            ExploreNod('material no fid', mat);
+        }
         return string(fid.ShortFileName);
     }
 
