@@ -53,6 +53,8 @@ class ItemSelection_DevTab : Tab {
             ExploreNod(itemModel);
         }
 
+        UI::Separator();
+
         auto varList = cast<NPlugItem_SVariantList>(itemModel.EntityModel);
         auto prefab = cast<CPlugPrefab>(itemModel.EntityModel);
 
@@ -72,7 +74,27 @@ class ItemSelection_DevTab : Tab {
             }
         }
 
+        UI::Separator();
+
+        if (itemModel.MaterialModifier is null) {
+            UI::Text("No material modifier");
+        } else {
+            UI::AlignTextToFramePadding();
+            UI::Text("Material Modifier:");
+            UI::Text("Skin:");
+            UI::Indent();
+            DrawMMSkin(itemModel.MaterialModifier);
+            UI::Unindent();
+            UI::Separator();
+            UI::Text("RemapFolder:");
+            UI::Indent();
+            DrawMMFids(itemModel.MaterialModifier);
+            UI::Unindent();
+        }
+
+
 #if DEV
+        UI::Separator();
         if (UI::Button(Icons::Cube + " Explore a new CPlugMaterialUserInst")) {
             auto mui = CPlugMaterialUserInst();
             mui.MwAddRef();
@@ -86,6 +108,67 @@ class ItemSelection_DevTab : Tab {
         }
 #endif
 
+    }
+
+    void DrawMMSkin(CPlugGameSkinAndFolder@ mm) {
+        auto skin = mm.Remapping;
+        string p1 = Dev::GetOffsetString(skin, 0x18);
+        string p2 = Dev::GetOffsetString(skin, 0x28);
+        auto fidBuf = Dev::GetOffsetNod(skin, 0x58);
+        auto fidBufC = Dev::GetOffsetUint32(skin, 0x58 + 0x8);
+        auto strBuf = Dev::GetOffsetNod(skin, 0x68);
+        auto strBufC = Dev::GetOffsetUint32(skin, 0x68 + 0x8);
+        auto clsBuf = Dev::GetOffsetNod(skin, 0x78);
+        auto unkBuf = Dev::GetOffsetNod(skin, 0x88);
+        CopiableLabeledValue("Pri Path", p1);
+        CopiableLabeledValue("Sec Path", p2);
+        if (UI::BeginTable("skintable", 4, UI::TableFlags::SizingStretchProp)) {
+            UI::TableSetupColumn("Replace ");
+            UI::TableSetupColumn("With");
+            UI::TableSetupColumn("ClassID");
+            UI::TableSetupColumn("Unk");
+            UI::TableHeadersRow();
+            for (uint i = 0; i < fidBufC; i++) {
+                auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(fidBuf, 0x8 * i));
+                auto str = Dev::GetOffsetString(strBuf, 0x10 * i);
+                auto cls = Dev::GetOffsetUint32(clsBuf, 0x4 * i);
+                auto unk = Dev::GetOffsetUint32(unkBuf, 0x4 * i);
+                UI::TableNextRow();
+                UI::TableNextColumn();
+                UI::Text(fid.FileName);
+                UI::TableNextColumn();
+                UI::Text(str);
+                UI::TableNextColumn();
+                UI::Text(Text::Format("0x%08x", cls));
+                UI::TableNextColumn();
+                UI::Text(Text::Format("0x%08x", unk));
+            }
+
+            UI::EndTable();
+        }
+        // UI::Text("Fids:");
+        // UI::Indent();
+        // for (uint i = 0; i < fidBufC; i++) {
+        //     auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(fidBuf, 0x8 * i));
+        //     CopiableLabeledValue(tostring(i), fid is null ? "null" : string(fid.FileName));
+        // }
+        // UI::Unindent();
+        // UI::Text("Strings:");
+        // UI::Indent();
+        // for (uint i = 0; i < strBufC; i++) {
+        //     auto str = Dev::GetOffsetString(strBuf, 0x10 * i);
+        //     CopiableLabeledValue(tostring(i), str);
+        // }
+        // UI::Unindent();
+    }
+
+    void DrawMMFids(CPlugGameSkinAndFolder@ mm) {
+        for (uint i = 0; i < mm.RemapFolder.Leaves.Length; i++) {
+            auto fid = mm.RemapFolder.Leaves[i];
+            CopiableLabeledValue("Name", fid.FileName);
+            UI::SameLine();
+            LabeledValue("Loaded", fid.Nod !is null);
+        }
     }
 }
 #endif

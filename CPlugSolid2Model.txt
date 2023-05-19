@@ -41,6 +41,8 @@ vanilla only?
 (note: not a pointer in custom item)
 0x148 -> buffer (4)
     -> ???
+    -> 0x60 large?
+    -> 0x58
 
 0x158 -> buffer(1/2)
     -> ??? 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00
@@ -62,15 +64,15 @@ vo?
     len 2 on lamps
 
 vo?
-0x198 -> buffer (2)
+0x198 -> buffer<uint> (2)
     -> unk
 
 
-0x1A8 -> buffer (3)
+0x1A8 -> buffer<uint> (3)
     -> unk; materials? for custom item?; no
     -> (1) 72 00 00 00 00 00 00 00
 
-0x1B8 -> buffer (3)
+0x1B8 -> buffer<uint> (3)
     -> unk
     -> (1) 44 00 00 00 01 00 00 00
 
@@ -82,8 +84,15 @@ vo?
 0x208 -> (1) -- set on custom items? buffer to mat but empty? next uint: 4, after that: 0
     -> material
 
-~~0x268 -> like above~~
-~~0x338 -> ptr to CSystemFidFile (item file; gcameitemmodel)~~
+
+
+
+
+??0x268 -> like above~~
+
+0x298 -> a struct? had CPlugBitmapAddress after; crashed on expanding in nod explorer
+
+0x338 -> ptr to CSystemFidFile (item file; gcameitemmodel)~~
 
 
 
@@ -141,27 +150,3 @@ material 9079 0x8d3340
 0x90 -> ":data:\Projects\Techno3\Media\Material\Tech3_Block_TDSN_CubeOut_DispIn.Material.gbx"
 
 0x150: END
-
-
-
-
-
-
-
-
-
-CPlugGameSkin: (up to 0x170 bytes large at most)
-
-0x18 -> string to path `Any\Advertisement1x1\`
-
-0x58 -> buffer (2) -> CSystemFidFiles for: Ad1x1Screen.dds, Ad1x1Screen.Material.Gbx
-0x68 -> buffer (2) to strings? `*Image`, `Ad1x1Screen`
-0x78 -> buffer (2) to unk, either 0x8 or 0xC bytes each: 00 50 02 09 00 90 07 09 80 6D 96 C5 00 0D 00 8C 00 00 00 0F 00 00 00 00
-0x88 -> buffer (2) to unk, 01 00 00 00 00 00 00 00 85 6D 8B C5 00 08 00 88 01 00 00 00 00 00 00 00 84 6D 8A C5 00 09 00 88
-
-    60 BD B6 26 6F 02 00 00 02 00 00 00 02 00 00 00
-    E0 19 59 26 6F 02 00 00 02 00 00 00 02 00 00 00
-    D0 87 90 44 6E 02 00 00 02 00 00 00 02 00 00 00
-    80 87 90 44 6E 02 00 00 02 00 00 00 02 00 00 00
-
-0x120: Any\Advertisement1x1\

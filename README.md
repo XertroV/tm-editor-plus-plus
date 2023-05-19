@@ -51,6 +51,7 @@ todo:
 - intercept undo or things that might crash with references to selected block
 - bettor 'cursor' editor-plugin as titleless window
 - (todo: fill list out more)
+- cloning light sphere gives cannot save map error but it saves the item okay
 
 research:
 - convert normal block to free block?

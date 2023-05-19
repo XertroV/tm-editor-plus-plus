@@ -10,6 +10,15 @@ void Main() {
     CheckAndSetGameVersionSafe();
 }
 
+void OnDestroyed() { Unload(); }
+void OnDisabled() { Unload(); }
+void Unload() {
+    // hmm not sure this is a great idea b/c some of it might be used by the game.
+    // still, openplanet frees it anyway, so i guess nbd.
+    FreeAllAllocated();
+}
+
+
 uint lastInItemEditor = 0;
 bool everEnteredEditor = false;
 

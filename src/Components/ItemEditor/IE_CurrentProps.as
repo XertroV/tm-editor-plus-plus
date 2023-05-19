@@ -5,13 +5,27 @@ class ItemEditCurrentPropsTab : Tab {
         ItemEditLayoutTab(Children);
         ItemEditCloneLayoutTab(Children);
         ItemEditEntityTab(Children);
-        ItemEditMisc(Children);
+        ItemEditMiscTab(Children);
+        ItemEditDevTab(Children);
     }
 
     void DrawInner() override {
         Children.DrawTabs();
     }
 }
+
+#if SIG_DEVELOPER
+class ItemEditDevTab : ItemSelection_DevTab {
+    ItemEditDevTab(TabGroup@ p) {
+        super(p);
+    }
+
+    CGameItemModel@ GetItemModel() override {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        return ieditor.ItemModel;
+    }
+}
+#endif
 
 class ItemEditPlacementTab : ItemPlacementTab {
     ItemEditPlacementTab(TabGroup@ p) {
@@ -55,7 +69,7 @@ class ItemEditCloneLayoutTab : Tab {
 
     string noItemError = "missing item!?";
 
-    string[] SampleGameItemNames = {"Flag8m", "Screen2x1Small", "RoadSign", "Lamp", "LightTubeSmall8m", "TunnelSupportArch8m", "ObstaclePillar2m", "CypressTall", "CactusMedium", "CactusVerySmall"};
+    string[] SampleGameItemNames = {"Flag8m", "Screen1x1", "Screen2x1", "Screen2x1Small", "RoadSign", "Lamp", "LightTubeSmall8m", "TunnelSupportArch8m", "ObstaclePillar2m", "CypressTall", "CactusMedium", "CactusVerySmall"};
 
     void DrawInner() override {
         UI::TextWrapped("Custom items can be used with layouts by replacing the custom item's layout with one from a Nadeo object (e.g., flags, or signs).");
@@ -85,8 +99,13 @@ class ItemEditCloneLayoutTab : Tab {
         }
         auto item = Editor::FindItemByName(nadeoItemName);
         if (item !is null) {
+            trace('getting tmp item placement ref');
             @TmpItemPlacementRef = ReferencedNod(item.DefaultPlacementParam_Content);
+            trace('add ref to current');
+            currentItem.DefaultPlacementParam_Content.MwAddRef();
+            trace('set current to other');
             @currentItem.DefaultPlacementParam_Content = item.DefaultPlacementParam_Content;
+            trace('getting fid');
             auto fidPointer = Dev::GetOffsetUint64(currentItem.DefaultPlacementParam_Content, 0x8);
             print("Zeroing Fid: " + Text::FormatPointer(fidPointer));
             Dev::SetOffset(currentItem.DefaultPlacementParam_Content, 0x8, uint64(0));
@@ -291,8 +310,12 @@ class ItemEditMiscTab : Tab {
 
     void DrawInner() override {
         auto item = GetItemModel();
-        LabeledValue("SkinDirectory", item.SkinDirectory);
-        if (UI::Button(""))
+        CopiableLabeledValue("SkinDirectory", item.SkinDirectory);
+        m_SkinDir = UI::InputText("New SkinDirectory", m_SkinDir);
+        if (UI::Button("Set New SkinDirectory")) {
+            Editor::SetItemModelSkinDir(item, m_SkinDir);
+
+        }
 
         item.SkinDirNameCustom = UI::InputText("SkinDirNameCustom", item.SkinDirNameCustom);
     }
@@ -338,9 +361,8 @@ class IE_CopyAnotherItemsModelTab : Tab {
     string m_itemSearch;
 
     void DrawInner() override {
-        auto ent1 = DrawItemCheck();
-        if (ent1 is null) return;
-
+        auto item = GetItemModel();
+        LabeledValue("ItemMode.EntityModel type", Reflection::TypeOf(item.EntityModel).Name);
 
         if (UI::Button("Explore Mesh Custom Materials")) {
             startnew(CoroutineFunc(ExploreCustomMaterials));
@@ -366,43 +388,52 @@ class IE_CopyAnotherItemsModelTab : Tab {
             UI::EndCombo();
         }
 
+        string searchName = "";
         bool enter = false;
         m_itemSearch = UI::InputText("Search(exact)", m_itemSearch, enter, UI::InputTextFlags::EnterReturnsTrue);
         if (enter) {
             bool found = false;
+            searchName = m_itemSearch;
+        }
+
+        if (UI::Button("find Support Connector x6")) {
+            searchName = "SupportConnectorX6";
+        }
+        if (UI::Button("find Screen1x1")) {
+            searchName = "Screen1x1";
+        }
+        if (UI::Button("find Screen16x9")) {
+            searchName = "Screen16x9";
+        }
+        if (UI::Button("find Flag16m")) {
+            searchName = "Flag16m";
+        }
+        if (UI::Button("find Lamp")) {
+            searchName = "Lamp";
+        }
+        if (UI::Button("find TunnelSupportArch8m")) {
+            searchName = "TunnelSupportArch8m";
+        }
+        if (UI::Button("find InflatableBorder1mStraight8m")) {
+            searchName = "InflatableBorder1mStraight8m";
+        }
+        if (UI::Button("find ObstaclePusher4mLevel0")) {
+            searchName = "ObstaclePusher4mLevel0";
+        }
+        if (UI::Button("find ObstacleRotor16mHolesX4Level0")) {
+            searchName = "ObstacleRotor16mHolesX4Level0";
+        }
+
+        if (searchName.Length > 0) {
+            bool found;
             for (uint i = 0; i < inv.ItemPaths.Length; i++) {
-                if (inv.ItemPaths[i] == m_itemSearch) {
+                if (inv.ItemPaths[i] == searchName) {
                     copyFromItemIx = i;
                     found = true;
                     break;
                 }
             }
             if (!found) Notify("Could not find item " + m_itemSearch + ".");
-        }
-
-        if (UI::Button("find Support Connector x6")) {
-            for (uint i = 0; i < inv.ItemPaths.Length; i++) {
-                if (inv.ItemPaths[i] == "SupportConnectorX6") {
-                    copyFromItemIx = i;
-                    break;
-                }
-            }
-        }
-        if (UI::Button("find Screen1x1")) {
-            for (uint i = 0; i < inv.ItemPaths.Length; i++) {
-                if (inv.ItemPaths[i] == "Screen1x1") {
-                    copyFromItemIx = i;
-                    break;
-                }
-            }
-        }
-        if (UI::Button("find Screen16x9")) {
-            for (uint i = 0; i < inv.ItemPaths.Length; i++) {
-                if (inv.ItemPaths[i] == "Screen16x9") {
-                    copyFromItemIx = i;
-                    break;
-                }
-            }
         }
 
         // UI::BeginDisabled(running);
@@ -440,22 +471,23 @@ class IE_CopyAnotherItemsModelTab : Tab {
 
 
     void CopyEntityModel() {
-        auto inv = Editor::GetInventoryCache();
-        auto itemNode = inv.ItemInvNodes[copyFromItemIx];
-        if (!itemNode.Article.IsLoaded) {
-            itemNode.Article.Preload();
-        }
-        auto model = cast<CGameItemModel>(itemNode.Article.LoadedNod);
+        auto model = GetInventorySelectionModel();
         if (model is null) throw('could not load item model');
-        auto ciEntity = cast<CGameCommonItemEntityModel>(model.EntityModel);
-        auto varList = cast<NPlugItem_SVariantList>(model.EntityModel);
+        MeshDuplication::ZeroChildFids(model);
+        // auto ciEntity = cast<CGameCommonItemEntityModel>(model.EntityModel);
+        // auto varList = cast<NPlugItem_SVariantList>(model.EntityModel);
         auto prefab = cast<CPlugPrefab>(model.EntityModel);
+        auto item = GetItemModel();
 
-        if (prefab !is null) {
+        item.EntityModel.MwAddRef();
+        @item.EntityModel = model.EntityModel;
+        item.EntityModel.MwAddRef();
 
-        }
+        MeshDuplication::FixItemModelProperties(item, model);
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        // triggers refresh of model
+        ieditor.AddEmptyMesh();
     }
-
 
 
     void RunCopy() {
@@ -551,72 +583,9 @@ class IE_CopyAnotherItemsModelTab : Tab {
             //     Dev::SetOffset(mat, 0x8, uint64(0));
             // }
 
-            // auto bufferPtr = Dev::GetOffsetUint64(mesh, 0xC8);
-            // auto nbAndSize = Dev::GetOffsetUint64(mesh, 0xC8 + 0x8);
-            auto nbMats = Dev::GetOffsetUint32(mesh, 0xC8 + 0x8);
-            auto alloc = Dev::GetOffsetUint32(mesh, 0xC8 + 0xC);
-            auto matBufFakeNod = Dev::GetOffsetNod(mesh, 0xC8);
+            MeshDuplication::FixMatsOnMesh(mesh);
 
-            auto nbUserMats = Dev::GetOffsetUint32(mesh, 0xF8 + 0x8);
-
-            // auto bufStructPtr = Dev::GetOffsetUint64(mesh, 0x138);
-            // auto bufStructLenSize = Dev::GetOffsetUint64(mesh, 0x138 + 0x8);
-
-
-            // shouldn't need to set anything here for custom items...
-            // if (nbMats == 0 || matBufFakeNod is null) {
-            //     @matBufFakeNod = Dev::GetOffsetNod(mesh, 0x1f8);
-            //     nbMats = Dev::GetOffsetUint32(mesh, 0x1f8 + 0x8);
-            //     alloc = Dev::GetOffsetUint32(mesh, 0x1f8 + 0xC);
-            // }
-
-            trace('s2m materials: nbMats / nbUserMats: ' + nbMats + ' / ' + nbUserMats);
-
-            if (nbMats > alloc) {
-                NotifyWarning('nbMats > alloc, though this may be because it is not a vanilla item (safe to ignore this warning if it is already custom)');
-            // } else if (nbMats != staticObj.Shape.Materials.Length) {
-            //     NotifyWarning('nbMats != staticObj.Shape.Materials.Length');
-            } else if (nbMats > 0 && nbUserMats == 0) {
-                // create a MwBuffer<CPlugMaterialUserInst> and set in the mesh
-                trace('Creating custom materials');
-                if (matBufFakeNod is null) {
-                    NotifyError("material buffer null?");
-                    return;
-                }
-                trace('Allocating buffer');
-                // this is something like a buffer of a struct of 0x18 length. If you have 2 custom materials, then the pointer to the 2nd is at 0x18.
-                // todo: check 3+ materials
-                auto userMatBufPtr = RequestMemory(0x18 * nbMats);
-                trace('Setting buffer pointer and size / alloc');
-                Dev::SetOffset(mesh, 0xF8, userMatBufPtr);
-                Dev::SetOffset(mesh, 0xF8 + 0x8, uint32(nbMats));
-                Dev::SetOffset(mesh, 0xF8 + 0xC, uint32(nbMats));
-                trace('Getting fake nod for user mat buffer');
-                auto userMatBufFakeNod = Dev::GetOffsetNod(mesh, 0xF8);
-                for (uint i = 0; i < nbMats; i++) {
-                    trace('Getting material ' + (i + 1));
-                    auto origMat = cast<CPlugMaterial>(Dev::GetOffsetNod(matBufFakeNod, i * 0x8));
-                    auto origMatName = GetMaterialName(origMat);
-                    trace('Creating user mat ' + origMatName);
-                    auto matUserInst = CPlugMaterialUserInst();
-                    matUserInst.MwAddRef();
-                    // how to set name? need to register a new mwid or something
-                    matUserInst._Name = CreateMwIdWithName("m" + i);
-                    matUserInst._Link_OldCompat = CreateMwIdWithName(origMatName);
-                    matUserInst.Link = CreateMwIdWithName(origMatName);
-                    matUserInst.PhysicsID = 77;
-
-                    // crashes the game:
-                    // matUserInst.MaterialId = 0;
-                    // seems to break vanilla items (probs needs full path)
-                    // matUserInst._LinkFull = GetMaterialName(origMat);
-                    // trace('Setting user mat props ' + (i + 1) + " (_LinkFull: "+matUserInst._LinkFull+")");
-                    trace('Setting user mat ptr in buffer ' + (i + 1));
-                    Dev::SetOffset(userMatBufFakeNod, 0x18 * i, matUserInst);
-                }
-                trace('Populated custom materials buffer');
-            }
-            Dev::SetOffset(mesh, 0xE8, "Stadium\\Media\\Material\\");
+            MeshDuplication::FixLightsOnMesh(mesh);
 
             // need to turn normal materials on the mesh into custom materials (we just ignore the custom materials user inst obj and path to materials folder)
 
@@ -636,70 +605,9 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 // Dev::SetOffset(mesh, 0x1F8 + 8, nbAndSize);
             }
 
-            // lights
-            auto lightBuffer = Dev::GetOffsetNod(mesh, 0x168);
-            auto lightBufferCount = Dev::GetOffsetUint32(mesh, 0x168 + 0x8);
-            trace('lights: zeroing fids for ' + lightBufferCount);
-            if (lightBufferCount > 0 && lightBuffer !is null) {
-                trace('light buffer not null');
 
-                trace('allocating user lights');
-                auto userLightBufPtr = RequestMemory(0x8 * lightBufferCount);
-                Dev::SetOffset(mesh, 0x178, userLightBufPtr);
-                Dev::SetOffset(mesh, 0x178 + 0x8, lightBufferCount);
-                Dev::SetOffset(mesh, 0x178 + 0xC, lightBufferCount);
-                trace('set and init buffer');
 
-                for (uint i = 0; i < lightBufferCount; i++) {
-                    trace('light: ' + i);
-                    auto light = cast<CPlugLight>(Dev::GetOffsetNod(lightBuffer, 0x60 * i + 0x58));
-                    if (light is null) {
-                        trace('light null!?');
-                    } else {
-                        trace('clear fid');
-                        // clear fid
-                        Dev::SetOffset(light, 0x8, uint64(0));
-                        // zero m_BitmapProjector
-                        trace('clear bitmap projector');
-                        Dev::SetOffset(light, GetOffset("CPlugLight", "m_BitmapProjector"), uint64(0));
-                            // zero light.m_GxLightModel.PlugLight
-                        auto lm = light.m_GxLightModel;
-                        auto lmAmb = cast<GxLightAmbient>(light.m_GxLightModel);
-                        auto lm2 = lmAmb;
-                        if (lm !is null && lm.PlugLight !is null) {
-                            trace('clear light.m_GxLightModel.PlugLight');
-                            Dev::SetOffset(lm, GetOffset("GxLight", "PlugLight"), uint64(0));
-                        }
-                    }
-                    // this seems to not be required, but works except for moving itmes
-                    if (true) {
-                        auto userLightBufNod = Dev::GetOffsetNod(mesh, 0x178);
-                        trace('got user light buf ptrnod');
-                        auto userLight = CPlugLightUserModel();
-                        userLight.Intensity = light.m_GxLightModel.Intensity;
-                        userLight.Color = light.m_GxLightModel.Color;
-                        Dev::SetOffset(userLightBufNod, 0x8 * i, userLight);
-                        trace('created CPlugLightUserModel ' + i);
-                    }
-                }
-
-                trace('done lights');
-
-                if (false) {
-                    // zero the lights array
-                    Dev::SetOffset(mesh, 0x168, uint64(0));
-                    Dev::SetOffset(mesh, 0x168 + 8, uint64(0));
-                }
-            }
-
-            trace('updating surf mat ids and mats to mat ids');
-            // possibly required for rotating
-            if (shape.Materials.Length > 0) {
-                shape.UpdateSurfMaterialIdsFromMaterialIndexs();
-                shape.TransformMaterialsToMatIds();
-                trace('done updating surf mat ids and mat to mat ids');
-            }
-
+            MeshDuplication::FixMatsOnShape(shape);
 
             if (false) {
 
@@ -717,53 +625,13 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 // }
             }
 
-            trace('setting skin pointer if exists');
-
-            // CPlugGameSkin
-            auto skinPtr = Dev::GetOffsetUint64(model, 0xa0);
-            auto skin = Dev::GetOffsetNod(model, 0xa0);
-            auto item = GetItemModel();
-            if (skin !is null) {
-                trace('setting skin');
-                Dev::SetOffset(item, 0xa0, skinPtr);
-                skin.MwAddRef();
-            }
-
-            if (model.MaterialModifier !is null) {
-                trace('mat modifier !is null, setting');
-                model.MaterialModifier.MwAddRef();
-                Dev::SetOffset(item, GetOffset("CGameItemModel", "MaterialModifier"), model.MaterialModifier);
-            } else {
-                trace('no mat modifier');
-            }
-
-            // // do this last as it changes the len of materials which we check earlier
-            // if (staticObj.Shape.Materials.Length > 0) {
-            //     staticObj.Shape.TransformMaterialsToMatIds();
-            // }
+            MeshDuplication::FixItemModelProperties(GetItemModel(), model);
 
             Notify("Replaced item mesh and shape, pls save the item.");
         // } catch {
         //     NotifyError("Exception copying mesh: " + getExceptionInfo());
         //     NotifyError("Game may be in an unsafe state. Please save your work and restart when you can.");
         // }
-    }
-
-    MwId CreateMwIdWithName(const string &in name) {
-        auto itemModel = GetItemModel();
-        auto initIdName = itemModel.IdName;
-        itemModel.IdName = name;
-        auto retMwIdValue = itemModel.Id.Value;
-        itemModel.IdName = initIdName;
-        return MwId(retMwIdValue);
-    }
-
-    string GetMaterialName(CPlugMaterial@ mat) {
-        auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(mat, 0x8));
-        if (fid is null) {
-            ExploreNod('material no fid', mat);
-        }
-        return string(fid.ShortFileName);
     }
 
     // returns CPlugDynaObjectModel or CPlugStaticObjectModel
