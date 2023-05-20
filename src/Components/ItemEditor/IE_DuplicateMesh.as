@@ -109,11 +109,12 @@ namespace MeshDuplication {
                 trace("Zeroing fid: prefab.Ents["+i+"].ModelFid");
                 auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
                 // size: NPlugPrefab_SEntRef: 0x50
-                auto ent = Dev::GetOffsetNod(ents, 0x50 * i);
-                if (ent !is null)
-                    Dev::SetOffset(ent, 0x0, uint64(0));
+                // probs null b/c there are no bytes at the start
+                // auto ent = Dev::GetOffsetNod(ents, 0x50 * i);
+                if (ents !is null)
+                    Dev::SetOffset(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "Model"), uint64(0));
                 else {
-                    NotifyWarning("ent was null!");
+                    NotifyWarning("ents was null!");
                 }
             }
             trace('Zeroing fids for prefab.Ents['+i+'].Model');

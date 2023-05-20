@@ -442,12 +442,19 @@ class IE_CopyAnotherItemsModelTab : Tab {
             startnew(CoroutineFunc(RunCopy));
         }
 
+        if (UI::Button("Copy variant 0 over dyna object")) {
+            startnew(CoroutineFunc(CopyVariant0ToDynamicObj));
+        }
+
         if (UI::Button("Copy EntityModel")) {
             startnew(CoroutineFunc(CopyEntityModel));
         }
 
         if (UI::Button("Run Zero Fids")) {
             startnew(CoroutineFunc(RunZeroFids));
+        }
+        if (UI::Button("NullifyEntityVar0Ent0Model")) {
+            startnew(CoroutineFunc(NullifyEntityVar0Ent0Model));
         }
 
         // UI::EndDisabled();
@@ -489,6 +496,144 @@ class IE_CopyAnotherItemsModelTab : Tab {
         ieditor.AddEmptyMesh();
     }
 
+    void CopyVariant0OverDynamicObj() {
+        auto model = GetInventorySelectionModel();
+        auto varList = cast<NPlugItem_SVariantList>(model.EntityModel);
+        if (varList is null) {
+            NotifyError("Selected inventory item does not have .EntityModel of type NPlugItem_SVariantList");
+            return;
+        }
+        if (varList.Variants.Length == 0) {
+            NotifyError("no variants");
+            return;
+        }
+        auto prefab = cast<CPlugPrefab>(varList.Variants[0].EntityModel);
+        if (prefab is null) {
+            NotifyError(".EntityModel.Variants[0].EntityModel is not a prefab");
+            return;
+        }
+        auto item = GetItemModel();
+        auto iPrefab = cast<CPlugPrefab>(item.EntityModel);
+        if (iPrefab is null) {
+            NotifyError("Editing item is not a prefab");
+            return;
+        }
+        auto dynaObj = cast<CPlugDynaObjectModel>(iPrefab.Ents[0].Model);
+        if (dynaObj is null) {
+            NotifyError("Editing item.EntityModel.Ents[0].Model is not a CPlugDynaObjectModel");
+            return;
+        }
+
+        MeshDuplication::ZeroFids(prefab);
+
+        auto ents = Dev::GetOffsetNod(iPrefab, GetOffset("CPlugPrefab", "Ents"));
+        // get zeroth ent
+        // auto ent = Dev::GetOffsetNod(ents, 0x50 * 0);
+        prefab.MwAddRef();
+        Dev::SetOffset(ents, GetOffset("NPlugPrefab_SEntRef", "Model"), prefab);
+
+        // note: this is copied from below (which was originally a modified version of this) and is untested
+
+        Notify("Done, please save the item");
+    }
+
+    void NullifyEntityVar0Ent0Model() {
+        auto item = GetItemModel();
+        auto varList = cast<NPlugItem_SVariantList>(item.EntityModel);
+        if (varList is null) {
+            NotifyError("item does not have .EntityModel of type NPlugItem_SVariantList");
+            return;
+        }
+        if (varList.Variants.Length == 0) {
+            NotifyError("no variants");
+            return;
+        }
+        auto prefab = cast<CPlugPrefab>(varList.Variants[0].EntityModel);
+        auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
+        if (ents is null) {
+            NotifyError('ents null');
+            return;
+        }
+        Dev::SetOffset(ents, 0x50 * 0 + GetOffset("NPlugPrefab_SEntRef", "Model"), uint64(0));
+        @item.EntityModel = prefab;
+
+        Notify("done, please save the item.");
+    }
+
+    void CopyVariant0ToDynamicObj() {
+        auto model = GetInventorySelectionModel();
+        auto varList = cast<NPlugItem_SVariantList>(model.EntityModel);
+        if (varList is null) {
+            NotifyError("Selected inventory item does not have .EntityModel of type NPlugItem_SVariantList");
+            return;
+        }
+        if (varList.Variants.Length == 0) {
+            NotifyError("no variants");
+            return;
+        }
+        auto prefab = cast<CPlugPrefab>(varList.Variants[0].EntityModel);
+        if (prefab is null) {
+            NotifyError(".EntityModel.Variants[0].EntityModel is not a prefab");
+            return;
+        }
+        auto item = GetItemModel();
+        auto iPrefab = cast<CPlugPrefab>(item.EntityModel);
+        if (iPrefab is null) {
+            NotifyError("Editing item is not a prefab");
+            return;
+        }
+        auto dynaObj = cast<CPlugDynaObjectModel>(iPrefab.Ents[0].Model);
+        if (dynaObj is null) {
+            NotifyError("Editing item.EntityModel.Ents[0].Model is not a CPlugDynaObjectModel");
+            return;
+        }
+
+        auto prefabStaticObj = cast<CPlugStaticObjectModel>(prefab.Ents[0].Model);
+        if (prefabStaticObj is null) {
+            NotifyError("prefabStaticObj is not a CPlugStaticObjectModel");
+            return;
+        }
+
+        MeshDuplication::ZeroFids(prefab);
+
+        auto ents = Dev::GetOffsetNod(iPrefab, GetOffset("CPlugPrefab", "Ents"));
+        // get zeroth ent
+        // auto ent = Dev::GetOffsetNod(ents, 0x50 * 0);
+        prefab.MwAddRef();
+        Dev::SetOffset(ents, GetOffset("NPlugPrefab_SEntRef", "Model"), prefab);
+
+        // note, setting .Model to prefab alone has no movement
+
+        // set prefab.Ents[0].Model to dyna object
+        auto prefabEnts = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
+        Dev::SetOffset(prefabEnts, GetOffset("NPlugPrefab_SEntRef", "Model"), dynaObj);
+
+        // set dyna.mesh etc to prefabStaticObj.mesh
+
+        prefabStaticObj.Shape.MwAddRef();
+        prefabStaticObj.Shape.MwAddRef();
+        prefabStaticObj.Mesh.MwAddRef();
+
+        CPlugSolid2Model@ mesh = prefabStaticObj.Mesh;
+        CPlugSurface@ shape = prefabStaticObj.Shape;
+
+        if (dynaObj.DynaShape !is null)
+            dynaObj.DynaShape.MwAddRef();
+        if (dynaObj.StaticShape !is null)
+            dynaObj.StaticShape.MwAddRef();
+        if (dynaObj.Mesh !is null)
+            dynaObj.Mesh.MwAddRef();
+
+        trace('setting offsets on dynaObj');
+
+        // not sure if setting static shape matters much
+        // Dev::SetOffset(dynaObj, GetOffset("CPlugDynaObjectModel", "StaticShape"), uint64(0));
+        Dev::SetOffset(dynaObj, GetOffset("CPlugDynaObjectModel", "StaticShape"), prefabStaticObj.Shape);
+        Dev::SetOffset(dynaObj, GetOffset("CPlugDynaObjectModel", "DynaShape"), prefabStaticObj.Shape);
+        Dev::SetOffset(dynaObj, GetOffset("CPlugDynaObjectModel", "Mesh"), prefabStaticObj.Mesh);
+
+        Notify("Done, please save the item");
+    }
 
     void RunCopy() {
         // try {
