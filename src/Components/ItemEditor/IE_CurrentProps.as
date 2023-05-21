@@ -338,7 +338,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
 }
 
 
-// ! MEMORY LEAK WHEN THIS IS UNCOMMENTED (AND ADDED AS CHILD TAB ABOVE??!)
+// ! MEMORY LEAK ON COMPILATIONI WHEN THIS IS UNCOMMENTED??! (AND ADDED AS CHILD TAB ABOVE)
 
 
 // class IE_MeshDupChooseItemTab : GenericInventoryBrowserTab {
@@ -349,7 +349,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
 //         @this.parent = parent;
 //     }
 
-//     CGameCtnArticleNodeArticle@ m_selectedNode = null;
+//     CGameCtnArticleNodeArticle@ m_selectedNode;
 
 //     void DrawInner() override {
 //         UI::Text("Current Item: " + (m_selectedNode is null ? "None" : string(m_selectedNode.Name)));
