@@ -79,12 +79,8 @@ namespace MeshDuplication {
                 trace('Zeroing fid: variant ' + i + '.EntityModelFidForReload');
                 // NotifyWarning("varList.Variants["+i+"].EntityModelFidForReload !is null");
                 auto variants = Dev::GetOffsetNod(varList, GetOffset("NPlugItem_SVariantList", "Variants"));
-                auto variantStruct = Dev::GetOffsetNod(variants, 0x28 * i);
-                if (variantStruct !is null)
-                    Dev::SetOffset(variantStruct, 0x20, uint64(0));
-                else {
-                    NotifyWarning("variantStruct was null!");
-                }
+                // auto variantStruct = Dev::GetOffsetNod(variants, 0x28 * i);
+                Dev::SetOffset(variants, 0x28 * i + GetOffset("NPlugItem_SVariant", "EntityModelFidForReload"), uint64(0));
                 // NPlugItem_SVariant@ x;
                 // Dev::SetOffset(varList.Variants[i], GetOffset("NPlugItem_SVariant", "EntityModelFidForReload"), uint64(0));
             }
@@ -112,7 +108,7 @@ namespace MeshDuplication {
                 // probs null b/c there are no bytes at the start
                 // auto ent = Dev::GetOffsetNod(ents, 0x50 * i);
                 if (ents !is null)
-                    Dev::SetOffset(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "Model"), uint64(0));
+                    Dev::SetOffset(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "ModelFid"), uint64(0));
                 else {
                     NotifyWarning("ents was null!");
                 }
@@ -120,12 +116,12 @@ namespace MeshDuplication {
             trace('Zeroing fids for prefab.Ents['+i+'].Model');
             auto eh = cast<CPlugEditorHelper>(prefab.Ents[i].Model);
             if (eh !is null) {
+                trace('zeroing editor helper model');
                 auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
                 // size: NPlugPrefab_SEntRef: 0x50
-                auto ent = Dev::GetOffsetNod(ents, 0x50 * i);
-                if (ent !is null) {
-                    Dev::SetOffset(ent, 0x8, eh.PrefabFid.Nod);
-                }
+                eh.PrefabFid.Nod.MwAddRef();
+                Dev::SetOffset(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "Model"), uint64(0));
+                ZeroFidsUnknownModelNod(eh.PrefabFid.Nod);
             } else {
                 ZeroFidsUnknownModelNod(prefab.Ents[i].Model);
             }
@@ -153,6 +149,7 @@ namespace MeshDuplication {
             Dev::SetOffset(so, GetOffset("CPlugStaticObjectModel", "ShapeFidForReload"), uint64(0));
         }
         ZeroFids(so.Mesh);
+        MeshDuplication::SyncUserMatsToShapeIfMissing(so.Mesh, so.Shape);
         ZeroFids(so.Shape);
     }
 
@@ -184,20 +181,28 @@ namespace MeshDuplication {
             auto pe = cast<CPlugFxSystemNode_ParticleEmitter>(rootNode.Children[0]);
             if (pe !is null) {
                 // pe.Model has an Fid
+                NotifyWarning("Todo, support CPlugFxSystemNode_ParticleEmitter");
+                ZeroFids(pe.Model);
             }
         }
+    }
+
+    void ZeroFids(CPlugParticleEmitterModel@ pem) {
+        ZeroNodFid(pem);
+        // todo, more?
     }
 
     void ZeroFids(CPlugDynaObjectModel@ dynaObj) {
         trace('zeroing fids for CPlugDynaObjectModel');
         ZeroNodFid(dynaObj);
+        if (dynaObj.Mesh !is null && dynaObj.DynaShape !is null)
+            MeshDuplication::SyncUserMatsToShapeIfMissing(dynaObj.Mesh, dynaObj.DynaShape);
         if (dynaObj.DynaShape !is null)
             ZeroFids(dynaObj.DynaShape);
         if (dynaObj.StaticShape !is null)
             ZeroFids(dynaObj.StaticShape);
         if (dynaObj.Mesh !is null)
             ZeroFids(dynaObj.Mesh);
-
     }
 
     void ZeroFids(NPlugDyna_SKinematicConstraint@ kc) {
@@ -278,6 +283,8 @@ namespace MeshDuplication {
         auto matBufFakeNod = Dev::GetOffsetNod(mesh, 0xC8);
 
         auto nbUserMats = Dev::GetOffsetUint32(mesh, 0xF8 + 0x8);
+        auto nbCustomMats = Dev::GetOffsetUint32(mesh, 0x1F8 + 0x8);
+        auto allocCustomMats = Dev::GetOffsetUint32(mesh, 0x1F8 + 0xC);
 
         // auto bufStructPtr = Dev::GetOffsetUint64(mesh, 0x138);
         // auto bufStructLenSize = Dev::GetOffsetUint64(mesh, 0x138 + 0x8);
@@ -285,8 +292,6 @@ namespace MeshDuplication {
         // shouldn't need to set anything here for custom items...
         // if (nbMats == 0 || matBufFakeNod is null) {
         //     @matBufFakeNod = Dev::GetOffsetNod(mesh, 0x1f8);
-        //     nbMats = Dev::GetOffsetUint32(mesh, 0x1f8 + 0x8);
-        //     alloc = Dev::GetOffsetUint32(mesh, 0x1f8 + 0xC);
         // }
 
         trace('s2m materials: nbMats / nbUserMats: ' + nbMats + ' / ' + nbUserMats);
@@ -430,6 +435,28 @@ namespace MeshDuplication {
         }
     }
 
+    void SyncUserMatsToShapeIfMissing(CPlugSolid2Model@ mesh, CPlugSurface@ shape) {
+        if (shape is null) return;
+        if (shape.MaterialIds.Length != 0 || shape.Materials.Length != 0) {
+            return;
+        }
+
+        auto nbUserMats = Dev::GetOffsetUint32(mesh, 0xF8 + 0x8);
+        auto nbCustomMats = Dev::GetOffsetUint32(mesh, 0x1F8 + 0x8);
+        auto allocCustomMats = Dev::GetOffsetUint32(mesh, 0x1F8 + 0xC);
+        auto customMatsBuf = Dev::GetOffsetNod(mesh, 0x1F8);
+        // todo: mb check regular mats too at 0xc8
+        if (nbUserMats == nbCustomMats && nbCustomMats <= allocCustomMats) {
+            for (uint i = 0; i < nbCustomMats; i++) {
+                CPlugMaterial@ mat = cast<CPlugMaterial>(Dev::GetOffsetNod(customMatsBuf, 0x8 * i));
+                shape.Materials.Add(mat);
+                if (mat !is null) {
+                    mat.MwAddRef();
+                }
+            }
+        }
+    }
+
     void FixItemModelProperties(CGameItemModel@ dest, CGameItemModel@ source) {
         trace('setting skin pointer if exists');
 
@@ -456,7 +483,7 @@ namespace MeshDuplication {
         // so the solution is to interpret the modifications and apply those
         if (source.MaterialModifier !is null) {
             auto mm = source.MaterialModifier;
-            auto skin = mm.Remapping;
+            auto remapSkin = mm.Remapping;
             auto mods = mm.RemapFolder;
             if (mods !is null) {
                 for (uint i = 0; i < mods.Leaves.Length; i++) {

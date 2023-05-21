@@ -5,6 +5,13 @@ uint16 GetOffset(const string &in className, const string &in memberName) {
     if (memberTy.Offset == 0xFFFF) throw("Invalid offset: 0xFFFF");
     return memberTy.Offset;
 }
+uint16 GetOffset(CMwNod@ obj, const string &in memberName) {
+    // throw exception when something goes wrong.
+    auto ty = Reflection::TypeOf(obj);
+    auto memberTy = ty.GetMember(memberName);
+    if (memberTy.Offset == 0xFFFF) throw("Invalid offset: 0xFFFF");
+    return memberTy.Offset;
+}
 
 uint64[]@ Dev_GetOffsetBytes(CMwNod@ nod, uint offset, uint length) {
     auto bs = array<uint64>();

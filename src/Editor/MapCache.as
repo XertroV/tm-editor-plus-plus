@@ -32,6 +32,10 @@ namespace Editor {
             pos = item.AbsolutePositionInMap;
             rot = Editor::GetItemRotation(item);
             color = int(item.MapElemColor);
+            if (item.ItemModel is null) {
+                NotifyError('MapCache: Item model is null!');
+                return;
+            }
             Id = item.ItemModel.Id.Value;
             IdName = item.ItemModel.IdName;
             mat = mat4::Translate(pos) * EulerToMat(rot);

@@ -328,6 +328,60 @@ class ItemEditMiscTab : Tab {
 class IE_CopyAnotherItemsModelTab : Tab {
     IE_CopyAnotherItemsModelTab(TabGroup@ p) {
         super(p, "Copy Model From", Icons::Clone);
+        // IE_MeshDupChooseItemTab(Children);
+        IE_CopyAnotherItemsModelDevTab(Children);
+    }
+
+    void DrawInner() override {
+        Children.DrawTabs();
+    }
+}
+
+
+// ! MEMORY LEAK WHEN THIS IS UNCOMMENTED (AND ADDED AS CHILD TAB ABOVE??!)
+
+
+// class IE_MeshDupChooseItemTab : GenericInventoryBrowserTab {
+//     IE_CopyAnotherItemsModelTab@ parent;
+
+//     IE_MeshDupChooseItemTab(IE_CopyAnotherItemsModelTab@ parent) {
+//         super(parent.Children, "Source Item", "", InventoryRootNode::Items);
+//         @this.parent = parent;
+//     }
+
+//     CGameCtnArticleNodeArticle@ m_selectedNode = null;
+
+//     void DrawInner() override {
+//         UI::Text("Current Item: " + (m_selectedNode is null ? "None" : string(m_selectedNode.Name)));
+//     }
+// }
+
+
+class IE_CopyModelToAnimatedTab : Tab {
+    IE_CopyModelToAnimatedTab(TabGroup@ p) {
+        super(p, "To Moving Item", "");
+    }
+
+    CGameItemModel@ GetItemModel() {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null) return null;
+        return ieditor.ItemModel;
+    }
+
+    uint m_SourcePrefabEntIxMesh = 0;
+    uint m_SourcePrefabEntIxShape = 0;
+
+    void DrawInner() override {
+
+    }
+}
+
+
+
+
+class IE_CopyAnotherItemsModelDevTab : Tab {
+    IE_CopyAnotherItemsModelDevTab(TabGroup@ p) {
+        super(p, "Copy Model Dev", Icons::Clone);
         // throw("Does not work, crashes on save");
     }
 
@@ -362,6 +416,10 @@ class IE_CopyAnotherItemsModelTab : Tab {
 
     void DrawInner() override {
         auto item = GetItemModel();
+        if (item.EntityModel is null) {
+            UI::Text("item.EntityModel is null!");
+            return;
+        }
         LabeledValue("ItemMode.EntityModel type", Reflection::TypeOf(item.EntityModel).Name);
 
         if (UI::Button("Explore Mesh Custom Materials")) {
@@ -423,6 +481,12 @@ class IE_CopyAnotherItemsModelTab : Tab {
         if (UI::Button("find ObstacleRotor16mHolesX4Level0")) {
             searchName = "ObstacleRotor16mHolesX4Level0";
         }
+        if (UI::Button("find GateFinishCenter16mv2")) {
+            searchName = "GateFinishCenter16mv2";
+        }
+        if (UI::Button("find GateStartCenter16mv2")) {
+            searchName = "GateStartCenter16mv2";
+        }
 
         if (searchName.Length > 0) {
             bool found;
@@ -442,7 +506,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
             startnew(CoroutineFunc(RunCopy));
         }
 
-        if (UI::Button("Copy variant 0 over dyna object")) {
+        if (UI::Button("Copy variant 0 to dyna object")) {
             startnew(CoroutineFunc(CopyVariant0ToDynamicObj));
         }
 
@@ -490,7 +554,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
         @item.EntityModel = model.EntityModel;
         item.EntityModel.MwAddRef();
 
-        MeshDuplication::FixItemModelProperties(item, model);
+        // MeshDuplication::FixItemModelProperties(item, model);
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         // triggers refresh of model
         ieditor.AddEmptyMesh();
@@ -498,6 +562,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
 
     void CopyVariant0OverDynamicObj() {
         auto model = GetInventorySelectionModel();
+        auto item = GetItemModel();
         auto varList = cast<NPlugItem_SVariantList>(model.EntityModel);
         if (varList is null) {
             NotifyError("Selected inventory item does not have .EntityModel of type NPlugItem_SVariantList");
@@ -512,7 +577,6 @@ class IE_CopyAnotherItemsModelTab : Tab {
             NotifyError(".EntityModel.Variants[0].EntityModel is not a prefab");
             return;
         }
-        auto item = GetItemModel();
         auto iPrefab = cast<CPlugPrefab>(item.EntityModel);
         if (iPrefab is null) {
             NotifyError("Editing item is not a prefab");
@@ -532,6 +596,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
         prefab.MwAddRef();
         Dev::SetOffset(ents, GetOffset("NPlugPrefab_SEntRef", "Model"), prefab);
 
+        MeshDuplication::FixItemModelProperties(GetItemModel(), model);
         // note: this is copied from below (which was originally a modified version of this) and is untested
 
         Notify("Done, please save the item");
@@ -589,6 +654,7 @@ class IE_CopyAnotherItemsModelTab : Tab {
         }
 
         auto prefabStaticObj = cast<CPlugStaticObjectModel>(prefab.Ents[0].Model);
+        auto prefabDynObj = cast<CPlugDynaObjectModel>(prefab.Ents[0].Model);
         if (prefabStaticObj is null) {
             NotifyError("prefabStaticObj is not a CPlugStaticObjectModel");
             return;
@@ -632,6 +698,8 @@ class IE_CopyAnotherItemsModelTab : Tab {
         Dev::SetOffset(dynaObj, GetOffset("CPlugDynaObjectModel", "DynaShape"), prefabStaticObj.Shape);
         Dev::SetOffset(dynaObj, GetOffset("CPlugDynaObjectModel", "Mesh"), prefabStaticObj.Mesh);
 
+        MeshDuplication::FixItemModelProperties(GetItemModel(), model);
+
         Notify("Done, please save the item");
     }
 
@@ -654,9 +722,11 @@ class IE_CopyAnotherItemsModelTab : Tab {
             } else if (prefab !is null) {
                 @staticObj = cast<CPlugStaticObjectModel>(prefab.Ents[0].Model);
             } else if (varList !is null) {
+                @staticObj = cast<CPlugStaticObjectModel>(varList.Variants[0].EntityModel);
                 @prefab = cast<CPlugPrefab>(varList.Variants[0].EntityModel);
-                if (prefab is null) throw('varlist > prefab is null');
-                @staticObj = cast<CPlugStaticObjectModel>(prefab.Ents[0].Model);
+                if (prefab is null && staticObj is null) throw('varlist > prefab is null');
+                if (staticObj !is null)
+                    @staticObj = cast<CPlugStaticObjectModel>(prefab.Ents[0].Model);
             }
             if (staticObj is null) {
                 auto err = ("StaticObject could not be found! ci: #1, prefab: #2, varList: #3")
@@ -728,10 +798,6 @@ class IE_CopyAnotherItemsModelTab : Tab {
             //     Dev::SetOffset(mat, 0x8, uint64(0));
             // }
 
-            MeshDuplication::FixMatsOnMesh(mesh);
-
-            MeshDuplication::FixLightsOnMesh(mesh);
-
             // need to turn normal materials on the mesh into custom materials (we just ignore the custom materials user inst obj and path to materials folder)
 
             if (false) {
@@ -750,10 +816,6 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 // Dev::SetOffset(mesh, 0x1F8 + 8, nbAndSize);
             }
 
-
-
-            MeshDuplication::FixMatsOnShape(shape);
-
             if (false) {
 
 
@@ -770,6 +832,10 @@ class IE_CopyAnotherItemsModelTab : Tab {
                 // }
             }
 
+            MeshDuplication::FixMatsOnMesh(mesh);
+            MeshDuplication::FixLightsOnMesh(mesh);
+            MeshDuplication::SyncUserMatsToShapeIfMissing(mesh, shape);
+            MeshDuplication::FixMatsOnShape(shape);
             MeshDuplication::FixItemModelProperties(GetItemModel(), model);
 
             Notify("Replaced item mesh and shape, pls save the item.");

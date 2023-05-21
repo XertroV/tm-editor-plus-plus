@@ -19,9 +19,20 @@ class InventoryMainTab : Tab {
     }
 }
 
+enum InventoryRootNode {
+    CrashBlocks = 0,
+    Blocks = 1,
+    Grass = 2,
+    Items = 3,
+    Macroblocks = 4,
+}
+
 class GenericInventoryBrowserTab : Tab {
     uint RootNodeIx = 1;
     CGameCtnArticleNode@ OverrideRootNode;
+
+    bool showExplore = true;
+    bool showPopout = true;
 
     GenericInventoryBrowserTab(TabGroup@ p, const string &in name, const string &in icon, uint rnIx) {
         super(p, name, icon);
@@ -63,23 +74,29 @@ class GenericInventoryBrowserTab : Tab {
 
     void DrawInvNodeTreeArticle(CGameCtnArticleNodeArticle@ node) {
 #if SIG_DEVELOPER
-        if (UI::Button(Icons::Cube + "##" + node.Name)) {
-            ExploreNod("Article " + node.NodeName, node);
-            // node.GetCollectorNod() points to .Article.LoadedNod (and probs loads it if need be)
-            // auto cnod = node.GetCollectorNod();
-            // if (cnod !is null) {
-            //     ExploreNod("CollectorNod " + node.NodeName, cnod);
-            // }
+        if (showExplore) {
+            if (UI::Button(Icons::Cube + "##" + node.Name)) {
+                ExploreNod("Article " + node.NodeName, node);
+                // node.GetCollectorNod() points to .Article.LoadedNod (and probs loads it if need be)
+                // auto cnod = node.GetCollectorNod();
+                // if (cnod !is null) {
+                //     ExploreNod("CollectorNod " + node.NodeName, cnod);
+                // }
+            }
+            UI::SameLine();
         }
-        UI::SameLine();
 #endif
         if (UI::Button(TrimNodeName(node.Name))) {
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            // we must set the placement node to the correct type, first, otherwise we get a crash
-            SetPlacementMode(editor);
-            auto inv = editor.PluginMapType.Inventory;
-            inv.SelectArticle(node);
+            OnSelectNode(node);
         }
+    }
+
+    void OnSelectNode(CGameCtnArticleNodeArticle@ node) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        // we must set the placement node to the correct type, first, otherwise we get a crash
+        SetPlacementMode(editor);
+        auto inv = editor.PluginMapType.Inventory;
+        inv.SelectArticle(node);
     }
 
     dictionary nodeNameTrimmedCache;
@@ -98,7 +115,7 @@ class GenericInventoryBrowserTab : Tab {
         bool isRoot = prior.Length == 0 || node.Name.Length == 0;
         auto nextPrior = (isRoot ? "" : prior) + node.Name + " > ";
         if (!isRoot) {
-            if (UX::SmallButton(Icons::Expand + "##inv-" + nextPrior)) {
+            if (showPopout && UX::SmallButton(Icons::Expand + "##inv-" + nextPrior)) {
                 // create an instance of the current class
                 // as a standalone tab with a new 'root node'
                 // that is an emphemeral window that is cleared

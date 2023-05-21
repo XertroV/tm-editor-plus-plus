@@ -6,6 +6,7 @@ class ItemSelectionTab : Tab {
         ItemPlacementTab(Children);
         ItemLayoutTab(Children);
         ItemCustomLayoutTab(Children);
+        ItemModelBrowserTab(Children);
         // ItemSceneryPlacementTab(Children);
 #if SIG_DEVELOPER
         ItemSelection_DevTab(Children);

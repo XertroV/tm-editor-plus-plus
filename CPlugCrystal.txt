@@ -1,0 +1,56 @@
+CPlugCrystal
+
+
+0x18 -> game data
+0x20 -> u4, u4
+0x28 -> 0x0, mwid
+0x30 -> struct? includes string "Layer1"
+
+0x38 -> 0x50, 0x0
+0x40 -> 0x50, 0x50
+0x48 -> Buffer (4) -> Struct(0x20 each)
+    0x0 -> CPlugMaterialUserInst
+    0x8 -> 0
+    0x10 -> 0
+    0x18 -> CPlugMaterial
+0x58 -> 0x1, mwid?
+0x60 -> CSystemFidsFolder (folder on disk)
+0x68 -> 0xf, 0x8
+0x68 -> 0x0, mwid
+
+
+0x98 -> Buffer (len 0x1cd4)
+    -> vec2? (yep, length confirms)
+0xa8 -> buffer (len 0x3)
+    -> uint32?
+0xb8 -> buffer (len 0x99c)
+    -> uint32; all values either 0x1 or 0x2
+0xc8 -> struct?
+    0x0 -> game data
+    0x08 -> buffer (len 1)
+        0x0 -> struct? (len 56 (dec)) 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 7C 0B 00 00 00 00 00 FF FF FF FF 0A 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF 00 00 00 00
+        0x10 -> CPlugShaderPass
+        (len: 0x20?)
+    0x28 -> unk, lots of u4s mb
+    0x38 ->
+        0x0 -> buf 1
+            0x0 -> E9 02 00 00 0A 02 00 00
+            0x8 -> into linked list?
+    0x40 -> struct?
+        0x0 -> buffer? (0x2e9) 40 18 77 76 0A 02 00 00 E9 02 00 00 E9 02 00 00
+            -> more ptrs, structs?
+    0x50 -> struct? -> buf 2 -> more ptrs to buffers one was just 0x6161 repeated
+    0x58 -> struct
+        buf len 0x7b4
+            struct (0x18)
+            0x0 -> more pts, 0x6161 repeated again
+    0x68 -> buf len 3 -> struct
+    0x70 -> struct with buf 50 61 54 AA 09 02 00 00 9C 09 00 00 9C 09 00 00
+
+0xd0 -> buf len 1
+    -> 0x0,mwid?
+0xe0 -> buf 1 unk
+0xf0 -> buf 1 struct (0x20 max)
+    0x0 -> ptr unk
+0x100 -> struct with lots of pointers?
+    0x10 -> buffer of structs of length 0x38
