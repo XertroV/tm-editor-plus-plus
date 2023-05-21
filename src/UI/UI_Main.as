@@ -189,8 +189,8 @@ TabGroup@ CreateItemEditorRT() {
     auto root = RootTabGroupCls();
     ItemEditCurrentPropsTab(root);
     IE_ItemModelBrowserTab(root);
-#if DEV
     IE_CopyAnotherItemsModelTab(root);
+#if DEV
 #endif
     // ItemEditMacroVariationsTab(root);
 #if SIG_DEVELOPER

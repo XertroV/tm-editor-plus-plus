@@ -203,7 +203,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         UI::SameLine();
         variant.HiddenInManualCycle = UI::Checkbox("##.HiddenInManualCycle"+fileName, variant.HiddenInManualCycle);
         AddSimpleTooltip(".HiddenInManualCycle");
-#if DEV
+#if SIG_DEVELOPER
         UI::SameLine();
         if (UI::Button(Icons::Cube+"##variant"+ix)) {
             ExploreNod("Variant", variant.EntityModel);

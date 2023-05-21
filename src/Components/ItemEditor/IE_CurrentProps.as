@@ -322,7 +322,7 @@ class ItemEditMiscTab : Tab {
 }
 
 
-#if DEV
+
 // ! Copy another items model does not work ~~and crashes on save~~
 
 class IE_CopyAnotherItemsModelTab : Tab {
@@ -725,14 +725,16 @@ class IE_CopyAnotherItemsModelDevTab : Tab {
                 @staticObj = cast<CPlugStaticObjectModel>(varList.Variants[0].EntityModel);
                 @prefab = cast<CPlugPrefab>(varList.Variants[0].EntityModel);
                 if (prefab is null && staticObj is null) throw('varlist > prefab is null');
-                if (staticObj !is null)
+                if (staticObj is null) {
                     @staticObj = cast<CPlugStaticObjectModel>(prefab.Ents[0].Model);
+                }
             }
             if (staticObj is null) {
                 auto err = ("StaticObject could not be found! ci: #1, prefab: #2, varList: #3")
                     .Replace("#1", tostring(ciEntity !is null))
                     .Replace("#2", tostring(prefab !is null))
                     .Replace("#3", tostring(varList !is null));
+                NotifyError(err);
                 throw(err);
             }
             // Mesh - cplugsolid2model; shape: cplugsurface
@@ -889,7 +891,6 @@ class IE_CopyAnotherItemsModelDevTab : Tab {
 
     */
 }
-#endif
 
 
 
