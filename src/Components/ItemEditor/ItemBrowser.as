@@ -185,8 +185,8 @@ class ItemModelTreeElement {
             UI::Text("\\$f80todo");
             // fxSys. /*todo -- check variable declaration below.*/;
             auto tmp = fxSys;
-            UI::Text("ContextClassId: " + tostring(tmp.ContextClassId));
-            UI::Text("ExtraContextClassId: " + tostring(tmp.ExtraContextClassId));
+            UI::Text("ContextClassId: " + Text::Format("%08x", tmp.ContextClassId.ClassId));
+            UI::Text("ExtraContextClassId: " + Text::Format("%08x", tmp.ExtraContextClassId.ClassId));
             UI::Text("nbVars: " + tostring(tmp.Vars.Length));
             if (StartTreeNode("RootNode", true, UI::TreeNodeFlags::None)) {
                 ItemModelTreeElement(fxSys.RootNode, "RootNode").Draw();

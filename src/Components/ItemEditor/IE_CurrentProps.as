@@ -6,7 +6,9 @@ class ItemEditCurrentPropsTab : Tab {
         ItemEditCloneLayoutTab(Children);
         ItemEditEntityTab(Children);
         ItemEditMiscTab(Children);
+#if SIG_DEVELOPER
         ItemEditDevTab(Children);
+#endif
     }
 
     void DrawInner() override {
@@ -322,8 +324,6 @@ class ItemEditMiscTab : Tab {
 }
 
 
-
-// ! Copy another items model does not work ~~and crashes on save~~
 
 class IE_CopyAnotherItemsModelTab : Tab {
     IE_CopyAnotherItemsModelTab(TabGroup@ p) {
