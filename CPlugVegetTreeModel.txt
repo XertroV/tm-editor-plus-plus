@@ -1,0 +1,14 @@
+CPlugVegetTreeModel
+
+0x18: nb materials
+inline: NPlugVeget_SMaterial (len 0x50)
+    0x0: always 0 except 1 for last entry?
+    0x8: CPlugMaterial
+    0x10: CPlugDds / CPlugImg diffuse.dds
+    0x18: CPlugDds / CPlugImg normals.dds
+    0x20: CPlugDds / CPlugImg roughness.dds
+    0x28: diffuse CPlugBitmap, ItemBase_D.Texture.gbx
+    0x30: normals CPlugBitmap, ItemBase_N.Texture.gbx
+    0x38: roughness CPlugBitmap, ItemBase_R.Texture.gbx
+    0x40: veget variation CPlugVegetMaterialVariation
+    0x48: veget sub surface CPlugVegetSubSurfaceParams
