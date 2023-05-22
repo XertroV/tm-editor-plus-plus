@@ -51,6 +51,10 @@ class ItemModel {
 class ItemModelTreeElement {
     CMwNod@ nod;
     string name;
+    bool drawProperties = true;
+    // set to true by subclasses to disable some things.
+    bool isPicker = false;
+    uint classId = 0x1001000; // CMwNod
 
     CPlugStaticObjectModel@ so;
     CPlugPrefab@ prefab;
@@ -71,6 +75,7 @@ class ItemModelTreeElement {
         @this.nod = nod;
         this.name = name;
         if (nod is null) return;
+        classId = Reflection::TypeOf(nod).ID;
         @this.so = cast<CPlugStaticObjectModel>(nod);
         @this.prefab = cast<CPlugPrefab>(nod);
         @this.varList = cast<NPlugItem_SVariantList>(nod);
@@ -86,6 +91,16 @@ class ItemModelTreeElement {
         @this.surf = cast<CPlugSurface>(nod);
         @this.s2m = cast<CPlugSolid2Model>(nod);
     }
+
+    // to be overloaded
+    void DrawPickable() {
+    }
+
+    // can be overloaded
+    void MkAndDrawChildNode(CMwNod@ nod, const string &in name) {
+        ItemModelTreeElement(nod, name).Draw();
+    }
+
 
     void ZeroFids() {
         MeshDuplication::ZeroFidsUnknownModelNod(nod);
@@ -130,8 +145,8 @@ class ItemModelTreeElement {
 
     void Draw(CPlugStaticObjectModel@ so) {
         if (StartTreeNode(name + " :: \\$f8fCPlugStaticObjectModel", UI::TreeNodeFlags::DefaultOpen)) {
-            ItemModelTreeElement(so.Mesh, "Mesh").Draw();
-            ItemModelTreeElement(so.Shape, "Shape").Draw();
+            MkAndDrawChildNode(so.Mesh, "Mesh");
+            MkAndDrawChildNode(so.Shape, "Shape");
             EndTreeNode();
         }
     }
@@ -140,10 +155,12 @@ class ItemModelTreeElement {
             UI::Text("nbEnts: " + prefab.Ents.Length);
             for (uint i = 0; i < prefab.Ents.Length; i++) {
                 if (StartTreeNode(".Ents["+i+"]:", true)) {
-                    UI::Text(".Location.Quat: " + prefab.Ents[i].Location.Quat.ToString());
-                    UI::Text(".Location.Trans: " + prefab.Ents[i].Location.Trans.ToString());
-                    DrawPrefabEntParams(prefab, i);
-                    ItemModelTreeElement(prefab.Ents[i].Model, "Model").Draw();
+                    if (drawProperties) {
+                        UI::Text(".Location.Quat: " + prefab.Ents[i].Location.Quat.ToString());
+                        UI::Text(".Location.Trans: " + prefab.Ents[i].Location.Trans.ToString());
+                        DrawPrefabEntParams(prefab, i);
+                    }
+                    MkAndDrawChildNode(prefab.Ents[i].Model, "Model");
                     if (prefab.Ents[i].Model is null && prefab.Ents[i].ModelFid !is null) {
                         UI::Text("\\$f80ModelFid without a Model: " + prefab.Ents[i].ModelFid.FileName);
                     }
@@ -158,9 +175,11 @@ class ItemModelTreeElement {
             UI::Text("nbVariants: " + varList.Variants.Length);
             for (uint i = 0; i < varList.Variants.Length; i++) {
                 if (StartTreeNode(".Variant["+i+"]:", true)) {
-                    UI::Text("nbPlacementTags: " + varList.Variants[i].Tags.Length + "  { " + GetVariantTagsStr(varList, i) + " }");
-                    LabeledValue("HiddenInManualCycle: ", varList.Variants[i].HiddenInManualCycle);
-                    ItemModelTreeElement(varList.Variants[i].EntityModel, "EntityModel").Draw();
+                    if (drawProperties) {
+                        UI::Text("nbPlacementTags: " + varList.Variants[i].Tags.Length + "  { " + GetVariantTagsStr(varList, i) + " }");
+                        LabeledValue("HiddenInManualCycle: ", varList.Variants[i].HiddenInManualCycle);
+                    }
+                    MkAndDrawChildNode(varList.Variants[i].EntityModel, "EntityModel");
                     EndTreeNode();
                 }
             }
@@ -182,14 +201,15 @@ class ItemModelTreeElement {
 
     void Draw(CPlugFxSystem@ fxSys) {
         if (StartTreeNode(name + " :: \\$f8fCPlugFxSystem", UI::TreeNodeFlags::DefaultOpen)) {
-            UI::Text("\\$f80todo");
             // fxSys. /*todo -- check variable declaration below.*/;
             auto tmp = fxSys;
-            UI::Text("ContextClassId: " + Text::Format("%08x", tmp.ContextClassId.ClassId));
-            UI::Text("ExtraContextClassId: " + Text::Format("%08x", tmp.ExtraContextClassId.ClassId));
-            UI::Text("nbVars: " + tostring(tmp.Vars.Length));
+            if (drawProperties) {
+                UI::Text("ContextClassId: " + Text::Format("%08x", tmp.ContextClassId.ClassId));
+                UI::Text("ExtraContextClassId: " + Text::Format("%08x", tmp.ExtraContextClassId.ClassId));
+                UI::Text("nbVars: " + tostring(tmp.Vars.Length));
+            }
             if (StartTreeNode("RootNode", true, UI::TreeNodeFlags::None)) {
-                ItemModelTreeElement(fxSys.RootNode, "RootNode").Draw();
+                MkAndDrawChildNode(fxSys.RootNode, "RootNode");
                 EndTreeNode();
             }
             EndTreeNode();
@@ -197,61 +217,65 @@ class ItemModelTreeElement {
     }
     void Draw(CPlugVegetTreeModel@ vegetTree) {
         if (StartTreeNode(name + " :: \\$f8fCPlugVegetTreeModel", UI::TreeNodeFlags::DefaultOpen)) {
-            auto tmp = vegetTree.Data;
-            UI::Text("Impostor_Lod_Dist: " + tostring(tmp.Impostor_Lod_Dist));
-            UI::Text("Impostor_Plane_Mode: " + tostring(tmp.Impostor_Plane_Mode));
-            UI::Text("ReductionRatio01: " + tostring(tmp.ReductionRatio01)); /* Pourcentage max du scale random par instance. 0 = 100%, 0.3 = 70% (soyez raisonnable) */
-            UI::Text("Params_AngleMax_RotXZ_Deg: " + tostring(tmp.Params_AngleMax_RotXZ_Deg));
-            UI::Text("Params_EnableRandomRotationY: " + tostring(tmp.Params_EnableRandomRotationY));
-            UI::TextDisabled("LodModels: UnknownType");// + tostring(tmp.LodModels));
-            UI::TextDisabled("LodMaxDists: UnknownType");// + tostring(tmp.LodMaxDists));
-            UI::TextDisabled("Materials: UnknownType");// + tostring(tmp.Materials));
-            UI::Text("Params_Force_No_Collision: " + tostring(tmp.Params_Force_No_Collision));
-            UI::Text("Params_Impostor_AllPlanesVisible: " + tostring(tmp.Params_Impostor_AllPlanesVisible));
-            UI::Text("Params_ReceivesPSSM: " + tostring(tmp.Params_ReceivesPSSM));
-            if (StartTreeNode("Propagation", true, UI::TreeNodeFlags::None)) {
-                UI::Text("Propagation.Render_BaseColor?: " + tostring(tmp.Propagation.Render_BaseColor !is null));
-                UI::Text("Propagation.Render_Normal?: " + tostring(tmp.Propagation.Render_Normal !is null));
-                UI::Text("Propagation.Render_c2AtlasGrid: " + tostring(tmp.Propagation.Render_c2AtlasGrid));
-                UI::Text("Propagation.Render_LeafSize: " + tostring(tmp.Propagation.Render_LeafSize));
-                UI::Text("Propagation.Phy_cGroundGenPoint: " + tostring(tmp.Propagation.Phy_cGroundGenPoint));
-                UI::Text("Propagation.Phy_cLeafPerSecond: " + tostring(tmp.Propagation.Phy_cLeafPerSecond));
-                UI::Text("Propagation.Phy_ConeHalfAngleDeg: " + tostring(tmp.Propagation.Phy_ConeHalfAngleDeg));
-                UI::Text("Propagation.Phy_EmissionSpawnRadius: " + tostring(tmp.Propagation.Phy_EmissionSpawnRadius));
-                UI::Text("Propagation.Phy_Enable: " + tostring(tmp.Propagation.Phy_Enable));
-                UI::TextDisabled("Propagation.EmissionPoss: Unknown Type");// + tostring(tmp.Propagation.EmissionPoss));
+            if (drawProperties) {
+                auto tmp = vegetTree.Data;
+                UI::Text("Impostor_Lod_Dist: " + tostring(tmp.Impostor_Lod_Dist));
+                UI::Text("Impostor_Plane_Mode: " + tostring(tmp.Impostor_Plane_Mode));
+                UI::Text("ReductionRatio01: " + tostring(tmp.ReductionRatio01)); /* Pourcentage max du scale random par instance. 0 = 100%, 0.3 = 70% (soyez raisonnable) */
+                UI::Text("Params_AngleMax_RotXZ_Deg: " + tostring(tmp.Params_AngleMax_RotXZ_Deg));
+                UI::Text("Params_EnableRandomRotationY: " + tostring(tmp.Params_EnableRandomRotationY));
+                UI::TextDisabled("LodModels: UnknownType");// + tostring(tmp.LodModels));
+                UI::TextDisabled("LodMaxDists: UnknownType");// + tostring(tmp.LodMaxDists));
+                UI::TextDisabled("Materials: UnknownType");// + tostring(tmp.Materials));
+                UI::Text("Params_Force_No_Collision: " + tostring(tmp.Params_Force_No_Collision));
+                UI::Text("Params_Impostor_AllPlanesVisible: " + tostring(tmp.Params_Impostor_AllPlanesVisible));
+                UI::Text("Params_ReceivesPSSM: " + tostring(tmp.Params_ReceivesPSSM));
+                if (StartTreeNode("Propagation", true, UI::TreeNodeFlags::None)) {
+                    UI::Text("Propagation.Render_BaseColor?: " + tostring(tmp.Propagation.Render_BaseColor !is null));
+                    UI::Text("Propagation.Render_Normal?: " + tostring(tmp.Propagation.Render_Normal !is null));
+                    UI::Text("Propagation.Render_c2AtlasGrid: " + tostring(tmp.Propagation.Render_c2AtlasGrid));
+                    UI::Text("Propagation.Render_LeafSize: " + tostring(tmp.Propagation.Render_LeafSize));
+                    UI::Text("Propagation.Phy_cGroundGenPoint: " + tostring(tmp.Propagation.Phy_cGroundGenPoint));
+                    UI::Text("Propagation.Phy_cLeafPerSecond: " + tostring(tmp.Propagation.Phy_cLeafPerSecond));
+                    UI::Text("Propagation.Phy_ConeHalfAngleDeg: " + tostring(tmp.Propagation.Phy_ConeHalfAngleDeg));
+                    UI::Text("Propagation.Phy_EmissionSpawnRadius: " + tostring(tmp.Propagation.Phy_EmissionSpawnRadius));
+                    UI::Text("Propagation.Phy_Enable: " + tostring(tmp.Propagation.Phy_Enable));
+                    UI::TextDisabled("Propagation.EmissionPoss: Unknown Type");// + tostring(tmp.Propagation.EmissionPoss));
+                    EndTreeNode();
+                }
                 EndTreeNode();
             }
-            EndTreeNode();
         }
     }
     void Draw(CPlugDynaObjectModel@ dynaObject) {
         if (StartTreeNode(name + " :: \\$f8fCPlugDynaObjectModel", UI::TreeNodeFlags::DefaultOpen)) {
-            ItemModelTreeElement(dynaObject.Mesh, "Mesh").Draw();
-            ItemModelTreeElement(dynaObject.StaticShape, "StaticShape").Draw();
-            ItemModelTreeElement(dynaObject.DynaShape, "DynaShape").Draw();
+            MkAndDrawChildNode(dynaObject.Mesh, "Mesh");
+            MkAndDrawChildNode(dynaObject.StaticShape, "StaticShape");
+            MkAndDrawChildNode(dynaObject.DynaShape, "DynaShape");
             EndTreeNode();
         }
     }
     void Draw(NPlugDyna_SKinematicConstraint@ kc) {
         if (StartTreeNode(name + " :: \\$f8fNPlugDyna_SKinematicConstraint", UI::TreeNodeFlags::DefaultOpen)) {
-            auto tmp = kc;
-            UI::Text("TransAxis: " + tostring(tmp.TransAxis));
-            UI::Text("TransMin: " + tostring(tmp.TransMin));
-            UI::Text("TransMax: " + tostring(tmp.TransMax));
-            UI::Text("RotAxis: " + tostring(tmp.RotAxis));
-            UI::Text("AngleMinDeg: " + tostring(tmp.AngleMinDeg));
-            UI::Text("AngleMaxDeg: " + tostring(tmp.AngleMaxDeg));
-            UI::Text("ShaderTcType: " + tostring(tmp.ShaderTcType));
-            // print("ShaderTcAnimFunc: " + tostring(tmp.ShaderTcAnimFunc));
-            // print("ShaderTcData_TransSub: " + tostring(tmp.ShaderTcData_TransSub));
-            if (StartTreeNode("TransAnimFunc", true, UI::TreeNodeFlags::None)) {
-                Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "TransAnimFunc"));
-                EndTreeNode();
-            }
-            if (StartTreeNode("RotAnimFunc", true, UI::TreeNodeFlags::None)) {
-                Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "RotAnimFunc"));
-                EndTreeNode();
+            if (drawProperties) {
+                auto tmp = kc;
+                UI::Text("TransAxis: " + tostring(tmp.TransAxis));
+                UI::Text("TransMin: " + tostring(tmp.TransMin));
+                UI::Text("TransMax: " + tostring(tmp.TransMax));
+                UI::Text("RotAxis: " + tostring(tmp.RotAxis));
+                UI::Text("AngleMinDeg: " + tostring(tmp.AngleMinDeg));
+                UI::Text("AngleMaxDeg: " + tostring(tmp.AngleMaxDeg));
+                UI::Text("ShaderTcType: " + tostring(tmp.ShaderTcType));
+                // print("ShaderTcAnimFunc: " + tostring(tmp.ShaderTcAnimFunc));
+                // print("ShaderTcData_TransSub: " + tostring(tmp.ShaderTcData_TransSub));
+                if (StartTreeNode("TransAnimFunc", true, UI::TreeNodeFlags::None)) {
+                    Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "TransAnimFunc"));
+                    EndTreeNode();
+                }
+                if (StartTreeNode("RotAnimFunc", true, UI::TreeNodeFlags::None)) {
+                    Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "RotAnimFunc"));
+                    EndTreeNode();
+                }
             }
             EndTreeNode();
         }
@@ -259,58 +283,64 @@ class ItemModelTreeElement {
 
     void Draw(CPlugSpawnModel@ spawnModel) {
         if (StartTreeNode(name + " :: \\$f8fCPlugSpawnModel", UI::TreeNodeFlags::DefaultOpen)) {
-            UI::Text("DefaultGravitySpawn: " + spawnModel.DefaultGravitySpawn.ToString());
-            UI::Text("Loc: " + FormatX::Iso4(spawnModel.Loc));
-            UI::Text("TorqueDuration: " + spawnModel.TorqueDuration);
-            UI::Text("TorqueX: " + spawnModel.TorqueX);
+            if (drawProperties) {
+                UI::Text("DefaultGravitySpawn: " + spawnModel.DefaultGravitySpawn.ToString());
+                UI::Text("Loc: " + FormatX::Iso4(spawnModel.Loc));
+                UI::Text("TorqueDuration: " + spawnModel.TorqueDuration);
+                UI::Text("TorqueX: " + spawnModel.TorqueX);
+            }
             EndTreeNode();
         }
     }
     void Draw(CPlugEditorHelper@ editorHelper) {
         if (StartTreeNode(name + " :: \\$f8fCPlugEditorHelper", UI::TreeNodeFlags::DefaultOpen)) {
             auto nod = editorHelper.PrefabFid is null ? null : editorHelper.PrefabFid.Nod;
-            ItemModelTreeElement(nod, "PrefabFid.Nod").Draw();
+            MkAndDrawChildNode(nod, "PrefabFid.Nod");
             EndTreeNode();
         }
     }
     void Draw(NPlugTrigger_SWaypoint@ sWaypoint) {
         if (StartTreeNode(name + " :: \\$f8fNPlugTrigger_SWaypoint", UI::TreeNodeFlags::DefaultOpen)) {
-            LabeledValue("NoRespawn", sWaypoint.NoRespawn);
-            LabeledValue("sWaypoint.Type", tostring(sWaypoint.Type));
-            ItemModelTreeElement(sWaypoint.TriggerShape, "TriggerShape").Draw();
+            if (drawProperties) {
+                LabeledValue("NoRespawn", sWaypoint.NoRespawn);
+                LabeledValue("sWaypoint.Type", tostring(sWaypoint.Type));
+            }
+            MkAndDrawChildNode(sWaypoint.TriggerShape, "TriggerShape");
             EndTreeNode();
         }
     }
     void Draw(NPlugTrigger_SSpecial@ sSpecial) {
         if (StartTreeNode(name + " :: \\$f8fNPlugTrigger_SSpecial", UI::TreeNodeFlags::DefaultOpen)) {
-            ItemModelTreeElement(sSpecial.TriggerShape, "TriggerShape").Draw();
+            MkAndDrawChildNode(sSpecial.TriggerShape, "TriggerShape");
             EndTreeNode();
         }
     }
     void Draw(CGameCommonItemEntityModel@ cieModel) {
         if (StartTreeNode(name + " :: \\$f8fCGameCommonItemEntityModel", UI::TreeNodeFlags::DefaultOpen)) {
-            ItemModelTreeElement(cieModel.StaticObject, "StaticObject").Draw();
-            ItemModelTreeElement(cieModel.TriggerShape, "TriggerShape").Draw();
-            ItemModelTreeElement(cieModel.PhyModel, "PhyModel").Draw();
+            MkAndDrawChildNode(cieModel.StaticObject, "StaticObject");
+            MkAndDrawChildNode(cieModel.TriggerShape, "TriggerShape");
+            MkAndDrawChildNode(cieModel.PhyModel, "PhyModel");
             EndTreeNode();
         }
     }
     void Draw(CPlugSolid2Model@ s2m) {
         if (StartTreeNode(name + " :: \\$f8fCPlugSolid2Model", UI::TreeNodeFlags::DefaultOpen)) {
             CPlugSkel@ skel = cast<CPlugSkel>(Dev::GetOffsetNod(s2m, 0x78));
-            uint nbVisualIndexedTriangles = Dev::GetOffsetUint32(s2m, 0xA8 + 0x8);
-            uint nbMaterials = Dev::GetOffsetUint32(s2m, 0xC8 + 0x8);
-            uint nbMaterialUserInsts = Dev::GetOffsetUint32(s2m, 0xF8 + 0x8);
-            uint nbLights = Dev::GetOffsetUint32(s2m, 0x168 + 0x8);
-            uint nbLightUserModels = Dev::GetOffsetUint32(s2m, 0x178 + 0x8);
-            uint nbCustomMaterials = Dev::GetOffsetUint32(s2m, 0x1F8 + 0x8);
-            UI::Text("nbVisualIndexedTriangles: " + nbVisualIndexedTriangles);
-            UI::Text("nbMaterialUserInsts: " + nbMaterialUserInsts);
-            UI::Text("nbLights: " + nbLights);
-            UI::Text("nbLightUserModels: " + nbLightUserModels);
-            DrawMaterialsAt("nbMaterials: " + nbMaterials, nod, 0xc8);
-            DrawMaterialsAt("nbCustomMaterials: " + nbCustomMaterials, nod, 0x1F8);
-            ItemModelTreeElement(skel, "Skel");
+            if (drawProperties) {
+                uint nbVisualIndexedTriangles = Dev::GetOffsetUint32(s2m, 0xA8 + 0x8);
+                uint nbMaterials = Dev::GetOffsetUint32(s2m, 0xC8 + 0x8);
+                uint nbMaterialUserInsts = Dev::GetOffsetUint32(s2m, 0xF8 + 0x8);
+                uint nbLights = Dev::GetOffsetUint32(s2m, 0x168 + 0x8);
+                uint nbLightUserModels = Dev::GetOffsetUint32(s2m, 0x178 + 0x8);
+                uint nbCustomMaterials = Dev::GetOffsetUint32(s2m, 0x1F8 + 0x8);
+                UI::Text("nbVisualIndexedTriangles: " + nbVisualIndexedTriangles);
+                UI::Text("nbMaterialUserInsts: " + nbMaterialUserInsts);
+                UI::Text("nbLights: " + nbLights);
+                UI::Text("nbLightUserModels: " + nbLightUserModels);
+                DrawMaterialsAt("nbMaterials: " + nbMaterials, nod, 0xc8);
+                DrawMaterialsAt("nbCustomMaterials: " + nbCustomMaterials, nod, 0x1F8);
+            }
+            MkAndDrawChildNode(skel, "Skel");
             EndTreeNode();
         }
     }
@@ -339,8 +369,10 @@ class ItemModelTreeElement {
 
     void Draw(CPlugSurface@ surf) {
         if (StartTreeNode(name + " :: \\$f8fCPlugSurface", UI::TreeNodeFlags::DefaultOpen)) {
-            DrawMaterialsAt("nbMaterials: " + surf.Materials.Length, surf, GetOffset(surf, "Materials"));
-            UI::Text("MaterialIds.Length: " + surf.MaterialIds.Length);
+            if (drawProperties) {
+                DrawMaterialsAt("nbMaterials: " + surf.Materials.Length, surf, GetOffset(surf, "Materials"));
+                UI::Text("MaterialIds.Length: " + surf.MaterialIds.Length);
+            }
             EndTreeNode();
         }
     }
@@ -361,7 +393,10 @@ class ItemModelTreeElement {
     bool StartTreeNode(const string &in title, bool suppressDev = false, UI::TreeNodeFlags flags = UI::TreeNodeFlags::DefaultOpen) {
         bool open = UI::TreeNode(title, flags);
         if (open) UI::PushID(title);
-        if (open && !suppressDev && nod !is null) {
+        if (open && nod !is null) {
+            DrawPickable();
+        }
+        if (open && !suppressDev && !isPicker && nod !is null) {
             auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(nod, 0x8));
 #if SIG_DEVELOPER
             if (UX::SmallButton(Icons::Cube + " Explore Nod")) {
@@ -470,6 +505,39 @@ void Draw_NPlugDyna_SAnimFunc01(CMwNod@ nod, uint16 offset) {
 }
 
 
+funcdef void EntityPickerCB(CMwNod@ nod);
+
+uint[] DynaObjectSources = {
+    Reflection::GetType("CPlugStaticObjectModel").ID
+};
+
+class ItemModelTreePicker : ItemModelTreeElement {
+    EntityPickerCB@ callback;
+    // class IDs
+    uint[]@ lookingFor;
+
+    ItemModelTreePicker(CMwNod@ nod, const string &in name, EntityPickerCB@ cb, uint[]@ lookingFor) {
+        super(nod, name);
+        isPicker = true;
+        drawProperties = false;
+        @callback = cb;
+        @this.lookingFor = lookingFor;
+    }
+
+    void MkAndDrawChildNode(CMwNod@ nod, const string&in name) override {
+        ItemModelTreePicker(nod, name, callback, lookingFor).Draw();
+    }
+
+    void DrawPickable() override {
+        if (MyNodClassMatches() && UI::Button("Pick")) {
+            callback(nod);
+        }
+    }
+
+    bool MyNodClassMatches() {
+        return lookingFor is null || lookingFor.Find(classId) >= 0;
+    }
+}
 
 
 

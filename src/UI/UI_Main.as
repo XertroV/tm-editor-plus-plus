@@ -214,6 +214,7 @@ TabGroup@ CreateRootTabGroup() {
     BlockSelectionTab(root);
     ItemSelectionTab(root);
     GlobalPlacementOptionsTab(root);
+    MacroblockOptsTab(root);
 
     // - filtered view of blocks/items show just checkpoints
     // - set linked order

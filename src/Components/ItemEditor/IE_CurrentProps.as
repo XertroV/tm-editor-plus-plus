@@ -836,7 +836,7 @@ class IE_CopyAnotherItemsModelDevTab : Tab {
 
             MeshDuplication::FixMatsOnMesh(mesh);
             MeshDuplication::FixLightsOnMesh(mesh);
-            MeshDuplication::SyncUserMatsToShapeIfMissing(mesh, shape);
+            // MeshDuplication::SyncUserMatsToShapeIfMissing(mesh, shape);
             MeshDuplication::FixMatsOnShape(shape);
             MeshDuplication::FixItemModelProperties(GetItemModel(), model);
 
