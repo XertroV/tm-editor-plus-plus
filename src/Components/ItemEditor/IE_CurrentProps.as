@@ -174,13 +174,18 @@ class ItemEditEntityTab : Tab {
     }
 
     void DrawPrefabEntity(CPlugPrefab@ prefab) {
-        if (prefab.Ents.Length == 2) {
+        if (prefab.Ents.Length >= 2) {
             auto ent1Model = cast<CPlugDynaObjectModel>(prefab.Ents[0].Model);
-            auto ent2Model = cast<NPlugDyna_SKinematicConstraint>(prefab.Ents[1].Model);
+            auto ent2Model = cast<NPlugDyna_SKinematicConstraint>(prefab.Ents[prefab.Ents.Length - 1].Model);
+            if (ent1Model is null || ent2Model is null) {
+                UI::Text("Found DynaObject (Ents[0]): " + (ent1Model !is null));
+                UI::Text("Found KinematicConstraints (Ents["+(prefab.Ents.Length - 1)+"]): " + (ent2Model !is null));
+                return;
+            }
             DrawCPlugDynaObjectModel(ent1Model);
             DrawKinematicConstraint(ent2Model);
         } else {
-            UI::Text("not 2 entities. unsure what to do.");
+            UI::Text("not 2+ entities. unsure what to do.");
         }
     }
 
@@ -558,6 +563,8 @@ class IE_CopyAnotherItemsModelDevTab : Tab {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         // triggers refresh of model
         ieditor.AddEmptyMesh();
+
+        Notify("Entity copied, please save the item.");
     }
 
     void CopyVariant0OverDynamicObj() {

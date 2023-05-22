@@ -190,6 +190,7 @@ TabGroup@ CreateItemEditorRT() {
     ItemEditCurrentPropsTab(root);
     IE_ItemModelBrowserTab(root);
     IE_CopyAnotherItemsModelTab(root);
+    IE_ManipulateMeshesTab(root);
 #if DEV
 #endif
     // ItemEditMacroVariationsTab(root);

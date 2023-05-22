@@ -3,9 +3,11 @@ const uint16 IM_AuthorOffset = 0xA0;
 
 class ItemModel {
     CGameItemModel@ item;
-    ItemModel(CGameItemModel@ item) {
+    bool drawProperties;
+    ItemModel(CGameItemModel@ item, bool drawProperties = true) {
         @this.item = item;
         item.MwAddRef();
+        this.drawProperties = drawProperties;
     }
 
     ~ItemModel() {
@@ -43,7 +45,7 @@ class ItemModel {
     }
 
     void DrawEMTree() {
-        ItemModelTreeElement(item.EntityModel, "EntityModel").Draw();
+        ItemModelTreeElement(item.EntityModel, "EntityModel", drawProperties).Draw();
     }
 }
 
@@ -55,6 +57,8 @@ class ItemModelTreeElement {
     // set to true by subclasses to disable some things.
     bool isPicker = false;
     uint classId = 0x1001000; // CMwNod
+
+    int currentIndex = -1;
 
     CPlugStaticObjectModel@ so;
     CPlugPrefab@ prefab;
@@ -71,11 +75,12 @@ class ItemModelTreeElement {
     CPlugSurface@ surf;
     CPlugSolid2Model@ s2m;
 
-    ItemModelTreeElement(CMwNod@ nod, const string &in name) {
+    ItemModelTreeElement(CMwNod@ nod, const string &in name, bool drawProperties = true) {
         @this.nod = nod;
         this.name = name;
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
+        this.drawProperties = drawProperties;
         @this.so = cast<CPlugStaticObjectModel>(nod);
         @this.prefab = cast<CPlugPrefab>(nod);
         @this.varList = cast<NPlugItem_SVariantList>(nod);
@@ -98,7 +103,7 @@ class ItemModelTreeElement {
 
     // can be overloaded
     void MkAndDrawChildNode(CMwNod@ nod, const string &in name) {
-        ItemModelTreeElement(nod, name).Draw();
+        ItemModelTreeElement(nod, name, drawProperties).Draw();
     }
 
 
@@ -107,6 +112,7 @@ class ItemModelTreeElement {
     }
 
     void Draw() {
+        currentIndex = -1;
         if (nod is null) {
             UI::Text(name + " :: \\$f8fnull");
         } else if (so !is null) {
@@ -154,6 +160,7 @@ class ItemModelTreeElement {
         if (StartTreeNode(name + " :: \\$f8fCPlugPrefab", UI::TreeNodeFlags::DefaultOpen)) {
             UI::Text("nbEnts: " + prefab.Ents.Length);
             for (uint i = 0; i < prefab.Ents.Length; i++) {
+                currentIndex = i;
                 if (StartTreeNode(".Ents["+i+"]:", true)) {
                     if (drawProperties) {
                         UI::Text(".Location.Quat: " + prefab.Ents[i].Location.Quat.ToString());
@@ -174,6 +181,7 @@ class ItemModelTreeElement {
         if (StartTreeNode(name + " :: \\$f8fNPlugItem_SVariantList", UI::TreeNodeFlags::DefaultOpen)) {
             UI::Text("nbVariants: " + varList.Variants.Length);
             for (uint i = 0; i < varList.Variants.Length; i++) {
+                currentIndex = i;
                 if (StartTreeNode(".Variant["+i+"]:", true)) {
                     if (drawProperties) {
                         UI::Text("nbPlacementTags: " + varList.Variants[i].Tags.Length + "  { " + GetVariantTagsStr(varList, i) + " }");
@@ -243,8 +251,8 @@ class ItemModelTreeElement {
                     UI::TextDisabled("Propagation.EmissionPoss: Unknown Type");// + tostring(tmp.Propagation.EmissionPoss));
                     EndTreeNode();
                 }
-                EndTreeNode();
             }
+            EndTreeNode();
         }
     }
     void Draw(CPlugDynaObjectModel@ dynaObject) {
@@ -505,11 +513,28 @@ void Draw_NPlugDyna_SAnimFunc01(CMwNod@ nod, uint16 offset) {
 }
 
 
-funcdef void EntityPickerCB(CMwNod@ nod);
+funcdef void EntityPickerCB(CMwNod@ nod, int index = -1);
 
+uint[] EmptyLookingFor = {};
 uint[] DynaObjectSources = {
     Reflection::GetType("CPlugStaticObjectModel").ID
 };
+uint[] PrefabLookingFor = {
+    Reflection::GetType("CPlugStaticObjectModel").ID
+};
+uint[] StaticObjLookingFor = {
+    Reflection::GetType("CPlugStaticObjectModel").ID
+};
+uint[] CommonIELookingFor = {
+    Reflection::GetType("CPlugPrefab").ID,
+    Reflection::GetType("CPlugPrefab").ID,
+};
+uint[] VariantListLookingFor = {
+    Reflection::GetType("CPlugPrefab").ID,
+    Reflection::GetType("CPlugPrefab").ID,
+};
+
+
 
 class ItemModelTreePicker : ItemModelTreeElement {
     EntityPickerCB@ callback;
@@ -529,8 +554,8 @@ class ItemModelTreePicker : ItemModelTreeElement {
     }
 
     void DrawPickable() override {
-        if (MyNodClassMatches() && UI::Button("Pick")) {
-            callback(nod);
+        if (MyNodClassMatches() && UX::SmallButton("Pick")) {
+            callback(nod, currentIndex);
         }
     }
 

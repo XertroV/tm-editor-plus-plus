@@ -117,11 +117,13 @@ namespace MeshDuplication {
             auto eh = cast<CPlugEditorHelper>(prefab.Ents[i].Model);
             if (eh !is null) {
                 trace('zeroing editor helper model');
-                auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
+                /* zero out entity model -- cannot save it
+                */
                 // size: NPlugPrefab_SEntRef: 0x50
-                eh.PrefabFid.Nod.MwAddRef();
+                auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
                 Dev::SetOffset(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "Model"), uint64(0));
-                ZeroFidsUnknownModelNod(eh.PrefabFid.Nod);
+                // eh.PrefabFid.Nod.MwAddRef();
+                // ZeroFidsUnknownModelNod(eh.PrefabFid.Nod);
             } else {
                 ZeroFidsUnknownModelNod(prefab.Ents[i].Model);
             }
@@ -231,6 +233,7 @@ namespace MeshDuplication {
         auto editorHelper = cast<CPlugEditorHelper>(nod);
         auto sWaypoint = cast<NPlugTrigger_SWaypoint>(nod);
         auto sSpecial = cast<NPlugTrigger_SSpecial>(nod);
+        auto commonIe = cast<CGameCommonItemEntityModel>(nod);
         if (so !is null) {
             ZeroFids(so);
         } else if (prefab !is null) {
@@ -251,6 +254,8 @@ namespace MeshDuplication {
             ZeroFids(sWaypoint);
         } else if (sSpecial !is null) {
             ZeroFids(sSpecial);
+        } else if (commonIe !is null) {
+            ZeroFids(commonIe);
         } else {
             NotifyError("ZeroFidsUnknownModelNod: nod is unknown.");
             NotifyError("ZeroFidsUnknownModelNod: nod type: " + Reflection::TypeOf(nod).Name);
@@ -459,6 +464,8 @@ namespace MeshDuplication {
 
     void FixItemModelProperties(CGameItemModel@ dest, CGameItemModel@ source) {
         trace('setting skin pointer if exists');
+
+        dest.WaypointType = source.WaypointType;
 
         // CPlugGameSkin
         auto skinPtr = Dev::GetOffsetUint64(source, 0xa0);

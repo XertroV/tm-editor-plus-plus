@@ -124,7 +124,7 @@ class ItemSelection_DevTab : Tab {
         CopiableLabeledValue("Pri Path", p1);
         CopiableLabeledValue("Sec Path", p2);
         if (UI::BeginTable("skintable", 4, UI::TableFlags::SizingStretchProp)) {
-            UI::TableSetupColumn("Replace ");
+            UI::TableSetupColumn("Replace");
             UI::TableSetupColumn("With");
             UI::TableSetupColumn("ClassID");
             UI::TableSetupColumn("Unk");
@@ -136,9 +136,9 @@ class ItemSelection_DevTab : Tab {
                 auto unk = Dev::GetOffsetUint32(unkBuf, 0x4 * i);
                 UI::TableNextRow();
                 UI::TableNextColumn();
-                UI::Text(fid.FileName);
-                UI::TableNextColumn();
                 UI::Text(str);
+                UI::TableNextColumn();
+                UI::Text(fid.FileName + "  " + (fid.Nod !is null ? Icons::Check : Icons::Times));
                 UI::TableNextColumn();
                 UI::Text(Text::Format("0x%08x", cls));
                 UI::TableNextColumn();

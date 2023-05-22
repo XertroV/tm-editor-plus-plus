@@ -80,4 +80,43 @@ class ReferencedNod {
     CGameItemPlacementParam@ AsPlacementParam() {
         return cast<CGameItemPlacementParam>(this.nod);
     }
+
+    CPlugStaticObjectModel@ As_CPlugStaticObjectModel() {
+        return cast<CPlugStaticObjectModel>(this.nod);
+    }
+    CPlugPrefab@ As_CPlugPrefab() {
+        return cast<CPlugPrefab>(this.nod);
+    }
+    CPlugFxSystem@ As_CPlugFxSystem() {
+        return cast<CPlugFxSystem>(this.nod);
+    }
+    CPlugVegetTreeModel@ As_CPlugVegetTreeModel() {
+        return cast<CPlugVegetTreeModel>(this.nod);
+    }
+    CPlugDynaObjectModel@ As_CPlugDynaObjectModel() {
+        return cast<CPlugDynaObjectModel>(this.nod);
+    }
+    NPlugDyna_SKinematicConstraint@ As_NPlugDyna_SKinematicConstraint() {
+        return cast<NPlugDyna_SKinematicConstraint>(this.nod);
+    }
+    CPlugSpawnModel@ As_CPlugSpawnModel() {
+        return cast<CPlugSpawnModel>(this.nod);
+    }
+    CPlugEditorHelper@ As_CPlugEditorHelper() {
+        return cast<CPlugEditorHelper>(this.nod);
+    }
+    NPlugTrigger_SWaypoint@ As_NPlugTrigger_SWaypoint() {
+        return cast<NPlugTrigger_SWaypoint>(this.nod);
+    }
+    NPlugTrigger_SSpecial@ As_NPlugTrigger_SSpecial() {
+        return cast<NPlugTrigger_SSpecial>(this.nod);
+    }
+    CGameCommonItemEntityModel@ As_CGameCommonItemEntityModel() {
+        return cast<CGameCommonItemEntityModel>(this.nod);
+    }
+    NPlugItem_SVariantList@ As_NPlugItem_SVariantList() {
+        return cast<NPlugItem_SVariantList>(this.nod);
+    }
+
+
 }
