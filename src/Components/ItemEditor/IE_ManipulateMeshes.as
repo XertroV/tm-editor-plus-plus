@@ -314,11 +314,15 @@ class IE_ManipulateMeshesTab : Tab {
     }
 
     protected void AppendRunMsg(const string &in msg) {
-        hasRunMsg = hasRunMsg + "\n\\$z[ \\$<\\$aaa" + Time::Now + "\\$> ] " +  msg;
+        string toAdd = "[ \\$<\\$aaa" + Time::Now + "\\$> ] " +  msg;
+        trace('AppendRunMsg | ' + toAdd);
+        hasRunMsg = hasRunMsg + "\n\\$z" + toAdd;
     }
 
     protected bool _RunReplaceChild() {
         AppendRunMsg("started _RunReplaceChild");
+        MeshDuplication::ZeroFidsUnknownModelNod(dest.parent.nod);
+        MeshDuplication::ZeroFidsUnknownModelNod(source.parent.nod);
         if (dest.ty == ModelTargetType::IndirectChild) {
             // prefab or varlist
             auto prefab = dest.parent.As_CPlugPrefab();
