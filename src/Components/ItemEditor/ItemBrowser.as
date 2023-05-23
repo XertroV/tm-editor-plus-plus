@@ -579,10 +579,10 @@ class ItemModelTarget {
     ~ItemModelTarget() {
     }
     const string get_TypeName() {
-        if (parent is null || parent.nod is null) return "None";
         if (child !is null) {
             return child.TypeName;
         }
+        if (parent is null || parent.nod is null) return "None";
         if (pIndex >= 0) {
             if (parent.TypeName == "NPlugItem_SVariantList") {
                 return "NPlugItem_SVariant";

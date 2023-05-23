@@ -87,6 +87,13 @@ namespace MeshDuplication {
         }
     }
 
+    void SetVariantModel(NPlugItem_SVariantList@ varList, int ix, CMwNod@ nod) {
+        // length of a _SVariant: 0x28
+        auto variants = Dev::GetOffsetNod(varList, GetOffset("NPlugItem_SVariantList", "Variants"));
+        nod.MwAddRef();
+        Dev::SetOffset(variants, 0x28 * ix + GetOffset("NPlugItem_SVariant", "EntityModelFidForReload"), nod);
+    }
+
     void ZeroFids(CPlugVegetTreeModel@ tree) {
         ZeroNodFid(tree);
         // some fids do exist under tree.Data but we mb get lucky and don't need to zero them (materials / textures and stuff)
@@ -119,15 +126,22 @@ namespace MeshDuplication {
                 trace('zeroing editor helper model');
                 /* zero out entity model -- cannot save it
                 */
-                // size: NPlugPrefab_SEntRef: 0x50
-                auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
-                Dev::SetOffset(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "Model"), uint64(0));
+                // auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
+                // Dev::SetOffset(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "Model"), uint64(0));
+                SetEntRefModel(prefab, i, null);
                 // eh.PrefabFid.Nod.MwAddRef();
                 // ZeroFidsUnknownModelNod(eh.PrefabFid.Nod);
             } else {
                 ZeroFidsUnknownModelNod(prefab.Ents[i].Model);
             }
         }
+    }
+
+    void SetEntRefModel(CPlugPrefab@ prefab, int entityIx, CMwNod@ nod) {
+        // size: NPlugPrefab_SEntRef: 0x50
+        auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
+        nod.MwAddRef();
+        Dev::SetOffset(ents, 0x50 * entityIx + GetOffset("NPlugPrefab_SEntRef", "Model"), nod);
     }
 
     void ZeroFids(CPlugSpawnModel@ sm) {
