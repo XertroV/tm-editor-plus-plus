@@ -37,12 +37,20 @@ shared bool ClickableLabel(const string &in label, const string &in value) {
     return ClickableLabel(label, value, ": ");
 }
 shared bool ClickableLabel(const string &in label, const string &in value, const string &in between) {
-    UI::Text(label + between + value);
+    UI::Text(label.Length > 0 ? label + between + value : value);
     return UI::IsItemClicked();
 }
 
 shared bool CopiableLabeledValue(const string &in label, const string &in value) {
     if (ClickableLabel(label, value)) {
+        SetClipboard(value);
+        return true;
+    }
+    return false;
+}
+
+shared bool CopiableValue(const string &in value) {
+    if (ClickableLabel("", value)) {
         SetClipboard(value);
         return true;
     }

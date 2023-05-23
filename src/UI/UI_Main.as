@@ -197,6 +197,8 @@ TabGroup@ CreateItemEditorRT() {
 #if SIG_DEVELOPER
     // IE_DevTab(root);
 #endif
+
+    AboutTab(root);
     return root;
 }
 
@@ -247,6 +249,7 @@ TabGroup@ CreateRootTabGroup() {
 #if SIG_DEVELOPER
     DevMainTab(root);
 #endif
+    AboutTab(root);
 
     return root;
 }

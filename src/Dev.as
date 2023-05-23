@@ -31,11 +31,17 @@ void Dev_SetOffsetBytes(CMwNod@ nod, uint offset, uint64[]@ bs) {
 
 class ReferencedNod {
     CMwNod@ nod;
+    uint ClassId = 0;
+    string TypeName;
 
     ReferencedNod(CMwNod@ _nod) {
         @nod = _nod;
-        if (nod !is null)
+        if (nod !is null) {
             nod.MwAddRef();
+            auto ty = Reflection::TypeOf(nod);
+            ClassId = ty.ID;
+            TypeName = ty.Name;
+        }
     }
 
     ~ReferencedNod() {

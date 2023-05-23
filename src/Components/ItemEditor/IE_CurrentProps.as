@@ -5,7 +5,7 @@ class ItemEditCurrentPropsTab : Tab {
         ItemEditLayoutTab(Children);
         ItemEditCloneLayoutTab(Children);
         ItemEditEntityTab(Children);
-        ItemEditMiscTab(Children);
+        // ItemEditMiscTab(Children);
 #if SIG_DEVELOPER
         ItemEditDevTab(Children);
 #endif
@@ -302,31 +302,31 @@ class ItemEditEntityTab : Tab {
 }
 
 
-class ItemEditMiscTab : Tab {
-    ItemEditMiscTab(TabGroup@ p) {
-        super(p, "Misc", "");
-    }
+// class ItemEditMiscTab : Tab {
+//     ItemEditMiscTab(TabGroup@ p) {
+//         super(p, "Misc", "");
+//     }
 
-    CGameItemModel@ GetItemModel() {
-        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
-        if (ieditor is null) return null;
-        return ieditor.ItemModel;
-    }
+//     CGameItemModel@ GetItemModel() {
+//         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+//         if (ieditor is null) return null;
+//         return ieditor.ItemModel;
+//     }
 
-    string m_SkinDir = "Any\\Advertisement2x1\\";
+//     string m_SkinDir = "Any\\Advertisement2x1\\";
 
-    void DrawInner() override {
-        auto item = GetItemModel();
-        CopiableLabeledValue("SkinDirectory", item.SkinDirectory);
-        m_SkinDir = UI::InputText("New SkinDirectory", m_SkinDir);
-        if (UI::Button("Set New SkinDirectory")) {
-            Editor::SetItemModelSkinDir(item, m_SkinDir);
+//     void DrawInner() override {
+//         auto item = GetItemModel();
+//         CopiableLabeledValue("SkinDirectory", item.SkinDirectory);
+//         m_SkinDir = UI::InputText("New SkinDirectory", m_SkinDir);
+//         if (UI::Button("Set New SkinDirectory")) {
+//             Editor::SetItemModelSkinDir(item, m_SkinDir);
 
-        }
+//         }
 
-        item.SkinDirNameCustom = UI::InputText("SkinDirNameCustom", item.SkinDirNameCustom);
-    }
-}
+//         item.SkinDirNameCustom = UI::InputText("SkinDirNameCustom", item.SkinDirNameCustom);
+//     }
+// }
 
 
 
@@ -522,6 +522,11 @@ class IE_CopyAnotherItemsModelDevTab : Tab {
         if (UI::Button("Run Zero Fids")) {
             startnew(CoroutineFunc(RunZeroFids));
         }
+
+        if (UI::Button("NullifyEntityVar0Ent0Model")) {
+            startnew(CoroutineFunc(NullifyEntityVar0Ent0Model));
+        }
+
         if (UI::Button("NullifyEntityVar0Ent0Model")) {
             startnew(CoroutineFunc(NullifyEntityVar0Ent0Model));
         }

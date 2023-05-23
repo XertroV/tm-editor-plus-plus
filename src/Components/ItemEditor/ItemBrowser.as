@@ -21,6 +21,11 @@ class ItemModel {
     void DrawTree() {
         // UI::TreeNodeFlags::OpenOnArrow
         if (UI::TreeNode(item.IdName, UI::TreeNodeFlags::DefaultOpen)) {
+#if SIG_DEVELOPER
+            if (UX::SmallButton(Icons::Cube + " Explore ItemModel")) {
+                ExploreNod(item);
+            }
+#endif
             ClickableLabel("Author", item.Author.GetName());
             DrawEMEdition();
             DrawEMTree();
@@ -45,12 +50,14 @@ class ItemModel {
     }
 
     void DrawEMTree() {
-        ItemModelTreeElement(item.EntityModel, "EntityModel", drawProperties).Draw();
+        ItemModelTreeElement(null, -1, item.EntityModel, "EntityModel", drawProperties).Draw();
     }
 }
 
 
 class ItemModelTreeElement {
+    ItemModelTreeElement@ parent;
+    int parentIx;
     CMwNod@ nod;
     string name;
     bool drawProperties = true;
@@ -75,7 +82,9 @@ class ItemModelTreeElement {
     CPlugSurface@ surf;
     CPlugSolid2Model@ s2m;
 
-    ItemModelTreeElement(CMwNod@ nod, const string &in name, bool drawProperties = true) {
+    ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true) {
+        @this.parent = parent;
+        this.parentIx = parentIx;
         @this.nod = nod;
         this.name = name;
         if (nod is null) return;
@@ -103,7 +112,7 @@ class ItemModelTreeElement {
 
     // can be overloaded
     void MkAndDrawChildNode(CMwNod@ nod, const string &in name) {
-        ItemModelTreeElement(nod, name, drawProperties).Draw();
+        ItemModelTreeElement(this, -1, nod, name, drawProperties).Draw();
     }
 
 
@@ -513,11 +522,12 @@ void Draw_NPlugDyna_SAnimFunc01(CMwNod@ nod, uint16 offset) {
 }
 
 
-funcdef void EntityPickerCB(CMwNod@ nod, int index = -1);
+funcdef void EntityPickerCB(CMwNod@ parent, int parentIndex, CMwNod@ nod, int index);
 
 uint[] EmptyLookingFor = {};
 uint[] DynaObjectSources = {
-    Reflection::GetType("CPlugStaticObjectModel").ID
+    Reflection::GetType("CPlugStaticObjectModel").ID,
+    Reflection::GetType("CPlugDynaObjectModel").ID,
 };
 uint[] PrefabLookingFor = {
     Reflection::GetType("CPlugStaticObjectModel").ID
@@ -540,9 +550,10 @@ class ItemModelTreePicker : ItemModelTreeElement {
     EntityPickerCB@ callback;
     // class IDs
     uint[]@ lookingFor;
+    bool allowIndexed;
 
-    ItemModelTreePicker(CMwNod@ nod, const string &in name, EntityPickerCB@ cb, uint[]@ lookingFor) {
-        super(nod, name);
+    ItemModelTreePicker(ItemModelTreePicker@ parent, int parentIx, CMwNod@ nod, const string &in name, EntityPickerCB@ cb, uint[]@ lookingFor, bool allowIndexed) {
+        super(parent, parentIx, nod, name);
         isPicker = true;
         drawProperties = false;
         @callback = cb;
@@ -550,16 +561,17 @@ class ItemModelTreePicker : ItemModelTreeElement {
     }
 
     void MkAndDrawChildNode(CMwNod@ nod, const string&in name) override {
-        ItemModelTreePicker(nod, name, callback, lookingFor).Draw();
+        ItemModelTreePicker(this, currentIndex, nod, name, callback, lookingFor, allowIndexed).Draw();
     }
 
     void DrawPickable() override {
         if (MyNodClassMatches() && UX::SmallButton("Pick")) {
-            callback(nod, currentIndex);
+            callback(parent.nod, parent.currentIndex, nod, currentIndex);
         }
     }
 
     bool MyNodClassMatches() {
+        if (!allowIndexed && currentIndex >= 0) return false;
         return lookingFor is null || lookingFor.Find(classId) >= 0;
     }
 }

@@ -506,8 +506,8 @@ namespace MeshDuplication {
 
 
 
-namespace Editor {
-    void SetItemModelSkinDir(CGameItemModel@ model, const string &in skinDir) {
-        Dev::SetOffset(model, GetOffset("CGameItemModel", "SkinDirectory"), skinDir);
-    }
-}
+// namespace Editor {
+//     void SetItemModelSkinDir(CGameItemModel@ model, const string &in skinDir) {
+//         Dev::SetOffset(model, GetOffset("CGameItemModel", "SkinDirectory"), skinDir);
+//     }
+// }
