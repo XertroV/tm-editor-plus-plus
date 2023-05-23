@@ -525,54 +525,108 @@ void Draw_NPlugDyna_SAnimFunc01(CMwNod@ nod, uint16 offset) {
 funcdef void EntityPickerCB(CMwNod@ parent, int parentIndex, CMwNod@ nod, int index);
 
 uint[] EmptyLookingFor = {};
+
+// copy into / use children
+
 uint[] DynaObjectSources = {
     Reflection::GetType("CPlugStaticObjectModel").ID,
     Reflection::GetType("CPlugDynaObjectModel").ID,
 };
+
 uint[] PrefabLookingFor = {
-    Reflection::GetType("CPlugStaticObjectModel").ID
+    // Reflection::GetType("CPlugStaticObjectModel").ID
 };
 uint[] StaticObjLookingFor = {
     Reflection::GetType("CPlugStaticObjectModel").ID
 };
 uint[] CommonIELookingFor = {
     Reflection::GetType("CPlugPrefab").ID,
-    Reflection::GetType("CPlugPrefab").ID,
 };
 uint[] VariantListLookingFor = {
     Reflection::GetType("CPlugPrefab").ID,
-    Reflection::GetType("CPlugPrefab").ID,
 };
 
+// overwrite / use this
 
+uint[] VariantListLookingForIx = {
+    Reflection::GetType("NPlugItem_SVariantList").ID,
+};
+uint[] PrefabLookingForIx = {
+    Reflection::GetType("CPlugStaticObjectModel").ID,
+    Reflection::GetType("CPlugDynaObjectModel").ID,
+    Reflection::GetType("CPlugPrefab").ID,
+};
+uint[] StaticObjLookingForIx = PrefabLookingForIx;
+uint[] DynaObjectLookingForIx = PrefabLookingForIx;
+uint[] CommonIELookingForIx = PrefabLookingForIx;
+uint[] Solid2ModelLookingForIx = {
+    Reflection::GetType("CPlugSolid2Model").ID,
+};
+uint[] SurfaceLookingForIx = {
+    Reflection::GetType("CPlugSurface").ID,
+};
 
 class ItemModelTreePicker : ItemModelTreeElement {
     EntityPickerCB@ callback;
     // class IDs
     uint[]@ lookingFor;
+    uint[]@ lookingForIndexed;
     bool allowIndexed;
 
-    ItemModelTreePicker(ItemModelTreePicker@ parent, int parentIx, CMwNod@ nod, const string &in name, EntityPickerCB@ cb, uint[]@ lookingFor, bool allowIndexed) {
+    ItemModelTreePicker(ItemModelTreePicker@ parent, int parentIx, CMwNod@ nod, const string &in name, EntityPickerCB@ cb, uint[]@ lookingFor, uint[]@ lookingForIndexed, bool allowIndexed) {
         super(parent, parentIx, nod, name);
         isPicker = true;
         drawProperties = false;
         @callback = cb;
         @this.lookingFor = lookingFor;
+        @this.lookingForIndexed = lookingForIndexed;
+        allowIndexed = allowIndexed;
     }
 
     void MkAndDrawChildNode(CMwNod@ nod, const string&in name) override {
-        ItemModelTreePicker(this, currentIndex, nod, name, callback, lookingFor, allowIndexed).Draw();
+        ItemModelTreePicker(this, currentIndex, nod, name, callback, lookingFor, lookingForIndexed, allowIndexed).Draw();
     }
 
+    string get_pickContainerLabel() { return "Copy Into"; }
+    string get_pickNodLabel() { return "Overwrite"; }
+
     void DrawPickable() override {
-        if (MyNodClassMatches() && UX::SmallButton("Pick")) {
-            callback(parent.nod, parent.currentIndex, nod, currentIndex);
+        bool matchContainer = MyNodClassMatches();
+        bool matchNod = MyNodClassMatches(true);
+        if (matchContainer && UX::SmallButton(pickContainerLabel)) {
+            callback(null, -1, nod, currentIndex);
+        }
+        if (matchNod) {
+            if (matchContainer)
+                UI::SameLine();
+            if (UX::SmallButton(pickNodLabel)) {
+                callback(parent.nod, parent.currentIndex, nod, currentIndex);
+            }
         }
     }
 
-    bool MyNodClassMatches() {
+    bool MyNodClassMatches(bool needsParent = false) {
         if (!allowIndexed && currentIndex >= 0) return false;
+        if (needsParent) {
+            return lookingForIndexed is null || lookingForIndexed.Find(classId) >= 0;
+        }
         return lookingFor is null || lookingFor.Find(classId) >= 0;
+    }
+}
+
+class ItemModelTreePickerSource : ItemModelTreePicker {
+    ItemModelTreePickerSource(ItemModelTreePicker@ parent, int parentIx, CMwNod@ nod, const string &in name, EntityPickerCB@ cb, uint[]@ lookingFor, uint[]@ lookingForIndexed, bool allowIndexed) {
+        super(parent, parentIx, nod, name, cb, lookingFor, lookingForIndexed, allowIndexed);
+    }
+
+    string get_pickContainerLabel() override property {
+        return "Use children";
+    }
+    string get_pickNodLabel() override property {
+        return "Use this";
+    }
+    void MkAndDrawChildNode(CMwNod@ nod, const string&in name) override {
+        ItemModelTreePickerSource(this, currentIndex, nod, name, callback, lookingFor, lookingForIndexed, allowIndexed).Draw();
     }
 }
 

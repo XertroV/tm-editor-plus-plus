@@ -123,6 +123,12 @@ class ReferencedNod {
     NPlugItem_SVariantList@ As_NPlugItem_SVariantList() {
         return cast<NPlugItem_SVariantList>(this.nod);
     }
+    CPlugSolid2Model@ As_CPlugSolid2Model() {
+        return cast<CPlugSolid2Model>(this.nod);
+    }
+    CPlugSurface@ As_CPlugSurface() {
+        return cast<CPlugSurface>(this.nod);
+    }
 
 
 }
