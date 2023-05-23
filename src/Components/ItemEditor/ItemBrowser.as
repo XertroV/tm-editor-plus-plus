@@ -66,8 +66,9 @@ class ItemModelTreeElement {
     uint classId = 0x1001000; // CMwNod
 
     int currentIndex = -1;
+    bool hasElements = false;
 
-    CPlugStaticObjectModel@ so;
+    CPlugStaticObjectModel@ staticObj;
     CPlugPrefab@ prefab;
     NPlugItem_SVariantList@ varList;
     CPlugFxSystem@ fxSys;
@@ -90,7 +91,7 @@ class ItemModelTreeElement {
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
         this.drawProperties = drawProperties;
-        @this.so = cast<CPlugStaticObjectModel>(nod);
+        @this.staticObj = cast<CPlugStaticObjectModel>(nod);
         @this.prefab = cast<CPlugPrefab>(nod);
         @this.varList = cast<NPlugItem_SVariantList>(nod);
         @this.fxSys = cast<CPlugFxSystem>(nod);
@@ -124,8 +125,8 @@ class ItemModelTreeElement {
         currentIndex = -1;
         if (nod is null) {
             UI::Text(name + " :: \\$f8fnull");
-        } else if (so !is null) {
-            Draw(so);
+        } else if (staticObj !is null) {
+            Draw(staticObj);
         } else if (prefab !is null) {
             Draw(prefab);
         } else if (varList !is null) {
@@ -166,6 +167,7 @@ class ItemModelTreeElement {
         }
     }
     void Draw(CPlugPrefab@ prefab) {
+        hasElements = true;
         if (StartTreeNode(name + " :: \\$f8fCPlugPrefab", UI::TreeNodeFlags::DefaultOpen)) {
             UI::Text("nbEnts: " + prefab.Ents.Length);
             for (uint i = 0; i < prefab.Ents.Length; i++) {
@@ -187,6 +189,7 @@ class ItemModelTreeElement {
         }
     }
     void Draw(NPlugItem_SVariantList@ varList) {
+        hasElements = true;
         if (StartTreeNode(name + " :: \\$f8fNPlugItem_SVariantList", UI::TreeNodeFlags::DefaultOpen)) {
             UI::Text("nbVariants: " + varList.Variants.Length);
             for (uint i = 0; i < varList.Variants.Length; i++) {
@@ -521,8 +524,93 @@ void Draw_NPlugDyna_SAnimFunc01(CMwNod@ nod, uint16 offset) {
     }
 }
 
+enum ModelTargetType {
+    None = 0,
+    // like itemModel.EntityModel, or StaticObj.Mesh
+    DirectChild = 1,
+    // like variantList.Variant[i].Model
+    IndirectChild = 2,
+    AnyChild_AndTest = 3,
+    // like variantList.Variant[i]
+    ArrayElement = 4,
+    // for replacing Mesh+Shape
+    AllChildren = 8,
+    Any_AndTest = 15,
+}
 
-funcdef void EntityPickerCB(CMwNod@ parent, int parentIndex, CMwNod@ nod, int index);
+class ItemModelTarget {
+    /**
+     * Entity: Prefab + Index
+     * Entity.Model: Prefab + Index + Model
+     * VarList: ItemModel + VarList
+     * Variant: VarList + Index
+     * Variant.Model: VarList + Index + Model
+     * DynaObj: VarList + Index + DynaObj
+     * DynaObj Children: DynaObj
+     */
+    bool usePIndex = false;
+    bool useCIndex = false;
+    bool useChild;
+    int pIndex = -1;
+    int cIndex = -1;
+    ReferencedNod@ parent;
+    ReferencedNod@ child;
+    ModelTargetType ty;
+    ItemModelTarget(CMwNod@ parent) {
+        ty = ModelTargetType::AllChildren;
+        @this.parent = ReferencedNod(parent);
+    }
+    ItemModelTarget(CMwNod@ parent, int parentIx) {
+        ty = ModelTargetType::ArrayElement;
+        @this.parent = ReferencedNod(parent);
+        pIndex = parentIx;
+    }
+    ItemModelTarget(CMwNod@ parent, int parentIx, CMwNod@ child) {
+        ty = ModelTargetType::IndirectChild;
+        @this.parent = ReferencedNod(parent);
+        pIndex = parentIx;
+        @this.child = ReferencedNod(child);
+    }
+    ItemModelTarget(CMwNod@ parent, CMwNod@ child) {
+        ty = ModelTargetType::DirectChild;
+        @this.parent = ReferencedNod(parent);
+        @this.child = ReferencedNod(child);
+    }
+    ~ItemModelTarget() {
+    }
+    const string get_TypeName() {
+        if (parent is null || parent.nod is null) return "None";
+        if (child !is null) {
+            return child.TypeName;
+        }
+        if (pIndex >= 0) {
+            if (parent.TypeName == "NPlugItem_SVariantList") {
+                return "NPlugItem_SVariant";
+            } else if (parent.TypeName == "CPlugPrefab") {
+                return "NPlugPrefab_SEntRef";
+            }
+            return "Element of " + parent.TypeName;
+        }
+        return parent.TypeName;
+    }
+    const string ToString() const {
+        if (parent is null || parent.nod is null) return "None";
+        if (ty == ModelTargetType::AllChildren) return parent.TypeName + " (All Children)";
+        if (ty == ModelTargetType::DirectChild) return child.TypeName + " (Direct)";
+        if (ty == ModelTargetType::IndirectChild) return child.TypeName + " (Indirect @ "+pIndex+")";
+        if (ty == ModelTargetType::ArrayElement) {
+            if (parent.TypeName == "NPlugItem_SVariantList") {
+                return "NPlugItem_SVariant @ " + pIndex;
+            } else if (parent.TypeName == "CPlugPrefab") {
+                return "NPlugPrefab_SEntRef @ " + pIndex;
+            }
+            return "Element " + pIndex + " of " + parent.TypeName;
+        }
+        return "Unknown? " + tostring(ty);
+    }
+}
+
+funcdef void EntityPickerCB(ItemModelTarget@ target);
 
 uint[] EmptyLookingFor = {};
 
@@ -558,7 +646,11 @@ uint[] PrefabLookingForIx = {
 };
 uint[] StaticObjLookingForIx = PrefabLookingForIx;
 uint[] DynaObjectLookingForIx = PrefabLookingForIx;
-uint[] CommonIELookingForIx = PrefabLookingForIx;
+uint[] CommonIELookingForIx = {
+    Reflection::GetType("CPlugStaticObjectModel").ID,
+    Reflection::GetType("CPlugDynaObjectModel").ID,
+    Reflection::GetType("CPlugPrefab").ID,
+};
 uint[] Solid2ModelLookingForIx = {
     Reflection::GetType("CPlugSolid2Model").ID,
 };
@@ -566,69 +658,123 @@ uint[] SurfaceLookingForIx = {
     Reflection::GetType("CPlugSurface").ID,
 };
 
+
+class MatchModelType {
+    ModelTargetType ty;
+    uint[]@ classIds;
+    MatchModelType(ModelTargetType ty, uint[]@ classIds) {
+        this.ty = ty;
+        @this.classIds = classIds;
+    }
+
+    bool Match(CMwNod@ parent, int index) {
+        if (index < 0 || parent is null) return false;
+        return ty & ModelTargetType::ArrayElement != ModelTargetType::None
+            && classIds is null || classIds.Find(Reflection::TypeOf(parent).ID) >= 0;
+    }
+    bool Match(CMwNod@ parent, int index, CMwNod@ child) {
+        if (index < 0 || parent is null || child is null) return false;
+        return ty & ModelTargetType::IndirectChild != ModelTargetType::None
+            && classIds is null || classIds.Find(Reflection::TypeOf(child).ID) >= 0;
+    }
+    bool Match(CMwNod@ parent, CMwNod@ child) {
+        if (parent is null || child is null) return false;
+        return ty & ModelTargetType::DirectChild != ModelTargetType::None
+            && classIds is null || classIds.Find(Reflection::TypeOf(child).ID) >= 0;
+    }
+    bool Match(CMwNod@ parent) {
+        if (parent is null) return false;
+        return ty & ModelTargetType::AllChildren != ModelTargetType::None
+            && classIds is null || classIds.Find(Reflection::TypeOf(parent).ID) >= 0;
+    }
+}
+
+
 class ItemModelTreePicker : ItemModelTreeElement {
     EntityPickerCB@ callback;
+    // bool allowIndexed;
     // class IDs
-    uint[]@ lookingFor;
-    uint[]@ lookingForIndexed;
-    bool allowIndexed;
+    MatchModelType@ matcher;
 
-    ItemModelTreePicker(ItemModelTreePicker@ parent, int parentIx, CMwNod@ nod, const string &in name, EntityPickerCB@ cb, uint[]@ lookingFor, uint[]@ lookingForIndexed, bool allowIndexed) {
+    ItemModelTreePicker(ItemModelTreePicker@ parent, int parentIx, CMwNod@ nod, const string &in name, EntityPickerCB@ cb, MatchModelType@ matcher) {
         super(parent, parentIx, nod, name);
         isPicker = true;
         drawProperties = false;
         @callback = cb;
-        @this.lookingFor = lookingFor;
-        @this.lookingForIndexed = lookingForIndexed;
-        allowIndexed = allowIndexed;
+        @this.matcher = matcher;
+        // allowIndexed = allowIndexed;
     }
 
     void MkAndDrawChildNode(CMwNod@ nod, const string&in name) override {
-        ItemModelTreePicker(this, currentIndex, nod, name, callback, lookingFor, lookingForIndexed, allowIndexed).Draw();
+        ItemModelTreePicker(this, currentIndex, nod, name, callback, matcher).Draw();
     }
 
-    string get_pickContainerLabel() { return "Copy Into"; }
-    string get_pickNodLabel() { return "Overwrite"; }
+    string get_pickDirectChildLabel() { return "This Nod (Direct)"; }
+    string get_pickIndirectChildLabel() { return "This Nod (Indirect)"; }
+    string get_pickArrayElementLabel() { return "This Element"; }
+    string get_pickAllChildrenLabel() { return "All Children"; }
 
     void DrawPickable() override {
-        bool matchContainer = MyNodClassMatches();
-        bool matchNod = MyNodClassMatches(true);
-        if (matchContainer && UX::SmallButton(pickContainerLabel)) {
-            callback(null, -1, nod, currentIndex);
+        bool matchDirectChild = MyNodClassMatches(ModelTargetType::DirectChild);
+        bool matchIndirectChild = MyNodClassMatches(ModelTargetType::IndirectChild);
+        bool matchArrayElement = MyNodClassMatches(ModelTargetType::ArrayElement);
+        bool matchAllChildren = MyNodClassMatches(ModelTargetType::AllChildren);
+
+        bool sameLine = false;
+        if (matchDirectChild && UX::SmallButton(pickDirectChildLabel)) {
+            if (sameLine) UI::SameLine();
+            callback(ItemModelTarget(parent.nod, nod));
         }
-        if (matchNod) {
-            if (matchContainer)
-                UI::SameLine();
-            if (UX::SmallButton(pickNodLabel)) {
-                callback(parent.nod, parent.currentIndex, nod, currentIndex);
-            }
+        sameLine = sameLine || matchDirectChild;
+        if (matchIndirectChild && UX::SmallButton(pickIndirectChildLabel)) {
+            if (sameLine) UI::SameLine();
+            callback(ItemModelTarget(parent.nod, parent.currentIndex, nod));
         }
+        sameLine = sameLine || matchIndirectChild;
+        if (matchArrayElement && UX::SmallButton(pickArrayElementLabel)) {
+            if (sameLine) UI::SameLine();
+            callback(ItemModelTarget(nod, currentIndex));
+        }
+        sameLine = sameLine || matchArrayElement;
+        if (matchAllChildren && UX::SmallButton(pickAllChildrenLabel)) {
+            if (sameLine) UI::SameLine();
+            callback(ItemModelTarget(nod));
+        }
+        sameLine = sameLine || matchAllChildren;
     }
 
-    bool MyNodClassMatches(bool needsParent = false) {
-        if (!allowIndexed && currentIndex >= 0) return false;
-        if (needsParent) {
-            return lookingForIndexed is null || lookingForIndexed.Find(classId) >= 0;
+    bool MyNodClassMatches(ModelTargetType ty) {
+        if (matcher.ty & ty == ModelTargetType::None) return false;
+        if (ty == ModelTargetType::ArrayElement) {
+            return matcher.Match(nod, currentIndex);
+        } else if (ty == ModelTargetType::DirectChild) {
+            if (currentIndex >= 0 || parent is null || parent.currentIndex >= 0) return false;
+            return matcher.Match(parent.nod, nod);
+        } else if (ty == ModelTargetType::IndirectChild) {
+            if (currentIndex >= 0 || parent is null || parent.currentIndex < 0) return false;
+            return matcher.Match(parent.nod, parent.currentIndex, nod);
+        } else if (ty == ModelTargetType::AllChildren) {
+            if (hasElements) return false;
+            if (!SupportsAllChildren) return false;
+            return matcher.Match(nod);
         }
-        return lookingFor is null || lookingFor.Find(classId) >= 0;
+        return false;
+    }
+
+    bool get_SupportsAllChildren() {
+        return dynaObject !is null || staticObj !is null;
     }
 }
 
-class ItemModelTreePickerSource : ItemModelTreePicker {
-    ItemModelTreePickerSource(ItemModelTreePicker@ parent, int parentIx, CMwNod@ nod, const string &in name, EntityPickerCB@ cb, uint[]@ lookingFor, uint[]@ lookingForIndexed, bool allowIndexed) {
-        super(parent, parentIx, nod, name, cb, lookingFor, lookingForIndexed, allowIndexed);
-    }
+// class ItemModelTreePickerSource : ItemModelTreePicker {
+//     ItemModelTreePickerSource(ItemModelTreePicker@ parent, int parentIx, CMwNod@ nod, const string &in name, EntityPickerCB@ cb, ) {
+//         super(parent, parentIx, nod, name, cb, matcher, allowIndexed);
+//     }
 
-    string get_pickContainerLabel() override property {
-        return "Use children";
-    }
-    string get_pickNodLabel() override property {
-        return "Use this";
-    }
-    void MkAndDrawChildNode(CMwNod@ nod, const string&in name) override {
-        ItemModelTreePickerSource(this, currentIndex, nod, name, callback, lookingFor, lookingForIndexed, allowIndexed).Draw();
-    }
-}
+//     void MkAndDrawChildNode(CMwNod@ nod, const string&in name) override {
+//         ItemModelTreePickerSource(this, currentIndex, nod, name, callback, matcher, allowIndexed).Draw();
+//     }
+// }
 
 
 
