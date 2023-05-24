@@ -237,6 +237,7 @@ namespace MeshDuplication {
 
     void ZeroFidsUnknownModelNod(CMwNod@ nod) {
         if (nod is null) return;
+        auto itemModel = cast<CGameItemModel>(nod);
         auto so = cast<CPlugStaticObjectModel>(nod);
         auto prefab = cast<CPlugPrefab>(nod);
         auto fxSys = cast<CPlugFxSystem>(nod);
@@ -250,6 +251,8 @@ namespace MeshDuplication {
         auto commonIe = cast<CGameCommonItemEntityModel>(nod);
         if (so !is null) {
             ZeroFids(so);
+        } else if (itemModel !is null) {
+            ZeroChildFids(itemModel);
         } else if (prefab !is null) {
             ZeroFids(prefab);
         } else if (fxSys !is null) {

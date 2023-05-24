@@ -82,6 +82,7 @@ class ItemModelTreeElement {
     CGameCommonItemEntityModel@ cieModel;
     CPlugSurface@ surf;
     CPlugSolid2Model@ s2m;
+    CGameItemModel@ itemModel;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true) {
         @this.parent = parent;
@@ -91,6 +92,7 @@ class ItemModelTreeElement {
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
         this.drawProperties = drawProperties;
+        @this.itemModel = cast<CGameItemModel>(nod);
         @this.staticObj = cast<CPlugStaticObjectModel>(nod);
         @this.prefab = cast<CPlugPrefab>(nod);
         @this.varList = cast<NPlugItem_SVariantList>(nod);
@@ -127,6 +129,8 @@ class ItemModelTreeElement {
             UI::Text(name + " :: \\$f8fnull");
         } else if (staticObj !is null) {
             Draw(staticObj);
+        } else if (itemModel !is null) {
+            Draw(itemModel);
         } else if (prefab !is null) {
             Draw(prefab);
         } else if (varList !is null) {
@@ -158,6 +162,12 @@ class ItemModelTreeElement {
         }
     }
 
+    void Draw(CGameItemModel@ itemModel) {
+        if (StartTreeNode(name + " :: CGameItemModel", UI::TreeNodeFlags::DefaultOpen)) {
+            MkAndDrawChildNode(itemModel.EntityModel, "EntityModel");
+            EndTreeNode();
+        }
+    }
 
     void Draw(CPlugStaticObjectModel@ so) {
         if (StartTreeNode(name + " :: \\$f8fCPlugStaticObjectModel", UI::TreeNodeFlags::DefaultOpen)) {

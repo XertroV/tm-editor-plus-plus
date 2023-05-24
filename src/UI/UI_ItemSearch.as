@@ -63,7 +63,14 @@ class ItemSearcher {
         auto inv = Editor::GetInventoryCache();
         for (uint i = 0; i < inv.ItemPaths.Length; i++) {
             if (itemPath == inv.ItemPaths[i]) {
-                return inv.ItemInvNodes[i];
+                auto ret = inv.ItemInvNodes[i];
+                auto collector = ret.GetCollectorNod();
+                trace("Collector of type: " + UnkType(collector));
+                if (!ret.Article.IsLoaded) {
+                    ret.Article.Preload();
+                }
+                trace("Collector of type: " + UnkType(ret.GetCollectorNod()));
+                return ret;
             }
         }
         return null;

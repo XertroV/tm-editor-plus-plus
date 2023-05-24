@@ -21,12 +21,12 @@ class AboutTab : Tab {
 
  With additional thanks for miscellaneous contributions from:
 
+ * Chraz
  * BigthirstyTM
  * SBVille
  * TNTree
  * Zai
  * Nightroast
- * Chraz
  * TMTOM
 
         """);

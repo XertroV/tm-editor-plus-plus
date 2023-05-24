@@ -73,6 +73,8 @@ class ItemEditCloneLayoutTab : Tab {
 
     string[] SampleGameItemNames = {"Flag8m", "Screen1x1", "Screen2x1", "Screen2x1Small", "RoadSign", "Lamp", "LightTubeSmall8m", "TunnelSupportArch8m", "ObstaclePillar2m", "CypressTall", "CactusMedium", "CactusVerySmall"};
 
+    ItemSearcher@ itemPicker = ItemSearcher();
+
     void DrawInner() override {
         UI::TextWrapped("Custom items can be used with layouts by replacing the custom item's layout with one from a Nadeo object (e.g., flags, or signs).");
         UI::TextWrapped("\\$f80Important!\\$z Once you save the item and return to the editor, you \\$<\\$f80*cannot re-enter the editor, and must restart the game*\\$>. Reloading from disk *might* work, but didn't seem to during testing. Without restarting the game, you will get a crash when loading back into the editor.");
@@ -81,12 +83,19 @@ class ItemEditCloneLayoutTab : Tab {
             UI::Text(noItemError);
         } else if (TmpItemPlacementRef is null) {
             UI::AlignTextToFramePadding();
-            UI::Text("Replace layout of " + currentItem.IdName);
-            for (uint i = 0; i < SampleGameItemNames.Length; i++) {
-                if (UI::Button("With layout from " + SampleGameItemNames[i])) {
-                    SetCustomPlacementParams(currentItem, SampleGameItemNames[i]);
-                }
+            UI::Text("Replace layout of " + currentItem.IdName + " (destination item)");
+            UI::AlignTextToFramePadding();
+            UI::Text("Choose a source item for the placement layout:");
+            auto picked = itemPicker.DrawPrompt();
+            if (picked !is null) {
+                SetCustomPlacementParams(currentItem, cast<CGameItemModel>(picked.Article.LoadedNod));
             }
+
+            // for (uint i = 0; i < SampleGameItemNames.Length; i++) {
+            //     if (UI::Button("With layout from " + SampleGameItemNames[i])) {
+            //         SetCustomPlacementParams(currentItem, SampleGameItemNames[i]);
+            //     }
+            // }
         } else {
             UI::TextWrapped("Layout replaced. Please save the item and return to the main Editor.");
         }
@@ -100,22 +109,30 @@ class ItemEditCloneLayoutTab : Tab {
             return;
         }
         auto item = Editor::FindItemByName(nadeoItemName);
-        if (item !is null) {
-            trace('getting tmp item placement ref');
-            @TmpItemPlacementRef = ReferencedNod(item.DefaultPlacementParam_Content);
-            trace('add ref to current');
-            currentItem.DefaultPlacementParam_Content.MwAddRef();
-            trace('set current to other');
-            @currentItem.DefaultPlacementParam_Content = item.DefaultPlacementParam_Content;
-            trace('getting fid');
-            auto fidPointer = Dev::GetOffsetUint64(currentItem.DefaultPlacementParam_Content, 0x8);
-            print("Zeroing Fid: " + Text::FormatPointer(fidPointer));
-            Dev::SetOffset(currentItem.DefaultPlacementParam_Content, 0x8, uint64(0));
-            NotifyWarning("Item layout successfully replaced. Please save the item.");
-            startnew(CoroutineFunc(WaitForLeftItemEditor));
-        } else {
+        if (item is null) {
             NotifyWarning("Could not find item: " + nadeoItemName);
+            return;
         }
+        SetCustomPlacementParams(currentItem, item);
+    }
+
+    void SetCustomPlacementParams(CGameItemModel@ currentItem, CGameItemModel@ sourceItem) {
+        if (sourceItem is null) {
+            NotifyWarning("Source item for placement params was null");
+            return;
+        }
+        trace('getting tmp item placement ref');
+        @TmpItemPlacementRef = ReferencedNod(sourceItem.DefaultPlacementParam_Content);
+        trace('add ref to current');
+        currentItem.DefaultPlacementParam_Content.MwAddRef();
+        trace('set current to other');
+        @currentItem.DefaultPlacementParam_Content = sourceItem.DefaultPlacementParam_Content;
+        trace('getting fid');
+        auto fidPointer = Dev::GetOffsetUint64(currentItem.DefaultPlacementParam_Content, 0x8);
+        print("Zeroing Fid: " + Text::FormatPointer(fidPointer));
+        Dev::SetOffset(currentItem.DefaultPlacementParam_Content, 0x8, uint64(0));
+        NotifyWarning("Item layout successfully replaced. Please save the item.");
+        startnew(CoroutineFunc(WaitForLeftItemEditor));
     }
 
     void WaitForLeftItemEditor() {

@@ -76,7 +76,7 @@ class IE_ManipulateMeshesTab : Tab {
             // if (UI::Button("Pick ItemModel")) {
             //     OnPickedDest(ItemModelTarget(item));
             // }
-            auto picker = ItemModelTreePicker(null, -1, item.EntityModel, "EntityModel", EntityPickerCB(OnPickedDest), MatchModelType(ModelTargetType::Any_AndTest, null));
+            auto picker = ItemModelTreePicker(null, -1, item, "EntityModel", EntityPickerCB(OnPickedDest), MatchModelType(ModelTargetType::Any_AndTest, null));
             picker.Draw();
         }
         UI::EndChild();
@@ -98,7 +98,7 @@ class IE_ManipulateMeshesTab : Tab {
             // if (UI::Button("Pick ItemModel")) {
             //     OnPickedSource(ItemModelTarget(item));
             // }
-            auto picker = ItemModelTreePicker(null, -1, item.EntityModel, "EntityModel", EntityPickerCB(OnPickedSource), lookingFor);
+            auto picker = ItemModelTreePicker(null, -1, item, "EntityModel", EntityPickerCB(OnPickedSource), lookingFor);
             picker.Draw();
         }
         UI::EndChild();
@@ -246,7 +246,6 @@ class IE_ManipulateMeshesTab : Tab {
 
     ItemSearcher@ itemPicker = ItemSearcher();
 
-    uint m_skipNumber = 0;
     void DrawSelectSouceItem() {
         UI::Text("Select \\$f80source\\$z item (the destination item is the one you're editing)");
         auto picked = itemPicker.DrawPrompt();
