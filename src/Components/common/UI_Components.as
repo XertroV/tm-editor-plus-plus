@@ -92,6 +92,7 @@ shared int DrawArbitraryEnum(const string &in label, int val, int nbVals, EnumTo
     return val;
 }
 
+
 CGameEditorPluginMap::ECardinalDirections DrawComboECardinalDir(const string &in label, CGameEditorPluginMap::ECardinalDirections val) {
     return CGameEditorPluginMap::ECardinalDirections(
         DrawArbitraryEnum(label, int(val), 4, function(int v) {

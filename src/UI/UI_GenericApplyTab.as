@@ -14,7 +14,7 @@ shared SourceSelection DrawComboSourceSelection(const string &in label, SourceSe
 
 
 // todo, make shared
-class GenericApplyTab : Tab {
+class GenericApplyTab : EffectTab {
     GenericApplyTab(TabGroup@ p, const string &in name, const string &in icon) {
         super(p, name, icon);
         startnew(CoroutineFunc(WatchFilterForUpdate));

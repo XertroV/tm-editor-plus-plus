@@ -230,6 +230,7 @@ TabGroup@ CreateRootTabGroup() {
     DissociateItemsTab(root);
     JitterEffectTab(root);
     ColorApplyTab(root);
+    PhaseOffsetApplyTab(root);
     // ApplyTranslationTab(root);
 
     RandomizerEffectsTab(root);
