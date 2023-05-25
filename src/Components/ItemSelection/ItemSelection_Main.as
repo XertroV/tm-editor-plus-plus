@@ -124,8 +124,8 @@ class ItemSelection_DevTab : Tab {
         CopiableLabeledValue("Pri Path", p1);
         CopiableLabeledValue("Sec Path", p2);
         if (UI::BeginTable("skintable", 4, UI::TableFlags::SizingStretchProp)) {
-            UI::TableSetupColumn("Replace");
-            UI::TableSetupColumn("With");
+            UI::TableSetupColumn("Use");
+            UI::TableSetupColumn("To Replace");
             UI::TableSetupColumn("ClassID");
             UI::TableSetupColumn("Unk");
             UI::TableHeadersRow();

@@ -73,9 +73,6 @@ class IE_ManipulateMeshesTab : Tab {
         UI::Indent();
         if (UI::BeginChild("pick dest nod")) {
             auto item = GetItemModel();
-            // if (UI::Button("Pick ItemModel")) {
-            //     OnPickedDest(ItemModelTarget(item));
-            // }
             auto picker = ItemModelTreePicker(null, -1, item, "EntityModel", EntityPickerCB(OnPickedDest), MatchModelType(ModelTargetType::Any_AndTest, null));
             picker.Draw();
         }
@@ -95,9 +92,6 @@ class IE_ManipulateMeshesTab : Tab {
         UI::Indent();
         if (UI::BeginChild("pick src nod")) {
             auto item = GetInventorySelectionModel();
-            // if (UI::Button("Pick ItemModel")) {
-            //     OnPickedSource(ItemModelTarget(item));
-            // }
             auto picker = ItemModelTreePicker(null, -1, item, "EntityModel", EntityPickerCB(OnPickedSource), lookingFor);
             picker.Draw();
         }
@@ -278,6 +272,16 @@ class IE_ManipulateMeshesTab : Tab {
             if (UI::Button("Back to start")) {
                 OnReset();
             }
+
+            // if (UI::Button("Set ItemModel Properties")) {
+            //     MeshDuplication::FixItemModelProperties(GetItemModel(), GetInventorySelectionModel());
+            //     AppendRunMsg("Set item model properties from source.");
+            // }
+            // UI::SameLine();
+            // if (UI::Button("")) {
+            //     MeshDuplication::FixItemModelProperties(GetItemModel(), GetInventorySelectionModel());
+            //     AppendRunMsg("Set item model properties from source.");
+            // }
             return;
         }
 
@@ -301,6 +305,12 @@ class IE_ManipulateMeshesTab : Tab {
             return;
         }
 
+
+        auto model = cast<CGameItemModel>(selectedInvNode.GetCollectorNod());
+        if (model !is null && model.MaterialModifier !is null) {
+            MeshDuplication::PushMaterialModifier(model.MaterialModifier);
+        }
+
         if (isOverwriteChild) {
             _RunReplaceChild();
         } else if (source.ty == ModelTargetType::ArrayElement) {
@@ -310,6 +320,11 @@ class IE_ManipulateMeshesTab : Tab {
         } else {
             AppendRunMsg("\\$f80Error: not sure how to process source type of " + tostring(source.ty));
         }
+
+        MeshDuplication::PopMaterialModifier();
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        // refreshes mesh in editor
+        ieditor.AddEmptyMesh();
     }
 
     protected void AppendRunMsg(const string &in msg) {
@@ -340,12 +355,14 @@ class IE_ManipulateMeshesTab : Tab {
             bool success = false
                 || (dest.parent.TypeName == "CPlugDynaObjectModel" && _RunReplaceChild(dest.parent.As_CPlugDynaObjectModel()))
                 || (dest.parent.TypeName == "CPlugStaticObjectModel" && _RunReplaceChild(dest.parent.As_CPlugStaticObjectModel()))
+                || (dest.parent.TypeName == "CGameItemModel" && _RunReplaceChild(dest.parent.AsItemModel()))
                 ;
             if (!success)
                 return UnknownDestSourceImplementation();
         }
         source.child.nod.MwAddRef();
         AppendRunMsg("\\$8f8Replacement completed.\\$z Please save the item.");
+
         return true;
     }
 
@@ -377,6 +394,14 @@ class IE_ManipulateMeshesTab : Tab {
             return UnknownDestSourceImplementation();
         }
         return changed;
+    }
+    bool _RunReplaceChild(CGameItemModel@ model) {
+        if (@model.EntityModel == @dest.child.nod) {
+            Dev::SetOffset(model, GetOffset(model, "EntityModel"), source.child.nod);
+        } else {
+            return UnknownDestSourceImplementation();
+        }
+        return true;
     }
 
 

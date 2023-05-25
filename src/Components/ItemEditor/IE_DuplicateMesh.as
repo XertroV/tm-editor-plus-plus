@@ -9,6 +9,20 @@ namespace MeshDuplication {
         return true;
     }
 
+    CPlugGameSkinAndFolder@ matMod = null;
+    void PushMaterialModifier(CPlugGameSkinAndFolder@ mm) {
+        if (matMod !is null) throw('already have a material modifier');
+        if (mm is null) return;
+        @matMod = mm;
+        matMod.MwAddRef();
+    }
+
+    void PopMaterialModifier() {
+        if (matMod is null) return;
+        matMod.MwRelease();
+        @matMod = null;
+    }
+
     void ZeroChildFids(CGameItemModel@ model) {
         // no need to change anything on the model itself,
         // but we want to zero all the fids and dependencies of children,
@@ -106,6 +120,7 @@ namespace MeshDuplication {
     }
 
     void ZeroFids(CPlugPrefab@ prefab) {
+        ApplyMaterialMods(prefab);
         ZeroNodFid(prefab);
         for (uint i = 0; i < prefab.Ents.Length; i++) {
             if (prefab.Ents[i].ModelFid !is null) {
@@ -170,6 +185,7 @@ namespace MeshDuplication {
     }
 
     void ZeroFids(CPlugSolid2Model@ mesh) {
+        ApplyMaterialMods(mesh);
         ZeroNodFid(mesh);
         FixMatsOnMesh(mesh);
         FixLightsOnMesh(mesh);
@@ -228,10 +244,10 @@ namespace MeshDuplication {
 
     void ZeroFids(CPlugGameSkinAndFolder@ gsaf) {
         ZeroNodFid(gsaf);
-        ZeroNodFid(gsaf.Remapping);
-        trace('zeroing game skin and folder');
-        Dev::SetOffset(gsaf, GetOffset("CPlugGameSkinAndFolder", "RemapFolder"), uint64(0));
-        trace('done zeroing game skin and folder');
+        // ZeroNodFid(gsaf.Remapping);
+        // trace('zeroing game skin and folder');
+        // Dev::SetOffset(gsaf, GetOffset("CPlugGameSkinAndFolder", "RemapFolder"), uint64(0));
+        // trace('done zeroing game skin and folder');
     }
 
 
@@ -494,6 +510,7 @@ namespace MeshDuplication {
             dest.SkinDirNameCustom = dest.SkinDirectory;
         }
 
+        // not sure if material modifiers are possible on custom items, cannot save
         // if (source.MaterialModifier !is null) {
         //     trace('mat modifier !is null, setting');
         //     source.MaterialModifier.MwAddRef();
@@ -503,21 +520,89 @@ namespace MeshDuplication {
         //     trace('no mat modifier');
         // }
 
-        // we can't use material modifiers it seems
-        // so the solution is to interpret the modifications and apply those
-        if (source.MaterialModifier !is null) {
-            auto mm = source.MaterialModifier;
-            auto remapSkin = mm.Remapping;
-            auto mods = mm.RemapFolder;
-            if (mods !is null) {
-                for (uint i = 0; i < mods.Leaves.Length; i++) {
-                    auto item = mods.Leaves[i];
+        // // we can't use material modifiers it seems
+        // // so the solution is to interpret the modifications and apply those
+        // if (source.MaterialModifier !is null) {
+        //     auto mm = source.MaterialModifier;
+        //     auto remapSkin = mm.Remapping;
+        //     auto mods = mm.RemapFolder;
+        //     if (mods !is null) {
+        //         for (uint i = 0; i < mods.Leaves.Length; i++) {
+        //             auto item = mods.Leaves[i];
+        //         }
+        //     } else {
+        //         trace('mm.RemapFolder is null');
+        //     }
+        // }
+    }
 
-                }
-            } else {
-                trace('mm.RemapFolder is null');
+    bool enableReplaceMatsViaMatMod = false;
+
+    void ApplyMaterialMods(CPlugSolid2Model@ mesh) {
+        if (!enableReplaceMatsViaMatMod) return;
+        if (matMod is null) return;
+        // check materials
+        trace('applying mat mods to mesh');
+        auto matBufFakeNod = Dev::GetOffsetNod(mesh, 0xC8);
+        auto nbMats = Dev::GetOffsetUint32(mesh, 0xC8 + 0x8);
+        auto alloc = Dev::GetOffsetUint32(mesh, 0xC8 + 0xC);
+        for (uint i = 0; i < Math::Min(nbMats, alloc); i++) {
+            auto mat = cast<CPlugMaterial>(Dev::GetOffsetNod(matBufFakeNod, i * 0x8));
+            auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(mat, 0x8));
+            auto newMat = MatMod_FidToReplacement(fid);
+            if (newMat !is null) {
+                trace('applying setting new mat ['+i+']: ' + string(newMat.FileName));
+                Dev::SetOffset(matBufFakeNod, i * 0x8, newMat.Nod);
+                newMat.Nod.MwAddRef();
             }
         }
+        trace('applied mat mods to mesh');
+    }
+
+    void ApplyMaterialMods(CPlugPrefab@ prefab) {
+        if (!enableReplaceMatsViaMatMod) return;
+        if (matMod is null) return;
+        // check materials
+        trace('applying mat mods to prefab');
+        for (uint i = 0; i < prefab.Ents.Length; i++) {
+            if (prefab.Ents[i].ModelFid is null) continue;
+            auto newFid = MatMod_FidToReplacement(prefab.Ents[i].ModelFid);
+            if (newFid is null) continue;
+            if (newFid !is null) {
+                trace('applying setting new model to  Ents['+i+']: ' + string(newFid.FileName));
+                SetEntRefModel(prefab, i, newFid.Nod);
+            }
+        }
+        trace('applied mat mods to prefab');
+    }
+
+    CSystemFidFile@ MatMod_FidToReplacement(CSystemFidFile@ fid) {
+        if (fid is null) return null;
+        auto skin = matMod.Remapping;
+        auto fidBuf = Dev::GetOffsetNod(skin, 0x58);
+        auto fidBufC = Dev::GetOffsetUint32(skin, 0x58 + 0x8);
+        auto strBuf = Dev::GetOffsetNod(skin, 0x68);
+        string replacementName = "";
+        for (uint i = 0; i < fidBufC; i++) {
+            auto skinFid = cast<CSystemFidFile>(Dev::GetOffsetNod(fidBuf, 0x8 * i));
+            if (skinFid !is null && string(fid.FileName) == string(skinFid.FileName)) {
+                // found index
+                replacementName = Dev::GetOffsetString(strBuf, 0x10 * i);
+                break;
+            }
+        }
+        if (replacementName.Length == 0) return null;
+        for (uint i = 0; i < matMod.RemapFolder.Leaves.Length; i++) {
+            auto remapFid = matMod.RemapFolder.Leaves[i];
+            if (replacementName == string(remapFid.ShortFileName)) {
+                if (remapFid.Nod is null) {
+                    NotifyWarning("Material Modifiers found null fid nod: " + remapFid.FileName + ". Loading...");
+                    Fids::Preload(remapFid);
+                }
+                return remapFid;
+            }
+        }
+        return null;
     }
 }
 
