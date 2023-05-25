@@ -89,6 +89,11 @@ class IE_ManipulateMeshesTab : Tab {
             UI::Text("\\$f80Warning, no compatible selections for selected destination.");
         }
 
+        if (dest.IsAnyChild && UI::Button("Null Source (nullifies destination nod)")) {
+            // null
+            OnPickedSource(ItemModelTarget());
+        }
+
         UI::Indent();
         if (UI::BeginChild("pick src nod")) {
             auto item = GetInventorySelectionModel();
@@ -141,19 +146,29 @@ class IE_ManipulateMeshesTab : Tab {
                     Reflection::GetType("CPlugStaticObjectModel").ID,
                     Reflection::GetType("CPlugDynaObjectModel").ID,
                     Reflection::GetType("NPlugItem_SVariantList").ID,
+                    Reflection::GetType("NPlugDyna_SKinematicConstraint").ID,
                 };
             } else if (dest.child.As_CPlugStaticObjectModel() !is null
                     || dest.child.As_CPlugDynaObjectModel() !is null
+                    || dest.child.As_NPlugDyna_SKinematicConstraint() !is null
             ) {
                 @clsIds = {
                     Reflection::GetType("CPlugPrefab").ID,
                     Reflection::GetType("CPlugStaticObjectModel").ID,
                     Reflection::GetType("CPlugDynaObjectModel").ID,
+                    Reflection::GetType("NPlugDyna_SKinematicConstraint").ID,
                 };
             } else if (dest.child.As_CGameCommonItemEntityModel() !is null) {
                 @clsIds = {
                     Reflection::GetType("CPlugPrefab").ID,
                     Reflection::GetType("NPlugItem_SVariantList").ID,
+                    Reflection::GetType("CGameCommonItemEntityModel").ID,
+                };
+            } else if (dest.child.As_NPlugItem_SVariantList() !is null) {
+                @clsIds = {
+                    Reflection::GetType("CPlugPrefab").ID,
+                    Reflection::GetType("NPlugItem_SVariantList").ID,
+                    Reflection::GetType("CGameCommonItemEntityModel").ID,
                 };
             } else if (dest.child.As_CPlugSolid2Model() !is null) {
                 @clsIds = {
@@ -163,8 +178,16 @@ class IE_ManipulateMeshesTab : Tab {
                 @clsIds = {
                     Reflection::GetType("CPlugSurface").ID,
                 };
-            // } else if (dest.child.As_CGameCommonItemEntityModel() !is null) {
-            //     // @lookingFor = CommonIELookingFor;
+            } else if (dest.child.nod is null) {
+                @clsIds = {
+                    Reflection::GetType("CPlugSurface").ID,
+                    Reflection::GetType("CPlugSolid2Model").ID,
+                    Reflection::GetType("CPlugPrefab").ID,
+                    Reflection::GetType("NPlugItem_SVariantList").ID,
+                    Reflection::GetType("CPlugStaticObjectModel").ID,
+                    Reflection::GetType("CPlugDynaObjectModel").ID,
+                    Reflection::GetType("NPlugDyna_SKinematicConstraint").ID,
+                };
             // } else if (dest.child.As_NPlugItem_SVariantList() !is null) {
             //     // @lookingFor = VariantListLookingFor;
             // } else if (dest.child.As_CPlugSolid2Model() !is null) {
@@ -297,8 +320,8 @@ class IE_ManipulateMeshesTab : Tab {
         }
         bool isOverwriteChild = source.ty | dest.ty == ModelTargetType::AnyChild_AndTest
             || (source.ty == dest.ty
-                && source.ty & ModelTargetType::AnyChild_AndTest != ModelTargetType::None
-            );
+                && (source.ty & ModelTargetType::AnyChild_AndTest != ModelTargetType::None)
+            ) || (dest.IsAnyChild && source.IsNull);
         if (source.ty != dest.ty && !isOverwriteChild) {
             AppendRunMsg("\\$f80Fatal error: incompatible source and destination target types");
             return;
@@ -334,18 +357,18 @@ class IE_ManipulateMeshesTab : Tab {
 
     protected bool _RunReplaceChild() {
         AppendRunMsg("started _RunReplaceChild");
-        MeshDuplication::ZeroFidsUnknownModelNod(dest.parent.nod);
-        MeshDuplication::ZeroFidsUnknownModelNod(source.parent.nod);
+        MeshDuplication::ZeroFidsUnknownModelNod(dest.GetParentNod());
+        MeshDuplication::ZeroFidsUnknownModelNod(source.GetParentNod());
         if (dest.ty == ModelTargetType::IndirectChild) {
             // prefab or varlist
             auto prefab = dest.parent.As_CPlugPrefab();
             auto varlist = dest.parent.As_NPlugItem_SVariantList();
             if (prefab !is null) {
                 // set entity model
-                MeshDuplication::SetEntRefModel(prefab, dest.pIndex, source.child.nod);
+                MeshDuplication::SetEntRefModel(prefab, dest.pIndex, source.GetChildNod());
             } else if (varlist !is null) {
                 // set variant model
-                MeshDuplication::SetVariantModel(varlist, dest.pIndex, source.child.nod);
+                MeshDuplication::SetVariantModel(varlist, dest.pIndex, source.GetChildNod());
             } else {
                 return UnknownDestSourceImplementation();
             }
@@ -355,51 +378,79 @@ class IE_ManipulateMeshesTab : Tab {
                 || (dest.parent.TypeName == "CPlugDynaObjectModel" && _RunReplaceChild(dest.parent.As_CPlugDynaObjectModel()))
                 || (dest.parent.TypeName == "CPlugStaticObjectModel" && _RunReplaceChild(dest.parent.As_CPlugStaticObjectModel()))
                 || (dest.parent.TypeName == "CGameItemModel" && _RunReplaceChild(dest.parent.AsItemModel()))
+                || (dest.parent.TypeName == "CGameCommonItemEntityModel" && _RunReplaceChild(dest.parent.As_CGameCommonItemEntityModel()))
+                || (dest.parent.TypeName == "NPlugTrigger_SSpecial" && _RunReplaceChild(dest.parent.As_NPlugTrigger_SSpecial()))
                 ;
             if (!success)
                 return UnknownDestSourceImplementation();
         }
-        source.child.nod.MwAddRef();
+        if (source.GetChildNod() !is null) {
+            source.GetChildNod().MwAddRef();
+        }
         AppendRunMsg("\\$8f8Replacement completed.\\$z Please save the item.");
 
         return true;
     }
 
     bool _RunReplaceChild(CPlugStaticObjectModel@ staticObj) {
-        if (@staticObj.Mesh == @dest.child.nod) {
-            Dev::SetOffset(staticObj, GetOffset(staticObj, "Mesh"), source.child.nod);
-        } else if (@staticObj.Shape == @dest.child.nod) {
-            Dev::SetOffset(staticObj, GetOffset(staticObj, "Shape"), source.child.nod);
-        } else {
-            return UnknownDestSourceImplementation();
-        }
+        Dev::SetOffset(staticObj, dest.childOffset, source.GetChildNod());
         return true;
+        // if (@staticObj.Mesh == @dest.GetChildNod()) {
+        //     Dev::SetOffset(staticObj, GetOffset(staticObj, "Mesh"), source.GetChildNod());
+        // } else if (@staticObj.Shape == @dest.GetChildNod()) {
+        //     Dev::SetOffset(staticObj, GetOffset(staticObj, "Shape"), source.GetChildNod());
+        // } else {
+        //     return UnknownDestSourceImplementation();
+        // }
+        // return true;
     }
     bool _RunReplaceChild(CPlugDynaObjectModel@ dynObject) {
-        bool changed = false;
-        if (@dynObject.Mesh == @dest.child.nod) {
-            Dev::SetOffset(dynObject, GetOffset(dynObject, "Mesh"), source.child.nod);
-            changed = true;
-        }
-        if (@dynObject.DynaShape == @dest.child.nod) {
-            Dev::SetOffset(dynObject, GetOffset(dynObject, "DynaShape"), source.child.nod);
-            changed = true;
-        }
-        if (@dynObject.StaticShape == @dest.child.nod) {
-            Dev::SetOffset(dynObject, GetOffset(dynObject, "StaticShape"), source.child.nod);
-            changed = true;
-        }
-        if (!changed) {
-            return UnknownDestSourceImplementation();
-        }
-        return changed;
+        Dev::SetOffset(dynObject, dest.childOffset, source.GetChildNod());
+        return true;
+        // bool changed = false;
+        // if (@dynObject.Mesh == @dest.GetChildNod()) {
+        //     Dev::SetOffset(dynObject, GetOffset(dynObject, "Mesh"), source.GetChildNod());
+        //     changed = true;
+        // }
+        // if (@dynObject.DynaShape == @dest.GetChildNod()) {
+        //     Dev::SetOffset(dynObject, GetOffset(dynObject, "DynaShape"), source.GetChildNod());
+        //     changed = true;
+        // }
+        // if (@dynObject.StaticShape == @dest.GetChildNod()) {
+        //     Dev::SetOffset(dynObject, GetOffset(dynObject, "StaticShape"), source.GetChildNod());
+        //     changed = true;
+        // }
+        // if (!changed) {
+        //     return UnknownDestSourceImplementation();
+        // }
+        // return changed;
     }
     bool _RunReplaceChild(CGameItemModel@ model) {
-        if (@model.EntityModel == @dest.child.nod) {
-            Dev::SetOffset(model, GetOffset(model, "EntityModel"), source.child.nod);
-        } else {
-            return UnknownDestSourceImplementation();
-        }
+        Dev::SetOffset(model, dest.childOffset, source.GetChildNod());
+        // if (@model.EntityModel == @dest.GetChildNod()) {
+        //     Dev::SetOffset(model, GetOffset(model, "EntityModel"), source.GetChildNod());
+        // } else {
+        //     return UnknownDestSourceImplementation();
+        // }
+        return true;
+    }
+    bool _RunReplaceChild(CGameCommonItemEntityModel@ model) {
+        Dev::SetOffset(model, dest.childOffset, source.GetChildNod());
+        // if (@model.StaticObject == @dest.GetChildNod()) {
+        //     Dev::SetOffset(model, GetOffset(model, "StaticObject"), source.GetChildNod());
+        // } else if (@model.PhyModel == @dest.GetChildNod()) {
+        //     Dev::SetOffset(model, GetOffset(model, "PhyModel"), source.GetChildNod());
+        // } else if (@model.TriggerShape == @dest.GetChildNod()) {
+        //     Dev::SetOffset(model, GetOffset(model, "TriggerShape"), source.GetChildNod());
+        // } else if (@model.VisModel == @dest.GetChildNod()) {
+        //     Dev::SetOffset(model, GetOffset(model, "VisModel"), source.GetChildNod());
+        // } else {
+        //     return UnknownDestSourceImplementation();
+        // }
+        return true;
+    }
+    bool _RunReplaceChild(NPlugTrigger_SSpecial@ ss) {
+        Dev::SetOffset(ss, dest.childOffset, source.GetChildNod());
         return true;
     }
 
@@ -407,15 +458,15 @@ class IE_ManipulateMeshesTab : Tab {
 
     protected void _RunReplaceElement() {
         AppendRunMsg("started _RunReplaceElement");
-
+        AppendRunMsg("\\$f80Not yet implemented");
     }
 
 
 
     protected bool _RunReplaceChildren() {
         AppendRunMsg("started _RunReplaceChildren");
-        MeshDuplication::ZeroFidsUnknownModelNod(dest.parent.nod);
-        MeshDuplication::ZeroFidsUnknownModelNod(source.parent.nod);
+        MeshDuplication::ZeroFidsUnknownModelNod(dest.GetParentNod());
+        MeshDuplication::ZeroFidsUnknownModelNod(source.GetParentNod());
         AppendRunMsg("zeroed FIDs");
         auto destDyna = dest.parent.As_CPlugDynaObjectModel();
         auto destStatic = dest.parent.As_CPlugStaticObjectModel();
@@ -461,7 +512,7 @@ class IE_ManipulateMeshesTab : Tab {
 
 
     bool UnknownDestSourceImplementation() {
-        AppendRunMsg("\\$f80Error: no implementation for combination.\\$z Source: " + source.ToString() + " / Destination: " + dest.ToString());
+        AppendRunMsg("\\$f80Error: no implementation for combination.\\$z Source: " + source.ToString() + " / Destination: " + dest.ToString() + " -- child of a "+UnkType(dest.GetParentNod()));
         return false;
     }
 

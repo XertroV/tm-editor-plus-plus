@@ -4,10 +4,12 @@ const uint16 IM_AuthorOffset = 0xA0;
 class ItemModel {
     CGameItemModel@ item;
     bool drawProperties;
-    ItemModel(CGameItemModel@ item, bool drawProperties = true) {
+    bool isEditable;
+    ItemModel(CGameItemModel@ item, bool drawProperties = true, bool isEditable = false) {
         @this.item = item;
         item.MwAddRef();
         this.drawProperties = drawProperties;
+        this.isEditable = isEditable;
     }
 
     ~ItemModel() {
@@ -50,7 +52,7 @@ class ItemModel {
     }
 
     void DrawEMTree() {
-        ItemModelTreeElement(null, -1, item.EntityModel, "EntityModel", drawProperties).Draw();
+        ItemModelTreeElement(null, -1, item.EntityModel, "EntityModel", drawProperties, GetOffset(item, "EntityModel"), isEditable).Draw();
     }
 }
 
@@ -59,11 +61,14 @@ class ItemModelTreeElement {
     ItemModelTreeElement@ parent;
     int parentIx;
     CMwNod@ nod;
+    uint16 nodOffset = 0xFFFF;
     string name;
     bool drawProperties = true;
     // set to true by subclasses to disable some things.
     bool isPicker = false;
     uint classId = 0x1001000; // CMwNod
+
+    bool isEditable = false;
 
     int currentIndex = -1;
     bool hasElements = false;
@@ -84,14 +89,14 @@ class ItemModelTreeElement {
     CPlugSolid2Model@ s2m;
     CGameItemModel@ itemModel;
 
-    ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true) {
+    ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
         @this.parent = parent;
         this.parentIx = parentIx;
         @this.nod = nod;
+        this.nodOffset = nodOffset;
         this.name = name;
-        if (nod is null) return;
-        classId = Reflection::TypeOf(nod).ID;
         this.drawProperties = drawProperties;
+        this.isEditable = isEditable;
         @this.itemModel = cast<CGameItemModel>(nod);
         @this.staticObj = cast<CPlugStaticObjectModel>(nod);
         @this.prefab = cast<CPlugPrefab>(nod);
@@ -107,6 +112,26 @@ class ItemModelTreeElement {
         @this.cieModel = cast<CGameCommonItemEntityModel>(nod);
         @this.surf = cast<CPlugSurface>(nod);
         @this.s2m = cast<CPlugSolid2Model>(nod);
+        UpdateNodOffset();
+        if (nod is null) return;
+        classId = Reflection::TypeOf(nod).ID;
+    }
+
+    protected void UpdateNodOffset() {
+        if (nodOffset < 0xFFFF) return;
+        if (parent !is null and parentIx < 0) {
+            this.nodOffset = GetOffset(parent.nod, name);
+        } else if (parent !is null) {
+            if (cast<NPlugItem_SVariantList>(parent.nod) !is null) {
+                nodOffset = GetOffset("NPlugItem_SVariant", name);
+            } else if (cast<CPlugPrefab>(parent.nod) !is null) {
+                nodOffset = GetOffset("NPlugPrefab_SEntRef", name);
+            } else {
+                NotifyError("unknown parent type and parentIx >= 0");
+                NotifyError("parent type: " + UnkType(parent.nod));
+                throw("unknown parent type and parentIx >= 0");
+            }
+        }
     }
 
     // to be overloaded
@@ -115,7 +140,10 @@ class ItemModelTreeElement {
 
     // can be overloaded
     void MkAndDrawChildNode(CMwNod@ nod, const string &in name) {
-        ItemModelTreeElement(this, -1, nod, name, drawProperties).Draw();
+        ItemModelTreeElement(this, currentIndex, nod, name, drawProperties, 0xFFFF, isEditable).Draw();
+    }
+    void MkAndDrawChildNode(CMwNod@ nod, uint16 offset, const string &in name) {
+        ItemModelTreeElement(this, currentIndex, nod, name, drawProperties, offset, isEditable).Draw();
     }
 
 
@@ -127,6 +155,11 @@ class ItemModelTreeElement {
         currentIndex = -1;
         if (nod is null) {
             UI::Text(name + " :: \\$f8fnull");
+#if SIG_DEVELOPER
+            UI::SameLine();
+            UI::TextDisabled(Text::Format("0x%03x", nodOffset));
+#endif
+            DrawPickable();
         } else if (staticObj !is null) {
             Draw(staticObj);
         } else if (itemModel !is null) {
@@ -184,8 +217,13 @@ class ItemModelTreeElement {
                 currentIndex = i;
                 if (StartTreeNode(".Ents["+i+"]:", true)) {
                     if (drawProperties) {
-                        UI::Text(".Location.Quat: " + prefab.Ents[i].Location.Quat.ToString());
-                        UI::Text(".Location.Trans: " + prefab.Ents[i].Location.Trans.ToString());
+                        if (isEditable) {
+                            prefab.Ents[i].Location.Quat = UX::InputQuat(".Location.Quat", prefab.Ents[i].Location.Quat);
+                            prefab.Ents[i].Location.Trans = UI::InputFloat3(".Location.Trans", prefab.Ents[i].Location.Trans);
+                        } else {
+                            CopiableLabeledValue(".Location.Quat", prefab.Ents[i].Location.Quat.ToString());
+                            CopiableLabeledValue(".Location.Trans", prefab.Ents[i].Location.Trans.ToString());
+                        }
                         DrawPrefabEntParams(prefab, i);
                     }
                     MkAndDrawChildNode(prefab.Ents[i].Model, "Model");
@@ -288,23 +326,27 @@ class ItemModelTreeElement {
     void Draw(NPlugDyna_SKinematicConstraint@ kc) {
         if (StartTreeNode(name + " :: \\$f8fNPlugDyna_SKinematicConstraint", UI::TreeNodeFlags::DefaultOpen)) {
             if (drawProperties) {
-                auto tmp = kc;
-                UI::Text("TransAxis: " + tostring(tmp.TransAxis));
-                UI::Text("TransMin: " + tostring(tmp.TransMin));
-                UI::Text("TransMax: " + tostring(tmp.TransMax));
-                UI::Text("RotAxis: " + tostring(tmp.RotAxis));
-                UI::Text("AngleMinDeg: " + tostring(tmp.AngleMinDeg));
-                UI::Text("AngleMaxDeg: " + tostring(tmp.AngleMaxDeg));
-                UI::Text("ShaderTcType: " + tostring(tmp.ShaderTcType));
-                // print("ShaderTcAnimFunc: " + tostring(tmp.ShaderTcAnimFunc));
-                // print("ShaderTcData_TransSub: " + tostring(tmp.ShaderTcData_TransSub));
-                if (StartTreeNode("TransAnimFunc", true, UI::TreeNodeFlags::None)) {
-                    Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "TransAnimFunc"));
-                    EndTreeNode();
-                }
-                if (StartTreeNode("RotAnimFunc", true, UI::TreeNodeFlags::None)) {
-                    Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "RotAnimFunc"));
-                    EndTreeNode();
+                if (isEditable) {
+                    DrawKinematicConstraint(kc);
+                } else {
+                    auto tmp = kc;
+                    UI::Text("TransAxis: " + tostring(tmp.TransAxis));
+                    UI::Text("TransMin: " + tostring(tmp.TransMin));
+                    UI::Text("TransMax: " + tostring(tmp.TransMax));
+                    UI::Text("RotAxis: " + tostring(tmp.RotAxis));
+                    UI::Text("AngleMinDeg: " + tostring(tmp.AngleMinDeg));
+                    UI::Text("AngleMaxDeg: " + tostring(tmp.AngleMaxDeg));
+                    UI::Text("ShaderTcType: " + tostring(tmp.ShaderTcType));
+                    // print("ShaderTcAnimFunc: " + tostring(tmp.ShaderTcAnimFunc));
+                    // print("ShaderTcData_TransSub: " + tostring(tmp.ShaderTcData_TransSub));
+                    if (StartTreeNode("TransAnimFunc", true, UI::TreeNodeFlags::None)) {
+                        Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "TransAnimFunc"));
+                        EndTreeNode();
+                    }
+                    if (StartTreeNode("RotAnimFunc", true, UI::TreeNodeFlags::None)) {
+                        Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "RotAnimFunc"));
+                        EndTreeNode();
+                    }
                 }
             }
             EndTreeNode();
@@ -370,7 +412,7 @@ class ItemModelTreeElement {
                 DrawMaterialsAt("nbCustomMaterials: " + nbCustomMaterials, nod, 0x1F8);
                 DrawUserMatIntsAt("nbMaterialUserInsts: " + nbMaterialUserInsts, nod, 0xF8);
             }
-            MkAndDrawChildNode(skel, "Skel");
+            MkAndDrawChildNode(skel, 0x78, "Skel");
             EndTreeNode();
         }
     }
@@ -450,13 +492,18 @@ class ItemModelTreeElement {
 
     bool StartTreeNode(const string &in title, bool suppressDev = false, UI::TreeNodeFlags flags = UI::TreeNodeFlags::DefaultOpen) {
         bool open = UI::TreeNode(title, flags);
-        if (open) UI::PushID(title);
+        if (open) {
+            UI::PushID(title);
+            UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(2, 0));
+        }
         if (open && nod !is null) {
             DrawPickable();
         }
         if (open && !suppressDev && !isPicker && nod !is null) {
             auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(nod, 0x8));
 #if SIG_DEVELOPER
+            UI::TextDisabled(Text::Format("0x%03x", nodOffset));
+            UI::SameLine();
             if (UX::SmallButton(Icons::Cube + " Explore Nod")) {
                 ExploreNod(title, nod);
             }
@@ -474,6 +521,7 @@ class ItemModelTreeElement {
     }
 
     void EndTreeNode() {
+        UI::PopStyleVar();
         UI::PopID();
         UI::TreePop();
     }
@@ -593,7 +641,11 @@ class ItemModelTarget {
     int cIndex = -1;
     ReferencedNod@ parent;
     ReferencedNod@ child;
+    uint16 childOffset;
     ModelTargetType ty;
+    ItemModelTarget() {
+        ty == ModelTargetType::None;
+    }
     ItemModelTarget(CMwNod@ parent) {
         ty = ModelTargetType::AllChildren;
         @this.parent = ReferencedNod(parent);
@@ -603,18 +655,34 @@ class ItemModelTarget {
         @this.parent = ReferencedNod(parent);
         pIndex = parentIx;
     }
-    ItemModelTarget(CMwNod@ parent, int parentIx, CMwNod@ child) {
+    ItemModelTarget(CMwNod@ parent, int parentIx, CMwNod@ child, uint16 offset) {
         ty = ModelTargetType::IndirectChild;
         @this.parent = ReferencedNod(parent);
         pIndex = parentIx;
         @this.child = ReferencedNod(child);
+        childOffset = offset;
     }
-    ItemModelTarget(CMwNod@ parent, CMwNod@ child) {
+    ItemModelTarget(CMwNod@ parent, CMwNod@ child, uint16 offset) {
         ty = ModelTargetType::DirectChild;
         @this.parent = ReferencedNod(parent);
         @this.child = ReferencedNod(child);
+        childOffset = offset;
     }
     ~ItemModelTarget() {
+    }
+    bool get_IsNull() {
+        return ty == ModelTargetType::None;
+    }
+    bool get_IsAnyChild() {
+        return ty & ModelTargetType::AnyChild_AndTest != ModelTargetType::None;
+    }
+    CMwNod@ GetChildNod() {
+        if (child is null) return null;
+        return child.nod;
+    }
+    CMwNod@ GetParentNod() {
+        if (parent is null) return null;
+        return parent.nod;
     }
     const string get_TypeName() {
         if (child !is null) {
@@ -650,53 +718,6 @@ class ItemModelTarget {
 
 funcdef void EntityPickerCB(ItemModelTarget@ target);
 
-uint[] EmptyLookingFor = {};
-
-// copy into / use children
-
-uint[] DynaObjectSources = {
-    Reflection::GetType("CPlugStaticObjectModel").ID,
-    Reflection::GetType("CPlugDynaObjectModel").ID,
-};
-
-uint[] PrefabLookingFor = {
-    // Reflection::GetType("CPlugStaticObjectModel").ID
-};
-uint[] StaticObjLookingFor = {
-    Reflection::GetType("CPlugStaticObjectModel").ID
-};
-uint[] CommonIELookingFor = {
-    Reflection::GetType("CPlugPrefab").ID,
-};
-uint[] VariantListLookingFor = {
-    Reflection::GetType("CPlugPrefab").ID,
-};
-
-// overwrite / use this
-
-uint[] VariantListLookingForIx = {
-    Reflection::GetType("NPlugItem_SVariantList").ID,
-};
-uint[] PrefabLookingForIx = {
-    Reflection::GetType("CPlugStaticObjectModel").ID,
-    Reflection::GetType("CPlugDynaObjectModel").ID,
-    Reflection::GetType("CPlugPrefab").ID,
-};
-uint[] StaticObjLookingForIx = PrefabLookingForIx;
-uint[] DynaObjectLookingForIx = PrefabLookingForIx;
-uint[] CommonIELookingForIx = {
-    Reflection::GetType("CPlugStaticObjectModel").ID,
-    Reflection::GetType("CPlugDynaObjectModel").ID,
-    Reflection::GetType("CPlugPrefab").ID,
-};
-uint[] Solid2ModelLookingForIx = {
-    Reflection::GetType("CPlugSolid2Model").ID,
-};
-uint[] SurfaceLookingForIx = {
-    Reflection::GetType("CPlugSurface").ID,
-};
-
-
 class MatchModelType {
     ModelTargetType ty;
     uint[]@ classIds;
@@ -725,6 +746,9 @@ class MatchModelType {
         return ty & ModelTargetType::AllChildren != ModelTargetType::None
             && classIds is null || classIds.Find(Reflection::TypeOf(parent).ID) >= 0;
     }
+    bool Match(CMwNod@ parent, uint16 offset) {
+        return classIds is null && ty & ModelTargetType::AnyChild_AndTest != ModelTargetType::None;
+    }
 }
 
 
@@ -734,8 +758,8 @@ class ItemModelTreePicker : ItemModelTreeElement {
     // class IDs
     MatchModelType@ matcher;
 
-    ItemModelTreePicker(ItemModelTreePicker@ parent, int parentIx, CMwNod@ nod, const string &in name, EntityPickerCB@ cb, MatchModelType@ matcher) {
-        super(parent, parentIx, nod, name);
+    ItemModelTreePicker(ItemModelTreePicker@ parent, int parentIx, CMwNod@ nod, const string &in name, EntityPickerCB@ cb, MatchModelType@ matcher, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
+        super(parent, parentIx, nod, name, false, nodOffset, isEditable);
         isPicker = true;
         drawProperties = false;
         @callback = cb;
@@ -761,12 +785,12 @@ class ItemModelTreePicker : ItemModelTreeElement {
         bool sameLine = false;
         if (matchDirectChild && UX::SmallButton(pickDirectChildLabel)) {
             if (sameLine) UI::SameLine();
-            callback(ItemModelTarget(parent.nod, nod));
+            callback(ItemModelTarget(parent.nod, nod, nodOffset));
         }
         sameLine = sameLine || matchDirectChild;
         if (matchIndirectChild && UX::SmallButton(pickIndirectChildLabel)) {
             if (sameLine) UI::SameLine();
-            callback(ItemModelTarget(parent.nod, parent.currentIndex, nod));
+            callback(ItemModelTarget(parent.nod, parent.currentIndex, nod, nodOffset));
         }
         sameLine = sameLine || matchIndirectChild;
         if (matchArrayElement && UX::SmallButton(pickArrayElementLabel)) {
@@ -787,7 +811,8 @@ class ItemModelTreePicker : ItemModelTreeElement {
             return matcher.Match(nod, currentIndex);
         } else if (ty == ModelTargetType::DirectChild) {
             if (currentIndex >= 0 || parent is null || parent.currentIndex >= 0) return false;
-            return matcher.Match(parent.nod, nod);
+            return matcher.Match(parent.nod, nod)
+                || matcher.Match(parent.nod, nodOffset);
         } else if (ty == ModelTargetType::IndirectChild) {
             if (currentIndex >= 0 || parent is null || parent.currentIndex < 0) return false;
             return matcher.Match(parent.nod, parent.currentIndex, nod);
@@ -832,6 +857,10 @@ class ItemModelBrowserTab : Tab {
             UI::Text("No item.");
             return;
         }
+        DrawItem(item);
+    }
+
+    void DrawItem(CGameItemModel@ item) {
         ItemModel(item).DrawTree();
     }
 }
@@ -844,5 +873,9 @@ class IE_ItemModelBrowserTab : ItemModelBrowserTab {
     CGameItemModel@ GetItemModel() override {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         return ieditor.ItemModel;
+    }
+
+    void DrawItem(CGameItemModel@ item) override {
+        ItemModel(item, true, true).DrawTree();
     }
 }

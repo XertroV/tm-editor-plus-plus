@@ -136,16 +136,15 @@ namespace MeshDuplication {
                 }
             }
             trace('Zeroing fids for prefab.Ents['+i+'].Model');
+            auto fx = cast<CPlugFxSystem>(prefab.Ents[i].Model);
             auto eh = cast<CPlugEditorHelper>(prefab.Ents[i].Model);
-            if (eh !is null) {
-                trace('zeroing editor helper model');
-                /* zero out entity model -- cannot save it
-                */
-                // auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
-                // Dev::SetOffset(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "Model"), uint64(0));
+            if (fx !is null) {
+                // note: we can create items with this, but it's a bit pointless since we can't save the map afterwards
+                trace('zeroing CPlugFxSystem model (cannot save map with custom items that use this)');
                 SetEntRefModel(prefab, i, null);
-                // eh.PrefabFid.Nod.MwAddRef();
-                // ZeroFidsUnknownModelNod(eh.PrefabFid.Nod);
+            } else if (eh !is null) {
+                trace('zeroing editor helper model (cannot save with one)');
+                SetEntRefModel(prefab, i, null);
             } else {
                 ZeroFidsUnknownModelNod(prefab.Ents[i].Model);
             }
@@ -153,9 +152,10 @@ namespace MeshDuplication {
     }
 
     void SetEntRefModel(CPlugPrefab@ prefab, int entityIx, CMwNod@ nod) {
+        if (nod !is null)
+            nod.MwAddRef();
         // size: NPlugPrefab_SEntRef: 0x50
         auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
-        nod.MwAddRef();
         Dev::SetOffset(ents, 0x50 * entityIx + GetOffset("NPlugPrefab_SEntRef", "Model"), nod);
     }
 
@@ -210,17 +210,25 @@ namespace MeshDuplication {
         // if need by there are more under
         auto rootNode = cast<CPlugFxSystemNode_Parallel>(fxSys.RootNode);
         if (rootNode !is null) {
-            auto pe = cast<CPlugFxSystemNode_ParticleEmitter>(rootNode.Children[0]);
-            if (pe !is null) {
-                // pe.Model has an Fid
-                NotifyWarning("Todo, support CPlugFxSystemNode_ParticleEmitter");
-                ZeroFids(pe.Model);
+            for (uint i = 0; i < rootNode.Children.Length; i++) {
+                auto child = rootNode.Children[i];
+                auto fxnPE = cast<CPlugFxSystemNode_ParticleEmitter>(child);
+                auto fxnCond = cast<CPlugFxSystemNode_Condition>(child);
+                if (fxnPE !is null) {
+                    // pe.Model has an Fid
+                    ZeroFids(fxnPE.Model);
+                } else if (fxnCond !is null) {
+                    // nothing to do here
+                } else {
+                    NotifyWarning("Unknown FX type: " + UnkType(child));
+                }
             }
         }
     }
 
     void ZeroFids(CPlugParticleEmitterModel@ pem) {
         ZeroNodFid(pem);
+        // ParticleEmitterSubModels don't seem to have FIDs anywhere, but is a very deep big tree
         // todo, more?
     }
 
@@ -265,12 +273,15 @@ namespace MeshDuplication {
         auto sWaypoint = cast<NPlugTrigger_SWaypoint>(nod);
         auto sSpecial = cast<NPlugTrigger_SSpecial>(nod);
         auto commonIe = cast<CGameCommonItemEntityModel>(nod);
+        auto varlist = cast<NPlugItem_SVariantList>(nod);
         if (so !is null) {
             ZeroFids(so);
         } else if (itemModel !is null) {
             ZeroChildFids(itemModel);
         } else if (prefab !is null) {
             ZeroFids(prefab);
+        } else if (varlist !is null) {
+            ZeroFids(varlist);
         } else if (fxSys !is null) {
             ZeroFids(fxSys);
         } else if (vegetTree !is null) {
@@ -505,6 +516,11 @@ namespace MeshDuplication {
     void FixItemModelProperties(CGameItemModel@ dest, CGameItemModel@ source) {
 
         dest.WaypointType = source.WaypointType;
+
+        if (source.PodiumClipList !is null) {
+            trace('adding empty PodiumClipList');
+            @dest.PodiumClipList = CPlugMediaClipList();
+        }
 
         trace('setting skin pointer if exists');
         // CPlugGameSkin

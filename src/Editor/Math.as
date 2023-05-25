@@ -21,6 +21,12 @@ shared int3 Nat3ToInt3(nat3 coord) {
 shared vec3 Int3ToVec3(int3 coord) {
     return vec3(coord.x, coord.y, coord.z);
 }
+shared quat Vec4ToQuat(vec4 v) {
+    return quat(v.x, v.y, v.z, v.w);
+}
+shared vec4 QuatToVec4(quat q) {
+    return vec4(q.x, q.y, q.z, q.w);
+}
 
 shared vec3 CoordToPos(nat3 coord) {
     return vec3(coord.x * 32, (int(coord.y) - 8) * 8, coord.z * 32);

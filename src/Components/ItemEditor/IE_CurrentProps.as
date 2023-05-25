@@ -244,79 +244,80 @@ class ItemEditEntityTab : Tab {
         //     UI::Unindent();
         // }
     }
+}
 
-    uint16 transAnimFuncOffset = GetOffset("NPlugDyna_SKinematicConstraint", "TransAnimFunc");
-    uint16 rotAnimFuncOffset = GetOffset("NPlugDyna_SKinematicConstraint", "RotAnimFunc");
+uint16 transAnimFuncOffset = GetOffset("NPlugDyna_SKinematicConstraint", "TransAnimFunc");
+uint16 rotAnimFuncOffset = GetOffset("NPlugDyna_SKinematicConstraint", "RotAnimFunc");
 
-    void DrawKinematicConstraint(NPlugDyna_SKinematicConstraint@ model) {
-        DrawSAnimFunc("TransAnimFunc", model, transAnimFuncOffset);
+void DrawKinematicConstraint(NPlugDyna_SKinematicConstraint@ model) {
+    DrawSAnimFunc("TransAnimFunc", model, transAnimFuncOffset);
 
-        model.TransAxis = DrawComboEAxis("TransAxis", model.TransAxis);
-        model.TransMin = UI::InputFloat("TransMin", model.TransMin);
-        model.TransMax = UI::InputFloat("TransMax", model.TransMax);
+    model.TransAxis = DrawComboEAxis("TransAxis", model.TransAxis);
+    model.TransMin = UI::InputFloat("TransMin", model.TransMin);
+    model.TransMax = UI::InputFloat("TransMax", model.TransMax);
 
-        DrawSAnimFunc("RotAnimFunc", model, rotAnimFuncOffset);
+    DrawSAnimFunc("RotAnimFunc", model, rotAnimFuncOffset);
 
-        model.RotAxis = DrawComboEAxis("RotAxis", model.RotAxis);
-        model.AngleMinDeg = UI::InputFloat("AngleMinDeg", model.AngleMinDeg);
-        model.AngleMaxDeg = UI::InputFloat("AngleMaxDeg", model.AngleMaxDeg);
-    }
+    model.RotAxis = DrawComboEAxis("RotAxis", model.RotAxis);
+    model.AngleMinDeg = UI::InputFloat("AngleMinDeg", model.AngleMinDeg);
+    model.AngleMaxDeg = UI::InputFloat("AngleMaxDeg", model.AngleMaxDeg);
+}
 
-    void DrawSAnimFunc(const string &in label, NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
-        if (model is null) return;
-        uint len = Dev::GetOffsetUint8(model, offset);
-        auto arrStartOffset = offset + 0x4;
-        if (UI::CollapsingHeader(label + " ("+len+")")) {
-            UI::Indent();
-            if (len < 4 && UI::Button("Add New Easing to Chain##"+label)) {
-                Notify("Note: you may need to save and re-edit the item for new easings to be loaded.");
-                IncrementEasingCountSetDefaults(model, offset);
-            }
-            if (len > 1 && UI::Button("Remove Last Easing from Chain##"+label)) {
-                DecrementEasingCount(model, offset);
-            }
-            for (uint i = 0; i < len; i++) {
-                if (i > 0) UI::Separator();
-
-                auto sfOffset = arrStartOffset + i * 0x8;
-                auto type = Dev::GetOffsetUint8(model, sfOffset);
-                auto reverse = Dev::GetOffsetUint8(model, sfOffset + 0x1) == 1;
-                auto duration = Dev::GetOffsetUint32(model, sfOffset + 0x4);
-
-                type = uint8(DrawComboSubFuncEasings("Easing##"+i+label, SubFuncEasings(type)));
-                reverse = UI::Checkbox("Reverse##"+i+label, reverse);
-                duration = Math::Clamp(UI::InputInt("Duration##"+i+label, duration), 0, 2000000000);
-
-                Dev::SetOffset(model, sfOffset + 0x0, type);
-                Dev::SetOffset(model, sfOffset + 0x1, reverse ? 0x1 : 0x0);
-                Dev::SetOffset(model, sfOffset + 0x4, duration);
-            }
-            UI::Unindent();
+void DrawSAnimFunc(const string &in label, NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
+    if (model is null) return;
+    uint len = Dev::GetOffsetUint8(model, offset);
+    auto arrStartOffset = offset + 0x4;
+    if (UI::CollapsingHeader(label + " ("+len+")")) {
+        UI::Indent();
+        if (len < 4 && UI::Button("Add New Easing to Chain##"+label)) {
+            Notify("Note: you may need to save and re-edit the item for new easings to be loaded.");
+            IncrementEasingCountSetDefaults(model, offset);
         }
-    }
+        if (len > 1 && UI::Button("Remove Last Easing from Chain##"+label)) {
+            DecrementEasingCount(model, offset);
+        }
+        for (uint i = 0; i < len; i++) {
+            if (i > 0) UI::Separator();
 
-    void DecrementEasingCount(NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
-        uint8 len = Dev::GetOffsetUint8(model, offset);
-        if (len <= 1) throw ('cannot decrement past 1');
-        Dev::SetOffset(model, offset, uint8(len - 1));
-    }
+            auto sfOffset = arrStartOffset + i * 0x8;
+            auto type = Dev::GetOffsetUint8(model, sfOffset);
+            auto reverse = Dev::GetOffsetUint8(model, sfOffset + 0x1) == 1;
+            auto duration = Dev::GetOffsetUint32(model, sfOffset + 0x4);
 
-    void IncrementEasingCountSetDefaults(NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
-        uint8 len = Dev::GetOffsetUint8(model, offset);
-        uint8 ix = len;
-        auto arrStartOffset = offset + 0x4;
-        // 4 maximum otherwise we overwrite other memory.
-        if (ix > 3) throw('cannot add more easings.');
-        auto sfOffset = arrStartOffset + ix * 0x8;
-        // set type, reverse, duration to known values
-        Dev::SetOffset(model, sfOffset, uint8(SubFuncEasings::QuadInOut));
-        Dev::SetOffset(model, sfOffset + 0x1, uint8(0));
-        Dev::SetOffset(model, sfOffset + 0x2, uint16(0));
-        Dev::SetOffset(model, sfOffset + 0x4, uint32(7500));
-        // finally, write new length
-        Dev::SetOffset(model, offset, uint32(len + 1));
+            type = uint8(DrawComboSubFuncEasings("Easing##"+i+label, SubFuncEasings(type)));
+            reverse = UI::Checkbox("Reverse##"+i+label, reverse);
+            duration = Math::Clamp(UI::InputInt("Duration##"+i+label, duration), 0, 2000000000);
+
+            Dev::SetOffset(model, sfOffset + 0x0, type);
+            Dev::SetOffset(model, sfOffset + 0x1, reverse ? 0x1 : 0x0);
+            Dev::SetOffset(model, sfOffset + 0x4, duration);
+        }
+        UI::Unindent();
     }
 }
+
+void DecrementEasingCount(NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
+    uint8 len = Dev::GetOffsetUint8(model, offset);
+    if (len <= 1) throw ('cannot decrement past 1');
+    Dev::SetOffset(model, offset, uint8(len - 1));
+}
+
+void IncrementEasingCountSetDefaults(NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
+    uint8 len = Dev::GetOffsetUint8(model, offset);
+    uint8 ix = len;
+    auto arrStartOffset = offset + 0x4;
+    // 4 maximum otherwise we overwrite other memory.
+    if (ix > 3) throw('cannot add more easings.');
+    auto sfOffset = arrStartOffset + ix * 0x8;
+    // set type, reverse, duration to known values
+    Dev::SetOffset(model, sfOffset, uint8(SubFuncEasings::QuadInOut));
+    Dev::SetOffset(model, sfOffset + 0x1, uint8(0));
+    Dev::SetOffset(model, sfOffset + 0x2, uint16(0));
+    Dev::SetOffset(model, sfOffset + 0x4, uint32(7500));
+    // finally, write new length
+    Dev::SetOffset(model, offset, uint32(len + 1));
+}
+
 
 
 // class ItemEditMiscTab : Tab {

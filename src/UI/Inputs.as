@@ -49,4 +49,8 @@ namespace UX {
         // auto z = UI::InputInt("(Z) " + label, val.z);
         // return nat3(x, y, z);
     }
+
+    shared quat InputQuat(const string &in label, quat val) {
+        return Vec4ToQuat(UI::InputFloat4(label, QuatToVec4(val)));
+    }
 }
