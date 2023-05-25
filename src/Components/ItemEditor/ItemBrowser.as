@@ -27,6 +27,8 @@ class ItemModel {
             if (UX::SmallButton(Icons::Cube + " Explore ItemModel")) {
                 ExploreNod(item);
             }
+            UI::SameLine();
+            CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(item)));
 #endif
             ClickableLabel("Author", item.Author.GetName());
             DrawEMEdition();
@@ -213,6 +215,10 @@ class ItemModelTreeElement {
         hasElements = true;
         if (StartTreeNode(name + " :: \\$f8fCPlugPrefab", UI::TreeNodeFlags::DefaultOpen)) {
             UI::Text("nbEnts: " + prefab.Ents.Length);
+#if SIG_DEVELOPER
+            UI::SameLine();
+            UI::TextDisabled(Text::Format("0x%03x", GetOffset("CPlugPrefab", "Ents")));
+#endif
             for (uint i = 0; i < prefab.Ents.Length; i++) {
                 currentIndex = i;
                 if (StartTreeNode(".Ents["+i+"]:", true)) {
@@ -240,6 +246,10 @@ class ItemModelTreeElement {
         hasElements = true;
         if (StartTreeNode(name + " :: \\$f8fNPlugItem_SVariantList", UI::TreeNodeFlags::DefaultOpen)) {
             UI::Text("nbVariants: " + varList.Variants.Length);
+#if SIG_DEVELOPER
+            UI::SameLine();
+            UI::TextDisabled(Text::Format("0x%03x", GetOffset("NPlugItem_SVariantList", "Variants")));
+#endif
             for (uint i = 0; i < varList.Variants.Length; i++) {
                 currentIndex = i;
                 if (StartTreeNode(".Variant["+i+"]:", true)) {
@@ -541,7 +551,7 @@ class ItemModelTreeElement {
             if (StartTreeNode("\\$888Params: ClsId / Type: " + Text::Format("%08x / " + type, paramsClsId),
                 true, UI::TreeNodeFlags::None
             )) {
-                DrawSMetaPtr(ptr1, paramsClsId);
+                DrawSMetaPtr(ptr1, paramsClsId, type, isEditable);
                 EndTreeNode();
             }
             // uint nextTypeMetadataEntry = Dev::ReadUInt64(ptr2 + 0x20);
@@ -577,7 +587,7 @@ string UnkType(CMwNod@ nod) {
 
 
 
-void DrawSMetaPtr(uint64 ptr, uint32 clsId) {
+void DrawSMetaPtr(uint64 ptr, uint32 clsId, const string &in type, bool isEditable = false) {
     if (clsId == 0) return;
     auto ty = Reflection::GetType(clsId);
     if (ty is null) return;
@@ -594,6 +604,15 @@ void DrawSMetaPtr(uint64 ptr, uint32 clsId) {
     CopiableLabeledValue("\\$888Ptr", Text::FormatPointer(ptr));
 #endif
     CopiableLabeledValue("\\$888Data", Dev::Read(ptr, maxOffset));
+
+    if (clsId == 0x2f0b6000 || type == "NPlugDynaObjectModel::SInstanceParams") {
+        if (isEditable) {
+            auto offset = GetOffset("NPlugDynaObjectModel_SInstanceParams", "CastStaticShadow");
+            bool castsShadow = UI::Checkbox("CastStaticShadow", Dev::ReadUInt8(ptr + offset) > 0);
+            Dev::Write(ptr + offset, castsShadow ? 0x1 : 0x0);
+        }
+    }
+
 }
 
 
