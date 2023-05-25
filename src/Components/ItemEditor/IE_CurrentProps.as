@@ -348,58 +348,6 @@ void IncrementEasingCountSetDefaults(NPlugDyna_SKinematicConstraint@ model, uint
 
 
 
-class IE_CopyAnotherItemsModelTab : Tab {
-    IE_CopyAnotherItemsModelTab(TabGroup@ p) {
-        super(p, "Copy Model From", Icons::Clone);
-        // IE_MeshDupChooseItemTab(Children);
-        IE_CopyAnotherItemsModelDevTab(Children);
-    }
-
-    void DrawInner() override {
-        Children.DrawTabs();
-    }
-}
-
-
-// ! MEMORY LEAK ON COMPILATIONI WHEN THIS IS UNCOMMENTED??! (AND ADDED AS CHILD TAB ABOVE)
-
-
-// class IE_MeshDupChooseItemTab : GenericInventoryBrowserTab {
-//     IE_CopyAnotherItemsModelTab@ parent;
-
-//     IE_MeshDupChooseItemTab(IE_CopyAnotherItemsModelTab@ parent) {
-//         super(parent.Children, "Source Item", "", InventoryRootNode::Items);
-//         @this.parent = parent;
-//     }
-
-//     CGameCtnArticleNodeArticle@ m_selectedNode;
-
-//     void DrawInner() override {
-//         UI::Text("Current Item: " + (m_selectedNode is null ? "None" : string(m_selectedNode.Name)));
-//     }
-// }
-
-
-class IE_CopyModelToAnimatedTab : Tab {
-    IE_CopyModelToAnimatedTab(TabGroup@ p) {
-        super(p, "To Moving Item", "");
-    }
-
-    CGameItemModel@ GetItemModel() {
-        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
-        if (ieditor is null) return null;
-        return ieditor.ItemModel;
-    }
-
-    uint m_SourcePrefabEntIxMesh = 0;
-    uint m_SourcePrefabEntIxShape = 0;
-
-    void DrawInner() override {
-
-    }
-}
-
-
 
 
 class IE_CopyAnotherItemsModelDevTab : Tab {

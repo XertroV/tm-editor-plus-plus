@@ -189,7 +189,6 @@ TabGroup@ CreateItemEditorRT() {
     auto root = RootTabGroupCls();
     ItemEditCurrentPropsTab(root);
     IE_ItemModelBrowserTab(root);
-    IE_CopyAnotherItemsModelTab(root);
     IE_ManipulateMeshesTab(root);
 #if DEV
 #endif

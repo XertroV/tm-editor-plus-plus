@@ -36,6 +36,16 @@ class IE_ManipulateMeshesTab : Tab {
             }
         }
 
+        if (UI::CollapsingHeader("Warnings and Info")) {
+
+            UI::TextWrapped("""
+* \$f80The game WILL crash eventually if you use this tool with vanilla items.\$z Make sure you save everything (preferably copies, and not over the original).
+* \$f80Assume that you will get a crash\$z after using this and restart the game if you are unsure! (You can do multiple items in a single session, though.)
+* \$8f8After making a change, it is good to save the item\$z, exit the item editor, and re-edit the item. This reloads the item in memory and helps avoid crashes.
+* Will not work for some items/meshes for unknown reasons. Items with a CPlugCrystral have mixed success. Some items just do not work, currently.
+            """);
+        }
+
         if (selectedInvNode is null) {
             DrawSelectSouceItem();
         } else if (dest is null) {

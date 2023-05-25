@@ -21,7 +21,7 @@ class AboutTab : Tab {
 
  With additional thanks for miscellaneous contributions from:
 
- * Chraz
+ * Chraz (supporter)
  * BigthirstyTM
  * SBVille
  * TNTree
