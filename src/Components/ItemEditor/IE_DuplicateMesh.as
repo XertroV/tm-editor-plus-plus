@@ -366,14 +366,11 @@ namespace MeshDuplication {
                 matUserInst._Name = CreateMwIdWithName("m" + i);
                 matUserInst._Link_OldCompat = CreateMwIdWithName(origMatName);
                 matUserInst.Link = CreateMwIdWithName(origMatName);
-                // plastic
-                matUserInst.PhysicsID = 77;
 
-                // crashes the game:
-                // matUserInst.MaterialId = 0;
-                // seems to break vanilla items (probs needs full path)
-                // matUserInst._LinkFull = GetMaterialName(origMat);
-                // trace('Setting user mat props ' + (i + 1) + " (_LinkFull: "+matUserInst._LinkFull+")");
+                matUserInst.PhysicsID = Dev::GetOffsetUint8(origMat, 0x28);
+                matUserInst.GameplayID = Dev::GetOffsetUint8(origMat, 0x29);
+
+                matUserInst._LinkFull = GetMaterialLinkFull(origMat);
                 trace('Setting user mat ptr in buffer ' + (i + 1));
                 Dev::SetOffset(userMatBufFakeNod, 0x18 * i, matUserInst);
             }
@@ -382,6 +379,17 @@ namespace MeshDuplication {
         Dev::SetOffset(mesh, 0xE8, "Stadium\\Media\\Material\\");
     }
 
+    string GetMaterialLinkFull(CPlugMaterial@ mat) {
+        auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(mat, 0x8));
+        if (fid is null) {
+            NotifyWarning("Tried getting material name but it had no fid");
+            return "";
+        }
+        auto fdn = string(fid.ParentFolder.FullDirName);
+        auto parts = fdn.Split('\\GameData\\');
+        if (parts.Length < 2) return "";
+        return parts[1] + fid.ShortFileName;
+    }
 
     MwId CreateMwIdWithName(const string &in name) {
         // auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
@@ -397,7 +405,6 @@ namespace MeshDuplication {
         auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(mat, 0x8));
         if (fid is null) {
             NotifyWarning("Tried getting material name but it had no fid");
-            ExploreNod('material no fid', mat);
             return "";
         }
         return string(fid.ShortFileName);
@@ -496,10 +503,10 @@ namespace MeshDuplication {
     }
 
     void FixItemModelProperties(CGameItemModel@ dest, CGameItemModel@ source) {
-        trace('setting skin pointer if exists');
 
         dest.WaypointType = source.WaypointType;
 
+        trace('setting skin pointer if exists');
         // CPlugGameSkin
         auto skinPtr = Dev::GetOffsetUint64(source, 0xa0);
         auto skin = Dev::GetOffsetNod(source, 0xa0);
@@ -536,7 +543,7 @@ namespace MeshDuplication {
         // }
     }
 
-    bool enableReplaceMatsViaMatMod = false;
+    bool enableReplaceMatsViaMatMod = true;
 
     void ApplyMaterialMods(CPlugSolid2Model@ mesh) {
         if (!enableReplaceMatsViaMatMod) return;

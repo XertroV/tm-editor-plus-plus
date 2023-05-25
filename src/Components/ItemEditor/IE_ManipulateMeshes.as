@@ -73,7 +73,7 @@ class IE_ManipulateMeshesTab : Tab {
         UI::Indent();
         if (UI::BeginChild("pick dest nod")) {
             auto item = GetItemModel();
-            auto picker = ItemModelTreePicker(null, -1, item, "EntityModel", EntityPickerCB(OnPickedDest), MatchModelType(ModelTargetType::Any_AndTest, null));
+            auto picker = ItemModelTreePicker(null, -1, item, "ItemModel", EntityPickerCB(OnPickedDest), MatchModelType(ModelTargetType::Any_AndTest, null));
             picker.Draw();
         }
         UI::EndChild();
@@ -92,7 +92,7 @@ class IE_ManipulateMeshesTab : Tab {
         UI::Indent();
         if (UI::BeginChild("pick src nod")) {
             auto item = GetInventorySelectionModel();
-            auto picker = ItemModelTreePicker(null, -1, item, "EntityModel", EntityPickerCB(OnPickedSource), lookingFor);
+            auto picker = ItemModelTreePicker(null, -1, item, "ItemModel", EntityPickerCB(OnPickedSource), lookingFor);
             picker.Draw();
         }
         UI::EndChild();
@@ -150,11 +150,10 @@ class IE_ManipulateMeshesTab : Tab {
                     Reflection::GetType("CPlugStaticObjectModel").ID,
                     Reflection::GetType("CPlugDynaObjectModel").ID,
                 };
-            } else if (dest.child.As_CPlugStaticObjectModel() !is null) {
+            } else if (dest.child.As_CGameCommonItemEntityModel() !is null) {
                 @clsIds = {
                     Reflection::GetType("CPlugPrefab").ID,
-                    Reflection::GetType("CPlugStaticObjectModel").ID,
-                    Reflection::GetType("CPlugDynaObjectModel").ID,
+                    Reflection::GetType("NPlugItem_SVariantList").ID,
                 };
             } else if (dest.child.As_CPlugSolid2Model() !is null) {
                 @clsIds = {
@@ -273,10 +272,10 @@ class IE_ManipulateMeshesTab : Tab {
                 OnReset();
             }
 
-            // if (UI::Button("Set ItemModel Properties")) {
-            //     MeshDuplication::FixItemModelProperties(GetItemModel(), GetInventorySelectionModel());
-            //     AppendRunMsg("Set item model properties from source.");
-            // }
+            if (UI::Button("Set ItemModel Properties")) {
+                MeshDuplication::FixItemModelProperties(GetItemModel(), GetInventorySelectionModel());
+                AppendRunMsg("Set item model properties from source item model.");
+            }
             // UI::SameLine();
             // if (UI::Button("")) {
             //     MeshDuplication::FixItemModelProperties(GetItemModel(), GetInventorySelectionModel());
@@ -430,28 +429,28 @@ class IE_ManipulateMeshesTab : Tab {
                 Dev::SetOffset(destDyna, GetOffset(destDyna, "Mesh"), sourceDyna.Mesh);
                 Dev::SetOffset(destDyna, GetOffset(destDyna, "DynaShape"), sourceDyna.DynaShape);
                 Dev::SetOffset(destDyna, GetOffset(destDyna, "StaticShape"), sourceDyna.StaticShape);
-                sourceDyna.Mesh.MwAddRef();
-                sourceDyna.DynaShape.MwAddRef();
-                sourceDyna.StaticShape.MwAddRef();
+                if (sourceDyna.Mesh !is null) sourceDyna.Mesh.MwAddRef();
+                if (sourceDyna.DynaShape !is null) sourceDyna.DynaShape.MwAddRef();
+                if (sourceDyna.StaticShape !is null) sourceDyna.StaticShape.MwAddRef();
             } else {
                 Dev::SetOffset(destDyna, GetOffset(destDyna, "Mesh"), sourceStatic.Mesh);
                 Dev::SetOffset(destDyna, GetOffset(destDyna, "DynaShape"), sourceStatic.Shape);
                 Dev::SetOffset(destDyna, GetOffset(destDyna, "StaticShape"), sourceStatic.Shape);
-                sourceStatic.Mesh.MwAddRef();
-                sourceStatic.Shape.MwAddRef();
-                sourceStatic.Shape.MwAddRef();
+                if (sourceStatic.Mesh !is null) sourceStatic.Mesh.MwAddRef();
+                if (sourceStatic.Shape !is null) sourceStatic.Shape.MwAddRef();
+                if (sourceStatic.Shape !is null) sourceStatic.Shape.MwAddRef();
             }
         } else if (destStatic !is null && hasSouce) {
             if (sourceDyna !is null) {
                 Dev::SetOffset(destStatic, GetOffset(destStatic, "Mesh"), sourceDyna.Mesh);
                 Dev::SetOffset(destStatic, GetOffset(destStatic, "Shape"), sourceDyna.DynaShape);
-                sourceDyna.Mesh.MwAddRef();
-                sourceDyna.DynaShape.MwAddRef();
+                if (sourceDyna.Mesh !is null) sourceDyna.Mesh.MwAddRef();
+                if (sourceDyna.DynaShape !is null) sourceDyna.DynaShape.MwAddRef();
             } else {
                 Dev::SetOffset(destStatic, GetOffset(destStatic, "Mesh"), sourceStatic.Mesh);
                 Dev::SetOffset(destStatic, GetOffset(destStatic, "Shape"), sourceStatic.Shape);
-                sourceStatic.Mesh.MwAddRef();
-                sourceStatic.Shape.MwAddRef();
+                if (sourceStatic.Mesh !is null) sourceStatic.Mesh.MwAddRef();
+                if (sourceStatic.Shape !is null) sourceStatic.Shape.MwAddRef();
             }
         } else {
             return UnknownDestSourceImplementation();

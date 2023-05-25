@@ -48,6 +48,7 @@ vanilla only?
     -> ??? 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00
         00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00
         (2): 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00
+        (6): 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 02 00 00 00 02 00 00 00 01 00 00 00 01 00 00 00 03 00 00 00 03 00 00 00 01 00 00 00 01 00 00 00 04 00 00 00 04 00 00 00 01 00 00 00 01 00 00 00 05 00 00 00 05 00 00 00 01 00 00 00 01 00 00 00
     material ID things,
 
 0x168 -> buffer (lights stuff)
@@ -133,6 +134,9 @@ at 0x158 otherwise
 
 
 material 9079 0x8d3340
+0x28 -> byte (physics id)
+0x29 -> gameplay id?
+
 0x38? -> ptr struct
     0x8 -> fid
     0x10 -> cplugshaderapply
@@ -150,3 +154,8 @@ material 9079 0x8d3340
 0x90 -> ":data:\Projects\Techno3\Media\Material\Tech3_Block_TDSN_CubeOut_DispIn.Material.gbx"
 
 0x150: END
+
+
+CPlugMaterialUserInst
+
+0x48: mwid for model model dyna 0

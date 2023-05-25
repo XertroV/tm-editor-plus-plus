@@ -139,6 +139,9 @@ class ItemSelection_DevTab : Tab {
                 UI::Text(str);
                 UI::TableNextColumn();
                 UI::Text(fid.FileName + "  " + (fid.Nod !is null ? Icons::Check : Icons::Times));
+                if (UI::IsItemClicked()) {
+                    ExploreNod(fid);
+                }
                 UI::TableNextColumn();
                 UI::Text(Text::Format("0x%08x", cls));
                 UI::TableNextColumn();
@@ -169,6 +172,10 @@ class ItemSelection_DevTab : Tab {
             CopiableLabeledValue("Name", fid.FileName);
             UI::SameLine();
             LabeledValue("Loaded", fid.Nod !is null);
+            UI::SameLine();
+            if (UX::SmallButton(Icons::Cube + " Explore##mmfid" + i)) {
+                ExploreNod(fid);
+            }
         }
     }
 }

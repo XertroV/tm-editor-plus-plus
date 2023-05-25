@@ -364,11 +364,11 @@ class ItemModelTreeElement {
                 uint nbLightUserModels = Dev::GetOffsetUint32(s2m, 0x178 + 0x8);
                 uint nbCustomMaterials = Dev::GetOffsetUint32(s2m, 0x1F8 + 0x8);
                 UI::Text("nbVisualIndexedTriangles: " + nbVisualIndexedTriangles);
-                UI::Text("nbMaterialUserInsts: " + nbMaterialUserInsts);
                 UI::Text("nbLights: " + nbLights);
                 UI::Text("nbLightUserModels: " + nbLightUserModels);
                 DrawMaterialsAt("nbMaterials: " + nbMaterials, nod, 0xc8);
                 DrawMaterialsAt("nbCustomMaterials: " + nbCustomMaterials, nod, 0x1F8);
+                DrawUserMatIntsAt("nbMaterialUserInsts: " + nbMaterialUserInsts, nod, 0xF8);
             }
             MkAndDrawChildNode(skel, "Skel");
             EndTreeNode();
@@ -390,6 +390,34 @@ class ItemModelTreeElement {
                     } else {
                         UI::Text("" + i + ". " + fid.FileName);
                     }
+                }
+            }
+            EndTreeNode();
+        }
+    }
+
+    void DrawUserMatIntsAt(const string &in title, CMwNod@ nod, uint16 offset) {
+        if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
+            auto buf = Dev::GetOffsetNod(nod, offset);
+            auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
+            for (uint i = 0; i < len; i++) {
+                auto mat = cast<CPlugMaterialUserInst>(Dev::GetOffsetNod(buf, 0x18 * i));
+                auto u1 = Dev::GetOffsetUint64(buf, 0x18 * i + 0x8);
+                auto u2 = Dev::GetOffsetUint64(buf, 0x18 * i + 0x10);
+                string suffix = " / " + u1 + " / " + Text::Format("0x%x", u2);
+                if (mat is null) {
+                    UI::Text("" + i + ". null" + suffix);
+                } else {
+                    UI::Text("" + i + ". " + mat._Name.GetName() + suffix);
+                    // UI::Indent();
+#if SIG_DEVELOPER
+                    UI::SameLine();
+                    if (UX::SmallButton(Icons::Cube + " Explore##matUserInst" + i)) {
+                        ExploreNod("MaterialUserInst " + i + ".", mat);
+                    }
+#endif
+                    // UI::SameLine();
+                    // UI::Text(mat.Link.GetName());
                 }
             }
             EndTreeNode();
