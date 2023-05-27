@@ -117,8 +117,10 @@ class ItemPlacementTab : Tab {
     }
 
     void DrawMagnetOptions() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
         if (UI::CollapsingHeader("Item to Item Snaping (Magnet)")) {
-            auto ef = cast<CGameCtnEditorFree>(GetApp().Editor).ExperimentalFeatures;
+            auto ef = editor.ExperimentalFeatures;
             ef.MagnetSnapDistance = UI::SliderFloat("Item Snap Dist.", ef.MagnetSnapDistance, 0., 64.);
             AddSimpleTooltip("Default: 1.25");
             ef.ShowMagnetsInItemCursor = UI::Checkbox("Show Item Magnet Points", ef.ShowMagnetsInItemCursor);
