@@ -18,6 +18,7 @@ class EditorControlsDocsTab : Tab {
         UI::LabelText("Cursor Yaw", "Numpad +/-");
         UI::LabelText("Enter copy mode", "C");
         UI::LabelText("Show/Hide Inventory", "Tab");
+        UI::LabelText("Skinning Mode - Apply Last", "Shift Click");
         UI::PopStyleVar();
 
         UI::TextWrapped("Contribute more in the plugin support thread!");
