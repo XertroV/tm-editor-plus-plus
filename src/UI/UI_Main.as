@@ -188,8 +188,8 @@ namespace MenuBar {
 TabGroup@ CreateItemEditorRT() {
     auto root = RootTabGroupCls();
     ItemEditCurrentPropsTab(root);
-    IE_ItemModelBrowserTab(root);
     IE_ManipulateMeshesTab(root);
+    IE_ItemModelBrowserTab(root);
 #if DEV
 #endif
     // ItemEditMacroVariationsTab(root);
@@ -197,7 +197,7 @@ TabGroup@ CreateItemEditorRT() {
     // IE_DevTab(root);
 #endif
 
-    AboutTab(root);
+    // AboutTab(root);
     return root;
 }
 

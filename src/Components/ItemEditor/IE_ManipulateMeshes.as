@@ -223,47 +223,6 @@ class IE_ManipulateMeshesTab : Tab {
         }
 
         @lookingFor = MatchModelType(ty, clsIds);
-
-        // if (dest.As_CPlugDynaObjectModel() !is null) {
-
-        //     @lookingFor = {
-
-        //         Reflection::GetType("CPlugStaticObjectModel").ID,
-        //     };
-        //     @lookingForIndexed = DynaObjectLookingForIx;
-        // } else if (dest.As_CPlugPrefab() !is null) {
-        //     @lookingFor = {
-        //         MatchGroup({}, )
-        //     };
-        //     @lookingForIndexed = PrefabLookingForIx;
-        // } else if (dest.As_CPlugStaticObjectModel() !is null) {
-        //     @lookingFor = StaticObjLookingFor;
-        //     @lookingForIndexed = StaticObjLookingForIx;
-        // } else if (dest.As_CGameCommonItemEntityModel() !is null) {
-        //     @lookingFor = CommonIELookingFor;
-        //     @lookingForIndexed = CommonIELookingForIx;
-        // } else if (dest.As_NPlugItem_SVariantList() !is null) {
-        //     @lookingFor = VariantListLookingFor;
-        //     @lookingForIndexed = VariantListLookingForIx;
-        // } else if (dest.As_CPlugSolid2Model() !is null) {
-        //     @lookingForIndexed = Solid2ModelLookingForIx;
-        // } else if (dest.As_CPlugSurface() !is null) {
-        //     @lookingForIndexed = SurfaceLookingForIx;
-        // // } else if (dest.As_CPlugEditorHelper() !is null) {
-        // //     @lookingFor = EmptyLookingFor;
-        // // } else if (dest.As_CPlugFxSystem() !is null) {
-        // //     @lookingFor = EmptyLookingFor;
-        // // } else if (dest.As_CPlugSpawnModel() !is null) {
-        // //     @lookingFor = EmptyLookingFor;
-        // // } else if (dest.As_CPlugVegetTreeModel() !is null) {
-        // //     @lookingFor = EmptyLookingFor;
-        // // } else if (dest.As_NPlugDyna_SKinematicConstraint() !is null) {
-        // //     @lookingFor = EmptyLookingFor;
-        // // } else if (dest.As_NPlugTrigger_SSpecial() !is null) {
-        // //     @lookingFor = EmptyLookingFor;
-        // // } else if (dest.As_NPlugTrigger_SWaypoint() !is null) {
-        // //     @lookingFor = EmptyLookingFor;
-        // }
     }
 
     void OnPickedSource(ItemModelTarget@ target) {
