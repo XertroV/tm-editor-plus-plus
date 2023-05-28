@@ -482,12 +482,18 @@ namespace MeshDuplication {
 
     void FixMatsOnShape(CPlugSurface@ shape) {
         if (shape is null) return;
-        trace('updating surf mat ids and mats to mat ids');
-        // possibly required for rotating
-        if (shape.Materials.Length > 0) {
+        // possibly required for moving items
+        if (shape.Materials.Length > 0 and shape.MaterialIds.Length == 0) {
+            trace('updating surf mat ids');
             shape.UpdateSurfMaterialIdsFromMaterialIndexs();
+            trace('updating mats to mat ids');
             shape.TransformMaterialsToMatIds();
             trace('done updating surf mat ids and mat to mat ids');
+        } if (shape.Materials.Length > 0 and shape.MaterialIds.Length > 0) {
+            trace('removing materials from shape as material IDs already populated');
+            // need to remove materials in this case. if this doesn't work, can use dev api
+            shape.Materials.RemoveRange(0, shape.Materials.Length);
+            trace('done removing materials');
         }
     }
 
