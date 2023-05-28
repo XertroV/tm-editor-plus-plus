@@ -18,17 +18,16 @@ class AboutTab : Tab {
  * bmx22c
  * ArEyeses
  * Damel
+ * Chraz
 
  With additional thanks for miscellaneous contributions from:
 
- * Chraz (supporter)
  * BigthirstyTM
  * SBVille
  * TNTree
  * Zai
  * Nightroast
  * TMTOM
-
         """);
     }
 }
