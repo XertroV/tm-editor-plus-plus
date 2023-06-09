@@ -19,7 +19,7 @@ Current features:
 - Apply a jitter to items upon placement (position and/or rotation and/or position offset)
 - Randomizer: various properties of blocks and items
 - Dev Info: access to convenient utilities and previously hidden properties of blocks and items
-
+- Create unique custom items via 'Mesh Manipulator' (in the Item Editor)
 
 
 License: Public Domain
@@ -28,7 +28,7 @@ Authors: XertroV
 
 Suggestions/feedback: @XertroV on Openplanet discord
 
-Code/issues: [https://github.com/XertroV/tm-play-map](https://github.com/XertroV/tm-play-map)
+Code/issues: [https://github.com/XertroV/tm-editor-plus-plus](https://github.com/XertroV/tm-editor-plus-plus)
 
 GL HF
 
@@ -62,7 +62,8 @@ else:
 test:
 - when refresh marked as unsafe, does adding items via the items update method work?
 
-
+new todo:
+- add docs or things for model browser / editor
 
 good icons mb:
 - road

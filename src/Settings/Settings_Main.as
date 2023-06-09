@@ -29,3 +29,6 @@ bool S_PickedItemWindowOpen = false;
 
 [Setting hidden]
 uint S_AnimationDuration = 250;
+
+[Setting hidden]
+bool S_RenderQuickToggle = true;

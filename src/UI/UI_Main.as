@@ -149,6 +149,9 @@ namespace MenuBar {
                 }
                 UI::EndDisabled();
 
+                if (UI::MenuItem("Tutorial: Custom Moving Items (Simple)")) {
+                    OpenBrowserURL("https://youtu.be/Di4jZkdXfFM");
+                }
                 if (UI::MenuItem("Plugin Support Thread")) {
                     OpenBrowserURL("https://discord.com/channels/276076890714800129/1103713844288819311");
                 }
