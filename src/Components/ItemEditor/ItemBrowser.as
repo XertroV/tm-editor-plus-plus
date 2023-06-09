@@ -606,10 +606,18 @@ void DrawSMetaPtr(uint64 ptr, uint32 clsId, const string &in type, bool isEditab
     CopiableLabeledValue("\\$888Data", Dev::Read(ptr, maxOffset));
 
     if (clsId == 0x2f0b6000 || type == "NPlugDynaObjectModel::SInstanceParams") {
+        auto offsetCSS = GetOffset("NPlugDynaObjectModel_SInstanceParams", "CastStaticShadow");
+        auto offsetIK = GetOffset("NPlugDynaObjectModel_SInstanceParams", "IsKinematic");
+        bool castsShadow = Dev::ReadUInt8(ptr + offsetCSS) > 0;
+        bool IsKinematic = Dev::ReadUInt8(ptr + offsetIK) > 0;
         if (isEditable) {
-            auto offset = GetOffset("NPlugDynaObjectModel_SInstanceParams", "CastStaticShadow");
-            bool castsShadow = UI::Checkbox("CastStaticShadow", Dev::ReadUInt8(ptr + offset) > 0);
-            Dev::Write(ptr + offset, castsShadow ? 0x1 : 0x0);
+            castsShadow = UI::Checkbox("CastStaticShadow", castsShadow);
+            Dev::Write(ptr + offsetCSS, castsShadow ? 0x1 : 0x0);
+            IsKinematic = UI::Checkbox("IsKinematic", IsKinematic);
+            Dev::Write(ptr + offsetIK, IsKinematic ? 0x1 : 0x0);
+        } else {
+            LabeledValue("CastStaticShadow", castsShadow);
+            LabeledValue("IsKinematic", IsKinematic);
         }
     }
 
