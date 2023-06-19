@@ -5,9 +5,8 @@
 
 0x2c u4 0x1a
 
-0x30 u4 (B0 3F 00 40 (custom) or 5A 0E 00 40 (screen))
-0x34 u4 (0x0 (custom) or AC C6 A7 C3)
 0x30 mwid author
+0x34 u4 (0x0 (custom) or AC C6 A7 C3)
 
 0x38 string name
 0x48 description
@@ -25,7 +24,7 @@
 
 0x170: nadeo skin fids
 
-0x1d8:
+0x1d8: placement params (yes)
 
 0x228 -> CSystemFidsFolder (Items, either system or local)
 
