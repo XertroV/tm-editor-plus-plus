@@ -620,7 +620,6 @@ void DrawSMetaPtr(uint64 ptr, uint32 clsId, const string &in type, bool isEditab
             LabeledValue("IsKinematic", IsKinematic);
         }
     }
-
 }
 
 
