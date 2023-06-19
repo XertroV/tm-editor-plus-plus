@@ -43,6 +43,7 @@ class IE_ManipulateMeshesTab : Tab {
 * \$f80Assume that you will get a crash\$z after using this and restart the game if you are unsure! (You can do multiple items in a single session, though.)
 * \$8f8After making a change, it is good to save the item\$z, exit the item editor, and re-edit the item. This reloads the item in memory and helps avoid crashes.
 * Will not work for some items/meshes for unknown reasons. Items with a CPlugCrystral have mixed success. Some items just do not work, currently.
+* Materials with globally projected textures will not work.
             """);
         }
 
@@ -268,6 +269,7 @@ class IE_ManipulateMeshesTab : Tab {
                 MeshDuplication::FixItemModelProperties(GetItemModel(), GetInventorySelectionModel());
                 AppendRunMsg("Set item model properties from source item model.");
             }
+
             // UI::SameLine();
             // if (UI::Button("")) {
             //     MeshDuplication::FixItemModelProperties(GetItemModel(), GetInventorySelectionModel());
@@ -310,6 +312,12 @@ class IE_ManipulateMeshesTab : Tab {
             _RunReplaceChildren();
         } else {
             AppendRunMsg("\\$f80Error: not sure how to process source type of " + tostring(source.ty));
+        }
+        
+        auto destModel = GetItemModel();
+        if (destModel.EntityModelEdition !is null) {
+            @destModel.EntityModelEdition = null;
+            AppendRunMsg("Nullified EntityModelEdition (Crystal / CPlugCrystal).");
         }
 
         MeshDuplication::PopMaterialModifier();
