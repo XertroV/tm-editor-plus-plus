@@ -179,6 +179,14 @@ EPlugSurfaceGameplayId DrawComboEPlugSurfaceGameplayId(const string &in label, E
     );
 }
 
+EGmSurfType DrawComboEGmSurfType(const string &in label, EGmSurfType val) {
+    return EGmSurfType(
+        DrawArbitraryEnum(label, int(val), 20, function(int v) {
+            return tostring(EGmSurfType(v));
+        })
+    );
+}
+
 EAxis DrawComboEAxis(const string &in label, EAxis val) {
     return EAxis(
         DrawArbitraryEnum(label, int(val), 3, function(int v) {

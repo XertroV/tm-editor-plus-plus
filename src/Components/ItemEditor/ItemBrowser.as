@@ -39,18 +39,35 @@ class ItemModel {
 
     void DrawEMEdition() {
         auto eme = item.EntityModelEdition;
-        auto emeCommon = cast<CGameCommonItemEntityModelEdition>(eme);
-        bool isCrystal = emeCommon !is null && emeCommon.MeshCrystal !is null;
-        UI::Text("Is a Crystal? " + isCrystal);
         if (eme is null) {
             UI::Text("No EntityModelEdition");
             return;
+        } 
+        
+        if (isEditable) {
+            if (UX::SmallButton("Nullify EntityModelEdition")) {
+                @item.EntityModelEdition = null;
+            }
         }
+
+        auto emeCommon = cast<CGameCommonItemEntityModelEdition>(eme);
+        bool isCrystal = emeCommon !is null && emeCommon.MeshCrystal !is null;
+
+        if (emeCommon !is null) {
+            UI::Text("Is a Crystal? " + isCrystal);
+            if (isEditable && isCrystal) {
+                UI::SameLine();
+                if (UX::SmallButton("Nullify")) {
+                    @emeCommon.MeshCrystal = null;
+                }
+            }
+        }
+
         if (emeCommon is null) {
             UI::Text("EntityModelEdition is an unknown type: " + UnkType(eme));
             return;
         }
-        UI::Text("Todo: more?");
+        // UI::Text("Todo: more?");
     }
 
     void DrawEMTree() {
@@ -452,11 +469,14 @@ class ItemModelTreeElement {
         if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
             auto buf = Dev::GetOffsetNod(nod, offset);
             auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
+            auto elSize = 0x18;
             for (uint i = 0; i < len; i++) {
-                auto mat = cast<CPlugMaterialUserInst>(Dev::GetOffsetNod(buf, 0x18 * i));
-                auto u1 = Dev::GetOffsetUint64(buf, 0x18 * i + 0x8);
-                auto u2 = Dev::GetOffsetUint64(buf, 0x18 * i + 0x10);
-                string suffix = " / " + u1 + " / " + Text::Format("0x%x", u2);
+                auto mat = cast<CPlugMaterialUserInst>(Dev::GetOffsetNod(buf, elSize * i));
+                auto u1 = Dev::GetOffsetUint64(buf, elSize * i + 0x8);
+                auto u2 = Dev::GetOffsetUint64(buf, elSize * i + 0x10);
+                // these seem to do/mean nothing
+                // string suffix = " / " + u1 + " / " + Text::Format("0x%x", u2);
+                string suffix = "";
                 if (mat is null) {
                     UI::Text("" + i + ". null" + suffix);
                 } else {
@@ -476,17 +496,64 @@ class ItemModelTreeElement {
         }
     }
 
-
-    void Draw(CPlugSurface@ surf) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugSurface", UI::TreeNodeFlags::DefaultOpen)) {
-            if (drawProperties) {
-                DrawMaterialsAt("nbMaterials: " + surf.Materials.Length, surf, GetOffset(surf, "Materials"));
-                UI::Text("MaterialIds.Length: " + surf.MaterialIds.Length);
+    void DrawMaterialIdsAt(const string &in title, CMwNod@ nod, uint16 offset) {
+        if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
+            auto buf = Dev::GetOffsetNod(nod, offset);
+            auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
+            auto objSize = 0x2;
+            for (uint i = 0; i < len; i++) {
+                EPlugSurfaceMaterialId PhysicId = EPlugSurfaceMaterialId(Dev::GetOffsetUint8(buf, objSize * i));
+                EPlugSurfaceGameplayId GameplayId = EPlugSurfaceGameplayId(Dev::GetOffsetUint8(buf, objSize * i + 0x1));
+                if (StartTreeNode("Material " + i + ".", true, UI::TreeNodeFlags::DefaultOpen)) {
+                    if (isEditable) {
+                        PhysicId = DrawComboEPlugSurfaceMaterialId("PhysicId", PhysicId);
+                        GameplayId = DrawComboEPlugSurfaceGameplayId("GameplayId", GameplayId);
+                        Dev::SetOffset(buf, objSize * i, uint8(PhysicId));
+                        Dev::SetOffset(buf, objSize * i + 0x1, uint8(GameplayId));
+                    } else {
+                        UI::Text("PhysicId: " + tostring(PhysicId));
+                        UI::Text("GameplayId: " + tostring(GameplayId));
+                    }
+                    EndTreeNode();
+                }
             }
             EndTreeNode();
         }
     }
 
+
+    void Draw(CPlugSurface@ surf) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugSurface", UI::TreeNodeFlags::DefaultOpen)) {
+            if (drawProperties) {
+                DrawMaterialsAt("nbMaterials: " + surf.Materials.Length, surf, GetOffset(surf, "Materials"));
+                DrawMaterialIdsAt("nbMaterialIds: " + surf.MaterialIds.Length, surf, GetOffset(surf, "MaterialIds"));
+                Draw("m_GmSurf", surf.m_GmSurf);
+                MkAndDrawChildNode(surf.Skel, GetOffset(surf, "Skel"), "Skel");
+            }
+            EndTreeNode();
+        }
+    }
+
+    void Draw(const string &in _name, GmSurf@ gmSurf) {
+        if (StartTreeNode(_name + " :: \\$f8fGmSurf", true, UI::TreeNodeFlags::DefaultOpen)) {
+            if (isEditable) {
+                gmSurf.GmSurfType = DrawComboEGmSurfType("GmSurfType", gmSurf.GmSurfType); 
+                AddSimpleTooltip("Almost always mesh? Unknown effects. Seems to crash the game for other values.");
+                gmSurf.GameplayMainDir = UI::InputFloat3("GameplayMainDir", gmSurf.GameplayMainDir);
+                AddSimpleTooltip("Allows customizing bumper and booster parameters");
+#if SIG_DEVELOPER
+                // UI::SameLine();
+                // if (UI::Button("Y=NaN")) {
+                //     Dev::SetOffset(gmSurf, GetOffset("GmSurf", "GameplayMainDir") + 0x4, uint32(0x7fc00000));
+                // }
+#endif
+            } else {
+                UI::Text("GmSurfType: " + tostring(gmSurf.GmSurfType));
+                UI::Text("GameplayMainDir: " + tostring(gmSurf.GameplayMainDir));
+            }
+            EndTreeNode();
+        }
+    }
 
 
     void Draw(CTrackMania@ asdf) {
