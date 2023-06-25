@@ -42,8 +42,8 @@ class ItemModel {
         if (eme is null) {
             UI::Text("No EntityModelEdition");
             return;
-        } 
-        
+        }
+
         if (isEditable) {
             if (UX::SmallButton("Nullify EntityModelEdition")) {
                 @item.EntityModelEdition = null;
@@ -435,11 +435,57 @@ class ItemModelTreeElement {
                 UI::Text("nbVisualIndexedTriangles: " + nbVisualIndexedTriangles);
                 UI::Text("nbLights: " + nbLights);
                 UI::Text("nbLightUserModels: " + nbLightUserModels);
+                DrawUserLightsAt("nbLightUserModels: " + nbLightUserModels, nod, 0x178);
                 DrawMaterialsAt("nbMaterials: " + nbMaterials, nod, 0xc8);
                 DrawMaterialsAt("nbCustomMaterials: " + nbCustomMaterials, nod, 0x1F8);
                 DrawUserMatIntsAt("nbMaterialUserInsts: " + nbMaterialUserInsts, nod, 0xF8);
             }
             MkAndDrawChildNode(skel, 0x78, "Skel");
+            EndTreeNode();
+        }
+    }
+
+    void DrawUserLightsAt(const string &in title, CMwNod@ nod, uint16 offset) {
+        if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
+            auto buf = Dev::GetOffsetNod(nod, offset);
+            auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
+            for (uint i = 0; i < len; i++) {
+                UI::PushID("userlight"+i);
+                auto light = cast<CPlugLightUserModel>(Dev::GetOffsetNod(buf, 0x8 * i));
+                if (light is null) {
+                    UI::Text("Light " + i + ". null");
+                } else {
+                    UI::Text("Light " + i + ":");
+                    UI::Indent();
+                    if (isEditable) {
+                        light.Color = UI::InputColor3("Color", light.Color);
+                        light.Intensity = UI::InputFloat("Intensity", light.Intensity);
+                        light.Distance = UI::InputFloat("Distance", light.Distance);
+                        light.PointEmissionRadius = UI::InputFloat("PointEmissionRadius", light.PointEmissionRadius);
+                        light.PointEmissionLength = UI::InputFloat("PointEmissionLength", light.PointEmissionLength);
+                        light.SpotInnerAngle = UI::InputFloat("SpotInnerAngle", light.SpotInnerAngle);
+                        light.SpotOuterAngle = UI::InputFloat("SpotOuterAngle", light.SpotOuterAngle);
+                        light.SpotEmissionSizeX = UI::InputFloat("SpotEmissionSizeX", light.SpotEmissionSizeX);
+                        light.SpotEmissionSizeY = UI::InputFloat("SpotEmissionSizeY", light.SpotEmissionSizeY);
+                        light.NightOnly = UI::Checkbox("NightOnly", light.NightOnly);
+                    } else {
+                        UI::BeginDisabled();
+                        light.Color = UI::InputColor3("Color", light.Color);
+                        UI::EndDisabled();
+                        UI::Text("Intensity: " + light.Intensity);
+                        UI::Text("Distance: " + light.Distance);
+                        UI::Text("PointEmissionRadius: " + light.PointEmissionRadius);
+                        UI::Text("PointEmissionLength: " + light.PointEmissionLength);
+                        UI::Text("SpotInnerAngle: " + light.SpotInnerAngle);
+                        UI::Text("SpotOuterAngle: " + light.SpotOuterAngle);
+                        UI::Text("SpotEmissionSizeX: " + light.SpotEmissionSizeX);
+                        UI::Text("SpotEmissionSizeY: " + light.SpotEmissionSizeY);
+                        UI::Text("NightOnly: " + light.NightOnly);
+                    }
+                    UI::Unindent();
+                }
+                UI::PopID();
+            }
             EndTreeNode();
         }
     }
@@ -537,7 +583,7 @@ class ItemModelTreeElement {
     void Draw(const string &in _name, GmSurf@ gmSurf) {
         if (StartTreeNode(_name + " :: \\$f8fGmSurf", true, UI::TreeNodeFlags::DefaultOpen)) {
             if (isEditable) {
-                gmSurf.GmSurfType = DrawComboEGmSurfType("GmSurfType", gmSurf.GmSurfType); 
+                gmSurf.GmSurfType = DrawComboEGmSurfType("GmSurfType", gmSurf.GmSurfType);
                 AddSimpleTooltip("Almost always mesh? Unknown effects. Seems to crash the game for other values.");
                 gmSurf.GameplayMainDir = UI::InputFloat3("GameplayMainDir", gmSurf.GameplayMainDir);
                 AddSimpleTooltip("Allows customizing bumper and booster parameters");
