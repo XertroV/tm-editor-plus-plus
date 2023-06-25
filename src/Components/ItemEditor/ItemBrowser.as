@@ -434,7 +434,6 @@ class ItemModelTreeElement {
                 uint nbCustomMaterials = Dev::GetOffsetUint32(s2m, 0x1F8 + 0x8);
                 UI::Text("nbVisualIndexedTriangles: " + nbVisualIndexedTriangles);
                 UI::Text("nbLights: " + nbLights);
-                UI::Text("nbLightUserModels: " + nbLightUserModels);
                 DrawUserLightsAt("nbLightUserModels: " + nbLightUserModels, nod, 0x178);
                 DrawMaterialsAt("nbMaterials: " + nbMaterials, nod, 0xc8);
                 DrawMaterialsAt("nbCustomMaterials: " + nbCustomMaterials, nod, 0x1F8);
