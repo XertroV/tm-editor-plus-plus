@@ -537,6 +537,11 @@ namespace MeshDuplication {
             skin.MwAddRef();
             Dev::SetOffset(dest, 0xa0, skinPtr);
             dest.SkinDirNameCustom = dest.SkinDirectory;
+            // try zeroing fids buffer: nope doesn't help
+            // Dev::SetOffset(skin, 0x58, uint64(0));
+            // Dev::SetOffset(skin, 0x60, uint64(0));
+        } else {
+            Dev::SetOffset(dest, 0xa0, uint64(0));
         }
 
         // not sure if material modifiers are possible on custom items, cannot save

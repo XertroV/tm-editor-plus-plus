@@ -141,6 +141,15 @@ class ReferencedNod {
 
 
 
+const uint16 O_ITEM_MODEL_SKIN = 0xA0;
+
+// no more than 0x170 bytes
+const uint16 O_GAMESKIN_PATH1 = 0x18;
+const uint16 O_GAMESKIN_PATH2 = 0x28;
+const uint16 O_GAMESKIN_FID_BUF = 0x58;
+const uint16 O_GAMESKIN_FILENAME_BUF = 0x68;
+const uint16 O_GAMESKIN_FID_CLASSID_BUF = 0x78;
+const uint16 O_GAMESKIN_PATH3 = 0x120;
 
 
 

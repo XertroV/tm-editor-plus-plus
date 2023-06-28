@@ -31,9 +31,18 @@ class ItemModel {
             CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(item)));
 #endif
             ClickableLabel("Author", item.Author.GetName());
+            DrawSkin();
             DrawEMEdition();
             DrawEMTree();
             UI::TreePop();
+        }
+    }
+
+    void DrawSkin() {
+        auto skin = cast<CPlugGameSkin>(Dev::GetOffsetNod(item, 0xA0));
+        if (skin !is null) {
+            auto el = ItemModelTreeElement(null, -1, skin, "GameSkin", drawProperties, O_ITEM_MODEL_SKIN, isEditable);
+            el.Draw();
         }
     }
 
@@ -107,6 +116,7 @@ class ItemModelTreeElement {
     CGameCommonItemEntityModel@ cieModel;
     CPlugSurface@ surf;
     CPlugSolid2Model@ s2m;
+    CPlugGameSkin@ skin;
     CGameItemModel@ itemModel;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
@@ -132,6 +142,7 @@ class ItemModelTreeElement {
         @this.cieModel = cast<CGameCommonItemEntityModel>(nod);
         @this.surf = cast<CPlugSurface>(nod);
         @this.s2m = cast<CPlugSolid2Model>(nod);
+        @this.skin = cast<CPlugGameSkin>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -210,6 +221,8 @@ class ItemModelTreeElement {
             Draw(s2m);
         } else if (surf !is null) {
             Draw(surf);
+        } else if (skin !is null) {
+            Draw(skin);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
@@ -523,12 +536,15 @@ class ItemModelTreeElement {
 #if SIG_DEVELOPER
                         Draw_IB_DevBtnPtr(matTitle, mat, 0x8 * i);
 #endif
-                        Dev::SetOffset(mat, O_MATERIAL_PHYSICS_ID, uint8(
-                            DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(Dev::GetOffsetUint8(mat, O_MATERIAL_PHYSICS_ID)))
-                        ));
-                        Dev::SetOffset(mat, O_MATERIAL_GAMEPLAY_ID, uint8(
-                            DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(Dev::GetOffsetUint8(mat, O_MATERIAL_GAMEPLAY_ID)))
-                        ));
+                        auto physId = EPlugSurfaceMaterialId(Dev::GetOffsetUint8(mat, O_MATERIAL_PHYSICS_ID));
+                        auto gameplayId = EPlugSurfaceGameplayId(Dev::GetOffsetUint8(mat, O_MATERIAL_GAMEPLAY_ID));
+                        if (isEditable) {
+                            Dev::SetOffset(mat, O_MATERIAL_PHYSICS_ID, uint8(DrawComboEPlugSurfaceMaterialId("PhysicsID", physId)));
+                            Dev::SetOffset(mat, O_MATERIAL_GAMEPLAY_ID, uint8(DrawComboEPlugSurfaceGameplayId("GameplayID", gameplayId)));
+                        } else {
+                            CopiableLabeledValue("PhysicsID", tostring(physId));
+                            CopiableLabeledValue("GameplayID", tostring(gameplayId));
+                        }
                         EndTreeNode();
                     }
                 }
@@ -558,20 +574,25 @@ class ItemModelTreeElement {
                     }
                     auto title = "" + i + ". " + name + suffix;
                     bool treeOpen = StartTreeNode(title, true, UI::TreeNodeFlags::None);
-#if SIG_DEVELOPER
-                    UI::SameLine();
-                    if (UX::SmallButton(Icons::Cube + " Explore##matUserInst" + i)) {
-                        ExploreNod("MaterialUserInst " + i + ".", mat);
-                    }
-#endif
+// #if SIG_DEVELOPER
+//                     UI::SameLine();
+//                     if (UX::SmallButton(Icons::Cube + " Explore##matUserInst" + i)) {
+//                         ExploreNod("MaterialUserInst " + i + ".", mat);
+//                     }
+// #endif
                     if (treeOpen) {
 #if SIG_DEVELOPER
                         Draw_IB_DevBtnPtr(title, mat, elSize * i);
 #endif
-                        bool changed;
-                        mat._LinkFull = UI::InputText("LinkFull", mat._LinkFull, changed);
-                        mat.PhysicsID = (DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(mat.PhysicsID)));
-                        mat.GameplayID = (DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(mat.GameplayID)));
+                        if (isEditable) {
+                            mat._LinkFull = UI::InputText("LinkFull", mat._LinkFull);
+                            mat.PhysicsID = (DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(mat.PhysicsID)));
+                            mat.GameplayID = (DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(mat.GameplayID)));
+                        } else {
+                            CopiableLabeledValue("LinkFull", mat._LinkFull);
+                            CopiableLabeledValue("PhysicsID", tostring(EPlugSurfaceMaterialId(mat.PhysicsID)));
+                            CopiableLabeledValue("GameplayID", tostring(EPlugSurfaceGameplayId(mat.GameplayID)));
+                        }
                         EndTreeNode();
                     }
                     // UI::Indent();
@@ -637,6 +658,50 @@ class ItemModelTreeElement {
             } else {
                 UI::Text("GmSurfType: " + tostring(gmSurf.GmSurfType));
                 UI::Text("GameplayMainDir: " + tostring(gmSurf.GameplayMainDir));
+            }
+            EndTreeNode();
+        }
+    }
+
+
+    void Draw(CPlugGameSkin@ skin) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugGameSkin", UI::TreeNodeFlags::None)) {
+            string path1 = Dev::GetOffsetString(skin, O_GAMESKIN_PATH1);
+            string path2 = Dev::GetOffsetString(skin, O_GAMESKIN_PATH2);
+            if (isEditable) {
+                Dev::SetOffset(skin, O_GAMESKIN_PATH1, UI::InputText("Path1", path1));
+                Dev::SetOffset(skin, O_GAMESKIN_PATH2, UI::InputText("Path2", path2));
+            } else {
+                CopiableLabeledValue("Path1", path1);
+                CopiableLabeledValue("Path2", path2);
+            }
+            auto buf = Dev::GetOffsetNod(skin, O_GAMESKIN_FID_BUF);
+            auto len = Dev::GetOffsetUint32(skin, O_GAMESKIN_FID_BUF + 0x8);
+            for (uint i = 0; i < len; i++) {
+                if (buf is null) continue;
+                auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(buf, 0x8 * i));
+                UI::Text("FID " + i +". " + (fid is null ? "Unknown" : string(fid.FileName)));
+#if SIG_DEVELOPER
+                if (fid !is null) {
+                    UI::SameLine();
+                    if (UI::Button(Icons::Cube + " Explore FID##" + i)) {
+                        ExploreNod(fid);
+                    }
+                }
+#endif
+            }
+            auto buf2 = Dev::GetOffsetNod(skin, O_GAMESKIN_FILENAME_BUF);
+            len = Dev::GetOffsetUint32(skin, O_GAMESKIN_FILENAME_BUF + 0x8);
+            for (uint i = 0; i < len; i++) {
+                if (buf2 is null) continue;
+                auto filename = Dev::GetOffsetString(buf2, 0x10 * i);
+                CopiableLabeledValue("Filename " + i, filename);
+            }
+            auto buf3 = Dev::GetOffsetNod(skin, O_GAMESKIN_FID_CLASSID_BUF);
+            len = Dev::GetOffsetUint32(skin, O_GAMESKIN_FID_CLASSID_BUF + 0x8);
+            for (uint i = 0; i < len; i++) {
+                auto classId = Dev::GetOffsetUint32(buf3, 0x4 * i);
+                CopiableLabeledValue("Class ID " + i, Reflection::GetType(classId).Name); // Text::Format("0x%08x", classId));
             }
             EndTreeNode();
         }

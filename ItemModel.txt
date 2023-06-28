@@ -64,6 +64,9 @@ CPlugGameSkin: (up to 0x170 bytes large at most)
 
 all 0s for pusher
 
+0xAC: 0x1
+0xB0: gamedata -> file://Media/???LocatorFilename
+0x118: 0x1
 0x120: Any\Advertisement1x1\
 
 

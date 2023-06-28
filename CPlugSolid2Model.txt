@@ -138,18 +138,30 @@ material 9079 0x8d3340
 0x28 -> byte (physics id)
 0x29 -> gameplay id?
 
-0x38? -> ptr struct
-    0x8 -> fid
-    0x10 -> cplugshaderapply
+0x38? -> ptr struct (maybe MwSArray)
+    0x0 -> 00 00 03 00 7B 02 00 00
+    0x8 -> fid Tech3_Block_TDSN_CubeOut.Shader.Gbx
+    0x10 -> cplugshaderapply or fid as above
         -> fid,
         -> 0x38
+    0x28 same as 0x8
     0x30 -> cplugshaderappyl
 
-0x48 -> CPlugMaterial (huh?)
+0x48 -> CPlugMaterial (huh?) Tech3_Block_TDSN_CubeOut.Material.gbx
 0x50 -> CPlugMaterialCustom 903A (0xafc020)
     0x38 -> 9079 (material) 0x8d3340
     0x50 -> mwsarray? (2) (skin color? + shader?)
     0x60 -> mwsarray? (9) 0x30 byte struct? (waypoint something? 0x20 -> fid b00a)
+        0x0 -> gamedata (shader?)
+        0x8 ?
+        0x10 -> gamedata 900200 class id -> CPlugShader
+        0x18 -> 0x40005415 -> MwId for Buddies ??
+        0x20 -> buffer to struct 0x100 large (wow!)
+            -> the structs are CSystemFidFile
+                -> TechnicsSpecials_D.Texture.gbx
+                -> TechnicsSpecials_D.Texture.gbx
+                -> TechnicsSpecials_D.dds
+                -> Block_TDSN_DefWrite_v.hlsl?1012
     0x80 -> mwsarray? (7) 0x30 cplugshaderpass?
 0x58 -> Buffer<uint>?
 0x90 -> ":data:\Projects\Techno3\Media\Material\Tech3_Block_TDSN_CubeOut_DispIn.Material.gbx"
