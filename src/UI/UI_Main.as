@@ -133,10 +133,19 @@ namespace MenuBar {
             if (UI::BeginMenu("Dev")) {
                 if (UI::MenuItem(Icons::Cube + " Editor"))
                     ExploreNod(GetApp().Editor);
-                if (UI::MenuItem(Icons::Cube + " PluginMapType"))
-                    ExploreNod(cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType);
-                if (UI::MenuItem(Icons::Cube + " Editor.Challenge"))
-                    ExploreNod(cast<CGameCtnEditorFree>(GetApp().Editor).Challenge);
+                CGameCtnEditorFree@ editor;
+                if (IsInEditor || IsInItemEditor) {
+                    auto s = GetApp().Switcher;
+                    if (s.ModuleStack.Length > 0) {
+                        @editor = cast<CGameCtnEditorFree>(s.ModuleStack[0]);
+                    }
+                }
+                if (editor !is null) {
+                    if (UI::MenuItem(Icons::Cube + " PluginMapType"))
+                        ExploreNod(editor.PluginMapType);
+                    if (UI::MenuItem(Icons::Cube + " Editor.Challenge"))
+                        ExploreNod(editor.Challenge);
+                }
                 UI::EndMenu();
             }
 #endif
