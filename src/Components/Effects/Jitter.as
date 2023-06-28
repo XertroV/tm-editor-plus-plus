@@ -59,9 +59,9 @@ class JitterEffectTab : EffectTab {
         UI::Separator();
         jitterPos = UI::Checkbox("Apply Position Jitter", jitterPos);
         AddSimpleTooltip("Apply a randomization to placed items' locations");
-        jitterPosOffset = UI::InputFloat3("Position Offset", jitterPosOffset);
+        jitterPosOffset = UX::InputFloat3("Position Offset", jitterPosOffset);
         AddSimpleTooltip("Offset applied to position before jitter.");
-        jitterPosAmt = UI::InputFloat3("Position Radius Jitter", jitterPosAmt); // , vec3(8, 1, 8)
+        jitterPosAmt = UX::InputFloat3("Position Radius Jitter", jitterPosAmt); // , vec3(8, 1, 8)
         AddSimpleTooltip("Position will have a random amount added to it, up to +/- the amount specified.");
         // jitterPosSin = UI::Checkbox("Position Jitter - Sine Wave", jitterPosSin);
         // AddSimpleTooltip("Sine wave profile will be applied. More items will be clustered around the center.\n(Theta offset = 90, so technically cosine but yeah.)");

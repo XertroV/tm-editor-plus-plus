@@ -64,6 +64,12 @@ shared class Tab {
         }
     }
 
+    void DrawMenuItem() {
+        if (UI::MenuItem(DisplayIconAndName)) {
+            windowOpen = !windowOpen;
+        }
+    }
+
     void DrawTab(bool withItem = true) {
         if (!withItem) {
             DrawTabWrapInner();

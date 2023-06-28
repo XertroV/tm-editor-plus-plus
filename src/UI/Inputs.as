@@ -8,6 +8,24 @@ namespace UX {
         return val;
     }
 
+    shared vec3 InputFloat3(const string &in label, vec3 val, vec3 _default = vec3()) {
+        auto ret = UI::InputFloat3(label, val);
+        UI::SameLine();
+        if (UI::Button("Reset##"+label)) {
+            return _default;
+        }
+        return ret;
+    }
+
+    shared vec3 SliderFloat3(const string &in label, vec3 val, float min, float max, const string &in fmt = "%.3f", vec3 _default = vec3()) {
+        auto ret = UI::SliderFloat3(label, val, min, max, fmt);
+        UI::SameLine();
+        if (UI::Button("Reset##"+label)) {
+            return _default;
+        }
+        return ret;
+    }
+
     shared vec2 InputAngles2(const string &in label, vec2 angles, vec2 _default = vec2()) {
         auto val = MathX::ToRad(UI::InputFloat2(label, MathX::ToDeg(angles)));
         UI::SameLine();
@@ -50,7 +68,12 @@ namespace UX {
         // return nat3(x, y, z);
     }
 
-    shared quat InputQuat(const string &in label, quat val) {
-        return Vec4ToQuat(UI::InputFloat4(label, QuatToVec4(val)));
+    shared quat InputQuat(const string &in label, quat val, quat _default = quat(0., 0., 0., 1.)) {
+        auto ret = Vec4ToQuat(UI::InputFloat4(label, QuatToVec4(val)));
+        UI::SameLine();
+        if (UI::Button("Reset##"+label)) {
+            return _default;
+        }
+        return ret;
     }
 }

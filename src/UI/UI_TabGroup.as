@@ -118,6 +118,12 @@ shared class TabGroup {
             }
         }
     }
+
+    void DrawTabsAsMenuItems() {
+        for (uint i = 0; i < tabs.Length; i++) {
+            tabs[i].DrawMenuItem();
+        }
+    }
 }
 
 class RootTabGroupCls : TabGroup {

@@ -159,7 +159,7 @@ namespace Repeat {
             UI::Text("Initial Item Transformation (Gray)");
 
             UI::BeginDisabled();
-            item_Pos = UI::SliderFloat3("Init. Pos Offset", item_Pos, -64, 64, "%.4f");
+            item_Pos = UX::SliderFloat3("Init. Pos Offset", item_Pos, -64, 64, "%.4f");
             if (!m_IgnoreItemRotation) {
                 item_Rot = UX::SliderAngles3("Init. Rot Offset (Deg)", item_Rot);
             }
@@ -172,21 +172,21 @@ namespace Repeat {
 
             UI::Text("Internal Transformation (Cyan)");
 
-            internal_Pos = UI::SliderFloat3("Internal Pos Offset", internal_Pos, -64, 64, "%.4f");
+            internal_Pos = UX::SliderFloat3("Internal Pos Offset", internal_Pos, -64, 64, "%.4f");
             internal_Rot = UX::SliderAngles3("Internal Rot Offset (Deg)", internal_Rot);
 
             UI::Separator();
 
             UI::Text("To Iteration Base (Green)");
 
-            iterBase_Pos = UI::SliderFloat3("Iter. Base Pos Offset", iterBase_Pos, -64, 64, "%.4f");
+            iterBase_Pos = UX::SliderFloat3("Iter. Base Pos Offset", iterBase_Pos, -64, 64, "%.4f");
             iterBase_Rot = UX::SliderAngles3("Iter. Base Rot Offset (Deg)", iterBase_Rot, -30, 30, "%.4f");
 
             UI::Separator();
 
             UI::Text("World-Iteration Transformation (Magenta)");
 
-            wi_Pos = UI::SliderFloat3("Iter. Pos Offset", wi_Pos, -64, 64, "%.4f");
+            wi_Pos = UX::SliderFloat3("Iter. Pos Offset", wi_Pos, -64, 64, "%.4f");
             wi_Rot = UX::SliderAngles3("Iter. Rot (Deg)", wi_Rot, -30, 30, "%.4f");
             wi_Scale = UI::InputFloat3("Iter. Scale", wi_Scale);
 

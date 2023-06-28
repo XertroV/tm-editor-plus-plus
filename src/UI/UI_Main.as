@@ -19,6 +19,7 @@
 
 TabGroup@ RootTabGroup_Editor = CreateRootTabGroup();
 TabGroup@ RootTabGroup_ItemEditor = CreateItemEditorRT();
+TabGroup@ ToolsTG = CreateToolsTabGroup();
 
 void UI_Main_Render() {
     if (!UserHasPermissions) return;
@@ -55,6 +56,8 @@ void UI_Main_Render() {
             tabToDraw.DrawTabsAsSidebar();
         }
         UI::End();
+
+        ToolsTG.DrawWindows();
     }
 
     if (!Editor::IsRefreshSafe()) {
@@ -88,6 +91,11 @@ namespace MenuBar {
                 if (changed) UpdateMenuSearch();
                 DrawMenuSearchOptions();
 
+                UI::EndMenu();
+            }
+
+            if (UI::BeginMenu("Tools")) {
+                ToolsTG.DrawTabsAsMenuItems();
                 UI::EndMenu();
             }
 
@@ -196,6 +204,11 @@ namespace MenuBar {
     }
 }
 
+TabGroup@ CreateToolsTabGroup() {
+    auto tools = RootTabGroupCls();
+    QuaternionCalcTab(tools);
+    return tools;
+}
 
 TabGroup@ CreateItemEditorRT() {
     auto root = RootTabGroupCls();

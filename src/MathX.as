@@ -54,6 +54,10 @@ namespace MathX {
         return a.x == b.x && a.y == b.y && a.z == b.z;
     }
 
+    shared bool QuatEq(quat a, quat b) {
+        return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+    }
+
 
     shared float AngleLerp(float start, float stop, float t) {
         float diff = stop - start;
