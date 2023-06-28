@@ -455,34 +455,38 @@ class ItemModelTreeElement {
                 if (light is null) {
                     UI::Text("Light " + i + ". null");
                 } else {
-                    UI::Text("Light " + i + ":");
-                    UI::Indent();
-                    if (isEditable) {
-                        light.Color = UI::InputColor3("Color", light.Color);
-                        light.Intensity = UI::InputFloat("Intensity", light.Intensity);
-                        light.Distance = UI::InputFloat("Distance", light.Distance);
-                        light.PointEmissionRadius = UI::InputFloat("PointEmissionRadius", light.PointEmissionRadius);
-                        light.PointEmissionLength = UI::InputFloat("PointEmissionLength", light.PointEmissionLength);
-                        light.SpotInnerAngle = UI::InputFloat("SpotInnerAngle", light.SpotInnerAngle);
-                        light.SpotOuterAngle = UI::InputFloat("SpotOuterAngle", light.SpotOuterAngle);
-                        light.SpotEmissionSizeX = UI::InputFloat("SpotEmissionSizeX", light.SpotEmissionSizeX);
-                        light.SpotEmissionSizeY = UI::InputFloat("SpotEmissionSizeY", light.SpotEmissionSizeY);
-                        light.NightOnly = UI::Checkbox("NightOnly", light.NightOnly);
-                    } else {
-                        UI::BeginDisabled();
-                        light.Color = UI::InputColor3("Color", light.Color);
-                        UI::EndDisabled();
-                        UI::Text("Intensity: " + light.Intensity);
-                        UI::Text("Distance: " + light.Distance);
-                        UI::Text("PointEmissionRadius: " + light.PointEmissionRadius);
-                        UI::Text("PointEmissionLength: " + light.PointEmissionLength);
-                        UI::Text("SpotInnerAngle: " + light.SpotInnerAngle);
-                        UI::Text("SpotOuterAngle: " + light.SpotOuterAngle);
-                        UI::Text("SpotEmissionSizeX: " + light.SpotEmissionSizeX);
-                        UI::Text("SpotEmissionSizeY: " + light.SpotEmissionSizeY);
-                        UI::Text("NightOnly: " + light.NightOnly);
+
+                    if (StartTreeNode("Light " + i, true, UI::TreeNodeFlags::None)) {
+#if SIG_DEVELOPER
+                        Draw_IB_DevBtnPtr("Light " + i, light, 0x8 * i);
+#endif
+                        if (isEditable) {
+                            light.Color = UI::InputColor3("Color", light.Color);
+                            light.Intensity = UI::InputFloat("Intensity", light.Intensity);
+                            light.Distance = UI::InputFloat("Distance", light.Distance);
+                            light.PointEmissionRadius = UI::InputFloat("PointEmissionRadius", light.PointEmissionRadius);
+                            light.PointEmissionLength = UI::InputFloat("PointEmissionLength", light.PointEmissionLength);
+                            light.SpotInnerAngle = UI::InputFloat("SpotInnerAngle", light.SpotInnerAngle);
+                            light.SpotOuterAngle = UI::InputFloat("SpotOuterAngle", light.SpotOuterAngle);
+                            light.SpotEmissionSizeX = UI::InputFloat("SpotEmissionSizeX", light.SpotEmissionSizeX);
+                            light.SpotEmissionSizeY = UI::InputFloat("SpotEmissionSizeY", light.SpotEmissionSizeY);
+                            light.NightOnly = UI::Checkbox("NightOnly", light.NightOnly);
+                        } else {
+                            UI::BeginDisabled();
+                            light.Color = UI::InputColor3("Color", light.Color);
+                            UI::EndDisabled();
+                            UI::Text("Intensity: " + light.Intensity);
+                            UI::Text("Distance: " + light.Distance);
+                            UI::Text("PointEmissionRadius: " + light.PointEmissionRadius);
+                            UI::Text("PointEmissionLength: " + light.PointEmissionLength);
+                            UI::Text("SpotInnerAngle: " + light.SpotInnerAngle);
+                            UI::Text("SpotOuterAngle: " + light.SpotOuterAngle);
+                            UI::Text("SpotEmissionSizeX: " + light.SpotEmissionSizeX);
+                            UI::Text("SpotEmissionSizeY: " + light.SpotEmissionSizeY);
+                            UI::Text("NightOnly: " + light.NightOnly);
+                        }
+                        EndTreeNode();
                     }
-                    UI::Unindent();
                 }
                 UI::PopID();
             }
@@ -511,10 +515,21 @@ class ItemModelTreeElement {
                     UI::Text("" + i + ". null");
                 } else {
                     auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(mat, 0x8));
-                    if (fid is null) {
-                        UI::Text("" + i + ". Unknown material.");
-                    } else {
-                        UI::Text("" + i + ". " + fid.FileName);
+                    auto matTitle = "" + i + ". Unknown material.";
+                    if (fid !is null) {
+                        matTitle = "" + i + ". " + fid.FileName;
+                    }
+                    if (StartTreeNode(matTitle, true, UI::TreeNodeFlags::None)) {
+#if SIG_DEVELOPER
+                        Draw_IB_DevBtnPtr(matTitle, mat, 0x8 * i);
+#endif
+                        Dev::SetOffset(mat, O_MATERIAL_PHYSICS_ID, uint8(
+                            DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(Dev::GetOffsetUint8(mat, O_MATERIAL_PHYSICS_ID)))
+                        ));
+                        Dev::SetOffset(mat, O_MATERIAL_GAMEPLAY_ID, uint8(
+                            DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(Dev::GetOffsetUint8(mat, O_MATERIAL_GAMEPLAY_ID)))
+                        ));
+                        EndTreeNode();
                     }
                 }
             }
@@ -541,7 +556,8 @@ class ItemModelTreeElement {
                     if (mat._LinkFull.Length > 0) {
                         name = mat._LinkFull;
                     }
-                    bool treeOpen = StartTreeNode("" + i + ". " + name + suffix, true, UI::TreeNodeFlags::None);
+                    auto title = "" + i + ". " + name + suffix;
+                    bool treeOpen = StartTreeNode(title, true, UI::TreeNodeFlags::None);
 #if SIG_DEVELOPER
                     UI::SameLine();
                     if (UX::SmallButton(Icons::Cube + " Explore##matUserInst" + i)) {
@@ -549,6 +565,9 @@ class ItemModelTreeElement {
                     }
 #endif
                     if (treeOpen) {
+#if SIG_DEVELOPER
+                        Draw_IB_DevBtnPtr(title, mat, elSize * i);
+#endif
                         bool changed;
                         mat._LinkFull = UI::InputText("LinkFull", mat._LinkFull, changed);
                         mat.PhysicsID = (DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(mat.PhysicsID)));
@@ -647,15 +666,7 @@ class ItemModelTreeElement {
         if (open && !suppressDev && !isPicker && nod !is null) {
             auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(nod, 0x8));
 #if SIG_DEVELOPER
-            UI::TextDisabled(Text::Format("0x%03x", nodOffset));
-            UI::SameLine();
-            if (UX::SmallButton(Icons::Cube + " Explore Nod")) {
-                ExploreNod(title, nod);
-            }
-//#if DEV
-            UI::SameLine();
-            CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(nod)));
-//#endif
+            Draw_IB_DevBtnPtr(title, nod, nodOffset);
             if (fid !is null) UI::SameLine();
 #endif
             if (fid !is null) {
@@ -700,7 +711,18 @@ class ItemModelTreeElement {
 }
 
 
-
+void Draw_IB_DevBtnPtr(const string &in title, CMwNod@ nod, uint16 nodOffset) {
+// safer to put preprocessor statements inside incase this is accidentally called without a SIG_DEVELOPER check
+#if SIG_DEVELOPER
+        UI::TextDisabled(Text::Format("0x%03x", nodOffset));
+        UI::SameLine();
+        if (UX::SmallButton(Icons::Cube + " Explore Nod")) {
+            ExploreNod(title, nod);
+        }
+        UI::SameLine();
+        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(nod)));
+#endif
+}
 
 uint64 Dev_GetPointerForNod(CMwNod@ nod) {
     if (nod is null) throw('nod was null');

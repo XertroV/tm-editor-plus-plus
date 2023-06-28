@@ -132,6 +132,19 @@ class ReferencedNod {
     CPlugSurface@ As_CPlugSurface() {
         return cast<CPlugSurface>(this.nod);
     }
-
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+const uint16 O_MATERIAL_PHYSICS_ID = 0x28;
+const uint16 O_MATERIAL_GAMEPLAY_ID = 0x29;
