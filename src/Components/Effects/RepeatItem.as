@@ -188,7 +188,7 @@ namespace Repeat {
 
             wi_Pos = UX::SliderFloat3("Iter. Pos Offset", wi_Pos, -64, 64, "%.4f");
             wi_Rot = UX::SliderAngles3("Iter. Rot (Deg)", wi_Rot, -30, 30, "%.4f");
-            wi_Scale = UI::InputFloat3("Iter. Scale", wi_Scale);
+            wi_Scale = UX::InputFloat3("Iter. Scale", wi_Scale, vec3(1));
 
             UI::Separator();
 

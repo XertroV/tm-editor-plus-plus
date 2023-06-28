@@ -65,7 +65,7 @@ shared class Tab {
     }
 
     void DrawMenuItem() {
-        if (UI::MenuItem(DisplayIconAndName)) {
+        if (UI::MenuItem(DisplayIconAndName, "", windowOpen)) {
             windowOpen = !windowOpen;
         }
     }

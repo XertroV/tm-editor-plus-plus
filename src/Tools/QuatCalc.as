@@ -1,6 +1,6 @@
 class QuaternionCalcTab : Tab {
     QuaternionCalcTab(TabGroup@ parent) {
-        super(parent, "Qaternion Calculator", Icons::Calculator + Icons::ArrowCircleRight);
+        super(parent, "Qaternion Calculator", Icons::Calculator + Icons::Kenney::MoveBtAlt);
         this.windowOpen = true;
     }
 

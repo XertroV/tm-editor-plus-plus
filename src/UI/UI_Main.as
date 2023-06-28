@@ -19,6 +19,7 @@
 
 TabGroup@ RootTabGroup_Editor = CreateRootTabGroup();
 TabGroup@ RootTabGroup_ItemEditor = CreateItemEditorRT();
+TabGroup@ RootTabGroup_MeshEditor = CreateMeshEditorRT();
 TabGroup@ ToolsTG = CreateToolsTabGroup();
 
 void UI_Main_Render() {
@@ -32,9 +33,9 @@ void UI_Main_Render() {
         // @tabToDraw = ;
         return;
     } else if (IsInItemEditor) {
-        // draw item editor UI
         @tabToDraw = RootTabGroup_ItemEditor;
-        // return;
+    } else if (IsInMeshEditor) {
+        @tabToDraw = RootTabGroup_MeshEditor;
     } else if (!IsInEditor) {
         return;
     }
@@ -208,6 +209,12 @@ TabGroup@ CreateToolsTabGroup() {
     auto tools = RootTabGroupCls();
     QuaternionCalcTab(tools);
     return tools;
+}
+
+TabGroup@ CreateMeshEditorRT() {
+    auto root = RootTabGroupCls();
+    MM_BrowserTab(root);
+    return root;
 }
 
 TabGroup@ CreateItemEditorRT() {

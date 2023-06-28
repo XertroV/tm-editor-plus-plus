@@ -48,6 +48,7 @@ class ItemModel {
             if (UX::SmallButton("Nullify EntityModelEdition")) {
                 @item.EntityModelEdition = null;
             }
+            AddSimpleTooltip("After nullifying, the item will fail to save if any CPlugSurfaces have materials -- to fix click TransformMaterialsToMatIds.");
         }
 
         auto emeCommon = cast<CGameCommonItemEntityModelEdition>(eme);
@@ -493,6 +494,17 @@ class ItemModelTreeElement {
         if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
             auto buf = Dev::GetOffsetNod(nod, offset);
             auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
+            // operations for surfaces
+            auto surf = cast<CPlugSurface>(nod);
+            if (isEditable && surf !is null && len > 0) {
+                if (UI::Button("UpdateSurfMaterialIdsFromMaterialIndexs")) {
+                    surf.UpdateSurfMaterialIdsFromMaterialIndexs();
+                }
+                if (UI::Button("TransformMaterialsToMatIds")) {
+                    surf.TransformMaterialsToMatIds();
+                }
+            }
+            // always show material name if we can
             for (uint i = 0; i < len; i++) {
                 auto mat = cast<CPlugMaterial>(Dev::GetOffsetNod(buf, 0x8 * i));
                 if (mat is null) {
@@ -525,14 +537,25 @@ class ItemModelTreeElement {
                 if (mat is null) {
                     UI::Text("" + i + ". null" + suffix);
                 } else {
-                    UI::Text("" + i + ". " + mat._Name.GetName() + suffix);
-                    // UI::Indent();
+                    string name = mat._Name.GetName();
+                    if (mat._LinkFull.Length > 0) {
+                        name = mat._LinkFull;
+                    }
+                    bool treeOpen = StartTreeNode("" + i + ". " + name + suffix, true, UI::TreeNodeFlags::None);
 #if SIG_DEVELOPER
                     UI::SameLine();
                     if (UX::SmallButton(Icons::Cube + " Explore##matUserInst" + i)) {
                         ExploreNod("MaterialUserInst " + i + ".", mat);
                     }
 #endif
+                    if (treeOpen) {
+                        bool changed;
+                        mat._LinkFull = UI::InputText("LinkFull", mat._LinkFull, changed);
+                        mat.PhysicsID = (DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(mat.PhysicsID)));
+                        mat.GameplayID = (DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(mat.GameplayID)));
+                        EndTreeNode();
+                    }
+                    // UI::Indent();
                     // UI::SameLine();
                     // UI::Text(mat.Link.GetName());
                 }
