@@ -267,7 +267,7 @@ void DrawSAnimFunc(const string &in label, NPlugDyna_SKinematicConstraint@ model
     if (model is null) return;
     uint len = Dev::GetOffsetUint8(model, offset);
     auto arrStartOffset = offset + 0x4;
-    if (UI::CollapsingHeader(label + " ("+len+")")) {
+    if (UI::CollapsingHeader(label + " ("+len+")###" + label + Dev_GetPointerForNod(model))) {
         UI::Indent();
         if (len < 4 && UI::Button("Add New Easing to Chain##"+label)) {
             Notify("Note: you may need to save and re-edit the item for new easings to be loaded.");

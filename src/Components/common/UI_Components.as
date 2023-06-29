@@ -194,6 +194,13 @@ EAxis DrawComboEAxis(const string &in label, EAxis val) {
         })
     );
 }
+CGxLightBall::EStaticShadow DrawComboEStaticShadow(const string &in label, CGxLightBall::EStaticShadow val) {
+    return CGxLightBall::EStaticShadow(
+        DrawArbitraryEnum(label, int(val), 2, function(int v) {
+            return tostring(CGxLightBall::EStaticShadow(v));
+        })
+    );
+}
 
 int DrawColorBtnChoice(const string &in label, int val) {
     if (DrawBtnMbActive("Default##"+label, val == 0))

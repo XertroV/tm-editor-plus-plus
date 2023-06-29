@@ -117,6 +117,11 @@ class ItemModelTreeElement {
     CPlugSurface@ surf;
     CPlugSolid2Model@ s2m;
     CPlugGameSkin@ skin;
+    CPlugMaterial@ mat;
+    CPlugLight@ light;
+    CPlugLightUserModel@ userLight;
+    CPlugMaterialUserInst@ userMat;
+    GxLight@ gxLight;
     CGameItemModel@ itemModel;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
@@ -143,6 +148,11 @@ class ItemModelTreeElement {
         @this.surf = cast<CPlugSurface>(nod);
         @this.s2m = cast<CPlugSolid2Model>(nod);
         @this.skin = cast<CPlugGameSkin>(nod);
+        @this.mat = cast<CPlugMaterial>(nod);
+        @this.light = cast<CPlugLight>(nod);
+        @this.userLight = cast<CPlugLightUserModel>(nod);
+        @this.userMat = cast<CPlugMaterialUserInst>(nod);
+        @this.gxLight = cast<GxLight>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -223,6 +233,16 @@ class ItemModelTreeElement {
             Draw(surf);
         } else if (skin !is null) {
             Draw(skin);
+        } else if (userLight !is null) {
+            Draw(userLight);
+        } else if (userMat !is null) {
+            Draw(userMat);
+        } else if (mat !is null) {
+            Draw(mat);
+        } else if (light !is null) {
+            Draw(light);
+        } else if (gxLight !is null) {
+            Draw(gxLight);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
@@ -286,7 +306,7 @@ class ItemModelTreeElement {
                 if (StartTreeNode(".Variant["+i+"]:", true)) {
                     if (drawProperties) {
                         UI::Text("nbPlacementTags: " + varList.Variants[i].Tags.Length + "  { " + GetVariantTagsStr(varList, i) + " }");
-                        LabeledValue("HiddenInManualCycle: ", varList.Variants[i].HiddenInManualCycle);
+                        LabeledValue("HiddenInManualCycle", varList.Variants[i].HiddenInManualCycle);
                     }
                     MkAndDrawChildNode(varList.Variants[i].EntityModel, "EntityModel");
                     EndTreeNode();
@@ -443,11 +463,11 @@ class ItemModelTreeElement {
                 uint nbVisualIndexedTriangles = Dev::GetOffsetUint32(s2m, 0xA8 + 0x8);
                 uint nbMaterials = Dev::GetOffsetUint32(s2m, 0xC8 + 0x8);
                 uint nbMaterialUserInsts = Dev::GetOffsetUint32(s2m, 0xF8 + 0x8);
-                uint nbLights = Dev::GetOffsetUint32(s2m, 0x168 + 0x8);
+                uint nbLights = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_LIGHTS_BUF + 0x8);
                 uint nbLightUserModels = Dev::GetOffsetUint32(s2m, 0x178 + 0x8);
                 uint nbCustomMaterials = Dev::GetOffsetUint32(s2m, 0x1F8 + 0x8);
                 UI::Text("nbVisualIndexedTriangles: " + nbVisualIndexedTriangles);
-                UI::Text("nbLights: " + nbLights);
+                DrawLightsAt("nbLights: " + nbLights, nod, O_SOLID2MODEL_LIGHTS_BUF);
                 DrawUserLightsAt("nbLightUserModels: " + nbLightUserModels, nod, 0x178);
                 DrawMaterialsAt("nbMaterials: " + nbMaterials, nod, 0xc8);
                 DrawMaterialsAt("nbCustomMaterials: " + nbCustomMaterials, nod, 0x1F8);
@@ -458,50 +478,248 @@ class ItemModelTreeElement {
         }
     }
 
+    void DrawLightsAt(const string &in title, CMwNod@ nod, uint16 offset) {
+        if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
+            auto buf = Dev::GetOffsetNod(nod, offset);
+            auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
+            for (uint i = 0; i < len; i++) {
+                UI::PushID("light"+i);
+                auto _offset = O_SOLID2MODEL_LIGHTS_BUF_STRUCT_SIZE * i + O_SOLID2MODEL_LIGHTS_BUF_STRUCT_LIGHT;
+                auto light = cast<CPlugLight>(Dev::GetOffsetNod(buf, _offset));
+                if (light is null) {
+                    UI::Text("Light " + i + ". null");
+                } else {
+                    MkAndDrawChildNode(light, _offset, "Light " + i);
+                }
+                UI::PopID();
+            }
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CPlugLight@ light) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugLight###" + Dev_GetPointerForNod(nod), UI::TreeNodeFlags::None)) {
+            if (isEditable) {
+                CopiableLabeledValue("m_DualCenterToLight", light.m_DualCenterToLight.ToString());
+                CopiableLabeledValue("AnimTimerName", light.AnimTimerName.GetName());
+                light.NightOnly = UI::Checkbox("NightOnly", light.NightOnly);
+                light.ReflectByGround = UI::Checkbox("ReflectByGround", light.ReflectByGround);
+                light.DuplicateGxLight = UI::Checkbox("DuplicateGxLight", light.DuplicateGxLight);
+                light.SceneLightOnlyWhenTreeVisible = UI::Checkbox("SceneLightOnlyWhenTreeVisible", light.SceneLightOnlyWhenTreeVisible);
+                light.SceneLightAlwaysActive = UI::Checkbox("SceneLightAlwaysActive", light.SceneLightAlwaysActive);
+            } else {
+                CopiableLabeledValue("m_DualCenterToLight", light.m_DualCenterToLight.ToString());
+                CopiableLabeledValue("AnimTimerName", light.AnimTimerName.GetName());
+                CopiableLabeledValue("NightOnly", tostring(light.NightOnly));
+                CopiableLabeledValue("ReflectByGround", tostring(light.ReflectByGround));
+                CopiableLabeledValue("DuplicateGxLight", tostring(light.DuplicateGxLight));
+                CopiableLabeledValue("SceneLightOnlyWhenTreeVisible", tostring(light.SceneLightOnlyWhenTreeVisible));
+                CopiableLabeledValue("SceneLightAlwaysActive", tostring(light.SceneLightAlwaysActive));
+            }
+            MkAndDrawChildNode(light.m_GxLightModel, GetOffset(light, "m_GxLightModel"), "m_GxLightModel");
+            EndTreeNode();
+        }
+    }
+
+    void Draw(GxLight@ gxLight) {
+        if (StartTreeNode(name + " :: \\$f8fGxLight###" + Dev_GetPointerForNod(nod))) {
+            if (isEditable) {
+                gxLight.Color = UI::InputColor3("Color", gxLight.Color);
+                gxLight.ShadowRGB = UI::InputColor3("ShadowRGB", gxLight.ShadowRGB);
+                gxLight.Intensity = UI::InputFloat("Intensity", gxLight.Intensity);
+                gxLight.DiffuseIntensity = UI::InputFloat("DiffuseIntensity", gxLight.DiffuseIntensity);
+                gxLight.ShadowIntensity = UI::InputFloat("ShadowIntensity", gxLight.ShadowIntensity);
+                gxLight.FlareIntensity = UI::InputFloat("FlareIntensity", gxLight.FlareIntensity);
+                gxLight.DoLighting = UI::Checkbox("DoLighting", gxLight.DoLighting);
+                gxLight.LightMapOnly = UI::Checkbox("LightMapOnly", gxLight.LightMapOnly);
+                gxLight.IsInversed = UI::Checkbox("IsInversed", gxLight.IsInversed);
+                gxLight.IsShadowGen = UI::Checkbox("IsShadowGen", gxLight.IsShadowGen);
+                gxLight.DoSpecular = UI::Checkbox("DoSpecular", gxLight.DoSpecular);
+                gxLight.HasLensFlare = UI::Checkbox("HasLensFlare", gxLight.HasLensFlare);
+                gxLight.HasSprite = UI::Checkbox("HasSprite", gxLight.HasSprite);
+                gxLight.IgnoreLocalScale = UI::Checkbox("IgnoreLocalScale", gxLight.IgnoreLocalScale);
+                gxLight.EnableGroup0 = UI::Checkbox("EnableGroup0", gxLight.EnableGroup0);
+                gxLight.EnableGroup1 = UI::Checkbox("EnableGroup1", gxLight.EnableGroup1);
+                gxLight.EnableGroup2 = UI::Checkbox("EnableGroup2", gxLight.EnableGroup2);
+                gxLight.EnableGroup3 = UI::Checkbox("EnableGroup3", gxLight.EnableGroup3);
+            } else {
+                UI::BeginDisabled();
+                gxLight.Color = UI::InputColor3("Color", gxLight.Color);
+                gxLight.ShadowRGB = UI::InputColor3("ShadowRGB", gxLight.ShadowRGB);
+                UI::EndDisabled();
+                LabeledValue("Intensity", gxLight.Intensity);
+                LabeledValue("DiffuseIntensity", gxLight.DiffuseIntensity);
+                LabeledValue("ShadowIntensity", gxLight.ShadowIntensity);
+                LabeledValue("FlareIntensity", gxLight.FlareIntensity);
+                LabeledValue("DoLighting", gxLight.DoLighting);
+                LabeledValue("LightMapOnly", gxLight.LightMapOnly);
+                LabeledValue("IsInversed", gxLight.IsInversed);
+                LabeledValue("IsShadowGen", gxLight.IsShadowGen);
+                LabeledValue("DoSpecular", gxLight.DoSpecular);
+                LabeledValue("HasLensFlare", gxLight.HasLensFlare);
+                LabeledValue("HasSprite", gxLight.HasSprite);
+                LabeledValue("IgnoreLocalScale", gxLight.IgnoreLocalScale);
+                LabeledValue("EnableGroup0", gxLight.EnableGroup0);
+                LabeledValue("EnableGroup1", gxLight.EnableGroup1);
+                LabeledValue("EnableGroup2", gxLight.EnableGroup2);
+                LabeledValue("EnableGroup3", gxLight.EnableGroup3);
+            }
+//             UI::Text("PlugLight null? " + tostring(gxLight.PlugLight is null));
+// #if SIG_DEVELOPER
+//             if (gxLight.PlugLight !is null) {
+//                 UI::SameLine();
+//                 if (UI::Button(Icons::Cube + " Explore PlugLight")) {
+//                     ExploreNod("PlugLight", gxLight.PlugLight);
+//                 }
+//             }
+// #endif
+
+            auto gxLightAmb = cast<GxLightAmbient>(gxLight);
+            if (gxLightAmb !is null) {
+                if (isEditable) {
+                    gxLightAmb.ShadeMinY = UI::InputFloat("ShadeMinY", gxLightAmb.ShadeMinY);
+                    gxLightAmb.ShadeMaxY = UI::InputFloat("ShadeMaxY", gxLightAmb.ShadeMaxY);
+                } else {
+                    CopiableLabeledValue("ShadeMinY", tostring(gxLightAmb.ShadeMinY));
+                    CopiableLabeledValue("ShadeMaxY", tostring(gxLightAmb.ShadeMaxY));
+                }
+            }
+            auto gxLightNotAmb = cast<GxLightNotAmbient>(gxLight);
+            auto gxLDir = cast<GxLightDirectional>(gxLightNotAmb);
+            if (gxLDir !is null) {
+                UI::Text("\\$aaa  GxLightDirectional:");
+                if (isEditable) {
+                    gxLDir.DblSidedRGB = UI::InputFloat3("DblSidedRGB", gxLDir.DblSidedRGB);
+                    gxLDir.ReverseRGB = UI::InputFloat3("ReverseRGB", gxLDir.ReverseRGB);
+                    gxLDir.BoundaryHintPos = UI::InputFloat3("BoundaryHintPos", gxLDir.BoundaryHintPos);
+                    gxLDir.ReverseIntens = UI::InputFloat("ReverseIntens", gxLDir.ReverseIntens);
+                    gxLDir.EmittAngularSize = UI::InputFloat("EmittAngularSize", gxLDir.EmittAngularSize);
+                    gxLDir.FlareAngularSize = UI::InputFloat("FlareAngularSize", gxLDir.FlareAngularSize);
+                    gxLDir.FlareIntensPower = UI::InputFloat("FlareIntensPower", gxLDir.FlareIntensPower);
+                    gxLDir.DazzleAngleMax = UI::InputFloat("DazzleAngleMax", gxLDir.DazzleAngleMax);
+                    gxLDir.DazzleIntensity = UI::InputFloat("DazzleIntensity", gxLDir.DazzleIntensity);
+                    gxLDir.UseBoundaryHint = UI::Checkbox("UseBoundaryHint", gxLDir.UseBoundaryHint);
+                } else {
+                    LabeledValue("DblSidedRGB", gxLDir.DblSidedRGB);
+                    LabeledValue("ReverseRGB", gxLDir.ReverseRGB);
+                    LabeledValue("BoundaryHintPos", gxLDir.BoundaryHintPos);
+                    LabeledValue("ReverseIntens", gxLDir.ReverseIntens);
+                    LabeledValue("EmittAngularSize", gxLDir.EmittAngularSize);
+                    LabeledValue("FlareAngularSize", gxLDir.FlareAngularSize);
+                    LabeledValue("FlareIntensPower", gxLDir.FlareIntensPower);
+                    LabeledValue("DazzleAngleMax", gxLDir.DazzleAngleMax);
+                    LabeledValue("DazzleIntensity", gxLDir.DazzleIntensity);
+                    LabeledValue("UseBoundaryHint", gxLDir.UseBoundaryHint);
+                }
+            }
+
+            auto gxLPoint = cast<GxLightPoint>(gxLightNotAmb);
+            if (gxLPoint !is null) {
+                UI::Text("\\$aaa  GxLightPoint:");
+                if (isEditable) {
+                    gxLPoint.FlareSize = UI::InputFloat("FlareSize", gxLPoint.FlareSize);
+                    gxLPoint.FlareBiasZ = UI::InputFloat("FlareBiasZ", gxLPoint.FlareBiasZ);
+                } else {
+                    LabeledValue("FlareSize", gxLPoint.FlareSize);
+                    LabeledValue("FlareBiasZ", gxLPoint.FlareBiasZ);
+                }
+            }
+
+            auto gxLBall = cast<CGxLightBall>(gxLPoint);
+            if (gxLBall !is null) {
+                UI::Text("\\$aaa  CGxLightBall:");
+                // LabeledValue("StaticShadow", gxLBall.StaticShadow)
+                if (isEditable) {
+                    gxLBall.StaticShadow = DrawComboEStaticShadow("StaticShadow", gxLBall.StaticShadow);
+                    gxLBall.AmbientRGB = UI::InputColor3("AmbientRGB", gxLBall.AmbientRGB);
+                    gxLBall.Radius = UI::InputFloat("Radius", gxLBall.Radius);
+                    gxLBall.RadiusSpecular = UI::InputFloat("RadiusSpecular", gxLBall.RadiusSpecular);
+                    gxLBall.RadiusIndex = UI::InputFloat("RadiusIndex", gxLBall.RadiusIndex);
+                    gxLBall.RadiusShadow = UI::InputFloat("RadiusShadow", gxLBall.RadiusShadow);
+                    gxLBall.RadiusFlare = UI::InputFloat("RadiusFlare", gxLBall.RadiusFlare);
+                    gxLBall.EmittingRadius = UI::InputFloat("EmittingRadius", gxLBall.EmittingRadius);
+                    gxLBall.EmittingCylinderLenZ = UI::InputFloat("EmittingCylinderLenZ", gxLBall.EmittingCylinderLenZ);
+                    gxLBall.CustomRadiusSpecular = UI::Checkbox("CustomRadiusSpecular", gxLBall.CustomRadiusSpecular);
+                    gxLBall.CustomRadiusIndex = UI::Checkbox("CustomRadiusIndex", gxLBall.CustomRadiusIndex);
+                    gxLBall.CustomRadiusShadow = UI::Checkbox("CustomRadiusShadow", gxLBall.CustomRadiusShadow);
+                    gxLBall.CustomRadiusFlare = UI::Checkbox("CustomRadiusFlare", gxLBall.CustomRadiusFlare);
+                } else {
+                    LabeledValue("StaticShadow", tostring(gxLBall.StaticShadow));
+                    LabeledValue("AmbientRGB", gxLBall.AmbientRGB);
+                    LabeledValue("Radius", gxLBall.Radius);
+                    LabeledValue("RadiusSpecular", gxLBall.RadiusSpecular);
+                    LabeledValue("RadiusIndex", gxLBall.RadiusIndex);
+                    LabeledValue("RadiusShadow", gxLBall.RadiusShadow);
+                    LabeledValue("RadiusFlare", gxLBall.RadiusFlare);
+                    LabeledValue("EmittingRadius", gxLBall.EmittingRadius);
+                    LabeledValue("EmittingCylinderLenZ", gxLBall.EmittingCylinderLenZ);
+                    LabeledValue("CustomRadiusSpecular", gxLBall.CustomRadiusSpecular);
+                    LabeledValue("CustomRadiusIndex", gxLBall.CustomRadiusIndex);
+                    LabeledValue("CustomRadiusShadow", gxLBall.CustomRadiusShadow);
+                    LabeledValue("CustomRadiusFlare", gxLBall.CustomRadiusFlare);
+                }
+            }
+
+            auto gxLFrustum = cast<CGxLightFrustum>(gxLBall);
+            if (gxLFrustum !is null) {
+                UI::Text("\\$aaa  CGxLightFrustum:");
+                UI::Text("todo");
+            }
+
+            auto gxLSpot = cast<CGxLightSpot>(gxLBall);
+            if (gxLSpot !is null) {
+                UI::Text("\\$aaa  CGxLightSpot:");
+                UI::Text("todo");
+            }
+
+            EndTreeNode();
+        }
+    }
+
     void DrawUserLightsAt(const string &in title, CMwNod@ nod, uint16 offset) {
         if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
             auto buf = Dev::GetOffsetNod(nod, offset);
             auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
             for (uint i = 0; i < len; i++) {
                 UI::PushID("userlight"+i);
-                auto light = cast<CPlugLightUserModel>(Dev::GetOffsetNod(buf, 0x8 * i));
-                if (light is null) {
-                    UI::Text("Light " + i + ". null");
+                auto userLight = cast<CPlugLightUserModel>(Dev::GetOffsetNod(buf, 0x8 * i));
+                if (userLight is null) {
+                    UI::Text("UserLight " + i + ". null");
                 } else {
-
-                    if (StartTreeNode("Light " + i, true, UI::TreeNodeFlags::None)) {
-#if SIG_DEVELOPER
-                        Draw_IB_DevBtnPtr("Light " + i, light, 0x8 * i);
-#endif
-                        if (isEditable) {
-                            light.Color = UI::InputColor3("Color", light.Color);
-                            light.Intensity = UI::InputFloat("Intensity", light.Intensity);
-                            light.Distance = UI::InputFloat("Distance", light.Distance);
-                            light.PointEmissionRadius = UI::InputFloat("PointEmissionRadius", light.PointEmissionRadius);
-                            light.PointEmissionLength = UI::InputFloat("PointEmissionLength", light.PointEmissionLength);
-                            light.SpotInnerAngle = UI::InputFloat("SpotInnerAngle", light.SpotInnerAngle);
-                            light.SpotOuterAngle = UI::InputFloat("SpotOuterAngle", light.SpotOuterAngle);
-                            light.SpotEmissionSizeX = UI::InputFloat("SpotEmissionSizeX", light.SpotEmissionSizeX);
-                            light.SpotEmissionSizeY = UI::InputFloat("SpotEmissionSizeY", light.SpotEmissionSizeY);
-                            light.NightOnly = UI::Checkbox("NightOnly", light.NightOnly);
-                        } else {
-                            UI::BeginDisabled();
-                            light.Color = UI::InputColor3("Color", light.Color);
-                            UI::EndDisabled();
-                            UI::Text("Intensity: " + light.Intensity);
-                            UI::Text("Distance: " + light.Distance);
-                            UI::Text("PointEmissionRadius: " + light.PointEmissionRadius);
-                            UI::Text("PointEmissionLength: " + light.PointEmissionLength);
-                            UI::Text("SpotInnerAngle: " + light.SpotInnerAngle);
-                            UI::Text("SpotOuterAngle: " + light.SpotOuterAngle);
-                            UI::Text("SpotEmissionSizeX: " + light.SpotEmissionSizeX);
-                            UI::Text("SpotEmissionSizeY: " + light.SpotEmissionSizeY);
-                            UI::Text("NightOnly: " + light.NightOnly);
-                        }
-                        EndTreeNode();
-                    }
+                    MkAndDrawChildNode(userLight, 0x8 * i, "UserLight " + i);
                 }
                 UI::PopID();
+            }
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CPlugLightUserModel@ userLight) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugLightUserModel###" + Dev_GetPointerForNod(nod), UI::TreeNodeFlags::None)) {
+            if (isEditable) {
+                userLight.Color = UI::InputColor3("Color", userLight.Color);
+                userLight.Intensity = UI::InputFloat("Intensity", userLight.Intensity);
+                userLight.Distance = UI::InputFloat("Distance", userLight.Distance);
+                userLight.PointEmissionRadius = UI::InputFloat("PointEmissionRadius", userLight.PointEmissionRadius);
+                userLight.PointEmissionLength = UI::InputFloat("PointEmissionLength", userLight.PointEmissionLength);
+                userLight.SpotInnerAngle = UI::InputFloat("SpotInnerAngle", userLight.SpotInnerAngle);
+                userLight.SpotOuterAngle = UI::InputFloat("SpotOuterAngle", userLight.SpotOuterAngle);
+                userLight.SpotEmissionSizeX = UI::InputFloat("SpotEmissionSizeX", userLight.SpotEmissionSizeX);
+                userLight.SpotEmissionSizeY = UI::InputFloat("SpotEmissionSizeY", userLight.SpotEmissionSizeY);
+                userLight.NightOnly = UI::Checkbox("NightOnly", userLight.NightOnly);
+            } else {
+                UI::BeginDisabled();
+                userLight.Color = UI::InputColor3("Color", userLight.Color);
+                UI::EndDisabled();
+                UI::Text("Intensity: " + userLight.Intensity);
+                UI::Text("Distance: " + userLight.Distance);
+                UI::Text("PointEmissionRadius: " + userLight.PointEmissionRadius);
+                UI::Text("PointEmissionLength: " + userLight.PointEmissionLength);
+                UI::Text("SpotInnerAngle: " + userLight.SpotInnerAngle);
+                UI::Text("SpotOuterAngle: " + userLight.SpotOuterAngle);
+                UI::Text("SpotEmissionSizeX: " + userLight.SpotEmissionSizeX);
+                UI::Text("SpotEmissionSizeY: " + userLight.SpotEmissionSizeY);
+                UI::Text("NightOnly: " + userLight.NightOnly);
             }
             EndTreeNode();
         }
@@ -532,22 +750,23 @@ class ItemModelTreeElement {
                     if (fid !is null) {
                         matTitle = "" + i + ". " + fid.FileName;
                     }
-                    if (StartTreeNode(matTitle, true, UI::TreeNodeFlags::None)) {
-#if SIG_DEVELOPER
-                        Draw_IB_DevBtnPtr(matTitle, mat, 0x8 * i);
-#endif
-                        auto physId = EPlugSurfaceMaterialId(Dev::GetOffsetUint8(mat, O_MATERIAL_PHYSICS_ID));
-                        auto gameplayId = EPlugSurfaceGameplayId(Dev::GetOffsetUint8(mat, O_MATERIAL_GAMEPLAY_ID));
-                        if (isEditable) {
-                            Dev::SetOffset(mat, O_MATERIAL_PHYSICS_ID, uint8(DrawComboEPlugSurfaceMaterialId("PhysicsID", physId)));
-                            Dev::SetOffset(mat, O_MATERIAL_GAMEPLAY_ID, uint8(DrawComboEPlugSurfaceGameplayId("GameplayID", gameplayId)));
-                        } else {
-                            CopiableLabeledValue("PhysicsID", tostring(physId));
-                            CopiableLabeledValue("GameplayID", tostring(gameplayId));
-                        }
-                        EndTreeNode();
-                    }
+                    MkAndDrawChildNode(mat, 0x8 * i, matTitle);
                 }
+            }
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CPlugMaterial@ mat) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugMaterial###" + Dev_GetPointerForNod(nod), UI::TreeNodeFlags::None)) {
+            auto physId = EPlugSurfaceMaterialId(Dev::GetOffsetUint8(mat, O_MATERIAL_PHYSICS_ID));
+            auto gameplayId = EPlugSurfaceGameplayId(Dev::GetOffsetUint8(mat, O_MATERIAL_GAMEPLAY_ID));
+            if (isEditable) {
+                Dev::SetOffset(mat, O_MATERIAL_PHYSICS_ID, uint8(DrawComboEPlugSurfaceMaterialId("PhysicsID", physId)));
+                Dev::SetOffset(mat, O_MATERIAL_GAMEPLAY_ID, uint8(DrawComboEPlugSurfaceGameplayId("GameplayID", gameplayId)));
+            } else {
+                CopiableLabeledValue("PhysicsID", tostring(physId));
+                CopiableLabeledValue("GameplayID", tostring(gameplayId));
             }
             EndTreeNode();
         }
@@ -573,32 +792,29 @@ class ItemModelTreeElement {
                         name = mat._LinkFull;
                     }
                     auto title = "" + i + ". " + name + suffix;
-                    bool treeOpen = StartTreeNode(title, true, UI::TreeNodeFlags::None);
+                    MkAndDrawChildNode(mat, elSize * i, title);
+                }
+            }
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CPlugMaterialUserInst@ userMat) {
 // #if SIG_DEVELOPER
 //                     UI::SameLine();
 //                     if (UX::SmallButton(Icons::Cube + " Explore##matUserInst" + i)) {
 //                         ExploreNod("MaterialUserInst " + i + ".", mat);
 //                     }
 // #endif
-                    if (treeOpen) {
-#if SIG_DEVELOPER
-                        Draw_IB_DevBtnPtr(title, mat, elSize * i);
-#endif
-                        if (isEditable) {
-                            mat._LinkFull = UI::InputText("LinkFull", mat._LinkFull);
-                            mat.PhysicsID = (DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(mat.PhysicsID)));
-                            mat.GameplayID = (DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(mat.GameplayID)));
-                        } else {
-                            CopiableLabeledValue("LinkFull", mat._LinkFull);
-                            CopiableLabeledValue("PhysicsID", tostring(EPlugSurfaceMaterialId(mat.PhysicsID)));
-                            CopiableLabeledValue("GameplayID", tostring(EPlugSurfaceGameplayId(mat.GameplayID)));
-                        }
-                        EndTreeNode();
-                    }
-                    // UI::Indent();
-                    // UI::SameLine();
-                    // UI::Text(mat.Link.GetName());
-                }
+        if (StartTreeNode(name + " :: \\$f8fCPlugMaterialUserInst###" + Dev_GetPointerForNod(nod), false, UI::TreeNodeFlags::None)) {
+            if (isEditable) {
+                userMat._LinkFull = UI::InputText("LinkFull", userMat._LinkFull);
+                userMat.PhysicsID = (DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(userMat.PhysicsID)));
+                userMat.GameplayID = (DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(userMat.GameplayID)));
+            } else {
+                CopiableLabeledValue("LinkFull", userMat._LinkFull);
+                CopiableLabeledValue("PhysicsID", tostring(EPlugSurfaceMaterialId(userMat.PhysicsID)));
+                CopiableLabeledValue("GameplayID", tostring(EPlugSurfaceGameplayId(userMat.GameplayID)));
             }
             EndTreeNode();
         }
@@ -719,7 +935,7 @@ class ItemModelTreeElement {
         return StartTreeNode(title, false, flags);
     }
 
-    bool StartTreeNode(const string &in title, bool suppressDev = false, UI::TreeNodeFlags flags = UI::TreeNodeFlags::DefaultOpen) {
+    bool StartTreeNode(const string &in title, bool suppressDev, UI::TreeNodeFlags flags = UI::TreeNodeFlags::DefaultOpen) {
         bool open = UI::TreeNode(title, flags);
         if (open) {
             UI::PushID(title);

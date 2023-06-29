@@ -52,7 +52,7 @@ vanilla only?
     material ID things,
 
 0x168 -> buffer (lights stuff)
-    -> struct;
+    -> struct (0x60 long);
         0x0 -> MwId? null in custom example (?Screen2x1SpotSmall)
         some coords mb?
         something that looked like an mwid but crashed the game (0x40000040)
