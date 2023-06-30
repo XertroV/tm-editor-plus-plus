@@ -32,6 +32,31 @@ void Dev_SetOffsetBytes(CMwNod@ nod, uint offset, uint64[]@ bs) {
 }
 
 
+
+void Dev_DoubleMwSArray(uint64 ptr, uint elSize) {
+    print("Dev_DoubleMwSArray: " + Text::FormatPointer(ptr) + ", sz: " + elSize);
+    // return;
+    auto len = Dev::ReadUInt32(ptr + 0x8);
+    if (len == 0) return;
+    auto buf = Dev::ReadUInt64(ptr);
+    auto bs_len = elSize * len;
+    uint mag = 2;
+    print("len: " + len);
+    print("bs_len: " + bs_len);
+    print("ptr: " + Text::FormatPointer(ptr));
+    // Dev_SetOffsetBytes(item, 0x0, Dev_GetOffsetBytes(origItem, 0x0, ItemItemModelOffset + 0x8));
+    auto newBuf = Dev::Allocate(bs_len * mag);
+    for (uint loopN = 0; loopN < mag; loopN++) {
+        for (uint b = 0; b < bs_len - 1; b += 4) {
+            auto offset = b + loopN * bs_len;
+            Dev::Write(newBuf + offset, Dev::ReadUInt32(buf + b));
+        }
+    }
+    Dev::Write(ptr, newBuf);
+    Dev::Write(ptr + 0x8, len * mag);
+}
+
+
 class ReferencedNod {
     CMwNod@ nod;
     uint ClassId = 0;
@@ -162,3 +187,7 @@ const uint16 O_GAMESKIN_PATH3 = 0x120;
 
 const uint16 O_MATERIAL_PHYSICS_ID = 0x28;
 const uint16 O_MATERIAL_GAMEPLAY_ID = 0x29;
+
+
+const uint32 SZ_SPLACEMENTOPTION = 0x18;
+const uint32 SZ_GMQUATTRANS = 0x1C;

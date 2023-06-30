@@ -1015,6 +1015,18 @@ uint64 Dev_GetPointerForNod(CMwNod@ nod) {
     return ptr;
 }
 
+CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
+    if (ptr < 0xFFFFFFFF || ptr % 8 != 0 || ptr >> 48 > 0) {
+        return null;
+    }
+    auto tmpNod = CMwNod();
+    uint64 tmp = Dev::GetOffsetUint64(tmpNod, 0);
+    Dev::SetOffset(tmpNod, 0, ptr);
+    auto nod = Dev::GetOffsetNod(tmpNod, 0);
+    Dev::SetOffset(tmpNod, 0, tmp);
+    return nod;
+}
+
 
 
 
@@ -1058,8 +1070,78 @@ void DrawSMetaPtr(uint64 ptr, uint32 clsId, const string &in type, bool isEditab
             LabeledValue("IsKinematic", IsKinematic);
         }
     }
+    if (clsId == 0x2f0d8000 || type == "NPlugItemPlacement::SPlacementGroup") {
+        DrawSPlacementGroup(ptr, isEditable);
+    }
 }
 
+void DrawSPlacementGroup(uint64 ptr, bool isEditable = false) {
+    // Placements MmSArray<NPlugItemPlacement_SPlacementOption> at 0x0
+    // MmSArray at 0x10: GmTransQuat?; Struct of [quat, vec3] i think (0.71, 0.0, -0.71, 0.0, x, y, z); length 0x1C
+    // Total size might be 0x40 bytes (gets updated on save if main placements group length is shortened)
+
+    // Read placement options
+    auto placementsPtr = Dev::ReadUInt64(ptr);
+    // CopiableLabeledValue("placementsPtr", Text::FormatPointer(placementsPtr));
+    auto buf = Dev_GetNodFromPointer(placementsPtr);
+    // LabeledValue("buf is null", buf is null);
+    auto len = Dev::ReadUInt32(ptr + 0x8);
+    // LabeledValue("Placements ptr", Text::FormatPointer(ptr));
+    LabeledValue("Placements.Length", len);
+    uint elSize = SZ_SPLACEMENTOPTION;
+    for (uint i = 0; i < Math::Min(5, len); i++) {
+        uint layout = Dev::GetOffsetUint32(buf, elSize * i + 0x0);
+        // MwSArray<NPlugItemPlacement_SPlacementOption>
+        auto placementOpts = Dev::GetOffsetNod(buf, elSize * i + 0x8);
+        auto placementOptsNb = Dev::GetOffsetUint32(buf, elSize * i + 0x10);
+        // works but useless atm
+        if (false) {
+            DrawSPlacementOption(i, layout, placementOpts, placementOptsNb);
+        }
+    }
+
+    // Read MwSArray<GmTransQuat>
+    auto tqsPtr = Dev::ReadUInt64(ptr + 0x10);
+    // CopiableLabeledValue("TQs Ptr", Text::FormatPointer(tqsPtr));
+    auto tqs = Dev_GetNodFromPointer(tqsPtr);
+    // LabeledValue("TQs is null", tqs is null);
+    auto nbTqs = Dev::ReadUInt32(ptr + 0x18);
+    auto newNb = Draw_SPlacementGroup_TQs(tqs, nbTqs, isEditable, ptr);
+    // check if we need to alter array lengths
+    if (isEditable && newNb < nbTqs && newNb < len) {
+        // update first 2 arrays -- updating first one will update the rest on save, but not the second one
+        Dev::Write(ptr + 0x8, newNb);
+        Dev::Write(ptr + 0x18, newNb);
+        NotifySuccess("Updated item spectator count, please save the item");
+    }
+}
+
+void DrawSPlacementOption(uint i, uint layout, CMwNod@ buf, uint len) {
+    UI::Text("" + i + ". Layout: " + layout + " / PlacecementOptions.Length: " + len);
+}
+
+// returns the number of elements so an update can be detected
+uint Draw_SPlacementGroup_TQs(CMwNod@ tqs, uint nbTqs, bool isEditable, uint64 placementGroupPtr) {
+    auto ret = nbTqs;
+    UI::Text("TQs.Length: " + nbTqs);
+    UI::SameLine();
+    if (UI::Button("Export Spectators")) {
+        ExportItemSpectators(tqs, nbTqs);
+    }
+    if (isEditable) {
+        UI::SameLine();
+        if (UI::Button("Import Spectators")) {
+            ret = ImportItemSpectators(tqs, nbTqs);
+            NotifySuccess("Successfully imported spectator locations! Please save the item.");
+        }
+        UI::SameLine();
+        if (UI::Button("Double Spectator Count")) {
+            DoubleItemSpectators(placementGroupPtr);
+        }
+        AddSimpleTooltip("\\$f80Warning!\\$z The game might crash leaving the editor or if E++ is unloaded/updated. At the very least, the game will crash on shutdown. (Safe to use for item creation). Be sure to save regularly.");
+    }
+    return ret;
+}
 
 void Draw_NPlugDyna_SAnimFunc01(CMwNod@ nod, uint16 offset) {
     auto len = Dev::GetOffsetUint32(nod, offset);
