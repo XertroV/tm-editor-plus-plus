@@ -138,7 +138,7 @@ Relevant Files (in this directory):
 It's best to start by exporting a spectators item's quaternions and positions.
 Then you can edit that using a script, and save the file as `Import.csv`.
 
-Example of such a script: https://github.com/openplanet-nl/mlhook/blob/master/examples/spectators_from_image.py
+Example of such a script: https://github.com/XertroV/tm-editor-plus-plus/blob/master/examples/spectators_from_image.py
 
 For help, ping @XertroV in the support thread on Discord.
 
