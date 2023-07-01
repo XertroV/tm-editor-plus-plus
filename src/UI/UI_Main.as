@@ -161,12 +161,6 @@ namespace MenuBar {
 
 
             if (UI::BeginMenu("Help")) {
-                // UI::BeginDisabled();
-                // if (UI::MenuItem("Video Tutorial")) {
-                //     OpenBrowserURL("https://youtube.com/watch?v=asdf");
-                // }
-                // UI::EndDisabled();
-
                 if (UI::MenuItem("Tutorial: Custom Moving Items (Simple)")) {
                     OpenBrowserURL("https://youtu.be/Di4jZkdXfFM");
                 }
