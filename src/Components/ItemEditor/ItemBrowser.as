@@ -1069,9 +1069,20 @@ void DrawSMetaPtr(uint64 ptr, uint32 clsId, const string &in type, bool isEditab
             LabeledValue("CastStaticShadow", castsShadow);
             LabeledValue("IsKinematic", IsKinematic);
         }
-    }
-    if (clsId == 0x2f0d8000 || type == "NPlugItemPlacement::SPlacementGroup") {
+    } else if (clsId == 0x2f0d8000 || type == "NPlugItemPlacement::SPlacementGroup") {
         DrawSPlacementGroup(ptr, isEditable);
+    } else if (clsId == 0x2f0c8000 || type == "NPlugDyna::SPrefabConstraintParams") {
+        Draw_SPrefabConstraintParams(ptr, isEditable);
+    }
+}
+
+void Draw_SPrefabConstraintParams(uint64 ptr, bool isEditable) {
+    uint dynaObjIx = Dev::ReadUInt32(ptr + 0x4);
+    if (isEditable) {
+        dynaObjIx = UI::InputInt("DynaObject Ix", dynaObjIx);
+        Dev::Write(ptr + 0x4, dynaObjIx);
+    } else {
+        LabeledValue("DynaObject Ix", dynaObjIx);
     }
 }
 
@@ -1124,23 +1135,36 @@ void DrawSPlacementOption(uint i, uint layout, CMwNod@ buf, uint len) {
 uint Draw_SPlacementGroup_TQs(CMwNod@ tqs, uint nbTqs, bool isEditable, uint64 placementGroupPtr) {
     auto ret = nbTqs;
     UI::Text("TQs.Length: " + nbTqs);
-    UI::SameLine();
-    if (UI::Button("Export Spectators")) {
-        ExportItemSpectators(tqs, nbTqs);
-    }
-    if (isEditable) {
+    if (IsPlacementGroupForSpectators(placementGroupPtr)) {
         UI::SameLine();
-        if (UI::Button("Import Spectators")) {
-            ret = ImportItemSpectators(tqs, nbTqs);
-            NotifySuccess("Successfully imported spectator locations! Please save the item.");
+        if (UI::Button("Export Spectators")) {
+            ExportItemSpectators(tqs, nbTqs);
         }
-        UI::SameLine();
-        if (UI::Button("Double Spectator Count")) {
-            DoubleItemSpectators(placementGroupPtr);
+        if (isEditable) {
+            UI::SameLine();
+            if (UI::Button("Import Spectators")) {
+                ret = ImportItemSpectators(tqs, nbTqs);
+                NotifySuccess("Successfully imported spectator locations! Please save the item.");
+            }
+            UI::SameLine();
+            if (UI::Button("Double Spectator Count")) {
+                DoubleItemSpectators(placementGroupPtr);
+            }
+            AddSimpleTooltip("\\$f80Warning!\\$z The game might crash leaving the editor or if E++ is unloaded/updated. At the very least, the game will crash on shutdown. (Safe to use for item creation). Be sure to save regularly.");
         }
-        AddSimpleTooltip("\\$f80Warning!\\$z The game might crash leaving the editor or if E++ is unloaded/updated. At the very least, the game will crash on shutdown. (Safe to use for item creation). Be sure to save regularly.");
     }
     return ret;
+}
+
+bool IsPlacementGroupForSpectators(uint64 placementGroupPtr) {
+    auto len = Dev::ReadUInt32(placementGroupPtr + 0x38);
+    if (len == 0) return false;
+    auto buf = Dev_GetNodFromPointer(Dev::ReadUInt64(placementGroupPtr + 0x30));
+    if (buf is null) return false;
+    if (Dev::GetOffsetUint32(buf, 0x10) < 1) return false;
+    auto inner = Dev::GetOffsetNod(buf, 0x8);
+    if (inner is null) return false;
+    return Dev::GetOffsetUint8(inner, 0x14) == 0x21;
 }
 
 void Draw_NPlugDyna_SAnimFunc01(CMwNod@ nod, uint16 offset) {
