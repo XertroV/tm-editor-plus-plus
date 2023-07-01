@@ -428,7 +428,7 @@ class ItemModelTreeElement {
     void Draw(CPlugEditorHelper@ editorHelper) {
         if (StartTreeNode(name + " :: \\$f8fCPlugEditorHelper", UI::TreeNodeFlags::DefaultOpen)) {
             auto nod = editorHelper.PrefabFid is null ? null : editorHelper.PrefabFid.Nod;
-            MkAndDrawChildNode(nod, "PrefabFid.Nod");
+            MkAndDrawChildNode(nod, "PrefabFid");
             EndTreeNode();
         }
     }
