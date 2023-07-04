@@ -11,11 +11,13 @@
 0x30: ?? uint, uint ??
 0x38: ?? uint, uint ??
 
-[may be uncleared for vanilla items / screen1x1 at least]
-0x40: -> ptr
-    CGameCtnArticle 301F
-0x48: -> ptr
-    CGameCtnArticle 301F
+~~[may be uncleared for vanilla items / screen1x1 at least]
+~~0x40: -> ptr
+~~    CGameCtnArticle 301F
+~~0x48: -> ptr
+~~    CGameCtnArticle 301F
+
+0x40->0x50 uncleared memory?
 
 (henk asset pack light)
 0x78: -> CPlugSkel
@@ -44,12 +46,15 @@ vanilla only?
     -> 0x60 large?
     -> 0x58
 
+shaded_geoms
 0x158 -> buffer(1/2)
-    -> ??? 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00
-        00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00
+    -> ???   00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00
+             00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00
         (2): 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00
         (6): 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 02 00 00 00 02 00 00 00 01 00 00 00 01 00 00 00 03 00 00 00 03 00 00 00 01 00 00 00 01 00 00 00 04 00 00 00 04 00 00 00 01 00 00 00 01 00 00 00 05 00 00 00 05 00 00 00 01 00 00 00 01 00 00 00
     material ID things,
+    Struct (from gbx py)
+    u32: visual ix, u32: mat ix, u32: lod, u32: unk
 
 0x168 -> buffer (lights stuff)
     -> struct (0x60 long);

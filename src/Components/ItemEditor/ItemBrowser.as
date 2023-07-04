@@ -732,9 +732,6 @@ class ItemModelTreeElement {
             // operations for surfaces
             auto surf = cast<CPlugSurface>(nod);
             if (isEditable && surf !is null && len > 0) {
-                if (UI::Button("UpdateSurfMaterialIdsFromMaterialIndexs")) {
-                    surf.UpdateSurfMaterialIdsFromMaterialIndexs();
-                }
                 if (UI::Button("TransformMaterialsToMatIds")) {
                     surf.TransformMaterialsToMatIds();
                 }
@@ -822,6 +819,7 @@ class ItemModelTreeElement {
 
     void DrawMaterialIdsAt(const string &in title, CMwNod@ nod, uint16 offset) {
         if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
+            auto surf = cast<CPlugSurface>(nod);
             auto buf = Dev::GetOffsetNod(nod, offset);
             auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
             auto objSize = 0x2;
@@ -830,10 +828,13 @@ class ItemModelTreeElement {
                 EPlugSurfaceGameplayId GameplayId = EPlugSurfaceGameplayId(Dev::GetOffsetUint8(buf, objSize * i + 0x1));
                 if (StartTreeNode("Material " + i + ".", true, UI::TreeNodeFlags::DefaultOpen)) {
                     if (isEditable) {
-                        PhysicId = DrawComboEPlugSurfaceMaterialId("PhysicId", PhysicId);
-                        GameplayId = DrawComboEPlugSurfaceGameplayId("GameplayId", GameplayId);
-                        Dev::SetOffset(buf, objSize * i, uint8(PhysicId));
-                        Dev::SetOffset(buf, objSize * i + 0x1, uint8(GameplayId));
+                        auto newPhysicId = DrawComboEPlugSurfaceMaterialId("PhysicId", PhysicId);
+                        auto newGameplayId = DrawComboEPlugSurfaceGameplayId("GameplayId", GameplayId);
+                        Dev::SetOffset(buf, objSize * i, uint8(newPhysicId));
+                        Dev::SetOffset(buf, objSize * i + 0x1, uint8(newGameplayId));
+                        if (surf !is null && (newPhysicId != PhysicId || newGameplayId != GameplayId)) {
+                            surf.UpdateSurfMaterialIdsFromMaterialIndexs();
+                        }
                     } else {
                         UI::Text("PhysicId: " + tostring(PhysicId));
                         UI::Text("GameplayId: " + tostring(GameplayId));
@@ -851,6 +852,12 @@ class ItemModelTreeElement {
             if (drawProperties) {
                 DrawMaterialsAt("nbMaterials: " + surf.Materials.Length, surf, GetOffset(surf, "Materials"));
                 DrawMaterialIdsAt("nbMaterialIds: " + surf.MaterialIds.Length, surf, GetOffset(surf, "MaterialIds"));
+                if (isEditable) {
+                    if (UI::Button("UpdateSurfMaterialIdsFromMaterialIndexs")) {
+                        surf.UpdateSurfMaterialIdsFromMaterialIndexs();
+                    }
+                    AddSimpleTooltip("This will update the material IDs on the surface itself. It should be run automatically after changing one of the surface's MaterialIds.");
+                }
                 Draw("m_GmSurf", surf.m_GmSurf);
                 MkAndDrawChildNode(surf.Skel, GetOffset(surf, "Skel"), "Skel");
             }
