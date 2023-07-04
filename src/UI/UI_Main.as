@@ -170,6 +170,9 @@ namespace MenuBar {
                 if (UI::MenuItem("Tutorial: Custom Moving Items (Complex)")) {
                     OpenBrowserURL("https://youtu.be/LU-nYz3GaBY");
                 }
+                if (UI::MenuItem("Tutorial: Editing Material IDs (Physics/Gameplay)")) {
+                    OpenBrowserURL("https://youtu.be/dmFzAL9ZzbA");
+                }
                 if (UI::MenuItem("Plugin Support Thread")) {
                     OpenBrowserURL("https://discord.com/channels/276076890714800129/1103713844288819311");
                 }
