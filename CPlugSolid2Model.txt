@@ -192,5 +192,6 @@ CPlugMaterialUserInst
 
 
 need to set 0x1, mwid x2, then 0x3 early on (see Dev.as)
+            0x14c, 0x150, 0x154, 0x158
 
 0x1D0: buffer<u8> color (0xFF000000 0xEE000000 0xDD000000)
