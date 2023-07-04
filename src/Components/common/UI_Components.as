@@ -165,7 +165,9 @@ CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType DrawComboEnumAutoTerrai
 
 EPlugSurfaceMaterialId DrawComboEPlugSurfaceMaterialId(const string &in label, EPlugSurfaceMaterialId val) {
     return EPlugSurfaceMaterialId(
-        DrawArbitraryEnum(label, int(val), 81, function(int v) {
+        // DrawArbitraryEnum(label, int(val), 81, function(int v) {
+        // set to 80 elements to exclude XXX_Null b/c it crashes the game if you drive on it. fun idea for some maps maybe, but really it's a bad idea.
+        DrawArbitraryEnum(label, int(val), 80, function(int v) {
             return tostring(EPlugSurfaceMaterialId(v));
         })
     );

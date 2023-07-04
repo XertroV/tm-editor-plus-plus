@@ -208,6 +208,7 @@ namespace MenuBar {
 TabGroup@ CreateToolsTabGroup() {
     auto tools = RootTabGroupCls();
     QuaternionCalcTab(tools);
+    MaterialsListTab(tools);
     return tools;
 }
 

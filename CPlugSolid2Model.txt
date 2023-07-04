@@ -155,18 +155,18 @@ material 9079 0x8d3340
 0x48 -> CPlugMaterial (huh?) Tech3_Block_TDSN_CubeOut.Material.gbx
 0x50 -> CPlugMaterialCustom 903A (0xafc020)
     0x38 -> 9079 (material) 0x8d3340
-    0x50 -> mwsarray? (2) (skin color? + shader?)
+    0x50 -> mwsarray? (2) (900200 class id, mwids (PreLightGen))
     0x60 -> mwsarray? (9) 0x30 byte struct? (waypoint something? 0x20 -> fid b00a)
         0x0 -> gamedata (shader?)
-        0x8 ?
+        0x8 ? mwid? RoughMetal, BaseColorOp, Normal, MulInside, MulInsideForeground, MulInside1, MulInsideForeground1, Height, SI
         0x10 -> gamedata 900200 class id -> CPlugShader
-        0x18 -> 0x40005415 -> MwId for Buddies ??
+        0x18 -> 0x40005415 -> mwid (repeat?)
         0x20 -> buffer to struct 0x100 large (wow!)
             -> the structs are CSystemFidFile
-                -> TechnicsSpecials_D.Texture.gbx
-                -> TechnicsSpecials_D.Texture.gbx
-                -> TechnicsSpecials_D.dds
-                -> Block_TDSN_DefWrite_v.hlsl?1012
+                -> TechnicsSpecials_D.Texture.gbx   LightShape_D.Tex
+                -> TechnicsSpecials_D.Texture.gbx   FrozenTreeVerySmall.VegetTreeModel.Gbx ??!
+                -> TechnicsSpecials_D.dds           LightShape_I.Tex
+                -> Block_TDSN_DefWrite_v.hlsl?1012  Tech3_Block_TDSN_CubeOut_DispIn.Shader.Gbx?1346
     0x80 -> mwsarray? (7) 0x30 cplugshaderpass?
 0x58 -> Buffer<uint>?
 0x90 -> ":data:\Projects\Techno3\Media\Material\Tech3_Block_TDSN_CubeOut_DispIn.Material.gbx"
@@ -174,8 +174,23 @@ material 9079 0x8d3340
 0x150: END
 
 
+
+
+
 CPlugMaterialUserInst
 
+0x28: _Name mwid
+0x30: string _LinkFull
+0x40: _Link_OldCompat
+
 0x48: mwid for model model dyna 0
+
+0x70: dataref (string) TexturesDiffuse
+0x88: dataref (string) TexturesSpecular
+0xA0: dataref (string) TexturesNormal
+
+
+
+need to set 0x1, mwid x2, then 0x3 early on (see Dev.as)
 
 0x1D0: buffer<u8> color (0xFF000000 0xEE000000 0xDD000000)

@@ -77,10 +77,20 @@ class FocusedItemTab : Tab, NudgeItemBlock {
                 UI::Unindent();
             }
         }
+
+        auto skin = cast<CSystemPackDesc>(Dev::GetOffsetNod(item, 0x98));
+        if (skin !is null) {
+            ItemModelTreeElement(null, -1, skin, "Skin").Draw();
+        } else {
+            UI::TextDisabled("No skin");
+        }
+
 #if SIG_DEVELOPER
         if (UI::Button(Icons::Cube + " Explore AnchoredObj##picked")) {
             ExploreNod("Item " + Editor::GetItemUniqueBlockID(item), item);
         }
+        UI::SameLine();
+        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(item)));
 #endif
         UI::Separator();
 

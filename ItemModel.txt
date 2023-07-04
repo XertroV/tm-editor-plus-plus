@@ -91,7 +91,7 @@ anchored objects:
 0x85: uint8 IVariant
 
 0x98: pointer to CSystemPackDesc for skin
-0xA0: pointer to
+0xA0: pointer to?
 
 0xC0: mapElemColor
 0xC1: animPhaseOffset

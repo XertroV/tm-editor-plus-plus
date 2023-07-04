@@ -123,6 +123,7 @@ class ItemModelTreeElement {
     CPlugMaterialUserInst@ userMat;
     GxLight@ gxLight;
     CGameItemModel@ itemModel;
+    CSystemPackDesc@ sysPackDesc;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
         @this.parent = parent;
@@ -153,6 +154,7 @@ class ItemModelTreeElement {
         @this.userLight = cast<CPlugLightUserModel>(nod);
         @this.userMat = cast<CPlugMaterialUserInst>(nod);
         @this.gxLight = cast<GxLight>(nod);
+        @this.sysPackDesc = cast<CSystemPackDesc>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -243,6 +245,8 @@ class ItemModelTreeElement {
             Draw(light);
         } else if (gxLight !is null) {
             Draw(gxLight);
+        } else if (sysPackDesc !is null) {
+            Draw(sysPackDesc);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
@@ -961,8 +965,20 @@ class ItemModelTreeElement {
     }
 
 
+    void Draw(CSystemPackDesc@ sysPackDesc) {
+        if (StartTreeNode(name + " :: \\$f8fCSystemPackDesc", UI::TreeNodeFlags::None)) {
+            CopiableLabeledValue("Url", sysPackDesc.Url);
+            CopiableLabeledValue("Name", sysPackDesc.Name);
+            CopiableLabeledValue("IdName", sysPackDesc.IdName);
+            CopiableLabeledValue("FileName", sysPackDesc.FileName);
+            CopiableLabeledValue("AutoUpdate", tostring(sysPackDesc.AutoUpdate));
+            CopiableLabeledValue("LocatorFileName", sysPackDesc.LocatorFileName);
+            EndTreeNode();
+        }
+    }
+
     void Draw(CTrackMania@ asdf) {
-        if (StartTreeNode(name + " :: \\$f8fCTrackMania", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8fC TrackMania", UI::TreeNodeFlags::DefaultOpen)) {
             UI::Text("\\$f80todo");
             EndTreeNode();
         }

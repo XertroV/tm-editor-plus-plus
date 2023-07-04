@@ -8,6 +8,7 @@ void Main() {
         return;
     }
     CheckAndSetGameVersionSafe();
+    startnew(Editor::CacheMaterials);
 }
 
 void OnDestroyed() { Unload(); }
