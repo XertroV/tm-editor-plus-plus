@@ -189,5 +189,13 @@ const uint16 O_MATERIAL_PHYSICS_ID = 0x28;
 const uint16 O_MATERIAL_GAMEPLAY_ID = 0x29;
 
 
+const uint16 O_USERMATINST_PHYSID = 0x148;
+const uint16 O_USERMATINST_UNK = 0x14C;
+const uint16 O_USERMATINST_COLORBUF = 0x1D0;
+const uint16 O_USERMATINST_PARAM_EXISTS = 0x14C; // bool
+const uint16 O_USERMATINST_PARAM_MWID_NAME = 0x150; // mwid: "TargetColor"
+const uint16 O_USERMATINST_PARAM_MWID_TYPE = 0x154; // mwid: "Real"
+const uint16 O_USERMATINST_PARAM_LEN = 0x158; // 3 for color
+
 const uint32 SZ_SPLACEMENTOPTION = 0x18;
 const uint32 SZ_GMQUATTRANS = 0x1C;

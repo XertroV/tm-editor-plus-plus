@@ -177,3 +177,5 @@ material 9079 0x8d3340
 CPlugMaterialUserInst
 
 0x48: mwid for model model dyna 0
+
+0x1D0: buffer<u8> color (0xFF000000 0xEE000000 0xDD000000)

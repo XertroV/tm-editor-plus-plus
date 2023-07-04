@@ -804,10 +804,40 @@ class ItemModelTreeElement {
 //                     }
 // #endif
         if (StartTreeNode(name + " :: \\$f8fCPlugMaterialUserInst###" + Dev_GetPointerForNod(nod), false, UI::TreeNodeFlags::None)) {
+            auto colorPtr = Dev::GetOffsetUint64(nod, O_USERMATINST_COLORBUF);
+            auto colorLen = Dev::GetOffsetUint32(nod, O_USERMATINST_COLORBUF + 0x8);
             if (isEditable) {
                 userMat._LinkFull = UI::InputText("LinkFull", userMat._LinkFull);
                 userMat.PhysicsID = (DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(userMat.PhysicsID)));
                 userMat.GameplayID = (DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(userMat.GameplayID)));
+                if (colorLen == 3) {
+                    auto r = Dev::ReadUInt32(colorPtr + 0x0),
+                        g = Dev::ReadUInt32(colorPtr + 0x4),
+                        b = Dev::ReadUInt32(colorPtr + 0x8);
+                    auto col = vec3(r, g, b) / vec3(255);
+                    col = UI::InputColor3("Color", col) * 255;
+                    Dev::Write(colorPtr + 0x0, uint8(Math::Clamp(uint32(Math::Round(col.x)), 0, 255)));
+                    Dev::Write(colorPtr + 0x4, uint8(Math::Clamp(uint32(Math::Round(col.y)), 0, 255)));
+                    Dev::Write(colorPtr + 0x8, uint8(Math::Clamp(uint32(Math::Round(col.z)), 0, 255)));
+                } else {
+                    UI::TextDisabled("unsupported color buffer length: " + colorLen);
+                    UI::SameLine();
+                    if (UI::Button("Instantiate Color")) {
+                        auto newColorPtr = Dev::Allocate(0x10);
+                        Dev::SetOffset(nod, O_USERMATINST_COLORBUF, newColorPtr);
+                        Dev::SetOffset(nod, O_USERMATINST_COLORBUF + 0x8, uint32(0x3));
+                        Dev::SetOffset(nod, O_USERMATINST_COLORBUF + 0xC, uint32(0x3));
+                        auto tyid = MwId();
+                        tyid.SetName("Real");
+                        auto targetid = MwId();
+                        targetid.SetName("TargetColor");
+                        Dev::SetOffset(nod, O_USERMATINST_PARAM_EXISTS, 1);
+                        Dev::SetOffset(nod, O_USERMATINST_PARAM_MWID_NAME, targetid.Value);
+                        Dev::SetOffset(nod, O_USERMATINST_PARAM_MWID_TYPE, tyid.Value);
+                        Dev::SetOffset(nod, O_USERMATINST_PARAM_LEN, 3);
+                    }
+                    AddSimpleTooltip("\\$f80Warning!\\$z The game will crash at some point (leaving editor, etc) after clicking this button. Be sure to save etc.");
+                }
             } else {
                 CopiableLabeledValue("LinkFull", userMat._LinkFull);
                 CopiableLabeledValue("PhysicsID", tostring(EPlugSurfaceMaterialId(userMat.PhysicsID)));
