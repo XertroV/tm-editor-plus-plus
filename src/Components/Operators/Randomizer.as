@@ -12,9 +12,11 @@ class RandomizerEffectsTab : MultiEffectTab {
     }
 }
 
-class RandomizerTab : Tab {
+class RandomizerTab : EffectTab {
     RandomizerTab(TabGroup@ p) {
         super(p, "Randomize Props", "\\$bff"+Icons::Random+"\\$z");
+        RegisterNewBlockCallback(ProcessBlock(OnNewBlock));
+        RegisterNewItemCallback(ProcessItem(OnNewItem));
     }
 
     bool applyToItems = true;
@@ -28,6 +30,8 @@ class RandomizerTab : Tab {
     bool excludeCPs = true;
 
     void DrawInner() override {
+        _IsActive = UI::Checkbox("Apply to next placed? (if matching)", _IsActive);
+
         UI::TextWrapped("Randomize properties for blocks/items");
 
         UI::Columns(2);
@@ -78,17 +82,39 @@ class RandomizerTab : Tab {
         Editor::RefreshBlocksAndItems(editor);
     }
 
+    bool OnNewBlock(CGameCtnBlock@ block) {
+        if (_IsActive && applyToBlocks) {
+            RandomizeBlock(block);
+            return true;
+        }
+        return false;
+    }
+
+    bool OnNewItem(CGameCtnAnchoredObject@ item) {
+        print('new item!');
+        if (_IsActive && applyToItems) {
+            print('randomizing!');
+            RandomizeItem(item);
+            return true;
+        }
+        return false;
+    }
+
     void RandomizeBlock(CGameCtnBlock@ block) {
         if (excludeCPs && block.WaypointSpecialProperty !is null) return;
         if (randomizeColor) block.MapElemColor = CGameCtnBlock::EMapElemColor(Math::Rand(0, 6));
         if (randomizeDir) block.BlockDir = CGameCtnBlock::ECardinalDirections(Math::Rand(0, 4));
         if (randomizeLM) block.MapElemLmQuality = CGameCtnBlock::EMapElemLightmapQuality(Math::Rand(0, 7));
     }
+
     void RandomizeItem(CGameCtnAnchoredObject@ item) {
         if (excludeCPs && item.WaypointSpecialProperty !is null) return;
         if (randomizeColor) item.MapElemColor = CGameCtnAnchoredObject::EMapElemColor(Math::Rand(0, 6));
+        print("randomizeColor: " + tostring(randomizeColor));
         if (randomizeLM) item.MapElemLmQuality = CGameCtnAnchoredObject::EMapElemLightmapQuality(Math::Rand(0, 7));
+        print("randomizeLM: " + tostring(randomizeLM));
         if (randomizeAnimPhase) item.AnimPhaseOffset = CGameCtnAnchoredObject::EPhaseOffset(Math::Rand(0, 8));
+        print("randomizeAnimPhase: " + tostring(randomizeAnimPhase));
     }
 }
 

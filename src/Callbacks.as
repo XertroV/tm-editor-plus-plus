@@ -46,15 +46,19 @@ namespace Event {
             onEditorLoadCbs[i]();
         }
     }
-    void OnNewBlock(CGameCtnBlock@ block) {
+    bool OnNewBlock(CGameCtnBlock@ block) {
+        bool updated = false;
         for (uint i = 0; i < blockCallbacks.Length; i++) {
-            blockCallbacks[i](block);
+            updated = blockCallbacks[i](block) || updated;
         }
+        return updated;
     }
-    void OnNewItem(CGameCtnAnchoredObject@ item) {
+    bool OnNewItem(CGameCtnAnchoredObject@ item) {
+        bool updated = false;
         for (uint i = 0; i < itemCallbacks.Length; i++) {
-            itemCallbacks[i](item);
+            updated = itemCallbacks[i](item) || updated;
         }
+        return updated;
     }
     void OnSelectedItemChanged(CGameItemModel@ itemModel) {
         for (uint i = 0; i < selectedItemChangedCbs.Length; i++) {
@@ -66,43 +70,49 @@ namespace Event {
 uint m_LastNbBlocks = 0;
 uint m_LastNbItems = 0;
 
-void CheckForNewBlocks(CGameCtnEditorFree@ editor) {
-    if (editor is null) return;
+bool CheckForNewBlocks(CGameCtnEditorFree@ editor) {
+    if (editor is null) return false;
     if (m_LastNbBlocks != editor.Challenge.Blocks.Length) {
         int newBlocks = int(editor.Challenge.Blocks.Length) - int(m_LastNbBlocks);
         m_LastNbBlocks = editor.Challenge.Blocks.Length;
         // just update the count, but don't fire callbacks
         if (EnteringEditor) {
-            return;
+            return false;
         }
         trace('Detected new blocks: ' + newBlocks);
         if (newBlocks > 0) {
             auto startIx = int(editor.Challenge.Blocks.Length) - newBlocks;
+            bool updated = false;
             for (uint i = startIx; i < editor.Challenge.Blocks.Length; i++) {
-                Event::OnNewBlock(editor.Challenge.Blocks[i]);
+                updated = Event::OnNewBlock(editor.Challenge.Blocks[i]) || updated;
             }
+            return updated;
         }
     }
+    return false;
 }
 
 
-void CheckForNewItems(CGameCtnEditorFree@ editor) {
-    if (editor is null) return;
+bool CheckForNewItems(CGameCtnEditorFree@ editor) {
+    if (editor is null) return false;
     if (m_LastNbItems != editor.Challenge.AnchoredObjects.Length) {
         int newItems = int(editor.Challenge.AnchoredObjects.Length) - int(m_LastNbItems);
         m_LastNbItems = editor.Challenge.AnchoredObjects.Length;
         // just update the count, but don't fire callbacks
         if (EnteringEditor) {
-            return;
+            return false;
         }
         trace('Detected new items: ' + newItems);
         if (newItems > 0) {
+            bool updated = false;
             auto startIx = int(editor.Challenge.AnchoredObjects.Length) - newItems;
             for (uint i = startIx; i < editor.Challenge.AnchoredObjects.Length; i++) {
-                Event::OnNewItem(editor.Challenge.AnchoredObjects[i]);
+                updated = Event::OnNewItem(editor.Challenge.AnchoredObjects[i]) || updated;
             }
+            return updated;
         }
     }
+    return false;
 }
 
 

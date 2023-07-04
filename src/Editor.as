@@ -8,10 +8,13 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     UpdateSelectedBlockItem(editor);
 
     CheckForNewSelectedItem(editor);
-    CheckForNewBlocks(editor);
-    CheckForNewItems(editor);
-    // todo: callbacks for changes in new items or things
-    // Jitter_CheckNewItems();
+    bool update = false;
+    update = CheckForNewBlocks(editor) || update;
+    update = CheckForNewItems(editor) || update;
+
+    if (update) {
+        Editor::RefreshBlocksAndItems(editor);
+    }
 }
 
 namespace EditorPriv {
