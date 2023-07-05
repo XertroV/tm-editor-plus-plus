@@ -17,8 +17,9 @@ void UpdatePickedItemProps(CGameCtnEditorFree@ editor) {
 }
 
 void UpdatePickedItemCachedValues() {
+    if (lastPickedItem is null) return;
     auto po = lastPickedItem.AsItem();
-    if (po !is null) return;
+    if (po is null || po.ItemModel is null) return;
     lastPickedItemName = po.ItemModel.IdName;
     lastPickedItemPos = po.AbsolutePositionInMap;
     @lastPickedItemRot = EditorRotation(po.Pitch, po.Yaw, po.Roll);

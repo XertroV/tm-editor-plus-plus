@@ -266,6 +266,7 @@ TabGroup@ CreateRootTabGroup() {
     JitterEffectTab(root);
     ColorApplyTab(root);
     PhaseOffsetApplyTab(root);
+    FindReplaceTab(root);
     // ApplyTranslationTab(root);
 
     RandomizerEffectsTab(root);

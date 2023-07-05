@@ -161,6 +161,9 @@ class GenericApplyTab : EffectTab {
 
     // 1 to run application
     void UpdateApplicationTargets(int64 runApplication) {
+        if (runApplication == 1) {
+            BeforeApply();
+        }
         trace('Running: UpdateApplicationTargets');
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (currScope == SourceSelection::Selected_Region) {
@@ -181,6 +184,11 @@ class GenericApplyTab : EffectTab {
         }
         if (runApplication == 1)
             OnApplyDone();
+    }
+
+    // overload this to do any prep
+    void BeforeApply() {
+        // nothing
     }
 
     // overload this to stop auto-refresh

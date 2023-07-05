@@ -47,6 +47,12 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
         auto item = FocusedItem.AsItem();
 
+        // if this is true the item was removed from the map
+        if (Reflection::GetRefCount(item) == 1) {
+            @FocusedItem = null;
+            return;
+        }
+
         vec3 initPos = item.AbsolutePositionInMap;
         vec3 initRot = Editor::GetItemRotation(item);
         auto initColor = item.MapElemColor;

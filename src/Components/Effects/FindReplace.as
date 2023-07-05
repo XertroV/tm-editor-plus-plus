@@ -1,0 +1,147 @@
+
+class FindReplaceTab : GenericApplyTab {
+    ReferencedNod@ sourceItemModel;
+    ReferencedNod@ sourceBlockModel;
+    bool applyToItems = true;
+    bool applyToBlocks = true;
+    bool awaitingPickedItem = false;
+    bool awaitingPickedBlock = false;
+
+    FindReplaceTab(TabGroup@ p) {
+        super(p, "Find/Replace", Icons::Magic + Icons::Search + Icons::LevelDown);
+        RegisterNewItemCallback(ProcessItem(this.OnNewItem));
+        RegisterNewBlockCallback(ProcessBlock(this.OnNewBlock));
+        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad));
+        RegisterOnEditorUnloadCallback(CoroutineFunc(this.OnEditorLoad));
+    }
+
+    // override this to clear picked block/item b/c we can get a crash if we picked one we're going to modify
+    void BeforeApply() override {
+        @lastPickedBlock = null;
+        @lastPickedItem = null;
+    }
+
+    void OnEditorLoad() {
+        @sourceBlockModel = null;
+        @sourceItemModel = null;
+    }
+
+    bool OnNewItem(CGameCtnAnchoredObject@ item) {
+        if (!_IsActive) return false;
+        return RunReplace(item);
+    }
+
+    bool OnNewBlock(CGameCtnBlock@ block) {
+        if (!_IsActive) return false;
+        return RunReplace(block);
+    }
+
+    bool RunReplace(CGameCtnAnchoredObject@ item) {
+        if (sourceItemModel is null || !applyToItems) return false;
+        if (!MatchesConditions(item)) return false;
+        auto origModel = item.ItemModel;
+        auto sourceModel = sourceItemModel.AsItemModel();
+        Dev::SetOffset(item, GetOffset(item, "ItemModel"), sourceModel);
+        Dev::SetOffset(item, 0x18, sourceModel.Id.Value);
+        item.ItemModel.MwAddRef();
+        origModel.MwRelease();
+        return true;
+    }
+
+    bool RunReplace(CGameCtnBlock@ block) {
+        if (sourceBlockModel is null || !applyToBlocks) return false;
+        if (!MatchesConditions(block)) return false;
+        auto origModel = block.BlockInfo;
+        Dev::SetOffset(block, GetOffset(block, "BlockInfo"), sourceBlockModel.AsBlockInfo());
+        Dev::SetOffset(block, 0x18, sourceBlockModel.AsBlockInfo().Id.Value);
+        block.BlockInfo.MwAddRef();
+        origModel.MwRelease();
+        return true;
+    }
+
+    void ApplyTo(CGameCtnBlock@ block) override {
+        RunReplace(block);
+    }
+
+    void ApplyTo(CGameCtnAnchoredObject@ item) override {
+        RunReplace(item);
+    }
+
+    void DrawInner() override {
+        UI::TextWrapped("Find all instances of an item and replace it with a source item. \\$f80Note:\\$z does not work for blocks.");
+
+        _IsActive = UI::Checkbox("Apply to new? (as per filter)", _IsActive);
+
+        UI::AlignTextToFramePadding();
+        if (sourceItemModel is null) {
+            UI::Text("Source Item: null");
+            UI::SameLine();
+            if (awaitingPickedItem) {
+                UI::Text("Ctrl+hover an item to select it as the source item.");
+            } else if (UI::Button("Pick Source Item")) {
+                startnew(CoroutineFunc(SetSourceAwaitPickedItem));
+            }
+        } else {
+            auto item = sourceItemModel.AsItemModel();
+            UI::Text("Source Item: " + item.IdName);
+            UI::SameLine();
+            if (UI::Button("Reset Source Item")) {
+                @sourceItemModel = null;
+            }
+        }
+
+        /* blocks dont work */
+        UI::AlignTextToFramePadding();
+        if (sourceBlockModel is null) {
+            UI::Text("Source Block: null");
+            UI::SameLine();
+            if (awaitingPickedBlock) {
+                UI::Text("Ctrl+hover a block to select it as the source block.");
+            } else if (UI::Button("Pick Source Block")) {
+                startnew(CoroutineFunc(SetSourceAwaitPickedBlock));
+            }
+        } else {
+            auto block = sourceBlockModel.AsBlockInfo();
+            UI::Text("Source Block: " + block.IdName);
+            UI::SameLine();
+            if (UI::Button("Reset Source Block")) {
+                @sourceBlockModel = null;
+            }
+        }
+        // */
+
+        UI::Separator();
+
+        GenericApplyTab::DrawInner();
+    }
+
+    void SetSourceAwaitPickedItem() {
+        awaitingPickedItem = true;
+        Notify("Ctrl+hover a Item to select it as the source Item.");
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto start = Time::Now;
+        while (GetApp().Editor !is null && start + 5000 > Time::Now) {
+            yield();
+            if (editor.PickedObject !is null) {
+                @sourceItemModel = ReferencedNod(editor.PickedObject.ItemModel);
+                break;
+            }
+        }
+        awaitingPickedItem = false;
+    }
+
+    void SetSourceAwaitPickedBlock() {
+        awaitingPickedBlock = true;
+        Notify("Ctrl+hover a Block to select it as the source Block.");
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto start = Time::Now;
+        while (GetApp().Editor !is null && start + 5000 > Time::Now) {
+            yield();
+            if (editor.PickedBlock !is null) {
+                @sourceBlockModel = ReferencedNod(editor.PickedBlock.BlockInfo);
+                break;
+            }
+        }
+        awaitingPickedBlock = false;
+    }
+}

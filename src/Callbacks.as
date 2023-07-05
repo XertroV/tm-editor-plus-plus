@@ -3,6 +3,7 @@ funcdef bool ProcessBlock(CGameCtnBlock@ block);
 funcdef bool ProcessNewSelectedItem(CGameItemModel@ itemModel);
 
 CoroutineFunc@[] onEditorLoadCbs;
+CoroutineFunc@[] onEditorUnloadCbs;
 ProcessItem@[] itemCallbacks;
 ProcessBlock@[] blockCallbacks;
 ProcessNewSelectedItem@[] selectedItemChangedCbs;
@@ -11,6 +12,11 @@ ProcessNewSelectedItem@[] selectedItemChangedCbs;
 void RegisterOnEditorLoadCallback(CoroutineFunc@ f) {
     if (f !is null) {
         onEditorLoadCbs.InsertLast(f);
+    }
+}
+void RegisterOnEditorUnloadCallback(CoroutineFunc@ f) {
+    if (f !is null) {
+        onEditorUnloadCbs.InsertLast(f);
     }
 }
 
@@ -44,6 +50,12 @@ namespace Event {
         trace("Running OnEditorLoad callbacks");
         for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
             onEditorLoadCbs[i]();
+        }
+    }
+    void RunOnEditorUnloadCbs() {
+        trace("Running OnEditorUnload callbacks");
+        for (uint i = 0; i < onEditorUnloadCbs.Length; i++) {
+            onEditorUnloadCbs[i]();
         }
     }
     bool OnNewBlock(CGameCtnBlock@ block) {

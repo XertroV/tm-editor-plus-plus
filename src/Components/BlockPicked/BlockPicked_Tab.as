@@ -70,6 +70,13 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         UI::Separator();
 
         auto block = FocusedBlock.AsBlock();
+
+        // if this is true the block was removed from the map
+        if (Reflection::GetRefCount(block) == 1) {
+            @FocusedBlock = null;
+            return;
+        }
+
         BlockDesc@ preDesc = BlockDesc(block);
         // Editor::UpdateBakedBlocksMatching(editor, preDesc, preDesc);
 
@@ -86,6 +93,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         if (UI::Button(Icons::Cube + "Explore Block")) {
             ExploreNod(block.DescId.GetName(), block);
         }
+        UI::SameLine();
+        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(block)));
 #endif
         UI::NextColumn();
 
@@ -98,6 +107,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         if (UI::Button(Icons::Cube + " BlockInfo")) {
             ExploreNod("Info: " + block.DescId.GetName(), block.BlockInfo);
         }
+        UI::SameLine();
+        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(block.BlockInfo)));
 #endif
         UI::Columns(1);
 

@@ -26,9 +26,10 @@ bool everEnteredEditor = false;
 void RenderEarly() {
     if (!UserHasPermissions) return;
     if (!GameVersionSafe) return;
-    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-    auto itemEditor = cast<CGameEditorItem>(GetApp().Editor);
-    auto meshEditor = cast<CGameEditorMesh>(GetApp().Editor);
+    auto anyEditor = GetApp().Editor;
+    auto editor = cast<CGameCtnEditorFree>(anyEditor);
+    auto itemEditor = cast<CGameEditorItem>(anyEditor);
+    auto meshEditor = cast<CGameEditorMesh>(anyEditor);
     auto currPg = cast<CSmArenaClient>(GetApp().CurrentPlayground);
 
     IsInCurrentPlayground = currPg !is null;
@@ -38,6 +39,7 @@ void RenderEarly() {
 
     IsInMeshEditor = meshEditor !is null;
 
+    WasInEditor = IsInEditor;
     EnteringEditor = !IsInEditor;
     // we're in the editor if it's not null and we were in the editor, or if we weren't then we wait for the editor to be ready for a request
     IsInEditor = editor !is null && (
@@ -49,11 +51,14 @@ void RenderEarly() {
     // we didn't fire this on being in the item editor, but we sorta do need it to refresh the caches.
     EnteringEditor = EnteringEditor && IsInEditor;
         // && (!everEnteredEditor || (Time::Now - lastInItemEditor) > 1000);
+    auto LeavingEditor = WasInEditor && anyEditor is null;
 
     if (EnteringEditor) {
         EditorPriv::ResetRefreshUnsafe();
         Event::RunOnEditorLoadCbs();
         everEnteredEditor = true;
+    } else if (LeavingEditor) {
+        Event::RunOnEditorUnloadCbs();
     }
 }
 

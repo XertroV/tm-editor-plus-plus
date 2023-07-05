@@ -23,7 +23,7 @@ class BlockSelectionTab : Tab {
             return;
 
         UI::SameLine();
-        UI::Text(bi.AsBlockInfo().Name);
+        CopiableValue(bi.AsBlockInfo().Name);
     }
 }
 
