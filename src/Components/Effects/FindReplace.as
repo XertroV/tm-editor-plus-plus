@@ -68,7 +68,7 @@ class FindReplaceTab : GenericApplyTab {
     }
 
     void DrawInner() override {
-        UI::TextWrapped("Find all instances of an item and replace it with a source item. \\$f80Note:\\$z does not work for blocks.");
+        UI::TextWrapped("Find all instances of an item or block and replace it with a source item/block.");
 
         _IsActive = UI::Checkbox("Apply to new? (as per filter)", _IsActive);
 
@@ -90,7 +90,6 @@ class FindReplaceTab : GenericApplyTab {
             }
         }
 
-        /* blocks dont work */
         UI::AlignTextToFramePadding();
         if (sourceBlockModel is null) {
             UI::Text("Source Block: null");
@@ -108,7 +107,6 @@ class FindReplaceTab : GenericApplyTab {
                 @sourceBlockModel = null;
             }
         }
-        // */
 
         UI::Separator();
 
