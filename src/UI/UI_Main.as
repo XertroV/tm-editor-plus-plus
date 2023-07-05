@@ -267,7 +267,7 @@ TabGroup@ CreateRootTabGroup() {
     ColorApplyTab(root);
     PhaseOffsetApplyTab(root);
     FindReplaceTab(root);
-    // ApplyTranslationTab(root);
+    ApplyTranslationTab(root);
 
     RandomizerEffectsTab(root);
 
