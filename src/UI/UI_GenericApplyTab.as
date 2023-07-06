@@ -49,9 +49,11 @@ class GenericApplyTab : EffectTab {
         // UI::SetNextItemWidth(UI::GetContentRegionAvail().x * .5);
         m_objIdNameFilter = UI::InputText("Add Names", m_objIdNameFilter, nameFilterEnter, nfInputFlags, UI::InputTextCallback(NameFilterCallback));
         bool nameFilterInputActive = UI::IsItemActive();
-        if (nameFilterEnter) AddSuggestedNameToFilterList();
         // if (nameFilter)
-        if (nameFilterInputActive) DrawNameFilterResults(UI::GetCursorPos() + UI::GetWindowPos());
+        bool clicked = false;
+        if (nameFilterInputActive)
+            clicked = DrawNameFilterResults(UI::GetCursorPos() + UI::GetWindowPos());
+        if (nameFilterEnter || clicked) AddSuggestedNameToFilterList();
 
         // UI::SameLine();
         if (UI::Button("Refresh Cache##" + idNonce)) {
@@ -367,7 +369,7 @@ class GenericApplyTab : EffectTab {
         return filteredObjectNames.Find(name) < 0;
     }
 
-    void DrawNameFilterResults(vec2 pos) {
+    bool DrawNameFilterResults(vec2 pos) {
         // UI::SetNextWindowSize(400, -1, UI::Cond::Always);
         UI::SetNextWindowPos(pos.x, pos.y, UI::Cond::Always);
         UI::PushStyleColor(UI::Col::PopupBg, vec4(0, 0, 0, .99));
@@ -379,26 +381,31 @@ class GenericApplyTab : EffectTab {
         auto startIx = Math::Max(0, f_suggestPos - nbToShow / 2);
         auto endIx = Math::Min(total, startIx + nbToShow);
         if (endIx == total) startIx = Math::Max(0, total - nbToShow);
+        UI::TextDisabled("KB only / Enter to select / Arrows to move");
         UI::TextDisabled("Results: " + total + " / <Tab> to add many / Wildcard: *");
         if (f_suggestPos >= total) {
             f_suggestPos = total - 1;
         }
-        UI::Selectable("Add All Results", f_suggestPos == -1);
+        bool clicked = UI::Selectable("Add All Results", f_suggestPos == -1);
+        // if (UI::IsItemHovered()) f_suggestPos = -1;
         for (uint i = startIx; i < endIx; i++) {
             bool isItem = i >= f_blockNames.Length;
             int _i = isItem ? i - f_blockNames.Length : i;
             if (DrawNameFilterResult(i + 1, _i, isItem, f_suggestPos == i)) {
                 f_suggestPos = i;
+                clicked = true;
             }
         }
         UI::EndTooltip();
 
         UI::PopStyleVar();
         UI::PopStyleColor(2);
+        return clicked;
     }
 
     bool DrawNameFilterResult(int resultNumber, int ix, bool isItem, bool isFocused) {
         bool clicked = UI::Selectable(Text::Format("%d. ", resultNumber) + (isItem ? f_itemNames[ix] : f_blockNames[ix]), isFocused);
+        // if (UI::IsItemHovered()) f_suggestPos = resultNumber - 1;
         return clicked;
     }
 }
