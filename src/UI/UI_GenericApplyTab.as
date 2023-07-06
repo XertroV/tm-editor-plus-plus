@@ -121,9 +121,9 @@ class GenericApplyTab : EffectTab {
         UI::Text("# Blocks: " + cachedTargetsB.Length);
         UI::Text("# Items: " + cachedTargetsI.Length);
         showCachedHelpers = UI::Checkbox("Show helpers for application targets", showCachedHelpers);
+        if (showCachedHelpers && filteredObjectNames.Length > 0) DrawShowCachedHelpers();
+        if (showCachedHelpers && filteredObjectNames.Length == 0) UI::TextDisabled("Helpers disabled because all blocks/items are selected.");
         UI::Unindent();
-
-        if (showCachedHelpers) DrawShowCachedHelpers();
 
         string btnLabel = "Update All##";
         switch (currScope) {
