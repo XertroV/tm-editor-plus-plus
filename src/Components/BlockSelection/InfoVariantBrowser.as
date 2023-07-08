@@ -33,6 +33,8 @@ class BlockVariantBrowserTab : Tab {
         if (UI::Button(Icons::Cube + " Explore BlockInfo")) {
             ExploreNod("Info: " + bi.IdName, bi);
         }
+        UI::SameLine();
+        CopiableLabeledPtr(Dev_GetPointerForNod(bi));
 #endif
 
         if (UI::CollapsingHeader("Legend##block-variants")) {

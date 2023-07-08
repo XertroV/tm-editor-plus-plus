@@ -61,6 +61,7 @@ class ItemModel {
         }
 
         auto emeCommon = cast<CGameCommonItemEntityModelEdition>(eme);
+        auto emeBlock = cast<CGameBlockItem>(eme);
         bool isCrystal = emeCommon !is null && emeCommon.MeshCrystal !is null;
 
         if (emeCommon !is null) {
@@ -71,9 +72,9 @@ class ItemModel {
                     @emeCommon.MeshCrystal = null;
                 }
             }
-        }
-
-        if (emeCommon is null) {
+        } else if (emeBlock !is null) {
+            Draw_EME_BlockItem(emeBlock);
+        } else {
             UI::Text("EntityModelEdition is an unknown type: " + UnkType(eme));
             return;
         }
@@ -83,8 +84,11 @@ class ItemModel {
     void DrawEMTree() {
         ItemModelTreeElement(null, -1, item.EntityModel, "EntityModel", drawProperties, GetOffset(item, "EntityModel"), isEditable).Draw();
     }
-}
 
+    void Draw_EME_BlockItem(CGameBlockItem@ eme) {
+        ItemModelTreeElement(null, -1, eme, "EntityModelEdition", drawProperties, GetOffset(item, "EntityModelEdition"), isEditable).Draw();
+    }
+}
 
 class ItemModelTreeElement {
     ItemModelTreeElement@ parent;
@@ -124,6 +128,8 @@ class ItemModelTreeElement {
     GxLight@ gxLight;
     CGameItemModel@ itemModel;
     CSystemPackDesc@ sysPackDesc;
+    CGameBlockItem@ blockItem;
+    CPlugCrystal@ crystal;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
         @this.parent = parent;
@@ -155,6 +161,8 @@ class ItemModelTreeElement {
         @this.userMat = cast<CPlugMaterialUserInst>(nod);
         @this.gxLight = cast<GxLight>(nod);
         @this.sysPackDesc = cast<CSystemPackDesc>(nod);
+        @this.blockItem = cast<CGameBlockItem>(nod);
+        @this.crystal = cast<CPlugCrystal>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -247,6 +255,10 @@ class ItemModelTreeElement {
             Draw(gxLight);
         } else if (sysPackDesc !is null) {
             Draw(sysPackDesc);
+        } else if (blockItem !is null) {
+            Draw(blockItem);
+        } else if (crystal !is null) {
+            Draw(crystal);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
@@ -729,7 +741,7 @@ class ItemModelTreeElement {
         }
     }
 
-    void DrawMaterialsAt(const string &in title, CMwNod@ nod, uint16 offset) {
+    void DrawMaterialsAt(const string &in title, CMwNod@ nod, uint16 offset, uint16 elSize = 0x8, uint16 elOffset = 0x0) {
         if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
             auto buf = Dev::GetOffsetNod(nod, offset);
             auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
@@ -742,7 +754,7 @@ class ItemModelTreeElement {
             }
             // always show material name if we can
             for (uint i = 0; i < len; i++) {
-                auto mat = cast<CPlugMaterial>(Dev::GetOffsetNod(buf, 0x8 * i));
+                auto mat = cast<CPlugMaterial>(Dev::GetOffsetNod(buf, elSize * i + elOffset));
                 if (mat is null) {
                     UI::Text("" + i + ". null");
                 } else {
@@ -773,15 +785,15 @@ class ItemModelTreeElement {
         }
     }
 
-    void DrawUserMatIntsAt(const string &in title, CMwNod@ nod, uint16 offset) {
+    void DrawUserMatIntsAt(const string &in title, CMwNod@ nod, uint16 offset, uint16 elSize = 0x18, uint16 elOffset = 0x0) {
         if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
             auto buf = Dev::GetOffsetNod(nod, offset);
             auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
-            auto elSize = 0x18;
+            // auto elSize = 0x18;
             for (uint i = 0; i < len; i++) {
-                auto mat = cast<CPlugMaterialUserInst>(Dev::GetOffsetNod(buf, elSize * i));
-                auto u1 = Dev::GetOffsetUint64(buf, elSize * i + 0x8);
-                auto u2 = Dev::GetOffsetUint64(buf, elSize * i + 0x10);
+                auto mat = cast<CPlugMaterialUserInst>(Dev::GetOffsetNod(buf, elSize * i + elOffset));
+                // auto u1 = Dev::GetOffsetUint64(buf, elSize * i + 0x8);
+                // auto u2 = Dev::GetOffsetUint64(buf, elSize * i + 0x10);
                 // these seem to do/mean nothing
                 // string suffix = " / " + u1 + " / " + Text::Format("0x%x", u2);
                 string suffix = "";
@@ -977,8 +989,37 @@ class ItemModelTreeElement {
         }
     }
 
+    void Draw(CGameBlockItem@ blockItem) {
+        if (StartTreeNode(name + " ::\\$f8f CGameBlockItem", UI::TreeNodeFlags::DefaultOpen)) {
+
+            CopiableLabeledValue("ArchetypeBlockInfoId", blockItem.ArchetypeBlockInfoId.GetName());
+
+            auto nbCrystals = blockItem.BlockInfoMobilSkins_Crystals.Length;
+            if (StartTreeNode("BlockInfoMobilSkins_Crystals (" + nbCrystals + ")###" + Dev_GetPointerForNod(nod), true, UI::TreeNodeFlags::None)) {
+                auto elSize = 0x68;
+                auto crystalsPtr = Dev::GetOffsetUint64(blockItem, 0x20);
+                for (uint i = 0; i < nbCrystals; i++) {
+                    auto offset = elSize * i + 0x8;
+                    // CopiableLabeledValue("PtrPtr", Text::FormatPointer(crystalsPtr + offset));
+                    MkAndDrawChildNode(Dev_GetNodFromPointer(Dev::ReadUInt64(crystalsPtr + offset)), offset, "Crystal " + i + ".");
+                }
+                EndTreeNode();
+            }
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CPlugCrystal@ crystal) {
+        if (StartTreeNode(name + " ::\\$f8f CPlugCrystal", UI::TreeNodeFlags::DefaultOpen)) {
+            auto nbMats = Dev::GetOffsetUint32(crystal, 0x50);
+            DrawMaterialsAt("Materials ("+nbMats+")##" + Dev_GetPointerForNod(crystal), crystal, 0x48, 0x20, 0x18);
+            DrawUserMatIntsAt("UserMatInts ("+nbMats+")##" + Dev_GetPointerForNod(crystal), crystal, 0x48, 0x20, 0x0);
+            EndTreeNode();
+        }
+    }
+
     void Draw(CTrackMania@ asdf) {
-        if (StartTreeNode(name + " ::\\$f8fC TrackMania", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CTrackMania", UI::TreeNodeFlags::DefaultOpen)) {
             UI::Text("\\$f80todo");
             EndTreeNode();
         }

@@ -3,6 +3,7 @@
     - requests
     - Pillow (PIL)
     - numpy
+    - click
 """
 
 import sys
@@ -11,6 +12,12 @@ import io
 import requests
 from PIL import Image
 import numpy as np
+import click
+
+
+
+
+
 
 def main():
     if len(sys.argv) < 2:

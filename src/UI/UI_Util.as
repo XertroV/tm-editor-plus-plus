@@ -46,6 +46,13 @@ shared bool ClickableLabel(const string &in label, const string &in value, const
     return UI::IsItemClicked();
 }
 
+bool CopiableLabeledPtr(CMwNod@ nod) {
+    return CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(nod)));
+}
+bool CopiableLabeledPtr(const uint64 ptr) {
+    return CopiableLabeledValue("ptr", Text::FormatPointer(ptr));
+}
+
 shared bool CopiableLabeledValue(const string &in label, const string &in value) {
     if (ClickableLabel(label, value)) {
         SetClipboard(value);

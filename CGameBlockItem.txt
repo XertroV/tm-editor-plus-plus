@@ -1,0 +1,26 @@
+CGameBlockItem
+
+0x20 buffer 4; struct 0x68 big
+    0x0 some id?
+    0x8 -> Crystal 0x9003000
+    <null bytes>
+    0x50 = ??
+    0x5c = 0x5 always?
+0x40 -> some pointer structure or linked list or something?
+0x90 -> ??
+0xA0 -> struct ? (self pointer but changes, then a list of ids u16 mb?)
+0xA8 -> ''
+0xB0 -> ''
+
+(object likely done by this point)
+
+0xE0 -> ?
+0xF0 -> CControlFrame
+0xF8 -> ?
+0x100 -> ?
+0x108 -> ?
+0x110 -> ?
+0x118 -> ?
+0x120 -> ?
+0x128 -> ?
+0x130 -> ?

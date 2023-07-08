@@ -19,12 +19,16 @@ CPlugCrystal
 0x68 -> 0x0, mwid
 
 
+edges?
 0x98 -> Buffer (len 0x1cd4)
     -> vec2? (yep, length confirms)
+
 0xa8 -> buffer (len 0x3)
     -> uint32?
+
 0xb8 -> buffer (len 0x99c)
     -> uint32; all values either 0x1 or 0x2
+
 0xc8 -> struct?
     0x0 -> game data
     0x08 -> buffer (len 1)
