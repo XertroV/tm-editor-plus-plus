@@ -1230,7 +1230,8 @@ uint Draw_SPlacementGroup_TQs(CMwNod@ tqs, uint nbTqs, bool isEditable, uint64 p
     auto ret = nbTqs;
     UI::Text("TQs.Length: " + nbTqs);
     if (IsPlacementGroupForSpectators(placementGroupPtr)) {
-        UI::SameLine();
+        // UI::SameLine();
+        UI::Indent();
         if (UI::Button("Export Spectators")) {
             ExportItemSpectators(tqs, nbTqs);
         }
@@ -1241,11 +1242,24 @@ uint Draw_SPlacementGroup_TQs(CMwNod@ tqs, uint nbTqs, bool isEditable, uint64 p
                 NotifySuccess("Successfully imported spectator locations! Please save the item.");
             }
             UI::SameLine();
-            if (UI::Button("Double Spectator Count")) {
+            if (UI::Button("2x Spectator Count")) {
                 DoubleItemSpectators(placementGroupPtr);
             }
             AddSimpleTooltip("\\$f80Warning!\\$z The game might crash leaving the editor or if E++ is unloaded/updated. At the very least, the game will crash on shutdown. (Safe to use for item creation). Be sure to save regularly.");
+
+            if (UI::Button("-10% Spectator Count")) {
+                ReduceItemSpectators(placementGroupPtr, 0.9);
+            }
+            UI::SameLine();
+            if (UI::Button("-25% Spectator Count")) {
+                ReduceItemSpectators(placementGroupPtr, 0.75);
+            }
+            UI::SameLine();
+            if (UI::Button("-50% Spectator Count")) {
+                ReduceItemSpectators(placementGroupPtr, 0.5);
+            }
         }
+        UI::Unindent();
     }
     return ret;
 }

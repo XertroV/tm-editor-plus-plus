@@ -31,7 +31,14 @@ void Dev_SetOffsetBytes(CMwNod@ nod, uint offset, uint64[]@ bs) {
     return;
 }
 
-
+void Dev_ReduceMwSArray(uint64 ptr, float newSizeProp) {
+    if (newSizeProp > 1.0) throw("out of range+ newSizeProp");
+    if (newSizeProp < 0.0) throw("out of range- newSizeProp");
+    auto len = Dev::ReadUInt32(ptr + 0x8);
+    uint32 newSize = uint32(float(len) * newSizeProp);
+    newSize = Math::Min(len, newSize);
+    Dev::Write(ptr + 0x8, newSize);
+}
 
 void Dev_DoubleMwSArray(uint64 ptr, uint elSize) {
     print("Dev_DoubleMwSArray: " + Text::FormatPointer(ptr) + ", sz: " + elSize);

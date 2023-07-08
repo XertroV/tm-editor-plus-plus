@@ -271,6 +271,8 @@ TabGroup@ CreateRootTabGroup() {
 
     RandomizerEffectsTab(root);
 
+    EditorMiscTab(root);
+
     TodoTab(root, "Apply Transformation", "f(x)", "apply a transformation to a Source of blocks/items");
 
     TodoTab(root, "Set B/I Properties", Icons::PencilSquareO, "mass-apply properties like color or LM quality.");

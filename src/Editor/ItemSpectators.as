@@ -46,10 +46,10 @@ uint ImportItemSpectators(CMwNod@ tqs, uint nbTqs) {
     try {
         auto spectatorsQTs = LoadItemSpectatorsImportFile(SPECTATORS_FOLDER);
         if (spectatorsQTs is null) throw("Could not parse Import.csv -- spectatorsQTs is null");
-        if (spectatorsQTs.Length > nbTqs) throw("Too many spectators in Import.csv (max lines: "+nbTqs+")");
+        if (spectatorsQTs.Length > nbTqs) NotifyWarning("Too many spectators in Import.csv (will only populate the first "+nbTqs+" spectators)");
         if (spectatorsQTs.Length == 0) throw("Import.csv had 0 spectators");
         uint elSize = SZ_GMQUATTRANS;
-        for (uint i = 0; i < spectatorsQTs.Length; i++) {
+        for (int i = 0; i < Math::Min(nbTqs, spectatorsQTs.Length); i++) {
             auto item = spectatorsQTs[i];
             Dev::SetOffset(tqs, i * elSize + 0x0, item.q);
             Dev::SetOffset(tqs, i * elSize + 0x10, item.p);
@@ -70,7 +70,14 @@ void DoubleItemSpectators(uint64 placementGroupPtr) {
     Dev_DoubleMwSArray(placementGroupPtr + 0x20, 0x2);
     // the 4th array has a length of 1
     // Dev_DoubleMwSArray(placementGroupPtr + 0x30);
-    NotifySuccess("Double spectator capacity (clones). Please continue editing and then save the item.");
+    NotifySuccess("Doubled spectator capacity (clones). Please continue editing and then save the item.");
+}
+
+void ReduceItemSpectators(uint64 placementGroupPtr, float keepRatio) {
+    Dev_ReduceMwSArray(placementGroupPtr + 0x00, keepRatio);
+    Dev_ReduceMwSArray(placementGroupPtr + 0x10, keepRatio);
+    Dev_ReduceMwSArray(placementGroupPtr + 0x20, keepRatio);
+    NotifySuccess("Reduced spectator capacity by " +Text::Format("%.1f", (1. - keepRatio) * 100)+ "%. Please continue editing and then save the item.");
 }
 
 
