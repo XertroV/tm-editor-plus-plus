@@ -8,7 +8,10 @@ void Main() {
         return;
     }
     CheckAndSetGameVersionSafe();
-    startnew(Editor::CacheMaterials);
+    if (GetApp().Editor !is null) {
+        startnew(Editor::CacheMaterials);
+    }
+    RegisterOnEditorLoadCallback(Editor::CacheMaterials);
 }
 
 void OnDestroyed() { Unload(); }

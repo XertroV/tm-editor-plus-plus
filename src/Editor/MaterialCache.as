@@ -34,6 +34,6 @@ namespace Editor {
         if (g_MaterialCache is null) {
             @g_MaterialCache = MaterialCache();
         }
-        Notify("Instantiated materials cache.");
+        // Notify("Instantiated materials cache.");
     }
 }

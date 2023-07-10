@@ -175,7 +175,8 @@ EPlugSurfaceMaterialId DrawComboEPlugSurfaceMaterialId(const string &in label, E
 
 EPlugSurfaceGameplayId DrawComboEPlugSurfaceGameplayId(const string &in label, EPlugSurfaceGameplayId val) {
     return EPlugSurfaceGameplayId(
-        DrawArbitraryEnum(label, int(val), 21, function(int v) {
+        // exclude XXX_Null by -1 nbVals (20 instead of 21)
+        DrawArbitraryEnum(label, int(val), 20, function(int v) {
             return tostring(EPlugSurfaceGameplayId(v));
         })
     );

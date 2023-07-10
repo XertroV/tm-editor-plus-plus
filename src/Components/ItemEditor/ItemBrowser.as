@@ -823,9 +823,12 @@ class ItemModelTreeElement {
             auto colorPtr = Dev::GetOffsetUint64(nod, O_USERMATINST_COLORBUF);
             auto colorLen = Dev::GetOffsetUint32(nod, O_USERMATINST_COLORBUF + 0x8);
             if (isEditable) {
+                auto origGPID = userMat.GameplayID;
                 userMat._LinkFull = UI::InputText("LinkFull", userMat._LinkFull);
-                userMat.PhysicsID = (DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(userMat.PhysicsID)));
-                userMat.GameplayID = (DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(userMat.GameplayID)));
+                userMat.PhysicsID = uint(DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(userMat.PhysicsID)));
+                // For some reason, setting userMat.GameplayID does not work for 'None', so we need to write the memory offset instead (which works)
+                auto newGameplayID = uint8(DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(origGPID)));
+                Dev::SetOffset(userMat, 0x149, newGameplayID);
                 if (colorLen == 3) {
                     auto r = Dev::ReadUInt32(colorPtr + 0x0),
                         g = Dev::ReadUInt32(colorPtr + 0x4),
