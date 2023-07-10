@@ -6,6 +6,9 @@ class EditorMiscTab : Tab {
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
 
+        UI::AlignTextToFramePadding();
+        UI::Text("Camera:");
+
         auto occ = editor.OrbitalCameraControl;
         auto pmt = editor.PluginMapType;
         occ.m_ParamFov = UI::SliderFloat("FoV", occ.m_ParamFov, 5.0, 180, "%.1f");
@@ -15,6 +18,9 @@ class EditorMiscTab : Tab {
         pmt.CameraVAngle = hv.y;
 
         UI::Separator();
+
+        UI::AlignTextToFramePadding();
+        UI::Text("Spectators:");
 
         pmt.BleacherSpectatorsFillRatio = UI::InputFloat("BleacherSpectatorsFillRatio", pmt.BleacherSpectatorsFillRatio, .1);
         pmt.BleacherSpectatorsCount = UI::InputInt("BleacherSpectatorsCount", pmt.BleacherSpectatorsCount);

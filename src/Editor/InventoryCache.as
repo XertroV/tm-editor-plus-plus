@@ -42,6 +42,7 @@ namespace Editor {
         }
 
         const array<string>@ get_BlockNames() { return cachedInvBlockNames; }
+        // const array<string>@ get_BlockPaths() { return cachedInvBlockPaths; }
         const array<CGameCtnArticleNodeArticle@>@ get_BlockInvNodes() { return cachedInvBlockArticleNodes; }
         const array<string>@ get_ItemNames() { return cachedInvItemNames; }
         const array<string>@ get_ItemPaths() { return cachedInvItemPaths; }
@@ -52,6 +53,7 @@ namespace Editor {
         protected string[] cachedInvItemPaths;
         protected string[] cachedInvItemNames;
         protected string[] cachedInvBlockNames;
+        // protected string[] cachedInvBlockPaths;
         protected CGameCtnArticleNodeArticle@[] cachedInvBlockArticleNodes;
         protected CGameCtnArticleNodeArticle@[] cachedInvItemArticleNodes;
 
@@ -80,6 +82,7 @@ namespace Editor {
                 cachedInvItemNames.InsertLast(string(node.Article.NameOrDisplayName));
                 cachedInvItemArticleNodes.InsertLast(node);
             } else {
+                // cachedInvBlockPaths.InsertLast(string(node.NodeName))
                 cachedInvBlockNames.InsertLast(string(node.NodeName));
                 cachedInvBlockArticleNodes.InsertLast(node);
             }

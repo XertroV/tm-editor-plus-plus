@@ -120,8 +120,8 @@ namespace MeshDuplication {
     }
 
     void ZeroFids(CPlugPrefab@ prefab) {
-        ApplyMaterialMods(prefab);
         ZeroNodFid(prefab);
+        ApplyMaterialMods(prefab);
         for (uint i = 0; i < prefab.Ents.Length; i++) {
             if (prefab.Ents[i].ModelFid !is null) {
                 trace("Zeroing fid: prefab.Ents["+i+"].ModelFid");
@@ -258,6 +258,12 @@ namespace MeshDuplication {
         // trace('done zeroing game skin and folder');
     }
 
+    void ZeroFids(CSystemFidFile@ fid) {
+        if (fid.Nod !is null) {
+            ZeroFidsUnknownModelNod(fid.Nod);
+        }
+    }
+
 
     void ZeroFidsUnknownModelNod(CMwNod@ nod) {
         if (nod is null) return;
@@ -274,6 +280,7 @@ namespace MeshDuplication {
         auto sSpecial = cast<NPlugTrigger_SSpecial>(nod);
         auto commonIe = cast<CGameCommonItemEntityModel>(nod);
         auto varlist = cast<NPlugItem_SVariantList>(nod);
+        auto fid = cast<CSystemFidFile>(nod);
         if (so !is null) {
             ZeroFids(so);
         } else if (itemModel !is null) {
@@ -300,6 +307,8 @@ namespace MeshDuplication {
             ZeroFids(sSpecial);
         } else if (commonIe !is null) {
             ZeroFids(commonIe);
+        } else if (fid !is null) {
+            ZeroFids(fid);
         } else {
             NotifyError("ZeroFidsUnknownModelNod: nod is unknown.");
             NotifyError("ZeroFidsUnknownModelNod: nod type: " + Reflection::TypeOf(nod).Name);
@@ -378,8 +387,9 @@ namespace MeshDuplication {
                 matUserInst._Link_OldCompat = CreateMwIdWithName(origMatName);
                 matUserInst.Link = CreateMwIdWithName(origMatName);
 
-                matUserInst.PhysicsID = Dev::GetOffsetUint8(origMat, 0x28);
-                matUserInst.GameplayID = Dev::GetOffsetUint8(origMat, 0x29);
+                // bug setting matUserInst.PhysicsID / GameplayID
+                Dev::SetOffset(matUserInst, O_USERMATINST_PHYSID, Dev::GetOffsetUint8(origMat, 0x28));
+                Dev::SetOffset(matUserInst, O_USERMATINST_GAMEPLAY_ID, Dev::GetOffsetUint8(origMat, 0x29));
 
                 matUserInst._LinkFull = GetMaterialLinkFull(origMat);
                 trace('Setting user mat ptr in buffer ' + (i + 1));
@@ -520,6 +530,9 @@ namespace MeshDuplication {
     }
 
     void FixItemModelProperties(CGameItemModel@ dest, CGameItemModel@ source) {
+        if (source is null) {
+            NotifyWarning("Couldn't set item model properties: source is null / not a CGameItemModel");
+        }
 
         dest.WaypointType = source.WaypointType;
 

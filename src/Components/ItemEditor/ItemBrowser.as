@@ -130,6 +130,11 @@ class ItemModelTreeElement {
     CSystemPackDesc@ sysPackDesc;
     CGameBlockItem@ blockItem;
     CPlugCrystal@ crystal;
+    CGameCtnBlockInfo@ blockInfo;
+    CGameCtnBlockInfoVariant@ infoVar;
+    CSystemFidFile@ fid;
+    CGameCtnBlockInfoMobil@ blockInfoMobil;
+    CGameCtnBlockUnitInfo@ unitInfo;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
         @this.parent = parent;
@@ -163,6 +168,11 @@ class ItemModelTreeElement {
         @this.sysPackDesc = cast<CSystemPackDesc>(nod);
         @this.blockItem = cast<CGameBlockItem>(nod);
         @this.crystal = cast<CPlugCrystal>(nod);
+        @this.blockInfo = cast<CGameCtnBlockInfo>(nod);
+        @this.infoVar = cast<CGameCtnBlockInfoVariant>(nod);
+        @this.fid = cast<CSystemFidFile>(nod);
+        @this.blockInfoMobil = cast<CGameCtnBlockInfoMobil>(nod);
+        @this.unitInfo = cast<CGameCtnBlockUnitInfo>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -259,14 +269,86 @@ class ItemModelTreeElement {
             Draw(blockItem);
         } else if (crystal !is null) {
             Draw(crystal);
+        } else if (blockInfo !is null) {
+            Draw(blockInfo);
+        } else if (infoVar !is null) {
+            Draw(infoVar);
+        } else if (fid !is null) {
+            Draw(fid);
+        } else if (blockInfoMobil !is null) {
+            Draw(blockInfoMobil);
+        } else if (unitInfo !is null) {
+            Draw(unitInfo);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
     }
 
     void Draw(CGameItemModel@ itemModel) {
-        if (StartTreeNode(name + " :: CGameItemModel", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CGameItemModel", UI::TreeNodeFlags::DefaultOpen)) {
             MkAndDrawChildNode(itemModel.EntityModel, "EntityModel");
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CGameCtnBlockInfo@ blockInfo) {
+        if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfo", UI::TreeNodeFlags::DefaultOpen)) {
+            MkAndDrawChildNode(blockInfo.VariantBaseGround, "VariantBaseGround");
+            MkAndDrawChildNode(blockInfo.VariantBaseAir, "VariantBaseAir");
+            for (uint i = 0; i < blockInfo.AdditionalVariantsGround.Length; i++) {
+                MkAndDrawChildNode(blockInfo.AdditionalVariantsGround[i], 0x8 * i, "AdditionalVariantsGround["+i+"]");
+            }
+            for (uint i = 0; i < blockInfo.AdditionalVariantsAir.Length; i++) {
+                MkAndDrawChildNode(blockInfo.AdditionalVariantsAir[i], 0x8 * i, "AdditionalVariantsAir["+i+"]");
+            }
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CGameCtnBlockInfoVariant@ infoVar) {
+        if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfoVariant", UI::TreeNodeFlags::None)) {
+            for (uint i = 0; i < infoVar.BlockUnitInfos.Length; i++) {
+                MkAndDrawChildNode(infoVar.BlockUnitInfos[i], 0x8 * i, "BlockUnitInfos["+i+"]");
+            }
+            for (uint i = 0; i < infoVar.Mobils00.Length; i++) {
+                MkAndDrawChildNode(infoVar.Mobils00[i], 0x8 * i, "Mobils00["+i+"]");
+            }
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CGameCtnBlockUnitInfo@ unitInfo) {
+        if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockUnitInfo", UI::TreeNodeFlags::None)) {
+            for (uint i = 0; i < unitInfo.AllClips.Length; i++) {
+                MkAndDrawChildNode(unitInfo.AllClips[i], 0x8 * i, "AllClips["+i+"]");
+            }
+            EndTreeNode();
+        }
+
+    }
+
+    void Draw(CGameCtnBlockInfoMobil@ blockInfoMobil) {
+        if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfoMobil", UI::TreeNodeFlags::None)) {
+            MkAndDrawChildNode(blockInfoMobil.PrefabFid, GetOffset(blockInfoMobil, "PrefabFid"), "PrefabFid");
+            MkAndDrawChildNode(blockInfoMobil.Solid2FromBlockItem, GetOffset(blockInfoMobil, "Solid2FromBlockItem"), "Solid2FromBlockItem");
+            MkAndDrawChildNode(blockInfoMobil.SurfaceFromBlockItem, GetOffset(blockInfoMobil, "SurfaceFromBlockItem"), "SurfaceFromBlockItem");
+            // MkAndDrawChildNode(blockInfoMobil.PrefabFid, GetOffset(blockInfoMobil, "PrefabFid"), "PrefabFid");
+            // MkAndDrawChildNode(blockInfoMobil.PrefabFid, GetOffset(blockInfoMobil, "PrefabFid"), "PrefabFid");
+            auto PlacementPatchesBuf = Dev::GetOffsetNod(blockInfoMobil, 0x118);
+            auto nbPlacementPatches = Dev::GetOffsetUint32(blockInfoMobil, 0x120);
+            UI::Text("nbPlacementPatches: " + nbPlacementPatches);
+            // prefab pointer at 0x130
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CSystemFidFile@ fid) {
+        if (StartTreeNode(name + " ::\\$f8f CSystemFidFile", UI::TreeNodeFlags::DefaultOpen)) {
+            if (fid.Nod is null && UI::Button("Load Nod")) {
+                Fids::Preload(fid);
+            } else {
+                MkAndDrawChildNode(fid.Nod, GetOffset(fid, "Nod"), "Nod");
+            }
             EndTreeNode();
         }
     }
@@ -825,10 +907,11 @@ class ItemModelTreeElement {
             if (isEditable) {
                 auto origGPID = userMat.GameplayID;
                 userMat._LinkFull = UI::InputText("LinkFull", userMat._LinkFull);
-                userMat.PhysicsID = uint(DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(userMat.PhysicsID)));
-                // For some reason, setting userMat.GameplayID does not work for 'None', so we need to write the memory offset instead (which works)
+
+                // For some reason, setting userMat.GameplayID / PhysicsID does not work for 'None' (or some values), so we need to write the memory offset instead (which works)
+                Dev::SetOffset(userMat, O_USERMATINST_PHYSID, uint8(DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(userMat.PhysicsID))));
                 auto newGameplayID = uint8(DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(origGPID)));
-                Dev::SetOffset(userMat, 0x149, newGameplayID);
+                Dev::SetOffset(userMat, O_USERMATINST_GAMEPLAY_ID, newGameplayID);
                 if (colorLen == 3) {
                     auto r = Dev::ReadUInt32(colorPtr + 0x0),
                         g = Dev::ReadUInt32(colorPtr + 0x4),
@@ -1452,6 +1535,10 @@ class ItemModelTreePicker : ItemModelTreeElement {
         ItemModelTreePicker(this, currentIndex, nod, name, callback, matcher).Draw();
     }
 
+    void MkAndDrawChildNode(CMwNod@ nod, uint16 offset, const string&in name) override {
+        ItemModelTreePicker(this, currentIndex, nod, name, callback, matcher, offset).Draw();
+    }
+
     string get_pickDirectChildLabel() { return "This Nod (Direct)"; }
     string get_pickIndirectChildLabel() { return "This Nod (Indirect)"; }
     string get_pickArrayElementLabel() { return "This Element"; }
@@ -1558,5 +1645,45 @@ class IE_ItemModelBrowserTab : ItemModelBrowserTab {
 
     void DrawItem(CGameItemModel@ item) override {
         ItemModel(item, true, true).DrawTree();
+    }
+}
+
+class BlockModelBrowserTab : Tab {
+    BlockModelBrowserTab(TabGroup@ p, const string &in name) {
+        super(p, name, "");
+    }
+
+    CGameCtnBlockInfo@ GetBlockInfo() {
+        if (selectedBlockInfo is null) return null;
+        return selectedBlockInfo.AsBlockInfo();
+    }
+
+    void DrawInner() override {
+        auto block = GetBlockInfo();
+        if (block is null) {
+            UI::Text("No block.");
+            return;
+        }
+        DrawBlock(block);
+    }
+
+    void DrawBlock(CGameCtnBlockInfo@ block) {
+        ItemModelTreeElement(null, -1, block, "BlockInfo").Draw();
+    }
+}
+
+class NormalBlockModelBrowserTab : BlockModelBrowserTab {
+    NormalBlockModelBrowserTab(TabGroup@ p) {
+        super(p, "Norm. Block Browser");
+    }
+}
+class GhostBlockModelBrowserTab : BlockModelBrowserTab {
+    GhostBlockModelBrowserTab(TabGroup@ p) {
+        super(p, "Ghost/Free Block Browser");
+    }
+
+    CGameCtnBlockInfo@ GetBlockInfo() override {
+        if (selectedGhostBlockInfo is null) return null;
+        return selectedGhostBlockInfo.AsBlockInfo();
     }
 }

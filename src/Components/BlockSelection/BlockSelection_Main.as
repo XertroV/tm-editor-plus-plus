@@ -6,10 +6,12 @@ class BlockSelectionTab : Tab {
         SetGhostVariantTab(Children);
         // BlockPlacementTagTab(Children);
         BlockVariantBrowserTab(Children);
+        NormalBlockModelBrowserTab(Children);
+        GhostBlockModelBrowserTab(Children);
     }
 
     void DrawInner() override {
-        Children.DrawTabsAsList();
+        Children.DrawTabs();
     }
 
     void _HeadingLeft() override {

@@ -15,14 +15,18 @@ class IE_ManipulateMeshesTab : Tab {
 
     CGameCtnArticleNodeArticle@ selectedInvNode = null;
 
-    CGameItemModel@ GetInventorySelectionModel() {
+    CMwNod@ GetInventorySelectionModel() {
         auto @itemNode = selectedInvNode;
         // might load the full item?
         itemNode.GetCollectorNod();
         if (!itemNode.Article.IsLoaded) {
             itemNode.Article.Preload();
         }
-        return cast<CGameItemModel>(itemNode.Article.LoadedNod);
+        return itemNode.Article.LoadedNod;
+    }
+
+    CGameItemModel@ GetInventorySelectionModel_Item() {
+        return cast<CGameItemModel>(GetInventorySelectionModel());
     }
 
     void DrawInner() override {
@@ -266,7 +270,7 @@ class IE_ManipulateMeshesTab : Tab {
             }
 
             if (UI::Button("Set ItemModel Properties")) {
-                MeshDuplication::FixItemModelProperties(GetItemModel(), GetInventorySelectionModel());
+                MeshDuplication::FixItemModelProperties(GetItemModel(), GetInventorySelectionModel_Item());
                 AppendRunMsg("Set item model properties from source item model.");
             }
 
@@ -313,7 +317,7 @@ class IE_ManipulateMeshesTab : Tab {
         } else {
             AppendRunMsg("\\$f80Error: not sure how to process source type of " + tostring(source.ty));
         }
-        
+
         auto destModel = GetItemModel();
         if (destModel.EntityModelEdition !is null) {
             @destModel.EntityModelEdition = null;

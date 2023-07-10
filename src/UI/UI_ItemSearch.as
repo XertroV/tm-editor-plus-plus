@@ -61,19 +61,28 @@ class ItemSearcher {
     CGameCtnArticleNodeArticle@ FindItemNamed(const string &in itemPath) {
         if (itemPath.Length == 0) return null;
         auto inv = Editor::GetInventoryCache();
+        CGameCtnArticleNodeArticle@ ret = null;
         for (uint i = 0; i < inv.ItemPaths.Length; i++) {
             if (itemPath == inv.ItemPaths[i]) {
-                auto ret = inv.ItemInvNodes[i];
-                auto collector = ret.GetCollectorNod();
-                trace("Collector of type: " + UnkType(collector));
-                if (!ret.Article.IsLoaded) {
-                    ret.Article.Preload();
-                }
-                trace("Collector of type: " + UnkType(ret.GetCollectorNod()));
-                return ret;
+                @ret = inv.ItemInvNodes[i];
+                break;
             }
         }
-        return null;
+        // if not an item, check blocks
+        for (uint i = 0; i < inv.BlockNames.Length && ret is null; i++) {
+            if (itemPath == inv.BlockNames[i]) {
+                @ret = inv.BlockInvNodes[i];
+            }
+        }
+        if (ret !is null) {
+            auto collector = ret.GetCollectorNod();
+            trace("Collector of type: " + UnkType(collector));
+            if (!ret.Article.IsLoaded) {
+                ret.Article.Preload();
+            }
+            trace("Collector of type: " + UnkType(ret.GetCollectorNod()));
+        }
+        return ret;
     }
 
 
@@ -119,6 +128,11 @@ class ItemSearcher {
         for (uint i = 0; i < inv.ItemPaths.Length; i++) {
             if (FilterMatchesName(inv.ItemPaths[i].ToLower(), inv.ItemPaths[i])) {
                 filtered.InsertLast(inv.ItemPaths[i]);
+            }
+        }
+        for (uint i = 0; i < inv.BlockNames.Length; i++) {
+            if (FilterMatchesName(inv.BlockNames[i].ToLower(), inv.BlockNames[i])) {
+                filtered.InsertLast(inv.BlockNames[i]);
             }
         }
     }
