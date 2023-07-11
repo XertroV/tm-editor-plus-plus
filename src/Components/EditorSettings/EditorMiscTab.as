@@ -16,6 +16,9 @@ class EditorMiscTab : Tab {
         hv = UX::SliderAngles2("H,V Angle", hv, -180, 180, "%.1f", vec2(0, -1.519));
         pmt.CameraHAngle = hv.x;
         pmt.CameraVAngle = hv.y;
+        pmt.CameraToTargetDistance = UI::SliderFloat("Distance to Target", pmt.CameraToTargetDistance);
+        pmt.CameraTargetPosition = UX::SliderFloat3("Target Position", pmt.CameraTargetPosition, -500, 2500, vec3(768, 70, 768));
+        pmt.CameraPosition = UX::SliderFloat3("Camera Position", -500, 2500, vec3(798, 100, 798));
 
         UI::Separator();
 
@@ -24,5 +27,14 @@ class EditorMiscTab : Tab {
 
         pmt.BleacherSpectatorsFillRatio = UI::InputFloat("BleacherSpectatorsFillRatio", pmt.BleacherSpectatorsFillRatio, .1);
         pmt.BleacherSpectatorsCount = UI::InputInt("BleacherSpectatorsCount", pmt.BleacherSpectatorsCount);
+
+
+        UI::Separator();
+
+        UI::AlignTextToFramePadding();
+        UI::Text("Helpers:");
+
+        editor.HideBlockHelpers = UI::Checkbox("HideBlockHelpers", editor.HideBlockHelpers);
+        // editor.ExperimentalFeatures.ShowNextMapElemParamIMGUIWindow
     }
 }
