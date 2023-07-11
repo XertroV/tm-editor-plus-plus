@@ -145,9 +145,11 @@ Relevant Files (in this directory):
 It's best to start by exporting a spectators item's quaternions and positions.
 Then you can edit that using a script, and save the file as `Import.csv`.
 
+If Import.csv has fewer lines than the item has capacity for, then the number of spectators will be reduced.
+
 Example of such a script: https://github.com/XertroV/tm-editor-plus-plus/blob/master/examples/spectators_from_image.py
+Example of usage: https://github.com/XertroV/tm-editor-plus-plus/tree/master/examples/terrain-spectators
 
 For help, ping @XertroV in the support thread on Discord.
-
 
 """;
