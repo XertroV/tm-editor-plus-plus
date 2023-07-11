@@ -16,9 +16,9 @@ class EditorMiscTab : Tab {
         hv = UX::SliderAngles2("H,V Angle", hv, -180, 180, "%.1f", vec2(0, -1.519));
         pmt.CameraHAngle = hv.x;
         pmt.CameraVAngle = hv.y;
-        pmt.CameraToTargetDistance = UI::SliderFloat("Distance to Target", pmt.CameraToTargetDistance);
+        pmt.CameraToTargetDistance = UI::SliderFloat("Distance to Target", pmt.CameraToTargetDistance, 0, 500);
         pmt.CameraTargetPosition = UX::SliderFloat3("Target Position", pmt.CameraTargetPosition, -500, 2500, vec3(768, 70, 768));
-        pmt.CameraPosition = UX::SliderFloat3("Camera Position", -500, 2500, vec3(798, 100, 798));
+        CopiableLabeledValue("Camera Position", pmt.CameraPosition.ToString());
 
         UI::Separator();
 

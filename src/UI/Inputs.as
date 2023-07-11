@@ -17,6 +17,10 @@ namespace UX {
         return ret;
     }
 
+    shared vec3 SliderFloat3(const string &in label, vec3 val, float min, float max, vec3 _default) {
+        return SliderFloat3(label, val, min, max, "%.3f", _default);
+    }
+
     shared vec3 SliderFloat3(const string &in label, vec3 val, float min, float max, const string &in fmt = "%.3f", vec3 _default = vec3()) {
         auto ret = UI::SliderFloat3(label, val, min, max, fmt);
         UI::SameLine();

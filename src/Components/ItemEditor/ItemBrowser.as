@@ -72,20 +72,15 @@ class ItemModel {
                     @emeCommon.MeshCrystal = null;
                 }
             }
-        } else if (emeBlock !is null) {
-            Draw_EME_BlockItem(emeBlock);
-        } else {
-            UI::Text("EntityModelEdition is an unknown type: " + UnkType(eme));
-            return;
         }
-        // UI::Text("Todo: more?");
+        Draw_EME_Tree(eme);
     }
 
     void DrawEMTree() {
         ItemModelTreeElement(null, -1, item.EntityModel, "EntityModel", drawProperties, GetOffset(item, "EntityModel"), isEditable).Draw();
     }
 
-    void Draw_EME_BlockItem(CGameBlockItem@ eme) {
+    void Draw_EME_Tree(CMwNod@ eme) {
         ItemModelTreeElement(null, -1, eme, "EntityModelEdition", drawProperties, GetOffset(item, "EntityModelEdition"), isEditable).Draw();
     }
 }
@@ -135,6 +130,7 @@ class ItemModelTreeElement {
     CSystemFidFile@ fid;
     CGameCtnBlockInfoMobil@ blockInfoMobil;
     CGameCtnBlockUnitInfo@ unitInfo;
+    CGameCommonItemEntityModelEdition@ commonEME;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
         @this.parent = parent;
@@ -173,6 +169,7 @@ class ItemModelTreeElement {
         @this.fid = cast<CSystemFidFile>(nod);
         @this.blockInfoMobil = cast<CGameCtnBlockInfoMobil>(nod);
         @this.unitInfo = cast<CGameCtnBlockUnitInfo>(nod);
+        @this.commonEME = cast<CGameCommonItemEntityModelEdition>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -279,6 +276,8 @@ class ItemModelTreeElement {
             Draw(blockInfoMobil);
         } else if (unitInfo !is null) {
             Draw(unitInfo);
+        } else if (commonEME !is null) {
+            Draw(commonEME);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
@@ -286,7 +285,24 @@ class ItemModelTreeElement {
 
     void Draw(CGameItemModel@ itemModel) {
         if (StartTreeNode(name + " ::\\$f8f CGameItemModel", UI::TreeNodeFlags::DefaultOpen)) {
+            MkAndDrawChildNode(itemModel.EntityModelEdition, "EntityModelEdition");
             MkAndDrawChildNode(itemModel.EntityModel, "EntityModel");
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CGameCommonItemEntityModelEdition@ commonEME) {
+        if (StartTreeNode(name + " ::\\$f8f CGameCommonItemEntityModelEdition", UI::TreeNodeFlags::DefaultOpen)) {
+            // if (isEditable) {
+            // } else {
+            // }
+            MkAndDrawChildNode(commonEME.MeshCrystal, GetOffset(commonEME, "MeshCrystal"), "MeshCrystal");
+            // print("CGameCommonItemEntityModelEdition.Triggers: " + tostring(commonEME.Triggers));
+            // print("CGameCommonItemEntityModelEdition.InventoryName: " + tostring(commonEME.InventoryName));
+            // print("CGameCommonItemEntityModelEdition.InventoryDescription: " + tostring(commonEME.InventoryDescription));
+            // print("CGameCommonItemEntityModelEdition.InventoryOccupation: " + tostring(commonEME.InventoryOccupation));
+            // print("CGameCommonItemEntityModelEdition.IdName: " + tostring(commonEME.IdName));
+            // print("CGameCommonItemEntityModelEdition.Id: " + tostring(commonEME.Id));
             EndTreeNode();
         }
     }
