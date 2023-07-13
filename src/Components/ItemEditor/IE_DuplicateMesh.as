@@ -497,7 +497,7 @@ namespace MeshDuplication {
             trace('updating surf mat ids');
             shape.UpdateSurfMaterialIdsFromMaterialIndexs();
             trace('updating mats to mat ids');
-            shape.TransformMaterialsToMatIds();
+            Editor::TransformMaterialsToMatIds(shape);
             trace('done updating surf mat ids and mat to mat ids');
         } if (shape.Materials.Length > 0 and shape.MaterialIds.Length > 0) {
             trace('removing materials from shape as material IDs already populated');

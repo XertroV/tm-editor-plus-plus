@@ -847,7 +847,7 @@ class ItemModelTreeElement {
             auto surf = cast<CPlugSurface>(nod);
             if (isEditable && surf !is null && len > 0) {
                 if (UI::Button("TransformMaterialsToMatIds")) {
-                    surf.TransformMaterialsToMatIds();
+                    Editor::TransformMaterialsToMatIds(surf);
                 }
             }
             // always show material name if we can
