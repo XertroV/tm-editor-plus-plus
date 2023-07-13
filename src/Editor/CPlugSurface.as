@@ -8,9 +8,11 @@ namespace Editor {
                 break;
             }
         }
-        if (hasNullMaterial) {
+        // only works if we already have material ids
+        if (hasNullMaterial && surf.MaterialIds.Length > 0) {
             // we need to remove null references to avoid crash -> easiest way is to zero materials buffer
             Dev::SetOffset(surf, GetOffset(surf, "Materials") + 0x8, uint32(0));
+            return;
         }
         surf.TransformMaterialsToMatIds();
     }
