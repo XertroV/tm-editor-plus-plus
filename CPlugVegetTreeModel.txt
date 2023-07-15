@@ -1,6 +1,7 @@
 CPlugVegetTreeModel
 
 0x18: nb materials
+0x20 start?
 inline: NPlugVeget_SMaterial (len 0x50)
     0x0: always 0 except 1 for last entry?
     0x8: CPlugMaterial
@@ -12,3 +13,17 @@ inline: NPlugVeget_SMaterial (len 0x50)
     0x38: roughness CPlugBitmap, ItemBase_R.Texture.gbx
     0x40: veget variation CPlugVegetMaterialVariation
     0x48: veget sub surface CPlugVegetSubSurfaceParams
+
+end of materials / before start of lodmodels
+0x3 / mwid: PalmTree_Bark, ItemBase_Bark, PalmTree_Leaf, 0xffffffff * 5, 0x6f725c50
+then start of lodmodels
+
+
+0x890: start
+0x950: zeroing this allowed saving
+  0xc0 offset
+  -0x18 -0x20 -> 0x88, -> 0x49
+
+
+
+0x4e0: something with an fid?

@@ -35,6 +35,12 @@ class EditorMiscTab : Tab {
         UI::Text("Helpers:");
 
         editor.HideBlockHelpers = UI::Checkbox("HideBlockHelpers", editor.HideBlockHelpers);
-        // editor.ExperimentalFeatures.ShowNextMapElemParamIMGUIWindow
+
+        UI::Separator();
+
+        UI::AlignTextToFramePadding();
+        UI::Text("Editor Features:");
+
+        editor.ExperimentalFeatures.AutoSavePeriod = Math::Clamp(UI::InputInt("AutoSavePeriod", editor.ExperimentalFeatures.AutoSavePeriod), 10, 3600 * 8);
     }
 }

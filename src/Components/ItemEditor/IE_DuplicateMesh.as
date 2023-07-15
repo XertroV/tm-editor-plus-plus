@@ -105,12 +105,50 @@ namespace MeshDuplication {
         // length of a _SVariant: 0x28
         auto variants = Dev::GetOffsetNod(varList, GetOffset("NPlugItem_SVariantList", "Variants"));
         nod.MwAddRef();
-        Dev::SetOffset(variants, 0x28 * ix + GetOffset("NPlugItem_SVariant", "EntityModelFidForReload"), nod);
+        // Dev::SetOffset(variants, 0x28 * ix + GetOffset("NPlugItem_SVariant", "EntityModelFidForReload"), nod);
+        Dev::SetOffset(variants, 0x28 * ix + GetOffset("NPlugItem_SVariant", "EntityModel"), nod);
     }
 
     void ZeroFids(CPlugVegetTreeModel@ tree) {
+        trace('Zeroing fid: vegetTree');
         ZeroNodFid(tree);
         // some fids do exist under tree.Data but we mb get lucky and don't need to zero them (materials / textures and stuff)
+        uint16 dataOffset = GetOffset(tree, "Data");
+        uint16 materialsOffset = dataOffset + GetOffset("NPlugVeget_STreeModel", "Materials");
+        // uint16 materialsOffset = dataOffset + GetOffset("NPlugVeget_STreeModel", "Materials");
+        uint32 nbMaterials = Dev::GetOffsetUint32(tree, materialsOffset);
+        auto o = materialsOffset + 0x8;
+        uint16 elSize = 0x50;
+        for (uint i = 0; i < nbMaterials; i++) {
+            trace('zeroing fids for veget material ' + i);
+            ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + GetOffset("NPlugVeget_SMaterial", "PlugMat")));
+            ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + GetOffset("NPlugVeget_SMaterial", "Color")));
+            ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + GetOffset("NPlugVeget_SMaterial", "Normal")));
+            ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + GetOffset("NPlugVeget_SMaterial", "Roughness")));
+
+            // 0x28, 30, 38 not included in type info, they are CPlugBitmaps.
+            // ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + 0x28));
+            // ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + 0x30));
+            // ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + 0x38));
+
+            // Zeroing the pointers gives red trees but it works...
+            Dev::SetOffset(tree, o + i * elSize + 0x28, uint64(0));
+            Dev::SetOffset(tree, o + i * elSize + 0x30, uint64(0));
+            Dev::SetOffset(tree, o + i * elSize + 0x38, uint64(0));
+
+            // 0x40, 48
+            ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + GetOffset("NPlugVeget_SMaterial", "Veget_Variation")));
+            ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + GetOffset("NPlugVeget_SMaterial", "Veget_SubSurface")));
+        }
+        trace('done zeroing veget tree fids');
+    }
+
+    CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
+        if (target is null) return null;
+        auto ptr = Dev::GetOffsetUint64(target, offset);
+        if (ptr < 0x100000000) return null;
+        if (ptr % 8 != 0) return null;
+        return Dev::GetOffsetNod(target, offset);
     }
 
     void ZeroFids(CPlugSurface@ surface) {

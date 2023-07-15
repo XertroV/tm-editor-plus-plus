@@ -1,0 +1,8 @@
+
+0x20: ptr to struct with some buffers mb
+0x28: as above
+0x30: ptr to 0x18 offset
+0x38: game data: ?
+
+0x40: mwsarray variants
+0x48: array len

@@ -592,6 +592,21 @@ class ItemModelTreeElement {
         }
     }
 
+    void CopyLightUserColorToSiblings(CMwNod@ inNod, vec3 col) {
+        auto host = cast<CPlugSolid2Model>(inNod);
+        if (host is null) {
+            NotifyError("CopyLightUserColorToSiblings expected Solid2Model but got " + Reflection::TypeOf(inNod).Name);
+            return;
+        }
+        auto LightUserModels = Dev::GetOffsetNod(host, 0x178);
+        uint nbLightUserModels = Dev::GetOffsetUint32(host, 0x178 + 0x8);
+        for (uint i = 0; i < nbLightUserModels; i++) {
+            auto light = cast<CPlugLightUserModel>(Dev::GetOffsetNod(LightUserModels, 0x8 * i));
+            if (light is null) continue;
+            light.Color = col;
+        }
+    }
+
     void DrawLightsAt(const string &in title, CMwNod@ nod, uint16 offset) {
         if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
             auto buf = Dev::GetOffsetNod(nod, offset);
@@ -811,6 +826,9 @@ class ItemModelTreeElement {
     void Draw(CPlugLightUserModel@ userLight) {
         if (StartTreeNode(name + " :: \\$f8fCPlugLightUserModel###" + Dev_GetPointerForNod(nod), UI::TreeNodeFlags::None)) {
             if (isEditable) {
+                if (UI::Button("Copy Light Color to Siblings")) {
+                    CopyLightUserColorToSiblings(this.parent.nod, userLight.Color);
+                }
                 userLight.Color = UI::InputColor3("Color", userLight.Color);
                 userLight.Intensity = UI::InputFloat("Intensity", userLight.Intensity);
                 userLight.Distance = UI::InputFloat("Distance", userLight.Distance);

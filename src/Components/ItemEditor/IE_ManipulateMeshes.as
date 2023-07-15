@@ -162,28 +162,33 @@ class IE_ManipulateMeshesTab : Tab {
                     Reflection::GetType("CPlugDynaObjectModel").ID,
                     Reflection::GetType("NPlugItem_SVariantList").ID,
                     Reflection::GetType("NPlugDyna_SKinematicConstraint").ID,
+                    Reflection::GetType("CPlugVegetTreeModel").ID,
                 };
             } else if (dest.child.As_CPlugStaticObjectModel() !is null
                     || dest.child.As_CPlugDynaObjectModel() !is null
                     || dest.child.As_NPlugDyna_SKinematicConstraint() !is null
+                    || dest.child.As_CPlugVegetTreeModel() !is null
             ) {
                 @clsIds = {
                     Reflection::GetType("CPlugPrefab").ID,
                     Reflection::GetType("CPlugStaticObjectModel").ID,
                     Reflection::GetType("CPlugDynaObjectModel").ID,
                     Reflection::GetType("NPlugDyna_SKinematicConstraint").ID,
+                    Reflection::GetType("CPlugVegetTreeModel").ID,
                 };
             } else if (dest.child.As_CGameCommonItemEntityModel() !is null) {
                 @clsIds = {
                     Reflection::GetType("CPlugPrefab").ID,
                     Reflection::GetType("NPlugItem_SVariantList").ID,
                     Reflection::GetType("CGameCommonItemEntityModel").ID,
+                    Reflection::GetType("CPlugVegetTreeModel").ID,
                 };
             } else if (dest.child.As_NPlugItem_SVariantList() !is null) {
                 @clsIds = {
                     Reflection::GetType("CPlugPrefab").ID,
                     Reflection::GetType("NPlugItem_SVariantList").ID,
                     Reflection::GetType("CGameCommonItemEntityModel").ID,
+                    Reflection::GetType("CPlugVegetTreeModel").ID,
                 };
             } else if (dest.child.As_CPlugSolid2Model() !is null) {
                 @clsIds = {
@@ -202,6 +207,7 @@ class IE_ManipulateMeshesTab : Tab {
                     Reflection::GetType("CPlugStaticObjectModel").ID,
                     Reflection::GetType("CPlugDynaObjectModel").ID,
                     Reflection::GetType("NPlugDyna_SKinematicConstraint").ID,
+                    Reflection::GetType("CPlugVegetTreeModel").ID,
                 };
             // } else if (dest.child.As_NPlugItem_SVariantList() !is null) {
             //     // @lookingFor = VariantListLookingFor;
@@ -496,5 +502,4 @@ class IE_ManipulateMeshesTab : Tab {
         AppendRunMsg("\\$f80Error: no implementation for combination.\\$z Source: " + source.ToString() + " / Destination: " + dest.ToString() + " -- child of a "+UnkType(dest.GetParentNod()));
         return false;
     }
-
 }

@@ -230,7 +230,7 @@ TabGroup@ CreateItemEditorRT() {
 #endif
     // ItemEditMacroVariationsTab(root);
 #if SIG_DEVELOPER
-    // IE_DevTab(root);
+    IE_DevTab(root);
 #endif
 
     // AboutTab(root);

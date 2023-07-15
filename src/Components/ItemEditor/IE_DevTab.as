@@ -10,6 +10,14 @@ class IE_DevTab : Tab {
         if (UI::Button(Icons::Cube + " Explore Item Editor")) {
             ExploreNod("Item Editor", ieditor);
         }
+        if (UI::Button("Zero ItemModel.EntityModel Fids")) {
+            try {
+                MeshDuplication::ZeroFidsUnknownModelNod(ieditor.ItemModel.EntityModel);
+                NotifySuccess("Zeroed ItemModel.EntityModel FIDs");
+            } catch {
+                NotifyError("Exception zeroing fids: " + getExceptionInfo());
+            }
+        }
     }
 }
 
