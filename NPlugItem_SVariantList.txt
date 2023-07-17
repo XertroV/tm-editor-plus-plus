@@ -1,5 +1,8 @@
 
 0x20: ptr to struct with some buffers mb
+  0x8: mwsarray? (0x228)
+  lots of pointers to fids or lists of indexes or something
+
 0x28: as above
 0x30: ptr to 0x18 offset
 0x38: game data: ?

@@ -9,6 +9,12 @@ shared int YawToCardinalDirection(float yaw) {
     return dir % 4;
 }
 
+shared vec2 Nat2ToVec2(nat2 coord) {
+    return vec2(coord.x, coord.y);
+}
+shared nat2 Vec2ToNat2(vec2 v) {
+    return nat2(v.x, v.y);
+}
 shared vec3 Nat3ToVec3(nat3 coord) {
     return vec3(coord.x, coord.y, coord.z);
 }

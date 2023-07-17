@@ -66,10 +66,9 @@ namespace UX {
 
     shared nat3 InputNat3(const string &in label, nat3 val) {
         return Vec3ToNat3(UI::InputFloat3(label, Nat3ToVec3(val)));
-        // auto x = UI::InputInt("(X) " + label, val.x);
-        // auto y = UI::InputInt("(Y) " + label, val.y);
-        // auto z = UI::InputInt("(Z) " + label, val.z);
-        // return nat3(x, y, z);
+    }
+    shared nat2 InputNat2(const string &in label, nat2 val) {
+        return Vec2ToNat2(UI::InputFloat2(label, Nat2ToVec2(val)));
     }
 
     shared quat InputQuat(const string &in label, quat val, quat _default = quat(0., 0., 0., 1.)) {

@@ -64,6 +64,40 @@ void Dev_DoubleMwSArray(uint64 ptr, uint elSize) {
 }
 
 
+CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
+    if (target is null) return null;
+    auto ptr = Dev::GetOffsetUint64(target, offset);
+    if (ptr < 0x100000000) return null;
+    if (ptr % 8 != 0) return null;
+    return Dev::GetOffsetNod(target, offset);
+}
+
+uint64 Dev_GetPointerForNod(CMwNod@ nod) {
+    if (nod is null) throw('nod was null');
+    auto tmpNod = CMwNod();
+    uint64 tmp = Dev::GetOffsetUint64(tmpNod, 0);
+    Dev::SetOffset(tmpNod, 0, nod);
+    uint64 ptr = Dev::GetOffsetUint64(tmpNod, 0);
+    Dev::SetOffset(tmpNod, 0, tmp);
+    return ptr;
+}
+
+CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
+    if (ptr < 0xFFFFFFFF || ptr % 8 != 0 || ptr >> 48 > 0) {
+        return null;
+    }
+    auto tmpNod = CMwNod();
+    uint64 tmp = Dev::GetOffsetUint64(tmpNod, 0);
+    Dev::SetOffset(tmpNod, 0, ptr);
+    auto nod = Dev::GetOffsetNod(tmpNod, 0);
+    Dev::SetOffset(tmpNod, 0, tmp);
+    return nod;
+}
+
+
+
+
+
 class ReferencedNod {
     CMwNod@ nod;
     uint ClassId = 0;

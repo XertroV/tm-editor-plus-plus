@@ -208,7 +208,7 @@ class ItemSceneryPlacementTab : Tab {
             return;
         }
         auto block = lastPickedBlock.AsBlock();
-            auto bi = block.BlockInfo;
+        auto bi = block.BlockInfo;
 
         if (bi.MatModifierPlacementTag is null) {
             UI::Text("Block does nod have a scenery placement tag");

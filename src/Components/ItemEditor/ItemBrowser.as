@@ -309,6 +309,13 @@ class ItemModelTreeElement {
 
     void Draw(CGameCtnBlockInfo@ blockInfo) {
         if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfo", UI::TreeNodeFlags::DefaultOpen)) {
+            auto mmOffset = GetOffset(blockInfo, "MatModifierPlacementTag");
+            auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
+            if (isEditable) {
+                Dev::SetOffset(blockInfo, mmOffset, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
+            } else {
+                UI::Text("MatModiferPlacementTag: " + mmPlacementTag.ToString());
+            }
             MkAndDrawChildNode(blockInfo.VariantBaseGround, "VariantBaseGround");
             MkAndDrawChildNode(blockInfo.VariantBaseAir, "VariantBaseAir");
             for (uint i = 0; i < blockInfo.AdditionalVariantsGround.Length; i++) {
@@ -1217,28 +1224,6 @@ void Draw_IB_DevBtnPtr(const string &in title, CMwNod@ nod, uint16 nodOffset) {
         UI::SameLine();
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(nod)));
 #endif
-}
-
-uint64 Dev_GetPointerForNod(CMwNod@ nod) {
-    if (nod is null) throw('nod was null');
-    auto tmpNod = CMwNod();
-    uint64 tmp = Dev::GetOffsetUint64(tmpNod, 0);
-    Dev::SetOffset(tmpNod, 0, nod);
-    uint64 ptr = Dev::GetOffsetUint64(tmpNod, 0);
-    Dev::SetOffset(tmpNod, 0, tmp);
-    return ptr;
-}
-
-CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
-    if (ptr < 0xFFFFFFFF || ptr % 8 != 0 || ptr >> 48 > 0) {
-        return null;
-    }
-    auto tmpNod = CMwNod();
-    uint64 tmp = Dev::GetOffsetUint64(tmpNod, 0);
-    Dev::SetOffset(tmpNod, 0, ptr);
-    auto nod = Dev::GetOffsetNod(tmpNod, 0);
-    Dev::SetOffset(tmpNod, 0, tmp);
-    return nod;
 }
 
 

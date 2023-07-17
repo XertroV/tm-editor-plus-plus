@@ -143,14 +143,6 @@ namespace MeshDuplication {
         trace('done zeroing veget tree fids');
     }
 
-    CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
-        if (target is null) return null;
-        auto ptr = Dev::GetOffsetUint64(target, offset);
-        if (ptr < 0x100000000) return null;
-        if (ptr % 8 != 0) return null;
-        return Dev::GetOffsetNod(target, offset);
-    }
-
     void ZeroFids(CPlugSurface@ surface) {
         ZeroNodFid(surface);
         // don't zero material Fids
