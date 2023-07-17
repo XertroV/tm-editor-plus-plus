@@ -437,18 +437,6 @@ class ItemModelTreeElement {
         }
     }
 
-    string GetVariantTagsStr(NPlugItem_SVariantList@ varList, uint i) {
-        string ret;
-        auto vars = Dev::GetOffsetNod(varList, GetOffset(varList, "Variants"));
-        auto tagsPtr = Dev::GetOffsetUint64(vars, 0x28 * i + GetOffset("NPlugItem_SVariant", "Tags"));
-        for (uint t = 0; t < varList.Variants[i].Tags.Length; t++) {
-            if (t > 0) ret += ", ";
-            ret += "<" + tostring(Dev::ReadUInt32(tagsPtr + 0x8 * t))
-                + ", " + tostring(Dev::ReadUInt32(tagsPtr + 0x8 * t + 0x4)) + ">";
-        }
-        return ret;
-    }
-
     void Draw(CPlugFxSystem@ fxSys) {
         if (StartTreeNode(name + " :: \\$f8fCPlugFxSystem", UI::TreeNodeFlags::DefaultOpen)) {
             // fxSys. /*todo -- check variable declaration below.*/;
@@ -1210,6 +1198,19 @@ class ItemModelTreeElement {
             // }
         }
     }
+}
+
+
+string GetVariantTagsStr(NPlugItem_SVariantList@ varList, uint i) {
+    string ret;
+    auto vars = Dev::GetOffsetNod(varList, GetOffset(varList, "Variants"));
+    auto tagsPtr = Dev::GetOffsetUint64(vars, 0x28 * i + GetOffset("NPlugItem_SVariant", "Tags"));
+    for (uint t = 0; t < varList.Variants[i].Tags.Length; t++) {
+        if (t > 0) ret += ", ";
+        ret += "<" + tostring(Dev::ReadUInt32(tagsPtr + 0x8 * t))
+            + ", " + tostring(Dev::ReadUInt32(tagsPtr + 0x8 * t + 0x4)) + ">";
+    }
+    return ret;
 }
 
 

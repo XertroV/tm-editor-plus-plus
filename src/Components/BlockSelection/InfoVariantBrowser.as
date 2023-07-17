@@ -99,11 +99,12 @@ class BlockVariantBrowserTab : Tab {
         bi.IsMultiHeightPillarOrVFC = UI::Checkbox("IsMultiHeightPillarOrVFC", bi.IsMultiHeightPillarOrVFC);
         bi.EdNoRespawn = UI::Checkbox("EdNoRespawn", bi.EdNoRespawn);
         bi.EdWaypointType = DrawComboEWayPointType("EdWaypointType", bi.EdWaypointType);
+        bi.PillarShapeMultiDir = DrawComboEMultiDirEnum("PillarShapeMultiDir", bi.PillarShapeMultiDir);
         // bi.Name = UI::Checkbox("Name", bi.Name);
         // bi.Name = UI::Checkbox("Name", bi.Name);
         // bi.Name = UI::Checkbox("Name", bi.Name);
 
-        bi.PillarShapeMultiDir = DrawComboEMultiDirEnum("PillarShapeMultiDir", bi.PillarShapeMultiDir);
+
         auto mmOffset = GetOffset(bi, "MatModifierPlacementTag");
         auto mmPlacementTag = Dev::GetOffsetNat2(bi, mmOffset);
         Dev::SetOffset(bi, mmOffset, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
