@@ -47,7 +47,7 @@ class TerrainAffinityTab : Tab {
         if (UI::Button("Apply Affinity")) {
             OnClickApplyAffinity(varList, variantsWithTags);
         }
-        UI::Text("Note: you may need to alter placement tag 0's 2nd value (typically 0, 1, 2, 4, or 15) if no terrain placements appear on hover.");
+        UI::TextWrapped("Note: you may need to alter placement tag 0's 2nd value (typically 0, 1, 2, 4, or 15) if no terrain placements appear on hover.");
 
         UI::Separator();
         UI::AlignTextToFramePadding();
