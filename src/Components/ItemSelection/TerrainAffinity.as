@@ -57,11 +57,12 @@ class TerrainAffinityTab : Tab {
         UI::Indent();
             UI::Markdown("""- Each placement tag has 2 numbers: (x, y).
 - it appears that only variant's tags apply at any one time -- this might not be variant 0! (so check the others, too)
-- `x` seems to be the index, and changing it doesn't seem to be productive.
+- `x` seems to be a kind of index / type, changing it will change the behavior of that placement tag.
 - the `y` value's meaning depends on which tag it is
-- tag 0.y seems to be some kind of pattern thing, and might need to be changed to get placements to appear on terrain.
-- tag 1 is unknown (always (1,1)?)
-- tag 2.y seems to relate to patterns, try changing it between 0 and 1
+- tag 0.y seems to be some kind of pattern thing, and might need to be changed to get placements to appear on terrain. (typically 0-4 but other values like 15 (summer trees), 24 (flag), 25 (lamp), 26 (road sign), 27 (screen) have also been seen)
+  - 0,8 -> can place on platform tech
+- tag 1.y is related to the position in the pattern expressed by that entity
+- tag 2.y seems to relate to patterns, changing it between 0 and 1 changes the type of layout on terrain
 - tag 3.y is the terrain it is placed on: 0=grass, 1=dirt, 2=snow
             """);
         UI::Unindent();
