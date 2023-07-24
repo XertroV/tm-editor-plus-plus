@@ -41,6 +41,12 @@ class EditorMiscTab : Tab {
         UI::AlignTextToFramePadding();
         UI::Text("Editor Features:");
 
-        editor.ExperimentalFeatures.AutoSavePeriod = Math::Clamp(UI::InputInt("AutoSavePeriod", editor.ExperimentalFeatures.AutoSavePeriod), 10, 3600 * 8);
+        if (S_AutosavePeriod < 1) {
+            S_AutosavePeriod = editor.ExperimentalFeatures.AutoSavePeriod;
+        }
+        S_AutosavePeriod = Math::Clamp(UI::InputInt("AutoSavePeriod", S_AutosavePeriod), 10, 3600 * 8);
+        if (editor.ExperimentalFeatures.AutoSavePeriod != S_AutosavePeriod) {
+            editor.ExperimentalFeatures.AutoSavePeriod = S_AutosavePeriod;
+        }
     }
 }

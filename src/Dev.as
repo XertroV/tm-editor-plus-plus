@@ -64,6 +64,13 @@ void Dev_DoubleMwSArray(uint64 ptr, uint elSize) {
 }
 
 
+void Dev_CopyArrayStruct(CMwNod@ sBuf, int sIx, CMwNod@ dBuf, int dIx, uint16 elSize, uint16 nbElements = 1) {
+    auto bytes = Dev_GetOffsetBytes(sBuf, elSize * sIx, elSize * nbElements);
+    Dev_SetOffsetBytes(dBuf, elSize * dIx, bytes);
+}
+
+
+
 CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
     if (target is null) return null;
     auto ptr = Dev::GetOffsetUint64(target, offset);

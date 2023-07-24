@@ -391,17 +391,27 @@ class ItemModelTreeElement {
             UI::SameLine();
             UI::TextDisabled(Text::Format("0x%03x", GetOffset("CPlugPrefab", "Ents")));
 #endif
+            UI::TreeNodeFlags entFlags = prefab.Ents.Length < 50 ? UI::TreeNodeFlags::DefaultOpen : UI::TreeNodeFlags::None;
+            auto entsBuf = Dev::GetOffsetNod(prefab, GetOffset(prefab, "Ents"));
+            auto elSize = 0x50;
             for (uint i = 0; i < prefab.Ents.Length; i++) {
                 currentIndex = i;
-                if (StartTreeNode(".Ents["+i+"]:", true)) {
+                if (StartTreeNode(".Ents["+i+"]:", true, entFlags)) {
                     if (drawProperties) {
+                        auto nameNod = Dev::GetOffsetNod(entsBuf, elSize * i + 0x40);
+                        string nameBytes = ""; // nameNod is null ? "<null>" : Dev::GetOffsetString(nameNod, 0x0);
+                        auto nameLen = Dev::GetOffsetUint64(entsBuf, elSize * i + 0x48);
                         if (isEditable) {
                             prefab.Ents[i].Location.Quat = UX::InputQuat(".Location.Quat", prefab.Ents[i].Location.Quat);
                             prefab.Ents[i].Location.Trans = UI::InputFloat3(".Location.Trans", prefab.Ents[i].Location.Trans);
+                            prefab.Ents[i].LodGroupId = UI::InputInt(".LodGroupId", prefab.Ents[i].LodGroupId);
                         } else {
                             CopiableLabeledValue(".Location.Quat", prefab.Ents[i].Location.Quat.ToString());
                             CopiableLabeledValue(".Location.Trans", prefab.Ents[i].Location.Trans.ToString());
+                            CopiableLabeledValue(".LodGroupId", tostring(prefab.Ents[i].LodGroupId));
                         }
+                        // name always len 0?
+                        CopiableLabeledValue(".Name.Length / bytes", tostring(nameLen) + " / " + nameBytes);
                         DrawPrefabEntParams(prefab, i);
                     }
                     MkAndDrawChildNode(prefab.Ents[i].Model, "Model");
@@ -1299,6 +1309,7 @@ void DrawSPlacementGroup(uint64 ptr, bool isEditable = false) {
     auto len = Dev::ReadUInt32(ptr + 0x8);
     // LabeledValue("Placements ptr", Text::FormatPointer(ptr));
     LabeledValue("Placements.Length", len);
+    LabeledValue("Placements Type", Text::Format("0x%02x", GetPlacementGroupType(ptr)));
     uint elSize = SZ_SPLACEMENTOPTION;
     for (uint i = 0; i < Math::Min(5, len); i++) {
         uint layout = Dev::GetOffsetUint32(buf, elSize * i + 0x0);
@@ -1314,10 +1325,10 @@ void DrawSPlacementGroup(uint64 ptr, bool isEditable = false) {
     // Read MwSArray<GmTransQuat>
     auto tqsPtr = Dev::ReadUInt64(ptr + 0x10);
     // CopiableLabeledValue("TQs Ptr", Text::FormatPointer(tqsPtr));
-    auto tqs = Dev_GetNodFromPointer(tqsPtr);
+    // auto tqs = Dev_GetNodFromPointer(tqsPtr);
     // LabeledValue("TQs is null", tqs is null);
     auto nbTqs = Dev::ReadUInt32(ptr + 0x18);
-    auto newNb = Draw_SPlacementGroup_TQs(tqs, nbTqs, isEditable, ptr);
+    auto newNb = Draw_SPlacementGroup_TQs(tqsPtr, nbTqs, isEditable, ptr);
     // check if we need to alter array lengths
     if (isEditable && newNb < nbTqs && newNb < len) {
         // update first 2 arrays -- updating first one will update the rest on save, but not the second one
@@ -1332,19 +1343,19 @@ void DrawSPlacementOption(uint i, uint layout, CMwNod@ buf, uint len) {
 }
 
 // returns the number of elements so an update can be detected
-uint Draw_SPlacementGroup_TQs(CMwNod@ tqs, uint nbTqs, bool isEditable, uint64 placementGroupPtr) {
+uint Draw_SPlacementGroup_TQs(uint64 tqsPtr, uint nbTqs, bool isEditable, uint64 placementGroupPtr) {
     auto ret = nbTqs;
     UI::Text("TQs.Length: " + nbTqs);
     if (IsPlacementGroupForSpectators(placementGroupPtr)) {
         // UI::SameLine();
         UI::Indent();
         if (UI::Button("Export Spectators")) {
-            ExportItemSpectators(tqs, nbTqs);
+            ExportItemSpectators(tqsPtr, nbTqs);
         }
         if (isEditable) {
             UI::SameLine();
             if (UI::Button("Import Spectators")) {
-                ret = ImportItemSpectators(tqs, nbTqs);
+                ret = ImportItemSpectators(tqsPtr, nbTqs);
                 NotifySuccess("Successfully imported spectator locations! Please save the item.");
             }
             UI::SameLine();
@@ -1371,14 +1382,22 @@ uint Draw_SPlacementGroup_TQs(CMwNod@ tqs, uint nbTqs, bool isEditable, uint64 p
 }
 
 bool IsPlacementGroupForSpectators(uint64 placementGroupPtr) {
-    auto len = Dev::ReadUInt32(placementGroupPtr + 0x38);
-    if (len == 0) return false;
-    auto buf = Dev_GetNodFromPointer(Dev::ReadUInt64(placementGroupPtr + 0x30));
-    if (buf is null) return false;
-    if (Dev::GetOffsetUint32(buf, 0x10) < 1) return false;
-    auto inner = Dev::GetOffsetNod(buf, 0x8);
-    if (inner is null) return false;
-    return Dev::GetOffsetUint8(inner, 0x14) == 0x21;
+    return GetPlacementGroupType(placementGroupPtr) == 0x21
+        || GetPlacementGroupType(placementGroupPtr) == 0x22
+        ;
+}
+
+uint8 GetPlacementGroupType(uint64 placementGroupPtr) {
+    auto len = Dev::ReadUInt32(placementGroupPtr + 0x8);
+    if (len == 0) return 0;
+    auto bufPtr = Dev::ReadUInt64(placementGroupPtr + 0x0);
+    if (bufPtr == 0) return 0;
+    // RequiredTags length
+    if (Dev::ReadUInt32(bufPtr + 0x10) < 1) return 0;
+    auto innerPtr = Dev::ReadUInt64(bufPtr + 0x8);
+    if (innerPtr == 0) return 0;
+    // todo, look for first tag with .x=0, read .y
+    return Dev::ReadUInt8(innerPtr + 0x14);
 }
 
 void Draw_NPlugDyna_SAnimFunc01(CMwNod@ nod, uint16 offset) {

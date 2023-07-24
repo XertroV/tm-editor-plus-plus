@@ -1,0 +1,6 @@
+need podium clips -- can instantiate or zero buffer length to save.
+positions stored as the last entity in the prefab (1st variant).
+same format as spectators / anchor points (like struct cube).
+type: 0x22 (?? I think, need to confirm by comparison to spectators)
+- note: does .x=0 of placement tag mean .y = type? (0x22 for podiums, 0x20/21 for spectators, 0x20/21 for anchor points, 0x2,4,f,0?,others? for items in terrain placement)
+- .x seems to be key, .y seems to be value

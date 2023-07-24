@@ -32,3 +32,6 @@ uint S_AnimationDuration = 250;
 
 [Setting hidden]
 bool S_RenderQuickToggle = true;
+
+[Setting hidden]
+int S_AutosavePeriod = -1;

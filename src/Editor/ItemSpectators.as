@@ -1,23 +1,16 @@
 const string SPECTATORS_FOLDER = IO::FromStorageFolder("Spectators/");
 
-void ExportItemSpectators(CMwNod@ tqs, uint nbTqs) {
+void ExportItemSpectators(uint64 tqsPtr, uint nbTqs) {
     CheckCreateFolder(SPECTATORS_FOLDER);
     CheckItemSpectatorsReadme(SPECTATORS_FOLDER);
     OpenExplorerPath(SPECTATORS_FOLDER);
 
-    if (tqs is null) {
-        NotifyError("Error: expected a list of quaternions and positions but got null.");
-        return;
-    }
-
     uint elSize = SZ_GMQUATTRANS;
     string[] szTQs;
-    // vec4[] rots;
-    // vec3[] poss;
     for (uint i = 0; i < nbTqs; i++) {
         // quaternion
-        auto rot = Dev::GetOffsetVec4(tqs, i * elSize + 0x0);
-        auto pos = Dev::GetOffsetVec3(tqs, i * elSize + 0x10);
+        auto rot = Dev::ReadVec4(tqsPtr + i * elSize + 0x0);
+        auto pos = Dev::ReadVec3(tqsPtr + i * elSize + 0x10);
         szTQs.InsertLast(_ExportQuatPos(rot, pos));
     }
     auto csv = string::Join(szTQs, "\n");
@@ -42,7 +35,7 @@ const string HighPrecisionFloat(float x) {
 }
 
 // returns the new number of spectators
-uint ImportItemSpectators(CMwNod@ tqs, uint nbTqs) {
+uint ImportItemSpectators(uint64 tqsPtr, uint nbTqs) {
     try {
         auto spectatorsQTs = LoadItemSpectatorsImportFile(SPECTATORS_FOLDER);
         if (spectatorsQTs is null) throw("Could not parse Import.csv -- spectatorsQTs is null");
@@ -51,8 +44,8 @@ uint ImportItemSpectators(CMwNod@ tqs, uint nbTqs) {
         uint elSize = SZ_GMQUATTRANS;
         for (int i = 0; i < Math::Min(nbTqs, spectatorsQTs.Length); i++) {
             auto item = spectatorsQTs[i];
-            Dev::SetOffset(tqs, i * elSize + 0x0, item.q);
-            Dev::SetOffset(tqs, i * elSize + 0x10, item.p);
+            Dev::Write(tqsPtr + i * elSize + 0x0, item.q);
+            Dev::Write(tqsPtr + i * elSize + 0x10, item.p);
         }
         return spectatorsQTs.Length;
     } catch {
@@ -68,8 +61,8 @@ void DoubleItemSpectators(uint64 placementGroupPtr) {
     Dev_DoubleMwSArray(placementGroupPtr + 0x10, SZ_GMQUATTRANS);
     // whatever this is, it's 2 bytes long
     Dev_DoubleMwSArray(placementGroupPtr + 0x20, 0x2);
-    // the 4th array has a length of 1
-    // Dev_DoubleMwSArray(placementGroupPtr + 0x30);
+    // the 4th array has a length of 0x18 -- duplicate of 1st array?; does not update for podium spots
+    Dev_DoubleMwSArray(placementGroupPtr + 0x30, SZ_SPLACEMENTOPTION);
     NotifySuccess("Doubled spectator capacity (clones). Please continue editing and then save the item.");
 }
 
@@ -77,6 +70,8 @@ void ReduceItemSpectators(uint64 placementGroupPtr, float keepRatio) {
     Dev_ReduceMwSArray(placementGroupPtr + 0x00, keepRatio);
     Dev_ReduceMwSArray(placementGroupPtr + 0x10, keepRatio);
     Dev_ReduceMwSArray(placementGroupPtr + 0x20, keepRatio);
+    // does not update for podium spots
+    Dev_ReduceMwSArray(placementGroupPtr + 0x30, keepRatio);
     NotifySuccess("Reduced spectator capacity by " +Text::Format("%.1f", (1. - keepRatio) * 100)+ "%. Please continue editing and then save the item.");
 }
 

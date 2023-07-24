@@ -231,6 +231,13 @@ class IE_ManipulateMeshesTab : Tab {
                     Reflection::GetType("CPlugDynaObjectModel").ID,
                 };
             }
+        } else if (target.ty == ModelTargetType::ArrayElement) {
+            ty = ModelTargetType::ArrayElement;
+            if (dest.parent.As_CPlugPrefab() !is null) {
+                @clsIds = { Reflection::GetType("CPlugPrefab").ID };
+            } else if (dest.parent.As_NPlugItem_SVariantList() !is null) {
+                @clsIds = { Reflection::GetType("NPlugItem_SVariantList").ID };
+            }
         }
 
         @lookingFor = MatchModelType(ty, clsIds);
@@ -382,58 +389,17 @@ class IE_ManipulateMeshesTab : Tab {
     bool _RunReplaceChild(CPlugStaticObjectModel@ staticObj) {
         Dev::SetOffset(staticObj, dest.childOffset, source.GetChildNod());
         return true;
-        // if (@staticObj.Mesh == @dest.GetChildNod()) {
-        //     Dev::SetOffset(staticObj, GetOffset(staticObj, "Mesh"), source.GetChildNod());
-        // } else if (@staticObj.Shape == @dest.GetChildNod()) {
-        //     Dev::SetOffset(staticObj, GetOffset(staticObj, "Shape"), source.GetChildNod());
-        // } else {
-        //     return UnknownDestSourceImplementation();
-        // }
-        // return true;
     }
     bool _RunReplaceChild(CPlugDynaObjectModel@ dynObject) {
         Dev::SetOffset(dynObject, dest.childOffset, source.GetChildNod());
         return true;
-        // bool changed = false;
-        // if (@dynObject.Mesh == @dest.GetChildNod()) {
-        //     Dev::SetOffset(dynObject, GetOffset(dynObject, "Mesh"), source.GetChildNod());
-        //     changed = true;
-        // }
-        // if (@dynObject.DynaShape == @dest.GetChildNod()) {
-        //     Dev::SetOffset(dynObject, GetOffset(dynObject, "DynaShape"), source.GetChildNod());
-        //     changed = true;
-        // }
-        // if (@dynObject.StaticShape == @dest.GetChildNod()) {
-        //     Dev::SetOffset(dynObject, GetOffset(dynObject, "StaticShape"), source.GetChildNod());
-        //     changed = true;
-        // }
-        // if (!changed) {
-        //     return UnknownDestSourceImplementation();
-        // }
-        // return changed;
     }
     bool _RunReplaceChild(CGameItemModel@ model) {
         Dev::SetOffset(model, dest.childOffset, source.GetChildNod());
-        // if (@model.EntityModel == @dest.GetChildNod()) {
-        //     Dev::SetOffset(model, GetOffset(model, "EntityModel"), source.GetChildNod());
-        // } else {
-        //     return UnknownDestSourceImplementation();
-        // }
         return true;
     }
     bool _RunReplaceChild(CGameCommonItemEntityModel@ model) {
         Dev::SetOffset(model, dest.childOffset, source.GetChildNod());
-        // if (@model.StaticObject == @dest.GetChildNod()) {
-        //     Dev::SetOffset(model, GetOffset(model, "StaticObject"), source.GetChildNod());
-        // } else if (@model.PhyModel == @dest.GetChildNod()) {
-        //     Dev::SetOffset(model, GetOffset(model, "PhyModel"), source.GetChildNod());
-        // } else if (@model.TriggerShape == @dest.GetChildNod()) {
-        //     Dev::SetOffset(model, GetOffset(model, "TriggerShape"), source.GetChildNod());
-        // } else if (@model.VisModel == @dest.GetChildNod()) {
-        //     Dev::SetOffset(model, GetOffset(model, "VisModel"), source.GetChildNod());
-        // } else {
-        //     return UnknownDestSourceImplementation();
-        // }
         return true;
     }
     bool _RunReplaceChild(NPlugTrigger_SSpecial@ ss) {
@@ -446,8 +412,45 @@ class IE_ManipulateMeshesTab : Tab {
     protected void _RunReplaceElement() {
         AppendRunMsg("started _RunReplaceElement");
         AppendRunMsg("\\$f80Not yet implemented");
+        MeshDuplication::ZeroFidsUnknownModelNod(dest.GetParentNod());
+        MeshDuplication::ZeroFidsUnknownModelNod(source.GetParentNod());
+        AppendRunMsg("zeroed FIDs");
+        auto dParentVL = dest.parent.As_NPlugItem_SVariantList();
+        auto sParentVL = source.parent.As_NPlugItem_SVariantList();
+        auto dParentPrefab = dest.parent.As_CPlugPrefab();
+        auto sParentPrefab = source.parent.As_CPlugPrefab();
+        if (dParentVL !is null && sParentVL !is null) {
+            _RunCopyVariantListEntry();
+        } else if (dParentPrefab !is null && sParentPrefab !is null) {
+            _RunCopyPrefabEntity();
+        }
     }
 
+    void _RunCopyVariantListEntry() {
+        auto dParent = dest.parent.As_NPlugItem_SVariantList();
+        auto sParent = source.parent.As_NPlugItem_SVariantList();
+        auto bufOffset = GetOffset(sParent, "Variants");
+        auto sBuf = Dev::GetOffsetNod(sParent, bufOffset);
+        auto dBuf = Dev::GetOffsetNod(dParent, bufOffset);
+        uint16 elSize = 0x28;
+        Dev_CopyArrayStruct(sBuf, source.pIndex, dBuf, dest.pIndex, elSize, 1);
+        if (sParent.Variants[source.pIndex].EntityModel !is null) {
+            sParent.Variants[source.pIndex].EntityModel.MwAddRef();
+        }
+    }
+
+    void _RunCopyPrefabEntity() {
+        auto dParent = dest.parent.As_CPlugPrefab();
+        auto sParent = source.parent.As_CPlugPrefab();
+        auto bufOffset = GetOffset(sParent, "Ents");
+        auto sBuf = Dev::GetOffsetNod(sParent, bufOffset);
+        auto dBuf = Dev::GetOffsetNod(dParent, bufOffset);
+        uint16 elSize = 0x28;
+        Dev_CopyArrayStruct(sBuf, source.pIndex, dBuf, dest.pIndex, elSize, 1);
+        if (sParent.Ents[source.pIndex].Model !is null) {
+            sParent.Ents[source.pIndex].Model.MwAddRef();
+        }
+    }
 
 
     protected bool _RunReplaceChildren() {
