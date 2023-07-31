@@ -1,6 +1,14 @@
 class EditorMiscTab : Tab {
     EditorMiscTab(TabGroup@ parent) {
         super(parent, "Editor Misc", Icons::Cog + Icons::Camera);
+        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad));
+    }
+
+    void OnEditorLoad() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor.ExperimentalFeatures.AutoSavePeriod != S_AutosavePeriod) {
+            editor.ExperimentalFeatures.AutoSavePeriod = S_AutosavePeriod;
+        }
     }
 
     void DrawInner() override {
