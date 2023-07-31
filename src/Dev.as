@@ -31,6 +31,21 @@ void Dev_SetOffsetBytes(CMwNod@ nod, uint offset, uint64[]@ bs) {
     return;
 }
 
+uint64[]@ Dev_ReadBytes(uint64 ptr, uint length) {
+    auto bs = array<uint64>();
+    for (uint i = 0; i < length; i += 0x8) {
+        bs.InsertLast(Dev::ReadUInt64(ptr + i));
+    }
+    return bs;
+}
+
+void Dev_WriteBytes(uint64 ptr, uint64[]@ bs) {
+    for (uint i = 0; i < bs.Length; i++) {
+        Dev::Write(ptr + i * 0x8, bs[i]);
+    }
+    return;
+}
+
 void Dev_ReduceMwSArray(uint64 ptr, float newSizeProp) {
     if (newSizeProp > 1.0) throw("out of range+ newSizeProp");
     if (newSizeProp < 0.0) throw("out of range- newSizeProp");
@@ -64,9 +79,10 @@ void Dev_DoubleMwSArray(uint64 ptr, uint elSize) {
 }
 
 
-void Dev_CopyArrayStruct(CMwNod@ sBuf, int sIx, CMwNod@ dBuf, int dIx, uint16 elSize, uint16 nbElements = 1) {
-    auto bytes = Dev_GetOffsetBytes(sBuf, elSize * sIx, elSize * nbElements);
-    Dev_SetOffsetBytes(dBuf, elSize * dIx, bytes);
+void Dev_CopyArrayStruct(uint64 sBufPtr, int sIx, uint64 dBufPtr, int dIx, uint16 elSize, uint16 nbElements = 1) {
+    auto bytes = Dev_ReadBytes(sBufPtr + elSize * sIx, elSize * nbElements);
+    Dev_WriteBytes(dBufPtr + elSize * dIx, bytes);
+    trace("Copied bytes: " + bytes.Length + 0x8);
 }
 
 

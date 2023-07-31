@@ -4,10 +4,10 @@
 bool ShowWindow = true;
 
 [Setting hidden]
-bool S_CopyPickedItemRotation = true;
+bool S_CopyPickedItemRotation = false;
 
 [Setting hidden]
-bool S_CopyPickedBlockRotation = true;
+bool S_CopyPickedBlockRotation = false;
 
 [Setting hidden]
 bool S_DrawPickedItemHelpers = true;

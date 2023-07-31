@@ -22,6 +22,9 @@
 (henk asset pack light)
 0x78: -> CPlugSkel
 
+// on car only?
+0x80: buffer (0x3a) -> ?
+
 0xA8: -> buffer? 0xC size
     -> CPlugVisualIndexedTriangles@ (no fid)
         -> 0xC0 -> CPlugVertexStream (no fid)
@@ -29,6 +32,9 @@
 vanilla only?
 0xC8: -> buffer? (4)
     -> CPlugMaterial@ (has fid)
+
+// only on car
+0xD8 -> buffer (0xb) of floats? (all values were about 2.01; 0x400103c3 / c3030140)
 
 0xE8 -> string, Stadium\Media\Material\
 

@@ -256,10 +256,26 @@ namespace MeshDuplication {
         }
     }
 
+    void ZeroFids(CPlugVehicleVisEmitterModel@ visEM) {
+        ZeroNodFid(visEM);
+
+    }
+
     void ZeroFids(CPlugParticleEmitterModel@ pem) {
         ZeroNodFid(pem);
         // ParticleEmitterSubModels don't seem to have FIDs anywhere, but is a very deep big tree
         // todo, more?
+        for (uint i = 0; i < pem.ParticleEmitterSubModels.Length; i++) {
+            ZeroFids(pem.ParticleEmitterSubModels[i]);
+        }
+    }
+
+    void ZeroFids(CPlugParticleEmitterSubModel@ subModel) {
+        ZeroNodFid(subModel);
+        ZeroFidsUnknownModelNod(subModel.Render.Material);
+        ZeroFidsUnknownModelNod(subModel.Render.Mesh);
+        ZeroFidsUnknownModelNod(subModel.Render.Light);
+        ZeroFidsUnknownModelNod(subModel.Render.Shader);
     }
 
     void ZeroFids(CPlugDynaObjectModel@ dynaObj) {
@@ -294,11 +310,83 @@ namespace MeshDuplication {
         }
     }
 
+    void ZeroFids(CGameCtnBlockInfo@ blockInfo) {
+        ZeroNodFid(blockInfo);
+        ZeroNodFid(blockInfo.VariantBaseAir);
+        ZeroNodFid(blockInfo.VariantBaseGround);
+    }
+
+    void ZeroFids(CPlugVehicleVisModelShared@ visShared) {
+        ZeroNodFid(visShared);
+        // buffer at 0x58 of CPlugVehicleVisEmitterModel
+        // buffer at 0x68 of CPlugVehicleVisEmitterModel
+        // buffer at 0x78 of CPlugVehicleVisEmitterModel
+        // buffer at 0x88 of CPlugVehicleVisEmitterModel
+        ZeroFids_BufferOfNods(visShared, 0x58);
+        ZeroFids_BufferOfNods(visShared, 0x68);
+        ZeroFids_BufferOfNods(visShared, 0x78);
+        ZeroFids_BufferOfNods(visShared, 0x88);
+        // ptrs at 0xa8, b0, b8, c0, c8
+        // light trail, sparkles,
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visShared, 0xA8));
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visShared, 0xB0));
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visShared, 0xB8));
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visShared, 0xC0));
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visShared, 0xC8));
+    }
+    void ZeroFids(CPlugVehicleVisGeomModel@ visGeom) {
+        ZeroNodFid(visGeom);
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visGeom, 0x18)); // s2m
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visGeom, 0x38)); // skel
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visGeom, 0xe0)); // CPlugAnimFile
+    }
+    void ZeroFids(CPlugSkel@ skel) {
+        ZeroNodFid(skel);
+    }
+    void ZeroFids(CPlugAnimFile@ anim) {
+        ZeroNodFid(anim);
+    }
+    void ZeroFids(CPlugVisEntFxModel@ visEntFx) {
+        ZeroNodFid(visEntFx);
+        ZeroNodFid(visEntFx.Part_Deactivated);
+        ZeroNodFid(visEntFx.Part_DeactivatedShot);
+        ZeroNodFid(visEntFx.Part_TeleportSpawn);
+        ZeroNodFid(visEntFx.Part_TeleportUnspawn);
+        ZeroNodFid(visEntFx.TacticalLight);
+    }
+
+    void ZeroFids(CPlugVehicleVisModel@ visModel) {
+        ZeroNodFid(visModel);
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visModel, 0x18)); // vis shared
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visModel, 0x20)); // vis geom
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visModel, 0x28)); // fx
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visModel, 0x30)); // s2m
+    }
+
+    void ZeroFids(CPlugShader@ shader) {
+        ZeroNodFid(shader);
+    }
+
+    // note: usually we don't want to zero the mat FID
+    void ZeroFids(CPlugMaterial@ mat) {
+        ZeroNodFid(mat);
+    }
+
+
+    void ZeroFids_BufferOfNods(CMwNod@ nod, uint16 offset) {
+        auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
+        auto buf = Dev::GetOffsetNod(nod, offset);
+        for (uint i = 0; i < len; i++) {
+            ZeroFidsUnknownModelNod(Dev::GetOffsetNod(buf, 0x8 * i));
+        }
+    }
+
 
     void ZeroFidsUnknownModelNod(CMwNod@ nod) {
         if (nod is null) return;
         auto itemModel = cast<CGameItemModel>(nod);
         auto so = cast<CPlugStaticObjectModel>(nod);
+        auto s2m = cast<CPlugSolid2Model>(nod);
         auto prefab = cast<CPlugPrefab>(nod);
         auto fxSys = cast<CPlugFxSystem>(nod);
         auto vegetTree = cast<CPlugVegetTreeModel>(nod);
@@ -311,10 +399,23 @@ namespace MeshDuplication {
         auto commonIe = cast<CGameCommonItemEntityModel>(nod);
         auto varlist = cast<NPlugItem_SVariantList>(nod);
         auto fid = cast<CSystemFidFile>(nod);
+        auto blockInfo = cast<CGameCtnBlockInfo>(nod);
+        auto visModel = cast<CPlugVehicleVisModel>(nod);
+        auto visShared = cast<CPlugVehicleVisModelShared>(nod);
+        auto visGeom = cast<CPlugVehicleVisGeomModel>(nod);
+        auto skel = cast<CPlugSkel>(nod);
+        auto anim = cast<CPlugAnimFile>(nod);
+        auto visEmitter = cast<CPlugVehicleVisEmitterModel>(nod);
+        auto visEntFx = cast<CPlugVisEntFxModel>(nod);
+        auto shader = cast<CPlugShader>(nod);
+        auto pem = cast<CPlugParticleEmitterModel>(nod);
+        auto mat = cast<CPlugMaterial>(nod);
         if (so !is null) {
             ZeroFids(so);
         } else if (itemModel !is null) {
             ZeroChildFids(itemModel);
+        } else if (s2m !is null) {
+            ZeroFids(s2m);
         } else if (prefab !is null) {
             ZeroFids(prefab);
         } else if (varlist !is null) {
@@ -339,6 +440,28 @@ namespace MeshDuplication {
             ZeroFids(commonIe);
         } else if (fid !is null) {
             ZeroFids(fid);
+        } else if (blockInfo !is null) {
+            ZeroFids(blockInfo);
+        } else if (visModel !is null) {
+            ZeroFids(visModel);
+        } else if (visShared !is null) {
+            ZeroFids(visShared);
+        } else if (visGeom !is null) {
+            ZeroFids(visGeom);
+        } else if (skel !is null) {
+            ZeroFids(skel);
+        } else if (anim !is null) {
+            ZeroFids(anim);
+        } else if (visEmitter !is null) {
+            ZeroFids(visEmitter);
+        } else if (visEntFx !is null) {
+            ZeroFids(visEntFx);
+        } else if (shader !is null) {
+            ZeroFids(shader);
+        } else if (pem !is null) {
+            ZeroFids(pem);
+        } else if (mat !is null) {
+            ZeroFids(mat);
         } else {
             NotifyError("ZeroFidsUnknownModelNod: nod is unknown.");
             NotifyError("ZeroFidsUnknownModelNod: nod type: " + Reflection::TypeOf(nod).Name);
@@ -349,6 +472,10 @@ namespace MeshDuplication {
         if (nod is null) return;
         auto fidPtr = Dev::GetOffsetUint64(nod, 0x8);
         if (fidPtr > 0) {
+            auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(nod, 0x8));
+            if (fid !is null) {
+                trace("Zeroing FID for: " + fid.FileName);
+            }
             Dev::SetOffset(nod, 0x8, uint64(0));
         }
     }

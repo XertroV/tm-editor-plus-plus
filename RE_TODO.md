@@ -33,3 +33,10 @@ GmSurf: 0x90 (144) large
 0x78: vec3?
 0x84: ffff / 0
 0x88: unk? uncleared?
+
+
+
+
+
+copy array elements not working properly
+water buf

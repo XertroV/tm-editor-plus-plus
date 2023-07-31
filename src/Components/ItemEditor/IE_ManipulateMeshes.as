@@ -411,7 +411,7 @@ class IE_ManipulateMeshesTab : Tab {
 
     protected void _RunReplaceElement() {
         AppendRunMsg("started _RunReplaceElement");
-        AppendRunMsg("\\$f80Not yet implemented");
+        AppendRunMsg("\\$f80 ? Not yet implemented");
         MeshDuplication::ZeroFidsUnknownModelNod(dest.GetParentNod());
         MeshDuplication::ZeroFidsUnknownModelNod(source.GetParentNod());
         AppendRunMsg("zeroed FIDs");
@@ -423,6 +423,8 @@ class IE_ManipulateMeshesTab : Tab {
             _RunCopyVariantListEntry();
         } else if (dParentPrefab !is null && sParentPrefab !is null) {
             _RunCopyPrefabEntity();
+        } else {
+            AppendRunMsg("Did not find pair of parent variant lists or prefabs");
         }
     }
 
@@ -430,26 +432,28 @@ class IE_ManipulateMeshesTab : Tab {
         auto dParent = dest.parent.As_NPlugItem_SVariantList();
         auto sParent = source.parent.As_NPlugItem_SVariantList();
         auto bufOffset = GetOffset(sParent, "Variants");
-        auto sBuf = Dev::GetOffsetNod(sParent, bufOffset);
-        auto dBuf = Dev::GetOffsetNod(dParent, bufOffset);
+        auto sBufPtr = Dev::GetOffsetUint64(sParent, bufOffset);
+        auto dBufPtr = Dev::GetOffsetUint64(dParent, bufOffset);
         uint16 elSize = 0x28;
-        Dev_CopyArrayStruct(sBuf, source.pIndex, dBuf, dest.pIndex, elSize, 1);
+        Dev_CopyArrayStruct(sBufPtr, source.pIndex, dBufPtr, dest.pIndex, elSize, 1);
         if (sParent.Variants[source.pIndex].EntityModel !is null) {
             sParent.Variants[source.pIndex].EntityModel.MwAddRef();
         }
+        AppendRunMsg("Copied Variant from source.Variants["+source.pIndex+"] to dest.Variants["+dest.pIndex+"]");
     }
 
     void _RunCopyPrefabEntity() {
         auto dParent = dest.parent.As_CPlugPrefab();
         auto sParent = source.parent.As_CPlugPrefab();
         auto bufOffset = GetOffset(sParent, "Ents");
-        auto sBuf = Dev::GetOffsetNod(sParent, bufOffset);
-        auto dBuf = Dev::GetOffsetNod(dParent, bufOffset);
+        auto sBufPtr = Dev::GetOffsetUint64(sParent, bufOffset);
+        auto dBufPtr = Dev::GetOffsetUint64(dParent, bufOffset);
         uint16 elSize = 0x28;
-        Dev_CopyArrayStruct(sBuf, source.pIndex, dBuf, dest.pIndex, elSize, 1);
+        Dev_CopyArrayStruct(sBufPtr, source.pIndex, dBufPtr, dest.pIndex, elSize, 1);
         if (sParent.Ents[source.pIndex].Model !is null) {
             sParent.Ents[source.pIndex].Model.MwAddRef();
         }
+        AppendRunMsg("Copied EntRef from source.Ents["+source.pIndex+"] to dest.Ents["+dest.pIndex+"]");
     }
 
 

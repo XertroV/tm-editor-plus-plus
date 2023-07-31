@@ -311,9 +311,12 @@ class ItemModelTreeElement {
         if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfo", UI::TreeNodeFlags::DefaultOpen)) {
             auto mmOffset = GetOffset(blockInfo, "MatModifierPlacementTag");
             auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
+            CopiableLabeledValue("Name MwID", tostring(blockInfo.Id.Value));
             if (isEditable) {
                 Dev::SetOffset(blockInfo, mmOffset, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
             } else {
+                CopiableLabeledValue("PageName", blockInfo.PageName);
+                CopiableLabeledValue("CatalogPosition", tostring(blockInfo.CatalogPosition));
                 UI::Text("MatModiferPlacementTag: " + mmPlacementTag.ToString());
             }
             MkAndDrawChildNode(blockInfo.VariantBaseGround, "VariantBaseGround");
@@ -336,6 +339,17 @@ class ItemModelTreeElement {
             for (uint i = 0; i < infoVar.Mobils00.Length; i++) {
                 MkAndDrawChildNode(infoVar.Mobils00[i], 0x8 * i, "Mobils00["+i+"]");
             }
+            // uint16 waterBufOffset = 0x1B0;
+            // auto waterNb = Dev::GetOffsetUint32(infoVar, waterBufOffset + 0x8);
+            // auto waterBufNod = Dev::GetOffsetNod(infoVar, waterBufNod);
+            // for (uint i = 0; i < infoVar.Mobils00.Length; i++) {
+            //     auto waterNod = Dev::GetOffsetNod(waterBufNod, 0x8 * i);
+            //     if (StartTreeNode("Water["+i+"]", true, UI::TreeNodeFlags::None)) {
+
+            //         EndTreeNode();
+            //     }
+            // }
+
             EndTreeNode();
         }
     }
@@ -400,7 +414,7 @@ class ItemModelTreeElement {
                     if (drawProperties) {
                         auto nameNod = Dev::GetOffsetNod(entsBuf, elSize * i + 0x40);
                         string nameBytes = ""; // nameNod is null ? "<null>" : Dev::GetOffsetString(nameNod, 0x0);
-                        auto nameLen = Dev::GetOffsetUint64(entsBuf, elSize * i + 0x48);
+                        auto nameLen = Dev::GetOffsetUint32(entsBuf, elSize * i + 0x48);
                         if (isEditable) {
                             prefab.Ents[i].Location.Quat = UX::InputQuat(".Location.Quat", prefab.Ents[i].Location.Quat);
                             prefab.Ents[i].Location.Trans = UI::InputFloat3(".Location.Trans", prefab.Ents[i].Location.Trans);
@@ -411,7 +425,7 @@ class ItemModelTreeElement {
                             CopiableLabeledValue(".LodGroupId", tostring(prefab.Ents[i].LodGroupId));
                         }
                         // name always len 0?
-                        CopiableLabeledValue(".Name.Length / bytes", tostring(nameLen) + " / " + nameBytes);
+                        // CopiableLabeledValue(".Name.Length / bytes", tostring(nameLen) + " / " + nameBytes);
                         DrawPrefabEntParams(prefab, i);
                     }
                     MkAndDrawChildNode(prefab.Ents[i].Model, "Model");
@@ -1383,9 +1397,20 @@ uint Draw_SPlacementGroup_TQs(uint64 tqsPtr, uint nbTqs, bool isEditable, uint64
 
 bool IsPlacementGroupForSpectators(uint64 placementGroupPtr) {
     return GetPlacementGroupType(placementGroupPtr) == 0x21
-        || GetPlacementGroupType(placementGroupPtr) == 0x22
+        // || GetPlacementGroupType(placementGroupPtr) == 0x22
         ;
 }
+
+
+string PlacementTypeToString(uint8 type) {
+    switch (type) {
+        case 0x20: return "Attachment Point (?)";
+        case 0x21: return "Spectator";
+        case 0x22: return "Podium Position";
+    }
+    return "Unknown";
+}
+
 
 uint8 GetPlacementGroupType(uint64 placementGroupPtr) {
     auto len = Dev::ReadUInt32(placementGroupPtr + 0x8);

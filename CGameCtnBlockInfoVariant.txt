@@ -1,0 +1,51 @@
+should have water stuff based on gbx-py
+
+
+
+
+
+estimate for water: between 0x150 and 0x250
+
+0x100: buffer -> Struct (buf, ptr?)
+    0x0: buf -> blockInfoMobil (x2)
+    0x10: fid (eg: BranchCross_Airv2.Prefab.Gbx)
+
+0x160: buffer -> CGameCtnBlockInfoClassic
+
+
+
+WATER!!!! 0x1b0
+
+0x1b0: buffer -> ?
+    0x0: game data (DecalPageHackId? close in memory)
+    0x8: buffer (5) -> struct 0x18
+        u32: 0x3
+        u32: index
+        u32: ? (0, 6, e, 0x14, 0x1b)
+        u32: 0x1c
+        u32: 0x04
+        u32: ? (5, d, 0x13, 0x1a, 0x1f)
+
+
+0x1B0: water buffer (1)
+    0x0 -> struct?
+        0x8 -> buffer to some kind of
+    0x8 garbage?
+    0x10 ->
+    0x18
+
+
+
+0B 00 00 00 00 00 00 00 05 00 00 00 14 00 00 00 00 00 00 00 1A 00 00 00
+
+
+
+
+
+
+
+
+
+CGameCtnBlock
+
+ghost: 0x87 -> 0x10 when ghost, 0x00 when not.

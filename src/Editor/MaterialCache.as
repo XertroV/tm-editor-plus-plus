@@ -24,6 +24,7 @@ class MaterialCache : FidCache {
         auto stad256 = Fids::GetGameFolder("GameData/Stadium256/Media");
         CacheFolder(stadium, ".Material.Gbx");
         CacheFolder(stad256, ".Material.Gbx");
+        CacheFolder(Fids::GetGameFolder("GameData/Effects/Media"), ".Material.Gbx");
     }
 }
 
