@@ -84,9 +84,9 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             }
         }
 
-        auto skin = cast<CSystemPackDesc>(Dev::GetOffsetNod(item, 0x98));
+        auto skin = cast<CSystemPackDesc>(Dev::GetOffsetNod(item, O_ANCHOREDOBJ_SKIN_PACKDESC));
         if (skin !is null) {
-            ItemModelTreeElement(null, -1, skin, "Skin").Draw();
+            ItemModelTreeElement(null, O_ANCHOREDOBJ_SKIN_PACKDESC, skin, "Skin").Draw();
         } else {
             UI::TextDisabled("No skin");
         }

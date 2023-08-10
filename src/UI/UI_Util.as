@@ -91,6 +91,9 @@ shared void LabeledValue(const string &in label, nat3 &in value, bool clickToCop
 shared void LabeledValue(const string &in label, vec3 &in value, bool clickToCopy = false) {
     (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Vec3(value));
 }
+shared void LabeledValue(const string &in label, vec4 &in value, bool clickToCopy = false) {
+    (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, value.ToString());
+}
 shared void LabeledValue(const string &in label, int3 &in value, bool clickToCopy = false) {
     (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Int3(value));
 }

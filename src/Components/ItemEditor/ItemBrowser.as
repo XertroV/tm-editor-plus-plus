@@ -339,17 +339,39 @@ class ItemModelTreeElement {
             for (uint i = 0; i < infoVar.Mobils00.Length; i++) {
                 MkAndDrawChildNode(infoVar.Mobils00[i], 0x8 * i, "Mobils00["+i+"]");
             }
-            // uint16 waterBufOffset = 0x1B0;
-            // auto waterNb = Dev::GetOffsetUint32(infoVar, waterBufOffset + 0x8);
-            // auto waterBufNod = Dev::GetOffsetNod(infoVar, waterBufNod);
-            // for (uint i = 0; i < infoVar.Mobils00.Length; i++) {
-            //     auto waterNod = Dev::GetOffsetNod(waterBufNod, 0x8 * i);
-            //     if (StartTreeNode("Water["+i+"]", true, UI::TreeNodeFlags::None)) {
+            auto waterNb = Dev::GetOffsetUint32(infoVar, O_BLOCKVAR_WATER_BUF + 0x8);
+            auto waterBufNod = Dev::GetOffsetNod(infoVar, O_BLOCKVAR_WATER_BUF);
+            for (uint i = 0; i < waterNb; i++) {
+                auto waterNod = Dev::GetOffsetNod(waterBufNod, 0x8 * i);
+                DrawWaterArchiveNod(i, waterNod);
+            }
 
-            //         EndTreeNode();
-            //     }
-            // }
+            EndTreeNode();
+        }
+    }
 
+    void DrawWaterArchiveNod(uint i, CMwNod@ water) {
+        if (StartTreeNode("Water["+i+"]", true, UI::TreeNodeFlags::None)) {
+            // gamedata at 0x0
+            // buffer at 0x8 of (int3, int3)
+            // 7 floats
+            // 0x4 gap
+            // 0x38: possible string?
+            auto coordPairsBuf = Dev::GetOffsetNod(water, 0x8);
+            auto nbCoordPairs = Dev::GetOffsetUint32(water, 0x10);
+
+            for (uint j = 0; j < nbCoordPairs; j++) {
+                auto cp1 = Dev::GetOffsetInt3(coordPairsBuf, 0x18 * j);
+                auto cp2 = Dev::GetOffsetInt3(coordPairsBuf, 0x18 * j + 0xC);
+                LabeledValue("CoordPair["+j+"]", cp1.ToString() + " / " + cp2.ToString());
+            }
+
+            auto u02to05 = Dev::GetOffsetVec4(water, 0x18);
+            LabeledValue("u02to05", u02to05.ToString());
+            auto u06to08 = Dev::GetOffsetVec3(water, 0x28);
+            LabeledValue("u06to08", u06to08.ToString());
+            auto strPtr = Dev::GetOffsetUint64(water, 0x38);
+            LabeledValue("u09 str ptr", Text::FormatPointer(strPtr));
             EndTreeNode();
         }
     }

@@ -247,6 +247,7 @@ const uint16 O_GAMESKIN_FID_CLASSID_BUF = 0x78;
 const uint16 O_GAMESKIN_PATH3 = 0x120;
 
 
+const uint16 O_ANCHOREDOBJ_SKIN_PACKDESC = 0x98;
 
 
 const uint16 O_MATERIAL_PHYSICS_ID = 0x28;
@@ -264,3 +265,6 @@ const uint16 O_USERMATINST_PARAM_LEN = 0x158; // 3 for color
 
 const uint32 SZ_SPLACEMENTOPTION = 0x18;
 const uint32 SZ_GMQUATTRANS = 0x1C;
+
+
+const uint16 O_BLOCKVAR_WATER_BUF = 0x1B0;
