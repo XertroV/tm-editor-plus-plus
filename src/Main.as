@@ -14,6 +14,7 @@ void Main() {
     RegisterOnEditorLoadCallback(Editor::CacheMaterials);
 }
 
+
 void OnDestroyed() { Unload(); }
 void OnDisabled() { Unload(); }
 void Unload() {

@@ -38,12 +38,6 @@ class MapEditPropsTab : Tab {
         CopiableLabeledPtr(map);
 #endif
 
-        // if (lastMapUid != map.EdChallengeId) {
-        //     lastMapUid = map.EdChallengeId;
-        //     newSizeX = map.Size.x;
-        //     newSizeY = map.Size.y;
-        //     newSizeZ = map.Size.z;
-        // }
 
         UI::Separator();
 
@@ -128,7 +122,7 @@ class MapEditPropsTab : Tab {
 
     // sorta works but sometimes crashes the game, not reliable
     void SaveAndRevertSize() {
-        // return;
+        return;
 #if SIG_DEVELOPER
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         Editor::_SetMapSize(editor.Challenge, newSize);
@@ -148,7 +142,7 @@ MapDecoChoice DecoIdToEnum(const string &in id) {
         if (parts[1] == "Sunrise") time = 2;
         if (parts[1] == "Sunset") time = 3;
     }
-    return MapDecoChoice(time + (isNS ? 3 : 0));
+    return MapDecoChoice(time + (isNS ? 4 : 0));
 }
 
 enum MapDecoChoice {
