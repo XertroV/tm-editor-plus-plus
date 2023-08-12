@@ -2,11 +2,22 @@ class MapEditPropsTab : Tab {
     MapEditPropsTab(TabGroup@ parent) {
         super(parent, "Map Properties", Icons::MapO);
         removable = false;
+        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEnterEditor));
     }
 
-    // uint newSizeX = 48;
+    void OnEnterEditor() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto map = editor.Challenge;
+        newSizeX = map.Size.x;
+        newSizeY = map.Size.y;
+        newSizeZ = map.Size.z;
+    }
+
+    uint newSizeX = 0;
     uint newSizeY = 0;
-    // uint newSizeZ = 48;
+    uint newSizeZ = 0;
+    nat3 oldSize;
+    nat3 newSize;
     string lastMapUid;
 
     void DrawInner() override {
@@ -27,10 +38,12 @@ class MapEditPropsTab : Tab {
         CopiableLabeledPtr(map);
 #endif
 
-        if (lastMapUid != map.EdChallengeId) {
-            lastMapUid = map.EdChallengeId;
-            newSizeY = map.Size.y;
-        }
+        // if (lastMapUid != map.EdChallengeId) {
+        //     lastMapUid = map.EdChallengeId;
+        //     newSizeX = map.Size.x;
+        //     newSizeY = map.Size.y;
+        //     newSizeZ = map.Size.z;
+        // }
 
         UI::Separator();
 
@@ -57,6 +70,16 @@ class MapEditPropsTab : Tab {
         UI::SameLine();
         UI::TextDisabled("Use gbxexplorer.net to change X/Z");
 
+        // sorta works but often crashes the game
+        // newSizeX = Math::Clamp(UI::InputInt("Size.X", newSizeX), 8, 255);
+        // newSizeZ = Math::Clamp(UI::InputInt("Size.Z", newSizeZ), 8, 255);
+        // if (UI::Button("Update Map X/Z")) {
+        //     oldSize = map.Size;
+        //     newSize = nat3(newSizeX, newSizeY, newSizeZ);
+        //     startnew(CoroutineFunc(this.SaveAndRevertSize));
+        // }
+        // AddSimpleTooltip("Note: this will save and reload the map.");
+
         UI::Unindent();
 
         UI::Separator();
@@ -68,6 +91,7 @@ class MapEditPropsTab : Tab {
         }
 
         if (map.IdName.Length > 10) {
+            UI::Indent();
             m_deco = DrawComboMapDecoChoice("New Decoration", m_deco);
             UI::BeginDisabled(m_deco == DecoIdToEnum(deco.IdName));
             if (UI::Button("Apply Decoration")) {
@@ -78,7 +102,9 @@ class MapEditPropsTab : Tab {
                 }
 
             }
+            AddSimpleTooltip("Note: will save and reload the map");
             UI::EndDisabled();
+            UI::Unindent();
         }
 
         UI::Separator();
@@ -98,6 +124,18 @@ class MapEditPropsTab : Tab {
         @editor.Challenge.Decoration = deco;
         sleep(100);
         Editor::NoSaveAndReloadMap();
+    }
+
+    // sorta works but sometimes crashes the game, not reliable
+    void SaveAndRevertSize() {
+        // return;
+#if SIG_DEVELOPER
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        Editor::_SetMapSize(editor.Challenge, newSize);
+        Editor::SaveMapSameName(editor);
+        Editor::_SetMapSize(editor.Challenge, oldSize);
+        Editor::NoSaveAndReloadMap();
+#endif
     }
 }
 
@@ -144,11 +182,7 @@ CGameCtnDecoration@ GetDecoration(MapDecoChoice d) {
     for (uint i = 0; i < ch.Articles.Length; i++) {
         auto item = ch.Articles[i];
         if (item.IdName == name) {
-            print(item.IdName);
-            print("" + item.IsLoaded);
             if (!item.IsLoaded) item.Preload();
-            print("" + item.IsLoaded);
-            print("" + tostring(item.LoadedNod !is null));
             auto deco = cast<CGameCtnDecoration>(item.LoadedNod);
             return deco;
         }
