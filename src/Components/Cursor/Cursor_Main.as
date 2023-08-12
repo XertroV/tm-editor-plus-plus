@@ -3,7 +3,7 @@ class CursorTab : Tab {
     CursorFavTab@ cursorFavs;
 
     CursorTab(TabGroup@ parent) {
-        super(parent, "Cursor", Icons::HandPointerO);
+        super(parent, "Cursor Coords", Icons::HandPointerO);
         canPopOut = false;
         // child tabs
         @cursorProps = CursorPropsTab(Children, this);
@@ -12,6 +12,55 @@ class CursorTab : Tab {
 
     void DrawInner() override {
         Children.DrawTabsAsList();
+    }
+}
+
+[Setting hidden]
+bool S_CursorWindowOpen = false;
+
+// activated from the tools menu, see UI_Main
+class CursorPosition : Tab {
+    CursorPosition(TabGroup@ parent) {
+        this.addRandWindowExtraId = false;
+        super(parent, "Cursor Coords", Icons::HandPointerO);
+        this.windowExtraId = 0;
+        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditor));
+    }
+
+    void OnEditor() {
+        this.windowOpen = S_CursorWindowOpen;
+    }
+
+    void set_windowOpen(bool value) override property {
+        S_CursorWindowOpen = value;
+        Tab::set_windowOpen(value);
+    }
+
+    int get_WindowFlags() override {
+        return UI::WindowFlags::AlwaysAutoResize | UI::WindowFlags::NoCollapse | UI::WindowFlags::NoTitleBar;
+    }
+
+    void DrawInner() override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        auto cursor = editor.Cursor;
+        if (cursor is null) return;
+
+        UI::PushFont(g_BigFont);
+        UI::Text("Cursor   ");
+        auto width = UI::GetWindowContentRegionWidth();
+        DrawLabledCoord("X", Text::Format("% 3d", cursor.Coord.x));
+        DrawLabledCoord("Y", Text::Format("% 3d", cursor.Coord.y));
+        DrawLabledCoord("Z", Text::Format("% 3d", cursor.Coord.z));
+        UI::Text(tostring(cursor.Dir));
+        UI::PopFont();
+    }
+
+    void DrawLabledCoord(const string &in axis, const string &in value) {
+        auto pos = UI::GetCursorPos();
+        UI::Text(axis);
+        UI::SetCursorPos(pos + vec2(32, 0));
+        UI::Text(value);
     }
 }
 

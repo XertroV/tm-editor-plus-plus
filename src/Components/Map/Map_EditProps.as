@@ -171,23 +171,34 @@ CGameCtnDecoration@ GetDecoration(MapDecoChoice d) {
     auto name = DecoEnumToName(d);
     print("looking for: " + name);
 
+    // auto fname = name.StartsWith("4") ? ("Base" + name) : name;
+    // auto path = "Stadium/GameCtnDecoration/" + fname + ".Decoration.Gbx";
+    // auto newDecoFid = Fids::GetGame(path);
+    // if (newDecoFid is null) return null;
+    // auto newDeco = cast<CGameCtnDecoration>(Fids::Preload(newDecoFid));
+    // if (newDeco is null) NotifyError("Returning deco that is null: " + path);
+    // return newDeco;
+
     auto app = GetApp();
     auto ch = app.GlobalCatalog.Chapters[3];
     for (uint i = 0; i < ch.Articles.Length; i++) {
         auto item = ch.Articles[i];
+        if (item.IdName.Contains('48x48') || item.IdName.Contains('NoStadium')) {
+            trace(item.IdName);
+        }
         if (item.IdName == name) {
             if (!item.IsLoaded) item.Preload();
             auto deco = cast<CGameCtnDecoration>(item.LoadedNod);
+            if (deco is null) {
+                @deco = cast<CGameCtnDecoration>(item.CollectorFid.Nod);
+            }
+            if (deco is null) {
+                @deco = cast<CGameCtnDecoration>(Fids::Preload(item.CollectorFid));
+            }
+            if (deco is null) NotifyError("Returning deco that is null: " + item.IdName);
+            if (deco is null) continue;
             return deco;
         }
     }
     return null;
-    // auto path = "Stadium/GameCtnDecoration/" + fname;
-    // auto newDecoFid = Fids::GetGame(path);
-    // if (newDecoFid is null) return null;
-    // auto newDeco = cast<CGameCtnDecoration>(Fids::Preload(newDecoFid));
-    // if (newDeco is null) return null;
-    // newDeco.MwAddRef();
-    // newDeco.MwAddRef();
-    // return newDeco;
 }

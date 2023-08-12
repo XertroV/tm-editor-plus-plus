@@ -270,9 +270,13 @@ bool DrawBtnMbActive(const string &in label, bool isActive, vec2 size = vec2()) 
 
 UI::Font@ g_MonoFont;
 UI::Font@ g_BoldFont;
+UI::Font@ g_BigFont;
+UI::Font@ g_MidFont;
 void LoadFonts() {
     @g_BoldFont = UI::LoadFont("DroidSans-Bold.ttf");
     @g_MonoFont = UI::LoadFont("DroidSansMono.ttf");
+    @g_BigFont = UI::LoadFont("DroidSans.ttf", 26);
+    @g_MidFont = UI::LoadFont("DroidSans.ttf", 20);
 }
 
 

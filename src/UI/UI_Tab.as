@@ -8,7 +8,8 @@ shared class Tab {
 
     string tabName;
     string fullName;
-    uint windowExtraId = Math::Rand(0, TWO_BILLION);
+    uint windowExtraId = 0;
+    bool addRandWindowExtraId = true;
     string tabIcon;
     string tabIconAndName;
 
@@ -29,6 +30,10 @@ shared class Tab {
         tabIconAndName = tabIcon + " " + tabName;
         @Children = TabGroup(tabName, this);
         @WindowChildren = TabGroup(tabName, this);
+
+        if (addRandWindowExtraId) {
+            windowExtraId = Math::Rand(0, TWO_BILLION);
+        }
     }
 
     const string get_DisplayIconAndName() {
@@ -136,7 +141,7 @@ shared class Tab {
         Children.DrawWindows();
         WindowChildren.DrawWindowsAndRemoveTabsWhenClosed();
         if (!windowOpen) return false;
-        if (expandWindowNextFrame && windowOpen) {
+        if (expandWindowNextFrame && windowOpen && addRandWindowExtraId) {
             UI::SetNextWindowPos(int(lastWindowPos.x), int(lastWindowPos.y));
             windowExtraId = Math::Rand(0, TWO_BILLION);
         }

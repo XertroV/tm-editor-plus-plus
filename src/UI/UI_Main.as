@@ -212,6 +212,7 @@ TabGroup@ CreateToolsTabGroup() {
     auto tools = RootTabGroupCls();
     QuaternionCalcTab(tools);
     MaterialsListTab(tools);
+    CursorPosition(tools);
     return tools;
 }
 

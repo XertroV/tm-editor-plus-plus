@@ -1,7 +1,7 @@
 bool UserHasPermissions = false;
 
 void Main() {
-    LoadFonts();
+    startnew(LoadFonts);
     UserHasPermissions = Permissions::OpenAdvancedMapEditor();
     if (!UserHasPermissions) {
         NotifyWarning("This plugin requires the advanced map editor");
@@ -71,6 +71,7 @@ void Update(float dt) {
 }
 
 void Render() {
+    if (g_BigFont is null) return;
     if (!GameVersionSafe) return;
     if (!UserHasPermissions) return;
     if (EnteringEditor)
