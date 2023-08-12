@@ -204,6 +204,13 @@ CGxLightBall::EStaticShadow DrawComboEStaticShadow(const string &in label, CGxLi
         })
     );
 }
+MapDecoChoice DrawComboMapDecoChoice(const string &in label, MapDecoChoice val) {
+    return MapDecoChoice(
+        DrawArbitraryEnum(label, int(val), MapDecoChoice::XXX_Last, function(int v) {
+            return tostring(MapDecoChoice(v));
+        })
+    );
+}
 
 int DrawColorBtnChoice(const string &in label, int val) {
     if (DrawBtnMbActive("Default##"+label, val == 0))
