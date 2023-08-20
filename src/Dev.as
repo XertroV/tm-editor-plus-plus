@@ -226,7 +226,9 @@ class ReferencedNod {
 
 
 
-
+const uint16 O_MAP_OFFZONE_BUF_OFFSET = 0x690;
+const uint16 O_MAP_OFFZONE_SIZE_OFFSET = 0x680;
+const uint16 O_MAP_MTSIZE_OFFSET = 0x1F0;
 
 
 

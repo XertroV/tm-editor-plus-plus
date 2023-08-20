@@ -53,6 +53,8 @@ todo:
 - (todo: fill list out more)
 - cloning light sphere gives cannot save map error but it saves the item okay
 
+- create custom block from vanilla
+
 research:
 - convert normal block to free block?
 

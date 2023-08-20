@@ -10,7 +10,8 @@ class DissociateItemsTab : EffectTab {
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
         if (!_IsActive) return false;
         Editor::DissociateItem(item);
-        return true;
+        // return false: no need to refresh
+        return false;
     }
 
     uint lastNbSelected = 0;

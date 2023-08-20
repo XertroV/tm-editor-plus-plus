@@ -20,6 +20,8 @@ class MapEditPropsTab : Tab {
     nat3 newSize;
     string lastMapUid;
 
+    bool m_ShowOffzone = false;
+
     void DrawInner() override {
         CGameCtnChallenge@ map = null;
         try {
@@ -103,7 +105,98 @@ class MapEditPropsTab : Tab {
 
         UI::Separator();
 
+        DrawMediaTrackerSettings();
+
+        UI::Separator();
+
+        auto offzoneLen = Dev::GetOffsetUint32(map, O_MAP_OFFZONE_BUF_OFFSET + 0x8);
+
+        if (offzoneLen > 0) {
+            if (UI::TreeNode("Offzones ("+offzoneLen+")###map-offzones", UI::TreeNodeFlags::None)) {
+                auto offzoneBuf = Dev::GetOffsetNod(map, O_MAP_OFFZONE_BUF_OFFSET);
+                for (uint i = 0; i < offzoneLen; i++) {
+                    int3 start = Dev::GetOffsetInt3(offzoneBuf, i * 0x18);
+                    int3 end = Dev::GetOffsetInt3(offzoneBuf, i * 0x18 + 0xC);
+                    UI::Text(start.ToString() + " -> " + end.ToString());
+                }
+                UI::TreePop();
+            }
+            m_ShowOffzone = UI::Checkbox("Show Offzones", m_ShowOffzone);
+            if (m_ShowOffzone) {
+                this.DrawOffzoneBoxes(map);
+            }
+        } else {
+            UI::Text("Map has no offzones.");
+        }
+
+        DrawOffzoneSettings();
+
+        UI::Separator();
+
         UI::Text("Todo: add setting to save and camera pos in the thumbnail data slots.");
+    }
+
+    void DrawMediaTrackerSettings() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto map = editor.Challenge;
+        nat3 mtPerBlock = Dev::GetOffsetNat3(map, O_MAP_MTSIZE_OFFSET);
+        nat3 origMtPerBlock = mtPerBlock;
+        if (UI::CollapsingHeader("Mediatracker Trigger:")) {
+            UI::Indent();
+                UI::TextWrapped("This measures how many trigger cubes you have per block (32x8x32). 2,1,2 will mean 4 trigger cubes completely cover 1 block.\n\\$f80Note: \\$zUnequal X-Z dimensions, or Y > 1, will confuse the Mediatracker editor a bit (still works though).");
+                // UI::BeginChild("mt-trigger-child", vec2(UI::GetContentRegionAvail().x * 0.5, 80), false, UI::WindowFlags::AlwaysAutoResize);
+                mtPerBlock.x = Math::Clamp(UI::InputInt("x##mt-trigger", mtPerBlock.x), 1, 128);
+                mtPerBlock.y = Math::Clamp(UI::InputInt("y##mt-trigger", mtPerBlock.y), 1, 128);
+                mtPerBlock.z = Math::Clamp(UI::InputInt("z##mt-trigger", mtPerBlock.z), 1, 128);
+                if (UI::Button("Reset##mtsize")) {
+                    mtPerBlock = nat3(3, 1, 3);
+                }
+                if (mtPerBlock != origMtPerBlock) {
+                    Dev::SetOffset(map, O_MAP_MTSIZE_OFFSET, mtPerBlock);
+                }
+                auto mtBlockSize = vec3(32, 8, 32) / vec3(mtPerBlock.x, mtPerBlock.y, mtPerBlock.z);
+                UI::Text("MT Trigger Size: " + mtBlockSize.ToString());
+                // UI::EndChild();
+            UI::Unindent();
+        }
+    }
+
+    void DrawOffzoneSettings() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto map = editor.Challenge;
+        nat3 ozPerBlock = Dev::GetOffsetNat3(map, O_MAP_OFFZONE_SIZE_OFFSET);
+        nat3 origOzPerBlock = ozPerBlock;
+        if (UI::CollapsingHeader("Offzone Trigger:")) {
+            UI::Indent();
+                UI::TextWrapped("This measures how many trigger cubes you have per block (32x8x32). 2,1,2 will mean 4 trigger cubes completely cover 1 block.\n\\$f80Note: \\$zUnequal X-Z dimensions, or Y > 1 may be unstable.");
+                // UI::BeginChild("oz-trigger-child", vec2(UI::GetContentRegionAvail().x * 0.5, 0));
+                ozPerBlock.x = Math::Clamp(UI::InputInt("x##oz-trigger", ozPerBlock.x), 1, 128);
+                ozPerBlock.y = Math::Clamp(UI::InputInt("y##oz-trigger", ozPerBlock.y), 1, 128);
+                ozPerBlock.z = Math::Clamp(UI::InputInt("z##oz-trigger", ozPerBlock.z), 1, 128);
+                if (UI::Button("Reset##ozsize")) {
+                    ozPerBlock = nat3(3, 1, 3);
+                }
+                if (ozPerBlock != origOzPerBlock) {
+                    Dev::SetOffset(map, O_MAP_MTSIZE_OFFSET, ozPerBlock);
+                }
+                auto mtBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
+                UI::Text("Offzone Trigger Size: " + mtBlockSize.ToString());
+                // UI::EndChild();
+            UI::Unindent();
+        }
+    }
+
+    void DrawOffzoneBoxes(CGameCtnChallenge@ map) {
+        auto offzoneLen = Dev::GetOffsetUint32(map, O_MAP_OFFZONE_BUF_OFFSET + 0x8);
+        if (offzoneLen == 0) return;
+        auto offzoneBuf = Dev::GetOffsetNod(map, O_MAP_OFFZONE_BUF_OFFSET);
+        for (uint i = 0; i < offzoneLen; i++) {
+            int3 start = Dev::GetOffsetInt3(offzoneBuf, i * 0x18);
+            int3 end = Dev::GetOffsetInt3(offzoneBuf, i * 0x18 + 0xC) + int3(1, 1, 1);
+            auto startPos = MTCoordToPos(start);
+            auto endPos = MTCoordToPos(end) - vec3(0.1);
+            nvgDrawBlockBox(mat4::Translate(startPos), endPos - startPos);
+        }
     }
 
     MapDecoChoice m_deco = MapDecoChoice::XXX_Last;

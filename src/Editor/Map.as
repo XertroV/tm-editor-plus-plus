@@ -13,6 +13,24 @@ namespace Editor {
         _SetMapSize(map, nat3(map.Size.x, newHeight, map.Size.z));
     }
 
+    // measured in partitions of a block; 3,1,3 => triggers are 1/3 w, 1/1 h, 1/3 d of a block
+    nat3 GetMTTriggerSize(CGameCtnChallenge@ map) {
+        return Dev::GetOffsetNat3(map, O_MAP_MTSIZE_OFFSET);
+    }
+    // measured in partitions of a block; 3,1,3 => triggers are 1/3 w, 1/1 h, 1/3 d of a block
+    nat3 GetOffzoneTriggerSize(CGameCtnChallenge@ map) {
+        return Dev::GetOffsetNat3(map, O_MAP_OFFZONE_SIZE_OFFSET);
+    }
+
+    // measured in partitions of a block; 3,1,3 => triggers are 1/3 w, 1/1 h, 1/3 d of a block
+    void SetMTTriggerSize(CGameCtnChallenge@ map, nat3 size) {
+        Dev::SetOffset(map, O_MAP_MTSIZE_OFFSET, size);
+    }
+    // measured in partitions of a block; 3,1,3 => triggers are 1/3 w, 1/1 h, 1/3 d of a block
+    void SetOffzoneTriggerSize(CGameCtnChallenge@ map, nat3 size) {
+        Dev::SetOffset(map, O_MAP_OFFZONE_SIZE_OFFSET, size);
+    }
+
     bool SaveMapSameName(CGameCtnEditorFree@ editor) {
         string fileName = editor.Challenge.MapInfo.FileName;
         if (fileName.Length == 0) {
