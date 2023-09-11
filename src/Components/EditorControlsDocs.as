@@ -20,9 +20,10 @@ class EditorControlsDocsTab : Tab {
         UI::LabelText("Show/Hide Inventory", "Tab");
         UI::LabelText("Skinning Mode - Apply Last", "Shift Click");
         UI::LabelText("Select picked block/item", "Ctrl + Click");
-        UI::LabelText("Focus on picked block/item", "Ctrl + R Click");
+        UI::LabelText("Focus on picked block/item", "Ctrl + R-Click");
         UI::LabelText("Show/hide in-game helpers", "H");
         UI::LabelText("Avoid blocks snapping to free-blocks", "Hold Shift");
+        UI::LabelText("Disable all editor plugins", "Ctrl + P");
 
         UI::PopStyleVar();
 

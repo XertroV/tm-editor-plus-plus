@@ -1,5 +1,11 @@
 - shaded_geoms in S2M
 
+- place macroblock air mode
+- filter inventory
+- favorites for inventory
+- check item placed when selecting in manip mesh
+- ensure item saved before editing properties
+-
 
 
 

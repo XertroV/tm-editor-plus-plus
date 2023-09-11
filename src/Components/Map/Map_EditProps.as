@@ -64,7 +64,7 @@ class MapEditPropsTab : Tab {
         }
         AddSimpleTooltip("You may need to save and reload the map to avoid camera bugs.");
         UI::SameLine();
-        UI::TextDisabled("Use gbxexplorer.net to change X/Z");
+        UI::TextDisabled("Use gbxexplorer.net to change X/Z -- may not work for validated maps");
 
         // sorta works but often crashes the game
         // newSizeX = Math::Clamp(UI::InputInt("Size.X", newSizeX), 8, 255);

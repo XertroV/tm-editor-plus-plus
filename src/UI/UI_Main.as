@@ -253,6 +253,7 @@ TabGroup@ CreateRootTabGroup() {
     BlockSelectionTab(root);
     ItemSelectionTab(root);
     GlobalPlacementOptionsTab(root);
+    // SkinsMainTab(root);
     MacroblockOptsTab(root);
 
     // - filtered view of blocks/items show just checkpoints
