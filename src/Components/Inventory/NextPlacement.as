@@ -46,7 +46,6 @@ class GlobalPlacementOptionsTab : EffectTab {
         if (f_RandomizeMbAdditionalAnimOffset) {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             editor.PluginMapType.NextMbAdditionalPhaseOffset = CGameEditorPluginMap::EPhaseOffset(Math::Rand(0, 8));
-            ret = true;
         }
         return ret;
     }
