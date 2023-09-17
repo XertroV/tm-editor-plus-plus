@@ -43,6 +43,10 @@ namespace Editor {
             warn("Refusing to refresh blocks/items as it has been marked unsafe.");
             return;
         }
+        // This patches the memory that adds undo states to not do that for a bit.
+        // This should be fine since we end at the same state as we started.
+        ExtraUndoFix::DisableUndo();
+
         trace('refreshing blocks and items: 1');
         auto pmt = editor.PluginMapType;
         // pmt.SaveMap("Autosaves\\Autosave_Editor++.Map.Gbx");
@@ -62,6 +66,9 @@ namespace Editor {
         // pmt.RemoveGhostBlock(tmpBlockI, tmpC, CGameEditorPluginMap::ECardinalDirections::North);
         // doing this twice fixes baked blocks and placed ix, but we have an extra undo point. worth it.
         pmt.AutoSave();
+
+        // this unpatches the memory that adds undo states
+        ExtraUndoFix::EnableUndo();
     }
 
     enum ItemMode {
