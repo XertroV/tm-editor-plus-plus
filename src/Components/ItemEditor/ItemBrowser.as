@@ -332,6 +332,8 @@ class ItemModelTreeElement {
     }
 
     void Draw(CGameCtnBlockInfoVariant@ infoVar) {
+        // disable editing info vars and below
+        isEditable = false;
         if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfoVariant", UI::TreeNodeFlags::None)) {
             for (uint i = 0; i < infoVar.BlockUnitInfos.Length; i++) {
                 MkAndDrawChildNode(infoVar.BlockUnitInfos[i], 0x8 * i, "BlockUnitInfos["+i+"]");
@@ -928,6 +930,10 @@ class ItemModelTreeElement {
     }
 
     void Draw(CPlugMaterial@ mat) {
+        // editing the in-game material physics properties can affect vanilla blocks, so disable editing if an FID exists for this material
+        if (GetFidFromNod(mat) !is null) {
+            isEditable = false;
+        }
         if (StartTreeNode(name + " :: \\$f8fCPlugMaterial###" + Dev_GetPointerForNod(nod), UI::TreeNodeFlags::None)) {
             auto physId = EPlugSurfaceMaterialId(Dev::GetOffsetUint8(mat, O_MATERIAL_PHYSICS_ID));
             auto gameplayId = EPlugSurfaceGameplayId(Dev::GetOffsetUint8(mat, O_MATERIAL_GAMEPLAY_ID));
