@@ -12,8 +12,9 @@ void Main() {
         startnew(Editor::CacheMaterials);
     }
     RegisterOnEditorLoadCallback(Editor::CacheMaterials);
-}
 
+    ExtraUndoFix::OnLoad();
+}
 
 
 void OnDestroyed() { Unload(); }

@@ -7,7 +7,7 @@
 - ensure item saved before editing properties
 -
 
-
+- copy placement params from 1 item to another
 
 
 CPlugSurface 0xA0 (160) large
