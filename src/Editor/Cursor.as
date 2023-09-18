@@ -5,4 +5,16 @@ namespace Editor {
         auto plugTree = Dev::GetOffsetNod(cursor.CursorBox, 0x18);
         return cast<CPlugTree>(plugTree);
     }
+
+    // prefer GetCursorRot
+    vec3 GetCursorPitchRollYaw(CGameCursorBlock@ cursor) {
+        return vec3(cursor.Pitch,
+            float(cursor.AdditionalDir) / 5.0 * 75.0 / 180.0 * Math::PI,
+            cursor.Roll);
+    }
+
+    EditorRotation@ GetCursorRot(CGameCursorBlock@ cursor) {
+        return EditorRotation(cursor);
+    }
+
 }

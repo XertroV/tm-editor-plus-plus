@@ -153,20 +153,20 @@ class EditorRotation {
 
     EditorRotation(vec3 euler) {
         this.euler = euler;
-        CalcDirFromPry();
+        UpdateDirFromPry();
     }
 
     EditorRotation(float pitch, float yaw, float roll) {
         euler = vec3(pitch, yaw, roll);
-        CalcDirFromPry();
+        UpdateDirFromPry();
     }
 
     EditorRotation(CGameCursorBlock@ cursor) {
         SetFromCursorProps(cursor.Pitch, cursor.Roll, cursor.Dir, cursor.AdditionalDir);
     }
-    EditorRotation(CGameCursorBlock@ cursor) {
-        SetFromCursorProps(cursor.Pitch, cursor.Roll, cursor.Dir, cursor.AdditionalDir);
-    }
+    // EditorRotation(CGameCursorBlock@ cursor) {
+    //     SetFromCursorProps(cursor.Pitch, cursor.Roll, cursor.Dir, cursor.AdditionalDir);
+    // }
 
     EditorRotation(float pitch, float roll, CGameCursorBlock::ECardinalDirEnum dir, CGameCursorBlock::EAdditionalDirEnum additionalDir) {
         SetFromCursorProps(pitch, roll, dir, additionalDir);
@@ -176,7 +176,24 @@ class EditorRotation {
         this.dir = dir;
         this.additionalDir = additionalDir;
         euler = vec3(pitch, 0, roll);
-        CalcYawFromDir();
+        UpdateYawFromDir();
+        NormalizeAngles();
+    }
+
+    void NormalizeAngles() {
+        euler.x = NormalizeAngle(euler.x);
+        euler.y = NormalizeAngle(euler.y);
+        euler.z = NormalizeAngle(euler.z);
+    }
+
+    float NormalizeAngle(float angle) {
+        while (angle < - Math::PI) {
+            angle += TAU;
+        }
+        while (angle > Math::PI) {
+            angle -= TAU;
+        }
+        return angle;
     }
 
     void SetCursor(CGameCursorBlock@ cursor) {
@@ -186,7 +203,7 @@ class EditorRotation {
         cursor.AdditionalDir = AdditionalDir;
     }
 
-    protected void CalcYawFromDir() {
+    void UpdateYawFromDir() {
         if (dir == CGameCursorBlock::ECardinalDirEnum::East)
             euler.y = Math::PI * 3. / 2.;
         else if (dir == CGameCursorBlock::ECardinalDirEnum::South)
@@ -198,7 +215,8 @@ class EditorRotation {
         euler.y += float(int(additionalDir)) / 6. * Math::PI / 2.;
     }
 
-    protected void CalcDirFromPry() {
+    void UpdateDirFromPry() {
+        NormalizeAngles();
         auto yaw = ((euler.y + Math::PI * 2.) % (Math::PI * 2.));
         dir = yaw < Math::PI
             ? yaw < Math::PI/2.
@@ -217,11 +235,42 @@ class EditorRotation {
     float get_Pitch() {
         return euler.x;
     }
+    void set_Pitch(float value) {
+        euler.x = value;
+        UpdateDirFromPry();
+    }
     float get_Roll() {
         return euler.z;
     }
+    void set_Roll(float value) {
+        euler.z = value;
+        UpdateDirFromPry();
+    }
     float get_Yaw() {
         return euler.y;
+    }
+    void set_Yaw(float value) {
+        euler.y = value;
+        UpdateDirFromPry();
+    }
+
+    float get_PitchD() {
+        return Math::ToDeg(Pitch);
+    }
+    void set_PitchD(float value) {
+        this.Pitch = Math::ToRad(value);
+    }
+    float get_RollD() {
+        return Math::ToDeg(Roll);
+    }
+    void set_RollD(float value) {
+        this.Roll = Math::ToRad(value);
+    }
+    float get_YawD() {
+        return Math::ToDeg(Yaw);
+    }
+    void set_YawD(float value) {
+        this.Yaw = Math::ToRad(value);
     }
     CGameCursorBlock::ECardinalDirEnum get_Dir() {
         return dir;

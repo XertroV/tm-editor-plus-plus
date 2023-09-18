@@ -18,6 +18,9 @@ class CursorTab : Tab {
 [Setting hidden]
 bool S_CursorWindowOpen = false;
 
+[Setting hidden]
+bool S_CursorWindowRotControls = true;
+
 // activated from the tools menu, see UI_Main
 class CursorPosition : Tab {
     CursorPosition(TabGroup@ parent) {
@@ -29,6 +32,11 @@ class CursorPosition : Tab {
 
     void OnEditor() {
         this.windowOpen = S_CursorWindowOpen;
+    }
+
+    bool get_windowOpen() override property {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor !is null && Tab::get_windowOpen();
     }
 
     void set_windowOpen(bool value) override property {
@@ -54,6 +62,54 @@ class CursorPosition : Tab {
         DrawLabledCoord("Z", Text::Format("% 3d", cursor.Coord.z));
         UI::Text(tostring(cursor.Dir));
         UI::PopFont();
+        DrawCursorControls(cursor);
+    }
+
+    void DrawCursorControls(CGameCursorBlock@ cursor) {
+        if (!S_CursorWindowRotControls) return;
+        auto rot = Editor::GetCursorRot(cursor);
+        UI::AlignTextToFramePadding();
+        // UI::SetNextItemWidth(30.);
+        bool addPitch = UI::Button("P+", vec2(30., 0.)); UI::SameLine();
+        // UI::SetNextItemWidth(30.);
+        bool subPitch = UI::Button("P-", vec2(30., 0.));
+        UI::SameLine(); UI::Text(Text::Format("%.1f", rot.PitchD));
+        UI::AlignTextToFramePadding();
+        // UI::SetNextItemWidth(30.);
+        bool addYaw = UI::Button("Y+", vec2(30., 0.));
+        UI::SameLine();
+        // UI::SetNextItemWidth(30.);
+        bool subYaw = UI::Button("Y-", vec2(30., 0.));
+        UI::SameLine(); UI::Text(Text::Format("%.1f", rot.YawD));
+        UI::AlignTextToFramePadding();
+        // UI::SetNextItemWidth(30.);
+        bool addRoll = UI::Button("R+", vec2(30., 0.));
+        UI::SameLine();
+        // UI::SetNextItemWidth(30.);
+        bool subRoll = UI::Button("R-", vec2(30., 0.));
+        UI::SameLine(); UI::Text(Text::Format("%.1f", rot.RollD));
+        bool reset = UI::Button("Reset");
+
+        if (reset) {
+            ResetCursor(cursor);
+            return;
+        }
+
+        if (!(addPitch || subPitch || addYaw || subYaw || addRoll || subRoll)) {
+            return;
+        }
+
+        vec3 mod = vec3();
+        mod += addPitch ? vec3(Math::ToRad(15), 0, 0) : vec3();
+        mod += subPitch ? vec3(Math::ToRad(-15), 0, 0) : vec3();
+        mod += addYaw ? vec3(0, Math::ToRad(15), 0) : vec3();
+        mod += subYaw ? vec3(0, Math::ToRad(-15), 0) : vec3();
+        mod += addRoll ? vec3(0, 0, Math::ToRad(15)) : vec3();
+        mod += subRoll ? vec3(0, 0, Math::ToRad(-15)) : vec3();
+
+        rot.euler += mod;
+        rot.UpdateDirFromPry();
+        rot.SetCursor(cursor);
     }
 
     void DrawLabledCoord(const string &in axis, const string &in value) {
@@ -64,6 +120,7 @@ class CursorPosition : Tab {
     }
 }
 
+CursorPosition@ g_CursorPositionWindow;
 
 class CursorFavTab : Tab {
     CursorTab@ cursorTab;
@@ -126,10 +183,21 @@ class CursorPropsTab : Tab {
         UI::SetCursorPos(UI::GetCursorPos() + vec2(10, 0));
 
         if (UI::Button("Reset##cursor")) {
-            cursor.Pitch = 0;
-            cursor.Roll = 0;
-            cursor.AdditionalDir = CGameCursorBlock::EAdditionalDirEnum::P0deg;
-            cursor.Dir = CGameCursorBlock::ECardinalDirEnum::North;
+            ResetCursor(cursor);
         }
+
+        UI::Separator();
+        if (g_CursorPositionWindow !is null) {
+            g_CursorPositionWindow.windowOpen = UI::Checkbox("Show Cursor Info Window", g_CursorPositionWindow.windowOpen);
+        }
+        S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls", S_CursorWindowRotControls);
+
     }
+}
+
+void ResetCursor(CGameCursorBlock@ cursor) {
+    cursor.Pitch = 0;
+    cursor.Roll = 0;
+    cursor.AdditionalDir = CGameCursorBlock::EAdditionalDirEnum::P0deg;
+    cursor.Dir = CGameCursorBlock::ECardinalDirEnum::North;
 }

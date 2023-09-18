@@ -210,9 +210,10 @@ namespace MenuBar {
 
 TabGroup@ CreateToolsTabGroup() {
     auto tools = RootTabGroupCls();
+
     QuaternionCalcTab(tools);
     MaterialsListTab(tools);
-    CursorPosition(tools);
+    @g_CursorPositionWindow = CursorPosition(tools);
     return tools;
 }
 
