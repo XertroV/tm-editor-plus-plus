@@ -133,16 +133,16 @@ namespace Editor {
         CGameCtnBlock@[] blocks;
         auto origBlockId = desc._BlockId;
         // auto nextBlockId = origBlockId + 1;
-        auto nextBlockId = -1;
+        int nextBlockId = -1;
 
         auto map = editor.Challenge;
         if (map is null || map.BakedBlocks.Length == 0) return null;
-        for (int i = 0; i < map.BakedBlocks.Length; i++) {
+        for (uint i = 0; i < map.BakedBlocks.Length; i++) {
             auto _bid = Editor::GetBlockUniqueID(map.BakedBlocks[i]);
             if (nextBlockId < 0 && desc.MatchesBB(map.BakedBlocks[i])) {
                 nextBlockId = _bid;
             }
-            if (_bid == nextBlockId) {
+            if (int(_bid) == nextBlockId) {
                 blocks.InsertLast(map.BakedBlocks[i]);
                 nextBlockId++;
             } else if (nextBlockId >= 0) {

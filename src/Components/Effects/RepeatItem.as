@@ -331,7 +331,7 @@ class RepeatMethod : Tab {
     mat4[] matricies;
 
     void RunItemCreation(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem) {
-            for (int i = 0; i < matricies.Length; i++) {
+            for (uint i = 0; i < matricies.Length; i++) {
                 auto rotV = PitchYawRollFromRotationMatrix(matricies[i]);
                 auto newItem = Editor::DuplicateAndAddItem(editor, origItem, false);
                 newItem.AbsolutePositionInMap = (matricies[i] * vec3()).xyz;
@@ -537,9 +537,9 @@ class GridRepeat : RepeatMethod {
         vec3 size = vec3(grid_SizeX, grid_SizeY, grid_SizeZ);
         vec3 maxPosIxs = MathX::Max(vec3(grid_ItemsX, grid_ItemsY, grid_ItemsZ) - vec3(1), vec3(1));
 
-        for (uint x = 0; x < (grid_RepeatX ? grid_ItemsX : 1); x++) {
-            for (uint y = 0; y < (grid_RepeatY ? grid_ItemsY : 1); y++) {
-                for (uint z = 0; z < (grid_RepeatZ ? grid_ItemsZ : 1); z++) {
+        for (int x = 0; x < (grid_RepeatX ? grid_ItemsX : 1); x++) {
+            for (int y = 0; y < (grid_RepeatY ? grid_ItemsY : 1); y++) {
+                for (int z = 0; z < (grid_RepeatZ ? grid_ItemsZ : 1); z++) {
                     auto pos = size * vec3(x, y, z) / maxPosIxs;
                     auto itemMatrix = base * gridRotM * mat4::Translate(pos) * gridRotMInv;
                     if (!grid_UseItemAlignment) itemMatrix = itemMatrix * itemOffsetRot;

@@ -23,6 +23,7 @@ void Main() {
     // startnew(RunItemTest); // .WithRunContext(Meta::RunContext::AfterScripts);
 }
 
+#if DEV
 
 void RunItemTest() {
     print('loading user32.dll');
@@ -295,6 +296,7 @@ void Unload() {
     // PatchEditorInput::Unload();
 }
 
+#endif
 
 uint lastInItemEditor = 0;
 bool everEnteredEditor = false;

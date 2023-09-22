@@ -267,7 +267,7 @@ class GenericApplyTab : EffectTab {
             f_itemNames.RemoveRange(0, f_itemNames.Length);
             return;
         }
-        bool isItem = i >= f_blockNames.Length;
+        bool isItem = i >= int(f_blockNames.Length);
         if (isItem) {
             i -= f_blockNames.Length;
         }
@@ -371,16 +371,16 @@ class GenericApplyTab : EffectTab {
 
     bool DrawNameFilterResults(vec2 pos) {
         // UI::SetNextWindowSize(400, -1, UI::Cond::Always);
-        UI::SetNextWindowPos(pos.x, pos.y, UI::Cond::Always);
+        UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
         UI::PushStyleColor(UI::Col::PopupBg, vec4(0, 0, 0, .99));
         UI::PushStyleColor(UI::Col::Border, vec4(.9));
         UI::PushStyleVar(UI::StyleVar::FrameBorderSize, 1.0);
         UI::BeginTooltip();
-        auto total = f_blockNames.Length + f_itemNames.Length;
+        int total = f_blockNames.Length + f_itemNames.Length;
         auto nbToShow = Math::Min(10, total);
-        auto startIx = Math::Max(0, f_suggestPos - nbToShow / 2);
-        auto endIx = Math::Min(total, startIx + nbToShow);
-        if (endIx == total) startIx = Math::Max(0, total - nbToShow);
+        auto startIx = Math::Max(0, f_suggestPos - int(nbToShow / 2));
+        uint endIx = Math::Min(total, startIx + nbToShow);
+        if (int(endIx) == total) startIx = Math::Max(0, total - nbToShow);
         UI::TextDisabled("KB only / Enter to select / Arrows to move");
         UI::TextDisabled("Results: " + total + " / <Tab> to add many / Wildcard: *");
         if (f_suggestPos >= total) {
@@ -391,7 +391,7 @@ class GenericApplyTab : EffectTab {
         for (uint i = startIx; i < endIx; i++) {
             bool isItem = i >= f_blockNames.Length;
             int _i = isItem ? i - f_blockNames.Length : i;
-            if (DrawNameFilterResult(i + 1, _i, isItem, f_suggestPos == i)) {
+            if (DrawNameFilterResult(i + 1, _i, isItem, f_suggestPos == int(i))) {
                 f_suggestPos = i;
                 clicked = true;
             }

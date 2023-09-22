@@ -967,8 +967,7 @@ class ItemModelTreeElement {
                     if (mat._LinkFull.Length > 0) {
                         name = mat._LinkFull;
                     }
-                    auto title = "" + i + ". " + name + suffix;
-                    MkAndDrawChildNode(mat, elSize * i, title);
+                    MkAndDrawChildNode(mat, elSize * i, "" + i + ". " + name + suffix);
                 }
             }
             EndTreeNode();
@@ -1353,7 +1352,7 @@ void DrawSPlacementGroup(uint64 ptr, bool isEditable = false) {
     LabeledValue("Placements.Length", len);
     LabeledValue("Placements Type", Text::Format("0x%02x", GetPlacementGroupType(ptr)));
     uint elSize = SZ_SPLACEMENTOPTION;
-    for (uint i = 0; i < Math::Min(5, len); i++) {
+    for (int i = 0; i < Math::Min(5, len); i++) {
         uint layout = Dev::GetOffsetUint32(buf, elSize * i + 0x0);
         // MwSArray<NPlugItemPlacement_SPlacementOption>
         auto placementOpts = Dev::GetOffsetNod(buf, elSize * i + 0x8);

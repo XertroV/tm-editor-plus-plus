@@ -94,7 +94,7 @@ shared class TabGroup {
         UI::PopStyleColor();
         UI::SameLine();
         if (UI::BeginChild("inner|" + fullName, vec2(-1, -1), false)) {
-            if (selectedTabIx >= 0 && selectedTabIx < tabs.Length) {
+            if (selectedTabIx >= 0 && selectedTabIx < int(tabs.Length)) {
                 tabs[selectedTabIx].DrawTab(false);
             } else {
                 UI::Text("No tab selected");

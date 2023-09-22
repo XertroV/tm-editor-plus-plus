@@ -20,7 +20,7 @@ class ViewClassicBlocksTab : ViewAllBlocksTab {
         nbCols = 9;
     }
 
-    int GetNbObjects(CGameCtnChallenge@ map) override {
+    uint GetNbObjects(CGameCtnChallenge@ map) override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return editor.PluginMapType.ClassicBlocks.Length;
     }
@@ -37,7 +37,7 @@ class ViewGhostBlocksTab : ViewAllBlocksTab {
         nbCols = 9;
     }
 
-    int GetNbObjects(CGameCtnChallenge@ map) override {
+    uint GetNbObjects(CGameCtnChallenge@ map) override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return editor.PluginMapType.GhostBlocks.Length;
     }

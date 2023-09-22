@@ -130,7 +130,7 @@ namespace CreateObj {
         for (uint i = 0; i < models.Length; i++) {
             // first two objs are static
             bool isMoving = i > 1;
-            for (uint j = 0; j < (isMoving ? 2 : 1); j++) {
+            for (int j = 0; j < (isMoving ? 2 : 1); j++) {
                 auto innerPrefab = cast<CPlugPrefab>(models[i].EntityModel);
                 auto commonIEM = cast<CGameCommonItemEntityModel>(models[i].EntityModel);
                 auto sourceModel = isMoving ? innerPrefab.Ents[j].Model : commonIEM.StaticObject;
@@ -154,7 +154,7 @@ namespace CreateObj {
         SetRocketLocation(outerPrefab, 2);
         SetRocketAnim(outerPrefab, 3);
         uint kinEntIx = 1;
-        float nextD;
+        float nextD = Math::Rand(fireworkHeight * 0.2, fireworkHeight * 0.7);
         for (uint i = 0; i < outerPrefab.Ents.Length; i++) {
             MbSetCastNoShadows(outerPrefab, i);
             if (i < 4) continue;

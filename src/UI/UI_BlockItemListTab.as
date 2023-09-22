@@ -32,7 +32,7 @@ class BlockItemListTab : Tab {
         recheckSkip = true;
     }
 
-    int GetNbObjects(CGameCtnChallenge@ map) {
+    uint GetNbObjects(CGameCtnChallenge@ map) {
         switch (ty) {
             case BIListTabType::Blocks: return map.Blocks.Length;
             case BIListTabType::BakedBlocks: return map.BakedBlocks.Length;
@@ -93,7 +93,7 @@ class BlockItemListTab : Tab {
             nbBlocksToSkip = 0;
         }
 
-        uint nbBlocksToDraw = nbBlocks - nbBlocksToSkip;
+        int nbBlocksToDraw = nbBlocks - nbBlocksToSkip;
 
         DrawColumnHeadersOnlyTable();
 
@@ -112,7 +112,7 @@ class BlockItemListTab : Tab {
             while (clip.Step()) {
                 if (clip.DisplayStart == 1) sawFirst = true;
                 if (clip.DisplayEnd == nbBlocksToDraw) sawLast = true;
-                for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
+                for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                     UI::PushID(i);
                     DrawObjectInfo(map, nbBlocksToSkip + i);
                     UI::PopID();

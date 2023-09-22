@@ -187,7 +187,7 @@ namespace MeshDuplication {
             nod.MwAddRef();
         // size: NPlugPrefab_SEntRef: 0x50
         auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
-        ManipPtrs::Replace(ents, SZ_ENT_REF * entityIx + GetOffset("NPlugPrefab_SEntRef", "Model"), nod);
+        ManipPtrs::Replace(ents, SZ_ENT_REF * entityIx + GetOffset("NPlugPrefab_SEntRef", "Model"), nod, true);
         // Dev::SetOffset(ents, SZ_ENT_REF * entityIx + GetOffset("NPlugPrefab_SEntRef", "Model"), nod);
 
     }
@@ -724,6 +724,7 @@ namespace MeshDuplication {
         if (skin !is null) {
             trace('setting skin');
             skin.MwAddRef();
+            ManipPtrs::Replace(dest, 0xa0, skin, true);
             Dev::SetOffset(dest, 0xa0, skinPtr);
             dest.SkinDirNameCustom = dest.SkinDirectory;
             // try zeroing fids buffer: nope doesn't help
@@ -769,13 +770,13 @@ namespace MeshDuplication {
         auto matBufFakeNod = Dev::GetOffsetNod(mesh, 0xC8);
         auto nbMats = Dev::GetOffsetUint32(mesh, 0xC8 + 0x8);
         auto alloc = Dev::GetOffsetUint32(mesh, 0xC8 + 0xC);
-        for (uint i = 0; i < Math::Min(nbMats, alloc); i++) {
+        for (int i = 0; i < Math::Min(nbMats, alloc); i++) {
             auto mat = cast<CPlugMaterial>(Dev::GetOffsetNod(matBufFakeNod, i * 0x8));
             auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(mat, 0x8));
             auto newMat = MatMod_FidToReplacement(fid);
             if (newMat !is null) {
                 trace('applying setting new mat ['+i+']: ' + string(newMat.FileName));
-                ManipPtrs::Replace(matBufFakeNod, i * 0x8, newMat.Nod);
+                ManipPtrs::Replace(matBufFakeNod, i * 0x8, newMat.Nod, true);
                 // Dev::SetOffset(matBufFakeNod, i * 0x8, newMat.Nod);
                 newMat.Nod.MwAddRef();
             }

@@ -13,13 +13,13 @@ shared vec2 Nat2ToVec2(nat2 coord) {
     return vec2(coord.x, coord.y);
 }
 shared nat2 Vec2ToNat2(vec2 v) {
-    return nat2(v.x, v.y);
+    return nat2(uint(v.x), uint(v.y));
 }
 shared vec3 Nat3ToVec3(nat3 coord) {
     return vec3(coord.x, coord.y, coord.z);
 }
 shared nat3 Vec3ToNat3(vec3 v) {
-    return nat3(v.x, v.y, v.z);
+    return nat3(uint(v.x), uint(v.y), uint(v.z));
 }
 shared int3 Nat3ToInt3(nat3 coord) {
     return int3(coord.x, coord.y, coord.z);

@@ -18,7 +18,7 @@ class MaterialsListTab : Tab {
         UI::Indent();
         UI::ListClipper clip(g_MaterialCache.files.Length);
         while (clip.Step()) {
-            for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
+            for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                 auto item = g_MaterialCache.files[i];
                 auto folder = string(item.ParentFolder.FullDirName).Split("GameData\\")[1];
                 CopiableValue(folder + item.ShortFileName);

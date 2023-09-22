@@ -5,9 +5,10 @@ class EditorMiscTab : Tab {
     }
 
     void OnEditorLoad() {
+        // note: this function must stay cheap due to call in DrawInner
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor.ExperimentalFeatures.AutoSavePeriod != S_AutosavePeriod) {
-            editor.ExperimentalFeatures.AutoSavePeriod = S_AutosavePeriod;
+        if (int(editor.ExperimentalFeatures.AutoSavePeriod) != S_AutosavePeriod && S_AutosavePeriod > 0) {
+            editor.ExperimentalFeatures.AutoSavePeriod = uint(S_AutosavePeriod);
         }
     }
 
@@ -53,8 +54,7 @@ class EditorMiscTab : Tab {
             S_AutosavePeriod = editor.ExperimentalFeatures.AutoSavePeriod;
         }
         S_AutosavePeriod = Math::Clamp(UI::InputInt("AutoSavePeriod", S_AutosavePeriod), 10, 3600 * 8);
-        if (editor.ExperimentalFeatures.AutoSavePeriod != S_AutosavePeriod) {
-            editor.ExperimentalFeatures.AutoSavePeriod = S_AutosavePeriod;
-        }
+        // cheap way to update setting when UI is drawn
+        OnEditorLoad();
     }
 }

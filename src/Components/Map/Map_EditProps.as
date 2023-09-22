@@ -217,11 +217,11 @@ class MapEditPropsTab : Tab {
     void SaveAndRevertSize() {
         return;
 #if SIG_DEVELOPER
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        Editor::_SetMapSize(editor.Challenge, newSize);
-        Editor::SaveMapSameName(editor);
-        Editor::_SetMapSize(editor.Challenge, oldSize);
-        Editor::NoSaveAndReloadMap();
+        // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        // Editor::_SetMapSize(editor.Challenge, newSize);
+        // Editor::SaveMapSameName(editor);
+        // Editor::_SetMapSize(editor.Challenge, oldSize);
+        // Editor::NoSaveAndReloadMap();
 #endif
     }
 }
