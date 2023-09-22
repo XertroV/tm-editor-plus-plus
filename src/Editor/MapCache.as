@@ -151,7 +151,7 @@ namespace Editor {
     class MapCache {
         MapCache() {
             RefreshCacheSoon();
-            RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon));
+            RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon), "MapCache");
         }
 
         // todo: BlockInMapI, ItemInMapI, dict for IdName => array<ObjInMapI>

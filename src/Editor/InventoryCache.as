@@ -3,7 +3,7 @@ namespace Editor {
         InventoryCache() {
             RefreshCacheSoon();
             itemsFolderPrefix = Fids::GetUserFolder("Items").FullDirName;
-            RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon));
+            RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon), "InventoryCache");
         }
 
         void RefreshCache() {

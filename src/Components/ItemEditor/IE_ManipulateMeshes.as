@@ -1,7 +1,7 @@
 class IE_ManipulateMeshesTab : Tab {
     IE_ManipulateMeshesTab(TabGroup@ p) {
         super(p, "Manipulate Meshes", Icons::Random + Icons::Dribbble);
-        RegisterOnEditorLoadCallback(CoroutineFunc(this.ClearStateOnEnterEditor));
+        RegisterOnEditorLoadCallback(CoroutineFunc(this.ClearStateOnEnterEditor), this.tabName);
     }
 
     CGameItemModel@ GetItemModel() {

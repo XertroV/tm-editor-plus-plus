@@ -1,7 +1,7 @@
 class ItemLayoutTab : Tab {
     ItemLayoutTab(TabGroup@ parent) {
         super(parent, "Layout", "");
-        RegisterItemChangedCallback(ProcessNewSelectedItem(this.OnNewItemSelected));
+        RegisterItemChangedCallback(ProcessNewSelectedItem(this.OnNewItemSelected), this.tabName);
     }
 
     ItemLayoutTab(TabGroup@ p, const string &in name, const string &in icon) {

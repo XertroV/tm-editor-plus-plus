@@ -1,7 +1,7 @@
 class PhaseOffsetApplyTab : GenericApplyTab {
     PhaseOffsetApplyTab(TabGroup@ p) {
         super(p, "Apply Phase Offset", Icons::Magic + Icons::ClockO);
-        RegisterNewItemCallback(ProcessItem(ApplyEffect));
+        RegisterNewItemCallback(ProcessItem(ApplyEffect), this.tabName);
     }
 
     bool ApplyEffect(CGameCtnAnchoredObject@ item) {

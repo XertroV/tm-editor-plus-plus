@@ -1,7 +1,7 @@
 class EditorMiscTab : Tab {
     EditorMiscTab(TabGroup@ parent) {
         super(parent, "Editor Misc", Icons::Cog + Icons::Camera);
-        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad));
+        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad), this.tabName);
     }
 
     void OnEditorLoad() {

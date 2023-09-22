@@ -277,4 +277,11 @@ const uint32 SZ_GMQUATTRANS = 0x1C;
 
 const uint16 O_BLOCKVAR_WATER_BUF = 0x1B0;
 
+
+const uint16 O_PREFAB_ENTS = GetOffset("CPlugPrefab", "Ents");
 const uint32 SZ_ENT_REF = 0x50;
+const uint16 O_ENTREF_MODELFID = GetOffset("NPlugPrefab_SEntRef", "ModelFid");
+
+const uint16 O_VARLIST_VARIANTS = GetOffset("NPlugItem_SVariantList", "Variants");
+const uint32 SZ_VARLIST_VARIANT = 0x28;
+const uint16 O_SVARIANT_MODELFID = GetOffset("NPlugItem_SVariant", "EntityModelFidForReload");

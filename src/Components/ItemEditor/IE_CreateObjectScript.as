@@ -62,15 +62,18 @@ class IE_CreateObjectMacroTab : Tab {
     }
 }
 
-// copy prefab from template
+// manual prep: use a prefab item as template
+// have X unique star items already created so they
+//     all have different model references
+//     (for kinematic constraints)
 // expand ent list to capacity
 // fill each entity
 // - set location and quat
 // - pipe, rocket, box, and X stars
-// - set meshes to be same source
+// - set star dynamic objects to point to same source
 // - set kinematic thing to ent ID
-// - for stars:
-//   - set transanim and rot
+// - turn off shadows
+// - set animation
 
 namespace CreateObj {
     string[] sources = {

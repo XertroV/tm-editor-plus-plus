@@ -19,7 +19,7 @@ class BlockItemListTab : Tab {
         if (ty == BIListTabType::Items) {
             IsAnyBlocksTab = false;
         }
-        RegisterOnEditorLoadCallback(CoroutineFunc(OnEditorLoad));
+        RegisterOnEditorLoadCallback(CoroutineFunc(OnEditorLoad), this.tabName);
     }
 
 

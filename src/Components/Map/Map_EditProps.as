@@ -2,7 +2,7 @@ class MapEditPropsTab : Tab {
     MapEditPropsTab(TabGroup@ parent) {
         super(parent, "Map Properties", Icons::MapO);
         removable = false;
-        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEnterEditor));
+        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEnterEditor), this.tabName);
     }
 
     void OnEnterEditor() {

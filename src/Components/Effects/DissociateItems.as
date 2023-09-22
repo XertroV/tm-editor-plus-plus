@@ -4,7 +4,7 @@ bool S_SetBlockLocationOnDissociation = true;
 class DissociateItemsTab : EffectTab {
     DissociateItemsTab(TabGroup@ p) {
         super(p, "Dissociate Items", Icons::Magic + Icons::ChainBroken);
-        RegisterNewItemCallback(ProcessItem(this.OnNewItem));
+        RegisterNewItemCallback(ProcessItem(this.OnNewItem), this.tabName);
     }
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {

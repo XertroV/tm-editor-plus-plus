@@ -15,8 +15,8 @@ class RandomizerEffectsTab : MultiEffectTab {
 class RandomizerTab : EffectTab {
     RandomizerTab(TabGroup@ p) {
         super(p, "Randomize Props", "\\$bff"+Icons::Random+"\\$z");
-        RegisterNewBlockCallback(ProcessBlock(OnNewBlock));
-        RegisterNewItemCallback(ProcessItem(OnNewItem));
+        RegisterNewBlockCallback(ProcessBlock(OnNewBlock), this.tabName);
+        RegisterNewItemCallback(ProcessItem(OnNewItem), this.tabName);
     }
 
     bool applyToItems = true;
@@ -123,7 +123,7 @@ class RandomizerTab : EffectTab {
 class SelectRandomBlockTab : EffectTab {
     SelectRandomBlockTab(TabGroup@ p) {
         super(p, "Randomize Next Block", "");
-        RegisterNewBlockCallback(ProcessBlock(OnNewBlock));
+        RegisterNewBlockCallback(ProcessBlock(OnNewBlock), this.tabName);
     }
 
     bool OnNewBlock(CGameCtnBlock@ block) {
@@ -154,7 +154,7 @@ class SelectRandomBlockTab : EffectTab {
 class SelectRandomItemTab : EffectTab {
     SelectRandomItemTab(TabGroup@ p) {
         super(p, "Randomize Next Item", "");
-        RegisterNewItemCallback(ProcessItem(OnNewItem));
+        RegisterNewItemCallback(ProcessItem(OnNewItem), this.tabName);
     }
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {

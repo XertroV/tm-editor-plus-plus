@@ -3,41 +3,51 @@ funcdef bool ProcessBlock(CGameCtnBlock@ block);
 funcdef bool ProcessNewSelectedItem(CGameItemModel@ itemModel);
 
 CoroutineFunc@[] onEditorLoadCbs;
+string[] onEditorLoadCbNames;
 CoroutineFunc@[] onEditorUnloadCbs;
+string[] onEditorUnloadCbNames;
 ProcessItem@[] itemCallbacks;
+string[] itemCallbackNames;
 ProcessBlock@[] blockCallbacks;
+string[] blockCallbackNames;
 ProcessNewSelectedItem@[] selectedItemChangedCbs;
+string[] selectedItemChangedCbNames;
 // CoroutineFunc@[] selectedBlockChangedCbs;
 
 // set this shortly after loading the plugin
 bool CallbacksEnabledPostInit = false;
 
-void RegisterOnEditorLoadCallback(CoroutineFunc@ f) {
+void RegisterOnEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
         onEditorLoadCbs.InsertLast(f);
+        onEditorLoadCbNames.InsertLast(name);
     }
 }
-void RegisterOnEditorUnloadCallback(CoroutineFunc@ f) {
+void RegisterOnEditorUnloadCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
         onEditorUnloadCbs.InsertLast(f);
+        onEditorUnloadCbNames.InsertLast(name);
     }
 }
 
-void RegisterNewItemCallback(ProcessItem@ f) {
+void RegisterNewItemCallback(ProcessItem@ f, const string &in name) {
     if (f !is null) {
         itemCallbacks.InsertLast(f);
+        itemCallbackNames.InsertLast(name);
     }
 }
 
-void RegisterNewBlockCallback(ProcessBlock@ f) {
+void RegisterNewBlockCallback(ProcessBlock@ f, const string &in name) {
     if (f !is null) {
         blockCallbacks.InsertLast(f);
+        blockCallbackNames.InsertLast(name);
     }
 }
 
-void RegisterItemChangedCallback(ProcessNewSelectedItem@ f) {
+void RegisterItemChangedCallback(ProcessNewSelectedItem@ f, const string &in name) {
     if (f !is null) {
         selectedItemChangedCbs.InsertLast(f);
+        selectedItemChangedCbNames.InsertLast(name);
     }
 }
 
@@ -63,15 +73,21 @@ namespace Event {
     }
     bool OnNewBlock(CGameCtnBlock@ block) {
         bool updated = false;
+        bool lastUpdated = false;
         for (uint i = 0; i < blockCallbacks.Length; i++) {
             updated = blockCallbacks[i](block) || updated;
+            if (updated && !lastUpdated) trace("NewBlock Callback triggered update: " + blockCallbackNames[i]);
+            lastUpdated = updated;
         }
         return updated;
     }
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
         bool updated = false;
+        bool lastUpdated = false;
         for (uint i = 0; i < itemCallbacks.Length; i++) {
             updated = itemCallbacks[i](item) || updated;
+            if (updated && !lastUpdated) trace("NewItem Callback triggered update: " + itemCallbackNames[i]);
+            lastUpdated = updated;
         }
         return updated;
     }
@@ -120,10 +136,12 @@ bool CheckForNewItems(CGameCtnEditorFree@ editor) {
         trace('Detected new items: ' + newItems);
         if (newItems > 0) {
             bool updated = false;
+            bool lastUpdated = false;
             auto startIx = int(editor.Challenge.AnchoredObjects.Length) - newItems;
             for (uint i = startIx; i < editor.Challenge.AnchoredObjects.Length; i++) {
                 updated = Event::OnNewItem(editor.Challenge.AnchoredObjects[i]) || updated;
-                if (updated) trace("Updating after " + i + " callbacks.");
+                // if (updated && !lastUpdated) trace("Updating after " + i + " callbacks.");
+                lastUpdated = updated;
             }
             return updated;
         }

@@ -21,8 +21,20 @@ class IE_DevTab : Tab {
         }
 
         if (UI::Button("Open Item")) {
-            Dev::SetOffset(ieditor, 0x8F0, 2);
+            Editor::DoItemEditorAction(ieditor, Editor::ItemEditorAction::OpenItem);
+            // Dev::SetOffset(ieditor, 0x8F0, 2);
         }
+
+        UI::Separator();
+
+        UI::Text("Zeroed Fids: " + ManipFids::recentlyZeroed.Length);
+        if (UI::Button("Unzero Fids")) {
+            ManipFids::RunUnzero();
+        }
+
+
+        UI::Separator();
+
         if (UI::Button("Test - go to root of saveas dialog")) {
             startnew(ItemEditor::SaveAsGoToRoot);
         }

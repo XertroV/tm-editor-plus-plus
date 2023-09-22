@@ -9,10 +9,10 @@ class FindReplaceTab : GenericApplyTab {
 
     FindReplaceTab(TabGroup@ p) {
         super(p, "Find/Replace", Icons::Magic + Icons::Search + Icons::LevelDown);
-        RegisterNewItemCallback(ProcessItem(this.OnNewItem));
-        RegisterNewBlockCallback(ProcessBlock(this.OnNewBlock));
-        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad));
-        RegisterOnEditorUnloadCallback(CoroutineFunc(this.OnEditorLoad));
+        RegisterNewItemCallback(ProcessItem(this.OnNewItem), this.tabName);
+        RegisterNewBlockCallback(ProcessBlock(this.OnNewBlock), this.tabName);
+        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad), this.tabName);
+        RegisterOnEditorUnloadCallback(CoroutineFunc(this.OnEditorLoad), this.tabName);
     }
 
     // override this to clear picked block/item b/c we can get a crash if we picked one we're going to modify

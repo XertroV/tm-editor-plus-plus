@@ -89,23 +89,22 @@ namespace MeshDuplication {
 
             trace('variant['+i+'] children fids zeroed');
             // todo: zero if need be
+            auto vsPtr = Dev::GetOffsetUint64(varList, O_VARLIST_VARIANTS);
             if (varList.Variants[i].EntityModelFidForReload !is null) {
                 trace('Zeroing fid: variant ' + i + '.EntityModelFidForReload');
                 // NotifyWarning("varList.Variants["+i+"].EntityModelFidForReload !is null");
-                auto variants = Dev::GetOffsetNod(varList, GetOffset("NPlugItem_SVariantList", "Variants"));
-                // auto variantStruct = Dev::GetOffsetNod(variants, 0x28 * i);
-                Dev::SetOffset(variants, 0x28 * i + GetOffset("NPlugItem_SVariant", "EntityModelFidForReload"), uint64(0));
-                // NPlugItem_SVariant@ x;
-                // Dev::SetOffset(varList.Variants[i], GetOffset("NPlugItem_SVariant", "EntityModelFidForReload"), uint64(0));
+                // auto variants = Dev::GetOffsetNod(varList, O_VARLIST_VARIANTS);
+                // Dev::SetOffset(variants, 0x28 * i + O_SVARIANT_MODELFID, uint64(0));
+                ManipFids::Zero(vsPtr + SZ_VARLIST_VARIANT * i + O_SVARIANT_MODELFID);
             }
         }
     }
 
     void SetVariantModel(NPlugItem_SVariantList@ varList, int ix, CMwNod@ nod) {
         // length of a _SVariant: 0x28
-        auto variants = Dev::GetOffsetNod(varList, GetOffset("NPlugItem_SVariantList", "Variants"));
+        auto variants = Dev::GetOffsetNod(varList, O_VARLIST_VARIANTS);
         nod.MwAddRef();
-        // Dev::SetOffset(variants, 0x28 * ix + GetOffset("NPlugItem_SVariant", "EntityModelFidForReload"), nod);
+        // Dev::SetOffset(variants, 0x28 * ix + O_SVARIANT_MODELFID, nod);
         Dev::SetOffset(variants, 0x28 * ix + GetOffset("NPlugItem_SVariant", "EntityModel"), nod);
     }
 
@@ -132,9 +131,9 @@ namespace MeshDuplication {
             // ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + 0x38));
 
             // Zeroing the pointers gives red trees but it works...
-            Dev::SetOffset(tree, o + i * elSize + 0x28, uint64(0));
-            Dev::SetOffset(tree, o + i * elSize + 0x30, uint64(0));
-            Dev::SetOffset(tree, o + i * elSize + 0x38, uint64(0));
+            ManipFids::Zero(Dev_GetPointerForNod(tree) + o + i * elSize + 0x28);
+            ManipFids::Zero(Dev_GetPointerForNod(tree) + o + i * elSize + 0x30);
+            ManipFids::Zero(Dev_GetPointerForNod(tree) + o + i * elSize + 0x38);
 
             // 0x40, 48
             ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + GetOffset("NPlugVeget_SMaterial", "Veget_Variation")));
@@ -155,12 +154,14 @@ namespace MeshDuplication {
         for (uint i = 0; i < prefab.Ents.Length; i++) {
             if (prefab.Ents[i].ModelFid !is null) {
                 trace("Zeroing fid: prefab.Ents["+i+"].ModelFid");
-                auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
+                auto ents = Dev::GetOffsetNod(prefab, O_PREFAB_ENTS);
+                auto entsPtr = Dev::GetOffsetUint64(prefab, O_PREFAB_ENTS);
                 // size: NPlugPrefab_SEntRef: 0x50
                 // probs null b/c there are no bytes at the start
                 // auto ent = Dev::GetOffsetNod(ents, 0x50 * i);
                 if (ents !is null)
-                    Dev::SetOffset(ents, SZ_ENT_REF * i + GetOffset("NPlugPrefab_SEntRef", "ModelFid"), uint64(0));
+                    ManipFids::Zero(entsPtr + SZ_ENT_REF * i + O_ENTREF_MODELFID);
+                    // Dev::SetOffset(ents, SZ_ENT_REF * i + O_ENTREF_MODELFID, uint64(0));
                 else {
                     NotifyWarning("ents was null!");
                 }
@@ -221,11 +222,13 @@ namespace MeshDuplication {
         // todo: MeshFidForReload / ShapeFidForReload if need be
         if (so.MeshFidForReload !is null) {
             // NotifyWarning("so.MeshFidForReload not null!");
-            Dev::SetOffset(so, GetOffset("CPlugStaticObjectModel", "MeshFidForReload"), uint64(0));
+            // Dev::SetOffset(so, GetOffset("CPlugStaticObjectModel", "MeshFidForReload"), uint64(0));
+            ManipFids::Zero(Dev_GetPointerForNod(so) + GetOffset("CPlugStaticObjectModel", "MeshFidForReload"));
         }
         if (so.ShapeFidForReload !is null) {
             // NotifyWarning("so.ShapeFidForReload not null!");
-            Dev::SetOffset(so, GetOffset("CPlugStaticObjectModel", "ShapeFidForReload"), uint64(0));
+            // Dev::SetOffset(so, GetOffset("CPlugStaticObjectModel", "ShapeFidForReload"), uint64(0));
+            ManipFids::Zero(Dev_GetPointerForNod(so) + GetOffset("CPlugStaticObjectModel", "ShapeFidForReload"));
         }
         ZeroFids(so.Mesh);
         MeshDuplication::SyncUserMatsToShapeIfMissing(so.Mesh, so.Shape);
@@ -487,15 +490,7 @@ namespace MeshDuplication {
     }
 
     void ZeroNodFid(CMwNod@ nod) {
-        if (nod is null) return;
-        auto fidPtr = Dev::GetOffsetUint64(nod, 0x8);
-        if (fidPtr > 0) {
-            auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(nod, 0x8));
-            if (fid !is null) {
-                trace("Zeroing FID for: " + fid.FileName);
-            }
-            Dev::SetOffset(nod, 0x8, uint64(0));
-        }
+        ManipFids::Zero(nod);
     }
 
     void AlertIfFid(CMwNod@ nod) {
@@ -630,17 +625,18 @@ namespace MeshDuplication {
                     trace('clear fid');
                     // clear fid
                     ZeroNodFid(light);
-                    // Dev::SetOffset(light, 0x8, uint64(0));
                     // zero m_BitmapProjector
                     trace('clear bitmap projector');
-                    Dev::SetOffset(light, GetOffset("CPlugLight", "m_BitmapProjector"), uint64(0));
+                    // Dev::SetOffset(light, GetOffset("CPlugLight", "m_BitmapProjector"), uint64(0));
+                    ManipFids::Zero(Dev_GetPointerForNod(light) + GetOffset("CPlugLight", "m_BitmapProjector"));
                         // zero light.m_GxLightModel.PlugLight
                     auto lm = light.m_GxLightModel;
                     auto lmAmb = cast<GxLightAmbient>(light.m_GxLightModel);
                     auto lm2 = lmAmb;
                     if (lm !is null && lm.PlugLight !is null) {
                         trace('clear light.m_GxLightModel.PlugLight');
-                        Dev::SetOffset(lm, GetOffset("GxLight", "PlugLight"), uint64(0));
+                        // Dev::SetOffset(lm, GetOffset("GxLight", "PlugLight"), uint64(0));
+                        ManipFids::Zero(Dev_GetPointerForNod(lm) + GetOffset("GxLight", "PlugLight"));
                     }
                 }
                 // this seems to not be required, but works except for moving itmes (just ignored in that case)
@@ -659,8 +655,11 @@ namespace MeshDuplication {
 
             if (false) {
                 // zero the lights array
-                Dev::SetOffset(mesh, 0x168, uint64(0));
-                Dev::SetOffset(mesh, 0x168 + 8, uint64(0));
+                // Dev::SetOffset(mesh, 0x168, uint64(0));
+                // Dev::SetOffset(mesh, 0x168 + 8, uint64(0));
+                auto ptr = Dev_GetPointerForNod(mesh) + 0x168;
+                ManipFids::Zero(ptr);
+                ManipFids::Zero(ptr + 0x8);
             }
         }
     }

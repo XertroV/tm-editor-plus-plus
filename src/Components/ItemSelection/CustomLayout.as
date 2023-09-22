@@ -1,7 +1,7 @@
 class ItemCustomLayoutTab : Tab {
     ItemCustomLayoutTab(TabGroup@ parent) {
         super(parent, "Custom Layout", "");
-        RegisterItemChangedCallback(ProcessNewSelectedItem(this.OnItemChanged));
+        RegisterItemChangedCallback(ProcessNewSelectedItem(this.OnItemChanged), this.tabName);
     }
 
     ItemCustomLayoutTab(TabGroup@ parent, const string &in n, const string &in icon) {

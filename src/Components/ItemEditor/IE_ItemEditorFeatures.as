@@ -8,9 +8,12 @@ class IE_FeaturesTab : Tab {
     }
 
     void WatchForFeatures() {
-        while (cast<CGameEditorItem>(GetApp().Editor) is null) yield();
-        while (cast<CGameEditorItem>(GetApp().Editor) !is null) {
-            CheckUpdatesInItemEditor();
+        while (true) {
+            while (cast<CGameEditorItem>(GetApp().Editor) is null) yield();
+            while (cast<CGameEditorItem>(GetApp().Editor) !is null) {
+                CheckUpdatesInItemEditor();
+                yield();
+            }
             yield();
         }
     }

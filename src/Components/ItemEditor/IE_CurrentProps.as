@@ -75,10 +75,19 @@ class ItemEditCloneLayoutTab : Tab {
 
     ItemSearcher@ itemPicker = ItemSearcher();
 
+    bool replaceLayout = true;
+    bool replacePlacementParams = true;
+    bool replacePivotPositions = true;
+
     void DrawInner() override {
         UI::TextWrapped("Custom items can be used with layouts by replacing the custom item's layout with one from a Nadeo object (e.g., flags, or signs).");
         UI::TextWrapped("\\$f80Important!\\$z Once you save the item and return to the editor, you \\$<\\$f80*cannot re-enter the editor, and must restart the game*\\$>. Reloading from disk *might* work, but didn't seem to during testing. Without restarting the game, you will get a crash when loading back into the editor.");
         CGameItemModel@ currentItem = GetItemModel();
+
+        replaceLayout = UI::Checkbox("Clone Layout?", replaceLayout);
+        replacePlacementParams = UI::Checkbox("Copy Placement Params?", replacePlacementParams);
+        replacePivotPositions = UI::Checkbox("Copy Pivot Positions?", replacePivotPositions);
+
         if (currentItem is null) {
             UI::Text(noItemError);
         } else if (TmpItemPlacementRef is null) {
@@ -88,6 +97,8 @@ class ItemEditCloneLayoutTab : Tab {
             UI::Text("Choose a source item for the placement layout:");
             auto picked = itemPicker.DrawPrompt();
             if (picked !is null) {
+                if (picked.Article.LoadedNod is null) picked.GetCollectorNod();
+                SetCustomPlacementParams(currentItem, cast<CGameItemModel>(picked.Article.LoadedNod));
                 SetCustomPlacementParams(currentItem, cast<CGameItemModel>(picked.Article.LoadedNod));
             }
 

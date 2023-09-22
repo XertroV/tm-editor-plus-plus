@@ -1,8 +1,8 @@
 class JitterEffectTab : EffectTab {
     JitterEffectTab(TabGroup@ p) {
         super(p, "Jitter", Icons::Magic + Icons::Arrows);
-        RegisterNewItemCallback(ProcessItem(OnNewItem));
-        RegisterNewBlockCallback(ProcessBlock(OnNewBlock));
+        RegisterNewItemCallback(ProcessItem(OnNewItem), this.tabName);
+        RegisterNewBlockCallback(ProcessBlock(OnNewBlock), this.tabName);
         startnew(CoroutineFunc(AutorefreshLoop));
     }
 
