@@ -9,6 +9,9 @@ ProcessBlock@[] blockCallbacks;
 ProcessNewSelectedItem@[] selectedItemChangedCbs;
 // CoroutineFunc@[] selectedBlockChangedCbs;
 
+// set this shortly after loading the plugin
+bool CallbacksEnabledPostInit = false;
+
 void RegisterOnEditorLoadCallback(CoroutineFunc@ f) {
     if (f !is null) {
         onEditorLoadCbs.InsertLast(f);
@@ -88,7 +91,7 @@ bool CheckForNewBlocks(CGameCtnEditorFree@ editor) {
         int newBlocks = int(editor.Challenge.Blocks.Length) - int(m_LastNbBlocks);
         m_LastNbBlocks = editor.Challenge.Blocks.Length;
         // just update the count, but don't fire callbacks
-        if (EnteringEditor) {
+        if (EnteringEditor || !CallbacksEnabledPostInit) {
             return false;
         }
         trace('Detected new blocks: ' + newBlocks);
@@ -111,7 +114,7 @@ bool CheckForNewItems(CGameCtnEditorFree@ editor) {
         int newItems = int(editor.Challenge.AnchoredObjects.Length) - int(m_LastNbItems);
         m_LastNbItems = editor.Challenge.AnchoredObjects.Length;
         // just update the count, but don't fire callbacks
-        if (EnteringEditor) {
+        if (EnteringEditor || !CallbacksEnabledPostInit) {
             return false;
         }
         trace('Detected new items: ' + newItems);
@@ -120,6 +123,7 @@ bool CheckForNewItems(CGameCtnEditorFree@ editor) {
             auto startIx = int(editor.Challenge.AnchoredObjects.Length) - newItems;
             for (uint i = startIx; i < editor.Challenge.AnchoredObjects.Length; i++) {
                 updated = Event::OnNewItem(editor.Challenge.AnchoredObjects[i]) || updated;
+                if (updated) trace("Updating after " + i + " callbacks.");
             }
             return updated;
         }

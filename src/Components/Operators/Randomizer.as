@@ -91,7 +91,7 @@ class RandomizerTab : EffectTab {
     }
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
-        print('new item!');
+        // print('new item!');
         if (_IsActive && applyToItems) {
             print('randomizing!');
             RandomizeItem(item);

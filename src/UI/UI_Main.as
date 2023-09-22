@@ -225,10 +225,12 @@ TabGroup@ CreateMeshEditorRT() {
 
 TabGroup@ CreateItemEditorRT() {
     auto root = RootTabGroupCls();
+    IE_FeaturesTab(root);
     ItemEditCurrentPropsTab(root);
     IE_ManipulateMeshesTab(root);
     IE_ItemModelBrowserTab(root);
 #if DEV
+    IE_CreateObjectMacroTab(root);
 #endif
     // ItemEditMacroVariationsTab(root);
 #if SIG_DEVELOPER

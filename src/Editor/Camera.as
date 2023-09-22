@@ -45,6 +45,11 @@ namespace Editor {
         SetCamAnimationGoTo(cam.LookUV, cam.Pos, cam.TargetDist);
         return true;
     }
+
+    void FinalizeAnimationNow() {
+        if (CameraAnimMgr is null) return;
+        CameraAnimMgr.SetAt(1.0);
+    }
 }
 
 AnimMgr@ CameraAnimMgr = AnimMgr(true);

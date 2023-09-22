@@ -20,6 +20,22 @@ class IE_DevTab : Tab {
             }
         }
 
+        if (UI::Button("Open Item")) {
+            Dev::SetOffset(ieditor, 0x8F0, 2);
+        }
+        if (UI::Button("Test - go to root of saveas dialog")) {
+            startnew(ItemEditor::SaveAsGoToRoot);
+        }
+        if (UI::Button("Test - set entry name")) {
+            string itemNamePath = GetApp().BasicDialogs.String;
+            itemNamePath = itemNamePath.SubStr(0, itemNamePath.Length - 9)
+                + "_2.Item.Gbx";
+            ItemEditor::SaveAsDialogSetPath(itemNamePath);
+        }
+        if (UI::Button("Test - save item")) {
+            ItemEditor::ClickConfirmOpenOrSave();
+        }
+
 
         // if (UI::Button("Set ItemModel.EntityModel to a CGameObjectModel")) {
         //     Dev::SetOffset(im, GetOffset(im, "EntityModel"), CGameObjectModel());

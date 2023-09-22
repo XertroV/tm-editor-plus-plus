@@ -1229,8 +1229,8 @@ class ItemModelTreeElement {
     void DrawPrefabEntParams(CPlugPrefab@ prefab, uint i) {
         auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
         // size: NPlugPrefab_SEntRef: 0x50
-        auto ptr1 = Dev::GetOffsetUint64(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "Params"));
-        auto ptr2 = Dev::GetOffsetUint64(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "Params") + 0x8);
+        auto ptr1 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * i + GetOffset("NPlugPrefab_SEntRef", "Params"));
+        auto ptr2 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * i + GetOffset("NPlugPrefab_SEntRef", "Params") + 0x8);
         string type = "Unknown";
         uint32 paramsClsId;
         if (ptr2 > 0 && ptr2 % 8 == 0) {
@@ -1465,6 +1465,11 @@ void Draw_NPlugDyna_SAnimFunc01(CMwNod@ nod, uint16 offset) {
         UI::Text(tostring(type) + ", Rev: " + reverse + ", Duration: " + duration);
     }
 }
+
+// class SAnimFunc01 {
+//     SAnimFunc01(SubFuncEasings easing, bool reverse, uint duration)
+// }
+
 
 enum ModelTargetType {
     None = 0,

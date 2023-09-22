@@ -7,11 +7,15 @@ namespace Editor {
         }
 
         void RefreshCache() {
+            yield();
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
             cachedInvItemNames.RemoveRange(0, cachedInvItemNames.Length);
             cachedInvBlockNames.RemoveRange(0, cachedInvBlockNames.Length);
             cachedInvBlockArticleNodes.RemoveRange(0, cachedInvBlockArticleNodes.Length);
             cachedInvItemArticleNodes.RemoveRange(0, cachedInvItemArticleNodes.Length);
+            cachedInvBlockIndexes.DeleteAll();
+            cachedInvItemIndexes.DeleteAll();
+            yield();
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             // this can be called when outside the editor
             if (editor is null) return;
@@ -19,6 +23,7 @@ namespace Editor {
             while (inv.RootNodes.Length < 4) yield();
             CGameCtnArticleNodeDirectory@ blockRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[1]);
             CGameCtnArticleNodeDirectory@ itemRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[3]);
+
             trace('Caching inventory blocks...');
             _IsScanningItems = false;
             CacheInvNode(blockRN);
@@ -47,6 +52,8 @@ namespace Editor {
         const array<string>@ get_ItemNames() { return cachedInvItemNames; }
         const array<string>@ get_ItemPaths() { return cachedInvItemPaths; }
         const array<CGameCtnArticleNodeArticle@>@ get_ItemInvNodes() { return cachedInvItemArticleNodes; }
+        const dictionary@ get_ItemIndexes() { return cachedInvItemIndexes; }
+        const dictionary@ get_BlockIndexes() { return cachedInvBlockIndexes; }
 
         protected bool _IsScanningItems = false;
         protected string itemsFolderPrefix;
@@ -56,6 +63,20 @@ namespace Editor {
         // protected string[] cachedInvBlockPaths;
         protected CGameCtnArticleNodeArticle@[] cachedInvBlockArticleNodes;
         protected CGameCtnArticleNodeArticle@[] cachedInvItemArticleNodes;
+        protected dictionary cachedInvBlockIndexes;
+        protected dictionary cachedInvItemIndexes;
+
+        CGameCtnArticleNode@ GetBlockByName(const string &in name) {
+            if (!cachedInvBlockIndexes.Exists(name)) return null;
+            uint ix = uint(cachedInvBlockIndexes[name]);
+            return cachedInvBlockArticleNodes[ix];
+        }
+
+        CGameCtnArticleNode@ GetItemByPath(const string &in path) {
+            if (!cachedInvItemIndexes.Exists(path)) return null;
+            uint ix = uint(cachedInvItemIndexes[path]);
+            return cachedInvItemArticleNodes[ix];
+        }
 
         protected void CacheInvNode(CGameCtnArticleNode@ node) {
             auto dir = cast<CGameCtnArticleNodeDirectory>(node);
@@ -78,10 +99,12 @@ namespace Editor {
                 return;
             }
             if (_IsScanningItems) {
+                cachedInvItemIndexes[string(node.NodeName)] = cachedInvItemPaths.Length;
                 cachedInvItemPaths.InsertLast(string(node.NodeName));
                 cachedInvItemNames.InsertLast(string(node.Article.NameOrDisplayName));
                 cachedInvItemArticleNodes.InsertLast(node);
             } else {
+                cachedInvBlockIndexes[string(node.NodeName)] = cachedInvBlockNames.Length;
                 // cachedInvBlockPaths.InsertLast(string(node.NodeName))
                 cachedInvBlockNames.InsertLast(string(node.NodeName));
                 cachedInvBlockArticleNodes.InsertLast(node);

@@ -9,6 +9,7 @@ class DevMainTab : Tab {
         DevBlockTab(Children);
         DevBlockTab(Children, true);
         DevItemsTab(Children);
+        DevMiscTab(Children);
     }
 
     void DrawInner() override {
@@ -20,6 +21,37 @@ class DevMainTab : Tab {
 }
 
 
+class DevMiscTab : Tab {
+    DevMiscTab(TabGroup@ p) {
+        super(p, "Misc Dev", "");
+    }
+
+    void DrawInner() override {
+        if (UI::Button("Remove 50% of items")) {
+            startnew(CoroutineFunc(Remove50PctItemsTest));
+        }
+    }
+
+    void Remove50PctItemsTest() {
+        CGameCtnAnchoredObject@[] items;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);;
+        auto map = editor.Challenge;
+        for (uint i = 0; i < map.AnchoredObjects.Length; i += 2) {
+            items.InsertLast(map.AnchoredObjects[i]);
+        }
+        for (uint i = 1; i < map.AnchoredObjects.Length; i += 2) {
+            items.InsertLast(map.AnchoredObjects[i]);
+        }
+        auto keepTo = items.Length / 2;
+
+        auto bufPtr = Dev::GetOffsetNod(map, GetOffset(map, "AnchoredObjects"));
+        for (uint i = 0; i < items.Length; i++) {
+            Dev::SetOffset(bufPtr, 0x8 * i, items[i]);
+        }
+        Dev::SetOffset(map, GetOffset(map, "AnchoredObjects") + 0x8, uint32(keepTo));
+        Editor::SaveAndReloadMap();
+    }
+}
 
 class DevItemsTab : BlockItemListTab {
     DevItemsTab(TabGroup@ p) {

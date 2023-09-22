@@ -160,7 +160,7 @@ namespace MeshDuplication {
                 // probs null b/c there are no bytes at the start
                 // auto ent = Dev::GetOffsetNod(ents, 0x50 * i);
                 if (ents !is null)
-                    Dev::SetOffset(ents, 0x50 * i + GetOffset("NPlugPrefab_SEntRef", "ModelFid"), uint64(0));
+                    Dev::SetOffset(ents, SZ_ENT_REF * i + GetOffset("NPlugPrefab_SEntRef", "ModelFid"), uint64(0));
                 else {
                     NotifyWarning("ents was null!");
                 }
@@ -186,7 +186,25 @@ namespace MeshDuplication {
             nod.MwAddRef();
         // size: NPlugPrefab_SEntRef: 0x50
         auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
-        Dev::SetOffset(ents, 0x50 * entityIx + GetOffset("NPlugPrefab_SEntRef", "Model"), nod);
+        Dev::SetOffset(ents, SZ_ENT_REF * entityIx + GetOffset("NPlugPrefab_SEntRef", "Model"), nod);
+    }
+
+    void CopyEntRefParams(CPlugPrefab@ prefab1, int entityIx1, CPlugPrefab@ prefab2, int entityIx2) {
+        // size: NPlugPrefab_SEntRef: 0x50
+        auto ents1 = Dev::GetOffsetNod(prefab1, GetOffset("CPlugPrefab", "Ents"));
+        auto ents2 = Dev::GetOffsetNod(prefab2, GetOffset("CPlugPrefab", "Ents"));
+        auto paramsOffset = GetOffset("NPlugPrefab_SEntRef", "Params");
+        uint64 u1 = Dev::GetOffsetUint64(ents1, SZ_ENT_REF * entityIx1 + paramsOffset);
+        uint64 u2 = Dev::GetOffsetUint64(ents1, SZ_ENT_REF * entityIx1 + paramsOffset + 0x8);
+        Dev::SetOffset(ents2, SZ_ENT_REF * entityIx2 + paramsOffset, u1);
+        Dev::SetOffset(ents2, SZ_ENT_REF * entityIx2 + paramsOffset + 0x8, u2);
+    }
+
+    void ZeroEntRefParams(CPlugPrefab@ prefab, int entityIx) {
+        auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
+        auto paramsOffset = GetOffset("NPlugPrefab_SEntRef", "Params");
+        Dev::SetOffset(ents, SZ_ENT_REF * entityIx + paramsOffset, uint64(0));
+        Dev::SetOffset(ents, SZ_ENT_REF * entityIx + paramsOffset + 0x8, uint64(0));
     }
 
     void ZeroFids(CPlugSpawnModel@ sm) {

@@ -55,6 +55,13 @@ void Dev_ReduceMwSArray(uint64 ptr, float newSizeProp) {
     Dev::Write(ptr + 0x8, newSize);
 }
 
+void Dev_ReduceMwSArray(uint64 ptr, uint newSize) {
+    auto len = Dev::ReadUInt32(ptr + 0x8);
+    if (newSize > len) throw("only reduces");
+    newSize = Math::Min(len, newSize);
+    Dev::Write(ptr + 0x8, newSize);
+}
+
 void Dev_DoubleMwSArray(uint64 ptr, uint elSize) {
     print("Dev_DoubleMwSArray: " + Text::FormatPointer(ptr) + ", sz: " + elSize);
     // return;
@@ -268,5 +275,6 @@ const uint16 O_USERMATINST_PARAM_LEN = 0x158; // 3 for color
 const uint32 SZ_SPLACEMENTOPTION = 0x18;
 const uint32 SZ_GMQUATTRANS = 0x1C;
 
-
 const uint16 O_BLOCKVAR_WATER_BUF = 0x1B0;
+
+const uint32 SZ_ENT_REF = 0x50;

@@ -170,7 +170,8 @@ namespace Editor {
             BlockTypes.RemoveRange(0, BlockTypes.Length);
             ItemTypesLower.RemoveRange(0, ItemTypesLower.Length);
             BlockTypesLower.RemoveRange(0, BlockTypesLower.Length);
-
+            yield();
+            yield();
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) return;
             auto pmt = editor.PluginMapType;
@@ -180,21 +181,29 @@ namespace Editor {
                 AddBlock(BlockInMap(i, pmt.ClassicBlocks[i]));
             }
             yield();
+            yield();
             trace('Caching map GhostBlocks...');
             for (uint i = 0; i < pmt.GhostBlocks.Length; i++) {
                 AddBlock(BlockInMap(i, pmt.GhostBlocks[i]));
             }
+            yield();
             yield();
             trace('Caching map items...');
             for (uint i = 0; i < pmt.Map.AnchoredObjects.Length; i++) {
                 AddItem(ItemInMap(i, pmt.Map.AnchoredObjects[i]));
             }
             trace('Caching map complete. Indexing...');
+            yield();
+            yield();
             // todo
             ItemTypes.SortAsc();
+            yield();
             BlockTypes.SortAsc();
+            yield();
             ItemTypesLower.SortAsc();
+            yield();
             BlockTypesLower.SortAsc();
+            yield();
         }
 
         dictionary _ItemIdNameMap;
