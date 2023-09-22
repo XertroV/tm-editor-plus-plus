@@ -9,6 +9,7 @@
 
 - ~~copy placement params from 1 item to another~~
 - script to do item manipulation
+- investigate placing items on freeblocks when a normally placed block is close
 -
 
 
