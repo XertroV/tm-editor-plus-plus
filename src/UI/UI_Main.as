@@ -76,6 +76,21 @@ void UI_Main_Render() {
         UI::End();
     }
 
+    if (ManipPtrs::recentlyModifiedPtrs.Length > 0) {
+        vec2 size = vec2(300, 140);
+        vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        pos.y = 60;
+        UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);
+        UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
+        if (UI::Begin("Item Unsafe! Save+Reload.", UI::WindowFlags::NoCollapse | UI::WindowFlags::NoResize)) {
+            UI::TextWrapped("\\$f80" + Icons::ExclamationTriangle + "\\$z Item currently unsafe! Please press the magic save and reload button as soon as you are ready (note: it will save the item under the current name).");
+            if (UI::Button("Magic Item Save and Reload")) {
+                startnew(ItemEditor::SaveAndReloadItem);
+            }
+        }
+        UI::End();
+    }
+
     UI::PopStyleColor(2);
 }
 

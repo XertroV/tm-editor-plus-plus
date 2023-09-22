@@ -8,13 +8,27 @@ namespace ItemEditor {
     void SaveItemAs(const string &in path) {
         auto frame = GetDialogSaveAs();
         if (frame is null) {
+            auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+            Editor::DoItemEditorAction(ieditor, Editor::ItemEditorAction::SaveItem);
+            yield();
+            @frame = GetDialogSaveAs();
+        }
+        if (frame is null) {
             NotifyWarning("SaveAs dialog does not appear to be open.");
+            throw("SaveAs dialog does not appear to be open.");
             return;
         }
         SaveAsGoToRoot();
         SaveAsDialogSetPath(path);
-        // yield();
+        yield();
+        trace('saving');
         ClickConfirmOpenOrSave();
+        yield();
+        trace('check for overwrite');
+        CheckForOverwriteDialogAndClose();
+        yield();
+        CheckForFailureMessage();
+        yield();
     }
 
     // save item with the same name, if it has been saved before
@@ -25,6 +39,78 @@ namespace ItemEditor {
         } else {
             SaveItemAs(ieditor.ItemModel.IdName);
         }
+    }
+
+    // Warning! Will unzero FIDs after it's been triggered.
+    void SaveAndReloadItem() {
+        SaveAndReloadItem(true);
+    }
+
+    void SaveAndReloadItem(bool unzero) {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null) return;
+        if (!HasItemBeenSaved()) {
+            NotifyError("Please save the item first.\n\nYou must have first saved the item.");
+        } else {
+            SaveItem();
+            yield();
+            OpenItem(ieditor.ItemModel.IdName);
+            yield();
+            if (unzero) {
+                ManipPtrs::RunUnzero();
+            }
+            yield();
+            SaveItem();
+            yield();
+        }
+    }
+
+    void OpenItem(const string &in path) {
+        ClickOpenItem();
+        yield();
+        SaveAsGoToRoot();
+        SaveAsDialogSetPath(path);
+        ClickConfirmOpenOrSave();
+        yield();
+    }
+
+    void CheckForOverwriteDialogAndClose() {
+        auto frame = GetDialogYesNo();
+        if (frame is null) {
+            trace('no overwrite dialog found');
+            return;
+        }
+        // while ((@frame = GetDialogYesNo()) is null)
+        auto labelMsg = cast<CControlLabel>(GetFrameChildFromChain(frame, {1, 0, 2, 0}));
+        bool checksOut = labelMsg.Label.StartsWith("The file")
+            && labelMsg.Label.EndsWith(" already exists.\nOverwrite it?");
+        if (!checksOut) return;
+        // auto yesBtn = cast<CControlLabel>(GetFrameChildFromChain(frame, {1, 0, 2, 1, 0}));
+        GetApp().BasicDialogs.AskYesNo_Yes();
+        // yield();
+    }
+
+    void CheckForFailureMessage() {
+        // auto frame = GetDialogYesNo();
+        // auto labelMsg = cast<CControlLabel>(GetFrameChildFromChain(frame, {1, 0, 2, 0}));
+        // bool checksOut = labelMsg.Label.StartsWith("The file")
+        //     && labelMsg.Label.EndsWith(" already exists.\nOverwrite it?");
+        // if (!checksOut) return;
+        // // auto yesBtn = cast<CControlLabel>(GetFrameChildFromChain(frame, {1, 0, 2, 1, 0}));
+        // GetApp().BasicDialogs.AskYesNo_Yes();
+        // // yield();
+    }
+
+    CGameMenuFrame@ GetDialogYesNo() {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null) return null;
+        auto cf = GetApp().BasicDialogs.Dialogs.CurrentFrame;
+        if (cf !is null && cf.IdName == "FrameAskYesNo") {
+            return cf;
+        } else if (cf !is null) {
+            trace('yes no dialog expected but got named: ' + cf.IdName);
+        }
+        return null;
     }
 
     CGameMenuFrame@ GetDialogSaveAs() {
@@ -79,11 +165,13 @@ namespace ItemEditor {
 }
 
 CControlBase@ GetFrameChildFromChain(CControlFrame@ frame, uint[]@ childs) {
-    CControlFrame@ next = frame;
+    CControlContainer@ next = frame;
     for (uint i = 0; i < childs.Length; i++) {
         auto childIx = childs[i];
+        // trace('getting child ' + i + ' at ix ' + childIx);
         if (i < childs.Length - 1) {
-            @next = cast<CControlFrame>(next.Childs[childIx]);
+            @next = cast<CControlContainer>(next.Childs[childIx]);
+            // trace('got child: ' + next.IdName);
         } else {
             return next.Childs[childIx];
         }

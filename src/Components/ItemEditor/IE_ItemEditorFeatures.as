@@ -22,6 +22,7 @@ class IE_FeaturesTab : Tab {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         if (S_UpdateItemNameFromFileName) {
             string idName = ieditor.ItemModel.IdName;
+            if (idName == "Unassigned") return;
             auto parts = idName.Split("\\");
             auto fname = parts[parts.Length - 1];
             if (fname.ToLower().EndsWith(".item.gbx")) {

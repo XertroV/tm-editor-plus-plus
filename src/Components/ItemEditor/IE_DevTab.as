@@ -22,14 +22,16 @@ class IE_DevTab : Tab {
 
         if (UI::Button("Open Item")) {
             Editor::DoItemEditorAction(ieditor, Editor::ItemEditorAction::OpenItem);
-            // Dev::SetOffset(ieditor, 0x8F0, 2);
+        }
+        if (UI::Button("Save and Reopen Item")) {
+            startnew(ItemEditor::SaveAndReloadItem);
         }
 
         UI::Separator();
 
-        UI::Text("Zeroed Fids: " + ManipFids::recentlyZeroed.Length);
+        UI::Text("Zeroed Fids: " + ManipPtrs::recentlyModifiedPtrs.Length);
         if (UI::Button("Unzero Fids")) {
-            ManipFids::RunUnzero();
+            ManipPtrs::RunUnzero();
         }
 
 

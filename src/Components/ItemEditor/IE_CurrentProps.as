@@ -139,9 +139,9 @@ class ItemEditCloneLayoutTab : Tab {
         trace('set current to other');
         @currentItem.DefaultPlacementParam_Content = sourceItem.DefaultPlacementParam_Content;
         trace('getting fid');
-        auto fidPointer = Dev::GetOffsetUint64(currentItem.DefaultPlacementParam_Content, 0x8);
-        print("Zeroing Fid: " + Text::FormatPointer(fidPointer));
-        Dev::SetOffset(currentItem.DefaultPlacementParam_Content, 0x8, uint64(0));
+        ManipPtrs::ZeroFid(currentItem.DefaultPlacementParam_Content);
+        // auto fidPointer = Dev::GetOffsetUint64(currentItem.DefaultPlacementParam_Content, 0x8);
+        // Dev::SetOffset(currentItem.DefaultPlacementParam_Content, 0x8, uint64(0));
         NotifyWarning("Item layout successfully replaced. Please save the item.");
         startnew(CoroutineFunc(WaitForLeftItemEditor));
     }
