@@ -21,17 +21,22 @@ namespace ManipPtrs {
     }
 
     void Replace(CMwNod@ nod, uint16 offset, CMwNod@ newNod, bool releaseNodOnUnmod = false) {
+        auto newPtr = Dev_GetPointerForNod(newNod);
+        Replace(nod, offset, newPtr, releaseNodOnUnmod);
+    }
+    void Replace(CMwNod@ nod, uint16 offset, uint64 newPtr, bool releaseNodOnUnmod = false) {
         if (nod is null) return;
         auto ptr = Dev_GetPointerForNod(nod) + offset;
-        auto newPtr = Dev_GetPointerForNod(newNod);
         trace("Replacing PTR at " + Text::FormatPointer(ptr) + " with " + Text::FormatPointer(newPtr));
         recentlyModifiedPtrs.InsertLast(PtrModRecord(ptr, newPtr, releaseNodOnUnmod));
     }
 
     // this will unzero recently zeroed FIDs. It should be run after an item is saved or reloaded.
     void RunUnzero() {
+        if (recentlyModifiedPtrs.Length == 0) return;
         trace('Running PTR unmod for ' + recentlyModifiedPtrs.Length + ' recently modified PTRs');
-        for (uint i = 0; i < recentlyModifiedPtrs.Length; i++) {
+        // run in reverse order in case things were replaced multiple times, e.g., via material modifier
+        for (int i = recentlyModifiedPtrs.Length - 1; i >= 0; i--) {
             recentlyModifiedPtrs[i].Unzero();
         }
         recentlyModifiedPtrs.RemoveRange(0, recentlyModifiedPtrs.Length);
@@ -73,10 +78,12 @@ namespace ManipPtrs {
         }
 
         void Unzero() {
-            if (canUnzero && ptr > 0 && fidPtr > 0) {
-                if (releaseNodOnUnmod) {
+            if (canUnzero && ptr > 0) {
+                if (fidPtr > 0 && releaseNodOnUnmod) {
+                    trace('releasing nod from pointer... ('+Text::FormatPointer(ptr)+')');
                     auto nod = Dev_GetNodFromPointer(Dev::ReadUInt64(ptr));
                     nod.MwRelease();
+                    trace('released.');
                 }
                 Dev::Write(ptr, fidPtr);
                 canUnzero = false;

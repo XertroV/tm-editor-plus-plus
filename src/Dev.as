@@ -74,7 +74,7 @@ void Dev_DoubleMwSArray(uint64 ptr, uint elSize) {
     print("bs_len: " + bs_len);
     print("ptr: " + Text::FormatPointer(ptr));
     // Dev_SetOffsetBytes(item, 0x0, Dev_GetOffsetBytes(origItem, 0x0, ItemItemModelOffset + 0x8));
-    auto newBuf = Dev::Allocate(bs_len * mag);
+    auto newBuf = RequestMemory(bs_len * mag);
     for (uint loopN = 0; loopN < mag; loopN++) {
         for (uint b = 0; b < bs_len - 1; b += 4) {
             auto offset = b + loopN * bs_len;

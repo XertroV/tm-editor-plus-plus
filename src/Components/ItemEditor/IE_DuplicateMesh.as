@@ -149,8 +149,8 @@ namespace MeshDuplication {
     }
 
     void ZeroFids(CPlugPrefab@ prefab) {
-        ZeroNodFid(prefab);
         ApplyMaterialMods(prefab);
+        ZeroNodFid(prefab);
         for (uint i = 0; i < prefab.Ents.Length; i++) {
             if (prefab.Ents[i].ModelFid !is null) {
                 trace("Zeroing fid: prefab.Ents["+i+"].ModelFid");
@@ -542,9 +542,8 @@ namespace MeshDuplication {
             // todo: check 3+ materials
             auto userMatBufPtr = RequestMemory(0x18 * nbMats);
             trace('Setting buffer pointer and size / alloc');
-            Dev::SetOffset(mesh, 0xF8, userMatBufPtr);
-            Dev::SetOffset(mesh, 0xF8 + 0x8, uint32(nbMats));
-            Dev::SetOffset(mesh, 0xF8 + 0xC, uint32(nbMats));
+            ManipPtrs::Replace(mesh, 0xF8, userMatBufPtr, false);
+            ManipPtrs::Replace(mesh, 0xF8 + 0x8, (uint64(nbMats) << 32) + uint64(nbMats), false);
             trace('Getting fake nod for user mat buffer');
             auto userMatBufFakeNod = Dev::GetOffsetNod(mesh, 0xF8);
             for (uint i = 0; i < nbMats; i++) {
@@ -568,6 +567,8 @@ namespace MeshDuplication {
                 Dev::SetOffset(userMatBufFakeNod, 0x18 * i, matUserInst);
             }
             trace('Populated custom materials buffer');
+        } else {
+            trace('skipping creating user mat instances because '+nbUserMats+' already exist');
         }
         Dev::SetOffset(mesh, 0xE8, "Stadium\\Media\\Material\\");
     }
@@ -613,9 +614,9 @@ namespace MeshDuplication {
 
             trace('allocating user lights');
             auto userLightBufPtr = RequestMemory(0x8 * lightBufferCount);
-            Dev::SetOffset(mesh, 0x178, userLightBufPtr);
-            Dev::SetOffset(mesh, 0x178 + 0x8, lightBufferCount);
-            Dev::SetOffset(mesh, 0x178 + 0xC, lightBufferCount);
+            ManipPtrs::Replace(mesh, 0x178, userLightBufPtr, false);
+            ManipPtrs::Replace(mesh, 0x178 + 0x8, (uint64(lightBufferCount) << 32) + lightBufferCount, false);
+            // Dev::SetOffset(mesh, 0x178 + 0xC, lightBufferCount);
             trace('set and init buffer');
 
             for (uint i = 0; i < lightBufferCount; i++) {
@@ -725,13 +726,13 @@ namespace MeshDuplication {
             trace('setting skin');
             skin.MwAddRef();
             ManipPtrs::Replace(dest, 0xa0, skin, true);
-            Dev::SetOffset(dest, 0xa0, skinPtr);
+            // Dev::SetOffset(dest, 0xa0, skinPtr);
             dest.SkinDirNameCustom = dest.SkinDirectory;
             // try zeroing fids buffer: nope doesn't help
             // Dev::SetOffset(skin, 0x58, uint64(0));
             // Dev::SetOffset(skin, 0x60, uint64(0));
         } else {
-            Dev::SetOffset(dest, 0xa0, uint64(0));
+            ManipPtrs::Replace(dest, 0xa0, uint64(0));
         }
 
         // not sure if material modifiers are possible on custom items, cannot save

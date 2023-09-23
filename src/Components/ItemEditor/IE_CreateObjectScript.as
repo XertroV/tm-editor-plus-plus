@@ -3,6 +3,7 @@
  *
  */
 
+#if DEV
 class IE_CreateObjectMacroTab : Tab {
     IE_CreateObjectMacroTab(TabGroup@ p) {
         super(p, "Create Object (Macro)", "");
@@ -309,8 +310,6 @@ namespace CreateObj {
         SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, false, 0);
     }
 
-
-
     void DedupStarEntities() {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         auto model = ieditor.ItemModel;
@@ -324,3 +323,4 @@ namespace CreateObj {
         }
     }
 }
+#endif

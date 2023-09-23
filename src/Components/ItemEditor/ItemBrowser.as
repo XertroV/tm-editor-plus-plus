@@ -1005,7 +1005,7 @@ class ItemModelTreeElement {
                     UI::TextDisabled("unsupported color buffer length: " + colorLen);
                     UI::SameLine();
                     if (UI::Button("Instantiate Color")) {
-                        auto newColorPtr = Dev::Allocate(0x10);
+                        auto newColorPtr = RequestMemory(0x10);
                         Dev::SetOffset(nod, O_USERMATINST_COLORBUF, newColorPtr);
                         Dev::SetOffset(nod, O_USERMATINST_COLORBUF + 0x8, uint32(0x3));
                         Dev::SetOffset(nod, O_USERMATINST_COLORBUF + 0xC, uint32(0x3));

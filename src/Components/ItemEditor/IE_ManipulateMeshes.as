@@ -429,6 +429,7 @@ class IE_ManipulateMeshesTab : Tab {
     }
 
     void _RunCopyVariantListEntry() {
+        warn("_RunCopyVariantListEntry might not work");
         auto dParent = dest.parent.As_NPlugItem_SVariantList();
         auto sParent = source.parent.As_NPlugItem_SVariantList();
         auto bufOffset = GetOffset(sParent, "Variants");
@@ -443,6 +444,7 @@ class IE_ManipulateMeshesTab : Tab {
     }
 
     void _RunCopyPrefabEntity() {
+        warn("_RunCopyPrefabEntity might not work");
         auto dParent = dest.parent.As_CPlugPrefab();
         auto sParent = source.parent.As_CPlugPrefab();
         auto bufOffset = GetOffset(sParent, "Ents");
@@ -471,29 +473,29 @@ class IE_ManipulateMeshesTab : Tab {
 
         if (destDyna !is null && hasSouce) {
             if (sourceDyna !is null) {
-                Dev::SetOffset(destDyna, GetOffset(destDyna, "Mesh"), sourceDyna.Mesh);
-                Dev::SetOffset(destDyna, GetOffset(destDyna, "DynaShape"), sourceDyna.DynaShape);
-                Dev::SetOffset(destDyna, GetOffset(destDyna, "StaticShape"), sourceDyna.StaticShape);
+                ManipPtrs::Replace(destDyna, GetOffset(destDyna, "Mesh"), sourceDyna.Mesh, true);
+                ManipPtrs::Replace(destDyna, GetOffset(destDyna, "DynaShape"), sourceDyna.DynaShape, true);
+                ManipPtrs::Replace(destDyna, GetOffset(destDyna, "StaticShape"), sourceDyna.StaticShape, true);
                 if (sourceDyna.Mesh !is null) sourceDyna.Mesh.MwAddRef();
                 if (sourceDyna.DynaShape !is null) sourceDyna.DynaShape.MwAddRef();
                 if (sourceDyna.StaticShape !is null) sourceDyna.StaticShape.MwAddRef();
             } else {
-                Dev::SetOffset(destDyna, GetOffset(destDyna, "Mesh"), sourceStatic.Mesh);
-                Dev::SetOffset(destDyna, GetOffset(destDyna, "DynaShape"), sourceStatic.Shape);
-                Dev::SetOffset(destDyna, GetOffset(destDyna, "StaticShape"), sourceStatic.Shape);
+                ManipPtrs::Replace(destDyna, GetOffset(destDyna, "Mesh"), sourceStatic.Mesh, true);
+                ManipPtrs::Replace(destDyna, GetOffset(destDyna, "DynaShape"), sourceStatic.Shape, true);
+                ManipPtrs::Replace(destDyna, GetOffset(destDyna, "StaticShape"), sourceStatic.Shape, true);
                 if (sourceStatic.Mesh !is null) sourceStatic.Mesh.MwAddRef();
                 if (sourceStatic.Shape !is null) sourceStatic.Shape.MwAddRef();
                 if (sourceStatic.Shape !is null) sourceStatic.Shape.MwAddRef();
             }
         } else if (destStatic !is null && hasSouce) {
             if (sourceDyna !is null) {
-                Dev::SetOffset(destStatic, GetOffset(destStatic, "Mesh"), sourceDyna.Mesh);
-                Dev::SetOffset(destStatic, GetOffset(destStatic, "Shape"), sourceDyna.DynaShape);
+                ManipPtrs::Replace(destStatic, GetOffset(destStatic, "Mesh"), sourceDyna.Mesh, true);
+                ManipPtrs::Replace(destStatic, GetOffset(destStatic, "Shape"), sourceDyna.DynaShape, true);
                 if (sourceDyna.Mesh !is null) sourceDyna.Mesh.MwAddRef();
                 if (sourceDyna.DynaShape !is null) sourceDyna.DynaShape.MwAddRef();
             } else {
-                Dev::SetOffset(destStatic, GetOffset(destStatic, "Mesh"), sourceStatic.Mesh);
-                Dev::SetOffset(destStatic, GetOffset(destStatic, "Shape"), sourceStatic.Shape);
+                ManipPtrs::Replace(destStatic, GetOffset(destStatic, "Mesh"), sourceStatic.Mesh, true);
+                ManipPtrs::Replace(destStatic, GetOffset(destStatic, "Shape"), sourceStatic.Shape, true);
                 if (sourceStatic.Mesh !is null) sourceStatic.Mesh.MwAddRef();
                 if (sourceStatic.Shape !is null) sourceStatic.Shape.MwAddRef();
             }

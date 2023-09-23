@@ -76,7 +76,7 @@ void UI_Main_Render() {
         UI::End();
     }
 
-    if (ManipPtrs::recentlyModifiedPtrs.Length > 0) {
+    if (IsInItemEditor && ManipPtrs::recentlyModifiedPtrs.Length > 0) {
         vec2 size = vec2(300, 140);
         vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
         pos.y = 60;
