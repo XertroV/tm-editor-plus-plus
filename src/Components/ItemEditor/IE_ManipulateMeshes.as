@@ -286,6 +286,7 @@ class IE_ManipulateMeshesTab : Tab {
                 MeshDuplication::FixItemModelProperties(GetItemModel(), GetInventorySelectionModel_Item());
                 AppendRunMsg("Set item model properties from source item model.");
             }
+            UI::TextWrapped("ItemModel Properties includes: Placement Params, Waypoint Type, and skin. For podiums: an empty PodiumClips.");
 
             // UI::SameLine();
             // if (UI::Button("")) {

@@ -720,6 +720,11 @@ namespace MeshDuplication {
             @dest.PodiumClipList = CPlugMediaClipList();
         }
 
+        trace('Cloning placement params');
+        @dest.DefaultPlacementParam_Content = source.DefaultPlacementParam_Content;
+        dest.DefaultPlacementParam_Content.MwAddRef();
+        ManipPtrs::ZeroFid(dest.DefaultPlacementParam_Content);
+
         trace('setting skin pointer if exists');
         // Note, we don't want to unreplace this pointers later, so don't use ManipPtrs
         // That's because this is on the item model, and not part of the entity model
