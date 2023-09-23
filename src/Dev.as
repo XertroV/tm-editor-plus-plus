@@ -46,6 +46,13 @@ void Dev_WriteBytes(uint64 ptr, uint64[]@ bs) {
     return;
 }
 
+void Dev_UpdateMwSArrayCapacity(uint64 ptr, uint newSize, uint elsize) {
+    while (Dev::ReadUInt32(ptr + 0x8) < newSize) {
+        Dev_DoubleMwSArray(ptr, elsize);
+    }
+    Dev_ReduceMwSArray(ptr, newSize);
+}
+
 void Dev_ReduceMwSArray(uint64 ptr, float newSizeProp) {
     if (newSizeProp > 1.0) throw("out of range+ newSizeProp");
     if (newSizeProp < 0.0) throw("out of range- newSizeProp");

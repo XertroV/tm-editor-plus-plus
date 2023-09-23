@@ -42,6 +42,7 @@ namespace ItemEditor {
     }
 
     void UpdateThumbnailAndSaveItem() {
+        trace('Auto updating thumbnail and resaving item.');
         ItemEditor::UpdateThumbnail(S_AutoThumbnailDirection);
         ItemEditor::SaveItem();
     }

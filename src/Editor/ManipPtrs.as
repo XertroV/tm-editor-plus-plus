@@ -1,6 +1,11 @@
 namespace ManipPtrs {
     PtrModRecord@[] recentlyModifiedPtrs;
 
+    // this will, in effect, trigger the item reload request window. It's useful if we allocate memory that we want the game to refresh (hopefully avoiding a crash)
+    void AddSignalEntry() {
+        recentlyModifiedPtrs.InsertLast(PtrModRecord());
+    }
+
     /* this should only zero FIDs on game nods -- which won't get deloaded when we do item editing stuff.
        so provided we check for replacement at appropriate times, we should avoid a crash.
     */
@@ -49,6 +54,7 @@ namespace ManipPtrs {
         bool canUnzero = false;
         bool releaseNodOnUnmod = false;
 
+        PtrModRecord() {}
         PtrModRecord(CMwNod@ nod) {
             if (nod !is null && GetFidFromNod(nod) !is null) {
                 InitFromPtr(Dev_GetPointerForNod(nod) + 0x8);

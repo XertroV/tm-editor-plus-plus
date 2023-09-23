@@ -92,10 +92,7 @@ namespace CreateObj {
         auto model = ieditor.ItemModel;
         auto prefab = cast<CPlugPrefab>(model.EntityModel);
         auto arrayPtr = Dev_GetPointerForNod(prefab) + GetOffset(prefab, "Ents");
-        while (prefab.Ents.Length < entCapacity) {
-            Dev_DoubleMwSArray(arrayPtr, SZ_ENT_REF);
-        }
-        Dev_ReduceMwSArray(arrayPtr, entCapacity);
+        Dev_UpdateMwSArrayCapacity(arrayPtr, entCapacity, SZ_ENT_REF);
     }
 
     CGameItemModel@[] models;

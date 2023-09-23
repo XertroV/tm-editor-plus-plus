@@ -1,6 +1,9 @@
 const uint16 IM_GameSkinOffset = 0xA0;
 const uint16 IM_AuthorOffset = 0xA0;
 
+// used for expanding/contracting entity lists
+uint g_NewNbEnts = 10;
+
 class ItemModel {
     CGameItemModel@ item;
     bool drawProperties;
@@ -425,6 +428,16 @@ class ItemModelTreeElement {
         hasElements = true;
         if (StartTreeNode(name + " :: \\$f8fCPlugPrefab", UI::TreeNodeFlags::DefaultOpen)) {
             UI::Text("nbEnts: " + prefab.Ents.Length);
+            if (isEditable) {
+                UI::SameLine();
+                UI::SetNextItemWidth(UI::GetWindowContentRegionWidth() * 0.3);
+                g_NewNbEnts = UI::InputInt("New Capacity", g_NewNbEnts);
+                UI::SameLine();
+                if (UI::Button("Update")) {
+                    Dev_UpdateMwSArrayCapacity(Dev_GetPointerForNod(prefab) + O_PREFAB_ENTS, g_NewNbEnts, SZ_ENT_REF);
+                    ManipPtrs::AddSignalEntry();
+                }
+            }
 #if SIG_DEVELOPER
             UI::SameLine();
             UI::TextDisabled(Text::Format("0x%03x", GetOffset("CPlugPrefab", "Ents")));
@@ -1476,7 +1489,7 @@ uint Draw_SPlacementGroup_TQs(uint64 tqsPtr, uint nbTqs, bool isEditable, uint64
 
 bool IsPlacementGroupForSpectators(uint64 placementGroupPtr) {
     return GetPlacementGroupType(placementGroupPtr) == 0x21
-        // || GetPlacementGroupType(placementGroupPtr) == 0x22
+        || GetPlacementGroupType(placementGroupPtr) == 0x22
         ;
 }
 

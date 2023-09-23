@@ -64,6 +64,7 @@ void DoubleItemSpectators(uint64 placementGroupPtr) {
     // the 4th array has a length of 0x18 -- duplicate of 1st array?; does not update for podium spots
     Dev_DoubleMwSArray(placementGroupPtr + 0x30, SZ_SPLACEMENTOPTION);
     NotifySuccess("Doubled spectator capacity (clones). Please continue editing and then save the item.");
+    ManipPtrs::AddSignalEntry();
 }
 
 void ReduceItemSpectators(uint64 placementGroupPtr, float keepRatio) {
