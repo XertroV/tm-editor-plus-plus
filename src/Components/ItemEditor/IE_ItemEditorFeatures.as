@@ -1,5 +1,9 @@
 [Setting hidden]
 bool S_UpdateItemNameFromFileName = false;
+[Setting hidden]
+bool S_UpdateItemThumbnailAfterReload = false;
+[Setting hidden]
+uint S_AutoThumbnailDirection = 0;
 
 class IE_FeaturesTab : Tab {
     IE_FeaturesTab(TabGroup@ p) {
@@ -34,5 +38,10 @@ class IE_FeaturesTab : Tab {
 
     void DrawInner() override {
         S_UpdateItemNameFromFileName = UI::Checkbox("Automatically update the item name from the file name?", S_UpdateItemNameFromFileName);
+        S_UpdateItemThumbnailAfterReload = UI::Checkbox("Automatically update the items thumbnail after a reload?", S_UpdateItemThumbnailAfterReload);
+        S_AutoThumbnailDirection = (UI::InputInt("Auto Thumbnail Direction", S_AutoThumbnailDirection) + 4) % 4;
+        if (UI::Button("Update thumbnail and save item")) {
+            startnew(CoroutineFunc(ItemEditor::UpdateThumbnailAndSaveItem));
+        }
     }
 }

@@ -99,7 +99,6 @@ class ItemEditCloneLayoutTab : Tab {
             if (picked !is null) {
                 if (picked.Article.LoadedNod is null) picked.GetCollectorNod();
                 SetCustomPlacementParams(currentItem, cast<CGameItemModel>(picked.Article.LoadedNod));
-                SetCustomPlacementParams(currentItem, cast<CGameItemModel>(picked.Article.LoadedNod));
             }
 
             // for (uint i = 0; i < SampleGameItemNames.Length; i++) {
@@ -147,22 +146,23 @@ class ItemEditCloneLayoutTab : Tab {
     }
 
     void WaitForLeftItemEditor() {
-        trace("Fixing placement param Fid: waiting to leave Item Editor");
-        while (true) {
-            yield();
-            auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
-            if (ieditor is null) break;
-        }
-        trace("Fixing placement param Fid: Left Item Editor");
-        if (TmpItemPlacementRef is null) return;
-        trace("Fixing placement param Fid: tmpRef is set");
-        auto placementParam = TmpItemPlacementRef.AsPlacementParam();
-        if (placementParam is null) return;
-        trace("Fixing placement param Fid: got placement param");
-        Dev::SetOffset(placementParam, 0x8, fidPointer);
-        fidPointer = 0;
-        @TmpItemPlacementRef = null;
-        trace("Fixing placement param Fid: done");
+        // don't need to do this now that we have ManipPtrs
+        // trace("Fixing placement param Fid: waiting to leave Item Editor");
+        // while (true) {
+        //     yield();
+        //     auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        //     if (ieditor is null) break;
+        // }
+        // trace("Fixing placement param Fid: Left Item Editor");
+        // if (TmpItemPlacementRef is null) return;
+        // trace("Fixing placement param Fid: tmpRef is set");
+        // auto placementParam = TmpItemPlacementRef.AsPlacementParam();
+        // if (placementParam is null) return;
+        // trace("Fixing placement param Fid: got placement param");
+        // Dev::SetOffset(placementParam, 0x8, fidPointer);
+        // fidPointer = 0;
+        // @TmpItemPlacementRef = null;
+        // trace("Fixing placement param Fid: done");
     }
 }
 

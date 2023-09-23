@@ -721,20 +721,21 @@ namespace MeshDuplication {
         }
 
         trace('setting skin pointer if exists');
+        // Note, we don't want to unreplace this pointers later, so don't use ManipPtrs
+        // That's because this is on the item model, and not part of the entity model
         // CPlugGameSkin
         auto skinPtr = Dev::GetOffsetUint64(source, 0xa0);
         auto skin = Dev::GetOffsetNod(source, 0xa0);
         if (skin !is null) {
             trace('setting skin');
             skin.MwAddRef();
-            ManipPtrs::Replace(dest, 0xa0, skin, true);
-            // Dev::SetOffset(dest, 0xa0, skinPtr);
+            Dev::SetOffset(dest, 0xa0, skinPtr);
             dest.SkinDirNameCustom = dest.SkinDirectory;
             // try zeroing fids buffer: nope doesn't help
             // Dev::SetOffset(skin, 0x58, uint64(0));
             // Dev::SetOffset(skin, 0x60, uint64(0));
         } else {
-            ManipPtrs::Replace(dest, 0xa0, uint64(0));
+            Dev::SetOffset(dest, 0xa0, uint64(0));
         }
 
         // not sure if material modifiers are possible on custom items, cannot save

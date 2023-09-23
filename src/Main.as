@@ -17,10 +17,6 @@ void Main() {
 
     sleep(500);
     CallbacksEnabledPostInit = true;
-    // if (GetApp().Editor is null) return;
-    // if (Time::Now < 50000) return;
-
-    // startnew(RunItemTest); // .WithRunContext(Meta::RunContext::AfterScripts);
 }
 
 
@@ -32,8 +28,6 @@ void Unload() {
     FreeAllAllocated();
     // PatchEditorInput::Unload();
 }
-
-#endif
 
 uint lastInItemEditor = 0;
 bool everEnteredEditor = false;

@@ -41,6 +41,11 @@ namespace ItemEditor {
         }
     }
 
+    void UpdateThumbnailAndSaveItem() {
+        ItemEditor::UpdateThumbnail(S_AutoThumbnailDirection);
+        ItemEditor::SaveItem();
+    }
+
     // Warning! Will unzero FIDs after it's been triggered.
     void SaveAndReloadItem() {
         SaveAndReloadItem(true);
@@ -62,6 +67,9 @@ namespace ItemEditor {
             yield();
             SaveItem();
             yield();
+            if (S_UpdateItemThumbnailAfterReload) {
+                UpdateThumbnailAndSaveItem();
+            }
         }
     }
 
@@ -162,9 +170,10 @@ namespace ItemEditor {
         if (frame !is null) return;
         Editor::DoItemEditorAction(ieditor, Editor::ItemEditorAction::OpenItem);
     }
+
 }
 
-CControlBase@ GetFrameChildFromChain(CControlFrame@ frame, uint[]@ childs) {
+CControlBase@ GetFrameChildFromChain(CControlContainer@ frame, uint[]@ childs) {
     CControlContainer@ next = frame;
     for (uint i = 0; i < childs.Length; i++) {
         auto childIx = childs[i];

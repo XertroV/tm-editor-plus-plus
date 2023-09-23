@@ -112,7 +112,7 @@ class ItemSearcher {
         // }
 
         if (f_lastFilterTerm != data.Text) {
-            trace('changed');
+            // trace('changed');
             f_lastFilterTerm = data.Text;
             startnew(CoroutineFunc(UpdateSearch));
         }
