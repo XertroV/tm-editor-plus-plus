@@ -11,7 +11,7 @@ class ItemSearcher {
     CGameCtnArticleNodeArticle@ DrawPrompt() {
         auto inv = Editor::GetInventoryCache();
         if (inv.NbItems == 0) {
-            UI::Text("Inventory cache empty -- enter main editor to refresh.");
+            UI::Text("\\$f44Inventory cache empty -- enter main editor to refresh.");
             return null;
         }
 
@@ -25,10 +25,13 @@ class ItemSearcher {
     }
 
     bool firstRunDone = false;
+    uint lastNonce = 0;
 
     CGameCtnArticleNodeArticle@ DrawFilterResults() {
-        if (!firstRunDone) {
+        auto inv = Editor::GetInventoryCache();
+        if (!firstRunDone || lastNonce != inv.cacheRefreshNonce) {
             firstRunDone = true;
+            lastNonce = inv.cacheRefreshNonce;
             UpdateSearch();
         }
         if (filtered.Length == 0) {

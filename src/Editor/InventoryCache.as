@@ -6,8 +6,10 @@ namespace Editor {
             RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon), "InventoryCache");
         }
 
+        uint cacheRefreshNonce = 0;
         void RefreshCache() {
             yield();
+            auto myNonce = ++cacheRefreshNonce;
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
             cachedInvItemNames.RemoveRange(0, cachedInvItemNames.Length);
             cachedInvBlockNames.RemoveRange(0, cachedInvBlockNames.Length);
@@ -17,6 +19,9 @@ namespace Editor {
             cachedInvItemIndexes.DeleteAll();
             yield();
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor is null) {
+                @editor = cast<CGameCtnEditorFree>(GetApp().Switcher.ModuleStack[0]);
+            }
             // this can be called when outside the editor
             if (editor is null) return;
             auto inv = editor.PluginMapType.Inventory;
@@ -24,14 +29,20 @@ namespace Editor {
             CGameCtnArticleNodeDirectory@ blockRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[1]);
             CGameCtnArticleNodeDirectory@ itemRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[3]);
 
+            if (myNonce != cacheRefreshNonce) return;
+
             trace('Caching inventory blocks...');
             _IsScanningItems = false;
-            CacheInvNode(blockRN);
+            CacheInvNode(blockRN, myNonce);
             yield();
             trace('Caching inventory items...');
             _IsScanningItems = true;
-            CacheInvNode(itemRN);
+            CacheInvNode(itemRN, myNonce);
             trace('Caching inventory complete.');
+            if (myNonce == cacheRefreshNonce) {
+                // trigger update in other things
+                cacheRefreshNonce++;
+            }
         }
 
         void RefreshCacheSoon() {
@@ -78,22 +89,24 @@ namespace Editor {
             return cachedInvItemArticleNodes[ix];
         }
 
-        protected void CacheInvNode(CGameCtnArticleNode@ node) {
+        protected void CacheInvNode(CGameCtnArticleNode@ node, uint nonce) {
             auto dir = cast<CGameCtnArticleNodeDirectory>(node);
             if (dir is null) {
-                CacheInvNode(cast<CGameCtnArticleNodeArticle>(node));
+                CacheInvNode(cast<CGameCtnArticleNodeArticle>(node), nonce);
             } else {
-                CacheInvNode(dir);
+                CacheInvNode(dir, nonce);
             }
         }
 
-        protected void CacheInvNode(CGameCtnArticleNodeDirectory@ node) {
+        protected void CacheInvNode(CGameCtnArticleNodeDirectory@ node, uint nonce) {
             for (uint i = 0; i < node.ChildNodes.Length; i++) {
-                CacheInvNode(node.ChildNodes[i]);
+                CheckPause();
+                if (nonce != cacheRefreshNonce) return;
+                CacheInvNode(node.ChildNodes[i], nonce);
             }
         }
 
-        protected void CacheInvNode(CGameCtnArticleNodeArticle@ node) {
+        protected void CacheInvNode(CGameCtnArticleNodeArticle@ node, uint nonce) {
             if (node.Article is null) {
                 warn('null article nod for ' + node.Name);
                 return;
