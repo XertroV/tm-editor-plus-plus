@@ -118,3 +118,13 @@ void CopyFile(const string &in f1, const string &in f2) {
     outFile.Close();
     inFile.Close();
 }
+
+uint g_LastPause = 0;
+void CheckPause() {
+    uint workMs = Time::Now < 60000 ? 1 : 4;
+    if (g_LastPause + workMs < Time::Now) {
+        yield();
+        // trace('paused');
+        g_LastPause = Time::Now;
+    }
+}

@@ -608,8 +608,11 @@ namespace MeshDuplication {
         if (mesh is null) return;
         auto lightBuffer = Dev::GetOffsetNod(mesh, 0x168);
         auto lightBufferCount = Dev::GetOffsetUint32(mesh, 0x168 + 0x8);
+        auto usrLightBufCount = Dev::GetOffsetUint32(mesh, 0x178 + 0x8);
         trace('lights: zeroing fids for ' + lightBufferCount);
-        if (lightBufferCount > 0 && lightBuffer !is null) {
+        if (usrLightBufCount > 0) {
+            trace('skipping processing lights buffer because userLight array is non-empty');
+        } if (lightBufferCount > 0 && lightBuffer !is null) {
             trace('light buffer not null');
 
             trace('allocating user lights');

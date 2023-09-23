@@ -138,23 +138,26 @@ shared class Tab {
 
     vec2 lastWindowPos;
     bool DrawWindow() {
+        if (windowOpen) {
+            if (expandWindowNextFrame && windowOpen && addRandWindowExtraId) {
+                UI::SetNextWindowPos(int(lastWindowPos.x), int(lastWindowPos.y));
+                windowExtraId = Math::Rand(0, TWO_BILLION);
+            }
+            expandWindowNextFrame = false;
+            windowExpanded = false;
+            if (UI::Begin(fullName + "##" + windowExtraId, windowOpen, WindowFlags)) {
+                windowExpanded = true;
+                // DrawTogglePop();
+                DrawInnerWrapID();
+            }
+            lastWindowPos = UI::GetWindowPos();
+            UI::End();
+        }
+
         Children.DrawWindows();
         WindowChildren.DrawWindowsAndRemoveTabsWhenClosed();
-        if (!windowOpen) return false;
-        if (expandWindowNextFrame && windowOpen && addRandWindowExtraId) {
-            UI::SetNextWindowPos(int(lastWindowPos.x), int(lastWindowPos.y));
-            windowExtraId = Math::Rand(0, TWO_BILLION);
-        }
-        expandWindowNextFrame = false;
-        windowExpanded = false;
-        if (UI::Begin(fullName + "##" + windowExtraId, windowOpen, WindowFlags)) {
-            windowExpanded = true;
-            // DrawTogglePop();
-            DrawInnerWrapID();
-        }
-        lastWindowPos = UI::GetWindowPos();
-        UI::End();
-        return true;
+
+        return windowOpen;
     }
 }
 

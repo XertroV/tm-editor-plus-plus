@@ -244,6 +244,7 @@ TabGroup@ CreateItemEditorRT() {
     ItemEditCurrentPropsTab(root);
     IE_ManipulateMeshesTab(root);
     IE_ItemModelBrowserTab(root);
+    IE_AdvancedTab(root);
 #if DEV
     IE_CreateObjectMacroTab(root);
 #endif
