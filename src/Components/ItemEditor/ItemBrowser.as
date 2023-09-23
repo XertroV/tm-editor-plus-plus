@@ -835,13 +835,65 @@ class ItemModelTreeElement {
             auto gxLFrustum = cast<CGxLightFrustum>(gxLBall);
             if (gxLFrustum !is null) {
                 UI::Text("\\$aaa  CGxLightFrustum:");
-                UI::Text("todo");
+                if (isEditable) {
+                    // gxLFrustum. /*todo -- check variable declaration below.*/;
+                    auto tmp = gxLFrustum;
+                    gxLFrustum.IsOrtho = UI::Checkbox("IsOrtho", gxLFrustum.IsOrtho);
+                    gxLFrustum.NearZ = UI::InputFloat("NearZ", gxLFrustum.NearZ, 0);
+                    gxLFrustum.FarZ = UI::InputFloat("FarZ", gxLFrustum.FarZ, 0);
+                    gxLFrustum.FovY = UI::InputFloat("FovY", gxLFrustum.FovY, 0);
+                    gxLFrustum.RatioXY = UI::InputFloat("RatioXY", gxLFrustum.RatioXY, 0);
+                    gxLFrustum.SizeX = UI::InputFloat("SizeX", gxLFrustum.SizeX, 0);
+                    gxLFrustum.SizeY = UI::InputFloat("SizeY", gxLFrustum.SizeY, 0);
+                    gxLFrustum.DoAttenuation = UI::Checkbox("DoAttenuation", gxLFrustum.DoAttenuation);
+                    gxLFrustum.Apply = DrawComboEApply("Apply", gxLFrustum.Apply);
+                    gxLFrustum.Technique = DrawComboETechnique("Technique", gxLFrustum.Technique);
+                    gxLFrustum.iShadowGroup = UI::InputInt("iShadowGroup", gxLFrustum.iShadowGroup);
+                    gxLFrustum.DoFadeZ = UI::Checkbox("DoFadeZ", gxLFrustum.DoFadeZ);
+                    gxLFrustum.RatioFadeZ = UI::InputFloat("RatioFadeZ", gxLFrustum.RatioFadeZ, 0);
+                    gxLFrustum.UseFacePosX = UI::Checkbox("UseFacePosX", gxLFrustum.UseFacePosX);
+                    gxLFrustum.UseFaceNegX = UI::Checkbox("UseFaceNegX", gxLFrustum.UseFaceNegX);
+                    gxLFrustum.UseFacePosY = UI::Checkbox("UseFacePosY", gxLFrustum.UseFacePosY);
+                    gxLFrustum.UseFaceNegY = UI::Checkbox("UseFaceNegY", gxLFrustum.UseFaceNegY);
+                    gxLFrustum.UseFacePosZ = UI::Checkbox("UseFacePosZ", gxLFrustum.UseFacePosZ);
+                    gxLFrustum.UseFaceNegZ = UI::Checkbox("UseFaceNegZ", gxLFrustum.UseFaceNegZ);
+                } else {
+                    LabeledValue("IsOrtho", gxLFrustum.IsOrtho);
+                    LabeledValue("NearZ", gxLFrustum.NearZ);
+                    LabeledValue("FarZ", gxLFrustum.FarZ);
+                    LabeledValue("FovY", gxLFrustum.FovY);
+                    LabeledValue("RatioXY", gxLFrustum.RatioXY);
+                    LabeledValue("SizeX", gxLFrustum.SizeX);
+                    LabeledValue("SizeY", gxLFrustum.SizeY);
+                    LabeledValue("DoAttenuation", gxLFrustum.DoAttenuation);
+                    LabeledValue("Apply", tostring(gxLFrustum.Apply));
+                    LabeledValue("Technique", tostring(gxLFrustum.Technique));
+                    LabeledValue("iShadowGroup", gxLFrustum.iShadowGroup);
+                    LabeledValue("DoFadeZ", gxLFrustum.DoFadeZ);
+                    LabeledValue("RatioFadeZ", gxLFrustum.RatioFadeZ);
+                    LabeledValue("UseFacePosX", gxLFrustum.UseFacePosX);
+                    LabeledValue("UseFaceNegX", gxLFrustum.UseFaceNegX);
+                    LabeledValue("UseFacePosY", gxLFrustum.UseFacePosY);
+                    LabeledValue("UseFaceNegY", gxLFrustum.UseFaceNegY);
+                    LabeledValue("UseFacePosZ", gxLFrustum.UseFacePosZ);
+                    LabeledValue("UseFaceNegZ", gxLFrustum.UseFaceNegZ);
+                }
             }
 
             auto gxLSpot = cast<CGxLightSpot>(gxLBall);
             if (gxLSpot !is null) {
                 UI::Text("\\$aaa  CGxLightSpot:");
-                UI::Text("todo");
+                if (isEditable) {
+                    gxLSpot.AngleInner = UI::InputFloat("AngleInner", gxLSpot.AngleInner);
+                    gxLSpot.AngleOuter = UI::InputFloat("AngleOuter", gxLSpot.AngleOuter);
+                    gxLSpot.SubLightCountX = uint8(UI::InputInt("SubLightCountX", gxLSpot.SubLightCountX));
+                    gxLSpot.SubLightCountY = uint8(UI::InputInt("SubLightCountY", gxLSpot.SubLightCountY));
+                } else {
+                    LabeledValue("AngleInner", gxLSpot.AngleInner);
+                    LabeledValue("AngleOuter", gxLSpot.AngleOuter);
+                    LabeledValue("SubLightCountX", gxLSpot.SubLightCountX);
+                    LabeledValue("SubLightCountY", gxLSpot.SubLightCountY);
+                }
             }
 
             EndTreeNode();

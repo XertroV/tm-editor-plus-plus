@@ -204,6 +204,20 @@ CGxLightBall::EStaticShadow DrawComboEStaticShadow(const string &in label, CGxLi
         })
     );
 }
+CGxLightFrustum::EApply DrawComboEApply(const string &in label, CGxLightFrustum::EApply val) {
+    return CGxLightFrustum::EApply(
+        DrawArbitraryEnum(label, int(val), 4, function(int v) {
+            return tostring(CGxLightFrustum::EApply(v));
+        })
+    );
+}
+CGxLightFrustum::ETechnique DrawComboETechnique(const string &in label, CGxLightFrustum::ETechnique val) {
+    return CGxLightFrustum::ETechnique(
+        DrawArbitraryEnum(label, int(val), 4, function(int v) {
+            return tostring(CGxLightFrustum::ETechnique(v));
+        })
+    );
+}
 MapDecoChoice DrawComboMapDecoChoice(const string &in label, MapDecoChoice val) {
     return MapDecoChoice(
         DrawArbitraryEnum(label, int(val), MapDecoChoice::XXX_Last, function(int v) {

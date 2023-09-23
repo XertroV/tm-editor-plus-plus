@@ -21,7 +21,7 @@ namespace ManipPtrs {
     }
 
     void Replace(CMwNod@ nod, uint16 offset, CMwNod@ newNod, bool releaseNodOnUnmod = false) {
-        auto newPtr = Dev_GetPointerForNod(newNod);
+        auto newPtr = newNod is null ? 0 : Dev_GetPointerForNod(newNod);
         Replace(nod, offset, newPtr, releaseNodOnUnmod);
     }
     void Replace(CMwNod@ nod, uint16 offset, uint64 newPtr, bool releaseNodOnUnmod = false) {
@@ -62,7 +62,7 @@ namespace ManipPtrs {
         PtrModRecord(uint64 ptr, uint64 newPtr, bool releaseNodOnUnmod) {
             if (ptr > 0) {
                 InitFromPtr(ptr, newPtr);
-                this.releaseNodOnUnmod = releaseNodOnUnmod;
+                this.releaseNodOnUnmod = newPtr != 0 && releaseNodOnUnmod;
             }
         }
 

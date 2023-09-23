@@ -632,6 +632,8 @@ namespace MeshDuplication {
                     trace('clear bitmap projector');
                     // Dev::SetOffset(light, GetOffset("CPlugLight", "m_BitmapProjector"), uint64(0));
                     ManipPtrs::Zero(Dev_GetPointerForNod(light) + GetOffset("CPlugLight", "m_BitmapProjector"));
+                    ManipPtrs::Zero(Dev_GetPointerForNod(light) + GetOffset("CPlugLight", "m_ImageAnim"));
+                    ManipPtrs::Zero(Dev_GetPointerForNod(light) + GetOffset("CPlugLight", "m_BitmapFlare"));
                         // zero light.m_GxLightModel.PlugLight
                     auto lm = light.m_GxLightModel;
                     auto lmAmb = cast<GxLightAmbient>(light.m_GxLightModel);
