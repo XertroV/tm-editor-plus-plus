@@ -61,6 +61,7 @@ class CursorPosition : Tab {
         DrawLabledCoord("Y", Text::Format("% 3d", cursor.Coord.y));
         DrawLabledCoord("Z", Text::Format("% 3d", cursor.Coord.z));
         UI::Text(tostring(cursor.Dir));
+        UI::Text("Pivot: " + Editor::GetCurrentPivot(editor));
         UI::PopFont();
         DrawCursorControls(cursor);
     }

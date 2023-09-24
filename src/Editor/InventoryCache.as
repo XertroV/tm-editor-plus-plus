@@ -24,6 +24,8 @@ namespace Editor {
             cachedInvItemArticleNodes.RemoveRange(0, cachedInvItemArticleNodes.Length);
             cachedInvBlockIndexes.DeleteAll();
             cachedInvItemIndexes.DeleteAll();
+            cachedInvBlockFolders.RemoveRange(0, cachedInvBlockFolders.Length);
+            cachedInvItemFolders.RemoveRange(0, cachedInvItemFolders.Length);
             yield();
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) {
@@ -73,12 +75,17 @@ namespace Editor {
         const array<CGameCtnArticleNodeArticle@>@ get_ItemInvNodes() { return cachedInvItemArticleNodes; }
         const dictionary@ get_ItemIndexes() { return cachedInvItemIndexes; }
         const dictionary@ get_BlockIndexes() { return cachedInvBlockIndexes; }
+        const array<string>@ get_BlockFolders() { return cachedInvBlockFolders; }
+        const array<string>@ get_ItemFolders() { return cachedInvItemFolders; }
 
         protected bool _IsScanningItems = false;
         protected string itemsFolderPrefix;
         protected string[] cachedInvItemPaths;
         protected string[] cachedInvItemNames;
         protected string[] cachedInvBlockNames;
+        protected string[] cachedInvBlockFolders;
+        protected string[] cachedInvItemFolders;
+
         // protected string[] cachedInvBlockPaths;
         protected CGameCtnArticleNodeArticle@[] cachedInvBlockArticleNodes;
         protected CGameCtnArticleNodeArticle@[] cachedInvItemArticleNodes;
@@ -115,6 +122,18 @@ namespace Editor {
                 if (nonce != cacheRefreshNonce) return;
                 CacheInvNode(node.ChildNodes[i], nonce);
             }
+            if (_IsScanningItems) {
+                cachedInvItemFolders.InsertLast(GetInvDirFullPath(node));
+            } else {
+                cachedInvBlockFolders.InsertLast(GetInvDirFullPath(node));
+            }
+        }
+
+        string GetInvDirFullPath(CGameCtnArticleNodeDirectory@ node) {
+            if (node.ParentNode !is null && (node.ParentNode.Name.Length > 0)) {
+                return GetInvDirFullPath(node.ParentNode) + "\\" + node.NodeName;
+            }
+            return node.NodeName;
         }
 
         protected void CacheInvNode(CGameCtnArticleNodeArticle@ node, uint nonce) {

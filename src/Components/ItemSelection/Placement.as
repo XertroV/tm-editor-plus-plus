@@ -55,22 +55,145 @@ class ItemPlacementTab : Tab {
         pp_content.FlyOffset = UI::InputFloat("FlyOffset", pp_content.FlyStep, 0.01);
         AddSimpleTooltip("Unknown");
         pp_content.AutoRotation = UI::Checkbox("AutoRotation", pp_content.AutoRotation);
-        AddSimpleTooltip("Unknown");
+        AddSimpleTooltip("Auto-rotate items to match the surface");
         pp_content.GhostMode = UI::Checkbox("GhostMode", pp_content.GhostMode);
         AddSimpleTooltip("Unknown");
         pp_content.IsFreelyAnchorable = UI::Checkbox("IsFreelyAnchorable", pp_content.IsFreelyAnchorable);
         AddSimpleTooltip("Unknown");
         pp_content.YawOnly = UI::Checkbox("YawOnly", pp_content.YawOnly);
         AddSimpleTooltip("In item mode: will only allow yaw to be changed. Note: keeps rotations set before YawOnly is checked -- it's like YawOnly just blocks the inputs to change Pitch and Roll, but doesn't reset prior rotations.");
+        pp_content.SwitchPivotManually = UI::Checkbox("SwitchPivotManually", pp_content.SwitchPivotManually);
+        AddSimpleTooltip("If true: you need to press Q to change the pivot. Otherwise the game does this automatically, which can be annoying.");
 
-        pp_content.Cube_Center = UI::InputFloat3("Cube_Center", pp_content.Cube_Center);
-        AddSimpleTooltip("Usually 0,0,0");
-        pp_content.Cube_Size = UI::InputFloat("Cube_Size", pp_content.Cube_Size);
-        AddSimpleTooltip("Unclear if this does anything, often 0");
+        // pp_content.Cube_Center = UI::InputFloat3("Cube_Center", pp_content.Cube_Center);
+        // AddSimpleTooltip("Usually 0,0,0");
+        // pp_content.Cube_Size = UI::InputFloat("Cube_Size", pp_content.Cube_Size);
+        // AddSimpleTooltip("Unclear if this does anything, often 0");
+
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+
+        int remPivot = -1;
+        if (UI::CollapsingHeader("Pivot Positions")) {
+            for (uint i = 0; i < pp_content.m_PivotPositions.Length; i++) {
+                UI::AlignTextToFramePadding();
+                UI::Text("" + i + ". ");
+                UI::SameLine();
+                UI::SetNextItemWidth(200);
+                pp_content.m_PivotPositions[i] = UI::InputFloat3("P. " + i, pp_content.m_PivotPositions[i]);
+                if (ieditor !is null) {
+                    UI::SameLine();
+                    if (UI::Button(Icons::Times + "##del-pp-"+i)) {
+                        remPivot = i;
+                    }
+                }
+            }
+            if (UI::Button(Icons::Plus + " New##pp")) {
+                pp_content.AddPivotPosition();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Times + " Last##pp")) {
+                pp_content.RemoveLastPivotPosition();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Trash + " All##pp")) {
+                pp_content.RemoveAllPivotPositions();
+            }
+            if (UI::Button("AppendPivotPositionsFromMagnets")) {
+                pp_content.AppendPivotPositionsFromMagnets();
+            }
+        }
+
+        // always empty?
+        // if (UI::CollapsingHeader("Pivot Rotations")) {
+        //     int remPivot = -1;
+        //     for (uint i = 0; i < pp_content.PivotRotations.Length; i++) {
+        //         auto item = pp_content.PivotRotations[i];
+        //         UI::AlignTextToFramePadding();
+        //         UI::Text("" + i + ". ");
+        //         UI::SameLine();
+        //         UI::SetNextItemWidth(200);
+        //         pp_content.PivotRotations[i] = UX::InputQuat("R. " + i, pp_content.PivotRotations[i]);
+        //         if (ieditor !is null) {
+        //             UI::SameLine();
+        //             if (UI::Button(Icons::Times + "##del-pp-"+i)) {
+        //                 remPivot = i;
+        //             }
+        //         }
+        //     }
+        // }
+        if (remPivot >= 0 && pp_content.PivotPositions.Length > 0) {
+            pp_content.PivotPositions[remPivot] = pp_content.PivotPositions[pp_content.PivotPositions.Length - 1];
+            pp_content.RemoveLastPivotPosition();
+        }
+
+        int remMag = -1;
+        if (UI::CollapsingHeader("Magnet Locations")) {
+            for (uint i = 0; i < pp_content.m_MagnetLocs_Degrees.Length; i++) {
+                UI::AlignTextToFramePadding();
+                UI::Text("" + i + ". ");
+                UI::SameLine();
+                UI::SetNextItemWidth(200);
+                pp_content.m_MagnetLocs_Degrees[i].Trans = UI::InputFloat3("T (x,y,z)   ", pp_content.m_MagnetLocs_Degrees[i].Trans);
+                UI::SameLine();
+                UI::SetNextItemWidth(200);
+                auto angles = MathX::ToRad(vec3(pp_content.m_MagnetLocs_Degrees[i].PitchDeg, pp_content.m_MagnetLocs_Degrees[i].YawDeg, pp_content.m_MagnetLocs_Degrees[i].RollDeg));
+                angles = MathX::ToDeg(UX::InputAngles3("R (p,y,r)", angles));
+                pp_content.m_MagnetLocs_Degrees[i].PitchDeg = angles.x;
+                pp_content.m_MagnetLocs_Degrees[i].YawDeg = angles.y;
+                pp_content.m_MagnetLocs_Degrees[i].RollDeg = angles.z;
+                if (ieditor !is null) {
+                    UI::SameLine();
+                    if (UI::Button(Icons::Times + "##del-pp-"+i)) {
+                        remMag = i;
+                    }
+                }
+            }
+            if (UI::Button(Icons::Plus + "##ml")) {
+                pp_content.AddMagnetLoc();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Plus + " Back")) {
+                pp_content.AddMagnetLoc_Back();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Plus + " Down")) {
+                pp_content.AddMagnetLoc_Down();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Plus + " Front")) {
+                pp_content.AddMagnetLoc_Front();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Plus + " Left")) {
+                pp_content.AddMagnetLoc_Left();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Plus + " Right")) {
+                pp_content.AddMagnetLoc_Right();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Plus + " Up")) {
+                pp_content.AddMagnetLoc_Up();
+            }
+
+            if (UI::Button(Icons::Times + " Last##ml")) {
+                pp_content.RemoveLastMagnetLoc();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Trash + " All##ml")) {
+                pp_content.RemoveAllMagnetLocs();
+            }
+        }
+        if (remMag >= 0) {
+            pp_content.m_MagnetLocs_Degrees[remMag].Trans = pp_content.m_MagnetLocs_Degrees[pp_content.m_MagnetLocs_Degrees.Length - 1].Trans;
+            pp_content.m_MagnetLocs_Degrees[remMag].PitchDeg = pp_content.m_MagnetLocs_Degrees[pp_content.m_MagnetLocs_Degrees.Length - 1].PitchDeg;
+            pp_content.m_MagnetLocs_Degrees[remMag].YawDeg = pp_content.m_MagnetLocs_Degrees[pp_content.m_MagnetLocs_Degrees.Length - 1].YawDeg;
+            pp_content.m_MagnetLocs_Degrees[remMag].RollDeg = pp_content.m_MagnetLocs_Degrees[pp_content.m_MagnetLocs_Degrees.Length - 1].RollDeg;
+        }
 
         // todo: more
 
-        UI::Text("\\$888Note: possible future additions: PivotPositions, MagnetLocations, PivotRotations (mb deprecated).");
+        // UI::Text("\\$888Note: possible future additions: PivotPositions, MagnetLocations, PivotRotations (mb deprecated).");
     }
 
     void DrawMainPlacement(NPlugItemPlacement_SClass@ pc, uint nbVars) {

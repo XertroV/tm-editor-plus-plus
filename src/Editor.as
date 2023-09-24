@@ -116,6 +116,14 @@ namespace Editor {
         }
     }
 
+    uint GetCurrentPivot(CGameCtnEditorFree@ editor) {
+        return Dev::GetOffsetUint32(editor, O_EDITOR_CURR_PIVOT_OFFSET);
+    }
+
+    void SetCurrentPivot(CGameCtnEditorFree@ editor, uint pivot) {
+        Dev::SetOffset(editor, O_EDITOR_CURR_PIVOT_OFFSET, pivot);
+    }
+
     CGameEditorPluginMap::EPlaceMode GetPlacementMode(CGameCtnEditorFree@ editor) {
         return editor.PluginMapType.PlaceMode;
     }

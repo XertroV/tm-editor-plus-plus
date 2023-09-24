@@ -35,10 +35,15 @@ class ItemModel {
 #endif
             ClickableLabel("Author", item.Author.GetName());
             DrawSkin();
+            DrawMatModifier();
             DrawEMEdition();
             DrawEMTree();
             UI::TreePop();
         }
+    }
+
+    void DrawMatModifier() {
+        ItemModelTreeElement(null, -1, item.MaterialModifier, "MaterialModifier", drawProperties, GetOffset(item, "MaterialModifier"), isEditable).Draw();
     }
 
     void DrawSkin() {
@@ -134,6 +139,7 @@ class ItemModelTreeElement {
     CGameCtnBlockInfoMobil@ blockInfoMobil;
     CGameCtnBlockUnitInfo@ unitInfo;
     CGameCommonItemEntityModelEdition@ commonEME;
+    CPlugGameSkinAndFolder@ matMod;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
         @this.parent = parent;
@@ -173,6 +179,7 @@ class ItemModelTreeElement {
         @this.blockInfoMobil = cast<CGameCtnBlockInfoMobil>(nod);
         @this.unitInfo = cast<CGameCtnBlockUnitInfo>(nod);
         @this.commonEME = cast<CGameCommonItemEntityModelEdition>(nod);
+        @this.matMod = cast<CPlugGameSkinAndFolder>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -281,6 +288,8 @@ class ItemModelTreeElement {
             Draw(unitInfo);
         } else if (commonEME !is null) {
             Draw(commonEME);
+        } else if (matMod !is null) {
+            Draw(matMod);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
@@ -1249,6 +1258,13 @@ class ItemModelTreeElement {
         }
     }
 
+    void Draw(CPlugGameSkinAndFolder@ matMod) {
+        if (StartTreeNode(name + " ::\\$f8f CPlugGameSkinAndFolder", UI::TreeNodeFlags::None)) {
+            DrawMaterialModifier(matMod);
+            EndTreeNode();
+        }
+    }
+
     void Draw(CTrackMania@ asdf) {
         if (StartTreeNode(name + " ::\\$f8f CTrackMania", UI::TreeNodeFlags::DefaultOpen)) {
             UI::Text("\\$f80todo");
@@ -1846,5 +1862,84 @@ class GhostBlockModelBrowserTab : BlockModelBrowserTab {
     CGameCtnBlockInfo@ GetBlockInfo() override {
         if (selectedGhostBlockInfo is null) return null;
         return selectedGhostBlockInfo.AsBlockInfo();
+    }
+}
+
+
+
+
+void DrawMaterialModifier(CPlugGameSkinAndFolder@ matMod) {
+    if (matMod is null) {
+        UI::Text("No material modifier");
+        return;
+    }
+    UI::AlignTextToFramePadding();
+    UI::Text("Material Modifier:");
+    UI::Text("Skin:");
+    UI::Indent();
+    DrawMMSkin(matMod);
+    UI::Unindent();
+    // UI::Separator();
+    UI::Text("RemapFolder:");
+    UI::Indent();
+    DrawMMFids(matMod);
+    UI::Unindent();
+}
+
+void DrawMMSkin(CPlugGameSkinAndFolder@ mm) {
+    auto skin = mm.Remapping;
+    string p1 = Dev::GetOffsetString(skin, 0x18);
+    string p2 = Dev::GetOffsetString(skin, 0x28);
+    auto fidBuf = Dev::GetOffsetNod(skin, 0x58);
+    auto fidBufC = Dev::GetOffsetUint32(skin, 0x58 + 0x8);
+    auto strBuf = Dev::GetOffsetNod(skin, 0x68);
+    auto strBufC = Dev::GetOffsetUint32(skin, 0x68 + 0x8);
+    auto clsBuf = Dev::GetOffsetNod(skin, 0x78);
+    auto unkBuf = Dev::GetOffsetNod(skin, 0x88);
+    CopiableLabeledValue("Pri Path", p1);
+    CopiableLabeledValue("Sec Path", p2);
+    if (UI::BeginTable("skintable", 4, UI::TableFlags::SizingStretchProp)) {
+        UI::TableSetupColumn("Use");
+        UI::TableSetupColumn("To Replace");
+        UI::TableSetupColumn("ClassID");
+        UI::TableSetupColumn("Unk");
+        UI::TableHeadersRow();
+        for (uint i = 0; i < fidBufC; i++) {
+            auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(fidBuf, 0x8 * i));
+            auto str = Dev::GetOffsetString(strBuf, 0x10 * i);
+            auto cls = Dev::GetOffsetUint32(clsBuf, 0x4 * i);
+            auto unk = Dev::GetOffsetUint32(unkBuf, 0x4 * i);
+            UI::TableNextRow();
+            UI::TableNextColumn();
+            UI::Text(str);
+            UI::TableNextColumn();
+            UI::Text(fid.FileName + "  " + (fid.Nod !is null ? Icons::Check : Icons::Times));
+#if SIG_DEVELOPER
+            // if (UI::IsItemClicked()) {
+            //     ExploreNod(fid);
+            // }
+#endif
+            UI::TableNextColumn();
+            UI::Text(Text::Format("0x%08x", cls));
+            UI::TableNextColumn();
+            UI::Text(Text::Format("0x%08x", unk));
+        }
+
+        UI::EndTable();
+    }
+}
+
+void DrawMMFids(CPlugGameSkinAndFolder@ mm) {
+    for (uint i = 0; i < mm.RemapFolder.Leaves.Length; i++) {
+        auto fid = mm.RemapFolder.Leaves[i];
+        CopiableLabeledValue("Name", fid.FileName);
+        UI::SameLine();
+        LabeledValue("Loaded", fid.Nod !is null);
+#if SIG_DEVELOPER
+        UI::SameLine();
+        if (UX::SmallButton(Icons::Cube + " Explore##mmfid" + i)) {
+            ExploreNod(fid);
+        }
+#endif
     }
 }

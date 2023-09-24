@@ -245,6 +245,9 @@ const uint16 O_MAP_OFFZONE_SIZE_OFFSET = 0x680;
 const uint16 O_MAP_MTSIZE_OFFSET = 0x1F0;
 
 
+// is a unit
+const uint16 O_EDITOR_CURR_PIVOT_OFFSET = GetOffset("CGameCtnEditorFree", "UndergroundBox") + (0xBC4 - 0xAC0);
+
 
 const uint16 O_ITEM_MODEL_SKIN = 0xA0;
 
