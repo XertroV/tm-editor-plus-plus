@@ -721,6 +721,19 @@ namespace MeshDuplication {
         if (source.PodiumClipList !is null) {
             trace('adding empty PodiumClipList');
             @dest.PodiumClipList = CPlugMediaClipList();
+            if (source.PodiumClipList.MediaClipFids.Length > 0) {
+                auto fid = cast<CSystemFidFile>(source.PodiumClipList.MediaClipFids[0]);
+                auto clip = cast<CGameCtnMediaClip>(source.PodiumClipList.MediaClipFids[0]);
+                if (fid !is null) {
+                    if (fid.Nod is null) {
+                        @clip = cast<CGameCtnMediaClip>(Fids::Preload(fid));
+                    }
+                }
+                if (clip !is null) {
+                    // dest.PodiumClipList.MediaClipFids.Add(clip);
+                    // clip.MwAddRef();
+                }
+            }
         }
 
         trace('Cloning placement params');

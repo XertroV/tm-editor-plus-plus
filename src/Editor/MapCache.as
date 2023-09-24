@@ -153,6 +153,13 @@ namespace Editor {
             RefreshCacheSoon();
             RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon), "MapCache");
         }
+        bool isRefreshing = false;
+
+        uint loadProgress = 0;
+        uint loadTotal = 0;
+        string LoadingStatus() {
+            return tostring(loadProgress) + " / " + loadTotal + Text::Format(" (%2.1f%%)", float(loadProgress) / loadTotal * 100);
+        }
 
         // todo: BlockInMapI, ItemInMapI, dict for IdName => array<ObjInMapI>
 
@@ -161,7 +168,10 @@ namespace Editor {
         protected ItemInMap@[] _Items;
         const ItemInMap@[] get_Items() { return _Items; }
 
+        uint lastRefreshNonce = 0;
         void RefreshCache() {
+            auto myNonce = ++lastRefreshNonce;
+            isRefreshing = true;
             _ItemIdNameMap.DeleteAll();
             _BlockIdNameMap.DeleteAll();
             _Items.RemoveRange(0, _Items.Length);
@@ -176,34 +186,50 @@ namespace Editor {
             if (editor is null) return;
             auto pmt = editor.PluginMapType;
 
+            loadTotal = pmt.ClassicBlocks.Length + pmt.GhostBlocks.Length + pmt.Map.AnchoredObjects.Length;
+
             trace('Caching map ClassicBlocks...');
             for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
+                CheckPause();
+                if (GetApp().Editor is null) return;
+                if (myNonce != lastRefreshNonce) return;
                 AddBlock(BlockInMap(i, pmt.ClassicBlocks[i]));
             }
             yield();
             yield();
             trace('Caching map GhostBlocks...');
             for (uint i = 0; i < pmt.GhostBlocks.Length; i++) {
+                CheckPause();
+                if (GetApp().Editor is null) return;
+                if (myNonce != lastRefreshNonce) return;
                 AddBlock(BlockInMap(i, pmt.GhostBlocks[i]));
             }
             yield();
             yield();
             trace('Caching map items...');
             for (uint i = 0; i < pmt.Map.AnchoredObjects.Length; i++) {
+                CheckPause();
+                if (GetApp().Editor is null) return;
+                if (myNonce != lastRefreshNonce) return;
                 AddItem(ItemInMap(i, pmt.Map.AnchoredObjects[i]));
             }
             trace('Caching map complete. Indexing...');
             yield();
             yield();
             // todo
+            if (myNonce != lastRefreshNonce) return;
             ItemTypes.SortAsc();
             yield();
+            if (myNonce != lastRefreshNonce) return;
             BlockTypes.SortAsc();
             yield();
+            if (myNonce != lastRefreshNonce) return;
             ItemTypesLower.SortAsc();
             yield();
+            if (myNonce != lastRefreshNonce) return;
+            isRefreshing = false;
+            lastRefreshNonce++;
             BlockTypesLower.SortAsc();
-            yield();
         }
 
         dictionary _ItemIdNameMap;
@@ -214,6 +240,7 @@ namespace Editor {
         string[] ItemTypesLower;
 
         protected void AddBlock(BlockInMap@ b) {
+            loadProgress++;
             _Blocks.InsertLast(b);
             if (!_BlockIdNameMap.Exists(b.IdName)) {
                 @_BlockIdNameMap[b.IdName] = array<BlockInMap@>();
@@ -224,6 +251,7 @@ namespace Editor {
         }
 
         protected void AddItem(ItemInMap@ b) {
+            loadProgress++;
             if (!_ItemIdNameMap.Exists(b.IdName)) {
                 @_ItemIdNameMap[b.IdName] = array<ItemInMap@>();
                 ItemTypes.InsertLast(b.IdName);

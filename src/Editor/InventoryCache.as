@@ -5,10 +5,17 @@ namespace Editor {
             itemsFolderPrefix = Fids::GetUserFolder("Items").FullDirName;
             RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon), "InventoryCache");
         }
+        bool isRefreshing = false;
+
+        uint loadProgress = 0;
+        uint loadTotal = 0;
+        string LoadingStatus() {
+            return tostring(loadProgress) + " / " + loadTotal + Text::Format(" (%2.1f%%)", float(loadProgress) / loadTotal * 100);
+        }
 
         uint cacheRefreshNonce = 0;
         void RefreshCache() {
-            yield();
+            isRefreshing = true;
             auto myNonce = ++cacheRefreshNonce;
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
             cachedInvItemNames.RemoveRange(0, cachedInvItemNames.Length);
@@ -42,6 +49,7 @@ namespace Editor {
             if (myNonce == cacheRefreshNonce) {
                 // trigger update in other things
                 cacheRefreshNonce++;
+                isRefreshing = false;
             }
         }
 
@@ -99,8 +107,11 @@ namespace Editor {
         }
 
         protected void CacheInvNode(CGameCtnArticleNodeDirectory@ node, uint nonce) {
+            loadTotal += node.Children.Length + 1;
+            loadProgress += 1;
             for (uint i = 0; i < node.ChildNodes.Length; i++) {
                 CheckPause();
+                if (GetApp().Editor is null) return;
                 if (nonce != cacheRefreshNonce) return;
                 CacheInvNode(node.ChildNodes[i], nonce);
             }
@@ -122,6 +133,7 @@ namespace Editor {
                 cachedInvBlockNames.InsertLast(string(node.NodeName));
                 cachedInvBlockArticleNodes.InsertLast(node);
             }
+            loadProgress += 1;
         }
     }
 }

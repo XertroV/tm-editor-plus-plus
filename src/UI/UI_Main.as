@@ -195,6 +195,21 @@ namespace MenuBar {
                 UI::EndMenu();
             }
 
+            bool isLoading = Editor::GetMapCache().isRefreshing
+                || Editor::GetInventoryCache().isRefreshing
+                ;
+            if (isLoading && UI::BeginMenu("Loading...")) {
+                UI::BeginDisabled();
+                if (Editor::GetMapCache().isRefreshing) {
+                    UI::MenuItem("Map Objs Cache: " + Editor::GetMapCache().LoadingStatus());
+                }
+                if (Editor::GetInventoryCache().isRefreshing) {
+                    UI::MenuItem("Inventory Cache: " + Editor::GetInventoryCache().LoadingStatus());
+                }
+                UI::EndDisabled();
+                UI::EndMenu();
+            }
+
             UI::EndMenuBar();
         }
     }
