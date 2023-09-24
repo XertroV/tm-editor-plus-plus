@@ -126,10 +126,6 @@ namespace MeshDuplication {
             ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + GetOffset("NPlugVeget_SMaterial", "Roughness")));
 
             // 0x28, 30, 38 not included in type info, they are CPlugBitmaps.
-            // ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + 0x28));
-            // ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + 0x30));
-            // ZeroNodFid(Dev_GetOffsetNodSafe(tree, o + i * elSize + 0x38));
-
             // Zeroing the pointers gives red trees but it works...
             ManipPtrs::Zero(Dev_GetPointerForNod(tree) + o + i * elSize + 0x28);
             ManipPtrs::Zero(Dev_GetPointerForNod(tree) + o + i * elSize + 0x30);

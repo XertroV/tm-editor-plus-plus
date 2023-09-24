@@ -57,9 +57,9 @@ void UI_Main_Render() {
             tabToDraw.DrawTabsAsSidebar();
         }
         UI::End();
-
-        ToolsTG.DrawWindows();
     }
+
+    ToolsTG.DrawWindows();
 
     if (!Editor::IsRefreshSafe()) {
         vec2 size = vec2(300, 120);
