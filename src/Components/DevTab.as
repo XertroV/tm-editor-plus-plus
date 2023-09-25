@@ -13,6 +13,15 @@ class DevMainTab : Tab {
     }
 
     void DrawInner() override {
+#if DEV
+        if (testTexture is null) {
+            UI::Text("no texture");
+        } else {
+            UI::Text("Image: vvvv");
+            UI::Image(testTexture, vec2(64, 64));
+            UI::Text("Image: ^^^^");
+        }
+#endif
         drawStuff = UI::Checkbox("Enable Dev Info", drawStuff);
         if (!drawStuff) return;
         Children.DrawTabs();

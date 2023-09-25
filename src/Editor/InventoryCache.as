@@ -15,6 +15,7 @@ namespace Editor {
 
         uint cacheRefreshNonce = 0;
         void RefreshCache() {
+            if (isRefreshing) return;
             isRefreshing = true;
             auto myNonce = ++cacheRefreshNonce;
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
@@ -93,6 +94,13 @@ namespace Editor {
         protected CGameCtnArticleNodeArticle@[] cachedInvItemArticleNodes;
         protected dictionary cachedInvBlockIndexes;
         protected dictionary cachedInvItemIndexes;
+
+        CGameCtnArticleNodeArticle@ GetByName(const string &in name, bool isItem) {
+            if (isItem) {
+                return GetItemByPath(name);
+            }
+            return GetBlockByName(name);
+        }
 
         CGameCtnArticleNodeArticle@ GetBlockByName(const string &in name) {
             if (!cachedInvBlockIndexes.Exists(name)) return null;

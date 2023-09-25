@@ -170,6 +170,7 @@ namespace Editor {
 
         uint lastRefreshNonce = 0;
         void RefreshCache() {
+            // if (isRefreshing) return;
             auto myNonce = ++lastRefreshNonce;
             isRefreshing = true;
             _ItemIdNameMap.DeleteAll();
@@ -181,7 +182,9 @@ namespace Editor {
             ItemTypesLower.RemoveRange(0, ItemTypesLower.Length);
             BlockTypesLower.RemoveRange(0, BlockTypesLower.Length);
             yield();
+            if (myNonce != lastRefreshNonce) return;
             yield();
+            if (myNonce != lastRefreshNonce) return;
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) return;
             auto pmt = editor.PluginMapType;
@@ -191,6 +194,7 @@ namespace Editor {
             trace('Caching map ClassicBlocks...');
             for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
                 CheckPause();
+                if (myNonce != lastRefreshNonce) return;
                 if (GetApp().Editor is null) return;
                 if (myNonce != lastRefreshNonce) return;
                 AddBlock(BlockInMap(i, pmt.ClassicBlocks[i]));
@@ -200,6 +204,7 @@ namespace Editor {
             trace('Caching map GhostBlocks...');
             for (uint i = 0; i < pmt.GhostBlocks.Length; i++) {
                 CheckPause();
+                if (myNonce != lastRefreshNonce) return;
                 if (GetApp().Editor is null) return;
                 if (myNonce != lastRefreshNonce) return;
                 AddBlock(BlockInMap(i, pmt.GhostBlocks[i]));
@@ -209,6 +214,7 @@ namespace Editor {
             trace('Caching map items...');
             for (uint i = 0; i < pmt.Map.AnchoredObjects.Length; i++) {
                 CheckPause();
+                if (myNonce != lastRefreshNonce) return;
                 if (GetApp().Editor is null) return;
                 if (myNonce != lastRefreshNonce) return;
                 AddItem(ItemInMap(i, pmt.Map.AnchoredObjects[i]));

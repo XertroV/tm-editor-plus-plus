@@ -17,6 +17,10 @@ void Main() {
 
     sleep(500);
     CallbacksEnabledPostInit = true;
+
+#if DEV
+    runGbxTest();
+#endif
 }
 
 
