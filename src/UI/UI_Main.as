@@ -238,6 +238,8 @@ namespace MenuBar {
     }
 }
 
+FavoritesTab@ g_Favorites;
+
 TabGroup@ CreateToolsTabGroup() {
     auto tools = RootTabGroupCls();
 
@@ -283,6 +285,7 @@ TabGroup@ CreateRootTabGroup() {
     PickedItemTab(root);
     // TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
     InventoryMainTab(root);
+    @g_Favorites = FavoritesTab(root);
     ItemEmbedTab(root);
     BlockSelectionTab(root);
     ItemSelectionTab(root);

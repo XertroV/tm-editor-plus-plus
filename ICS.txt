@@ -1,0 +1,70 @@
+// ICS, item creation script
+
+- load templates
+- describe output object
+-
+
+sourceItems:
+  - alias: IdName
+
+
+modelSpec = prefab | varlist | staticobj | dynaobj | kinematic | ...
+
+staticobj: {
+    mesh,
+    surface
+}
+
+dynaobj: {
+    mesh, surface
+}
+
+kinematic: {
+    translation: animSpec,
+    rotation: animSpec,
+}
+
+animSpec: {
+    animFunc,
+    axis, min, max
+}
+
+mesh: {
+    source: alias,
+    setMaterials: [
+        (ix, materialSpec),
+    ]
+}
+
+surface: {
+    source: alias,
+    setMaterials: [
+        (ix, materialSpec),
+    ]
+}
+
+prefab: {
+    ents: [
+        entRefSpec,
+        entRefSpec,
+        {repeat: [entRefSpec, n_repeats, [...replacement_params]]},
+        ...
+    ]
+}
+
+entRefSpec: {
+    model: modelSpec,
+    params?: entRefParams,
+    loc: vec3, quat: quat,
+}
+
+entRefParams: {
+    type: <class name>
+    values: [x, y, z]
+}
+
+- set colors on materials
+- set materials
+- set kinematic props
+- set ent params
+- ent location

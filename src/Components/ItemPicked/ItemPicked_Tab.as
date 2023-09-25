@@ -4,6 +4,16 @@ class FocusedItemTab : Tab, NudgeItemBlock {
     FocusedItemTab(TabGroup@ parent, const string &in name) {
         super(parent, name, Icons::Crosshairs + Icons::Cube);
         removable = true;
+        SetupFav(true, false);
+    }
+
+    bool get_favEnabled() override property {
+        return FocusedItem !is null && FocusedItem.nod !is null;
+    }
+
+    string GetFavIdName() override {
+        if (!favEnabled) return "";
+        return FocusedItem.AsItem().ItemModel.IdName;
     }
 
     ReferencedNod@ get_FocusedItem() {

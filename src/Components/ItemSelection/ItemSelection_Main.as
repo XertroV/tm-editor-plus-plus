@@ -2,6 +2,7 @@ class ItemSelectionTab : Tab {
     ItemSelectionTab(TabGroup@ parent) {
         super(parent, "Current Item", Icons::FolderOpenO + Icons::Tree);
         canPopOut = false;
+        SetupFav(true, false);
         // child tabs
         ItemPlacementTab(Children);
         ItemLayoutTab(Children);
@@ -12,6 +13,16 @@ class ItemSelectionTab : Tab {
 #if SIG_DEVELOPER
         ItemSelection_DevTab(Children);
 #endif
+    }
+
+    bool get_favEnabled() override property {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.CurrentItemModel !is null;
+    }
+
+    string GetFavIdName() override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.CurrentItemModel.IdName;
     }
 
     void DrawInner() override {

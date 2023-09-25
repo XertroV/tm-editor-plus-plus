@@ -4,6 +4,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
     FocusedBlockTab(TabGroup@ parent) {
         super(parent, "Picked Block", Icons::Crosshairs + Icons::Cube);
         removable = true;
+        SetupFav(false, false);
     }
 
     ReferencedNod@ get_FocusedBlock() {
@@ -12,6 +13,15 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
     void set_FocusedBlock(ReferencedNod@ value) {
         @pinnedBlock = value;
+    }
+
+
+    bool get_favEnabled() override property {
+        return FocusedBlock !is null && FocusedBlock.nod !is null;
+    }
+
+    string GetFavIdName() override {
+        return FocusedBlock.AsBlock().BlockInfo.IdName;
     }
 
     // ! use block desc instead

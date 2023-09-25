@@ -116,6 +116,25 @@ namespace Editor {
         }
     }
 
+    void SetSelectedInventoryNode(CGameCtnEditorFree@ editor, CGameCtnArticleNodeArticle@ article, bool isItem) {
+        // article null check?
+        if (isItem) {
+            Editor::EnsureItemPlacementMode(editor);
+        } else {
+            Editor::EnsureBlockPlacementMode(editor);
+        }
+        editor.PluginMapType.Inventory.SelectArticle(article);
+    }
+    void SetSelectedInventoryFolder(CGameCtnEditorFree@ editor, CGameCtnArticleNodeDirectory@ dir, bool isItem) {
+        // article null check?
+        if (isItem) {
+            Editor::EnsureItemPlacementMode(editor);
+        } else {
+            Editor::EnsureBlockPlacementMode(editor);
+        }
+        editor.PluginMapType.Inventory.SelectNode(dir);
+    }
+
     uint GetCurrentPivot(CGameCtnEditorFree@ editor) {
         return Dev::GetOffsetUint32(editor, O_EDITOR_CURR_PIVOT_OFFSET);
     }
@@ -128,6 +147,9 @@ namespace Editor {
         return editor.PluginMapType.PlaceMode;
     }
 
+    void SetPlacementMode(CGameCtnEditorFree@ editor, CGameEditorPluginMap::EPlaceMode mode) {
+        editor.PluginMapType.PlaceMode = mode;
+    }
 
     CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) {
         return editor.PluginMapType.EditMode;

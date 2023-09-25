@@ -1,4 +1,4 @@
-shared class TabGroup {
+class TabGroup {
     Tab@ Parent = null;
 
     Tab@[] tabs;

@@ -1,4 +1,4 @@
-shared class EffectTab : Tab {
+class EffectTab : Tab {
     EffectTab(TabGroup@ p, const string &in name, const string &in icon) {
         super(p, name, icon);
     }
@@ -28,7 +28,7 @@ shared class EffectTab : Tab {
 }
 
 
-shared class MultiEffectTab : EffectTab {
+class MultiEffectTab : EffectTab {
     MultiEffectTab(TabGroup@ p, const string &in name, const string &in icon) {
         super(p, name, icon);
     }

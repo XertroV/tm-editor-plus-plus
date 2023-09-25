@@ -2,6 +2,7 @@ class BlockSelectionTab : Tab {
     BlockSelectionTab(TabGroup@ parent) {
         super(parent, "Current Block", Icons::FolderOpenO + Icons::Cube);
         canPopOut = false;
+        SetupFav(false, false);
         // child tabs
         SetGhostVariantTab(Children);
         // BlockPlacementTagTab(Children);
@@ -10,8 +11,30 @@ class BlockSelectionTab : Tab {
         GhostBlockModelBrowserTab(Children);
     }
 
+    bool get_favEnabled() override property {
+        auto currBlock = CurrentBlockSelection;
+        return currBlock !is null && currBlock.nod !is null;
+    }
+
+    string GetFavIdName() override {
+        return CurrentBlockSelection.AsBlockInfo().IdName;
+    }
+
     void DrawInner() override {
         Children.DrawTabs();
+    }
+
+    ReferencedNod@ get_CurrentBlockSelection() {
+        if (IsInGhostMode) {
+            return selectedGhostBlockInfo;
+        }
+        return selectedBlockInfo;
+    }
+
+    bool get_IsInGhostMode() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto pmt = editor.PluginMapType;
+        return pmt.PlaceMode == CGameEditorPluginMap::EPlaceMode::GhostBlock;
     }
 
     void _HeadingLeft() override {

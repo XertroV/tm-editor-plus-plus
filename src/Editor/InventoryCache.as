@@ -85,6 +85,8 @@ namespace Editor {
         protected string[] cachedInvBlockNames;
         protected string[] cachedInvBlockFolders;
         protected string[] cachedInvItemFolders;
+        protected dictionary cachedInvBlockFolderLookup;
+        protected dictionary cachedInvItemFolderLookup;
 
         // protected string[] cachedInvBlockPaths;
         protected CGameCtnArticleNodeArticle@[] cachedInvBlockArticleNodes;
@@ -92,16 +94,26 @@ namespace Editor {
         protected dictionary cachedInvBlockIndexes;
         protected dictionary cachedInvItemIndexes;
 
-        CGameCtnArticleNode@ GetBlockByName(const string &in name) {
+        CGameCtnArticleNodeArticle@ GetBlockByName(const string &in name) {
             if (!cachedInvBlockIndexes.Exists(name)) return null;
             uint ix = uint(cachedInvBlockIndexes[name]);
             return cachedInvBlockArticleNodes[ix];
         }
 
-        CGameCtnArticleNode@ GetItemByPath(const string &in path) {
+        CGameCtnArticleNodeArticle@ GetItemByPath(const string &in path) {
             if (!cachedInvItemIndexes.Exists(path)) return null;
             uint ix = uint(cachedInvItemIndexes[path]);
             return cachedInvItemArticleNodes[ix];
+        }
+
+        CGameCtnArticleNodeDirectory@ GetBlockDirectory(const string &in dir) {
+            if (!cachedInvBlockFolderLookup.Exists(dir)) return null;
+            return cast<CGameCtnArticleNodeDirectory>(cachedInvBlockIndexes[dir]);
+        }
+
+        CGameCtnArticleNodeDirectory@ GetItemDirectory(const string &in dir) {
+            if (!cachedInvItemFolderLookup.Exists(dir)) return null;
+            return cast<CGameCtnArticleNodeDirectory>(cachedInvItemIndexes[dir]);
         }
 
         protected void CacheInvNode(CGameCtnArticleNode@ node, uint nonce) {
@@ -123,9 +135,13 @@ namespace Editor {
                 CacheInvNode(node.ChildNodes[i], nonce);
             }
             if (_IsScanningItems) {
-                cachedInvItemFolders.InsertLast(GetInvDirFullPath(node));
+                string name = GetInvDirFullPath(node);
+                cachedInvItemFolders.InsertLast(name);
+                @cachedInvItemFolderLookup[name] = node;
             } else {
-                cachedInvBlockFolders.InsertLast(GetInvDirFullPath(node));
+                string name = GetInvDirFullPath(node);
+                cachedInvBlockFolders.InsertLast(name);
+                @cachedInvBlockFolderLookup[name] = node;
             }
         }
 

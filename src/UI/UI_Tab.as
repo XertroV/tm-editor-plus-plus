@@ -1,4 +1,4 @@
-shared class Tab {
+class Tab {
     string idNonce = "tab-" + Math::Rand(0, TWO_BILLION);
 
     // bool canCloseTab = false;
@@ -108,6 +108,7 @@ shared class Tab {
     }
 
     void _HeadingRight() {
+        DrawFavoriteButton();
         if (!tabOpen) {
             if (!windowExpanded) {
                 if (UI::Button("Expand Window##"+fullName)) {
@@ -123,6 +124,35 @@ shared class Tab {
                 DrawTogglePop();
             }
         }
+    }
+
+    // override me
+    bool get_favEnabled() {return false;}
+    bool favIsFolder = false;
+    bool favIsItem = false;
+
+    void SetupFav(bool isItem, bool isFolder) {
+        favIsFolder = isFolder;
+        favIsItem = isItem;
+    }
+
+    void DrawFavoriteButton() {
+        if (!favEnabled) return;
+        auto idName = GetFavIdName();
+        if (idName.Length == 0) return;
+
+        bool isFav = g_Favorites.IsFavorited(idName, favIsItem, favIsFolder);
+        if (isFav && UI::ButtonColored(Icons::Star, .4)) {
+            g_Favorites.RemoteFromFavorites(idName, favIsItem, favIsFolder);
+        } else if (!isFav && UI::Button(Icons::Star)) {
+            g_Favorites.AddToFavorites(idName, favIsItem, favIsFolder);
+        }
+        UI::SameLine();
+    }
+
+    // override me
+    string GetFavIdName() {
+        return "";
     }
 
     void DrawInner() {
