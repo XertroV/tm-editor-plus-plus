@@ -8,8 +8,11 @@ namespace IconTextures {
     UI::Texture@ noIconImg;
     UI::Texture@ failedImg;
     UI::Texture@[] loadingFrames;
+    dictionary knownHashes;
 
-    void LoadLoadingFrames() {
+    void IconInitCoro() {
+        yield();
+        LoadIconTextureCsvCache();
         yield();
         loadingFrames.InsertLast(UI::LoadTexture("img/loading.png"));
         yield();
@@ -22,7 +25,24 @@ namespace IconTextures {
         loadingFrames.InsertLast(UI::LoadTexture("img/loading-5.png"));
     }
 
-    auto initCoro = startnew(LoadLoadingFrames);
+    void LoadIconTextureCsvCache() {
+        IO::File csv(ArticleMappingPath(), IO::FileMode::Read);
+        auto lines = csv.ReadToEnd().Split("\n");
+        for (uint i = 0; i < lines.Length; i++) {
+            if (lines[i].Length == 0) continue;
+            auto parts = lines[i].Split(",", 2);
+            if (parts.Length < 2) {
+                trace("skipping icon texture csv cache line: " + lines[i]);
+                continue;
+            }
+            auto hash = parts[0];
+            auto nodeName = parts[1];
+            knownHashes[hash] = nodeName;
+        }
+        auto buf = csv.Read(csv.Size());
+    }
+
+    auto initCoro = startnew(IconInitCoro);
 
     UI::Texture@ GetIconTexture(CGameCtnArticleNodeArticle@ article) {
         if (article is null) return null;
@@ -141,12 +161,16 @@ namespace IconTextures {
         iconWrite.Write(iconBytes);
         iconWrite.Close();
         // update mapping with the corresponding node
-        IO::File iconLog(IconFilePath("article_mapping.csv"), IO::FileMode::Append);
+        IO::File iconLog(ArticleMappingPath(), IO::FileMode::Append);
         iconLog.WriteLine(hash + "," + nodeName);
         iconLog.Close();
         // reset bytes and return
         iconBytes.Seek(0);
         return iconBytes;
+    }
+
+    string ArticleMappingPath() {
+        return IconFilePath("article_mapping.csv");
     }
 
     bool IconFileExists(const string &in hash) {
@@ -218,6 +242,32 @@ class FavoritesTab : Tab {
         if (!IO::FolderExists(FAV_ICON_PATH)) {
             IO::CreateFolder(FAV_ICON_PATH);
         }
+
+        InitFavObjects();
+    }
+
+    FavObj@[] blockFavs;
+    FavObj@[] blockFolderFavs;
+    FavObj@[] itemFavs;
+    FavObj@[] itemFolderFavs;
+
+    void InitFavObjects() {
+        auto blocks = favorites['blocks'].GetKeys();
+        auto blockFolders = favorites['blockFolders'].GetKeys();
+        auto items = favorites['items'].GetKeys();
+        auto itemFolders = favorites['itemFolders'].GetKeys();
+        for (uint i = 0; i < blocks.Length; i++) {
+            blockFavs.InsertLast(FavObj(blocks[i], false, false));
+        }
+        for (uint i = 0; i < blockFolders.Length; i++) {
+            blockFavs.InsertLast(FavObj(blockFolders[i], false, true));
+        }
+        for (uint i = 0; i < items.Length; i++) {
+            itemFavs.InsertLast(FavObj(items[i], true, false));
+        }
+        for (uint i = 0; i < itemFolders.Length; i++) {
+            itemFavs.InsertLast(FavObj(itemFolders[i], true, true));
+        }
     }
 
     void SaveFavorites() {
@@ -225,54 +275,66 @@ class FavoritesTab : Tab {
     }
 
     void AddToFavorites(const string &in idName, bool isItem, bool isFolder) {
+        Json::Value@ store;
+        bool exists = store.HasKey(idName);
+        if (!exists) {
+            store[idName] = 1;
+            AddNewFavObj(idName, isItem, isFolder);
+            SaveFavorites();
+        }
+    }
+
+    void AddNewFavObj(const string &in nodeName, bool isItem, bool isFolder) {
+        GetFavs(isItem, isFolder).InsertLast(FavObj(nodeName, isItem, isFolder));
+    }
+
+    Json::Value@ GetStore(bool isItem, bool isFolder) {
         if (isFolder) {
             if (isItem) {
-                FavItemFolders[idName] = 1;
+                return FavItemFolders;
             } else {
-                FavBlockFolders[idName] = 1;
+                return FavBlockFolders;
             }
         } else {
             if (isItem) {
-                FavItems[idName] = 1;
+                return FavItems;
             } else {
-                FavBlocks[idName] = 1;
+                return FavBlocks;
             }
         }
-        SaveFavorites();
+    }
+
+    FavObj@[]@ GetFavs(bool isItem, bool isFolder) {
+        if (isFolder) {
+            if (isItem) {
+                return itemFolderFavs;
+            } else {
+                return blockFolderFavs;
+            }
+        } else {
+            if (isItem) {
+                return itemFavs;
+            } else {
+                return blockFavs;
+            }
+        }
     }
 
     void RemoteFromFavorites(const string &in idName, bool isItem, bool isFolder) {
-        if (isFolder) {
-            if (isItem) {
-                RemoveKeyFromJsonObj(FavItemFolders, idName);
-            } else {
-                RemoveKeyFromJsonObj(FavBlockFolders, idName);
-            }
-        } else {
-            if (isItem) {
-                RemoveKeyFromJsonObj(FavItems, idName);
-            } else {
-                RemoveKeyFromJsonObj(FavBlocks, idName);
+        RemoveKeyFromJsonObj(GetStore(isItem, isFolder), idName);
+        auto favs = GetFavs(isItem, isFolder);
+        for (uint i = 0; i < favs.Length; i++) {
+            if (favs[i].nodeName == idName) {
+                favs.RemoveAt(i);
+                SaveFavorites();
+                return;
             }
         }
-        SaveFavorites();
+        NotifyWarning("Couldn't find favorite to remove: " + idName);
     }
 
     bool IsFavorited(const string &in name, bool isItem, bool isFolder) {
-        if (isFolder) {
-            if (isItem) {
-                return FavItemFolders.HasKey(name);
-            } else {
-                return FavBlockFolders.HasKey(name);
-            }
-        } else {
-            if (isItem) {
-                return FavItems.HasKey(name);
-            } else {
-                return FavBlocks.HasKey(name);
-            }
-        }
-        return false;
+        return GetStore(isItem, isFolder).HasKey(name);
     }
 
     Json::Value@ get_FavItems() { return favorites['items']; }
@@ -307,10 +369,10 @@ class FavoritesTab : Tab {
             SaveFavorites();
         }
 
-        if (UI::CollapsingHeader("Block Folders")) { DrawFavEntries(favorites['blockFolders'], false, true); }
-        if (UI::CollapsingHeader("Item Folders")) { DrawFavEntries(favorites['itemFolders'], true, true); }
-        if (UI::CollapsingHeader("Blocks")) { DrawFavEntries(favorites['blocks'], false, false); }
-        if (UI::CollapsingHeader("Items")) { DrawFavEntries(favorites['items'], true, false); }
+        if (UI::CollapsingHeader("Block Folders")) { DrawFavEntries(false, true); }
+        if (UI::CollapsingHeader("Item Folders")) { DrawFavEntries(true, true); }
+        if (UI::CollapsingHeader("Blocks")) { DrawFavEntries(false, false); }
+        if (UI::CollapsingHeader("Items")) { DrawFavEntries(true, false); }
         // uint totalCount = FavItems.Length + FavBlocks.Length + FavItemFolders.Length + FavBlockFolders.Length;
         // UI::ListClipper clip(totalCount);
         // while (clip.Step()) {
@@ -333,24 +395,14 @@ class FavoritesTab : Tab {
         // }
     }
 
-    void DrawFavEntries(Json::Value@ list, bool isItem, bool isFolder) {
+    void DrawFavEntries(bool isItem, bool isFolder) {
         auto inv = Editor::GetInventoryCache();
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        UI::ListClipper clip(list.Length);
-        auto keys = list.GetKeys();
+        auto favs = GetFavs(isItem, isFolder);
+        UI::ListClipper clip(favs.Length);
         while (clip.Step()) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
-                UI::Text(tostring(i) + ". " + keys[i]);
-                UI::SameLine();
-                if (UX::SmallButton(keys[i])) {
-                    SelectInvNode(editor, keys[i], isItem, isFolder);
-                }
-                auto article = inv.GetByName(keys[i], isItem);
-                if (article is null) UI::Text("\\$f80! Null article");
-                auto tex = IconTextures::GetIconTexture(article);
-                if (tex !is null) {
-                    UI::Image(tex, vec2(64, 64));
-                }
+                favs[i].DrawFavEntry(editor, inv);
             }
         }
     }
@@ -373,6 +425,135 @@ class FavoritesTab : Tab {
     }
 }
 
+class FavObj {
+    string nodeName;
+    bool isItem;
+    bool isFolder;
+    vec2 thumbSize = vec2(64);
+
+    FavObj(const string &in nodeName, bool isItem, bool isFolder) {
+        this.nodeName = nodeName;
+        this.isFolder = isFolder;
+        this.isItem = isItem;
+    }
+
+    void DrawFavEntry(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv) {
+        // auto inv = Editor::GetInventoryCache();
+        // UI::Text(tostring(i) + ". " + keys[i]);
+        // UI::SameLine();
+        // if (UX::SmallButton(keys[i])) {
+        //     SelectInvNode(editor, keys[i], isItem, isFolder);
+        // }
+        auto article = inv.GetByName(nodeName, isItem);
+        // if (article is null) UI::Text("\\$f80! Null article");
+        auto tex = IconTextures::GetIconTexture(article);
+        if (tex !is null) {
+            auto pos = UI::GetCursorPos();
+            UI::Image(tex, thumbSize);
+            if (UI::BeginPopupContextItem("rmb-inv-"+nodeName)) {
+                if (UI::MenuItem("Drag Somewhere")) {
+                    startnew(CoroutineFunc(this.DragSomewhere));
+                }
+                if (UI::MenuItem("Remove From Favs")) {
+                    startnew(CoroutineFunc(RemoveSelf));
+                }
+                UI::EndPopup();
+            }
+            // need the invis button to preven imgui default behavior
+            UI::SetCursorPos(pos);
+            auto clicked = UI::InvisibleButton("icon-" + nodeName, thumbSize, UI::ButtonFlags::MouseButtonLeft);
+
+            if (UI::IsItemClicked()) {
+                trace('DEBUG clicked in UI');
+                startnew(CoroutineFunc(this.ClickWatch));
+            }
+            if (isDragging)
+                DrawClickedState();
+        }
+    }
+
+    void RemoveSelf() {
+        g_Favorites.RemoteFromFavorites(nodeName, isItem, isFolder);
+    }
+
+    void DragSomewhere() {
+        isDragging = true;
+    }
+
+    bool isClicked = false;
+    bool isDragging = false;
+    uint clickedStart = 0;
+    vec2 initClickPos;
+    bool initClickWait = false;
+    void ClickWatch() {
+        trace('DEBUG click watch start');
+        // add a bit since we start a frame late
+        clickedStart = Time::Now - int(g_AvgFrameTime);
+        // only clicked if we LMB stays down
+        isClicked = g_LmbDown;
+        initClickPos = UI::GetMousePos();
+
+        while ((isDragging = g_LmbDown) && (g_IsDragging = isDragging) && (initClickWait = Time::Now - clickedStart < 150)) yield();
+        if (g_IsDragging)
+            trace('initClickWait should be false ' + initClickWait);
+        else
+            trace('DEBUG not dragging early');
+        if (initClickWait) {
+            trace('DEBUG select inv node');
+            SelectInvNode();
+        } else {
+            trace('DEBUG monitoring dragging');
+            while ((isDragging = g_LmbDown) && (g_IsDragging = isDragging)) yield();
+            trace('DEBUG calling lmb release');
+            OnReleaseLMB();
+        }
+        initClickWait = false;
+        isClicked = false;
+    }
+
+    void OnReleaseLMB() {
+        trace('DEBUG release LMB');
+        // if we are less than 32 pixels away, treat it as selecting an inventory node.
+        if ((UI::GetMousePos() - initClickPos).LengthSquared() < 32*32) {
+            SelectInvNode();
+            return;
+        }
+        // otherwise, we dragged it somewhere, so do something
+        warn('todo: on drag');
+    }
+
+    void DrawClickedState() {
+        auto tex = IconTextures::GetIconTexture(Editor::GetInventoryCache().GetByName(nodeName, isItem));
+        auto dl = UI::GetForegroundDrawList();
+        int alpha = Math::Min(Time::Now - clickedStart, 250) * 0xAA / 250;
+        auto mousePos = UI::GetMousePos();
+        dl.AddImage(tex, mousePos - thumbSize / 2., thumbSize, 0xFFFFFF00 + alpha);
+        dl.AddCircle(mousePos, 42, vec4(1, 1, 1, .8 * alpha), 64, 2.);
+
+        if (IsLMBPressed()) {
+            trace('deteceted LMB press');
+            isDragging = false;
+        }
+    }
+
+    void SelectInvNode() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto inv = Editor::GetInventoryCache();
+        if (!isFolder) {
+            if (isItem) {
+                Editor::SetSelectedInventoryNode(editor, inv.GetItemByPath(nodeName), true);
+            } else {
+                Editor::SetSelectedInventoryNode(editor, inv.GetBlockByName(nodeName), false);
+            }
+        } else {
+            if (isItem) {
+                Editor::SetSelectedInventoryFolder(editor, inv.GetItemDirectory(nodeName), true);
+            } else {
+                Editor::SetSelectedInventoryFolder(editor, inv.GetBlockDirectory(nodeName), false);
+            }
+        }
+    }
+}
 
 void RemoveKeyFromJsonObj(Json::Value@ obj, const string &in value) {
     if (obj.HasKey(value)) {

@@ -11,3 +11,5 @@ blocks   = ["item-placement-toolbox", "item-placement-toolbox-dev"]
 dependencies = ["Camera"]
 # some editor things can take a while, like saving the map
 timeout  = 7500
+
+shared_exports = ["GBX/GBX.as"]

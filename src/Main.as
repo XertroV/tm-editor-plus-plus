@@ -18,9 +18,9 @@ void Main() {
     sleep(500);
     CallbacksEnabledPostInit = true;
 
-#if DEV
-    runGbxTest();
-#endif
+// #if DEV
+//     runGbxTest();
+// #endif
 }
 
 
@@ -73,10 +73,8 @@ void RenderEarly() {
     } else if (LeavingEditor) {
         Event::RunOnEditorUnloadCbs();
     }
-}
 
-void Update(float dt) {
-    UpdateAnimAndCamera();
+    g_LmbDown = IsLMBPressed();
 }
 
 void Render() {
@@ -131,4 +129,39 @@ void CheckPause() {
         // trace('paused');
         g_LastPause = Time::Now;
     }
+}
+
+bool g_LmbDown = false;
+bool g_RmbDown = false;
+bool g_MmbDown = false;
+vec2 lastMbClickPos;
+vec2 lastMousePos;
+bool g_IsDragging = false;
+
+UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
+    // print('mb ' + (down ? 'down' : 'up'));
+    // if (button == 0) {
+    //     g_LmbDown = down;
+    //     print('lmb ' + (down ? 'down' : 'up'));
+    // } else if (button == 1) {
+    //     g_RmbDown = down;
+    // } else if (button == 2) {
+    //     g_MmbDown = down;
+    // }
+    // if (down)
+    //     lastMbClickPos = vec2(x, y);
+    return g_IsDragging ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
+}
+
+void OnMouseMove(int x, int y) {
+    lastMousePos = vec2(x, y);
+}
+
+float g_FrameTime = 10.;
+float g_AvgFrameTime = 10.;
+void Update(float dt) {
+    UpdateAnimAndCamera();
+
+    g_FrameTime = dt;
+    g_AvgFrameTime = g_AvgFrameTime * .9 + dt * .1;
 }
