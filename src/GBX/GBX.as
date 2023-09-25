@@ -1,14 +1,16 @@
+
 // ptr to write to for getting hex
-uint64 tempWrite_128b = 0;
+// uint64 tempWrite_128b = 0;
 
-const uint GBX_ITEM_MODEL_ICON_CLASS = 0x2E001004;
+shared enum GBX_CHUNK_IDS {
+    CGameItemModel_Icon = 0x2E001004,
+}
 
-class Gbx : BufUtils {
-    MemoryBuffer@ buf;
-
-    Gbx(const string &in path, uint maxReadSize = 65536 / 2) {
-        log_parse_pop_all();
-        log_parse(path, "GbxFile", "Loading .gbx file.");
+shared class Gbx : BufUtils {
+    Gbx(const string &in path, uint maxReadSize = 65536 / 2, bool quiet = true) {
+        SetLogger(quiet);
+        log.parse_pop_all();
+        log.parse(path, "GbxFile", "Loading .gbx file.");
         try {
             IO::File f(path, IO::FileMode::Read);
             trace('Loading GBX file of length: ' + f.Size());
@@ -21,7 +23,8 @@ class Gbx : BufUtils {
         ReadHeader();
     }
 
-    Gbx(MemoryBuffer@ buf) {
+    Gbx(MemoryBuffer@ buf, bool quiet = true) {
+        SetLogger(quiet);
         @this.buf = buf;
         ReadHeader();
     }
@@ -45,20 +48,20 @@ class Gbx : BufUtils {
         // BU, C for compressed, U for uncompressed, then u01_R_or_E
         SkipBytes(4);
         hClassId = ReadUInt32('main class id');
-        log_parse_push(Text::Format("%08x", hClassId));
-        @userData = UserData(buf);
+        log.parse_push(Text::Format("%08x", hClassId));
+        @userData = UserData(buf, log);
         nbNodes = ReadInt32('nb nodes');
         nbExternalNodes = ReadInt32('nb external nodes');
         // todo, read external nodes if they exist
         if (nbExternalNodes > 0) {
             auto ancestorLevel = ReadUInt32('ancestor level');
-            @rootSubFolder = ExternalFolder(buf);
+            @rootSubFolder = ExternalFolder(buf, log);
             // read external nodes
-            log_parse_push("ExtNode");
-            for (uint i = 0; i < nbExternalNodes; i++) {
-                extNodes.InsertLast(ExternalNode(buf, hVersion, i));
+            log.parse_push("ExtNode");
+            for (int i = 0; i < nbExternalNodes; i++) {
+                extNodes.InsertLast(ExternalNode(buf, hVersion, i, log));
             }
-            log_parse_pop();
+            log.parse_pop();
         }
         dataSize = ReadUInt32('data size');
         compressedDataSize = ReadUInt32('compressed size');
@@ -72,29 +75,29 @@ class Gbx : BufUtils {
 
 
 
-class ExternalFolder : BufUtils {
+shared class ExternalFolder : BufUtils {
     int nb;
     string[] strings;
     ExternalFolder@[] subFolders;
-    MemoryBuffer@ buf;
 
-    ExternalFolder(MemoryBuffer@ buf) {
-        log_parse_push('SubFolder');
+    ExternalFolder(MemoryBuffer@ buf, ParseLogger@ log) {
+        @this.log = log;
+        log.parse_push('SubFolder');
         @this.buf = buf;
         nb = ReadInt32("nb folders");
         for (int i = 0; i < nb; i++) {
             strings.InsertLast(ReadString('name'));
-            subFolders.InsertLast(ExternalFolder(buf));
+            subFolders.InsertLast(ExternalFolder(buf, log));
         }
-        log_parse_pop();
+        log.parse_pop();
     }
 }
 
-class ExternalNode : BufUtils {
-    MemoryBuffer@ buf;
-    ExternalNode(MemoryBuffer@ buf, uint hVersion, uint i) {
+shared class ExternalNode : BufUtils {
+    ExternalNode(MemoryBuffer@ buf, uint hVersion, uint i, ParseLogger@ log) {
+        @this.log = log;
         @this.buf = buf;
-        log_parse_push('ExtNode ' + i);
+        log.parse_push('ExtNode ' + i);
 
         auto flags = ReadUInt32();
         if (flags & 4 == 0) {
@@ -108,32 +111,32 @@ class ExternalNode : BufUtils {
         if (flags & 4 == 0)
             SkipBytes(4);
 
-        log_parse_pop();
+        log.parse_pop();
     }
 }
 
 
-class UserData : BufUtils {
-    MemoryBuffer@ buf;
+shared class UserData : BufUtils {
     UDEntry@[] entries;
     uint size;
     uint nbChunks;
 
-    UserData(MemoryBuffer@ buf) {
+    UserData(MemoryBuffer@ buf, ParseLogger@ log) {
+        @this.log = log;
         @this.buf = buf;
-        log_parse_push('UserData');
+        log.parse_push('UserData');
 
         size = ReadUInt32('total user data size');
         nbChunks = ReadUInt32('nb chunks');
 
         for (uint i = 0; i < nbChunks; i++) {
-            entries.InsertLast(UDEntry(buf));
+            entries.InsertLast(UDEntry(buf, log));
         }
         for (uint i = 0; i < entries.Length; i++) {
             entries[i].ReadData();
         }
 
-        log_parse_pop();
+        log.parse_pop();
     }
 
     UDEntry@ GetHeaderChunk(uint chunkId) {
@@ -145,46 +148,46 @@ class UserData : BufUtils {
     }
 }
 
-class UDEntry : BufUtils {
-    MemoryBuffer@ buf;
+shared class UDEntry : BufUtils {
     uint clsId;
     uint size;
     bool isHeavy;
     MemoryBuffer@ data = MemoryBuffer();
 
-    UDEntry(MemoryBuffer@ buf) {
+    UDEntry(MemoryBuffer@ buf, ParseLogger@ log) {
+        @this.log = log;
         @this.buf = buf;
-        log_parse_push('UDEntry');
+        log.parse_push('UDEntry');
 
         clsId = ReadUInt32('cls ID');
         size = ReadUInt32('ud entry size');
         isHeavy = size != (size | 0x80000000);
         size = size & 0x7FFFFFFF;
 
-        log_parse_pop();
+        log.parse_pop();
     }
 
     void ReadData() {
-        trace("Reading header chunk of size: " + size);
+        log.trace("Reading header chunk of size: " + size);
         @data = buf.ReadBuffer(size);
         data.Seek(0);
         buf.Seek(data.GetSize(), 1);
-        log_parse("data["+size+"] (" + BufReadHex(data, 32) + ")", "bytes", "UD for " + Text::Format("%08x", clsId));
+        // log.parse("data["+size+"] (" + BufReadHex(data, 32) + ")", "bytes", "UD for " + Text::Format("%08x", clsId));
     }
 
     UDIcon@ AsIcon() {
         if (clsId != 0x2E001004) return null;
-        return UDIcon(data);
+        return UDIcon(data, log);
     }
 }
 
-class UDIcon : BufUtils {
-    MemoryBuffer@ buf;
+shared class UDIcon : BufUtils {
     uint16 width, height, webp_v;
     bool webp;
     MemoryBuffer@ imgBytes;
 
-    UDIcon(MemoryBuffer@ data) {
+    UDIcon(MemoryBuffer@ data, ParseLogger@ log) {
+        @this.log = log;
         @buf = data;
         buf.Seek(0);
         uint16 width_webp = ReadUInt16("width_webp");
@@ -206,84 +209,99 @@ class UDIcon : BufUtils {
     }
 }
 
-mixin class BufUtils {
-
+shared class BufUtils {
+    ParseLogger@ log = ParseLogger();
     MemoryBuffer@ buf;
 
+    void SetLogger(bool quiet) {
+        @log = ParseLogger(quiet);
+    }
     string ReadString(const string &in annotation = "") {
         uint len = buf.ReadUInt32();
         string s = buf.ReadString(len);
-        log_parse(s, "string", annotation);
+        log.parse(s, "string", annotation);
         return s;
     }
     uint32 ReadUInt32(const string &in annotation = "") {
         auto u = buf.ReadUInt32();
-        log_parse(u, annotation);
+        log.parse(u, annotation);
         return u;
     }
     int32 ReadInt32(const string &in annotation = "") {
         auto u = buf.ReadInt32();
-        log_parse(u, annotation);
+        log.parse(u, annotation);
         return u;
     }
     uint16 ReadUInt16(const string &in annotation = "") {
         auto u = buf.ReadUInt16();
-        log_parse(u, annotation);
+        log.parse(u, annotation);
         return u;
     }
     void SkipBytes(uint n, const string &in annotation = "") {
         buf.Seek(n, 1);
-        log_parse("[+"+n+"]", "skipped bytes", annotation);
+        log.parse("[+"+n+"]", "skipped bytes", annotation);
     }
 
-    string BufReadHex(MemoryBuffer@ data, uint len) {
-        if (tempWrite_128b == 0) {
-            tempWrite_128b = RequestMemory(200);
-            print(tempWrite_128b);
-            // tempWrite_128b = Dev::Allocate(128);
-        }
-        if (tempWrite_128b == 0) {
-            throw('cannot write to 0 poitner');
-        }
-        len = Math::Min(len, data.GetSize());
-        Dev::WriteCString(tempWrite_128b, data.ReadString(len));
-        return Dev::Read(tempWrite_128b, len);
+    // string BufReadHex(MemoryBuffer@ data, uint len) {
+    //     if (tempWrite_128b == 0) {
+    //         tempWrite_128b = RequestMemory(200);
+    //         print(tempWrite_128b);
+    //         // tempWrite_128b = Dev::Allocate(128);
+    //     }
+    //     if (tempWrite_128b == 0) {
+    //         throw('cannot write to 0 poitner');
+    //     }
+    //     len = Math::Min(len, data.GetSize());
+    //     Dev::WriteCString(tempWrite_128b, data.ReadString(len));
+    //     return Dev::Read(tempWrite_128b, len);
+    // }
+}
+
+
+shared class ParseLogger {
+    bool PrintParseLogs = false;
+    string parseStack = "";
+    string[] _parseStack;
+    ParseLogger() {}
+    ParseLogger(bool quiet) {
+        PrintParseLogs = !quiet;
+    }
+    ~ParseLogger() {
+    }
+
+    void trace(const string &in msg) {
+        if (PrintParseLogs)
+            trace(msg);
+    }
+    void parse(const string &in str, const string &in type = "string", const string &in annotation = "") {
+        if (PrintParseLogs)
+            trace('[Parse | '+parseStack+'] '+type+': ' + str + (annotation.Length > 0 ? "  ("+annotation+")" : ""));
+    }
+
+    void parse(uint32 u, const string &in annotation = "") {
+        parse(Text::Format("%x = " + u, u), "uint32", annotation);
+    }
+    void parse(int32 u, const string &in annotation = "") {
+        parse(Text::Format("%x = " + u, u), "int32", annotation);
+    }
+    void parse(uint16 u, const string &in annotation = "") {
+        parse(Text::Format("%x = " + u, u), "uint16", annotation);
+    }
+
+    void parse_push(const string &in type) {
+        _parseStack.InsertLast(type);
+        parseStack = string::Join(_parseStack, " > ");
+    }
+    void parse_pop() {
+        _parseStack.RemoveLast();
+        parseStack = string::Join(_parseStack, " > ");
+    }
+    void parse_pop_all() {
+        _parseStack.RemoveRange(0, _parseStack.Length);
+        parseStack = "";
     }
 }
 
-
-bool PrintParseLogs = true;
-string parseStack = "";
-string[] _parseStack;
-
-
-void log_parse(const string &in str, const string &in type = "string", const string &in annotation = "") {
-    if (PrintParseLogs)
-        trace('[Parse | '+parseStack+'] '+type+': ' + str + (annotation.Length > 0 ? "  ("+annotation+")" : ""));
-}
-
-void log_parse(uint32 u, const string &in annotation = "") {
-    log_parse(Text::Format("%x = " + u, u), "uint32", annotation);
-}
-void log_parse(int32 u, const string &in annotation = "") {
-    log_parse(Text::Format("%x = " + u, u), "int32", annotation);
-}
-void log_parse(uint16 u, const string &in annotation = "") {
-    log_parse(Text::Format("%x = " + u, u), "uint16", annotation);
-}
-
-void log_parse_push(const string &in type) {
-    _parseStack.InsertLast(type);
-    parseStack = string::Join(_parseStack, " > ");
-}
-void log_parse_pop() {
-    _parseStack.RemoveLast();
-    parseStack = string::Join(_parseStack, " > ");
-}
-void log_parse_pop_all() {
-    _parseStack.RemoveRange(0, _parseStack.Length);
-    parseStack = "";
-}
 
 #if DEV
 void runGbxTest() {

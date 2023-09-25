@@ -6,6 +6,7 @@ namespace IconTextures {
     dictionary loadedTextures;
     dictionary seenRequested;
     UI::Texture@ noIconImg;
+    UI::Texture@ failedImg;
     UI::Texture@[] loadingFrames;
 
     void LoadLoadingFrames() {
@@ -92,8 +93,17 @@ namespace IconTextures {
         if (path.StartsWith("<fake>\\MemoryTemp\\BlockItems_GeneratedBlockInfos\\UserDrive\\Stadium") && path.EndsWith("bx_CustomBlock")) {
             toLoad = IO::FromUserGameFolder("Blocks" + path.Split("UserDrive\\Stadium", 2)[1].Replace("bx_CustomBlock", "bx"));
         }
-        auto gbx = Gbx(toLoad);
-        auto iconUD = gbx.GetHeaderChunk(GBX_ITEM_MODEL_ICON_CLASS);
+        Gbx@ gbx;
+        try {
+            @gbx = Gbx(toLoad);
+        } catch {
+            // failed to load gbx
+            NotifyWarning("Failed to load GBX: " + getExceptionInfo());
+            if (failedImg is null) @failedImg = UI::LoadTexture("img/failed.png");
+            @loadedTextures[nodeName] = failedImg;
+            return;
+        }
+        auto iconUD = gbx.GetHeaderChunk(GBX_CHUNK_IDS::CGameItemModel_Icon);
         if (iconUD is null) {
             trace("Could not load icon from " + toLoad + ' -- it probably has none.');
             if (noIconImg is null) @noIconImg = UI::LoadTexture("img/no-icon.png");
