@@ -153,8 +153,10 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     return g_IsDragging ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
 }
 
+// only updates when not hovering imgui and input not carried off imgui
 void OnMouseMove(int x, int y) {
     lastMousePos = vec2(x, y);
+    // trace(lastMousePos.ToString());
 }
 
 float g_FrameTime = 10.;

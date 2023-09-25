@@ -1,28 +1,28 @@
 namespace MathX {
-    shared vec2 ToDeg(vec2 rads) {
+    shared vec2 ToDeg(vec2 &in rads) {
         return vec2(Math::ToDeg(rads.x), Math::ToDeg(rads.y));
     }
 
-    shared vec3 ToDeg(vec3 rads) {
+    shared vec3 ToDeg(vec3 &in rads) {
         return vec3(Math::ToDeg(rads.x), Math::ToDeg(rads.y), Math::ToDeg(rads.z));
     }
 
-    shared vec2 ToRad(vec2 degs) {
+    shared vec2 ToRad(vec2 &in degs) {
         return vec2(Math::ToRad(degs.x), Math::ToRad(degs.y));
     }
 
-    shared vec3 ToRad(vec3 degs) {
+    shared vec3 ToRad(vec3 &in degs) {
         return vec3(Math::ToRad(degs.x), Math::ToRad(degs.y), Math::ToRad(degs.z));
     }
 
-    shared vec3 Max(vec3 a, vec3 b) {
+    shared vec3 Max(vec3 &in a, vec3 &in b) {
         return vec3(
             Math::Max(a.x, b.x),
             Math::Max(a.y, b.y),
             Math::Max(a.z, b.z)
         );
     }
-    shared nat3 Max(nat3 a, nat3 b) {
+    shared nat3 Max(nat3 &in a, nat3 &in b) {
         return nat3(
             Math::Max(a.x, b.x),
             Math::Max(a.y, b.y),
@@ -30,14 +30,14 @@ namespace MathX {
         );
     }
 
-    shared vec3 Min(vec3 a, vec3 b) {
+    shared vec3 Min(vec3 &in a, vec3 &in b) {
         return vec3(
             Math::Min(a.x, b.x),
             Math::Min(a.y, b.y),
             Math::Min(a.z, b.z)
         );
     }
-    shared nat3 Min(nat3 a, nat3 b) {
+    shared nat3 Min(nat3 &in a, nat3 &in b) {
         return nat3(
             Math::Min(a.x, b.x),
             Math::Min(a.y, b.y),
@@ -45,16 +45,16 @@ namespace MathX {
         );
     }
 
-    shared bool Vec3Eq(vec3 a, vec3 b) {
+    shared bool Vec3Eq(vec3 &in a, vec3 &in b) {
         return a.x == b.x && a.y == b.y && a.z == b.z;
         // return (a-b).LengthSquared() < 0.000001;
     }
 
-    shared bool Nat3Eq(nat3 a, nat3 b) {
+    shared bool Nat3Eq(nat3 &in a, nat3 &in b) {
         return a.x == b.x && a.y == b.y && a.z == b.z;
     }
 
-    shared bool QuatEq(quat a, quat b) {
+    shared bool QuatEq(quat &in a, quat &in b) {
         return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
     }
 
@@ -75,14 +75,18 @@ namespace MathX {
         return a;
     }
 
-    shared bool Within(vec3 pos, vec3 min, vec3 max) {
+    shared bool Within(vec3 &in pos, vec3 &in min, vec3 &in max) {
         return pos.x >= min.x && pos.x <= max.x
             && pos.y >= min.y && pos.y <= max.y
             && pos.z >= min.z && pos.z <= max.z;
     }
-    shared bool Within(nat3 pos, nat3 min, nat3 max) {
+    shared bool Within(nat3 &in pos, nat3 &in min, nat3 &in max) {
         return pos.x >= min.x && pos.x <= max.x
             && pos.y >= min.y && pos.y <= max.y
             && pos.z >= min.z && pos.z <= max.z;
+    }
+
+    shared vec2 Floor(vec2 &in val) {
+        return vec2(Math::Floor(val.x), Math::Floor(val.y));
     }
 }

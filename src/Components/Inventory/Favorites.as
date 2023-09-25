@@ -7,6 +7,7 @@ namespace IconTextures {
     dictionary seenRequested;
     UI::Texture@ noIconImg;
     UI::Texture@ failedImg;
+    UI::Texture@ invGroupBox;
     UI::Texture@[] loadingFrames;
     dictionary knownHashes;
 
@@ -23,6 +24,8 @@ namespace IconTextures {
         loadingFrames.InsertLast(UI::LoadTexture("img/loading-4.png"));
         yield();
         loadingFrames.InsertLast(UI::LoadTexture("img/loading-5.png"));
+        yield();
+        @invGroupBox = UI::LoadTexture("img/inv-group-box.png");
     }
 
     void LoadIconTextureCsvCache() {
@@ -37,9 +40,8 @@ namespace IconTextures {
             }
             auto hash = parts[0];
             auto nodeName = parts[1];
-            knownHashes[hash] = nodeName;
+            knownHashes[nodeName] = hash;
         }
-        auto buf = csv.Read(csv.Size());
     }
 
     auto initCoro = startnew(IconInitCoro);
@@ -47,8 +49,19 @@ namespace IconTextures {
     UI::Texture@ GetIconTexture(CGameCtnArticleNodeArticle@ article) {
         if (article is null) return null;
         if (!seenRequested.Exists(article.NodeName)) {
-            startnew(RequestLoadForRef, ref(article));
             seenRequested[article.NodeName] = true;
+            bool knownHash = knownHashes.Exists(article.NodeName);
+            if (knownHash) {
+                string hash = string(knownHashes[article.NodeName]);
+                if (IconFileExists(hash)) {
+                    trace('DEBUG loading previous: ' + IconFilePath(hash));
+                    auto tex = UI::LoadTexture(ReadFile(IconFilePath(hash)));
+                    @loadedTextures[article.NodeName] = tex;
+                    // return tex;
+                }
+            } else {
+                startnew(RequestLoadForRef, ref(article));
+            }
         }
         if (!loadedTextures.Exists(article.NodeName)) return GetCurrLoadingFrame();
         return cast<UI::Texture>(loadedTextures[article.NodeName]);
@@ -132,6 +145,7 @@ namespace IconTextures {
         }
         auto icon = iconUD.AsIcon();
         auto iconBase64 = icon.imgBytes.ReadToBase64(icon.imgBytes.GetSize());
+        // icon.imgBytes.Seek(0);
         auto iconHash = Crypto::MD5(iconBase64);
         MemoryBuffer@ iconBytes;
         if (!icon.webp) {
@@ -360,7 +374,7 @@ class FavoritesTab : Tab {
             }
             SaveFavorites();
         }
-
+        UI::SameLine();
         if (UI::Button("Remove all favorites")) {
             favorites['blocks'] = Json::Object();
             favorites['blockFolders'] = Json::Object();
@@ -399,10 +413,20 @@ class FavoritesTab : Tab {
         auto inv = Editor::GetInventoryCache();
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto favs = GetFavs(isItem, isFolder);
-        UI::ListClipper clip(favs.Length);
+        auto lineNb = int(Math::Floor(UI::GetContentRegionAvail().x / 76));
+        auto len = favs.Length <= lineNb ? 1 : (favs.Length) / lineNb + 1;
+        UI::ListClipper clip(len);
         while (clip.Step()) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
-                favs[i].DrawFavEntry(editor, inv);
+                for (int j = 0; j < lineNb; j++) {
+                    auto ix = i * lineNb + j;
+                    if (ix >= favs.Length) {
+                        UI::Dummy(vec2(64, 64));
+                        break;
+                    }
+                    favs[ix].DrawFavEntry(editor, inv);
+                    if (j < lineNb - 1) UI::SameLine();
+                }
             }
         }
     }
@@ -427,12 +451,17 @@ class FavoritesTab : Tab {
 
 class FavObj {
     string nodeName;
+    string shortName;
     bool isItem;
     bool isFolder;
     vec2 thumbSize = vec2(64);
 
     FavObj(const string &in nodeName, bool isItem, bool isFolder) {
         this.nodeName = nodeName;
+        shortName = nodeName.Contains("\\") ? GetLastStr(nodeName.Split("\\")) : nodeName;
+        string lower = shortName.ToLower();
+        if (lower.EndsWith('.item.gbx')) shortName = shortName.SubStr(0, shortName.Length - 9);
+        if (lower.EndsWith('.block.gbx_customblock')) shortName = shortName.SubStr(0, shortName.Length - 22);
         this.isFolder = isFolder;
         this.isItem = isItem;
     }
@@ -447,6 +476,9 @@ class FavObj {
         auto article = inv.GetByName(nodeName, isItem);
         // if (article is null) UI::Text("\\$f80! Null article");
         auto tex = IconTextures::GetIconTexture(article);
+        if (tex is null) {
+            @tex = IconTextures::GetCurrLoadingFrame();
+        }
         if (tex !is null) {
             auto pos = UI::GetCursorPos();
             UI::Image(tex, thumbSize);
@@ -461,16 +493,47 @@ class FavObj {
             }
             // need the invis button to preven imgui default behavior
             UI::SetCursorPos(pos);
-            auto clicked = UI::InvisibleButton("icon-" + nodeName, thumbSize, UI::ButtonFlags::MouseButtonLeft);
+            UI::InvisibleButton("icon-" + nodeName, thumbSize, UI::ButtonFlags::MouseButtonLeft);
 
             if (UI::IsItemClicked()) {
-                trace('DEBUG clicked in UI');
                 startnew(CoroutineFunc(this.ClickWatch));
             }
-            if (isDragging)
+            hoverDuration = UI::IsItemHovered() ? hoverDuration + g_AvgFrameTime : 0.;
+
+            if (isDragging) {
                 DrawClickedState();
+            }
+            if (hoverDuration > 0) {
+                DrawHovered();
+            }
+        } else {
         }
     }
+
+    float hoverDuration = 0;
+    vec2 lastHoveredWindowDims;
+    float hoverBuffer = 10.;
+
+    void DrawHovered() {
+        vec2 mp = UI::GetMousePos();
+        vec2 windowPos = vec2(
+            Draw::GetWidth() - mp.x > lastHoveredWindowDims.x + hoverBuffer
+                ? mp.x + hoverBuffer
+                : mp.x - lastHoveredWindowDims.x - hoverBuffer,
+            Draw::GetHeight() - mp.y > lastHoveredWindowDims.y + hoverBuffer
+                ? mp.y + hoverBuffer
+                : mp.y - lastHoveredWindowDims.y - hoverBuffer
+        );
+        UI::SetNextWindowPos(windowPos.x, windowPos.y, UI::Cond::Always);
+        if (UI::Begin("inv-hover", UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
+            UI::Text(shortName);
+        }
+        UI::End();
+
+
+    }
+
+
 
     void RemoveSelf() {
         g_Favorites.RemoteFromFavorites(nodeName, isItem, isFolder);
@@ -486,7 +549,6 @@ class FavObj {
     vec2 initClickPos;
     bool initClickWait = false;
     void ClickWatch() {
-        trace('DEBUG click watch start');
         // add a bit since we start a frame late
         clickedStart = Time::Now - int(g_AvgFrameTime);
         // only clicked if we LMB stays down
@@ -494,17 +556,10 @@ class FavObj {
         initClickPos = UI::GetMousePos();
 
         while ((isDragging = g_LmbDown) && (g_IsDragging = isDragging) && (initClickWait = Time::Now - clickedStart < 150)) yield();
-        if (g_IsDragging)
-            trace('initClickWait should be false ' + initClickWait);
-        else
-            trace('DEBUG not dragging early');
         if (initClickWait) {
-            trace('DEBUG select inv node');
             SelectInvNode();
         } else {
-            trace('DEBUG monitoring dragging');
             while ((isDragging = g_LmbDown) && (g_IsDragging = isDragging)) yield();
-            trace('DEBUG calling lmb release');
             OnReleaseLMB();
         }
         initClickWait = false;
@@ -512,7 +567,9 @@ class FavObj {
     }
 
     void OnReleaseLMB() {
-        trace('DEBUG release LMB');
+        lastDragPos = vec2(0);
+        trace("LMB release");
+        dragResult = FavDraggingResult::None;
         // if we are less than 32 pixels away, treat it as selecting an inventory node.
         if ((UI::GetMousePos() - initClickPos).LengthSquared() < 32*32) {
             SelectInvNode();
@@ -522,18 +579,82 @@ class FavObj {
         warn('todo: on drag');
     }
 
+    uint iconDragAlpha = 0xCC;
+    uint clickFadeDuration = 500;
+    uint currAlpha = 0xCC;
     void DrawClickedState() {
+        UpdateClickedState();
         auto tex = IconTextures::GetIconTexture(Editor::GetInventoryCache().GetByName(nodeName, isItem));
         auto dl = UI::GetForegroundDrawList();
-        int alpha = Math::Min(Time::Now - clickedStart, 250) * 0xAA / 250;
-        auto mousePos = UI::GetMousePos();
-        dl.AddImage(tex, mousePos - thumbSize / 2., thumbSize, 0xFFFFFF00 + alpha);
-        dl.AddCircle(mousePos, 42, vec4(1, 1, 1, .8 * alpha), 64, 2.);
+        currAlpha = Math::Min(Time::Now - clickedStart, clickFadeDuration) * iconDragAlpha / clickFadeDuration;
+        if (dragResult >= FavDraggingResult::CreateOrJoinGroup) {
+            DrawGroupHover();
+        }
+        dl.AddImage(tex, lastDragPos - thumbSize / 2., thumbSize, 0xFFFFFF00 + currAlpha);
+        dl.AddCircle(lastDragPos, 42, vec4(GetDragCircleColor(), .8 * currAlpha / 0xFF), 64, 2.);
 
         if (IsLMBPressed()) {
-            trace('deteceted LMB press');
             isDragging = false;
         }
+    }
+
+    float gridGap = 8.;
+    float gridSize = 64.;
+    float betweenSq = gridSize + gridGap;
+    vec2 invBoxTexSize = vec2(betweenSq);
+
+    vec2 lastDragPos;
+    vec2 lastGridMidPos;
+    // only call once per frame
+    protected vec2 UpdateDraggedDrawPos() {
+        auto mp = UI::GetMousePos();
+        vec2 ret = mp;
+        if (dragResult >= FavDraggingResult::CreateOrJoinGroup) {
+            ret = GetGridMidPointScreen(GetGridPos(mp));
+            lastGridMidPos = ret;
+        }
+        if (lastDragPos.LengthSquared() > 0.1)
+            lastDragPos = Math::Lerp(lastDragPos, ret, 0.25);
+        else
+            lastDragPos = mp;
+        return lastDragPos;
+    }
+
+    vec2 GetGridPos(vec2 &in screen) {
+        return MathX::Floor(screen / betweenSq);
+    }
+
+    vec2 GetGridMidPointScreen(vec2 &in grid) {
+        return grid * betweenSq + (betweenSq / 2.);
+    }
+
+    vec3 GetDragCircleColor() {
+        switch (dragResult) {
+            // case FavDraggingResult::None: ;
+            case FavDraggingResult::SelectInventory: return vec3(1);
+            case FavDraggingResult::DoNothing: return vec3(0.8, 0.5, 0.1);
+            case FavDraggingResult::CreateOrJoinGroup: return vec3(0.2, 0.8, 0.5);
+        }
+        return vec3(0);
+    }
+
+    void DrawGroupHover() {
+        auto dl = UI::GetForegroundDrawList();
+        if (IconTextures::invGroupBox !is null)
+            dl.AddImage(IconTextures::invGroupBox, lastGridMidPos - invBoxTexSize / 2., invBoxTexSize, 0xFFFFFF00 + currAlpha);
+    }
+
+    FavDraggingResult dragResult = FavDraggingResult::None;
+    void UpdateClickedState() {
+        auto dSq = (UI::GetMousePos() - initClickPos).LengthSquared();
+        if (dSq < 32*32) {
+            dragResult = FavDraggingResult::SelectInventory;
+        } else if (dSq < 150*150) {
+            dragResult = FavDraggingResult::DoNothing;
+        } else {
+            dragResult = FavDraggingResult::CreateOrJoinGroup;
+        }
+        UpdateDraggedDrawPos();
     }
 
     void SelectInvNode() {
@@ -555,8 +676,25 @@ class FavObj {
     }
 }
 
+enum FavDraggingResult {
+    None,
+    SelectInventory,
+    DoNothing,
+    CreateOrJoinGroup
+}
+
 void RemoveKeyFromJsonObj(Json::Value@ obj, const string &in value) {
     if (obj.HasKey(value)) {
         obj.Remove(value);
     }
+}
+
+MemoryBuffer@ ReadFile(const string &in path) {
+    IO::File f(path, IO::FileMode::Read);
+    return f.Read(f.Size());
+}
+
+string GetLastStr(string[]@ parts) {
+    if (parts.Length == 0) return "";
+    return parts[parts.Length - 1];
 }
