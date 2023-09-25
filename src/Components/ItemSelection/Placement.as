@@ -80,11 +80,10 @@ class ItemPlacementTab : Tab {
                 UI::SameLine();
                 UI::SetNextItemWidth(200);
                 pp_content.m_PivotPositions[i] = UI::InputFloat3("P. " + i, pp_content.m_PivotPositions[i]);
-                if (ieditor !is null) {
-                    UI::SameLine();
-                    if (UI::Button(Icons::Times + "##del-pp-"+i)) {
-                        remPivot = i;
-                    }
+
+                UI::SameLine();
+                if (UI::Button(Icons::Times + "##del-pp-"+i)) {
+                    remPivot = i;
                 }
             }
             if (UI::Button(Icons::Plus + " New##pp")) {
@@ -103,6 +102,41 @@ class ItemPlacementTab : Tab {
             }
         }
 
+        if (remPivot >= 0 && pp_content.PivotPositions.Length > 0) {
+            pp_content.PivotPositions[remPivot] = pp_content.PivotPositions[pp_content.PivotPositions.Length - 1];
+            pp_content.RemoveLastPivotPosition();
+        }
+
+        int remPivotRot = -1;
+        if (UI::CollapsingHeader("Pivot Rotations")) {
+            for (uint i = 0; i < pp_content.PivotRotations.Length; i++) {
+                UI::AlignTextToFramePadding();
+                UI::Text("" + i + ". ");
+                UI::SameLine();
+                UI::SetNextItemWidth(200);
+                pp_content.PivotRotations[i] = UX::InputQuat("R. " + i, pp_content.PivotRotations[i]);
+
+                UI::SameLine();
+                if (UI::Button(Icons::Times + "##del-pr-"+i)) {
+                    remPivotRot = i;
+                }
+            }
+            if (UI::Button(Icons::Plus + " New##pr")) {
+                pp_content.AddPivotRotation_Deprecated();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Times + " Last##pr")) {
+                pp_content.RemoveLastPivotRotation();
+            }
+            UI::SameLine();
+            if (UI::Button(Icons::Trash + " All##pr")) {
+                pp_content.RemoveAllPivotRotations();
+            }
+        }
+        if (remPivotRot >= 0 && pp_content.PivotRotations.Length > 0) {
+            pp_content.PivotRotations[remPivot] = pp_content.PivotRotations[pp_content.PivotPositions.Length - 1];
+            pp_content.RemoveLastPivotPosition();
+        }
         // always empty?
         // if (UI::CollapsingHeader("Pivot Rotations")) {
         //     int remPivot = -1;
@@ -113,19 +147,13 @@ class ItemPlacementTab : Tab {
         //         UI::SameLine();
         //         UI::SetNextItemWidth(200);
         //         pp_content.PivotRotations[i] = UX::InputQuat("R. " + i, pp_content.PivotRotations[i]);
-        //         if (ieditor !is null) {
-        //             UI::SameLine();
-        //             if (UI::Button(Icons::Times + "##del-pp-"+i)) {
-        //                 remPivot = i;
-        //             }
-        //         }
+        //
+    //             UI::SameLine();
+    //             if (UI::Button(Icons::Times + "##del-pp-"+i)) {
+    //                 remPivot = i;
+    //             }
         //     }
         // }
-        if (remPivot >= 0 && pp_content.PivotPositions.Length > 0) {
-            pp_content.PivotPositions[remPivot] = pp_content.PivotPositions[pp_content.PivotPositions.Length - 1];
-            pp_content.RemoveLastPivotPosition();
-        }
-
         int remMag = -1;
         if (UI::CollapsingHeader("Magnet Locations")) {
             for (uint i = 0; i < pp_content.m_MagnetLocs_Degrees.Length; i++) {
@@ -141,11 +169,10 @@ class ItemPlacementTab : Tab {
                 pp_content.m_MagnetLocs_Degrees[i].PitchDeg = angles.x;
                 pp_content.m_MagnetLocs_Degrees[i].YawDeg = angles.y;
                 pp_content.m_MagnetLocs_Degrees[i].RollDeg = angles.z;
-                if (ieditor !is null) {
-                    UI::SameLine();
-                    if (UI::Button(Icons::Times + "##del-pp-"+i)) {
-                        remMag = i;
-                    }
+
+                UI::SameLine();
+                if (UI::Button(Icons::Times + "##del-pp-"+i)) {
+                    remMag = i;
                 }
             }
             if (UI::Button(Icons::Plus + "##ml")) {
