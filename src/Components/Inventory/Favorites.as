@@ -14,6 +14,13 @@ namespace IconTextures {
     dictionary knownHashes;
     dictionary knownHashTest;
     bool initializedResources = false;
+    UI::Texture@ blocksTex;
+    UI::Texture@ itemsTex;
+    UI::Texture@ macroblocksTex;
+    UI::Texture@ officialItemsTex;
+    UI::Texture@ clubItemsTex;
+    UI::Texture@ customItemsTex;
+    UI::Texture@ blankLabelTex;
 
     void IconInitCoro() {
         while (Time::Now < 60000 && cast<CGameCtnEditorFree>(GetApp().Editor) is null)
@@ -21,18 +28,23 @@ namespace IconTextures {
         LoadIconTextureCsvCache();
         yield();
         loadingFrames.InsertLast(UI::LoadTexture("img/loading.png"));
-        yield();
         loadingFrames.InsertLast(UI::LoadTexture("img/loading-2.png"));
         yield();
         loadingFrames.InsertLast(UI::LoadTexture("img/loading-3.png"));
-        yield();
         loadingFrames.InsertLast(UI::LoadTexture("img/loading-4.png"));
         yield();
         loadingFrames.InsertLast(UI::LoadTexture("img/loading-5.png"));
-        yield();
         @invGroupBox = UI::LoadTexture("img/inv-group-box.png");
-
-
+        yield();
+        @blocksTex = UI::LoadTexture("img/blocks.png");
+        @itemsTex = UI::LoadTexture("img/items.png");
+        yield();
+        @macroblocksTex = UI::LoadTexture("img/macroblocks.png");
+        @officialItemsTex = UI::LoadTexture("img/official-items.png");
+        yield();
+        @clubItemsTex = UI::LoadTexture("img/club-items.png");
+        @customItemsTex = UI::LoadTexture("img/custom-items.png");
+        @blankLabelTex = UI::LoadTexture("img/blank-label.png");
         initializedResources = true;
     }
 
@@ -496,8 +508,11 @@ class FavObj {
     string shortName;
     bool isItem;
     bool isFolder;
+    bool isSpecialFolder = false;
+    int specialIx = -1;
+    CoroutineFunc@ dirCallback = null;
 
-    FavObj(const string &in nodeName, bool isItem, bool isFolder) {
+    FavObj(const string &in nodeName, bool isItem, bool isFolder, CoroutineFunc@ dirCallback = null) {
         this.nodeName = nodeName;
         shortName = nodeName.Contains("\\") ? GetLastStr(nodeName.Split("\\")) : nodeName;
         string lower = shortName.ToLower();
@@ -505,33 +520,65 @@ class FavObj {
         if (lower.EndsWith('.block.gbx_customblock')) shortName = shortName.SubStr(0, shortName.Length - 22);
         this.isFolder = isFolder;
         this.isItem = isItem;
+        @this.dirCallback = dirCallback;
+        SetSpecialNodes();
+    }
+
+    protected string[] specialNames = {"Blocks", "Items Official", "Items Club", "Items Custom", "Macroblocks"};
+
+    void SetSpecialNodes() {
+        if (!isFolder) return;
+        specialIx = specialNames.Find(nodeName);
+        if (specialIx < 0) return;
+        isSpecialFolder = true;
+    }
+
+    UI::Texture@ GetTexture() {
+        UI::Texture@ tex;
+        if (!isFolder) {
+            @tex = IconTextures::GetIconTexture(Editor::GetInventoryCache().GetByName(nodeName, isItem));
+        } else if (!isSpecialFolder) {
+            @tex = IconTextures::blankLabelTex;
+        } else {
+            @tex =
+                nodeName == specialNames[0] ? IconTextures::blocksTex
+                : nodeName == specialNames[1] ? IconTextures::officialItemsTex
+                : nodeName == specialNames[2] ? IconTextures::clubItemsTex
+                : nodeName == specialNames[3] ? IconTextures::customItemsTex
+                : nodeName == specialNames[4] ? IconTextures::macroblocksTex
+                : IconTextures::failedImg;
+        }
+        if (tex is null) {
+            @tex = IconTextures::GetCurrLoadingFrame();
+        }
+
+        return tex;
     }
 
     vec2 lastTlGlobalPos;
 
-    void DrawFavEntry(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv) {
-        // auto inv = Editor::GetInventoryCache();
-        // UI::Text(tostring(i) + ". " + keys[i]);
-        // UI::SameLine();
-        // if (UX::SmallButton(keys[i])) {
-        //     SelectInvNode(editor, keys[i], isItem, isFolder);
-        // }
-        auto article = inv.GetByName(nodeName, isItem);
-        // if (article is null) UI::Text("\\$f80! Null article");
-        auto tex = IconTextures::GetIconTexture(article);
-        if (tex is null) {
-            @tex = IconTextures::GetCurrLoadingFrame();
+    void DrawFavBgEntry() {
+        UI::Texture@ tex = GetTexture();
+        if (tex !is null) {
+            // trace('drawing bg faventry: ' + nodeName);
+            auto pos = UI::GetCursorPos();
+            lastTlGlobalPos = UI::GetWindowPos() + pos - vec2(UI::GetScrollX(), UI::GetScrollY());
+            auto dl = UI::GetWindowDrawList();
+            dl.AddImage(tex, lastTlGlobalPos, S_IconSize);
+        } else {
+            // trace('skipping bg faventry, null tex: ' + nodeName);
         }
+    }
+
+    void DrawFavEntry(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv) {
+        UI::Texture@ tex = GetTexture();
         if (tex !is null) {
             auto pos = UI::GetCursorPos();
-            lastTlGlobalPos = UI::GetWindowPos() + pos;
+            lastTlGlobalPos = UI::GetWindowPos() + pos - vec2(UI::GetScrollX(), UI::GetScrollY());
 
-
-            if (selectedItemModel !is null) {
-                auto im = selectedItemModel.AsItemModel();
-                if (im !is null && im.IdName == nodeName) {
-                    UI::GetWindowDrawList().AddImage(IconTextures::invGroupBox, lastTlGlobalPos - 4., S_IconSize + 8., 0xFFFFFF00 + 0xCC);
-                }
+            DrawSelectedNodeBox();
+            if (hoverDuration > 0) {
+                DrawHoveredBg();
             }
 
             UI::Image(tex, S_IconSize);
@@ -549,9 +596,14 @@ class FavObj {
                 if (UI::MenuItem("Refresh Icon")) {
                     startnew(IconTextures::RefreshIconFor, nodeName);
                 }
-                if (UI::MenuItem("Remove From Favs")) {
-                    startnew(CoroutineFunc(RemoveSelf));
+                bool isFav = g_Favorites.IsFavorited(nodeName, isItem, isFolder);
+                if (UI::MenuItem(isFav ? "Remove From Favs" : "Add To Favorites")) {
+                    if (isFav) startnew(CoroutineFunc(RemoveSelf));
+                    else startnew(CoroutineFunc(AddSelf));
                 }
+                UI::BeginDisabled();
+                UI::MenuItem(nodeName);
+                UI::EndDisabled();
                 UI::EndPopup();
             }
             // need the invis button to preven imgui default behavior
@@ -566,11 +618,32 @@ class FavObj {
             if (isDragging) {
                 DrawClickedState();
             }
-            if (hoverDuration > 0) {
-                DrawHovered();
+            if (isFolder || hoverDuration > 0) {
+                DrawTextLabelMbHovered();
             }
         } else {
+            UI::Text("NULL TEX!?");
         }
+    }
+
+    void DrawSelectedNodeBox() {
+        if (!isFolder && selectedItemModel !is null) {
+            auto im = selectedItemModel.AsItemModel();
+            if (im !is null && im.IdName == nodeName) {
+                UI::GetWindowDrawList().AddImage(IconTextures::invGroupBox, lastTlGlobalPos - 4., S_IconSize + 8., 0xFFFFFF00 + 0xCC);
+            }
+        }
+    }
+
+    void DrawHoveredBg() {
+        hoverAlpha = Math::Clamp(hoverDuration / hoverAlphFadeDur, 0.0, 1.0);
+        if (hoverAlpha == 0) return;
+        auto dl = UI::GetWindowDrawList();
+        // bg
+        float thick = S_IconSize.x / 32.;
+        float rounding = S_IconSize.x / 10.;
+        dl.AddRectFilled(vec4(lastTlGlobalPos, S_IconSize), vec4(.2,.2,.2, hoverAlpha * .6), rounding);
+        dl.AddRect(vec4(lastTlGlobalPos - thick, S_IconSize + thick * 2), vec4(.75,.8,.85, hoverAlpha * .6), rounding, thick);
     }
 
     float hoverDuration = 0;
@@ -579,15 +652,21 @@ class FavObj {
     float hoverAlpha = 0.0;
     int hoverAlphFadeDur = 250;
 
-    void DrawHovered() {
+    void DrawTextLabelMbHovered() {
         hoverAlpha = Math::Clamp(hoverDuration / hoverAlphFadeDur, 0.0, 1.0);
-        auto dl = UI::GetForegroundDrawList();
+        if (isSpecialFolder) hoverAlpha = 0.0;
+        else if (isFolder) hoverAlpha = Math::Lerp(0.75, 1.0, hoverAlpha);
+        if (hoverAlpha == 0) return;
+
+        // text
+        auto dl = UI::GetWindowDrawList();
         auto midpoint = lastTlGlobalPos + S_IconSize / 2.;
-        auto nameDim = Draw::MeasureString(shortName, g_BoldFont, 16.0, S_IconSize.x);
-        auto tl = midpoint - nameDim / 2. - vec2(0, 4.);
+        float wrapWidth = S_IconSize.x - InvDrawVals::colGap;
+        auto nameDim = Draw::MeasureString(shortName, g_BoldFont, 14.0, wrapWidth);
+        auto tl = midpoint - nameDim / 2.;
         // auto iconTl = lastTlGlobalPos;
         // dlBack.AddQuadFilled(iconTl, iconTl + vec2(S_IconSize.x, 0), iconTl + S_IconSize, iconTl + vec2(0, S_IconSize.y), vec4(.5, .5, .5, hoverAlpha * 0.5));
-        DrawList_AddTextWithStroke(dl, tl, vec4(1, 1, 1, hoverAlpha), vec4(0, 0, 0, hoverAlpha), shortName, g_BoldFont, 0.0, S_IconSize.x);
+        DrawList_AddTextWithStroke(dl, tl, vec4(1, 1, 1, hoverAlpha), vec4(0, 0, 0, hoverAlpha), shortName, g_BoldFont, 14.0, wrapWidth);
         // dl.AddText(tl, vec4(1, 1, 1, hoverAlpha), shortName, g_BoldFont, 0.0, S_IconSize.x);
     }
 
@@ -612,6 +691,10 @@ class FavObj {
 
     void RemoveSelf() {
         g_Favorites.RemoteFromFavorites(nodeName, isItem, isFolder);
+    }
+
+    void AddSelf() {
+        g_Favorites.AddToFavorites(nodeName, isItem, isFolder);
     }
 
     void DragSomewhere() {
@@ -664,7 +747,7 @@ class FavObj {
     uint currAlpha = 0xEE;
     void DrawClickedState() {
         UpdateClickedState();
-        auto tex = IconTextures::GetIconTexture(Editor::GetInventoryCache().GetByName(nodeName, isItem));
+        auto tex = GetTexture();
         auto dl = UI::GetForegroundDrawList();
         currAlpha = Math::Min(Time::Now - clickedStart, clickFadeDuration) * iconDragAlpha / clickFadeDuration;
         if (dragResult >= FavDraggingResult::CreateOrJoinGroup) {
@@ -743,6 +826,9 @@ class FavObj {
     uint lastSelected = 0;
     void SelectInvNode() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto inv = Editor::GetInventoryCache();
+
+        if (SelectInvFolderMb(editor, inv)) return;
 
         bool rollInsteadOfSelect = Time::Now - lastSelected < 500;
         // print("now: " + Time::Now + ", last: " + lastSelected + ", rollInstead: " + rollInsteadOfSelect);
@@ -752,20 +838,43 @@ class FavObj {
         lastSelected = Time::Now;
         if (rollInsteadOfSelect) return;
 
-        auto inv = Editor::GetInventoryCache();
         if (!isFolder) {
-            if (isItem) {
-                Editor::SetSelectedInventoryNode(editor, inv.GetItemByPath(nodeName), true);
-            } else {
-                Editor::SetSelectedInventoryNode(editor, inv.GetBlockByName(nodeName), false);
-            }
+            Editor::SetSelectedInventoryNode(editor, cast<CGameCtnArticleNodeArticle>(GetInvArticle(inv)), isItem);
         } else {
-            if (isItem) {
-                Editor::SetSelectedInventoryFolder(editor, inv.GetItemDirectory(nodeName), true);
-            } else {
-                Editor::SetSelectedInventoryFolder(editor, inv.GetBlockDirectory(nodeName), false);
-            }
+            Editor::SetSelectedInventoryFolder(editor, cast<CGameCtnArticleNodeDirectory>(GetInvArticle(inv)), isItem);
         }
+    }
+
+    CGameCtnArticleNode@ GetInvArticle(Editor::InventoryCache@ inv) {
+        if (isSpecialFolder) {
+            if (specialIx == 0) return Editor::GetInventoryRootNode(Editor::InventoryRootNode::Blocks);
+            else if (specialIx < 4) return Editor::GetInventoryItemFolder(Editor::InventoryItemsFolder(specialIx - 1));
+            else if (specialIx == 4) return Editor::GetInventoryRootNode(Editor::InventoryRootNode::Macroblocks);
+            return null;
+        }
+        if (isFolder) {
+            return inv.GetDirectory(GetDirectoryNodeName(), isItem);
+        } else {
+            return inv.GetByName(nodeName, isItem);
+        }
+    }
+
+    string GetDirectoryNodeName() {
+        if (isItem) return nodeName.Contains(" ") ? nodeName.Split(" ", 2)[1] : nodeName;
+        return nodeName.Contains("\\") ? nodeName.Split("\\", 2)[1] : nodeName;
+    }
+
+    // return true if we are a folder
+    bool SelectInvFolderMb(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv) {
+        CGameCtnArticleNodeDirectory@ dir = cast<CGameCtnArticleNodeDirectory>(GetInvArticle(inv));
+        if (dir is null) {
+            NotifyWarning("Could not select inventory folder: " + nodeName + " (it is null); computed: " + GetDirectoryNodeName());
+        } else if (dirCallback !is null) {
+            dirCallback();
+        } else {
+            editor.PluginMapType.Inventory.OpenDirectory(dir);
+        }
+        return isFolder;
     }
 
     void EditSelf() {

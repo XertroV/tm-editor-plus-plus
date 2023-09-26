@@ -121,14 +121,27 @@ namespace Editor {
         }
 
         CGameCtnArticleNodeDirectory@ GetBlockDirectory(const string &in dir) {
+            trace('get block dir: ' + dir);
             if (!cachedInvBlockFolderLookup.Exists(dir)) return null;
-            return cast<CGameCtnArticleNodeDirectory>(cachedInvBlockIndexes[dir]);
+            trace(' >> exists');
+            auto ret = cast<CGameCtnArticleNodeDirectory>(cachedInvBlockFolderLookup[dir]);
+            // trace(' >> null? ' + (ret is null));
+            return ret;
         }
 
         CGameCtnArticleNodeDirectory@ GetItemDirectory(const string &in dir) {
+            trace('get item dir: ' + dir);
             if (!cachedInvItemFolderLookup.Exists(dir)) return null;
-            return cast<CGameCtnArticleNodeDirectory>(cachedInvItemIndexes[dir]);
+            trace('>> exists');
+            return cast<CGameCtnArticleNodeDirectory>(cachedInvItemFolderLookup[dir]);
         }
+
+        CGameCtnArticleNodeDirectory@ GetDirectory(const string &in dir, bool isItem) {
+            trace('get dir: ' + dir + ', is item: ' + isItem);
+            if (isItem) return GetItemDirectory(dir);
+            return GetBlockDirectory(dir);
+        }
+
 
         protected void CacheInvNode(CGameCtnArticleNode@ node, uint nonce) {
             auto dir = cast<CGameCtnArticleNodeDirectory>(node);
@@ -148,12 +161,11 @@ namespace Editor {
                 if (nonce != cacheRefreshNonce) return;
                 CacheInvNode(node.ChildNodes[i], nonce);
             }
+            string name = GetInvDirFullPath(node);
             if (_IsScanningItems) {
-                string name = GetInvDirFullPath(node);
                 cachedInvItemFolders.InsertLast(name);
                 @cachedInvItemFolderLookup[name] = node;
             } else {
-                string name = GetInvDirFullPath(node);
                 cachedInvBlockFolders.InsertLast(name);
                 @cachedInvBlockFolderLookup[name] = node;
             }

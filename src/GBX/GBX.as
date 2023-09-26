@@ -50,6 +50,7 @@ shared class Gbx : BufUtils {
         hClassId = ReadUInt32('main class id');
         log.parse_push(Text::Format("%08x", hClassId));
         @userData = UserData(buf, log);
+        return;
         nbNodes = ReadInt32('nb nodes');
         nbExternalNodes = ReadInt32('nb external nodes');
         // todo, read external nodes if they exist

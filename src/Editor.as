@@ -117,7 +117,7 @@ namespace Editor {
     }
 
     void SetSelectedInventoryNode(CGameCtnEditorFree@ editor, CGameCtnArticleNodeArticle@ article, bool isItem) {
-        // article null check?
+        if (article is null) return;
         if (isItem) {
             Editor::EnsureItemPlacementMode(editor);
         } else {
@@ -126,7 +126,7 @@ namespace Editor {
         editor.PluginMapType.Inventory.SelectArticle(article);
     }
     void SetSelectedInventoryFolder(CGameCtnEditorFree@ editor, CGameCtnArticleNodeDirectory@ dir, bool isItem) {
-        // article null check?
+        if (dir is null) return;
         if (isItem) {
             Editor::EnsureItemPlacementMode(editor);
         } else {

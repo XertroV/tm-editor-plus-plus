@@ -19,14 +19,6 @@ class InventoryMainTab : Tab {
     }
 }
 
-enum InventoryRootNode {
-    CrashBlocks = 0,
-    Blocks = 1,
-    Grass = 2,
-    Items = 3,
-    Macroblocks = 4,
-}
-
 class GenericInventoryBrowserTab : Tab {
     uint RootNodeIx = 1;
     CGameCtnArticleNode@ OverrideRootNode;
