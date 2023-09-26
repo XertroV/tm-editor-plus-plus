@@ -210,3 +210,12 @@ class TodoTab : Tab {
         // UI::Text("This tab full name is: " + fullName);
     }
 }
+
+
+// namespace TabState {
+//     [Setting hidden]
+//     string S_TabStatePoppedJson = "[]";
+
+//     [Setting hidden]
+//     string S_TabStateMain = "";
+// }

@@ -1,6 +1,8 @@
 const string FAV_JSON_PATH = IO::FromStorageFolder("favs.json");
 const string FAV_ICON_PATH = IO::FromDataFolder("Common/EditorIcons/");
 
+[Setting hidden]
+vec2 S_IconSize = vec2(64);
 
 namespace IconTextures {
     dictionary loadedTextures;
@@ -10,6 +12,7 @@ namespace IconTextures {
     UI::Texture@ invGroupBox;
     UI::Texture@[] loadingFrames;
     dictionary knownHashes;
+    dictionary knownHashTest;
 
     void IconInitCoro() {
         yield();
@@ -41,6 +44,7 @@ namespace IconTextures {
             auto hash = parts[0];
             auto nodeName = parts[1];
             knownHashes[nodeName] = hash;
+            knownHashTest[hash] = true;
         }
     }
 
@@ -65,6 +69,12 @@ namespace IconTextures {
         }
         if (!loadedTextures.Exists(article.NodeName)) return GetCurrLoadingFrame();
         return cast<UI::Texture>(loadedTextures[article.NodeName]);
+    }
+
+    void RefreshIconFor(const string &in nodeName) {
+        if (knownHashes.Exists(nodeName)) knownHashes.Delete(nodeName);
+        if (loadedTextures.Exists(nodeName)) loadedTextures.Delete(nodeName);
+        if (seenRequested.Exists(nodeName)) seenRequested.Delete(nodeName);
     }
 
     UI::Texture@ GetCurrLoadingFrame() {
@@ -131,7 +141,7 @@ namespace IconTextures {
             @gbx = Gbx(toLoad);
         } catch {
             // failed to load gbx
-            NotifyWarning("Failed to load GBX: " + getExceptionInfo());
+            NotifyWarning("Failed to load GBX. (" + getExceptionInfo() + ") - " + toLoad);
             if (failedImg is null) @failedImg = UI::LoadTexture("img/failed.png");
             @loadedTextures[nodeName] = failedImg;
             return;
@@ -147,11 +157,14 @@ namespace IconTextures {
         auto iconBase64 = icon.imgBytes.ReadToBase64(icon.imgBytes.GetSize());
         // icon.imgBytes.Seek(0);
         auto iconHash = Crypto::MD5(iconBase64);
+        // record new duplicate
+        if (knownHashTest.Exists(iconHash)) {
+            // trace("caching known icon hash: " + iconHash + " for " + nodeName);
+            RecordIconNodeAsscoiation(iconHash, nodeName);
+        }
         MemoryBuffer@ iconBytes;
         if (!icon.webp) {
-            NotifyWarning("Found icon that wasn't webp: " + nodeName + ". Attempting to convert anyway...");
-            // @loadedTextures[nodeName] = UI::LoadTexture(icon.imgBytes);
-            // return;
+            // NotifyWarning("Found icon that wasn't webp: " + nodeName + ". Attempting to convert anyway...");
         }
         if (!IconFileExists(iconHash)) {
             @iconBytes = CacheIcon(iconHash, nodeName, icon.webp ? MapMonitor::ConvertWebpIcon(iconBase64) : MapMonitor::ConvertRGBAIcon(iconBase64));
@@ -174,13 +187,19 @@ namespace IconTextures {
         IO::File iconWrite(IconFilePath(hash), IO::FileMode::Write);
         iconWrite.Write(iconBytes);
         iconWrite.Close();
+
+        RecordIconNodeAsscoiation(hash, nodeName);
+        // reset bytes and return
+        iconBytes.Seek(0);
+        return iconBytes;
+    }
+
+    void RecordIconNodeAsscoiation(const string &in hash, const string &in nodeName) {
         // update mapping with the corresponding node
         IO::File iconLog(ArticleMappingPath(), IO::FileMode::Append);
         iconLog.WriteLine(hash + "," + nodeName);
         iconLog.Close();
-        // reset bytes and return
-        iconBytes.Seek(0);
-        return iconBytes;
+        knownHashTest[hash] = true;
     }
 
     string ArticleMappingPath() {
@@ -226,12 +245,25 @@ namespace MapMonitor {
     }
 }
 
+[Setting hidden]
+bool S_FavTabPopped = false;
+
+bool g_FavoritesWindowHovered = false;
 
 class FavoritesTab : Tab {
     FavoritesTab(TabGroup@ p) {
         super(p, "Favorites", Icons::FolderOpenO + Icons::StarO);
         @favorites = Json::FromFile(FAV_JSON_PATH);
         CheckInitFavs();
+        windowOpen = S_FavTabPopped;
+    }
+
+    bool get_windowOpen() override property {
+        return S_FavTabPopped;
+    }
+    void set_windowOpen(bool value) override property {
+        Tab::set_windowOpen(value);
+        S_FavTabPopped = value;
     }
 
     Json::Value@ favorites;
@@ -289,7 +321,7 @@ class FavoritesTab : Tab {
     }
 
     void AddToFavorites(const string &in idName, bool isItem, bool isFolder) {
-        Json::Value@ store;
+        Json::Value@ store = GetStore(isItem, isFolder);
         bool exists = store.HasKey(idName);
         if (!exists) {
             store[idName] = 1;
@@ -357,7 +389,7 @@ class FavoritesTab : Tab {
     Json::Value@ get_FavBlockFolders() { return favorites['blockFolders']; }
 
     void DrawInner() override {
-
+        g_FavoritesWindowHovered = UI::IsWindowFocused();
         if (UI::Button("Remove favorites with missing articles")) {
             auto inv = Editor::GetInventoryCache();
             auto blocks = favorites['blocks'].GetKeys();
@@ -414,14 +446,14 @@ class FavoritesTab : Tab {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto favs = GetFavs(isItem, isFolder);
         auto lineNb = int(Math::Floor(UI::GetContentRegionAvail().x / 76));
-        auto len = favs.Length <= lineNb ? 1 : (favs.Length) / lineNb + 1;
+        auto len = int(favs.Length) <= lineNb ? 1 : int(favs.Length) / lineNb + 1;
         UI::ListClipper clip(len);
         while (clip.Step()) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                 for (int j = 0; j < lineNb; j++) {
                     auto ix = i * lineNb + j;
-                    if (ix >= favs.Length) {
-                        UI::Dummy(vec2(64, 64));
+                    if (ix >= int(favs.Length)) {
+                        UI::Dummy(S_IconSize);
                         break;
                     }
                     favs[ix].DrawFavEntry(editor, inv);
@@ -454,7 +486,6 @@ class FavObj {
     string shortName;
     bool isItem;
     bool isFolder;
-    vec2 thumbSize = vec2(64);
 
     FavObj(const string &in nodeName, bool isItem, bool isFolder) {
         this.nodeName = nodeName;
@@ -465,6 +496,8 @@ class FavObj {
         this.isFolder = isFolder;
         this.isItem = isItem;
     }
+
+    vec2 lastTlGlobalPos;
 
     void DrawFavEntry(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv) {
         // auto inv = Editor::GetInventoryCache();
@@ -481,10 +514,14 @@ class FavObj {
         }
         if (tex !is null) {
             auto pos = UI::GetCursorPos();
-            UI::Image(tex, thumbSize);
+            lastTlGlobalPos = UI::GetWindowPos() + pos;
+            UI::Image(tex, S_IconSize);
             if (UI::BeginPopupContextItem("rmb-inv-"+nodeName)) {
                 if (UI::MenuItem("Drag Somewhere")) {
                     startnew(CoroutineFunc(this.DragSomewhere));
+                }
+                if (UI::MenuItem("Refresh Icon")) {
+                    startnew(IconTextures::RefreshIconFor, nodeName);
                 }
                 if (UI::MenuItem("Remove From Favs")) {
                     startnew(CoroutineFunc(RemoveSelf));
@@ -493,12 +530,12 @@ class FavObj {
             }
             // need the invis button to preven imgui default behavior
             UI::SetCursorPos(pos);
-            UI::InvisibleButton("icon-" + nodeName, thumbSize, UI::ButtonFlags::MouseButtonLeft);
+            UI::InvisibleButton("icon-" + nodeName, S_IconSize, UI::ButtonFlags::MouseButtonLeft);
 
             if (UI::IsItemClicked()) {
                 startnew(CoroutineFunc(this.ClickWatch));
             }
-            hoverDuration = UI::IsItemHovered() ? hoverDuration + g_AvgFrameTime : 0.;
+            hoverDuration = Math::Clamp(hoverDuration + (UI::IsItemHovered() ? g_AvgFrameTime : -g_AvgFrameTime), 0.0, hoverAlphFadeDur);
 
             if (isDragging) {
                 DrawClickedState();
@@ -513,8 +550,24 @@ class FavObj {
     float hoverDuration = 0;
     vec2 lastHoveredWindowDims;
     float hoverBuffer = 10.;
+    float hoverAlpha = 0.0;
+    int hoverAlphFadeDur = 250;
 
     void DrawHovered() {
+        hoverAlpha = Math::Clamp(hoverDuration / hoverAlphFadeDur, 0.0, 1.0);
+        auto dl = UI::GetForegroundDrawList();
+        auto midpoint = lastTlGlobalPos + S_IconSize / 2.;
+        auto nameDim = Draw::MeasureString(shortName, g_BoldFont, 16.0, S_IconSize.x);
+        auto tl = midpoint - nameDim / 2. - vec2(0, 4.);
+        auto iconTl = lastTlGlobalPos;
+        // dlBack.AddQuadFilled(iconTl, iconTl + vec2(S_IconSize.x, 0), iconTl + S_IconSize, iconTl + vec2(0, S_IconSize.y), vec4(.5, .5, .5, hoverAlpha * 0.5));
+        dl.AddImage(IconTextures::invGroupBox, iconTl - 4., S_IconSize + 8., 0xFFFFFF00 + (0xCC * hoverAlpha));
+        DrawList_AddTextWithStroke(dl, tl, vec4(1, 1, 1, hoverAlpha), vec4(0, 0, 0, hoverAlpha), shortName, g_BoldFont, 0.0, S_IconSize.x);
+        // dl.AddText(tl, vec4(1, 1, 1, hoverAlpha), shortName, g_BoldFont, 0.0, S_IconSize.x);
+    }
+
+    // unused atm
+    void DrawHovered_Window() {
         vec2 mp = UI::GetMousePos();
         vec2 windowPos = vec2(
             Draw::GetWidth() - mp.x > lastHoveredWindowDims.x + hoverBuffer
@@ -527,12 +580,22 @@ class FavObj {
         UI::SetNextWindowPos(windowPos.x, windowPos.y, UI::Cond::Always);
         if (UI::Begin("inv-hover", UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
             UI::Text(shortName);
+            lastHoveredWindowDims = UI::GetWindowSize();
         }
         UI::End();
-
-
     }
 
+    void DrawList_AddTextWithStroke(UI::DrawList@ dl, vec2 pos, vec4 color, vec4 stroke, string str, UI::Font@ font = null, float size = 0.0f, float wrapWidth = 0.0f) {
+        vec2 offset;
+        float thickness = 1.5;
+        for (uint i = 0; i < 12; i++) {
+            float rot = (TAU * i / 12.);
+            offset = vec2(Math::Sin(rot), Math::Cos(rot)) * thickness + vec2(.5);
+            dl.AddText(pos + offset, stroke, str, font, size, wrapWidth);
+
+        }
+        dl.AddText(pos, color, str, font, size, wrapWidth);
+    }
 
 
     void RemoveSelf() {
@@ -540,9 +603,11 @@ class FavObj {
     }
 
     void DragSomewhere() {
-        isDragging = true;
+        isDragging = g_IsDragging = true;
+        clickToEndDrag = true;
     }
 
+    bool clickToEndDrag = false;
     bool isClicked = false;
     bool isDragging = false;
     uint clickedStart = 0;
@@ -564,10 +629,13 @@ class FavObj {
         }
         initClickWait = false;
         isClicked = false;
+        isDragging = false;
+        g_IsDragging = false;
     }
 
     void OnReleaseLMB() {
         lastDragPos = vec2(0);
+        clickToEndDrag = g_IsDragging = isDragging = false;
         trace("LMB release");
         dragResult = FavDraggingResult::None;
         // if we are less than 32 pixels away, treat it as selecting an inventory node.
@@ -579,9 +647,9 @@ class FavObj {
         warn('todo: on drag');
     }
 
-    uint iconDragAlpha = 0xCC;
+    uint iconDragAlpha = 0xEE;
     uint clickFadeDuration = 500;
-    uint currAlpha = 0xCC;
+    uint currAlpha = 0xEE;
     void DrawClickedState() {
         UpdateClickedState();
         auto tex = IconTextures::GetIconTexture(Editor::GetInventoryCache().GetByName(nodeName, isItem));
@@ -590,16 +658,17 @@ class FavObj {
         if (dragResult >= FavDraggingResult::CreateOrJoinGroup) {
             DrawGroupHover();
         }
-        dl.AddImage(tex, lastDragPos - thumbSize / 2., thumbSize, 0xFFFFFF00 + currAlpha);
-        dl.AddCircle(lastDragPos, 42, vec4(GetDragCircleColor(), .8 * currAlpha / 0xFF), 64, 2.);
+        dl.AddImage(tex, lastDragPos - S_IconSize / 2., S_IconSize, 0xFFFFFF00 + currAlpha);
+        dl.AddCircle(lastDragPos, 42, vec4(GetDragCircleColor(), .8 * currAlpha / 0xFF), 32, 2.);
 
-        if (IsLMBPressed()) {
-            isDragging = false;
+        if (clickToEndDrag && IsLMBPressed()) {
+            // trace('setting isDragging false');
+            OnReleaseLMB();
         }
     }
 
     float gridGap = 8.;
-    float gridSize = 64.;
+    float gridSize = S_IconSize.x;
     float betweenSq = gridSize + gridGap;
     vec2 invBoxTexSize = vec2(betweenSq);
 
@@ -638,6 +707,7 @@ class FavObj {
         return vec3(0);
     }
 
+    // draw a rounded square around the current grid square
     void DrawGroupHover() {
         auto dl = UI::GetForegroundDrawList();
         if (IconTextures::invGroupBox !is null)
@@ -657,8 +727,18 @@ class FavObj {
         UpdateDraggedDrawPos();
     }
 
+    uint lastSelected = 0;
     void SelectInvNode() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+
+        bool rollInsteadOfSelect = Time::Now - lastSelected < 500;
+        // print("now: " + Time::Now + ", last: " + lastSelected + ", rollInstead: " + rollInsteadOfSelect);
+        if (rollInsteadOfSelect) {
+            Editor::RollCurrentPlacementMode(editor);
+        }
+        lastSelected = Time::Now;
+        if (rollInsteadOfSelect) return;
+
         auto inv = Editor::GetInventoryCache();
         if (!isFolder) {
             if (isItem) {

@@ -64,6 +64,7 @@ namespace Event {
         for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
             onEditorLoadCbs[i]();
         }
+        trace("Finished OnEditorLoad callbacks");
     }
     void RunOnEditorUnloadCbs() {
         trace("Running OnEditorUnload callbacks");

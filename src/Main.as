@@ -74,6 +74,7 @@ void RenderEarly() {
         Event::RunOnEditorUnloadCbs();
     }
 
+    g_WasDragging = g_IsDragging;
     g_LmbDown = IsLMBPressed();
 }
 
@@ -137,6 +138,8 @@ bool g_MmbDown = false;
 vec2 lastMbClickPos;
 vec2 lastMousePos;
 bool g_IsDragging = false;
+// track drag status for last frame
+bool g_WasDragging = false;
 
 UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     // print('mb ' + (down ? 'down' : 'up'));
@@ -150,7 +153,7 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     // }
     // if (down)
     //     lastMbClickPos = vec2(x, y);
-    return g_IsDragging ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
+    return (g_IsDragging || g_WasDragging) ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
 }
 
 // only updates when not hovering imgui and input not carried off imgui

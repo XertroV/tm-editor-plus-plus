@@ -16,7 +16,7 @@ shared class Gbx : BufUtils {
             trace('Loading GBX file of length: ' + f.Size());
             @buf = f.Read(Math::Min(maxReadSize, f.Size()));
         } catch {
-            error("Failed to open the file: " + getExceptionInfo());
+            NotifyError("Failed to open the file: " + getExceptionInfo());
             warn("File path: " + path);
         }
         // can be optimized to just read header

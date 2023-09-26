@@ -296,8 +296,6 @@ TabGroup@ CreateRootTabGroup() {
     // - filtered view of blocks/items show just checkpoints
     // - set linked order
     //   -- for next, selected, picked
-    TodoTab(root, "Favorites", Icons::FolderOpenO + Icons::StarO, "show favorited inventory items.");
-
     CheckpointsTab(root);
 
     Repeat::MainRepeatTab(root);

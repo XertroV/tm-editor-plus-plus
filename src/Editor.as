@@ -133,6 +133,7 @@ namespace Editor {
             Editor::EnsureBlockPlacementMode(editor);
         }
         editor.PluginMapType.Inventory.SelectNode(dir);
+
     }
 
     uint GetCurrentPivot(CGameCtnEditorFree@ editor) {
@@ -202,6 +203,32 @@ namespace Editor {
         if (!IsInMacroblockPlacementMode(editor, false)) {
             editor.PluginMapType.EditMode = CGameEditorPluginMap::EditMode::Place;
             editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Macroblock;
+        }
+    }
+
+    // cycle through placement mode variants (normal, ghost, free, etc)
+    void RollCurrentPlacementMode(CGameCtnEditorFree@ editor) {
+        auto pm = GetPlacementMode(editor);
+        if (IsInBlockPlacementMode(editor)) {
+            if (pm == CGameEditorPluginMap::EPlaceMode::Block)
+                SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::GhostBlock);
+            else if (pm == CGameEditorPluginMap::EPlaceMode::GhostBlock)
+                SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
+            else if (pm == CGameEditorPluginMap::EPlaceMode::FreeBlock)
+                SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Block);
+        } else if (IsInAnyItemPlacementMode(editor)) {
+            auto itemPm = GetItemPlacementMode();
+            if (itemPm == ItemMode::Normal)
+                SetItemPlacementMode(ItemMode::FreeGround);
+            else if (itemPm == ItemMode::FreeGround)
+                SetItemPlacementMode(ItemMode::Free);
+            else if (itemPm == ItemMode::Free)
+                SetItemPlacementMode(ItemMode::Normal);
+        } else if (IsInMacroblockPlacementMode(editor)) {
+            if (pm == CGameEditorPluginMap::EPlaceMode::Macroblock)
+                SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeMacroblock);
+            else
+                SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Macroblock);
         }
     }
 
