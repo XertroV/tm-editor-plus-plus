@@ -61,6 +61,15 @@ ReferencedNod@ selectedGhostBlockInfo;
 ReferencedNod@ selectedItemModel;
 ReferencedNod@ selectedMacroBlockInfo;
 
+void ClearSelectedOnEditorUnload() {
+    @lastPickedItem = null;
+    @lastPickedBlock = null;
+    @selectedBlockInfo = null;
+    @selectedGhostBlockInfo = null;
+    @selectedItemModel = null;
+    @selectedMacroBlockInfo = null;
+}
+
 void UpdateSelectedBlockItem(CGameCtnEditorFree@ editor) {
     if (editor is null) {
         @selectedBlockInfo = null;

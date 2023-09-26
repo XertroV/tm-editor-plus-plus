@@ -12,6 +12,8 @@ void Main() {
         startnew(Editor::CacheMaterials);
     }
     RegisterOnEditorLoadCallback(Editor::CacheMaterials, "CacheMaterials");
+    RegisterOnItemEditorLoadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
+    RegisterOnEditorUnloadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
 
     ExtraUndoFix::OnLoad();
 
@@ -47,8 +49,10 @@ void RenderEarly() {
 
     IsInCurrentPlayground = currPg !is null;
 
+    EnteringItemEditor = !IsInItemEditor;
     IsInItemEditor = itemEditor !is null;
     if (IsInItemEditor) lastInItemEditor = Time::Now;
+    EnteringItemEditor = IsInItemEditor && EnteringItemEditor;
 
     IsInMeshEditor = meshEditor !is null;
 
@@ -64,7 +68,7 @@ void RenderEarly() {
     // we didn't fire this on being in the item editor, but we sorta do need it to refresh the caches.
     EnteringEditor = EnteringEditor && IsInEditor;
         // && (!everEnteredEditor || (Time::Now - lastInItemEditor) > 1000);
-    auto LeavingEditor = WasInEditor && anyEditor is null;
+    auto LeavingEditor = WasInEditor && !IsInEditor;
 
     if (EnteringEditor) {
         EditorPriv::ResetRefreshUnsafe();
@@ -72,6 +76,10 @@ void RenderEarly() {
         everEnteredEditor = true;
     } else if (LeavingEditor) {
         Event::RunOnEditorUnloadCbs();
+    }
+
+    if (EnteringItemEditor) {
+        Event::RunOnItemEditorLoadCbs();
     }
 
     g_WasDragging = g_IsDragging;

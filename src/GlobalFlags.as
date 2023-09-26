@@ -4,3 +4,4 @@ bool IsInItemEditor = false;
 bool IsInMeshEditor = false;
 bool IsInCurrentPlayground = false;
 bool EnteringEditor = false;
+bool EnteringItemEditor = false;

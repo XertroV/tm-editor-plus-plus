@@ -138,7 +138,7 @@ namespace ItemEditor {
         auto buttonUp = cast<CControlButton>(GetFrameChildFromChain(frame, {0, 4, 1, 0}));
         auto entryPath = cast<CControlEntry>(GetFrameChildFromChain(frame, {0, 4, 1, 3}));
         uint count = 0;
-        while (string(entryPath.String) != "$3CFItems\\$z") {
+        while (string(entryPath.String) != "$3CFItems\\$z" && string(entryPath.String) != "$3CFBlocks\\$z") {
             trace(entryPath.String);
             buttonUp.OnAction();
             trace(string(entryPath.String) + " " + count);

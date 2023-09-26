@@ -1,5 +1,7 @@
 namespace Editor {
     const uint16 offsetMouseDown = 0xBB8; // +4: right click, +8 duplicate left click
+    // updates sometimes, not always
+    const uint16 secOffsetPickMode = 0xBE8; // uint, = 0 place, 1 = ?, 2 = delete, 3 = pick, 4 = select?, mb more
     const uint16 offsetPickMode = 0xBF0; // uint, = 0 place, 1 = ?, 2 = delete, 3 = pick, 4 = select?, mb more
     uint8 DeleteItemFromMap(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ item) {
         //

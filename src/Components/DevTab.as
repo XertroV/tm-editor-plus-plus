@@ -1,7 +1,7 @@
 #if SIG_DEVELOPER
 
 class DevMainTab : Tab {
-    bool drawStuff = false;
+    bool drawStuff = true;
 
     DevMainTab(TabGroup@ p) {
         super(p, "Dev Info", Icons::ExclamationTriangle);
@@ -9,26 +9,45 @@ class DevMainTab : Tab {
         DevBlockTab(Children);
         DevBlockTab(Children, true);
         DevItemsTab(Children);
+        DevCallbacksTab(Children);
         DevMiscTab(Children);
     }
 
     void DrawInner() override {
-#if DEV
-        if (testTexture is null) {
-            UI::Text("no texture");
-        } else {
-            UI::Text("Image: vvvv");
-            UI::Image(testTexture, vec2(64, 64));
-            UI::Text("Image: ^^^^");
-        }
-#endif
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         drawStuff = UI::Checkbox("Enable Dev Info", drawStuff);
+        if (editor !is null) {
+            UI::SameLine();
+            CopiableLabeledValue("editor ptr", Text::FormatPointer(Dev_GetPointerForNod(editor)));
+        }
+
         if (!drawStuff) return;
         Children.DrawTabs();
         return;
     }
 }
 
+class DevCallbacksTab : Tab {
+    DevCallbacksTab(TabGroup@ p) {
+        super(p, "Callbacks", "");
+    }
+
+    void DrawInner() override {
+        DrawCBs("On Editor Load", onEditorLoadCbNames);
+        DrawCBs("On Editor Unload", onEditorUnloadCbNames);
+        DrawCBs("On New Item", itemCallbackNames);
+        DrawCBs("Block Callback", blockCallbackNames);
+        DrawCBs("Selected Item Changed", selectedItemChangedCbNames);
+    }
+
+    void DrawCBs(const string &in type, string[]@ names) {
+        if (UI::CollapsingHeader(type)) {
+            for (uint i = 0; i < names.Length; i++) {
+                UI::Text(names[i]);
+            }
+        }
+    }
+}
 
 class DevMiscTab : Tab {
     DevMiscTab(TabGroup@ p) {

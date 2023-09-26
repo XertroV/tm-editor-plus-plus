@@ -13,9 +13,11 @@ namespace IconTextures {
     UI::Texture@[] loadingFrames;
     dictionary knownHashes;
     dictionary knownHashTest;
+    bool initializedResources = false;
 
     void IconInitCoro() {
-        yield();
+        while (Time::Now < 60000 && cast<CGameCtnEditorFree>(GetApp().Editor) is null)
+            yield();
         LoadIconTextureCsvCache();
         yield();
         loadingFrames.InsertLast(UI::LoadTexture("img/loading.png"));
@@ -29,6 +31,9 @@ namespace IconTextures {
         loadingFrames.InsertLast(UI::LoadTexture("img/loading-5.png"));
         yield();
         @invGroupBox = UI::LoadTexture("img/inv-group-box.png");
+
+
+        initializedResources = true;
     }
 
     void LoadIconTextureCsvCache() {
@@ -92,17 +97,21 @@ namespace IconTextures {
     }
 
     void RequestLoadFor(CGameCtnArticleNodeArticle@ article) {
+        while (!initializedResources) yield();
         // if (article is null)
         auto fid = article.Article.CollectorFid;
         if (fid is null) {
-            NotifyWarning("Cannot load icon for " + article.NodeName + " since the article has no FID. Is it saved?");
+            NotifyWarning("Cannot load icon for " + StripFormatCodes(article.NodeName) + " since the article has no FID. Is it saved?");
             return;
         }
         if (loadedTextures.Exists(article.NodeName)) {
-            NotifyWarning("Attempted to reload an already loaded icon: " + article.NodeName);
+            NotifyWarning("Attempted to reload an already loaded icon: " + StripFormatCodes(article.NodeName));
             return;
         }
 
+        if (fid is null) {
+            warn('null fid???');
+        }
         if (fid.IsReadOnly || fid.FullFileName == "<virtual>") {
             LoadForVirtual(fid, article.NodeName);
         } else {
@@ -259,7 +268,8 @@ class FavoritesTab : Tab {
     }
 
     bool get_windowOpen() override property {
-        return S_FavTabPopped;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return S_FavTabPopped && editor !is null;
     }
     void set_windowOpen(bool value) override property {
         Tab::set_windowOpen(value);
@@ -515,10 +525,26 @@ class FavObj {
         if (tex !is null) {
             auto pos = UI::GetCursorPos();
             lastTlGlobalPos = UI::GetWindowPos() + pos;
+
+
+            if (selectedItemModel !is null) {
+                auto im = selectedItemModel.AsItemModel();
+                if (im !is null && im.IdName == nodeName) {
+                    UI::GetWindowDrawList().AddImage(IconTextures::invGroupBox, lastTlGlobalPos - 4., S_IconSize + 8., 0xFFFFFF00 + 0xCC);
+                }
+            }
+
             UI::Image(tex, S_IconSize);
+
             if (UI::BeginPopupContextItem("rmb-inv-"+nodeName)) {
                 if (UI::MenuItem("Drag Somewhere")) {
                     startnew(CoroutineFunc(this.DragSomewhere));
+                }
+                if (UI::MenuItem(isItem ? "Edit Item" : "Edit Block")) {
+                    startnew(CoroutineFunc(this.EditSelf));
+                }
+                if (!isItem && UI::MenuItem("Edit Block (Method 2)")) {
+                    startnew(CoroutineFunc(this.EditSelfBlockM2));
                 }
                 if (UI::MenuItem("Refresh Icon")) {
                     startnew(IconTextures::RefreshIconFor, nodeName);
@@ -559,9 +585,8 @@ class FavObj {
         auto midpoint = lastTlGlobalPos + S_IconSize / 2.;
         auto nameDim = Draw::MeasureString(shortName, g_BoldFont, 16.0, S_IconSize.x);
         auto tl = midpoint - nameDim / 2. - vec2(0, 4.);
-        auto iconTl = lastTlGlobalPos;
+        // auto iconTl = lastTlGlobalPos;
         // dlBack.AddQuadFilled(iconTl, iconTl + vec2(S_IconSize.x, 0), iconTl + S_IconSize, iconTl + vec2(0, S_IconSize.y), vec4(.5, .5, .5, hoverAlpha * 0.5));
-        dl.AddImage(IconTextures::invGroupBox, iconTl - 4., S_IconSize + 8., 0xFFFFFF00 + (0xCC * hoverAlpha));
         DrawList_AddTextWithStroke(dl, tl, vec4(1, 1, 1, hoverAlpha), vec4(0, 0, 0, hoverAlpha), shortName, g_BoldFont, 0.0, S_IconSize.x);
         // dl.AddText(tl, vec4(1, 1, 1, hoverAlpha), shortName, g_BoldFont, 0.0, S_IconSize.x);
     }
@@ -577,7 +602,7 @@ class FavObj {
                 ? mp.y + hoverBuffer
                 : mp.y - lastHoveredWindowDims.y - hoverBuffer
         );
-        UI::SetNextWindowPos(windowPos.x, windowPos.y, UI::Cond::Always);
+        UI::SetNextWindowPos(int(windowPos.x), int(windowPos.y), UI::Cond::Always);
         if (UI::Begin("inv-hover", UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
             UI::Text(shortName);
             lastHoveredWindowDims = UI::GetWindowSize();
@@ -658,7 +683,8 @@ class FavObj {
         if (dragResult >= FavDraggingResult::CreateOrJoinGroup) {
             DrawGroupHover();
         }
-        dl.AddImage(tex, lastDragPos - S_IconSize / 2., S_IconSize, 0xFFFFFF00 + currAlpha);
+        if (tex !is null)
+            dl.AddImage(tex, lastDragPos - S_IconSize / 2., S_IconSize, 0xFFFFFF00 + currAlpha);
         dl.AddCircle(lastDragPos, 42, vec4(GetDragCircleColor(), .8 * currAlpha / 0xFF), 32, 2.);
 
         if (clickToEndDrag && IsLMBPressed()) {
@@ -753,6 +779,92 @@ class FavObj {
                 Editor::SetSelectedInventoryFolder(editor, inv.GetBlockDirectory(nodeName), false);
             }
         }
+    }
+
+    void EditSelf() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto inv = Editor::GetInventoryCache();
+        auto node = inv.GetByName(nodeName, isItem);
+        if (node is null) return;
+        auto cs = Editor::GetCurrentCamState(editor);
+        if (isItem) {
+            auto im = cast<CGameItemModel>(node.GetCollectorNod());
+            auto newAnchored = CGameCtnAnchoredObject();
+            IO::SetClipboard(Text::FormatPointer(Dev_GetPointerForNod(newAnchored)));
+            Editor::SetItemLocation(newAnchored, cs.Pos);
+            newAnchored.AbsolutePositionInMap.y = Math::Max(8, newAnchored.AbsolutePositionInMap.y);
+            newAnchored.BlockUnitCoord = nat3(-1);
+            Dev::SetOffset(newAnchored, GetOffset(newAnchored, "ItemModel"), im);
+            // not sure how many of these are required
+            // Editor::SetAO_ItemModelMwId(newAnchored);
+            // Editor::SetAO_ItemModelAuthorMwId(newAnchored);
+            // Editor::SetNewAO_ItemUniqueBlockID(newAnchored);
+            // seems like 1 for each is enough
+            im.MwAddRef();
+            newAnchored.MwAddRef();
+            Editor::OpenItemEditor(editor, newAnchored);
+        } else {
+            auto bm = cast<CGameCtnBlockInfo>(node.GetCollectorNod());
+            auto newBlock = CGameCtnBlock();
+            Dev::SetOffset(newBlock, GetOffset(newBlock, "BlockModel"), bm);
+            Editor::SetBlockCoord(newBlock, editor.Cursor.Coord);
+            Editor::SetBlockLocation(newBlock, MathX::Max(cs.Pos, vec3(0, 8, 0)));
+            newBlock.MwAddRef();
+            bm.MwAddRef();
+            Editor::OpenItemEditor(editor, newBlock, true);
+        }
+    }
+
+    void EditSelfBlockM2() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto inv = Editor::GetInventoryCache();
+        auto node = inv.GetBlockByName(nodeName);
+        if (node is null) return;
+        auto cs = Editor::GetCurrentCamState(editor);
+
+        // method 2 creates a new block from a compatible one, then force updates the block in the item editor, and save + reload.
+        auto baseNode = inv.GetBlockByName("RoadTechStraight");
+        auto bm = cast<CGameCtnBlockInfo>(baseNode.GetCollectorNod());
+        auto targetBm = cast<CGameCtnBlockInfo>(node.GetCollectorNod());
+
+        // create the block
+        auto newBlock = CGameCtnBlock();
+        Dev::SetOffset(newBlock, GetOffset(newBlock, "BlockModel"), bm);
+        Editor::SetBlockCoord(newBlock, editor.Cursor.Coord);
+        Editor::SetBlockLocation(newBlock, MathX::Max(cs.Pos, vec3(0, 8, 0)));
+        newBlock.MwAddRef();
+        bm.MwAddRef();
+
+        // open editor
+        Editor::OpenItemEditor(editor, newBlock, true);
+
+        yield();
+        yield();
+
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        auto blockItem = cast<CGameBlockItem>(ieditor.ItemModel.EntityModelEdition);
+        auto blockInfo = cast<CGameCtnBlockInfo>(ieditor.ItemModel.EntityModel);
+
+        // update the archetype block info id
+        Dev::SetOffset(blockItem, GetOffset(blockItem, 'ArchetypeBlockInfoId_GameBox'), targetBm.Id.Value);
+
+        // update catalog info
+        blockInfo.CatalogPosition = targetBm.CatalogPosition + 1;
+        blockInfo.PageName = targetBm.PageName;
+        blockInfo.NameE = targetBm.Name;
+        ieditor.ItemModel.Name = targetBm.Name;
+        ieditor.ItemModel.Name = targetBm.Name;
+        ieditor.ItemModel.CatalogPosition = targetBm.CatalogPosition + 1;
+        ieditor.ItemModel.PageName = targetBm.PageName;
+
+        auto saveName = "Custom_" + targetBm.IdName + ".Block.Gbx";
+        ItemEditor::SaveItemAs(saveName);
+        // ItemEditor::OpenItem(saveName);
+        // ieditor.Exit();
+        ieditor.AddEmptyMesh();
+        yield();
+        ItemEditor::UpdateThumbnail(2);
+        ItemEditor::SaveItem();
     }
 }
 

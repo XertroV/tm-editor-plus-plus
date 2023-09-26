@@ -4,6 +4,8 @@ funcdef bool ProcessNewSelectedItem(CGameItemModel@ itemModel);
 
 CoroutineFunc@[] onEditorLoadCbs;
 string[] onEditorLoadCbNames;
+CoroutineFunc@[] onItemEditorLoadCbs;
+string[] onItemEditorLoadCbNames;
 CoroutineFunc@[] onEditorUnloadCbs;
 string[] onEditorUnloadCbNames;
 ProcessItem@[] itemCallbacks;
@@ -21,6 +23,12 @@ void RegisterOnEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
         onEditorLoadCbs.InsertLast(f);
         onEditorLoadCbNames.InsertLast(name);
+    }
+}
+void RegisterOnItemEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
+    if (f !is null) {
+        onItemEditorLoadCbs.InsertLast(f);
+        onItemEditorLoadCbNames.InsertLast(name);
     }
 }
 void RegisterOnEditorUnloadCallback(CoroutineFunc@ f, const string &in name) {
@@ -66,11 +74,19 @@ namespace Event {
         }
         trace("Finished OnEditorLoad callbacks");
     }
+    void RunOnItemEditorLoadCbs() {
+        trace("Running OnItemEditorLoad callbacks");
+        for (uint i = 0; i < onItemEditorLoadCbs.Length; i++) {
+            onItemEditorLoadCbs[i]();
+        }
+        trace("Finished OnEditorLoad callbacks");
+    }
     void RunOnEditorUnloadCbs() {
         trace("Running OnEditorUnload callbacks");
         for (uint i = 0; i < onEditorUnloadCbs.Length; i++) {
             onEditorUnloadCbs[i]();
         }
+        trace("Finished OnEditorUnload callbacks");
     }
     bool OnNewBlock(CGameCtnBlock@ block) {
         bool updated = false;
@@ -83,6 +99,7 @@ namespace Event {
         return updated;
     }
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
+        trace("Running OnNewItem");
         bool updated = false;
         bool lastUpdated = false;
         for (uint i = 0; i < itemCallbacks.Length; i++) {
@@ -90,12 +107,15 @@ namespace Event {
             if (updated && !lastUpdated) trace("NewItem Callback triggered update: " + itemCallbackNames[i]);
             lastUpdated = updated;
         }
+        trace("Finished OnNewItem");
         return updated;
     }
     void OnSelectedItemChanged(CGameItemModel@ itemModel) {
+        trace("Running OnSelectedItemChanged");
         for (uint i = 0; i < selectedItemChangedCbs.Length; i++) {
             selectedItemChangedCbs[i](itemModel);
         }
+        trace("Finished OnSelectedItemChanged");
     }
 }
 

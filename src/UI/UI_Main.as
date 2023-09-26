@@ -40,6 +40,9 @@ void UI_Main_Render() {
         return;
     }
 
+    // test: don't draw stuff for 1 more frame
+    if (EnteringEditor) return;
+
     vec4 newCollapsedBg = UI::GetStyleColor(UI::Col::TitleBgCollapsed);
     newCollapsedBg.w = .9;
     UI::PushStyleColor(UI::Col::FrameBg, vec4(.2, .2, .2, .5));

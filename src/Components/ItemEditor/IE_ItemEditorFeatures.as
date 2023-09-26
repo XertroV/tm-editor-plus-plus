@@ -25,6 +25,7 @@ class IE_FeaturesTab : Tab {
     void CheckUpdatesInItemEditor() {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         if (S_UpdateItemNameFromFileName) {
+            if (ieditor.ItemModel is null) return;
             string idName = ieditor.ItemModel.IdName;
             if (idName == "Unassigned") return;
             auto parts = idName.Split("\\");

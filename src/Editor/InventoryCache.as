@@ -10,12 +10,11 @@ namespace Editor {
         uint loadProgress = 0;
         uint loadTotal = 0;
         string LoadingStatus() {
-            return tostring(loadProgress) + " / " + loadTotal + Text::Format(" (%2.1f%%)", float(loadProgress) / loadTotal * 100);
+            return tostring(loadProgress) + " / " + loadTotal + Text::Format(" (%2.1f%%)", float(loadProgress) / Math::Max(1, loadTotal) * 100);
         }
 
         uint cacheRefreshNonce = 0;
         void RefreshCache() {
-            if (isRefreshing) return;
             isRefreshing = true;
             auto myNonce = ++cacheRefreshNonce;
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
@@ -28,6 +27,7 @@ namespace Editor {
             cachedInvBlockFolders.RemoveRange(0, cachedInvBlockFolders.Length);
             cachedInvItemFolders.RemoveRange(0, cachedInvItemFolders.Length);
             yield();
+            if (myNonce != cacheRefreshNonce) return;
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) {
                 @editor = cast<CGameCtnEditorFree>(GetApp().Switcher.ModuleStack[0]);
@@ -36,15 +36,16 @@ namespace Editor {
             if (editor is null) return;
             auto inv = editor.PluginMapType.Inventory;
             while (inv.RootNodes.Length < 4) yield();
+            if (myNonce != cacheRefreshNonce) return;
+
             CGameCtnArticleNodeDirectory@ blockRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[1]);
             CGameCtnArticleNodeDirectory@ itemRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[3]);
-
-            if (myNonce != cacheRefreshNonce) return;
 
             trace('Caching inventory blocks...');
             _IsScanningItems = false;
             CacheInvNode(blockRN, myNonce);
             yield();
+            if (myNonce != cacheRefreshNonce) return;
             trace('Caching inventory items...');
             _IsScanningItems = true;
             CacheInvNode(itemRN, myNonce);

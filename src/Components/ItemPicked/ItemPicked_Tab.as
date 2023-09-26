@@ -69,6 +69,9 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         auto initFlying = item.IsFlying;
         auto initIVar = item.IVariant;
 
+        UI::Columns(2, "pickeditem", false);
+
+
         CopiableLabeledValue("Name", item.ItemModel.IdName);
         CopiableLabeledValue("Pos", item.AbsolutePositionInMap.ToString());
         CopiableLabeledValue("P,Y,R (Deg)", MathX::ToDeg(initRot).ToString());
@@ -101,13 +104,22 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             UI::TextDisabled("No skin");
         }
 
+        UI::NextColumn();
+
 #if SIG_DEVELOPER
+        UI::AlignTextToFramePadding();
+        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(item)));
         if (UI::Button(Icons::Cube + " Explore AnchoredObj##picked")) {
             ExploreNod("Item " + Editor::GetItemUniqueBlockID(item), item);
         }
-        UI::SameLine();
-        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(item)));
+        // UI::SameLine();
 #endif
+
+        if (UI::Button("Edit This Item")) {
+            Editor::OpenItemEditor(editor, item);
+        }
+
+        UI::Columns(1);
         UI::Separator();
 
         if (ShowHelpers) {

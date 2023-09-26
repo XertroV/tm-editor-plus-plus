@@ -125,6 +125,24 @@ namespace Editor {
         return Dev::GetOffsetUint32(item, ItemUniqueBlockIDOffset);
     }
 
+    void SetNewAO_ItemUniqueBlockID(CGameCtnAnchoredObject@ ao) {
+        auto ni_ID = Dev::GetOffsetUint32(ao, ItemUniqueNodIDOffset);
+        // this is required to be set for picking to work correctly -- typically they're in the range of like 7k, but setting this to the new items ID doesn't seem to be a problem -- this is probs the block id, b/c we don't get any duplicate complaints when setting this value.
+        Dev::SetOffset(ao, ItemUniqueBlockIDOffset, ni_ID);
+    }
+
+    // if mwIdValue is 0, then the value is taken from the item model
+    void SetAO_ItemModelMwId(CGameCtnAnchoredObject@ ao, uint mwIdValue = 0) {
+        if (mwIdValue == 0) mwIdValue = ao.ItemModel.Id.Value;
+        Dev::SetOffset(ao, 0x18, mwIdValue);
+        Dev::SetOffset(ao, 0x1c, uint(0x1a));
+    }
+    // if mwIdValue is 0, then the value is taken from the item model
+    void SetAO_ItemModelAuthorMwId(CGameCtnAnchoredObject@ ao, uint mwIdValue = 0) {
+        if (mwIdValue == 0) mwIdValue = ao.ItemModel.Author.Value;
+        Dev::SetOffset(ao, 0x20, mwIdValue);
+    }
+
     // when there are duplicate blockIds this is may not save and occasionally results in crash-on-saves (but not autosaves)
     CGameCtnAnchoredObject@ DuplicateAndAddItem(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem, bool updateItemsAfter = false) {
         auto item = CGameCtnAnchoredObject();

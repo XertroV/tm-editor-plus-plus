@@ -311,18 +311,33 @@ namespace Editor {
         Crash = 0xE,
     }
 
-    void OpenItemEditor(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ nodToEdit) {
+    // CGameCtnAnchoredObject
+    void OpenItemEditor(CGameCtnEditorFree@ editor, CMwNod@ nodToEdit, bool blockEditor = false) {
         if (editor is null) return;
+        // 0x1008 - 1 in ieditor for block and item
         // 0x1150 - 0x1138 = 0x18
         // 0x1150 - set to 1 to enter item editor
-        // 0x1158?: ptr to edited item (+0x40) from last
-        // 0x1190: ptr to edited item (+0x40) from last
+        // 0x1158: ptr to edited item from last
+        // 0x1160 - set to 1 when in block mode
+        // 0x1190: ptr to edited item (+0x40) from last (while in ieditor block mode this points to ItemModel)
+        // 0x1198: ptr to edited block (+0x48) from last (while in ieditor block mode this points to CGameCtnBlock)
+        // 0x11b8: ptr to fid (?? of item model)
         // 0x11c0: ptr to orig item model (seems like a duplicate is created in item editor)
         // 0x648: ptr to picked item; 0x628 item cursor
         // 0xA28: nat3 coords of picked item
         auto o1138 = GetOffset(editor, "ColoredCopperPrice");
-        Dev::SetOffset(editor,  o1138 + 0x18, uint8(1));
-        Dev::SetOffset(editor, o1138 + 0x20, nodToEdit);
+        auto o1150 = o1138 + 0x18;
+        auto o1158 = o1138 + 0x20;
+        auto o1160 = o1138 + 0x28;
+        auto o1190 = o1138 + 0x58;
+        auto o1198 = o1138 + 0x60;
+        Dev::SetOffset(editor,  o1150, uint8(1));
+        if (blockEditor) Dev::SetOffset(editor, o1198, nodToEdit);
+        else {
+            Dev::SetOffset(editor, o1158, nodToEdit);
+            // Dev::SetOffset(editor, o1190, nodToEdit);
+        }
+        Dev::SetOffset(editor,  o1160, uint8(blockEditor ? 1 : 0));
     }
 
     void SetEditorPickedNod(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ nodToEdit) {

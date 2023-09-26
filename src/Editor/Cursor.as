@@ -16,5 +16,4 @@ namespace Editor {
     EditorRotation@ GetCursorRot(CGameCursorBlock@ cursor) {
         return EditorRotation(cursor);
     }
-
 }
