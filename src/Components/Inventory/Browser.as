@@ -9,7 +9,7 @@
 
 class InventoryMainV2Tab : Tab {
     InventoryMainV2Tab(TabGroup@ p) {
-        super(p, "Inventory V2", Icons::FolderOpenO);
+        super(p, "Inventory V2" + NewIndicator, Icons::FolderOpenO);
         canPopOut = true;
     }
 
@@ -96,18 +96,24 @@ class InvNode {
             @node = cast<CGameCtnArticleNodeDirectory>(node.ChildNodes[0]);
         }
         @firstLeaf = FavObj(cast<CGameCtnArticleNodeArticle>(lastNode.ChildNodes[0]).NodeName, isItem, false);
-        trace('DEBUG firstLeaf: ' + firstLeaf.nodeName);
     }
 
     // cb for selection
     void DirCallback() {
-        trace('dir callback: ' + ui.nodeName);
         parent.OpenChildDir(this);
     }
 
     void Draw(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv) {
         if (firstLeaf !is null) firstLeaf.DrawFavBgEntry();
-        ui.DrawFavEntry(editor, inv);
+        ui.DrawFavEntry(editor, inv, firstLeaf);
+        if (GetIsAnOpenDir()) {
+            ui.DrawSelectedBoxIndicator();
+        }
+    }
+
+    bool GetIsAnOpenDir() {
+        if (!isDirectory || parent is null || parent.openChild is null) return false;
+        return parent.openChild.nodeName == ui.nodeName;
     }
 }
 

@@ -273,7 +273,7 @@ bool g_FavoritesWindowHovered = false;
 
 class FavoritesTab : Tab {
     FavoritesTab(TabGroup@ p) {
-        super(p, "Favorites", Icons::FolderOpenO + Icons::StarO);
+        super(p, "Favorites" + NewIndicator, Icons::FolderOpenO + Icons::StarO);
         @favorites = Json::FromFile(FAV_JSON_PATH);
         CheckInitFavs();
         windowOpen = S_FavTabPopped;
@@ -437,8 +437,8 @@ class FavoritesTab : Tab {
             SaveFavorites();
         }
 
-        if (UI::CollapsingHeader("Block Folders")) { DrawFavEntries(false, true); }
-        if (UI::CollapsingHeader("Item Folders")) { DrawFavEntries(true, true); }
+        if (UI::CollapsingHeader("Block Folders")) { UI::Text("Bugged atm, sorry. Sorta works until you restart the game."); DrawFavEntries(false, true); }
+        if (UI::CollapsingHeader("Item Folders")) { UI::Text("Bugged atm, sorry. Sorta works until you restart the game."); DrawFavEntries(true, true); }
         if (UI::CollapsingHeader("Blocks")) { DrawFavEntries(false, false); }
         if (UI::CollapsingHeader("Items")) { DrawFavEntries(true, false); }
         // uint totalCount = FavItems.Length + FavBlocks.Length + FavItemFolders.Length + FavBlockFolders.Length;
@@ -570,7 +570,7 @@ class FavObj {
         }
     }
 
-    void DrawFavEntry(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv) {
+    void DrawFavEntry(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv, FavObj@ bgIcon = null) {
         UI::Texture@ tex = GetTexture();
         if (tex !is null) {
             auto pos = UI::GetCursorPos();
@@ -616,7 +616,7 @@ class FavObj {
             hoverDuration = Math::Clamp(hoverDuration + (UI::IsItemHovered() ? g_AvgFrameTime : -g_AvgFrameTime), 0.0, hoverAlphFadeDur);
 
             if (isDragging) {
-                DrawClickedState();
+                DrawClickedState(bgIcon);
             }
             if (isFolder || hoverDuration > 0) {
                 DrawTextLabelMbHovered();
@@ -630,9 +630,13 @@ class FavObj {
         if (!isFolder && selectedItemModel !is null) {
             auto im = selectedItemModel.AsItemModel();
             if (im !is null && im.IdName == nodeName) {
-                UI::GetWindowDrawList().AddImage(IconTextures::invGroupBox, lastTlGlobalPos - 4., S_IconSize + 8., 0xFFFFFF00 + 0xCC);
+                DrawSelectedBoxIndicator();
             }
         }
+    }
+
+    void DrawSelectedBoxIndicator() {
+        UI::GetWindowDrawList().AddImage(IconTextures::invGroupBox, lastTlGlobalPos - 4., S_IconSize + 8., 0xFFFFFF00 + 0xCC);
     }
 
     void DrawHoveredBg() {
@@ -641,7 +645,7 @@ class FavObj {
         auto dl = UI::GetWindowDrawList();
         // bg
         float thick = S_IconSize.x / 32.;
-        float rounding = S_IconSize.x / 10.;
+        float rounding = S_IconSize.x / 6.4;
         dl.AddRectFilled(vec4(lastTlGlobalPos, S_IconSize), vec4(.2,.2,.2, hoverAlpha * .6), rounding);
         dl.AddRect(vec4(lastTlGlobalPos - thick, S_IconSize + thick * 2), vec4(.75,.8,.85, hoverAlpha * .6), rounding, thick);
     }
@@ -661,14 +665,16 @@ class FavObj {
         // text
         auto dl = UI::GetWindowDrawList();
         auto midpoint = lastTlGlobalPos + S_IconSize / 2.;
+        DrawList_DrawCenteredLabelText(dl, midpoint);
+    }
+
+    void DrawList_DrawCenteredLabelText(UI::DrawList@ dl, vec2 midpoint) {
         float wrapWidth = S_IconSize.x - InvDrawVals::colGap;
         auto nameDim = Draw::MeasureString(shortName, g_BoldFont, 14.0, wrapWidth);
         auto tl = midpoint - nameDim / 2.;
-        // auto iconTl = lastTlGlobalPos;
-        // dlBack.AddQuadFilled(iconTl, iconTl + vec2(S_IconSize.x, 0), iconTl + S_IconSize, iconTl + vec2(0, S_IconSize.y), vec4(.5, .5, .5, hoverAlpha * 0.5));
         DrawList_AddTextWithStroke(dl, tl, vec4(1, 1, 1, hoverAlpha), vec4(0, 0, 0, hoverAlpha), shortName, g_BoldFont, 14.0, wrapWidth);
-        // dl.AddText(tl, vec4(1, 1, 1, hoverAlpha), shortName, g_BoldFont, 0.0, S_IconSize.x);
     }
+
 
     // unused atm
     void DrawHovered_Window() {
@@ -742,20 +748,34 @@ class FavObj {
         warn('todo: on drag');
     }
 
+    void CloneAndDrawClickedState(FavObj@ host) {
+        this.lastDragPos = host.lastDragPos;
+        this.lastTlGlobalPos = host.lastTlGlobalPos;
+        this.clickedStart = host.clickedStart;
+        this.currAlpha = host.currAlpha;
+        this.DrawClickedState(null, false);
+    }
+
     uint iconDragAlpha = 0xEE;
     uint clickFadeDuration = 500;
     uint currAlpha = 0xEE;
-    void DrawClickedState() {
+    void DrawClickedState(FavObj@ bgIcon = null, bool update = true) {
         UpdateClickedState();
         auto tex = GetTexture();
         auto dl = UI::GetForegroundDrawList();
         currAlpha = Math::Min(Time::Now - clickedStart, clickFadeDuration) * iconDragAlpha / clickFadeDuration;
-        if (dragResult >= FavDraggingResult::CreateOrJoinGroup) {
+        if (update && dragResult >= FavDraggingResult::CreateOrJoinGroup) {
             DrawGroupHover();
         }
+        if (bgIcon !is null)
+            bgIcon.CloneAndDrawClickedState(this);
         if (tex !is null)
             dl.AddImage(tex, lastDragPos - S_IconSize / 2., S_IconSize, 0xFFFFFF00 + currAlpha);
-        dl.AddCircle(lastDragPos, 42, vec4(GetDragCircleColor(), .8 * currAlpha / 0xFF), 32, 2.);
+        if (isFolder) {
+            DrawList_DrawCenteredLabelText(dl, lastDragPos);
+        }
+        if (update)
+            dl.AddCircle(lastDragPos, 42, vec4(GetDragCircleColor(), .8 * currAlpha / 0xFF), 32, 2.);
 
         if (clickToEndDrag && IsLMBPressed()) {
             // trace('setting isDragging false');

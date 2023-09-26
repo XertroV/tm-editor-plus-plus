@@ -52,7 +52,7 @@ class IE_DevTab : Tab {
 
 class IE_AdvancedTab : Tab {
     IE_AdvancedTab(TabGroup@ p) {
-        super(p, "Advanced", Icons::ExclamationTriangle + Icons::Cogs);
+        super(p, "Advanced" + NewIndicator, Icons::ExclamationTriangle + Icons::Cogs);
     }
 
     void DrawInner() override {
