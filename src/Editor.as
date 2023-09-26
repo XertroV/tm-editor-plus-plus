@@ -311,9 +311,7 @@ namespace Editor {
         Crash = 0xE,
     }
 
-    // CGameCtnAnchoredObject
-    void OpenItemEditor(CGameCtnEditorFree@ editor, CMwNod@ nodToEdit, bool blockEditor = false) {
-        if (editor is null) return;
+    namespace OpenIEOffsets {
         // 0x1008 - 1 in ieditor for block and item
         // 0x1150 - 0x1138 = 0x18
         // 0x1150 - set to 1 to enter item editor
@@ -325,20 +323,58 @@ namespace Editor {
         // 0x11c0: ptr to orig item model (seems like a duplicate is created in item editor)
         // 0x648: ptr to picked item; 0x628 item cursor
         // 0xA28: nat3 coords of picked item
-        auto o1138 = GetOffset(editor, "ColoredCopperPrice");
+        auto o1138 = GetOffset("CGameCtnEditorFree", "ColoredCopperPrice");
         auto o1150 = o1138 + 0x18;
         auto o1158 = o1138 + 0x20;
         auto o1160 = o1138 + 0x28;
         auto o1190 = o1138 + 0x58;
         auto o1198 = o1138 + 0x60;
-        Dev::SetOffset(editor,  o1150, uint8(1));
-        if (blockEditor) Dev::SetOffset(editor, o1198, nodToEdit);
-        else {
-            Dev::SetOffset(editor, o1158, nodToEdit);
-            // Dev::SetOffset(editor, o1190, nodToEdit);
-        }
-        Dev::SetOffset(editor,  o1160, uint8(blockEditor ? 1 : 0));
     }
+
+    // CGameCtnAnchoredObject
+    void OpenItemEditor(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ nodToEdit) {
+        if (editor is null) return;
+        Dev::SetOffset(editor,  OpenIEOffsets::o1150, uint8(1));
+        Dev::SetOffset(editor, OpenIEOffsets::o1158, nodToEdit);
+    }
+
+    void OpenItemEditor(CGameCtnEditorFree@ editor, CGameCtnBlock@ nodToEdit) {
+        bool blockEditor = true;
+        if (editor is null) return;
+        Dev::SetOffset(editor,  OpenIEOffsets::o1150, uint8(1));
+        Dev::SetOffset(editor, OpenIEOffsets::o1198, nodToEdit);
+        Dev::SetOffset(editor,  OpenIEOffsets::o1160, uint8(blockEditor ? 1 : 0));
+    }
+
+    void OpenItemEditor(CGameCtnEditorFree@ editor, CGameItemModel@ model) {
+        auto cs = Editor::GetCurrentCamState(editor);
+        auto newAnchored = CGameCtnAnchoredObject();
+        // IO::SetClipboard(Text::FormatPointer(Dev_GetPointerForNod(newAnchored)));
+        Editor::SetItemLocation(newAnchored, cs.Pos);
+        newAnchored.AbsolutePositionInMap.y = Math::Max(8, newAnchored.AbsolutePositionInMap.y);
+        newAnchored.BlockUnitCoord = nat3(-1);
+        Dev::SetOffset(newAnchored, GetOffset(newAnchored, "ItemModel"), model);
+        // not sure how many of these are required
+        // Editor::SetAO_ItemModelMwId(newAnchored);
+        // Editor::SetAO_ItemModelAuthorMwId(newAnchored);
+        // Editor::SetNewAO_ItemUniqueBlockID(newAnchored);
+        // seems like 1 for each is enough
+        model.MwAddRef();
+        newAnchored.MwAddRef();
+        Editor::OpenItemEditor(editor, newAnchored);
+    }
+
+    void OpenItemEditor(CGameCtnEditorFree@ editor, CGameCtnBlockInfo@ model) {
+        auto cs = Editor::GetCurrentCamState(editor);
+        auto newBlock = CGameCtnBlock();
+        Dev::SetOffset(newBlock, GetOffset(newBlock, "BlockModel"), model);
+        Editor::SetBlockCoord(newBlock, editor.Cursor.Coord);
+        Editor::SetBlockLocation(newBlock, MathX::Max(cs.Pos, vec3(0, 8, 0)));
+        newBlock.MwAddRef();
+        model.MwAddRef();
+        Editor::OpenItemEditor(editor, newBlock);
+    }
+
 
     void SetEditorPickedNod(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ nodToEdit) {
         nodToEdit.MwAddRef();

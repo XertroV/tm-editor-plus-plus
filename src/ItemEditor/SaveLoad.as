@@ -140,7 +140,12 @@ namespace ItemEditor {
         uint count = 0;
         while (string(entryPath.String) != "$3CFItems\\$z" && string(entryPath.String) != "$3CFBlocks\\$z") {
             trace(entryPath.String);
-            buttonUp.OnAction();
+            auto nbSlashes = string(entryPath.String).Split("\\").Length;
+            auto bd = GetApp().BasicDialogs;
+            for (uint i = 0; i < nbSlashes - 2; i++) {
+                bd.DialogSaveAs_HierarchyUp();
+            }
+            // buttonUp.OnAction();
             trace(string(entryPath.String) + " " + count);
             count++;
             if (count > 20) {

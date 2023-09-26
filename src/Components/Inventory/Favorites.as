@@ -610,19 +610,6 @@ class FavObj {
         UI::End();
     }
 
-    void DrawList_AddTextWithStroke(UI::DrawList@ dl, vec2 pos, vec4 color, vec4 stroke, string str, UI::Font@ font = null, float size = 0.0f, float wrapWidth = 0.0f) {
-        vec2 offset;
-        float thickness = 1.5;
-        for (uint i = 0; i < 12; i++) {
-            float rot = (TAU * i / 12.);
-            offset = vec2(Math::Sin(rot), Math::Cos(rot)) * thickness + vec2(.5);
-            dl.AddText(pos + offset, stroke, str, font, size, wrapWidth);
-
-        }
-        dl.AddText(pos, color, str, font, size, wrapWidth);
-    }
-
-
     void RemoveSelf() {
         g_Favorites.RemoteFromFavorites(nodeName, isItem, isFolder);
     }
@@ -788,30 +775,9 @@ class FavObj {
         if (node is null) return;
         auto cs = Editor::GetCurrentCamState(editor);
         if (isItem) {
-            auto im = cast<CGameItemModel>(node.GetCollectorNod());
-            auto newAnchored = CGameCtnAnchoredObject();
-            IO::SetClipboard(Text::FormatPointer(Dev_GetPointerForNod(newAnchored)));
-            Editor::SetItemLocation(newAnchored, cs.Pos);
-            newAnchored.AbsolutePositionInMap.y = Math::Max(8, newAnchored.AbsolutePositionInMap.y);
-            newAnchored.BlockUnitCoord = nat3(-1);
-            Dev::SetOffset(newAnchored, GetOffset(newAnchored, "ItemModel"), im);
-            // not sure how many of these are required
-            // Editor::SetAO_ItemModelMwId(newAnchored);
-            // Editor::SetAO_ItemModelAuthorMwId(newAnchored);
-            // Editor::SetNewAO_ItemUniqueBlockID(newAnchored);
-            // seems like 1 for each is enough
-            im.MwAddRef();
-            newAnchored.MwAddRef();
-            Editor::OpenItemEditor(editor, newAnchored);
+            Editor::OpenItemEditor(editor, cast<CGameItemModel>(node.GetCollectorNod()));
         } else {
-            auto bm = cast<CGameCtnBlockInfo>(node.GetCollectorNod());
-            auto newBlock = CGameCtnBlock();
-            Dev::SetOffset(newBlock, GetOffset(newBlock, "BlockModel"), bm);
-            Editor::SetBlockCoord(newBlock, editor.Cursor.Coord);
-            Editor::SetBlockLocation(newBlock, MathX::Max(cs.Pos, vec3(0, 8, 0)));
-            newBlock.MwAddRef();
-            bm.MwAddRef();
-            Editor::OpenItemEditor(editor, newBlock, true);
+            Editor::OpenItemEditor(editor, cast<CGameCtnBlockInfo>(node.GetCollectorNod()));
         }
     }
 
@@ -827,17 +793,8 @@ class FavObj {
         auto bm = cast<CGameCtnBlockInfo>(baseNode.GetCollectorNod());
         auto targetBm = cast<CGameCtnBlockInfo>(node.GetCollectorNod());
 
-        // create the block
-        auto newBlock = CGameCtnBlock();
-        Dev::SetOffset(newBlock, GetOffset(newBlock, "BlockModel"), bm);
-        Editor::SetBlockCoord(newBlock, editor.Cursor.Coord);
-        Editor::SetBlockLocation(newBlock, MathX::Max(cs.Pos, vec3(0, 8, 0)));
-        newBlock.MwAddRef();
-        bm.MwAddRef();
-
         // open editor
-        Editor::OpenItemEditor(editor, newBlock, true);
-
+        Editor::OpenItemEditor(editor, bm);
         yield();
         yield();
 
@@ -889,4 +846,18 @@ MemoryBuffer@ ReadFile(const string &in path) {
 string GetLastStr(string[]@ parts) {
     if (parts.Length == 0) return "";
     return parts[parts.Length - 1];
+}
+
+
+
+void DrawList_AddTextWithStroke(UI::DrawList@ dl, vec2 pos, vec4 color, vec4 stroke, string str, UI::Font@ font = null, float size = 0.0f, float wrapWidth = 0.0f) {
+    vec2 offset;
+    float thickness = 1.5;
+    if (size > 0) thickness = size * .12;
+    for (uint i = 0; i < 12; i++) {
+        float rot = (TAU * i / 12.);
+        offset = vec2(Math::Sin(rot), Math::Cos(rot)) * thickness + vec2(.5);
+        dl.AddText(pos + offset, stroke, str, font, size, wrapWidth);
+    }
+    dl.AddText(pos, color, str, font, size, wrapWidth);
 }

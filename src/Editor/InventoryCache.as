@@ -1,4 +1,6 @@
 namespace Editor {
+    bool PAUSE_INVENTORY_CACHING = false;
+
     class InventoryCache {
         InventoryCache() {
             RefreshCacheSoon();
@@ -15,6 +17,7 @@ namespace Editor {
 
         uint cacheRefreshNonce = 0;
         void RefreshCache() {
+            while (PAUSE_INVENTORY_CACHING) yield();
             isRefreshing = true;
             auto myNonce = ++cacheRefreshNonce;
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
@@ -36,6 +39,8 @@ namespace Editor {
             if (editor is null) return;
             auto inv = editor.PluginMapType.Inventory;
             while (inv.RootNodes.Length < 4) yield();
+
+            if (cast<CGameCtnEditorFree>(GetApp().Editor) is null) return;
             if (myNonce != cacheRefreshNonce) return;
 
             CGameCtnArticleNodeDirectory@ blockRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[1]);
@@ -139,7 +144,7 @@ namespace Editor {
             loadProgress += 1;
             for (uint i = 0; i < node.ChildNodes.Length; i++) {
                 CheckPause();
-                if (GetApp().Editor is null) return;
+                if (cast<CGameCtnEditorFree>(GetApp().Editor) is null) return;
                 if (nonce != cacheRefreshNonce) return;
                 CacheInvNode(node.ChildNodes[i], nonce);
             }

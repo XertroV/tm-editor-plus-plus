@@ -1,6 +1,6 @@
 class ItemEmbedTab : Tab {
     ItemEmbedTab(TabGroup@ p) {
-        super(p, "Embed Items", Icons::FolderOpenO + Icons::Refresh);
+        super(p, "Load New Items", Icons::FolderOpenO + Icons::Refresh);
     }
 
     uint step = 1;
@@ -9,7 +9,7 @@ class ItemEmbedTab : Tab {
         UI::SetNextItemOpen(true, UI::Cond::FirstUseEver);
         if (UI::CollapsingHeader("About / Usage")) {
             UI::Indent();
-            UI::TextWrapped("This will embed new items in the map if they are not in the inventory.\nUsage: download an item set via Item Exchange, then use this form. Note that the maximum request size (including the map) is ~12 MB.\nSaving the map will remove all embedded items that are not placed in the map. However, they will remain in the inventory until you fully exit the editor. In this way, you can add multiple new items without restarting the game.\nEmbedded items will by added to existing folders if they exist, otherwise will be the final entry in the item inventory (far right).");
+            UI::TextWrapped("This will automate loading new items using the item editor (ones that are not in the inventory).\nUsage: download an item set via Item Exchange, then use this form.");
             UI::Unindent();
         }
         if (UI::Button("Reset##refresh-items-step")) {
@@ -21,9 +21,6 @@ class ItemEmbedTab : Tab {
         DrawStep2();
         UI::Separator();
         DrawStep3();
-        UI::Separator();
-        DrawStep4();
-        UI::Separator();
     }
 
     uint lastRefresh = 0;
@@ -167,17 +164,13 @@ class ItemEmbedTab : Tab {
     Net::HttpRequest@ step3Req;
     void DrawStep3() {
         UI::BeginDisabled(step != 3);
-        UI::Text("Step 3. Request embed items to map");
+        UI::Text("Step 3. Load items");
 
         if (missingItems.Length == 0) {
             UI::Text("\\$f80No missing items detected.");
         }
 
-        UI::TextWrapped("New folders/items will appear as the last elements of their respective folders.");
-        UI::TextWrapped("Note: will also automatically save, request, and reload the map. (Creates a backup every time.)");
-        UI::TextWrapped("Note: Too many items may make the request fail; max: ~12mb incl map.");
-
-        UI::TextWrapped("\\$f80Warning:\\$z If you get msg like 'Error while retrieving map! Missing items:', click 'Load Anyway' and then 'No'. (If this doesn't work, you can experiment, and say something in the support thread.)");
+        UI::TextWrapped("New folders/items will appear as the first elements of their respective folders.");
 
         if (step == 3 && missingItems.Length > 0) {
             UI::SetNextItemOpen(true, UI::Cond::Appearing);
@@ -209,13 +202,9 @@ class ItemEmbedTab : Tab {
                 UI::Unindent();
             }
 
-            UI::Text("Status: " + (step3ReqError.Length == 0 ? step3Req is null ? "Not started" : "In Progress" : "\\$f80Last Req Error:\\$z " + step3ReqError));
-
-            UI::BeginDisabled(step3Req !is null);
-            if (UI::Button("Get Updated Map")) {
+            if (UI::Button("Load Items")) {
                 startnew(CoroutineFunc(RunStep3));
             }
-            UI::EndDisabled();
         }
 
         UI::EndDisabled();
@@ -225,111 +214,73 @@ class ItemEmbedTab : Tab {
     string step3ReqError = "";
 
     void RunStep3() {
+        ShowReloadingWindow = true;
+        Reloading_IsSaving = true;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        Editor::SaveMapSameName(editor);
-        yield();
-        string mapFileName = editor.Challenge.MapInfo.FileName;
-        if (mapFileName.Length == 0) return;
-        string mapFileFullName = IO::FromUserGameFolder("Maps/" + mapFileName);
-        CopyFile(mapFileFullName, mapFileFullName.SubStr(0, mapFileFullName.Length - 8) + ".Map.Gbx_backup_" + Time::Stamp);
-        MemoryBuffer@ data = MemoryBuffer();
-        data.Write(uint32(0));
-        Json::Value@ items = Json::Array();
-        uint countItems = 0;
+
+        string[] items;
         for (uint i = 0; i < missingItems.Length; i++) {
             if (selectedMissing[i]) {
-                items.Add(missingItems[i]);
-                trace('added embed request item: ' + missingItems[i]);
-                countItems++;
+                items.InsertLast(missingItems[i]);
             }
         }
-        _WriteString(data, Json::Write(items));
-        _WriteUint(data, items.Length);
-        for (uint i = 0; i < items.Length; i++) {
-            _WriteFileBytes(data, itemsFolderPrefix + string(items[i]));
+
+        if (items.Length == 0) {
+            NotifyWarning("cant refresh 0 items");
+            ResetState();
+            return;
         }
+        Reloading_Total = items.Length;
+
+        auto inv = Editor::GetInventoryCache();
+        auto initModel = cast<CGameItemModel>(inv.GetItemByPath("LightCube8m").GetCollectorNod());
+        if (initModel is null) NotifyWarning("Attempting to load init model but it is null");
+        Editor::OpenItemEditor(editor, initModel);
+
         yield();
-        _WriteFileBytes(data, IO::FromUserGameFolder("Maps/" + mapFileName));
-        data.Seek(0);
-        _WriteUint(data, data.GetSize());
-        data.Seek(0);
-        string pl = data.ReadToBase64(data.GetSize());
-        print('pl size: ' + data.GetSize() + ' / b64: ' + pl.Length);
-        @step3Req = Net::HttpRequest();
-        step3Req.Method = Net::HttpMethod::Post;
-        step3Req.Url = "https://map-monitor.xk.io/itemrefresh/create_map";
-#if DEV
-        // step3Req.Url = "http://localhost:8000/itemrefresh/create_map";
-#endif
-        step3Req.Body = pl;
-        step3Req.Start();
-        // @step3Req = Net::HttpPost(, pl);
-        // sleep(3000);
-        try {
-            while (!step3Req.Finished()) {
-                // long sleeps to avoid crash condition
-                // sleep(500);
-            }
-        } catch {
-            step3ReqError = getExceptionInfo();
-            NotifyWarning("Exception making request: " + step3ReqError);
-            ResetState();
-            return;
+        for (uint i = 0; i < items.Length; i++) {
+            RunLoadItem(editor, items[i], i == 0);
+            Reloading_Done += 1;
         }
-        step3ReqError = "";
-        trace('req done');
-        if (step3Req.ResponseCode() != 200) {
-            NotifyWarning('Error getting map: ' + step3Req.ResponseCode() + "; " + step3Req.Error());
-            ResetState();
-            return;
+        RunLoadItem(editor, items[0], false);
+
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        ieditor.Exit();
+        Reloading_IsSaving = false;
+        Reloading_Done = 0;
+        yield();
+        yield();
+        yield();
+
+        while (inv.isRefreshing) yield();
+
+        for (uint i = 0; i < items.Length; i++) {
+            auto node = inv.GetItemByPath(items[i]);
+            Editor::SetSelectedInventoryNode(editor, node, true);
+            Reloading_Done++;
+            yield();
         }
-        auto app = cast<CGameManiaPlanet>(GetApp());
-        auto currCam = Editor::GetCurrentCamState(editor);
-        app.BackToMainMenu();
-        AwaitReturnToMenu();
-        sleep(50);
-        auto buf = step3Req.Buffer();
-        trace('writing to ' + mapFileFullName);
-        IO::File mapFile(mapFileFullName, IO::FileMode::Write);
-        mapFile.Write(buf);
-        mapFile.Close();
-        step++;
-        sleep(50);
-        cast<CGameManiaPlanet>(GetApp()).ManiaTitleControlScriptAPI.EditMap(mapFileName, '', '');
-        step++;
-        AwaitEditor();
-        Editor::SetCamAnimationGoTo(currCam);
-    }
-
-    void _WriteString(MemoryBuffer@ buf, const string &in str) {
-        _WriteUint(buf, str.Length);
-        buf.Write(str);
-    }
-
-    void _WriteUint(MemoryBuffer@ buf, uint val) {
-        buf.Write(val);
-    }
-
-    void _WriteFileBytes(MemoryBuffer@ buf, const string &in filename) {
-        IO::File f(filename, IO::FileMode::Read);
-        auto fileContents = f.Read(f.Size());
-        auto b64 = fileContents.ReadToBase64(fileContents.GetSize());
-        _WriteUint(buf, fileContents.GetSize());
-        buf.WriteFromBase64(b64);
-    }
-
-    void DrawStep4() {
-        UI::BeginDisabled(step != 4);
-        UI::Text("Step 4. Save, Load refresh map, Re-load this map (should be automatic)");
-        if (UI::Button("Load Refresh Map then reload this map")) {
-            startnew(CoroutineFunc(RunStep4));
+        Reloading_Done = 0;
+        for (uint i = 0; i < items.Length; i++) {
+            auto node = inv.GetItemByPath(items[i]);
+            Editor::SetSelectedInventoryNode(editor, node, true);
+            Reloading_Done++;
+            yield();
         }
-        UI::EndDisabled();
-    }
 
-    void RunStep4() {
-        Editor::NoSaveAndReloadMap();
+        ShowReloadingWindow = false;
         ResetState();
+    }
+
+    void RunLoadItem(CGameCtnEditorFree@ editor, const string &in item, bool isFirst) {
+        auto itemPath = itemsFolderPrefix + "/" + item;
+        auto itemPathBackup = itemPath + ".back";
+        CopyFile(itemPath, itemPathBackup);
+        if (isFirst) ItemEditor::OpenItem(item);
+        else IO::Delete(itemPath);
+        ItemEditor::SaveItemAs(item);
+        CopyFile(itemPathBackup, itemPath);
+        IO::Delete(itemPathBackup);
     }
 
     void ResetState() {
@@ -339,5 +290,31 @@ class ItemEmbedTab : Tab {
         // cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
         localItemPaths.RemoveRange(0, localItemPaths.Length);
         Editor::GetInventoryCache().RefreshCacheSoon();
+    }
+
+    bool ShowReloadingWindow = false;
+    bool Reloading_IsSaving = false;
+    uint Reloading_Total = 1;
+    uint Reloading_Done = 0;
+
+    bool DrawWindow() override {
+        if (ShowReloadingWindow) {
+            auto screen = vec2(Draw::GetWidth(), Draw::GetHeight());
+            auto midPos = screen * vec2(0.5, 0.25);
+            auto msg = Reloading_IsSaving ? "[ Adding to Inventory: " : "Loading Items: ";
+            msg += tostring(Reloading_Done) + " / " + Reloading_Total
+                + Text::Format(" ( %2.1f%% ) ]", float(Reloading_Done) * 100. / Reloading_Total);
+            float size = 40.;
+            auto dims = Draw::MeasureString(msg, g_BigFont, size);
+            auto tl = midPos - dims/2.;
+            float pad = 20.;
+            auto boxTL = tl - pad;
+            auto boxSize = dims + (pad * 2.);
+
+            auto dl = UI::GetForegroundDrawList();
+            dl.AddRectFilled(vec4(boxTL, boxSize), vec4(.0, .0, .0, .7), pad);
+            DrawList_AddTextWithStroke(dl, tl, vec4(1), vec4(0), msg, g_BigFont, size);
+        }
+        return Tab::DrawWindow();
     }
 }
