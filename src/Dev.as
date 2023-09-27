@@ -244,6 +244,9 @@ const uint16 O_MAP_OFFZONE_BUF_OFFSET = 0x690;
 const uint16 O_MAP_OFFZONE_SIZE_OFFSET = 0x680;
 const uint16 O_MAP_MTSIZE_OFFSET = 0x1F0;
 
+// buffer with map objects and LM mapping
+const uint16 O_LM_PIMP_Buf2 = 0xA8;
+const uint16 SZ_LM_SPIMP_Buf2_EL = 0x58;
 
 // is a unit
 const uint16 O_EDITOR_CURR_PIVOT_OFFSET = GetOffset("CGameCtnEditorFree", "UndergroundBox") + (0xBC4 - 0xAC0);

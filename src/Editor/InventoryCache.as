@@ -31,16 +31,13 @@ namespace Editor {
             cachedInvItemFolders.RemoveRange(0, cachedInvItemFolders.Length);
             yield();
             if (myNonce != cacheRefreshNonce) return;
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            if (editor is null) {
-                @editor = cast<CGameCtnEditorFree>(GetApp().Switcher.ModuleStack[0]);
-            }
+            auto editor = GetEditor(GetApp());
             // this can be called when outside the editor
             if (editor is null) return;
             auto inv = editor.PluginMapType.Inventory;
-            while (inv.RootNodes.Length < 4) yield();
 
-            if (cast<CGameCtnEditorFree>(GetApp().Editor) is null) return;
+            while (inv.RootNodes.Length < 4) yield();
+            if (GetEditor(GetApp()) is null) return;
             if (myNonce != cacheRefreshNonce) return;
 
             CGameCtnArticleNodeDirectory@ blockRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[1]);
@@ -60,6 +57,14 @@ namespace Editor {
                 cacheRefreshNonce++;
                 isRefreshing = false;
             }
+        }
+
+        protected CGameCtnEditorFree@ GetEditor(CGameCtnApp@ app) {
+            auto editor = cast<CGameCtnEditorFree>(app.Editor);
+            if (editor is null) {
+                @editor = cast<CGameCtnEditorFree>(app.Switcher.ModuleStack[0]);
+            }
+            return editor;
         }
 
         void RefreshCacheSoon() {
@@ -157,7 +162,7 @@ namespace Editor {
             loadProgress += 1;
             for (uint i = 0; i < node.ChildNodes.Length; i++) {
                 CheckPause();
-                if (cast<CGameCtnEditorFree>(GetApp().Editor) is null) return;
+                if (GetEditor(GetApp()) is null) return;
                 if (nonce != cacheRefreshNonce) return;
                 CacheInvNode(node.ChildNodes[i], nonce);
             }

@@ -13,14 +13,25 @@ class InventoryMainV2Tab : Tab {
         canPopOut = true;
     }
 
+    int get_WindowFlags() override property {
+        return UI::WindowFlags::HorizontalScrollbar;
+    }
+
+    bool DrawWindow() override {
+        if (windowOpen) UI::SetNextWindowSize(400, Draw::GetHeight() * 3/4, UI::Cond::FirstUseEver);
+        return Tab::DrawWindow();
+    }
+
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
         // we can occasionally get an index out of range exception entering the editor.
         if (editor.PluginMapType.Inventory.RootNodes.Length < 4) {
             return;
         }
 
-        UI::Unindent();
+        if (!windowOpen)
+            UI::Unindent();
         // UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(0));
         // UI::PushStyleVar(UI::StyleVar::WindowPadding, vec2(0));
         // UI::PushStyleVar(UI::StyleVar::ChildRounding, 0);
@@ -29,7 +40,8 @@ class InventoryMainV2Tab : Tab {
         UI::PushStyleVar(UI::StyleVar::ItemSpacing, vec2(0));
         DrawInvMain(editor, Editor::GetInventoryCache());
         UI::PopStyleVar(1);
-        UI::Indent();
+        if (!windowOpen)
+            UI::Indent();
 
         Children.DrawTabs();
     }
@@ -58,10 +70,14 @@ namespace InvDrawVals {
     float colGap = 12.;
     float colPad;
     vec2 initItemSpacing;
+    vec2 framePadding;
+    float scrollBarSize;
 
     void Update() {
         colWidth = S_IconSize.x;
-        colWidthFull = colWidth + colGap + UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize);
+        scrollBarSize = UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize);
+        framePadding = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
+        colWidthFull = colWidth + colGap + scrollBarSize;
         colPad = colGap / 2.;
         initItemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
     }

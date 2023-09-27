@@ -4,6 +4,14 @@ namespace FormatX {
             + Text::Format("%.0f, ", v.y)
             + Text::Format("%.0f>", v.z);
     }
+    shared string Vec2_2DPS(vec2 &in v) {
+        return Text::Format("<%.2f, ", v.x)
+            + Text::Format("%.2f>", v.y);
+    }
+    shared string Vec2_4DPS(vec2 &in v) {
+        return Text::Format("<%.4f, ", v.x)
+            + Text::Format("%.4f>", v.y);
+    }
     shared string Nat3(nat3 &in v) {
         return Text::Format("<%d, ", int(v.x))
             + Text::Format("%d, ", int(v.y))

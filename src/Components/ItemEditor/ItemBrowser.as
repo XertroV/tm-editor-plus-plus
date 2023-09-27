@@ -140,6 +140,8 @@ class ItemModelTreeElement {
     CGameCtnBlockUnitInfo@ unitInfo;
     CGameCommonItemEntityModelEdition@ commonEME;
     CPlugGameSkinAndFolder@ matMod;
+    CHmsLightMapCache@ lmCache;
+    CHmsLightMap@ lm;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
         @this.parent = parent;
@@ -180,6 +182,8 @@ class ItemModelTreeElement {
         @this.unitInfo = cast<CGameCtnBlockUnitInfo>(nod);
         @this.commonEME = cast<CGameCommonItemEntityModelEdition>(nod);
         @this.matMod = cast<CPlugGameSkinAndFolder>(nod);
+        @this.lmCache = cast<CHmsLightMapCache>(nod);
+        @this.lm = cast<CHmsLightMap>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -290,6 +294,10 @@ class ItemModelTreeElement {
             Draw(commonEME);
         } else if (matMod !is null) {
             Draw(matMod);
+        } else if (lmCache !is null) {
+            Draw(lmCache);
+        } else if (lm !is null) {
+            Draw(lm);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
@@ -1223,6 +1231,7 @@ class ItemModelTreeElement {
             CopiableLabeledValue("Name", sysPackDesc.Name);
             CopiableLabeledValue("IdName", sysPackDesc.IdName);
             CopiableLabeledValue("FileName", sysPackDesc.FileName);
+            CopiableLabeledValue("Checksum", sysPackDesc.Checksum);
             CopiableLabeledValue("AutoUpdate", tostring(sysPackDesc.AutoUpdate));
             CopiableLabeledValue("LocatorFileName", sysPackDesc.LocatorFileName);
             EndTreeNode();
@@ -1264,6 +1273,86 @@ class ItemModelTreeElement {
             EndTreeNode();
         }
     }
+
+    void DrawLMBuffer2At(const string &in title, uint64 bufPtr) {
+        if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
+            auto bufLen = Dev::ReadUInt32(bufPtr + 0x8);
+            auto startPtr = Dev::ReadUInt64(bufPtr);
+            auto objSize = SZ_LM_SPIMP_Buf2_EL;
+            UI::ListClipper clip(bufLen);
+            while (clip.Step()) {
+                for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
+                    UI::PushID(i);
+
+                    auto ptr = startPtr + i * objSize;
+
+                    // Solid2Model
+                    auto s2mPtr = Dev::ReadUInt64(ptr);
+                    auto ix1 = Dev::ReadUInt32(ptr + 0x8);
+                    auto unk1 = Dev::ReadUInt32(ptr + 0xC);
+                    auto ix2 = Dev::ReadUInt32(ptr + 0x10);
+                    auto unk2 = Dev::ReadUInt32(ptr + 0x14);
+                    // an empty cmwnod
+                    auto cmwnodPtr = Dev::ReadUInt64(ptr + 0x18);
+                    // struct 1: unknown
+                    auto struct1Ptr = Dev::ReadUInt64(ptr + 0x20);
+                    // struct 2: LM coordinates
+                    auto struct2Ptr = Dev::ReadUInt64(ptr + 0x28);
+                    // source object FID
+                    auto fidPtr = Dev::ReadUInt64(ptr + 0x30);
+                    auto fid = cast<CSystemFidFile>(Dev_GetNodFromPointer(fidPtr));
+                    auto pos = Dev::ReadVec3(ptr + 0x38);
+                    auto size = Dev::ReadVec3(ptr + 0x44);
+
+                    uint16 x = Dev::ReadUInt16(struct2Ptr + 0x00);
+                    uint16 y = Dev::ReadUInt16(struct2Ptr + 0x02);
+
+                    uint16 sizeX = Dev::ReadUInt16(struct2Ptr + 0x04);
+                    uint16 sizeY = Dev::ReadUInt16(struct2Ptr + 0x06);
+
+                    // float2 UV-size
+                    auto f12 = Dev::ReadVec2(struct2Ptr + 0x8);
+                    // float2 UV-pos (note: X is scaled to 1536 px instead of 1024, so all x values are between 0 and 0.66666 (2/3), and all y values are between 0 and 1)
+                    vec2 f34 = Dev::ReadVec2(struct2Ptr + 0x10);
+
+                    UI::Text(tostring(i) + ". " + (fid is null ? "\\$f80Unknown" : "\\$8f8" + fid.FileName)
+                        + "\\$z at " + pos.ToString() + ", size: " + size.ToString()
+                        + "\\$8f4 =>\\$z at " + nat2(x, y).ToString() + ", size: " + nat2(sizeX, sizeY).ToString() + " px "
+                        + "(UVs: at "+FormatX::Vec2_4DPS(f34)+", size: "+FormatX::Vec2_4DPS(f12)+")"
+                    );
+
+                    UI::PopID();
+                }
+            }
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CHmsLightMap@ lm) {
+        if (StartTreeNode(name + " ::\\$f8f CHmsLightMap", UI::TreeNodeFlags::DefaultOpen)) {
+            auto pimp = lm.m_PImp;
+            auto pimpPtr = Dev::GetOffsetUint64(lm, GetOffset(lm, "m_PImp"));
+            LabeledValue("Objects in LM", (pimp.cBlock));
+            LabeledValue("LM Decoration", (pimp.CacheId_IdDecoration.GetName()));
+            LabeledValue("ChallengeJoinId", pimp.ChallengeJointId);
+            LabeledValue("Cache Size", tostring(pimp.CacheSize));
+            LabeledValue("Objects Buffer Length", Dev::GetOffsetUint32(pimp, O_LM_PIMP_Buf2 + 0x8));
+            DrawLMBuffer2At("Objects Buffer", pimpPtr + O_LM_PIMP_Buf2);
+            MkAndDrawChildNode(pimp.Cache, GetOffset("NHmsLightMap_SPImp", "Cache"), "Cache");
+            MkAndDrawChildNode(pimp.CacheSmall, 0x0, "CacheSmall");
+            MkAndDrawChildNode(pimp.CachePackDesc, GetOffset("NHmsLightMap_SPImp", "CachePackDesc"), "CachePackDesc");
+            MkAndDrawChildNode(pimp.CachePackDescBumpAvg, GetOffset("NHmsLightMap_SPImp", "CachePackDescBumpAvg"), "CachePackDescBumpAvg");
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CHmsLightMapCache@ lmCache) {
+        if (StartTreeNode(name + " ::\\$f8f CHmsLightMapCache", UI::TreeNodeFlags::DefaultOpen)) {
+
+            EndTreeNode();
+        }
+    }
+
 
     void Draw(CTrackMania@ asdf) {
         if (StartTreeNode(name + " ::\\$f8f CTrackMania", UI::TreeNodeFlags::DefaultOpen)) {

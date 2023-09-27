@@ -1,0 +1,175 @@
+
+
+
+Buffer of struct at 0xA8 (struct size: 0x58)
+
+
+70 3A 3E 0E 65 02 00 00 00 00 00 00 65 02 00 00 00 00 00 00 24 01 01 00 20 6F BB 9C 64 02 00 00 A0 11 99 11 65 02 00 00 D0 C6 5C 15 65 02 00 00 E0 EB 0D 0E 65 02 00 00 9A A9 6F 44 C5 4A 35 43 CD AC A0 43 34 33 F5 41 CE A9 9A 40 3C 33 F5 41 00 00 80 3F 02 00 00 00
+10 95 3E 0E 65 02 00 00 01 00 00 00 00 00 00 00 01 00 00 00 24 01 01 00 50 CF BB 9C 64 02 00 00 60 72 99 11 65 02 00 00 A8 C6 5C 15 65 02 00 00 E0 E8 0D 0E 65 02 00 00 01 D0 6F 44 F6 4F 35 43 FE 5F A0 43 26 00 FA 41 70 01 AA 40 32 00 FA 41 00 00 80 3F 02 00 00 00
+B0 98 3E 0E 65 02 00 00 02 00 00 00 00 00 00 00 02 00 00 00 24 01 01 00 80 BD BB 9C 64 02 00 00 00 90 99 11 65 02 00 00 80 C6 5C 15 65 02 00 00 E0 F5 0D 0E 65 02 00 00 AD 20 70 44 60 94 32 43 16 7B 95 43 0C 43 0F 3E 6D B3 B7 3E 5B 09 4C 3E 00 00 80 3F 02 00 00 00
+
+0x0: ptr -> solid2model
+0x8: u32: ix1? (can be large)
+0xc: u32: 0 or uninit?
+0x10: u32: ix2; drops to 0 sometimes (is large when ix1 is large, but otherwise less than 64; always 1 byte)
+0x14: flags or somethign? often shared while ix2 is increasing, then changes when ix2 drops to 0
+0x18: ptr -> cmwnod
+0x20: ptr ?? to struct
+0x28: ptr -> struct (0x28)
+0x30: ptr -> fid (example: RoadBorderSpot.Prefab.Gbx, TiltTransition2UpLeftCurveIn_Air.Prefab.Gbx)
+0x38: vec3 pos
+0x44: vec3 unk?
+
+0x58:
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // dev below
+        if (UI::CollapsingHeader("dev / testing")) {
+
+
+            UI::Text("m_PImp:");
+            auto pimpPtr = Dev::GetOffsetUint64(lm, GetOffset(lm, "m_PImp"));
+            CopiableLabeledPtr(pimpPtr);
+            UI::Text("Cache:");
+            CopiableLabeledPtr(Dev::ReadUInt64(pimpPtr + GetOffset("NHmsLightMap_SPImp", "Cache")));
+            UI::Text("CacheSmall:");
+            auto csPtr1 = Dev::ReadUInt64(pimpPtr);
+            auto csPtr2 = csPtr1 == 0 ? 0 : Dev::ReadUInt64(csPtr1);
+            CopiableLabeledPtr(csPtr2);
+            CopiableLabeledPtr(lm.m_PImp.CacheSmall !is null ? Dev_GetPointerForNod(lm.m_PImp.CacheSmall) : 0);
+
+
+            auto bufPtr = Dev::ReadUInt64(pimpPtr + 0xA8);
+            auto bufLen = Dev::ReadUInt32(pimpPtr + 0xB0);
+
+
+            UI::Text("Buffer: " + bufLen);
+            CopiableLabeledPtr(bufPtr);
+
+            if (bufLen > 0 && bufPtr > 0) {
+                UI::ListClipper clip(bufLen);
+                while (clip.Step()) {
+                    for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
+                        UI::PushID(i);
+                        auto entryPointer = bufPtr + i * SZ_LM_SPIMP_Buf2_EL;
+                        UI::Text("" + i + ".");
+                        UI::SameLine();
+                        DrawBuf2Entry(entryPointer);
+                        UI::PopID();
+                    }
+                }
+            }
+        }
+    }
+
+    void StartAnalysis() {
+        // need to cache current LM
+
+    }
+
+
+
+
+    void DrawBuf2Entry(uint64 ptr) {
+        CopiableLabeledPtr(ptr);
+        UI::Indent();
+
+        auto s2mPtr = Dev::ReadUInt64(ptr);
+        auto ix1 = Dev::ReadUInt32(ptr + 0x8);
+        auto unk1 = Dev::ReadUInt32(ptr + 0xC);
+        auto ix2 = Dev::ReadUInt32(ptr + 0x10);
+        auto unk2 = Dev::ReadUInt32(ptr + 0x14);
+        auto cmwnodPtr = Dev::ReadUInt64(ptr + 0x18);
+        auto struct1Ptr = Dev::ReadUInt64(ptr + 0x20);
+        auto struct2Ptr = Dev::ReadUInt64(ptr + 0x28);
+        auto fidPtr = Dev::ReadUInt64(ptr + 0x30);
+        auto pos = Dev::ReadVec3(ptr + 0x38);
+        auto size = Dev::ReadVec3(ptr + 0x44);
+
+        CSystemFidFile@ fid = cast<CSystemFidFile>(fidPtr == 0 ? null : Dev_GetNodFromPointer(fidPtr));
+
+        CopiableLabeledValue("Solid2Model", Text::FormatPointer(s2mPtr));
+        LabeledValue("Ix1", ix1);
+        LabeledValue("Unk1", Text::Format("0x%08x", unk1));
+        LabeledValue("Ix2", ix2);
+        LabeledValue("Unk2", unk2);
+        CopiableLabeledValue("a CMwNod", Text::FormatPointer(cmwnodPtr));
+        if (UI::CollapsingHeader("struct 1: " + Text::FormatPointer(struct1Ptr) + "##" + ptr)) {
+            CopiableLabeledValue("struct 1", Text::FormatPointer(struct1Ptr));
+            DrawStruct1(struct1Ptr);
+        }
+        if (UI::CollapsingHeader("struct 2: " + Text::FormatPointer(struct2Ptr) + "##" + ptr)) {
+            CopiableLabeledValue("struct 2", Text::FormatPointer(struct2Ptr));
+            DrawStruct2(struct2Ptr);
+        }
+        CopiableLabeledValue("FID", fid is null ? "null" : string(fid.FileName));
+        LabeledValue("Pos", pos);
+        LabeledValue("Size?", size);
+
+        UI::Unindent();
+    }
+
+    void DrawStruct1(uint64 ptr) {
+        // up to 0x60 (96) bytes
+        vec3 v1 = Dev::ReadVec3(ptr);
+        vec2 v2 = Dev::ReadVec2(ptr + 0xC);
+        string bytesFForF7 = Dev::Read(ptr + 0x14, 0x10);
+        string bytes0_1 = Dev::Read(ptr + 0x24, 0x8);
+        auto f1 = Dev::ReadUInt32(ptr + 0x2C);
+        string bytes0_2 = Dev::Read(ptr + 0x30, 0x20);
+        string bytes110000 = Dev::Read(ptr + 0x50, 0x8);
+        auto u1 = Dev::ReadUInt32(ptr + 0x58);
+        auto u2 = Dev::ReadUInt32(ptr + 0x5C);
+
+        UI::Indent();
+
+        LabeledValue("v1", v1);
+        LabeledValue("v2", v2.ToString());
+        LabeledValue("bytesFForF7", bytesFForF7);
+        LabeledValue("bytes0_1", bytes0_1);
+        LabeledValue("f1", f1);
+        LabeledValue("bytes0_2", bytes0_2);
+        LabeledValue("bytes110000", bytes110000);
+        LabeledValue("u1", u1);
+        LabeledValue("u2", u2);
+
+        UI::Unindent();
+    }
+
+    void DrawStruct2(uint64 ptr) {
+        // 0x20 len, and ptr to prev entry at 0x20
+        UI::Indent();
+        // CopiableLabeledValue("bytes", Dev::Read(ptr, 0x20));
+
+        uint16 x = Dev::ReadUInt16(ptr + 0x00);
+        uint16 y = Dev::ReadUInt16(ptr + 0x02);
+        uint16 sizeX = Dev::ReadUInt16(ptr + 0x04);
+        uint16 sizeY = Dev::ReadUInt16(ptr + 0x06);
+        auto u12 = Dev::ReadUInt64(ptr + 0x8);
+        auto f12 = Dev::ReadVec2(ptr + 0x8);
+        vec2 f34 = Dev::ReadVec2(ptr + 0x10);
+        string allFs = Dev::Read(ptr + 0x18, 4);
+        // then uncleared memory, then ptr to prev
+
+        LabeledValue("x", x);
+        LabeledValue("y", y);
+        LabeledValue("sizeX", sizeX);
+        LabeledValue("sizeY", sizeY);
+        LabeledValue("u12", Text::FormatPointer(u12));
+        LabeledValue("f12", f12.ToString());
+        LabeledValue("f34", f34.ToString());
+        LabeledValue("allFs", allFs);
+
+        UI::Unindent();
+    }

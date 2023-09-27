@@ -288,6 +288,16 @@ class FavoritesTab : Tab {
         S_FavTabPopped = value;
     }
 
+    int get_WindowFlags() override property {
+        return UI::WindowFlags::None;
+    }
+
+    bool DrawWindow() override {
+        if (windowOpen)
+            UI::SetNextWindowSize(400, 500, UI::Cond::FirstUseEver);
+        return Tab::DrawWindow();
+    }
+
     Json::Value@ favorites;
 
     void CheckInitFavs() {
@@ -467,18 +477,22 @@ class FavoritesTab : Tab {
         auto inv = Editor::GetInventoryCache();
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto favs = GetFavs(isItem, isFolder);
-        auto lineNb = int(Math::Floor(UI::GetContentRegionAvail().x / 76));
+        auto available = Math::Min(UI::GetWindowContentRegionWidth(), UI::GetContentRegionAvail().x);
+        auto lineNb = Math::Max(int(Math::Floor((available - InvDrawVals::scrollBarSize + 30.) / Math::Max(1.0, InvDrawVals::colWidth + InvDrawVals::colGap + InvDrawVals::initItemSpacing.x + InvDrawVals::framePadding.x * 2))), 1);
         auto len = int(favs.Length) <= lineNb ? 1 : int(favs.Length) / lineNb + 1;
+        if (favs.Length == 0) len = 0;
         UI::ListClipper clip(len);
         while (clip.Step()) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                 for (int j = 0; j < lineNb; j++) {
+                    UI::Dummy(vec2(InvDrawVals::colPad)); UI::SameLine();
                     auto ix = i * lineNb + j;
                     if (ix >= int(favs.Length)) {
                         UI::Dummy(S_IconSize);
                         break;
                     }
                     favs[ix].DrawFavEntry(editor, inv);
+                    UI::SameLine(); UI::Dummy(vec2(InvDrawVals::colPad));
                     if (j < lineNb - 1) UI::SameLine();
                 }
             }
@@ -979,7 +993,7 @@ string GetLastStr(string[]@ parts) {
 
 
 
-void DrawList_AddTextWithStroke(UI::DrawList@ dl, vec2 pos, vec4 color, vec4 stroke, string str, UI::Font@ font = null, float size = 0.0f, float wrapWidth = 0.0f) {
+void DrawList_AddTextWithStroke(UI::DrawList@ dl, vec2 pos, vec4 color, vec4 stroke, const string &in str, UI::Font@ font = null, float size = 0.0f, float wrapWidth = 0.0f) {
     vec2 offset;
     float thickness = 1.5;
     if (size > 0) thickness = size * .12;

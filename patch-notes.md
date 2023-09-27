@@ -1,3 +1,11 @@
+Item Reload:
+  - Mass refresh of newly downloaded items ("Refresh Items")
+
+Inventory & Favorites:
+  - Add favorite blocks and items and support icons
+  - Redo inventory entirely using new favorites tech
+    - right click icons for some features
+
 Item Editor:
 
   - Feature: Auto-name item based on file name

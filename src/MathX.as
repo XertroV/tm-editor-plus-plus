@@ -85,6 +85,10 @@ namespace MathX {
             && pos.y >= min.y && pos.y <= max.y
             && pos.z >= min.z && pos.z <= max.z;
     }
+    shared bool Within(vec2 &in pos, vec4 &in rect) {
+        return pos.x >= rect.x && pos.x < (rect.x + rect.z)
+            && pos.y >= rect.y && pos.y < (rect.y + rect.w);
+    }
 
     shared vec2 Floor(vec2 &in val) {
         return vec2(Math::Floor(val.x), Math::Floor(val.y));

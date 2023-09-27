@@ -80,13 +80,16 @@ void UI_Main_Render() {
     }
 
     if (IsInItemEditor && ManipPtrs::recentlyModifiedPtrs.Length > 0) {
-        vec2 size = vec2(300, 140);
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        auto imIdName = ieditor.ItemModel !is null ? ieditor.ItemModel.IdName : "⚠️ ??";
+        vec2 size = vec2(300, 160);
         vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
         pos.y = 60;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
         if (UI::Begin("Item Unsafe! Save+Reload.", UI::WindowFlags::NoCollapse | UI::WindowFlags::NoResize)) {
             UI::TextWrapped("\\$f80" + Icons::ExclamationTriangle + "\\$z Item currently unsafe! Please press the magic save and reload button as soon as you are ready (note: it will save the item under the current name).");
+            UI::TextWrapped("Will save at: " + imIdName);
             if (UI::Button("Magic Item Save and Reload")) {
                 startnew(ItemEditor::SaveAndReloadItem);
             }
@@ -281,6 +284,7 @@ TabGroup@ CreateItemEditorRT() {
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
     MapEditPropsTab(root);
+    LightmapTab(root);
     BI_MainTab(root);
     TodoTab(root, "Pinned B&I", Icons::MapO + Icons::MapMarker, "lists of pinned blocks and items");
     CursorTab(root);

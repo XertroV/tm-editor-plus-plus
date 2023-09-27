@@ -68,6 +68,14 @@ class IE_AdvancedTab : Tab {
 
         UI::Separator();
 
+        if (UI::Button("Zero ItemModel Fids")) {
+            try {
+                MeshDuplication::ZeroFidsUnknownModelNod(im);
+                NotifySuccess("Zeroed ItemModel FIDs");
+            } catch {
+                NotifyError("Exception zeroing fids: " + getExceptionInfo());
+            }
+        }
         if (UI::Button("Zero ItemModel.EntityModel Fids")) {
             try {
                 MeshDuplication::ZeroFidsUnknownModelNod(im.EntityModel);

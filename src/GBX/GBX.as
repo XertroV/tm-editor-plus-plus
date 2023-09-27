@@ -7,26 +7,52 @@ shared enum GBX_CHUNK_IDS {
 }
 
 shared class Gbx : BufUtils {
-    Gbx(const string &in path, uint maxReadSize = 65536 / 2, bool quiet = true) {
+    Gbx(const string &in path, uint maxReadSize = 65536 * 2, bool quiet = true) {
         SetLogger(quiet);
         log.parse_pop_all();
         log.parse(path, "GbxFile", "Loading .gbx file.");
+        uint fileLen = 0;
+
         try {
             IO::File f(path, IO::FileMode::Read);
-            trace('Loading GBX file of length: ' + f.Size());
-            @buf = f.Read(Math::Min(maxReadSize, f.Size()));
+            fileLen = f.Size();
+            trace('Loading GBX file of length: ' + fileLen);
+            @buf = f.Read(Math::Min(maxReadSize, fileLen));
         } catch {
             NotifyError("Failed to open the file: " + getExceptionInfo());
-            warn("File path: " + path);
+            warn(">> File path: " + path);
         }
-        // can be optimized to just read header
-        ReadHeader();
+
+        try {
+            // can be optimized to just read header
+            ReadHeader();
+        } catch {
+            auto ex = getExceptionInfo();
+            warn("Exception parsing GBX file: " + ex);
+            if (quiet) {
+                warn(">> ------------ PARSE LOGS ------------");
+                log.PrintAllAfterCrash();
+                warn(">> ------------ END PARSE LOGS ------------");
+            }
+            throw(ex);
+        }
+            if (fileLen <= maxReadSize) {
+                ReadCompressedBody();
+            }
     }
 
     Gbx(MemoryBuffer@ buf, bool quiet = true) {
         SetLogger(quiet);
         @this.buf = buf;
         ReadHeader();
+    }
+
+    void ReadCompressedBody() {
+        log.trace('Reading compressed data of length: ' + compressedDataSize);
+        @compressedData = buf.ReadBuffer(compressedDataSize);
+        // @data = LZO_Decompress(compressedData, compressedDataSize);
+        // log.trace('Got data of size: ' + data.GetSize());
+        // log.trace('Expected data size: ' + dataSize);
     }
 
     uint hVersion;
@@ -38,6 +64,8 @@ shared class Gbx : BufUtils {
     UserData@ userData;
     uint dataSize;
     uint compressedDataSize;
+    MemoryBuffer@ compressedData;
+    MemoryBuffer@ data;
 
     void ReadHeader() {
         if (buf.ReadString(3) != "GBX") {
@@ -50,7 +78,7 @@ shared class Gbx : BufUtils {
         hClassId = ReadUInt32('main class id');
         log.parse_push(Text::Format("%08x", hClassId));
         @userData = UserData(buf, log);
-        return;
+        // return;
         nbNodes = ReadInt32('nb nodes');
         nbExternalNodes = ReadInt32('nb external nodes');
         // todo, read external nodes if they exist
@@ -64,9 +92,13 @@ shared class Gbx : BufUtils {
             }
             log.parse_pop();
         }
-        dataSize = ReadUInt32('data size');
-        compressedDataSize = ReadUInt32('compressed size');
-        // buf.Read(compressedDataSize)
+        if (buf.AtEnd()) {
+            dataSize = 0;
+            compressedDataSize = 0;
+        } else {
+            dataSize = ReadUInt32('data size');
+            compressedDataSize = ReadUInt32('compressed size');
+        }
     }
 
     UDEntry@ GetHeaderChunk(uint chunkId) {
@@ -95,22 +127,31 @@ shared class ExternalFolder : BufUtils {
 }
 
 shared class ExternalNode : BufUtils {
+    string filename;
+    uint32 resourceIx;
+    uint32 nodeIx;
+    uint32 useFile;
+    uint32 folderIx;
+
     ExternalNode(MemoryBuffer@ buf, uint hVersion, uint i, ParseLogger@ log) {
         @this.log = log;
         @this.buf = buf;
         log.parse_push('ExtNode ' + i);
 
-        auto flags = ReadUInt32();
+        // flags & 4 => !isRefResourceIndex
+        auto flags = ReadUInt32('flags');
+        // ref
         if (flags & 4 == 0) {
-            ReadString('?');
+            ReadString('ref: filename');
         } else {
-            ReadUInt32('?');
+            ReadUInt32('ref: resource ix');
         }
-        SkipBytes(4);
-        if (hVersion >= 5)
-            SkipBytes(4);
+
+        nodeIx = ReadUInt32('node Ix');
+        useFile = ReadUInt32('use file (bool)');
+
         if (flags & 4 == 0)
-            SkipBytes(4);
+            folderIx = ReadUInt32('folder ix');
 
         log.parse_pop();
     }
@@ -120,7 +161,7 @@ shared class ExternalNode : BufUtils {
 shared class UserData : BufUtils {
     UDEntry@[] entries;
     uint size;
-    uint nbChunks;
+    uint nbChunks = 0;
 
     UserData(MemoryBuffer@ buf, ParseLogger@ log) {
         @this.log = log;
@@ -128,6 +169,7 @@ shared class UserData : BufUtils {
         log.parse_push('UserData');
 
         size = ReadUInt32('total user data size');
+        if (size == 0) return;
         nbChunks = ReadUInt32('nb chunks');
 
         for (uint i = 0; i < nbChunks; i++) {
@@ -263,6 +305,7 @@ shared class ParseLogger {
     bool PrintParseLogs = false;
     string parseStack = "";
     string[] _parseStack;
+    string[] logs;
     ParseLogger() {}
     ParseLogger(bool quiet) {
         PrintParseLogs = !quiet;
@@ -270,13 +313,20 @@ shared class ParseLogger {
     ~ParseLogger() {
     }
 
+    void PrintAllAfterCrash(const string &in prefix = ">> ") {
+        for (uint i = 0; i < logs.Length; i++) {
+            print(prefix + logs[i]);
+        }
+    }
+
     void trace(const string &in msg) {
+        logs.InsertLast(msg);
         if (PrintParseLogs)
-            trace(msg);
+            ::trace(msg);
     }
     void parse(const string &in str, const string &in type = "string", const string &in annotation = "") {
-        if (PrintParseLogs)
-            trace('[Parse | '+parseStack+'] '+type+': ' + str + (annotation.Length > 0 ? "  ("+annotation+")" : ""));
+        auto msg = '[Parse | '+parseStack+'] '+type+': ' + str + (annotation.Length > 0 ? "  ("+annotation+")" : "");
+        this.trace(msg);
     }
 
     void parse(uint32 u, const string &in annotation = "") {
@@ -306,21 +356,22 @@ shared class ParseLogger {
 
 #if DEV
 void runGbxTest() {
+    Gbx@ test = Gbx(IO::FromUserGameFolder("x.LightMapCache.Gbx"), 128000, false);
     Gbx@ test1 = Gbx(IO::FromUserGameFolder("Items/zzzy_DOWN_FIREWORK_10.Item.Gbx"));
     Gbx@ test2 = Gbx("C:\\Users\\xertrov\\OpenplanetNext\\Extract\\GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\RoadBumpBranchCross.EDClassic.Gbx");
-    Gbx@ test = Gbx("C:\\Users\\xertrov\\OpenplanetNext\\Extract\\GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\DecoHillSlope2Curve2In.EDClassic.Gbx");
-    auto iconChunk = test.GetHeaderChunk(0x2E001004);
-    auto icon = iconChunk.AsIcon();
+    Gbx@ test3 = Gbx("C:\\Users\\xertrov\\OpenplanetNext\\Extract\\GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\DecoHillSlope2Curve2In.EDClassic.Gbx");
+    // auto iconChunk = test.GetHeaderChunk(0x2E001004);
+    // auto icon = iconChunk.AsIcon();
     // @testTexture = UI::LoadTexture(icon.imgBytes);
-    auto iconBase64 = icon.imgBytes.ReadToBase64(icon.imgBytes.GetSize());
-    auto iconHash = Crypto::MD5(iconBase64);
-    trace('LOADED TEXTURE');
-    auto req = Net::HttpPost("http://localhost:8000/e++/icons/convert/webp", iconBase64);
-    while (!req.Finished()) yield();
-    auto iconBuf = req.Buffer();
-    trace('req status: ' + req.ResponseCode());
-    trace('got png size: ' + iconBuf.GetSize());
-    @testTexture = UI::LoadTexture(iconBuf);
+    // auto iconBase64 = icon.imgBytes.ReadToBase64(icon.imgBytes.GetSize());
+    // auto iconHash = Crypto::MD5(iconBase64);
+    // trace('LOADED TEXTURE');
+    // auto req = Net::HttpPost("http://localhost:8000/e++/icons/convert/webp", iconBase64);
+    // while (!req.Finished()) yield();
+    // auto iconBuf = req.Buffer();
+    // trace('req status: ' + req.ResponseCode());
+    // trace('got png size: ' + iconBuf.GetSize());
+    // @testTexture = UI::LoadTexture(iconBuf);
 }
 
 UI::Texture@ testTexture;

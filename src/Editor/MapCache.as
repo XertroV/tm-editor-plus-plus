@@ -158,7 +158,7 @@ namespace Editor {
         uint loadProgress = 0;
         uint loadTotal = 0;
         string LoadingStatus() {
-            return tostring(loadProgress) + " / " + loadTotal + Text::Format(" (%2.1f%%)", float(loadProgress) / loadTotal * 100);
+            return tostring(loadProgress) + " / " + loadTotal + Text::Format(" (%2.1f%%)", float(loadProgress) / Math::Max(1, loadTotal) * 100);
         }
 
         // todo: BlockInMapI, ItemInMapI, dict for IdName => array<ObjInMapI>

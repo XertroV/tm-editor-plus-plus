@@ -44,6 +44,8 @@ namespace MeshDuplication {
             ZeroFids(prefab);
         }
 
+        ManipPtrs::ZeroFid(model.DefaultPlacementParam_Content);
+
         if (model.MaterialModifier !is null) {
             ZeroFids(model.MaterialModifier);
         }
@@ -391,6 +393,10 @@ namespace MeshDuplication {
         ZeroNodFid(mat);
     }
 
+    // void ZeroFids(CGameItemPlacementParam@ ip) {
+    //     ZeroNodFid(ip);
+    // }
+
 
     void ZeroFids_BufferOfNods(CMwNod@ nod, uint16 offset) {
         auto len = Dev::GetOffsetUint32(nod, offset + 0x8);
@@ -429,6 +435,7 @@ namespace MeshDuplication {
         auto shader = cast<CPlugShader>(nod);
         auto pem = cast<CPlugParticleEmitterModel>(nod);
         auto mat = cast<CPlugMaterial>(nod);
+        // auto itemPlacement = cast<CGameItemPlacementParam>(nod);
         if (so !is null) {
             ZeroFids(so);
         } else if (itemModel !is null) {
@@ -481,6 +488,8 @@ namespace MeshDuplication {
             ZeroFids(pem);
         } else if (mat !is null) {
             ZeroFids(mat);
+        // } else if (itemPlacement !is null) {
+        //     ZeroFids(itemPlacement);
         } else {
             NotifyError("ZeroFidsUnknownModelNod: nod is unknown.");
             NotifyError("ZeroFidsUnknownModelNod: nod type: " + Reflection::TypeOf(nod).Name);
