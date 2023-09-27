@@ -1,3 +1,10 @@
+todo:
+- add time constraint on LM map requests
+- fav folders bug
+- rate limit item conversion requests
+-
+
+
 Item Reload:
   - Mass refresh of newly downloaded items ("Refresh Items")
 
@@ -10,7 +17,7 @@ Item Editor:
 
   - Feature: Auto-name item based on file name
   - Feature: Auto-update icon and save: click button and/or automatically after item reload
-  - Add "Advanced" tab: buttons for: open item, save and reload
+  - Add "Advanced" tab: buttons for: open item, save and reload, expose some other useful buttons
   - Various bug fixes with manipulating meshes
   - Enable changing `prefab.Ents` capacity
   - Enable editing podium positions like spectators -- only up to 6 (3 winners, 3 losers) supported by the game. (To edit, look for `SPlacementGroup` Params on an entity of podium items, usually the last entry in the entity list with a null model)
@@ -23,6 +30,7 @@ Item Editor:
 
 Map Editor:
 
+  - Feature: Add lightmap tab + analysis
   - Fix refreshing blocks and items when not necessary
   - Add patch to reduce refresh blocks and items undos required by 1
   - Add buttons to modify cursor rotations + reset to cursor window (window enabled under Cursor Coords)
