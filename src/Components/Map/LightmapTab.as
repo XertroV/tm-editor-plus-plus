@@ -11,16 +11,16 @@ class LightmapTab : Tab {
         auto lm = Editor::GetCurrentLightMap(editor);
 
 #if SIG_DEVELOPER
-        if (UI::Button("Explore LM")) {
+        if (lm !is null && UI::Button("Explore LM")) {
             ExploreNod("LightMap", lm);
         }
 #endif
 
         ItemModelTreeElement(null, -1, lm, "Light Map").Draw();
 
-        auto pimp = lm.m_PImp;
+        auto pimp = lm !is null ? lm.m_PImp : null;
         // all these components mean we have an up to date cached LM to upload -- needs to be up to date for when we cache the objects in the map.
-        bool canUpload = pimp.Cache !is null && pimp.CacheSmall !is null
+        bool canUpload = pimp !is null && pimp.Cache !is null && pimp.CacheSmall !is null
             && pimp.CachePackDesc !is null && pimp.CachePackDesc.Fid !is null;
 
         UI::AlignTextToFramePadding();
@@ -30,7 +30,7 @@ class LightmapTab : Tab {
                 startnew(CoroutineFunc(this.StartAnalysis));
             }
         } else {
-            UI::Text("\\$f84 Unable to analyze LM. Please " + (pimp.CacheSmall is null ? " calculate shadows on Fast or better." : " save the map (note: you just need to open the prompt)."));
+            UI::Text("\\$f84 Unable to analyze LM. Please " + ((pimp is null || pimp.CacheSmall is null) ? "calculate shadows on Fast or better (and save the map if that doesn't work)." : "save the map (note: you usually just need to open the prompt)."));
         }
 
         // dev below
@@ -393,15 +393,17 @@ class LMAnalysisWindow : Tab {
     }
 
     vec2 imgTL;
+    string currTab;
     void DrawTextureTab(uint i, LmMappingCache@ mapping) {
         if (UI::BeginTabItem(lmFileNames[i])) {
+            currTab = lmFileNames[i];
             auto tex = lmTextures.Length > i ? lmTextures[i] : null;
             if (tex is null) {
                 UI::Text("\\$f80No texture...");
             } else {
                 auto imgTL = UI::GetWindowPos() + UI::GetCursorPos();
                 UI::Dummy(vec2(1024));
-                DrawMappingOverlay(tex, imgTL, mapping);
+                DrawMappingOverlay(tex, imgTL, mapping, !currTab.StartsWith("ProbeGrid"));
             }
             UI::EndTabItem();
         }
@@ -409,20 +411,21 @@ class LMAnalysisWindow : Tab {
 }
 
 
-void DrawMappingOverlay(UI::Texture@ tex, vec2 imgTL, LmMappingCache@ mapping) {
+void DrawMappingOverlay(UI::Texture@ tex, vec2 imgTL, LmMappingCache@ mapping, bool drawMapping = true) {
     auto size = vec2(1024);
     auto dl = UI::GetWindowDrawList();
     auto fg = UI::GetForegroundDrawList();
     dl.AddImage(tex, imgTL, size);
 
-    if (mapping is null) return;
+    if (!drawMapping || mapping is null) return;
 
     auto nbHovered = 0;
+    auto mousePos = UI::GetMousePos();
     for (uint i = 0; i < mapping.objs.Length; i++) {
         auto item = mapping.objs[i];
         // auto pos = item.size;
         auto itemAdjRect = vec4(imgTL - vec2(1.25), vec2(1.25)) + item.imgRect;
-        bool hovered = MathX::Within(UI::GetMousePos(), itemAdjRect);
+        bool hovered = MathX::Within(mousePos, itemAdjRect);
         auto c = hovered ? 1.0 : 0.;
         auto col = vec4(c, c, c, 1);
         if (!hovered) col = vec4(1, 1, 0, 1);

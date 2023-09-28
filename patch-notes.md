@@ -2,16 +2,26 @@ todo:
 - add time constraint on LM map requests
 - fav folders bug
 - rate limit item conversion requests
+- lightmap req debounce
+- cotd limitation
+- lm open current results
+- lm click to select a bunch of blocks/items and reduce LM quality
+- LM cached reload -- cache prior mapping also
+- lm zoom
+- lm draw controls (color, turn off unhovered boxes)
 -
-
 
 Item Reload:
   - Mass refresh of newly downloaded items ("Refresh Items")
 
 Inventory & Favorites:
+  - Feature: Add inventory v2 + favorites for blocks & items
   - Add favorite blocks and items and support icons
   - Redo inventory entirely using new favorites tech
     - right click icons for some features
+
+Lightmaps / Shadows
+  - Feature: Add lightmap tab + analysis
 
 Item Editor:
 
@@ -30,7 +40,6 @@ Item Editor:
 
 Map Editor:
 
-  - Feature: Add lightmap tab + analysis
   - Fix refreshing blocks and items when not necessary
   - Add patch to reduce refresh blocks and items undos required by 1
   - Add buttons to modify cursor rotations + reset to cursor window (window enabled under Cursor Coords)
