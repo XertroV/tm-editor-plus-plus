@@ -17,6 +17,12 @@ class IE_AdvancedTab : Tab {
 
         UI::Separator();
 
+        if (UI::Button("Add empty PodiumListClip")) {
+            @cast<CGameEditorItem>(GetApp().Editor).ItemModel.PodiumClipList = CPlugMediaClipList();
+        }
+
+        UI::Separator();
+
         if (UI::Button("Zero ItemModel Fids")) {
             try {
                 MeshDuplication::ZeroFidsUnknownModelNod(im);

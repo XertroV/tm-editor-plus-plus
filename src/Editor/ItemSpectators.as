@@ -14,8 +14,12 @@ void ExportItemSpectators(uint64 tqsPtr, uint nbTqs) {
         szTQs.InsertLast(_ExportQuatPos(rot, pos));
     }
     auto csv = string::Join(szTQs, "\n");
-    IO::File outf(SPECTATORS_FOLDER + "Export.csv", IO::FileMode::Write);
-    outf.Write(csv);
+    try {
+        IO::File outf(SPECTATORS_FOLDER + "Export.csv", IO::FileMode::Write);
+        outf.Write(csv);
+    } else {
+        NotifyError("Failed to export: " + getExceptionInfo());
+    }
 }
 
 const string _ExportQuatPos(vec4 q, vec3 p) {

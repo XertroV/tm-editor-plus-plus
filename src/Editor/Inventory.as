@@ -28,5 +28,8 @@ namespace Editor {
         return rn.ChildNodes[folder];
     }
 
-
+    // 0 = show all. 1 = hide 1 level. 2 = hide 2 levels. If set to more than the available number of levels it will reset to 0;
+    void SetInventoryHiddenFolderDepth(CGameEditorGenericInventory@ inventory, uint8 v) {
+        Dev::SetOffset(inventory, 0x1E8, v);
+    }
 }

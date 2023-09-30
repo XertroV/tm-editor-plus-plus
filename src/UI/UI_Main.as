@@ -93,6 +93,9 @@ void UI_Main_Render() {
             if (UI::Button("Magic Item Save and Reload")) {
                 startnew(ItemEditor::SaveAndReloadItem);
             }
+            if (UI::Button("Undo FID zeroing (save to leave item editor without saving)")) {
+                ManipPtrs::RunUnzero();
+            }
         }
         UI::End();
     }

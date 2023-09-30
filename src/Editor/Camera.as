@@ -50,6 +50,38 @@ namespace Editor {
         if (CameraAnimMgr is null) return;
         CameraAnimMgr.SetAt(1.0);
     }
+
+    // via Miss
+    void SetEditorOrbitalTarget(const vec3 &in pos) {
+        auto editor = cast<CGameCtnEditorCommon>(GetApp().Editor);
+        if (editor is null) {
+            throw("Not in editor");
+            return;
+        }
+
+        auto orbital = editor.OrbitalCameraControl;
+        if (orbital is null) {
+            throw("No orbital camera");
+            return;
+        }
+
+        float h = (orbital.m_CurrentHAngle + Math::PI / 2) * -1;
+        float v = orbital.m_CurrentVAngle;
+
+        vec4 axis(1, 0, 0, 0);
+        axis = axis * mat4::Rotate(v, vec3(0, 0, -1));
+        axis = axis * mat4::Rotate(h, vec3(0, 1, 0));
+
+        orbital.m_TargetedPosition = pos;
+
+        vec3 newCameraPos = pos + axis.xyz * orbital.m_CameraToTargetDistance;
+#if TMNEXT
+        orbital.Pos = newCameraPos;
+#else
+        //TODO: This is correct for Maniaplanet, but probably not for Turbo
+        Dev::SetOffset(orbital, 0x44, newCameraPos);
+#endif
+    }
 }
 
 AnimMgr@ CameraAnimMgr = AnimMgr(true);

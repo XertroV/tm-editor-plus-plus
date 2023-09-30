@@ -24,8 +24,8 @@ shared class Gbx : BufUtils {
         }
 
         try {
-            // can be optimized to just read header
             ReadHeader();
+            // can be optimized to just read header
         } catch {
             auto ex = getExceptionInfo();
             warn("Exception parsing GBX file: " + ex);
@@ -36,9 +36,9 @@ shared class Gbx : BufUtils {
             }
             throw(ex);
         }
-            if (fileLen <= maxReadSize) {
-                ReadCompressedBody();
-            }
+        if (fileLen <= maxReadSize) {
+            ReadCompressedBody();
+        }
     }
 
     Gbx(MemoryBuffer@ buf, bool quiet = true) {
@@ -96,8 +96,12 @@ shared class Gbx : BufUtils {
             dataSize = 0;
             compressedDataSize = 0;
         } else {
-            dataSize = ReadUInt32('data size');
-            compressedDataSize = ReadUInt32('compressed size');
+            try {
+                dataSize = ReadUInt32('data size');
+            } catch {}
+            if (dataSize > 0) {
+                compressedDataSize = ReadUInt32('compressed size');
+            }
         }
     }
 
@@ -356,10 +360,10 @@ shared class ParseLogger {
 
 #if DEV
 void runGbxTest() {
-    Gbx@ test = Gbx(IO::FromUserGameFolder("x.LightMapCache.Gbx"), 128000, false);
-    Gbx@ test1 = Gbx(IO::FromUserGameFolder("Items/zzzy_DOWN_FIREWORK_10.Item.Gbx"));
-    Gbx@ test2 = Gbx("C:\\Users\\xertrov\\OpenplanetNext\\Extract\\GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\RoadBumpBranchCross.EDClassic.Gbx");
-    Gbx@ test3 = Gbx("C:\\Users\\xertrov\\OpenplanetNext\\Extract\\GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\DecoHillSlope2Curve2In.EDClassic.Gbx");
+    // Gbx@ test = Gbx(IO::FromUserGameFolder("x.LightMapCache.Gbx"), 128000, false);
+    // Gbx@ test1 = Gbx(IO::FromUserGameFolder("Items/zzzy_DOWN_FIREWORK_10.Item.Gbx"));
+    // Gbx@ test2 = Gbx("C:\\Users\\xertrov\\OpenplanetNext\\Extract\\GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\RoadBumpBranchCross.EDClassic.Gbx");
+    // Gbx@ test3 = Gbx("C:\\Users\\xertrov\\OpenplanetNext\\Extract\\GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\DecoHillSlope2Curve2In.EDClassic.Gbx");
     // auto iconChunk = test.GetHeaderChunk(0x2E001004);
     // auto icon = iconChunk.AsIcon();
     // @testTexture = UI::LoadTexture(icon.imgBytes);

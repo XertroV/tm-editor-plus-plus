@@ -30,7 +30,7 @@ class LightmapTab : Tab {
                 startnew(CoroutineFunc(this.StartAnalysis));
             }
         } else {
-            UI::Text("\\$f84 Unable to analyze LM. Please " + ((pimp is null || pimp.CacheSmall is null) ? "calculate shadows on Fast or better (and save the map if that doesn't work)." : "save the map (note: you usually just need to open the prompt)."));
+            UI::TextWrapped("\\$f84 Unable to analyze LM. Please " + ((pimp is null || pimp.CacheSmall is null) ? "calculate shadows on Fast or better (and save the map if that doesn't work)." : "save the map (note: you usually just need to open the prompt, if that doens't work, calculate shadows again)."));
         }
 
         // dev below

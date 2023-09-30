@@ -9,7 +9,8 @@ todo:
 - LM cached reload -- cache prior mapping also
 - lm zoom
 - lm draw controls (color, turn off unhovered boxes)
--
+- detailed b/item info in inventory v2
+- macroblocks for inv v2
 
 Item Reload:
   - Mass refresh of newly downloaded items ("Refresh Items")
@@ -17,8 +18,10 @@ Item Reload:
 Inventory & Favorites:
   - Feature: Add inventory v2 + favorites for blocks & items
   - Add favorite blocks and items and support icons
+
   - Redo inventory entirely using new favorites tech
     - right click icons for some features
+    - double click icons to roll through placement modes
 
 Lightmaps / Shadows
   - Feature: Add lightmap tab + analysis

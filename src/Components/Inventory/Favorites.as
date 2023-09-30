@@ -601,20 +601,30 @@ class FavObj {
                 if (UI::MenuItem("Drag Somewhere")) {
                     startnew(CoroutineFunc(this.DragSomewhere));
                 }
-                if (UI::MenuItem(isItem ? "Edit Item" : "Edit Block")) {
-                    startnew(CoroutineFunc(this.EditSelf));
-                }
-                if (!isItem && UI::MenuItem("Edit Block (Method 2)")) {
-                    startnew(CoroutineFunc(this.EditSelfBlockM2));
-                }
-                if (UI::MenuItem("Refresh Icon")) {
-                    startnew(IconTextures::RefreshIconFor, nodeName);
+                if (!isFolder) {
+                    if (UI::MenuItem(isItem ? "Edit Item" : "Edit Block")) {
+                        startnew(CoroutineFunc(this.EditSelf));
+                    }
+                    if (!isItem && UI::MenuItem("Edit Block (Method 2)")) {
+                        startnew(CoroutineFunc(this.EditSelfBlockM2));
+                    }
+                    if (UI::MenuItem("Refresh Icon")) {
+                        startnew(IconTextures::RefreshIconFor, nodeName);
+                    }
+                } else {
+                    if (UI::MenuItem("Open")) {
+                        startnew(CoroutineFunc(this.OpenInvFolderMb));
+                    }
+                    if (UI::MenuItem("Select")) {
+                        startnew(CoroutineFunc(this.SelectInvFolderMb));
+                    }
                 }
                 bool isFav = g_Favorites.IsFavorited(nodeName, isItem, isFolder);
                 if (UI::MenuItem(isFav ? "Remove From Favs" : "Add To Favorites")) {
                     if (isFav) startnew(CoroutineFunc(RemoveSelf));
                     else startnew(CoroutineFunc(AddSelf));
                 }
+
                 UI::BeginDisabled();
                 UI::MenuItem(nodeName);
                 UI::EndDisabled();
@@ -862,7 +872,10 @@ class FavObj {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto inv = Editor::GetInventoryCache();
 
-        if (SelectInvFolderMb(editor, inv)) return;
+        if (isFolder) {
+            SelectInvFolderMb(editor, inv);
+            return;
+        }
 
         bool rollInsteadOfSelect = Time::Now - lastSelected < 500;
         // print("now: " + Time::Now + ", last: " + lastSelected + ", rollInstead: " + rollInsteadOfSelect);
@@ -899,16 +912,40 @@ class FavObj {
     }
 
     // return true if we are a folder
-    bool SelectInvFolderMb(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv) {
+    bool SelectInvFolderMb(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv, bool neverCallback = false) {
         CGameCtnArticleNodeDirectory@ dir = cast<CGameCtnArticleNodeDirectory>(GetInvArticle(inv));
         if (dir is null) {
             NotifyWarning("Could not select inventory folder: " + nodeName + " (it is null); computed: " + GetDirectoryNodeName());
-        } else if (dirCallback !is null) {
+        } else if (!neverCallback && dirCallback !is null) {
             dirCallback();
         } else {
+            trace('DEBUG opening directory vis selecting node');
+            editor.PluginMapType.Inventory.SelectNode(dir);
+        }
+        return isFolder;
+    }
+    bool OpenInvFolderMb(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv, bool neverCallback = false) {
+        CGameCtnArticleNodeDirectory@ dir = cast<CGameCtnArticleNodeDirectory>(GetInvArticle(inv));
+        if (dir is null) {
+            NotifyWarning("Could not select inventory folder: " + nodeName + " (it is null); computed: " + GetDirectoryNodeName());
+        } else if (!neverCallback && dirCallback !is null) {
+            dirCallback();
+        } else {
+            trace('DEBUG opening directory');
             editor.PluginMapType.Inventory.OpenDirectory(dir);
         }
         return isFolder;
+    }
+
+    void SelectInvFolderMb() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto inv = Editor::GetInventoryCache();
+        SelectInvFolderMb(editor, inv, true);
+    }
+    void OpenInvFolderMb() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto inv = Editor::GetInventoryCache();
+        OpenInvFolderMb(editor, inv, true);
     }
 
     void EditSelf() {

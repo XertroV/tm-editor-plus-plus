@@ -21,7 +21,8 @@ void Main() {
     CallbacksEnabledPostInit = true;
 
 #if DEV
-    runGbxTest();
+    // runGbxTest();
+    // runZipTest();
 #endif
 }
 
@@ -33,6 +34,7 @@ void Unload() {
     // still, openplanet frees it anyway, so i guess nbd.
     FreeAllAllocated();
     // PatchEditorInput::Unload();
+
 }
 
 uint lastInItemEditor = 0;
