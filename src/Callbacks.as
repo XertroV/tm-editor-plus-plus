@@ -131,7 +131,7 @@ bool CheckForNewBlocks(CGameCtnEditorFree@ editor) {
         if (EnteringEditor || !CallbacksEnabledPostInit) {
             return false;
         }
-        trace('Detected new blocks: ' + newBlocks);
+        dev_trace('Detected new blocks: ' + newBlocks);
         if (newBlocks > 0) {
             auto startIx = int(editor.Challenge.Blocks.Length) - newBlocks;
             bool updated = false;
@@ -154,7 +154,7 @@ bool CheckForNewItems(CGameCtnEditorFree@ editor) {
         if (EnteringEditor || !CallbacksEnabledPostInit) {
             return false;
         }
-        trace('Detected new items: ' + newItems);
+        dev_trace('Detected new items: ' + newItems);
         if (newItems > 0) {
             bool updated = false;
             bool lastUpdated = false;
