@@ -17,7 +17,7 @@ void ExportItemSpectators(uint64 tqsPtr, uint nbTqs) {
     try {
         IO::File outf(SPECTATORS_FOLDER + "Export.csv", IO::FileMode::Write);
         outf.Write(csv);
-    } else {
+    } catch {
         NotifyError("Failed to export: " + getExceptionInfo());
     }
 }
