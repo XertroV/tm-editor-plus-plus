@@ -82,7 +82,7 @@ void UI_Main_Render() {
     if (IsInItemEditor && ManipPtrs::recentlyModifiedPtrs.Length > 0) {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         auto imIdName = ieditor.ItemModel !is null ? ieditor.ItemModel.IdName : "⚠️ ??";
-        vec2 size = vec2(300, 160);
+        vec2 size = vec2(340, 240);
         vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
         pos.y = 60;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);
@@ -93,7 +93,9 @@ void UI_Main_Render() {
             if (UI::Button("Magic Item Save and Reload")) {
                 startnew(ItemEditor::SaveAndReloadItem);
             }
-            if (UI::Button("Undo FID zeroing (save to leave item editor without saving)")) {
+            UI::AlignTextToFramePadding();
+            UI::TextWrapped("To leave the item editor without saving, click this first:");
+            if (UI::Button("Undo FID zeroing")) {
                 ManipPtrs::RunUnzero();
             }
         }

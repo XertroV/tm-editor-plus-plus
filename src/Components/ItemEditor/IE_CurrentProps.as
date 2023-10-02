@@ -57,8 +57,6 @@ class ItemEditLayoutTab : ItemLayoutTab {
 
 
 class ItemEditCloneLayoutTab : Tab {
-    ReferencedNod@ TmpItemPlacementRef = null;
-
     ItemEditCloneLayoutTab(TabGroup@ p) {
         super(p, "Clone Layout From", "");
     }
@@ -90,7 +88,11 @@ class ItemEditCloneLayoutTab : Tab {
 
         if (currentItem is null) {
             UI::Text(noItemError);
-        } else if (TmpItemPlacementRef is null) {
+        } else {
+            UI::AlignTextToFramePadding();
+            if (lastRun + 10000 > Time::Now) {
+                UI::TextWrapped("\\$8f4Layout replaced. Please save the item before returning to the main Editor.");
+            }
             UI::AlignTextToFramePadding();
             UI::Text("Replace layout of " + currentItem.IdName + " (destination item)");
             UI::AlignTextToFramePadding();
@@ -100,24 +102,17 @@ class ItemEditCloneLayoutTab : Tab {
                 if (picked.Article.LoadedNod is null) picked.GetCollectorNod();
                 SetCustomPlacementParams(currentItem, cast<CGameItemModel>(picked.Article.LoadedNod));
             }
-
-            // for (uint i = 0; i < SampleGameItemNames.Length; i++) {
-            //     if (UI::Button("With layout from " + SampleGameItemNames[i])) {
-            //         SetCustomPlacementParams(currentItem, SampleGameItemNames[i]);
-            //     }
-            // }
-        } else {
-            UI::TextWrapped("Layout replaced. Please save the item and return to the main Editor.");
         }
     }
 
     uint64 fidPointer = 0;
+    uint lastRun = 0;
 
     void SetCustomPlacementParams(CGameItemModel@ currentItem, const string &in nadeoItemName) {
-        if (TmpItemPlacementRef !is null) {
-            NotifyError("SetCustomPlacementParams called while TmpItemPlacementRef is not null!! Refusing to set placement params.");
-            return;
-        }
+        // if (TmpItemPlacementRef !is null) {
+        //     NotifyError("SetCustomPlacementParams called while TmpItemPlacementRef is not null!! Refusing to set placement params.");
+        //     return;
+        // }
         auto item = Editor::FindItemByName(nadeoItemName);
         if (item is null) {
             NotifyWarning("Could not find item: " + nadeoItemName);
@@ -131,38 +126,11 @@ class ItemEditCloneLayoutTab : Tab {
             NotifyWarning("Source item for placement params was null");
             return;
         }
-        trace('getting tmp item placement ref');
-        @TmpItemPlacementRef = ReferencedNod(sourceItem.DefaultPlacementParam_Content);
-        trace('add ref to current');
-        currentItem.DefaultPlacementParam_Content.MwAddRef();
-        trace('set current to other');
+        sourceItem.DefaultPlacementParam_Content.MwAddRef();
         @currentItem.DefaultPlacementParam_Content = sourceItem.DefaultPlacementParam_Content;
-        trace('getting fid');
-        ManipPtrs::ZeroFid(currentItem.DefaultPlacementParam_Content);
-        // auto fidPointer = Dev::GetOffsetUint64(currentItem.DefaultPlacementParam_Content, 0x8);
-        // Dev::SetOffset(currentItem.DefaultPlacementParam_Content, 0x8, uint64(0));
-        NotifyWarning("Item layout successfully replaced. Please save the item.");
-        startnew(CoroutineFunc(WaitForLeftItemEditor));
-    }
-
-    void WaitForLeftItemEditor() {
-        // don't need to do this now that we have ManipPtrs
-        // trace("Fixing placement param Fid: waiting to leave Item Editor");
-        // while (true) {
-        //     yield();
-        //     auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
-        //     if (ieditor is null) break;
-        // }
-        // trace("Fixing placement param Fid: Left Item Editor");
-        // if (TmpItemPlacementRef is null) return;
-        // trace("Fixing placement param Fid: tmpRef is set");
-        // auto placementParam = TmpItemPlacementRef.AsPlacementParam();
-        // if (placementParam is null) return;
-        // trace("Fixing placement param Fid: got placement param");
-        // Dev::SetOffset(placementParam, 0x8, fidPointer);
-        // fidPointer = 0;
-        // @TmpItemPlacementRef = null;
-        // trace("Fixing placement param Fid: done");
+        MeshDuplication::ZeroFids(sourceItem.DefaultPlacementParam_Content);
+        NotifyWarning("Item layout successfully replaced. Please save + reload the item.");
+        lastRun = Time::Now;
     }
 }
 

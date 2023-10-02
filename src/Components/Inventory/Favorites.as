@@ -49,6 +49,7 @@ namespace IconTextures {
     }
 
     void LoadIconTextureCsvCache() {
+        if (!IO::FileExists(ArticleMappingPath())) return;
         IO::File csv(ArticleMappingPath(), IO::FileMode::Read);
         auto lines = csv.ReadToEnd().Split("\n");
         for (uint i = 0; i < lines.Length; i++) {
