@@ -770,7 +770,7 @@ class FavObj {
             return;
         }
         // otherwise, we dragged it somewhere, so do something
-        warn('todo: on drag');
+        NotifyWarning('drag features not implemented yet');
     }
 
     void CloneAndDrawClickedState(FavObj@ host) {
