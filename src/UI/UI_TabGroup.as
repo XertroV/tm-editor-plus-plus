@@ -25,6 +25,13 @@ class TabGroup {
         return false;
     }
 
+    void SetChildSelected(Tab@ child) {
+        if (child is null) return;
+        auto ix = tabs.FindByRef(child);
+        if (ix >= 0) selectedTabIx = ix;
+        else warn("Could not find child: " + child.fullName);
+    }
+
     void AddTab(Tab@ t) {
         if (t.Parent !is null) {
             throw('tried to add a tab that already has a parent group.');
@@ -85,7 +92,7 @@ class TabGroup {
             }
             for (int i = 0; i < int(tabs.Length); i++) {
                 auto tab = tabs[i];
-                if (UI::Selectable(sideBarExpanded ? tab.DisplayIconAndName : tab.DisplayIcon, selectedTabIx == i)) {
+                if (UI::Selectable(sideBarExpanded ? tab.DisplayIconAndName : tab.DisplayIconWithId, selectedTabIx == i)) {
                     selectedTabIx = i;
                 }
             }

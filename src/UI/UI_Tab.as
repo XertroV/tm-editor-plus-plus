@@ -44,10 +44,26 @@ class Tab {
         return tabIcon;
     }
 
+    const string get_DisplayIconWithId() {
+        return tabIcon + "###" + tabName;
+    }
+
+    protected bool _ShouldSelectNext = false;
+
+    void SetSelectedTab() {
+        _ShouldSelectNext = true;
+        Parent.SetChildSelected(this);
+    }
+
     int get_TabFlags() {
-        return UI::TabItemFlags::NoCloseWithMiddleMouseButton
+        int flags = UI::TabItemFlags::NoCloseWithMiddleMouseButton
             | UI::TabItemFlags::NoReorder
             ;
+        if (_ShouldSelectNext) {
+            _ShouldSelectNext = false;
+            flags |= UI::TabItemFlags::SetSelected;
+        }
+        return flags;
     }
 
     int get_WindowFlags() {

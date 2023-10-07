@@ -8,6 +8,7 @@ void Main() {
         return;
     }
     CheckAndSetGameVersionSafe();
+    while (!GameVersionSafe) sleep(500);
     if (GetApp().Editor !is null) {
         startnew(Editor::CacheMaterials);
     }

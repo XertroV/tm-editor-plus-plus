@@ -116,6 +116,7 @@ class ViewAllBlocksTab : BlockItemListTab {
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             Notify("Setting block ("+blockId+") as picked item.");
             @lastPickedBlock = ReferencedNod(block);
+            g_PickedBlockTab.SetSelectedTab();
             UpdatePickedBlockCachedValues();
         }
         if (!Editor::IsBlockFree(block)) {
@@ -200,6 +201,7 @@ class ViewAllItemsTab : BlockItemListTab {
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             Notify("Setting item ("+blockId+") as picked item.");
             @lastPickedItem = ReferencedNod(item);
+            g_PickedItemTab.SetSelectedTab();
             UpdatePickedItemCachedValues();
         }
         // // todo: not sure how to do item removal

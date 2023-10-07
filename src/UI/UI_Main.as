@@ -285,6 +285,8 @@ TabGroup@ CreateItemEditorRT() {
     return root;
 }
 
+PickedBlockTab@ g_PickedBlockTab;
+PickedItemTab@ g_PickedItemTab;
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
@@ -293,8 +295,8 @@ TabGroup@ CreateRootTabGroup() {
     BI_MainTab(root);
     TodoTab(root, "Pinned B&I", Icons::MapO + Icons::MapMarker, "lists of pinned blocks and items");
     CursorTab(root);
-    PickedBlockTab(root);
-    PickedItemTab(root);
+    @g_PickedBlockTab = PickedBlockTab(root);
+    @g_PickedItemTab = PickedItemTab(root);
     // TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
     InventoryMainTab(root);
     InventoryMainV2Tab(root);

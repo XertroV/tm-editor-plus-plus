@@ -33,6 +33,7 @@ class LightmapTab : Tab {
             UI::TextWrapped("\\$f84 Unable to analyze LM. Please " + ((pimp is null || pimp.CacheSmall is null) ? "calculate shadows on Fast or better (and save the map if that doesn't work)." : "save the map (note: you usually just need to open the prompt, if that doens't work, calculate shadows again)."));
         }
 
+#if DEV
         // dev below
         if (UI::CollapsingHeader("dev / testing")) {
 
@@ -70,6 +71,7 @@ class LightmapTab : Tab {
                 }
             }
         }
+#endif
     }
 
     LmMappingCache@ lmMappingCache;

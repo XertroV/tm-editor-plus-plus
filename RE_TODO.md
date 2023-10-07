@@ -5,12 +5,27 @@
 - favorites for inventory
 - check item placed when selecting in manip mesh
 - ensure item saved before editing properties
--
+- custom selection
+- recently selected blocks and items history
+- [x] Quick idea please, would it be possible to redirect to the "Picked Item" tab when clicking this button on the "Blocks & Items" tab?
+- edit block coord of item
+
 
 - ~~copy placement params from 1 item to another~~
 - script to do item manipulation
 - investigate placing items on freeblocks when a normally placed block is close
 -
+
+- scenery spray
+  - mouse button to apply scenery (maybe blocks, maybe items)
+
+- media tracker
+  - auto label text stuff
+  - custom playback speed (clip player, 0x33c)
+  - clip browser?
+
+// To get clip from EditorMediaTracker
+// offsets: 0x228, 0x80, 0x0
 
 
 CPlugSurface 0xA0 (160) large
