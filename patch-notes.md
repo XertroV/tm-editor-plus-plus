@@ -55,4 +55,7 @@ General:
   - add current game version as safe
   - try to make refresh / update things a bit more forgiving
   - show inventory/map cache loading status in menubar
+  - switch tab to picked block/item when picking from the Blocks & Items tab
+  - fix unselectable main tabs when collapsed
+  - add Block Coords of items as editable (useful for moving a free item temporarily before deleting a block in that coord)
   - probably some stuff i forgot

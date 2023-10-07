@@ -76,7 +76,7 @@ namespace IconTextures {
             if (knownHash) {
                 string hash = string(knownHashes[article.NodeName]);
                 if (IconFileExists(hash)) {
-                    trace('DEBUG loading previous: ' + IconFilePath(hash));
+                    // trace('DEBUG loading previous: ' + IconFilePath(hash));
                     auto tex = UI::LoadTexture(ReadFile(IconFilePath(hash)));
                     @loadedTextures[article.NodeName] = tex;
                     // return tex;
@@ -920,7 +920,7 @@ class FavObj {
         } else if (!neverCallback && dirCallback !is null) {
             dirCallback();
         } else {
-            trace('DEBUG opening directory vis selecting node');
+            // trace('DEBUG opening directory vis selecting node');
             editor.PluginMapType.Inventory.SelectNode(dir);
         }
         return isFolder;
@@ -932,7 +932,7 @@ class FavObj {
         } else if (!neverCallback && dirCallback !is null) {
             dirCallback();
         } else {
-            trace('DEBUG opening directory');
+            // trace('DEBUG opening directory');
             editor.PluginMapType.Inventory.OpenDirectory(dir);
         }
         return isFolder;
