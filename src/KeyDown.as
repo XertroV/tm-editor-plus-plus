@@ -1,6 +1,6 @@
-// for checking mouse click
-// Import::Library@ user32 = Import::GetLibrary("user32.dll");
-// Import::Function@ GetAsyncKeyState = user32.GetFunction("GetAsyncKeyState");
+// for checking ctrl/alt/shift down
+Import::Library@ user32 = Import::GetLibrary("user32.dll");
+Import::Function@ GetAsyncKeyState = user32.GetFunction("GetAsyncKeyState");
 
 // no reliable way to test this natively from openplanet
 bool IsLMBPressed() {
@@ -11,4 +11,19 @@ bool IsLMBPressed() {
     // return (UI::IsKeyPressed(UI::Key(1)));
     // if (user32 is null || GetAsyncKeyState is null) return false;
     // return 0 < 0x8000 & GetAsyncKeyState.CallUInt16(int(1));
+}
+
+bool IsCtrlDown() {
+    if (user32 is null || GetAsyncKeyState is null) return false;
+    return 0 < 0x8000 & GetAsyncKeyState.CallUInt16(int(VirtualKey::Control));
+}
+
+bool IsAltDown() {
+    if (user32 is null || GetAsyncKeyState is null) return false;
+    return 0 < 0x8000 & GetAsyncKeyState.CallUInt16(int(VirtualKey::Menu));
+}
+
+bool IsShiftDown() {
+    if (user32 is null || GetAsyncKeyState is null) return false;
+    return 0 < 0x8000 & GetAsyncKeyState.CallUInt16(int(VirtualKey::Shift));
 }

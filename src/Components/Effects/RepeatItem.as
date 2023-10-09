@@ -455,6 +455,9 @@ float grid_SizeY = 64.;
 float grid_SizeZ = 64.;
 
 [Setting hidden]
+vec3 grid_Size = vec3(64.);
+
+[Setting hidden]
 int grid_ItemsX = 10.;
 [Setting hidden]
 int grid_ItemsY = 10.;
@@ -473,6 +476,7 @@ class GridRepeat : RepeatMethod {
     mat4 gridRotM = mat4::Identity();
     mat4 gridRotMInv = mat4::Identity();
     mat4 base = mat4::Identity();
+    bool setGridFromItem = false;
 
     void UpdateMatricies() override {
         RepeatMethod::UpdateMatricies();
@@ -514,13 +518,19 @@ class GridRepeat : RepeatMethod {
 
         UI::TextWrapped("Grid Size");
 
-        grid_SizeX = UI::InputFloat("Total Size (X)", grid_SizeX, 1);
-        grid_SizeY = UI::InputFloat("Total Size (Y)", grid_SizeY, 1);
-        grid_SizeZ = UI::InputFloat("Total Size (Z)", grid_SizeZ, 1);
+        grid_Size = UX::InputFloat3("Total Size", grid_Size, vec3(64.));
+        // grid_SizeX = UI::InputFloat("Total Size (X)", grid_SizeX, 1);
+        // grid_SizeY = UI::InputFloat("Total Size (Y)", grid_SizeY, 1);
+        // grid_SizeZ = UI::InputFloat("Total Size (Z)", grid_SizeZ, 1);
 
+        setGridFromItem = UI::Checkbox("Set grid based on item placement params", setGridFromItem);
+        if (setGridFromItem) UpdateGridFromPickedItem();
+
+        UI::BeginDisabled(setGridFromItem);
         grid_ItemsX = Math::Clamp(UI::InputInt("Items (X)", grid_ItemsX, 1), 1, 5000);
         grid_ItemsY = Math::Clamp(UI::InputInt("Items (Y)", grid_ItemsY, 1), 1, 5000);
         grid_ItemsZ = Math::Clamp(UI::InputInt("Items (Z)", grid_ItemsZ, 1), 1, 5000);
+        UI::EndDisabled();
 
         UpdateMatricies();
         DrawHelpers(false);
@@ -531,10 +541,21 @@ class GridRepeat : RepeatMethod {
         }
     }
 
+    void UpdateGridFromPickedItem() {
+        if (lastPickedItem is null) return;
+        auto item = lastPickedItem.AsItem();
+        if (item is null || item.ItemModel is null) return;
+        auto sizeXZ = item.ItemModel.DefaultPlacementParam_Content.GridSnap_HStep;
+        auto sizeY = item.ItemModel.DefaultPlacementParam_Content.GridSnap_VStep;
+        grid_ItemsX = Math::Floor(grid_Size.x / (sizeXZ <= 0. ? 1. : sizeXZ)) + 1;
+        grid_ItemsZ = Math::Floor(grid_Size.z / (sizeXZ <= 0. ? 1. : sizeXZ)) + 1;
+        grid_ItemsY = Math::Floor(grid_Size.y / (sizeY <= 0. ? 1. : sizeY)) + 1;
+    }
+
     mat4[]@ CalcPosRotMatricies() {
         matricies.RemoveRange(0, matricies.Length);
 
-        vec3 size = vec3(grid_SizeX, grid_SizeY, grid_SizeZ);
+        vec3 size = grid_Size;
         vec3 maxPosIxs = MathX::Max(vec3(grid_ItemsX, grid_ItemsY, grid_ItemsZ) - vec3(1), vec3(1));
 
         for (int x = 0; x < (grid_RepeatX ? grid_ItemsX : 1); x++) {

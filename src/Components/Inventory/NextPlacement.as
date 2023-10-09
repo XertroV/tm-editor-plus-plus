@@ -1,3 +1,5 @@
+bool g_PlaceMacroblockAirModeActive = false;
+
 class GlobalPlacementOptionsTab : EffectTab {
     GlobalPlacementOptionsTab(TabGroup@ p) {
         super(p, "Next Placed", Icons::FolderOpenO + Icons::Download);
@@ -5,7 +7,8 @@ class GlobalPlacementOptionsTab : EffectTab {
     }
 
     bool get__IsActive() override property {
-        return f_RandomizeItemAnimOffset || f_RandomizeItemsInMbAnimOffsets || f_RandomizeMbAdditionalAnimOffset;
+        return f_RandomizeItemAnimOffset || f_RandomizeItemsInMbAnimOffsets || f_RandomizeMbAdditionalAnimOffset
+            || g_PlaceMacroblockAirModeActive;
     }
 
     void DrawInner() override {
@@ -20,6 +23,7 @@ class GlobalPlacementOptionsTab : EffectTab {
         pmt.ForceMacroblockColor = UI::Checkbox("ForceMacroblockColor", pmt.ForceMacroblockColor);
         pmt.ForceMacroblockLightmapQuality = UI::Checkbox("ForceMacroblockLightmapQuality", pmt.ForceMacroblockLightmapQuality);
         editor.PasteAsFreeMacroBlock = UI::Checkbox("PasteAsFreeMacroBlock", editor.PasteAsFreeMacroBlock);
+        g_PlaceMacroblockAirModeActive = UI::Checkbox("Place Macroblocks in Air Mode", g_PlaceMacroblockAirModeActive);
 
         // todo: paste as air macro block
 
@@ -56,4 +60,17 @@ class GlobalPlacementOptionsTab : EffectTab {
         }
         return false;
     }
+}
+
+// true to block click
+bool CheckPlaceMacroblockAirMode() {
+    if (!g_PlaceMacroblockAirModeActive) return false;
+    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    auto pmt = editor.PluginMapType;
+    if (pmt.PlaceMode == CGameEditorPluginMap::EPlaceMode::Macroblock && pmt.CursorMacroblockModel !is null) {
+        pmt.PlaceMacroblock_AirMode(pmt.CursorMacroblockModel, Nat3ToInt3(pmt.CursorCoord), pmt.CursorDir);
+        pmt.AutoSave();
+        return true;
+    }
+    return false;
 }

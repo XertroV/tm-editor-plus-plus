@@ -12,6 +12,7 @@ void Main() {
     if (GetApp().Editor !is null) {
         startnew(Editor::CacheMaterials);
     }
+    startnew(UpdateEditorPlugin);
     RegisterOnEditorLoadCallback(Editor::CacheMaterials, "CacheMaterials");
     RegisterOnItemEditorLoadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
     RegisterOnEditorUnloadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
@@ -35,7 +36,8 @@ void Unload() {
     // still, openplanet frees it anyway, so i guess nbd.
     FreeAllAllocated();
     // PatchEditorInput::Unload();
-
+    // MLHook::UnregisterMLHooksAndRemoveInjectedML();
+    // CleanupEditorInputPatch();
 }
 
 uint lastInItemEditor = 0;
@@ -153,6 +155,9 @@ bool g_IsDragging = false;
 bool g_WasDragging = false;
 
 UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
+    bool block = down && button == 0 && CheckPlaceMacroblockAirMode();
+    block = block || g_IsDragging || g_WasDragging;
+    return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
     // print('mb ' + (down ? 'down' : 'up'));
     // if (button == 0) {
     //     g_LmbDown = down;
@@ -164,7 +169,6 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     // }
     // if (down)
     //     lastMbClickPos = vec2(x, y);
-    return (g_IsDragging || g_WasDragging) ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
 }
 
 // only updates when not hovering imgui and input not carried off imgui
@@ -180,4 +184,21 @@ void Update(float dt) {
 
     g_FrameTime = dt;
     g_AvgFrameTime = g_AvgFrameTime * .9 + dt * .1;
+}
+
+// virtual keys that are registered for a hotkey
+bool[] hotkeysFlags = array<bool>(256);
+
+/** Called whenever a key is pressed on the keyboard. See the documentation for the [`VirtualKey` enum](https://openplanet.dev/docs/api/global/VirtualKey).
+*/
+UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
+    if (GetApp().Editor is null) return UI::InputBlocking::DoNothing;
+    bool block = false;
+    block = block || (S_BlockEscape && down && key == VirtualKey::Escape);
+    // trace('key down: ' + tostring(key));
+    if (down && hotkeysFlags[key]) {
+        // trace('checking hotkey: ' + tostring(key));
+        block = block || CheckHotkey(key) == UI::InputBlocking::Block;
+    }
+    return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
 }

@@ -1,8 +1,22 @@
 namespace Editor {
-    const uint16 SelectedBufOffset = GetOffset("CGameCtnEditorFree", "CurrentSectorOutlineBox") + 0x78; // 0xB50 - 0xAD8
+    const uint16 SelectedBufOffset = GetOffset("CGameCtnEditorFree", "CurrentSectorOutlineBox") + 0x78; // 0xB30 - 0xAB8
+    const uint16 CustomSelectedBufOffset = GetOffset("CGameCtnEditorFree", "CurrentSectorOutlineBox") + 0xA8; // 0xB60 - 0xAB8
+    // const uint16 TmpCustomSelectedBufOffset = GetOffset("CGameCtnEditorFree", "CurrentSectorOutlineBox") + 0x1F0; // 0xCA8 - 0xAB8
+    // const uint16 LastLMBInputTimeOffset = GetOffset("CGameCtnEditorFree", "CurrentSectorOutlineBox") + 0xF8; // 0xBB0 - 0xAB8
+    // const uint16 MouseDownOffset = GetOffset("CGameCtnEditorFree", "CurrentSectorOutlineBox") + 0x100; // 0xBB8 - 0xAB8
 
     uint GetNbSelectedBlockRegions(CGameCtnEditorFree@ editor) {
         return Dev::GetOffsetUint32(editor, SelectedBufOffset + 0x8);
+    }
+
+    uint GetNbCustomSelectedBlockRegions(CGameCtnEditorFree@ editor) {
+        return Dev::GetOffsetUint32(editor, CustomSelectedBufOffset + 0x8);
+    }
+
+    void CustomSelectionCoords_Clear(CGameCtnEditorFree@ editor) {
+        // trace('Custom selection before: ' + GetNbCustomSelectedBlockRegions(editor) + ' / ' + editor.PluginMapType.CustomSelectionCoords.Length);
+        Dev::SetOffset(editor, CustomSelectedBufOffset + 0x8, uint32(0));
+        // trace('Custom selection after: ' + GetNbCustomSelectedBlockRegions(editor) + ' / ' + editor.PluginMapType.CustomSelectionCoords.Length);
     }
 
     dictionary selectedCoords;

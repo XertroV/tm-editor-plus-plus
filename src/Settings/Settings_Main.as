@@ -35,3 +35,15 @@ bool S_RenderQuickToggle = true;
 
 [Setting hidden]
 int S_AutosavePeriod = -1;
+
+[Setting hidden]
+bool S_DefaultToAirMode = false;
+
+[Setting hidden]
+bool S_HideBlockHelpers = false;
+
+[Setting hidden]
+bool S_ControlBlockHelpers = false;
+
+[Setting hidden]
+bool S_BlockEscape = false;

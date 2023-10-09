@@ -23,6 +23,11 @@ esac
 
 _colortext16 yellow "🚩 Build mode: $_build_mode"
 
+
+_colortext16 green "🏗️ preprocessing .Script.txt files in ml-scripts"
+
+python3 ./pre-proc-scripts.py
+
 pluginSources=( 'src' )
 
 for pluginSrc in ${pluginSources[@]}; do
