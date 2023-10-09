@@ -290,6 +290,7 @@ PickedItemTab@ g_PickedItemTab;
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
+    ChangelogTab(root);
     MapEditPropsTab(root);
     LightmapTab(root);
     BI_MainTab(root);

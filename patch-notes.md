@@ -68,6 +68,7 @@ Hotkeys:
   - (API) Add Get/Set Air Block mode; Clear CustomSelectionCoords
   - Add E++ EditorPlugin
   - Add option to block escape key from exiting the editor (note: global block)
+  - Added changelog tab
 - Editor Misc:
   - Improve camera control inputs
   - add persistance to helpers

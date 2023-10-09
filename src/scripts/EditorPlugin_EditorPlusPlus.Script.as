@@ -15,7 +15,7 @@ main() {
     {
         if (CustomSelectionCoords.count > 0) {
             declare Int3[] Tmp = [];
-            foreach (Coord in CustomSelectionCoords) { tmp.add(Coord); }
+            foreach (Coord in CustomSelectionCoords) { Tmp.add(Coord); }
             CustomSelectionCoords.clear();
             foreach (Coord in Tmp) { CustomSelectionCoords.add(Coord); }
         }

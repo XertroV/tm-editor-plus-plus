@@ -13,14 +13,6 @@ class CustomSelectionMgr {
     CustomSelectionMgr() {
         AddHotkey(VirtualKey::F, true, false, false, HotkeyFunction(this.OnFillHotkey));
         trace('added custom selection mgr hotkey, ' + tostring(VirtualKey::F) + ', ' + int(VirtualKey::F));
-        // startnew(CoroutineFunc(InitML_CB));
-    }
-
-    void InitML_CB() {
-        sleep(500);
-        // MLHook::RegisterPlaygroundMLExecutionPointCallback(MLHook::MLFeedFunction(this.ML_CB));
-        // editorInputCallbacks.InsertLast(CoroutineFunc(this.ML_CB));
-        // SetupEditorInputPatch();
     }
 
     UI::InputBlocking OnFillHotkey() {
@@ -51,12 +43,13 @@ class CustomSelectionMgr {
         if (SupportedFillModes.Find(origPlacementMode) < 0) {
             NotifyWarning("Place mode not supported for fill: " + tostring(origPlacementMode));
         }
+        Editor::CustomSelectionCoords_Clear(editor);
         Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::CustomSelection);
         editor.PluginMapType.CustomSelectionRGB = vec3(1.);
         editor.PluginMapType.ShowCustomSelection();
         active = true;
         // Editor::EnableCustomCameraInputs();
-        startnew(CoroutineFunc(this.WatchLoop)).WithRunContext(Meta::RunContext::BeforeScripts);
+        startnew(CoroutineFunc(this.WatchLoop)); //.WithRunContext(Meta::RunContext::BeforeScripts);
     }
 
     // if user presses escape
@@ -65,12 +58,13 @@ class CustomSelectionMgr {
     }
 
     nat3 startCoord;
-    bool updateML = false;
-    nat3 updateMin;
-    nat3 updateMax;
-    void ML_CB() { // ref@ r
-        if (!updateML) return;
-        updateML = false;
+    // bool updateML = false;
+    protected nat3 updateMin;
+    protected nat3 updateMax;
+    // use UpdateSelection
+    protected void _DoUpdateSelection() { // ref@ r
+        // if (!updateML) return;
+        // updateML = false;
         // dev_trace('updating selection: ');
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
@@ -126,38 +120,12 @@ class CustomSelectionMgr {
 
     bool hideNext = true;
     void UpdateSelection(CGameCtnEditorFree@ editor, CSmEditorPluginMapType@ pmt, nat3 start, nat3 end) {
-        updateML = true;
         auto min = MathX::Min(start, end); // updateMin
         auto max = MathX::Max(start, end); // updateMax
         updateMin = min;
         updateMax = max;
-        ML_CB();
+        _DoUpdateSelection();
         return;
-
-        // auto minPos = CoordToPos(min);
-        // auto maxPos = CoordToPos(max);
-
-        // auto centerPos = (minPos + maxPos) / 2.;
-        // auto boxPos = (maxPos - minPos) / 2.;
-        // auto box = editor.CustomSelectionBox;
-        // //
-        // auto tree = cast<CPlugTree>(Dev::GetOffsetNod(box, 0x18));
-
-
-        // ! does not update :(
-        // pmt.Clear
-        // pmt.CustomSelectionCoords.RemoveRange(0, pmt.CustomSelectionCoords.Length);
-        // Editor::CustomSelectionCoords_Clear(editor);
-        // for (uint x = min.x; x <= max.x; x++) {
-        //     for (uint y = min.y; y <= max.y; y++) {
-        //         for (uint z = min.z; z <= max.z; z++) {
-        //             pmt.CustomSelectionCoords.Add(nat3(x, y, z));
-        //         }
-        //     }
-        // }
-        // hideNext = !hideNext;
-        // if (hideNext) pmt.HideCustomSelection();
-        // else pmt.ShowCustomSelection();
     }
 
     CGameUILayer@ FindUpdateCustomSelectionUILayer(CSmEditorPluginMapType@ pmt) {
@@ -173,29 +141,29 @@ class CustomSelectionMgr {
         return layer;
     }
 
-    string GenUpdateCustomSelectionML(nat3 s, nat3 e) {
-        return (
-            // "<mainialink version=\"3\" page=\"EppUpdateCustomSelection\">\n"
-            // "<script><!--\n"
-            "main() {\n"
-            " log(\"mian test\");"
-            " declare Int3 Start = {start};\n"
-            " declare Int3 End = {end};\n"
-            " CustomSelectionCoords.Clear();\n"
-            " for (X, Start.X, End.X) {\n"
-            "  for (Y, Start.Y, End.Y) {\n"
-            "   for (Z, Start.Z, End.Z) {\n"
-            "    CustomSelectionCoords.add(<X, Y, Z>);\n"
-            "   }\n"
-            "  }\n"
-            " }\n"
-            "}\n"
-            // "--></script>\n"
-            // "</manialink>"
-        ).Replace("{start}", s.ToString())
-         .Replace("{end}", e.ToString())
-         ;
-    }
+    // string GenUpdateCustomSelectionML(nat3 s, nat3 e) {
+    //     return (
+    //         // "<mainialink version=\"3\" page=\"EppUpdateCustomSelection\">\n"
+    //         // "<script><!--\n"
+    //         "main() {\n"
+    //         " log(\"mian test\");"
+    //         " declare Int3 Start = {start};\n"
+    //         " declare Int3 End = {end};\n"
+    //         " CustomSelectionCoords.Clear();\n"
+    //         " for (X, Start.X, End.X) {\n"
+    //         "  for (Y, Start.Y, End.Y) {\n"
+    //         "   for (Z, Start.Z, End.Z) {\n"
+    //         "    CustomSelectionCoords.add(<X, Y, Z>);\n"
+    //         "   }\n"
+    //         "  }\n"
+    //         " }\n"
+    //         "}\n"
+    //         // "--></script>\n"
+    //         // "</manialink>"
+    //     ).Replace("{start}", s.ToString())
+    //      .Replace("{end}", e.ToString())
+    //      ;
+    // }
 
     void Disable() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -223,7 +191,6 @@ class CustomSelectionMgr {
     };
 
     void OnFillSelectionComplete(CGameCtnEditorFree@ editor, CSmEditorPluginMapType@ pmt) {
-        if (savedBlock is null) return;
         int3 coord;
         nat3 c;
 
@@ -239,7 +206,7 @@ class CustomSelectionMgr {
         } else if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Item) {
             @item = selectedItemModel.AsItemModel();
         }
-        if (block is null) return;
+        if (block is null && macroblock is null && item is null) return;
         dev_trace('Running OnFillSelectionComplete');
         for (uint i = 0; i < pmt.CustomSelectionCoords.Length; i++) {
             c = pmt.CustomSelectionCoords[i];
