@@ -1,14 +1,14 @@
 - shaded_geoms in S2M
 
-- place macroblock air mode
+- [x] place macroblock air mode
 - filter inventory
-- favorites for inventory
+- [ ] favorites for inventory
 - check item placed when selecting in manip mesh
 - ensure item saved before editing properties
-- custom selection
+- [x] custom selection
 - recently selected blocks and items history
 - [x] Quick idea please, would it be possible to redirect to the "Picked Item" tab when clicking this button on the "Blocks & Items" tab?
-- edit block coord of item
+- [x] edit block coord of item
 
 
 - ~~copy placement params from 1 item to another~~
@@ -18,6 +18,8 @@
 
 - scenery spray
   - mouse button to apply scenery (maybe blocks, maybe items)
+  - trees but randomize each click
+
 
 - media tracker
   - auto label text stuff

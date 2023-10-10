@@ -55,8 +55,22 @@ class DevMiscTab : Tab {
     }
 
     void DrawInner() override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (UI::Button("Remove 50% of items")) {
             startnew(CoroutineFunc(Remove50PctItemsTest));
+        }
+        UI::Separator();
+        if (UI::Button("Explore PluginMapManager")) {
+            auto pmm = Editor::GetPluginMapManager(editor);
+            if (pmm is null) NotifyError("PluginMapManager was null!");
+            else ExploreNod("PluginMapManager", pmm);
+        }
+        UI::Separator();
+        if (UI::Button("disable thumb update")) {
+            Editor::DisableMapThumbnailUpdate();
+        }
+        if (UI::Button("enable thumb update")) {
+            Editor::EnableMapThumbnailUpdate();
         }
     }
 

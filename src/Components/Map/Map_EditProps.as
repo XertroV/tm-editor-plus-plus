@@ -20,7 +20,13 @@ class MapEditPropsTab : Tab {
     nat3 newSize;
     string lastMapUid;
 
+    bool f_UnlockStripMetadata = false;
+
     bool m_ShowOffzone = false;
+
+    string TimeFormatSecs(int64 t) {
+        return Time::Format(t, false, true, true, false);
+    }
 
     void DrawInner() override {
         CGameCtnChallenge@ map = null;
@@ -40,7 +46,6 @@ class MapEditPropsTab : Tab {
         CopiableLabeledPtr(map);
 #endif
 
-
         UI::Separator();
 
         UI::Text("Map: " + ColoredString(map.MapName));
@@ -50,7 +55,36 @@ class MapEditPropsTab : Tab {
         UI::Text("Author: " + map.AuthorNickName);
         UI::Text("Filename: " + map.MapInfo.FileName);
         UI::Text("Thumbnail (KB): " + map.Thumbnail_KBytes);
+        UI::SameLine();
+        UI::Text(FromML::lockedThumbnail ? Icons::Lock : Icons::Unlock);
+        UI::SameLine();
+        if (UX::SmallButton((FromML::lockedThumbnail ? "Unlock" : "Lock") + "###thumbnail-lock-btn")) {
+            ToML::SendMessage("LockThumbnail", {tostring(!FromML::lockedThumbnail)});
+        }
+        AddSimpleTooltip("When locked, the thumbnail will not be updated when the map is saved. This setting is saved as metadata on the map. Only works when the E++ Editor Plugin is active.");
+        SameLineNewIndicator();
         UI::Text("LightMapCacheSmall (KB): " + map.LightMapCacheSmall_KBytes);
+        UI::Text("Time spent mapping: " + TimeFormatSecs(FromML::mappingTime));
+        if (UI::IsItemHovered()) {
+            AddSimpleTooltip("Editor: " + TimeFormatSecs(FromML::mappingTimeMapping) + " / Testing: " + TimeFormatSecs(FromML::mappingTimeTesting) + " / Validating: " + TimeFormatSecs(FromML::mappingTimeValidating));
+        }
+        SameLineNewIndicator();
+        UI::Text("Times loaded map in editor: " + FromML::pluginLoads);
+        UI::Text("Times tested/validated map: " + FromML::pgSwitches);
+
+        if (UX::SmallButton((f_UnlockStripMetadata ? Icons::Unlock : Icons::Lock) + "###unlock-strip-meta")) {
+            f_UnlockStripMetadata = !f_UnlockStripMetadata;
+        }
+        UI::SameLine();
+        UI::BeginDisabled(!f_UnlockStripMetadata);
+        if (UX::SmallButton("Clear Metadata")) {
+            f_UnlockStripMetadata = false;
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            editor.PluginMapType.ClearMapMetadata();
+            ToML::ResyncPlease();
+        }
+        UI::EndDisabled();
+        SameLineNewIndicator();
 
         UI::Unindent();
 

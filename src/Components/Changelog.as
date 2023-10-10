@@ -2,7 +2,7 @@ class ChangelogTab : Tab {
     Json::Value@ versions;
 
     ChangelogTab(TabGroup@ p) {
-        super(p, "Changelog", Icons::QuestionCircle);
+        super(p, "Changelog" + NewIndicator, Icons::QuestionCircle);
     }
 
     void DrawInner() override {

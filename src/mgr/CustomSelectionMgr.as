@@ -16,7 +16,7 @@ class CustomSelectionMgr {
     }
 
     UI::InputBlocking OnFillHotkey() {
-        Enable();
+        startnew(CoroutineFunc(Enable));
         @doneCB = OnCustomSelectionDoneF(this.OnFillSelectionComplete);
         dev_trace('running enable hotkey');
         Editor::EnableCustomCameraInputs();
@@ -28,22 +28,21 @@ class CustomSelectionMgr {
         return active;
     }
 
-    ReferencedNod@ savedBlock;
     CGameEditorPluginMap::EPlaceMode origPlacementMode;
 
 
-    void Enable(vec3 color = vec3(.5, .8, .3)) {
+    void Enable() {
         if (active) {
             NotifyWarning("Cannot enable a new custom selection while one is still active.");
             return;
         }
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        @savedBlock = ReferencedNod(editor.PluginMapType.Cursor.BlockModel);
         origPlacementMode = editor.PluginMapType.PlaceMode;
         if (SupportedFillModes.Find(origPlacementMode) < 0) {
             NotifyWarning("Place mode not supported for fill: " + tostring(origPlacementMode));
         }
         Editor::CustomSelectionCoords_Clear(editor);
+        editor.PluginMapType.CustomSelectionCoords.Add(nat3(uint(-1)));
         Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::CustomSelection);
         editor.PluginMapType.CustomSelectionRGB = vec3(1.);
         editor.PluginMapType.ShowCustomSelection();
@@ -82,17 +81,20 @@ class CustomSelectionMgr {
 
     protected bool _cancel = false;
     void WatchLoop() {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto app = GetApp();
+        auto input = app.InputPort;
+
+        auto editor = cast<CGameCtnEditorFree>(app.Editor);
         auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
         // Editor::EnableCustomCameraInputs();
-        while (!UI::IsMouseDown() && ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) !is null) && !_cancel) {
+        while (!(UI::IsMouseDown() && int(input.MouseVisibility) == 0) && ((@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) && !_cancel) {
             if (pmt.PlaceMode != CGameEditorPluginMap::EPlaceMode::CustomSelection) break;
             currentlySelected = editor.PluginMapType.CustomSelectionCoords.Length;
             startCoord = editor.PluginMapType.CursorCoord;
             yield();
         }
         if (!_cancel) dev_trace('mouse is now down');
-        while (UI::IsMouseDown() && ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) !is null) && !_cancel) {
+        while (UI::IsMouseDown() && ((@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) && !_cancel) {
             if (pmt.PlaceMode != CGameEditorPluginMap::EPlaceMode::CustomSelection) break;
             UpdateSelection(editor, pmt, startCoord, pmt.CursorCoord);
             auto minPos = CoordToPos(updateMin);
@@ -108,10 +110,11 @@ class CustomSelectionMgr {
                 warn('catch in custom selection done callback: ' + getExceptionInfo());
             }
             Editor::CustomSelectionCoords_Clear(editor);
-            pmt.HideCustomSelection();
             pmt.PlaceMode = origPlacementMode;
         }
-        @savedBlock = null;
+        if (editor !is null) {
+            pmt.HideCustomSelection();
+        }
         active = false;
         @doneCB = null;
         _cancel = false;

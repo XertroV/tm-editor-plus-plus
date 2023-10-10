@@ -3,6 +3,7 @@
 void nvgCircleWorldPos(vec3 pos, vec4 col = vec4(1, .5, 0, 1)) {
     auto uv = Camera::ToScreen(pos);
     if (uv.z < 0) {
+        nvg::Reset();
         nvg::BeginPath();
         nvg::FillColor(col);
         nvg::Circle(uv.xy, 5);
@@ -63,6 +64,8 @@ void nvgMoveToWorldPos(vec3 pos) {
 }
 
 void nvgDrawCoordHelpers(mat4 &in m, float size = 10.) {
+    nvg::Reset();
+    nvg::StrokeWidth(3.0);
     vec3 beforePos = nvgLastWorldPos;
     vec3 pos =  (m * vec3()).xyz;
     vec3 up =   (m * (vec3(0,1,0) * size)).xyz;
@@ -78,6 +81,8 @@ void nvgDrawCoordHelpers(mat4 &in m, float size = 10.) {
 }
 
 void nvgDrawBlockBox(mat4 &in m, vec3 size) {
+    nvg::Reset();
+    nvg::StrokeWidth(2.0);
     vec3 prePos = nvgLastWorldPos;
     vec3 pos = (m * vec3()).xyz;
     nvgMoveToWorldPos(pos);

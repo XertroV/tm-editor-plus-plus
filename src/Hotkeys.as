@@ -5,10 +5,10 @@ UI::InputBlocking CheckHotkey(VirtualKey key) {
     bool ctrlDown = IsCtrlDown();
     bool altDown = IsAltDown();
     bool shiftDown = IsShiftDown();
-    trace('ctrl: ' + ctrlDown + ", alt: " + altDown + ", shift: " + shiftDown);
+    dev_trace('ctrl: ' + ctrlDown + ", alt: " + altDown + ", shift: " + shiftDown);
     auto f = GetHotkeyFunction(key, ctrlDown, altDown, shiftDown);
     if (f is null) {
-        trace('null hotkey function');
+        dev_trace('null hotkey function');
         return UI::InputBlocking::DoNothing;
     }
     trace('running hotkey f');

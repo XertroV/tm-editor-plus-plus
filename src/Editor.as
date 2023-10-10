@@ -100,6 +100,12 @@ namespace Editor {
         Free = 3
     }
 
+    const uint16 O_EDITOR_ITEM_PLACEMENT_OFFSET = GetOffset("CGameCtnEditorFree", "EnableMapProcX2") - (0x1254 - 0x1238);  // item mode offset originally 0x1238
+    ItemMode GetItemPlacementMode_Raw(CGameCtnEditorFree@ editor) {
+        if (!IsInAnyItemPlacementMode(editor, true)) return ItemMode::None;
+        return ItemMode(Dev::GetOffsetUint32(editor, O_EDITOR_ITEM_PLACEMENT_OFFSET) + 1);
+    }
+
     ItemMode GetItemPlacementMode() {
         try {
             auto root = cast<CGameCtnEditorFree>(GetApp().Editor).EditorInterface.InterfaceRoot;
@@ -412,5 +418,12 @@ namespace Editor {
     void DoItemEditorAction(CGameEditorItem@ ieditor, ItemEditorAction action) {
         if (ieditor is null) return;
         Dev::SetOffset(ieditor, 0x8F0, uint(action));
+    }
+
+    // Editor (Maniascript) Plugins
+
+    const uint16 O_EDITOR_PLUGIN_MAP_MGR = GetOffset("CGameCtnEditorFree", "ForcedPluginsSettings") + 0x18;
+    CGameEditorPluginMapManager@ GetPluginMapManager(CGameCtnEditorFree@ editor) {
+        return cast<CGameEditorPluginMapManager>(Dev::GetOffsetNod(editor, O_EDITOR_PLUGIN_MAP_MGR));
     }
 }

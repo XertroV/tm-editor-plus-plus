@@ -23,7 +23,9 @@ class GlobalPlacementOptionsTab : EffectTab {
         pmt.ForceMacroblockColor = UI::Checkbox("ForceMacroblockColor", pmt.ForceMacroblockColor);
         pmt.ForceMacroblockLightmapQuality = UI::Checkbox("ForceMacroblockLightmapQuality", pmt.ForceMacroblockLightmapQuality);
         editor.PasteAsFreeMacroBlock = UI::Checkbox("PasteAsFreeMacroBlock", editor.PasteAsFreeMacroBlock);
-        g_PlaceMacroblockAirModeActive = UI::Checkbox("Place Macroblocks in Air Mode", g_PlaceMacroblockAirModeActive);
+        g_PlaceMacroblockAirModeActive = UI::Checkbox("Place Macroblocks in Air Mode" + NewIndicator, g_PlaceMacroblockAirModeActive);
+        S_HelpPlaceItemsOnFreeBlocks = UI::Checkbox("Help place autorotated items on free blocks" + NewIndicator, S_HelpPlaceItemsOnFreeBlocks);
+        AddSimpleTooltip("Normally, the game doesn't let you place freelay anchorable and autorotated items on free blocks. Checking this box will enable the helper so that you can place these items.\n\nItem Placement Requirements: 0 for GridSnap_HStep and GridSnap_VStep, AutoRotation=true, GhostMode=false, IsFreelyAnchorable=true.");
 
         // todo: paste as air macro block
 
@@ -62,8 +64,9 @@ class GlobalPlacementOptionsTab : EffectTab {
     }
 }
 
-// true to block click
+// true => block click
 bool CheckPlaceMacroblockAirMode() {
+    // dev_trace('CheckPlaceMacroblockAirMode');
     if (!g_PlaceMacroblockAirModeActive) return false;
     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
     auto pmt = editor.PluginMapType;
@@ -73,4 +76,58 @@ bool CheckPlaceMacroblockAirMode() {
         return true;
     }
     return false;
+}
+
+[Setting hidden]
+bool S_HelpPlaceItemsOnFreeBlocks = false;
+
+// true => block click
+bool CheckPlacingItemFreeMode() {
+    // dev_trace('CheckPlacingItemFreeMode');
+    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    if (!S_HelpPlaceItemsOnFreeBlocks || editor is null) return false;
+    auto pmt = editor.PluginMapType;
+    if (Editor::IsInAnyItemPlacementMode(editor, true) && Editor::GetItemPlacementMode() == Editor::ItemMode::Normal) {
+        auto coord = Nat3ToInt3(pmt.CursorCoord);
+        auto inv = Editor::GetInventoryCache();
+        auto article = inv.GetBlockByName("TrackWallSlopeUTop");
+        auto bm = cast<CGameCtnBlockInfo>(article.GetCollectorNod());
+        bool shouldPlace = pmt.CanPlaceBlock_NoDestruction(bm, coord, pmt.CursorDir, false, 0);
+        dev_trace('shouldPlace: ' + shouldPlace);
+        if (shouldPlace) {
+            bool didPlace = pmt.PlaceBlock_NoDestruction(bm, coord, pmt.CursorDir);
+            dev_trace('didPlace: ' + didPlace);
+            if (didPlace) {
+                startnew(_WatchAndCleanUp, array<nat3> = {pmt.CursorCoord}).WithRunContext(Meta::RunContext::AfterMainLoop);
+                ExtraUndoFix::DisableUndo();
+            }
+        }
+    } else {
+        // dev_trace('not in item mode');
+    }
+    return false;
+}
+
+
+void _WatchAndCleanUp(ref@ r) {
+    ExtraUndoFix::EnableUndo();
+    auto coord = cast<nat3[]>(r)[0];
+    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    auto pmt = editor.PluginMapType;
+    auto inv = Editor::GetInventoryCache();
+    auto article = inv.GetBlockByName("TrackWallSlopeUTop");
+    auto bm = cast<CGameCtnBlockInfo>(article.GetCollectorNod());
+    auto map = editor.Challenge;
+    CGameCtnAnchoredObject@[] moved;
+    for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
+        if (map.AnchoredObjects[i].BlockUnitCoord == coord) {
+            moved.InsertLast(map.AnchoredObjects[i]);
+            map.AnchoredObjects[i].BlockUnitCoord.x = uint(-1);
+        }
+    }
+    pmt.RemoveBlockSafe(bm, Nat3ToInt3(coord), pmt.CursorDir);
+    for (uint i = 0; i < moved.Length; i++) {
+        moved[i].BlockUnitCoord.x = coord.x;
+    }
+    pmt.AutoSave();
 }

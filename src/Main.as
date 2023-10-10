@@ -18,6 +18,9 @@ void Main() {
     RegisterOnEditorUnloadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
 
     ExtraUndoFix::OnLoad();
+    Editor::OnPluginLoadSetUpMapThumbnailHook();
+    SetUpEditMapIntercepts();
+    startnew(Editor::OffzonePatch::Apply);
 
     sleep(500);
     CallbacksEnabledPostInit = true;
@@ -35,13 +38,14 @@ void Unload() {
     // hmm not sure this is a great idea b/c some of it might be used by the game.
     // still, openplanet frees it anyway, so i guess nbd.
     FreeAllAllocated();
-    // PatchEditorInput::Unload();
-    // MLHook::UnregisterMLHooksAndRemoveInjectedML();
-    // CleanupEditorInputPatch();
+    Editor::EnableMapThumbnailUpdate();
+    Editor::OffzonePatch::Unapply();
 }
 
 uint lastInItemEditor = 0;
 bool everEnteredEditor = false;
+uint lastTimeEnteredEditor = 0;
+bool dismissedPluginEnableRequest = false;
 
 void RenderEarly() {
     if (!UserHasPermissions) return;
@@ -79,6 +83,7 @@ void RenderEarly() {
         EditorPriv::ResetRefreshUnsafe();
         Event::RunOnEditorLoadCbs();
         everEnteredEditor = true;
+        lastTimeEnteredEditor = Time::Now;
     } else if (LeavingEditor) {
         Event::RunOnEditorUnloadCbs();
     }
@@ -155,7 +160,10 @@ bool g_IsDragging = false;
 bool g_WasDragging = false;
 
 UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
-    bool block = down && button == 0 && CheckPlaceMacroblockAirMode();
+    bool lmbDown = down && button == 0;
+    bool block = lmbDown && CheckPlaceMacroblockAirMode();
+    block = (lmbDown && CheckPlacingItemFreeMode()) || block;
+
     block = block || g_IsDragging || g_WasDragging;
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
     // print('mb ' + (down ? 'down' : 'up'));
@@ -192,13 +200,14 @@ bool[] hotkeysFlags = array<bool>(256);
 /** Called whenever a key is pressed on the keyboard. See the documentation for the [`VirtualKey` enum](https://openplanet.dev/docs/api/global/VirtualKey).
 */
 UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
-    if (GetApp().Editor is null) return UI::InputBlocking::DoNothing;
+    auto app = GetApp();
+    if (app.Editor is null) return UI::InputBlocking::DoNothing;
     bool block = false;
-    block = block || (S_BlockEscape && down && key == VirtualKey::Escape);
+    block = block || (S_BlockEscape && down && key == VirtualKey::Escape && app.CurrentPlayground is null);
     // trace('key down: ' + tostring(key));
     if (down && hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
-        block = block || CheckHotkey(key) == UI::InputBlocking::Block;
+        block = CheckHotkey(key) == UI::InputBlocking::Block || block;
     }
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
 }

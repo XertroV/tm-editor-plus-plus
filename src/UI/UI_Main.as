@@ -102,6 +102,22 @@ void UI_Main_Render() {
         UI::End();
     }
 
+    auto now = Time::Now;
+    if (IsInEditor && now - lastTimeEnteredEditor > 2000 && now - FromML::lastEventTime > 2000 && !dismissedPluginEnableRequest) {
+        vec2 size = vec2(300, 120);
+        vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        pos.y = 200;
+        UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);
+        UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
+        if (UI::Begin("Please Load E++ Editor Plugin", UI::WindowFlags::NoCollapse | UI::WindowFlags::NoResize)) {
+            UI::TextWrapped("\\$f80" + Icons::ExclamationTriangle + "\\$z Please enable the E++ Editor Plugin.\n\\$8f8 Press 'P', then toggle 'EditorPlusPlus' on.");
+            if (UI::Button("Dismiss this msg")) {
+                dismissedPluginEnableRequest = true;
+            }
+        }
+        UI::End();
+    }
+
     UI::PopStyleColor(2);
 }
 
@@ -326,16 +342,17 @@ TabGroup@ CreateRootTabGroup() {
 
     EditorMiscTab(root);
 
-    TodoTab(root, "Apply Transformation", "f(x)", "apply a transformation to a Source of blocks/items");
+    // TodoTab(root, "Apply Transformation", "f(x)", "apply a transformation to a Source of blocks/items");
 
-    TodoTab(root, "Set B/I Properties", Icons::PencilSquareO, "mass-apply properties like color or LM quality.");
-    TodoTab(root, "Editor Settings", Icons::Cogs, "change hidden and regular editor settings");
-    TodoTab(root, "Medals & Validation (Plugin)", "\\$fb4"+Icons::Circle+"\\$z", "be a demo plugin and do the same thing as Medals Editor");
-    // TodoTab(root, "Ranomizer", "\\$bff"+Icons::Random+"\\$z", "randomize the type of blocks/items for newly placed ones, or existing ones, according to some filter / conditions.");
-    TodoTab(root, "Validation Runs", Icons::Car, 'track validation runs so you dont lose validation times');
+    // TodoTab(root, "Set B/I Properties", Icons::PencilSquareO, "mass-apply properties like color or LM quality.");
+    // TodoTab(root, "Editor Settings", Icons::Cogs, "change hidden and regular editor settings");
+    // TodoTab(root, "Medals & Validation (Plugin)", "\\$fb4"+Icons::Circle+"\\$z", "be a demo plugin and do the same thing as Medals Editor");
+    // // TodoTab(root, "Ranomizer", "\\$bff"+Icons::Random+"\\$z", "randomize the type of blocks/items for newly placed ones, or existing ones, according to some filter / conditions.");
+    // TodoTab(root, "Validation Runs", Icons::Car, 'track validation runs so you dont lose validation times');
 
-    TodoTab(root, "For Devs", Icons::QuestionCircle, "-- ignore that.\n\nI want to make a decent export system for this plugin so it's exensible. The idea is that it's easy to add a new root tab, or add some feature to an existing tab group. Medals & validation is an example -- i'm going to use that as a test plugin to implement the interface. Some work has already been done, but testing volunteers and feedback/ideas would be great. Check out the code (particularly src/Editor/*.as), there's lots of stuff set up for export, like convenience functions and ones for reading/writing values, camera controls, in-map block/item refreshing, map saving and reloading, etc.");
+    // TodoTab(root, "For Devs", Icons::QuestionCircle, "-- ignore that.\n\nI want to make a decent export system for this plugin so it's exensible. The idea is that it's easy to add a new root tab, or add some feature to an existing tab group. Medals & validation is an example -- i'm going to use that as a test plugin to implement the interface. Some work has already been done, but testing volunteers and feedback/ideas would be great. Check out the code (particularly src/Editor/*.as), there's lots of stuff set up for export, like convenience functions and ones for reading/writing values, camera controls, in-map block/item refreshing, map saving and reloading, etc.");
 
+    HotkeysTab(root);
     EditorControlsDocsTab(root);
 
 #if SIG_DEVELOPER

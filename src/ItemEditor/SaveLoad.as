@@ -185,6 +185,7 @@ CControlBase@ GetFrameChildFromChain(CControlContainer@ frame, uint[]@ childs) {
         auto childIx = childs[i];
         // trace('getting child ' + i + ' at ix ' + childIx);
         if (i < childs.Length - 1) {
+            if (childIx >= next.Childs.Length) return null;
             @next = cast<CControlContainer>(next.Childs[childIx]);
             // trace('got child: ' + next.IdName);
         } else {
