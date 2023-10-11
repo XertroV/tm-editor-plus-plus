@@ -2,6 +2,22 @@ class EditorMiscTab : Tab {
     EditorMiscTab(TabGroup@ parent) {
         super(parent, "Editor Misc", Icons::Cog + Icons::Camera);
         RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad), this.tabName);
+        startnew(CoroutineFunc(this.WatchForVarResets));
+    }
+
+    void WatchForVarResets() {
+        while (true) {
+            yield();
+            if (!IsInEditor) continue;
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            CheckSetHideBlockHelpers(editor);
+        }
+    }
+
+    void CheckSetHideBlockHelpers(CGameCtnEditorFree@ editor) {
+        if (S_ControlBlockHelpers && S_HideBlockHelpers != editor.HideBlockHelpers) {
+            editor.HideBlockHelpers = S_HideBlockHelpers;
+        }
     }
 
     void OnEditorLoad() {
@@ -63,6 +79,7 @@ class EditorMiscTab : Tab {
 
         S_DefaultToAirMode = UI::Checkbox("Default to Air mode for blocks", S_DefaultToAirMode);
 
+        CheckSetHideBlockHelpers(editor);
         editor.HideBlockHelpers = UI::Checkbox("Hide Block Helpers", editor.HideBlockHelpers);
 
         S_ControlBlockHelpers = UI::Checkbox("Save and persist Hide Block Helpers", S_ControlBlockHelpers);
