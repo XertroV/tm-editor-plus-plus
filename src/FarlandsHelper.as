@@ -1,3 +1,8 @@
+/**
+ * bugs:
+ * - sometimes the input is missed and (presumably) the cursor is reset before next block is placed
+ */
+
 namespace FarlandsHelper {
     float CustomRotation;
     bool FL_Helper_Active;
@@ -147,7 +152,7 @@ namespace FarlandsHelper {
         if (!FarlandsHelper::ApplyAddBlockHook()) {
             warn("FAILED TO APPLY FARLANDS ADD BLOCK PATCH");
         } else {
-            warn("Applied on block hook");
+            dev_trace("Applied on block hook");
         }
 
         _addBlockSetPos = pos;

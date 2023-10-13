@@ -25,8 +25,9 @@ class GlobalPlacementOptionsTab : EffectTab {
         editor.PasteAsFreeMacroBlock = UI::Checkbox("PasteAsFreeMacroBlock", editor.PasteAsFreeMacroBlock);
         g_PlaceMacroblockAirModeActive = UI::Checkbox("Place Macroblocks in Air Mode" + NewIndicator, g_PlaceMacroblockAirModeActive);
         S_HelpPlaceItemsOnFreeBlocks = UI::Checkbox("Help place autorotated items on free blocks" + NewIndicator, S_HelpPlaceItemsOnFreeBlocks);
-        S_EnableInfinitePrecisionFreeBlocks = UI::Checkbox("Enable infinite precision for freeblock placement" + NewIndicator, S_EnableInfinitePrecisionFreeBlocks);
         AddSimpleTooltip("Normally, the game doesn't let you place freelay anchorable and autorotated items on free blocks. Checking this box will enable the helper so that you can place these items.\n\nItem Placement Requirements: 0 for GridSnap_HStep and GridSnap_VStep, AutoRotation=true, GhostMode=false, IsFreelyAnchorable=true.");
+        S_EnableInfinitePrecisionFreeBlocks = UI::Checkbox("Enable infinite precision for freeblock placement" + NewIndicator, S_EnableInfinitePrecisionFreeBlocks);
+        AddSimpleTooltip("Overwrite the cursor position so you can preview and place blocks outside the stadium. You should also unlock the editor camera (under Editor Misc)");
 
         // todo: paste as air macro block
 
