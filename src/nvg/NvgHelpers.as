@@ -12,6 +12,15 @@ void nvgCircleWorldPos(vec3 pos, vec4 col = vec4(1, .5, 0, 1)) {
     }
 }
 
+void nvgCircleScreenPos(vec2 xy, vec4 col = vec4(1, .5, 0, 1)) {
+    nvg::Reset();
+    nvg::BeginPath();
+    nvg::FillColor(col);
+    nvg::Circle(xy, 5);
+    nvg::Fill();
+    nvg::ClosePath();
+}
+
 // void nvgCircleWorldPos(vec3 pos, vec4 col, vec4 strokeCol) {
 //     auto uv = Camera::ToScreen(pos);
 //     if (uv.z < 0) {
@@ -103,4 +112,20 @@ void nvgDrawBlockBox(mat4 &in m, vec3 size) {
     nvgMoveToWorldPos((m * (size * vec3(0, 0, 1))).xyz);
     nvgToWorldPos((m * (size * vec3(0, 1, 1))).xyz);
     nvgMoveToWorldPos(prePos);
+}
+
+
+
+// this does not seem to be expensive
+const float nTextStrokeCopies = 32;
+
+void DrawTextWithStroke(const vec2 &in pos, const string &in text, vec4 textColor, float strokeWidth, vec4 strokeColor = vec4(0, 0, 0, 1)) {
+    nvg::FillColor(strokeColor);
+    for (float i = 0; i < nTextStrokeCopies; i++) {
+        float angle = TAU * float(i) / nTextStrokeCopies;
+        vec2 offs = vec2(Math::Sin(angle), Math::Cos(angle)) * strokeWidth;
+        nvg::Text(pos + offs, text);
+    }
+    nvg::FillColor(textColor);
+    nvg::Text(pos, text);
 }

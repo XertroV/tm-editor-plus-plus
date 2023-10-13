@@ -1,7 +1,9 @@
 namespace Editor {
 
-    uint16 FreeBlockPosOffset = GetOffset("CGameCtnBlock", "Dir") + 0x8;
-    uint16 FreeBlockRotOffset = FreeBlockPosOffset + 0xC;
+    const uint16 FreeBlockPosOffset = GetOffset("CGameCtnBlock", "Dir") + 0x8;
+    const uint16 FreeBlockRotOffset = FreeBlockPosOffset + 0xC;
+    const uint16 O_CGameCtnBlock_BlockUnitsEOffset = GetOffset("CGameCtnBlock", "BlockUnitsE");
+    const uint16 O_CGameCtnBlock_CoordOffset = GetOffset("CGameCtnBlock", "Coord");
 
     vec3 GetBlockLocation(CGameCtnBlock@ block, bool forceFree = false) {
         if (IsBlockFree(block) || forceFree) {
@@ -184,6 +186,15 @@ namespace Editor {
     // Count of *placed* blocks (excludes grass), starts at 0 and increments
     uint GetBlockPlacedCountIndex(CGameCtnBlock@ block) {
         return Dev::GetOffsetUint32(block, 0xAC);
+    }
+
+    void ConvertNormalToFree(CGameCtnBlock@ block, vec3 pos, vec3 rot) {
+        // zero block uints at 0x50
+        Dev::SetOffset(block, O_CGameCtnBlock_BlockUnitsEOffset, uint64(0));
+        Dev::SetOffset(block, O_CGameCtnBlock_BlockUnitsEOffset + 0x8, uint64(0));
+        Dev::SetOffset(block, O_CGameCtnBlock_CoordOffset, nat3(-1, 0, -1));
+        Dev::SetOffset(block, FreeBlockPosOffset, pos);
+        Dev::SetOffset(block, FreeBlockRotOffset, rot);
     }
 }
 

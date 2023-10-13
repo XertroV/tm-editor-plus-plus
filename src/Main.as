@@ -21,6 +21,7 @@ void Main() {
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
     startnew(Editor::OffzonePatch::Apply);
+    startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
 
     sleep(500);
     CallbacksEnabledPostInit = true;
@@ -40,6 +41,8 @@ void Unload() {
     FreeAllAllocated();
     Editor::EnableMapThumbnailUpdate();
     Editor::OffzonePatch::Unapply();
+    FarlandsHelper::Unapply();
+    FarlandsHelper::UnapplyAddBlockHook();
 }
 
 uint lastInItemEditor = 0;
@@ -84,6 +87,7 @@ void RenderEarly() {
         Event::RunOnEditorLoadCbs();
         everEnteredEditor = true;
         lastTimeEnteredEditor = Time::Now;
+        CacheMapBounds();
     } else if (LeavingEditor) {
         Event::RunOnEditorUnloadCbs();
     }
@@ -163,6 +167,7 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     bool lmbDown = down && button == 0;
     bool block = lmbDown && CheckPlaceMacroblockAirMode();
     block = (lmbDown && CheckPlacingItemFreeMode()) || block;
+    block = (lmbDown && FarlandsHelper::CheckPlacingFreeBlock()) || block;
 
     block = block || g_IsDragging || g_WasDragging;
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;

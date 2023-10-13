@@ -3,6 +3,12 @@ namespace Editor {
         return CamState(editor.OrbitalCameraControl);
     }
 
+    void UnlockCamera(CGameControlCameraEditorOrbital@ occ) {
+        Dev::SetOffset(occ, GetOffset(occ, "m_TargetedPosition") + 0x18, vec2(-90000000)); // occ_MinXZ
+        Dev::SetOffset(occ, GetOffset(occ, "m_TargetedPosition") + 0x20, vec2(90000000)); // occ_MaxXZ
+        Dev::SetOffset(occ, GetOffset(occ, "m_TargetedPosition") + 0x28, vec2(-90000000, 90000000)); // occ_YBounds
+    }
+
     void EnableCustomCameraInputs() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
@@ -19,6 +25,10 @@ namespace Editor {
 
     void SetCamTargetedPosition(vec3 pos) {
         cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType.CameraTargetPosition = pos;
+        // if (MathX::Within(pos, vec3(0), g_MapBounds)) {
+        // } else {
+        //     cast<CGameCtnEditorFree>(GetApp().Editor).OrbitalCameraControl.m_TargetedPosition = pos;
+        // }
     }
 
     void SetCamTargetedDistance(float dist) {

@@ -47,3 +47,6 @@ bool S_ControlBlockHelpers = false;
 
 [Setting hidden]
 bool S_BlockEscape = false;
+
+[Setting hidden]
+bool S_EnableInfinitePrecisionFreeBlocks = false;

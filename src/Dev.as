@@ -243,6 +243,24 @@ class ReferencedNod {
 const uint16 O_MAP_OFFZONE_BUF_OFFSET = 0x690;
 const uint16 O_MAP_OFFZONE_SIZE_OFFSET = 0x680;
 const uint16 O_MAP_MTSIZE_OFFSET = 0x1F0;
+const uint16 O_MAP_COORD_SIZE_XY = 0x7B8;
+const uint16 O_MAP_EXTENDS_BELOW_0 = 0x7C0;
+
+/*
+todo: set flag to false and experiment with the other flag
+
+7F8: flag
+- when false
+=> load 7C8 (1.0f)
+
+
+
+
+some editor mode things (+BE8); tests like this:
+0x21, 0x20, 0x0x17, 0x16, 0x15, 0xA
+*/
+
+
 
 // buffer with map objects and LM mapping
 const uint16 O_LM_PIMP_Buf2 = 0xA8;

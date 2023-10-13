@@ -197,6 +197,12 @@ namespace Editor {
         return false;
     }
 
+    bool IsInFreeBlockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (checkEditMode && !IsInPlacementMode(editor)) return false;
+        auto pm = GetPlacementMode(editor);
+        return pm == CGameEditorPluginMap::EPlaceMode::FreeBlock;
+    }
+
     // checks placement mode, with optional edit mode checking
     bool IsInAnyItemPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
         return (!checkEditMode || IsInPlacementMode(editor))
