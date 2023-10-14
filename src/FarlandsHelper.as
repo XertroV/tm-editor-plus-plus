@@ -9,6 +9,13 @@ namespace FarlandsHelper {
     bool drawDebugFarlandsHelper = false;
     bool skipNextFrame = false;
 
+    bool IsCameraInFarlands() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto cam = Editor::GetCurrentCamState(editor);
+        // 210m is a little more than 3 * (256*32)^2;
+        return cam.Pos.LengthSquared() > 210000000;
+    }
+
     void CursorLoop() {
         if (!FarlandsHelper::Apply()) {
             warn("FAILED TO APPLY FARLANDS HELPER PATCH");
@@ -146,8 +153,9 @@ namespace FarlandsHelper {
         if (!cursor.UseFreePos) return false;
         if (!Editor::IsInFreeBlockPlacementMode(editor, true)) return false;
         if (cursor.Color != cursor.CannotPlaceNorJoinColor) return false;
-        auto pos = cursor.FreePosInMap;
-        auto rot = Editor::GetCursorRot(cursor).euler;
+        _addBlockSetPos = cursor.FreePosInMap;
+        @_prevCursorState = Editor::GetCursorRot(cursor);
+        _addBlockSetRot = _prevCursorState.euler;
 
         if (!FarlandsHelper::ApplyAddBlockHook()) {
             warn("FAILED TO APPLY FARLANDS ADD BLOCK PATCH");
@@ -155,11 +163,14 @@ namespace FarlandsHelper {
             dev_trace("Applied on block hook");
         }
 
-        _addBlockSetPos = pos;
-        _addBlockSetRot = rot;
-
+        // need to reset cursor rotations b/c some blocks need to be placed flat
+        cursor.AdditionalDir = CGameCursorBlock::EAdditionalDirEnum::P0deg;
+        cursor.Pitch = 0;
+        cursor.Roll = 0;
+        cursor.Dir = CGameCursorBlock::ECardinalDirEnum::North;
+        // choose a random spot in the map
         cursor.FreePosInMap = vec3(Math::Rand(0.0, g_MapBounds.x - 32.), Math::Rand(0.0, g_MapBounds.y - 32.), Math::Rand(0.0, g_MapBounds.z - 32.));
-
+        // attempt to avoid missing a click input
         skipNextFrame = true;
 
         return false;
@@ -206,6 +217,7 @@ namespace FarlandsHelper {
 
     vec3 _addBlockSetPos;
     vec3 _addBlockSetRot;
+    EditorRotation@ _prevCursorState;
 
     void OnAddBlockHook(uint64 rdx) {
         print('on add block hook');
@@ -225,6 +237,7 @@ namespace FarlandsHelper {
             dev_trace("unapplied on add block hook");
         }
         if (editor.Cursor is null) return;
+        _prevCursorState.SetCursor(editor.Cursor);
         editor.Cursor.FreePosInMap = _addBlockSetPos;
     }
 }

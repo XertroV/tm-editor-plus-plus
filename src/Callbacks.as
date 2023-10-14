@@ -14,6 +14,8 @@ ProcessBlock@[] blockCallbacks;
 string[] blockCallbackNames;
 ProcessNewSelectedItem@[] selectedItemChangedCbs;
 string[] selectedItemChangedCbNames;
+CoroutineFunc@[] onLeavingPlaygroundCbs;
+string[] onLeavingPlaygroundCbNames;
 // CoroutineFunc@[] selectedBlockChangedCbs;
 
 // set this shortly after loading the plugin
@@ -59,12 +61,18 @@ void RegisterItemChangedCallback(ProcessNewSelectedItem@ f, const string &in nam
     }
 }
 
+void RegisterOnLeavingPlaygroundCallback(CoroutineFunc@ f, const string &in name) {
+    if (f !is null) {
+        onLeavingPlaygroundCbs.InsertLast(f);
+        onLeavingPlaygroundCbNames.InsertLast(name);
+    }
+}
+
 // void RegisterBlockChangedCallback(CoroutineFunc@ f) {
 //     if (f !is null) {
 //         selectedBlockChangedCbs.InsertLast(f);
 //     }
 // }
-
 
 namespace Event {
     void RunOnEditorLoadCbs() {
@@ -116,6 +124,13 @@ namespace Event {
             selectedItemChangedCbs[i](itemModel);
         }
         trace("Finished OnSelectedItemChanged");
+    }
+    void RunOnLeavingPlaygroundCbs() {
+        trace("Running OnLeavingPlayground callbacks");
+        for (uint i = 0; i < onLeavingPlaygroundCbs.Length; i++) {
+            onLeavingPlaygroundCbs[i]();
+        }
+        trace("Finished OnEditorLoad callbacks");
     }
 }
 

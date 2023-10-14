@@ -49,6 +49,7 @@ uint lastInItemEditor = 0;
 bool everEnteredEditor = false;
 uint lastTimeEnteredEditor = 0;
 bool dismissedPluginEnableRequest = false;
+bool dismissedCamReturnToStadium = false;
 
 void RenderEarly() {
     if (!UserHasPermissions) return;
@@ -59,6 +60,7 @@ void RenderEarly() {
     auto meshEditor = cast<CGameEditorMesh>(anyEditor);
     auto currPg = cast<CSmArenaClient>(GetApp().CurrentPlayground);
 
+    WasInPlayground = IsInCurrentPlayground;
     IsInCurrentPlayground = currPg !is null;
 
     EnteringItemEditor = !IsInItemEditor;
@@ -79,6 +81,7 @@ void RenderEarly() {
     );
     // we didn't fire this on being in the item editor, but we sorta do need it to refresh the caches.
     EnteringEditor = EnteringEditor && IsInEditor;
+    IsLeavingPlayground = !IsInCurrentPlayground && WasInPlayground;
         // && (!everEnteredEditor || (Time::Now - lastInItemEditor) > 1000);
     auto LeavingEditor = WasInEditor && !IsInEditor;
 
@@ -94,6 +97,10 @@ void RenderEarly() {
 
     if (EnteringItemEditor) {
         Event::RunOnItemEditorLoadCbs();
+    }
+
+    if (IsLeavingPlayground) {
+        Event::RunOnLeavingPlaygroundCbs();
     }
 
     g_WasDragging = g_IsDragging;

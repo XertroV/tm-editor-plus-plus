@@ -5,3 +5,5 @@ bool IsInMeshEditor = false;
 bool IsInCurrentPlayground = false;
 bool EnteringEditor = false;
 bool EnteringItemEditor = false;
+bool IsLeavingPlayground = false;
+bool WasInPlayground = false;

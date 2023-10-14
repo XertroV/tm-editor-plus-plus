@@ -13,6 +13,12 @@ class CustomSelectionMgr {
     CustomSelectionMgr() {
         AddHotkey(VirtualKey::F, true, false, false, HotkeyFunction(this.OnFillHotkey));
         trace('added custom selection mgr hotkey, ' + tostring(VirtualKey::F) + ', ' + int(VirtualKey::F));
+        RegisterOnLeavingPlaygroundCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
+    }
+
+    void HideCustomSelection() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        editor.PluginMapType.HideCustomSelection();
     }
 
     UI::InputBlocking OnFillHotkey() {

@@ -118,6 +118,26 @@ void UI_Main_Render() {
         UI::End();
     }
 
+    if (IsInEditor && FarlandsHelper::IsCameraInFarlands() && !dismissedCamReturnToStadium) {
+        vec2 size = vec2(300, 120);
+        vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        pos.y = 100;
+        pos.x += 300;
+        UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);
+        UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
+        if (UI::Begin("Escape The Farlands", UI::WindowFlags::NoCollapse | UI::WindowFlags::NoResize)) {
+            UI::TextWrapped("\\$f80" + Icons::ExclamationTriangle + "\\$z Is the camera bugged? (You can always fix under Editor Misc tab)");
+            if (UI::Button("Return to Stadium")) {
+                Editor::SetCamTargetedPosition(vec3(128));
+            }
+            UI::SameLine();
+            if (UI::Button("Dismiss this msg")) {
+                dismissedCamReturnToStadium = true;
+            }
+        }
+        UI::End();
+    }
+
     UI::PopStyleColor(2);
 }
 
