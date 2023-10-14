@@ -99,7 +99,7 @@ void RenderEarly() {
         Event::RunOnItemEditorLoadCbs();
     }
 
-    if (IsLeavingPlayground) {
+    if (IsLeavingPlayground && IsInEditor) {
         Event::RunOnLeavingPlaygroundCbs();
     }
 

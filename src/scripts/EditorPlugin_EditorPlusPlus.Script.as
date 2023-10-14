@@ -38,6 +38,32 @@ Void LockThumbnail(Boolean _Lock) {
 	SendEvent("LockedThumbnail", [""^EPP_ThumbnailLocked]);
 }
 
+Void SaveCameraState() {
+	declare metadata EPP_CameraHAngle for Map = CameraHAngle;
+	declare metadata EPP_CameraVAngle for Map = CameraVAngle;
+	declare metadata EPP_CameraPosition for Map = CameraPosition;
+	declare metadata EPP_CameraTargetPosition for Map = CameraTargetPosition;
+	declare metadata EPP_CameraToTargetDistance for Map = CameraToTargetDistance;
+	EPP_CameraHAngle = CameraHAngle;
+	EPP_CameraVAngle = CameraVAngle;
+	EPP_CameraPosition = CameraPosition;
+	EPP_CameraTargetPosition = CameraTargetPosition;
+	EPP_CameraToTargetDistance = CameraToTargetDistance;
+}
+
+Void LoadCameraState() {
+	declare metadata EPP_CameraHAngle for Map = CameraHAngle;
+	declare metadata EPP_CameraVAngle for Map = CameraVAngle;
+	declare metadata EPP_CameraPosition for Map = CameraPosition;
+	declare metadata EPP_CameraTargetPosition for Map = CameraTargetPosition;
+	declare metadata EPP_CameraToTargetDistance for Map = CameraToTargetDistance;
+	CameraHAngle = EPP_CameraHAngle;
+	CameraVAngle = EPP_CameraVAngle;
+	// CameraPosition = EPP_CameraPosition;
+	CameraTargetPosition = EPP_CameraTargetPosition;
+	CameraToTargetDistance = EPP_CameraToTargetDistance;
+}
+
 Void SendAllInfo() {
 	declare metadata Integer EPP_EditorPluginLoads for Map = 0;
 	declare metadata Integer EPP_PlaygroundSwitches for Map = 0;
@@ -73,7 +99,7 @@ main() {
 
 	// log(""^This);
 	declare Boolean IsInPlayground = False;
-	declare Integer LastMappingTimeUpdate = Now;
+	declare Integer LastRegularValuesUpdate = Now;
 	// ! make sure to update SendAllInfo, too
 	declare metadata Integer EPP_EditorPluginLoads for Map = 0;
 	declare metadata Integer EPP_PlaygroundSwitches for Map = 0;
@@ -84,6 +110,8 @@ main() {
 	declare metadata Boolean EPP_ThumbnailLocked for Map = False;
 	declare Text[][] EPP_MsgQueue for ManialinkPage = [];
 	EPP_EditorPluginLoads += 1;
+
+	LoadCameraState();
 
 	log("E++: Setting AttachID on UI layer");
 	UILayers[0].AttachId = "E++ Supporting Plugin";
@@ -117,9 +145,11 @@ main() {
 			}
 		}
 
-		// update mapping time for map
-		if (Now - LastMappingTimeUpdate > 100) {
-			declare Delta = (Now - LastMappingTimeUpdate);
+		if (Now - LastRegularValuesUpdate > 100) {
+			// save the camera state
+			SaveCameraState();
+			// update mapping time for map
+			declare Delta = (Now - LastRegularValuesUpdate);
 			EPP_MappingTime += Delta;
 			if (IsTesting) {
 				EPP_MappingTime_Testing += Delta;
@@ -130,7 +160,7 @@ main() {
 				EPP_MappingTime_Mapping += Delta;
 			}
 			SendEvent("MappingTime", [""^EPP_MappingTime, ""^EPP_MappingTime_Mapping, ""^EPP_MappingTime_Testing, ""^EPP_MappingTime_Validating]);
-			LastMappingTimeUpdate = Now;
+			LastRegularValuesUpdate = Now;
 		}
 
 		yield;

@@ -128,6 +128,7 @@ void UI_Main_Render() {
         if (UI::Begin("Escape The Farlands", UI::WindowFlags::NoCollapse | UI::WindowFlags::NoResize)) {
             UI::TextWrapped("\\$f80" + Icons::ExclamationTriangle + "\\$z Is the camera bugged? (You can always fix under Editor Misc tab)");
             if (UI::Button("Return to Stadium")) {
+                // todo: remember last cam position in stadium
                 Editor::SetCamTargetedPosition(vec3(128));
             }
             UI::SameLine();

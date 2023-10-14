@@ -26,6 +26,23 @@
   - custom playback speed (clip player, 0x33c)
   - clip browser?
 
+- farlands items
+- fill items
+- block & item lists
+- cursor grid when in inf precision mode
+- inf precision yaw
+- item-rotator tool / UI (like blender sphere rotators)
+
+
+- Map Together
+  - [ ] free block placement
+  - [x] regular block placement
+  - [ ] custom item / block sync
+  - [x] item placement
+    - exact variants
+  -
+
+
 // To get clip from EditorMediaTracker
 // offsets: 0x228, 0x80, 0x0
 
