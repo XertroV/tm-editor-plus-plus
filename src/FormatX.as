@@ -1,4 +1,8 @@
 namespace FormatX {
+    shared string Vec2(vec2 &in v) {
+        return Text::Format("<%.0f, ", v.x)
+            + Text::Format("%.0f>", v.y);
+    }
     shared string Vec3(vec3 &in v) {
         return Text::Format("<%.0f, ", v.x)
             + Text::Format("%.0f, ", v.y)

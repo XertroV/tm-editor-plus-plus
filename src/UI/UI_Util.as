@@ -85,6 +85,9 @@ shared void LabeledValue(const string &in label, int value) {
 shared void LabeledValue(const string &in label, const string &in value) {
     ClickableLabel(label, value);
 }
+shared void LabeledValue(const string &in label, vec2 &in value, bool clickToCopy = false) {
+    (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Vec2(value));
+}
 shared void LabeledValue(const string &in label, nat3 &in value, bool clickToCopy = false) {
     (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Nat3(value));
 }

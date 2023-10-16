@@ -4,8 +4,8 @@
  */
 
 namespace FarlandsHelper {
-    float CustomRotation;
-    bool FL_Helper_Active;
+    // float CustomRotation = 0.1;
+    bool FL_Helper_Active = true;
     bool drawDebugFarlandsHelper = false;
     bool skipNextFrame = false;
 
@@ -13,13 +13,12 @@ namespace FarlandsHelper {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cam = Editor::GetCurrentCamState(editor);
         // 210m is a little more than 3 * (256*32)^2;
-        return cam.Pos.LengthSquared() > 210000000;
+        return cam.Pos.LengthSquared() > 210e6;
     }
 
     void CursorLoop() {
-        if (!FarlandsHelper::Apply()) {
-            warn("FAILED TO APPLY FARLANDS HELPER PATCH");
-        }
+        GetCursorRotation_BlockCreation_Hook.Apply();
+        GetCursorRotation_ForDrawing_Hook.Apply();
         while (true) {
             yield();
             if (skipNextFrame) {
@@ -42,108 +41,49 @@ namespace FarlandsHelper {
                 ;
             if (!atEdge && !S_EnableInfinitePrecisionFreeBlocks) continue;
 
-
-
-            auto cam = Camera::GetCurrent();
-            auto camPos = Camera::GetCurrentPosition();
-            auto camMat = Camera::GetProjectionMatrix();
-            auto screen = vec2(Draw::GetWidth(), Draw::GetHeight());
-
-            // if (!atEdge) continue;
-
-            // calculate the position of the cursor based on the ray
-            // auto cam = Camera::GetCurrent();
-            // auto camPos = Camera::GetCurrentPosition();
-            // auto camMat = Camera::GetProjectionMatrix();
-            auto picker = cam.m_Picker;
-            // auto picker = GetApp().Viewport.Picker;
             auto occ = editor.OrbitalCameraControl;
-
-            auto rayDir = picker.RayDir.xy;
-            mat4 translation = mat4::Translate(vec3(cam.Location.tx, cam.Location.ty, cam.Location.tz));
-            mat4 rotation = mat4::Inverse(mat4::Inverse(translation) * mat4(cam.Location));
-            vec3 up =   (rotation * (vec3(0,1,0))).xyz;
-            vec3 left = (rotation * (vec3(-1,0,0))).xyz;
-            // vec3 dir =  (rotation * (vec3(0,0,1))).xyz;
-            rotation = mat4::Rotate(rayDir.y/1.0, left) * mat4::Rotate(rayDir.x/1.3, up) * rotation;
-            auto dir = (rotation * vec3(0,0,1)).xyz;
-
-
-            // // TL is -1,-1
-            // // picker.RayPos.xy / vec2(1.55, 0.88) + vec2(-0.01)
-            // auto uv = vec4(picker.InputPos, vec2(-1.)); // picker.PosRect
-            // // auto uv = vec4(lastMousePos / screen * -2. + 1., vec2(-1.)) * occ.m_CameraToTargetDistance;
-            // DrawTextWithStroke(screen * vec2(.35, .28), "UV: " + uv.ToString() + " / " + (uvCalc / uv.xy).ToString(), vec4(1), 3);
-            // auto invProj = mat4::Inverse(camMat);
-            // auto equidistDirVec = (invProj * uv);
-            // auto edvFromPreCalc = (invProj * uvPre);
-            // DrawTextWithStroke(screen * vec2(.35, .32), "equidistDirVec: " + equidistDirVec.ToString(), vec4(1), 3);
-            // DrawTextWithStroke(screen * vec2(.65, .32), "edvFromPreCalc: " + edvFromPreCalc.ToString(), vec4(1), 3);
-            // // auto dir = equidistDirVec.Normalized().xyz;
-            // dir = equidistDirVec.xyz;
-
-
-            auto yPos = occ.m_TargetedPosition.y;
-            auto coef = (yPos - camPos.y) / dir.y;
-            auto finalPos = (dir * coef + camPos); // * vec3(1.031, 1, 1.031);
-            cursor.FreePosInMap = finalPos;
-
-            if (drawDebugFarlandsHelper) {
-                // test drawings as helpers
-                auto initPos = cursor.FreePosInMap;
-                auto uvPre = (camMat * initPos);
-                auto uvCalc = uvPre.xy / uvPre.w;
-
-                nvg::BeginPath();
-                nvg::FontSize(30.);
-
-                DrawTextWithStroke(screen * vec2(.35, .16), "start pos " + initPos.ToString(), vec4(1), 3);
-                DrawTextWithStroke(screen * vec2(.35, .2), "uvPre from Cam:: " + uvPre.ToString(), vec4(1), 3);
-                DrawTextWithStroke(screen * vec2(.35, .24), "uvCalc from Cam:: " + uvCalc.ToString(), vec4(1), 3);
-
-                DrawTextWithStroke(screen * vec2(.35, .36), "dir: " + dir.ToString(), vec4(1), 3);
-                DrawTextWithStroke(screen * vec2(.35, .40), "yPos, coef: " + vec2(yPos, coef).ToString(), vec4(1), 3);
-                DrawTextWithStroke(screen * vec2(.35, .44), "Pos: " + finalPos.ToString(), vec4(1), 3);
-                DrawTextWithStroke(screen * vec2(.35, .48), "init/pos: " + (initPos / finalPos).ToString(), vec4(1), 3);
-                nvgCircleWorldPos(initPos, vec4(.3, 1, .3, 1));
-                nvgCircleWorldPos(finalPos);
-                nvgToWorldPos(finalPos);
-                nvgToWorldPos(finalPos * vec3(1, 0, 1) + vec3(0, 8, 0));
-                // nvgCircleWorldPos(equidistDirVec);
-                nvgCircleScreenPos(lastMousePos, vec4(.2, .5, 1, 1));
-            }
+            auto pos = Picker::GetMouseToWorldAtHeight(occ.m_TargetedPosition.y);
+            cursor.FreePosInMap = pos;
         }
     }
 
+    HookHelper@ GetCursorRotation_ForDrawing_Hook = HookHelper(
+        "0F 11 0B F2 0F 11 43 10 48 8B 5C 24 60 48 83 C4 50 5F C3",
+        3, 0, "FarlandsHelper::_GetCursorRotation_SetViaRbxPlus0xC"
+    );
+    HookHelper@ GetCursorRotation_BlockCreation_Hook = HookHelper(
+        "8B 86 54 01 00 00 48 8B 5C 24 30 89 07 8B 86 58 01 00 00 48 8B 74 24 38 48 8B 7C 24 40 41 89 06 48 83 C4 20",
+        0, 1, "FarlandsHelper::_GetCursorRotation_SetViaRbx"
+    );
+
+    // note: only works for blocks
     // const string GetRotationPattern = "8B 86 54 01 00 00 48 8B 5C 24 30 89 07 8B 86 58 01 00 00 48 8B 74 24 38 48 8B 7C 24 40 41 89 06 48 83 C4 20 41 5E C3 ??";
-    const string GetRotationPattern = "8B 86 54 01 00 00 48 8B 5C 24 30 89 07 8B 86 58 01 00 00 48 8B 74 24 38 48 8B 7C 24 40 41 89 06 48 83 C4 20";
+    // const string GetRotationPattern = ;
 
-    uint64 getRotationPtr;
-    Dev::HookInfo@ getRotationHook;
-    bool Apply() {
-        if (getRotationHook !is null) return false;
-        if (getRotationPtr == 0) {
-            getRotationPtr = Dev::FindPattern(GetRotationPattern);
-        }
-        if (getRotationPtr == 0) {
-            warn_every_60_s("Could not find Cursor Get Rotation pattern");
-            return false;
-        }
-        @getRotationHook = Dev::Hook(getRotationPtr, 1, "FarlandsHelper::OnGetCursorRotation", Dev::PushRegisters::SSE);
-        return true;
+    float get_CustomRotation() {
+        return float(Time::Now) / 1000. % TAU;
     }
 
-    bool Unapply() {
-        if (getRotationHook is null) return false;
-        Dev::Unhook(getRotationHook);
-        return true;
-    }
-
-    void OnGetCursorRotation(uint64 rbx) {
+    void _GetCursorRotation_SetViaRbx(uint64 rbx) {
+        // dev_trace("OnGetCursorRotation");
         if (FL_Helper_Active) {
             Dev::Write(rbx, float(CustomRotation));
+            // Dev::Write(rbx + 0x10, float(CustomRotation));
+            // dev_trace("Wrote custom rotation: " + CustomRotation);
         }
     }
+    // this works, but
+    void _GetCursorRotation_SetViaRbxPlus0xC(uint64 rbx) {
+        // dev_trace("OnGetCursorRotation");
+        if (FL_Helper_Active) {
+            // todo, make sure
+            Dev::Write(rbx + 0xC, float(CustomRotation)); //  % (TAU / 4.)
+            // if (Time::Now / 1000 % 2 == 0)
+            // dev_trace("Wrote custom rotation: " + CustomRotation);
+        }
+    }
+
+    // free block stuff
 
     bool CheckPlacingFreeBlock() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -272,7 +212,45 @@ pattern: 8B 86 54 01 00 00 48 8B 5C 24 30 89 07 8B 86 58 01 00 00 48 8B 74 24 38
 - hook with padding = 1
 
 
+ * preview for items is elsewhere,
 
+Trackmania.exe+10C435D - 0F11 0B               - movups [rbx],xmm1 { angle moved into rbx
+ }
+Trackmania.exe+10C4360 - F2 0F11 43 10         - movsd [rbx+10],xmm0
+Trackmania.exe+10C4365 - 48 8B 5C 24 60        - mov rbx,[rsp+60]
+Trackmania.exe+10C436A - 48 83 C4 50           - add rsp,50 { 80 }
+Trackmania.exe+10C436E - 5F                    - pop rdi
+Trackmania.exe+10C436F - C3                    - ret
+
+
+full:
+
+
+Trackmania.exe+10C432E - E8 ED7EDDFF           - call Trackmania.exe+E9C220
+Trackmania.exe+10C4333 - 0F10 4C 24 20         - movups xmm1,[rsp+20]
+Trackmania.exe+10C4338 - 48 8B C3              - mov rax,rbx
+Trackmania.exe+10C433B - F3 0F10 57 28         - movss xmm2,[rdi+28]
+Trackmania.exe+10C4340 - F2 0F10 CE            - movsd xmm1,xmm6
+Trackmania.exe+10C4344 - 0F28 74 24 40         - movaps xmm6,[rsp+40]
+Trackmania.exe+10C4349 - 0FC6 C9 93            - shufps xmm1,xmm1,-6D { 147 }
+Trackmania.exe+10C434D - F3 0F10 C8            - movss xmm1,xmm0
+Trackmania.exe+10C4351 - F3 0F10 47 24         - movss xmm0,[rdi+24]
+Trackmania.exe+10C4356 - 0FC6 C9 39            - shufps xmm1,xmm1,39 { 57 }
+Trackmania.exe+10C435A - 0F14 C2               - unpcklps xmm0,xmm2
+Trackmania.exe+10C435D - 0F11 0B               - movups [rbx],xmm1 { angle moved into rbx
+ }
+Trackmania.exe+10C4360 - F2 0F11 43 10         - movsd [rbx+10],xmm0
+Trackmania.exe+10C4365 - 48 8B 5C 24 60        - mov rbx,[rsp+60]
+Trackmania.exe+10C436A - 48 83 C4 50           - add rsp,50 { 80 }
+Trackmania.exe+10C436E - 5F                    - pop rdi
+Trackmania.exe+10C436F - C3                    - ret
+
+
+
+
+pattern: 0F 11 0B F2 0F 11 43 10 48 8B 5C 24 60 48 83 C4 50 5F C3
+offset = 3
+padding = 0
 
 -------------
 
@@ -317,4 +295,62 @@ void warn_every_60_s(const string &in msg) {
     }
     warnTracker[msg] = Time::Now;
     warn(msg);
+}
+
+
+
+class HookHelper {
+    protected Dev::HookInfo@ hookInfo;
+    protected uint64 patternPtr;
+
+    // protected string name;
+    protected string pattern;
+    protected uint offset;
+    protected uint padding;
+    protected string functionName;
+
+    // const string &in name,
+    HookHelper(const string &in pattern, uint offset, uint padding, const string &in functionName) {
+        this.pattern = pattern;
+        this.offset = offset;
+        this.padding = padding;
+        this.functionName = functionName;
+    }
+
+    ~HookHelper() {
+        Unapply();
+    }
+
+    bool Apply() {
+        if (hookInfo !is null) return false;
+        if (patternPtr == 0) patternPtr = Dev::FindPattern(pattern);
+        if (patternPtr == 0) {
+            warn_every_60_s("Failed to apply hook for " + functionName);
+            return false;
+        }
+        @hookInfo = Dev::Hook(patternPtr + offset, padding, functionName, Dev::PushRegisters::SSE);
+        RegisterUnhookFunction(UnapplyHookFn(this.Unapply));
+        return true;
+    }
+
+    bool Unapply() {
+        if (hookInfo is null) return false;
+        Dev::Unhook(hookInfo);
+        @hookInfo = null;
+        return true;
+    }
+}
+
+funcdef bool UnapplyHookFn();
+
+UnapplyHookFn@[] unapplyHookFns;
+void RegisterUnhookFunction(UnapplyHookFn@ fn) {
+    if (fn is null) throw("null fn passted to reg unhook fn");
+    unapplyHookFns.InsertLast(fn);
+}
+
+void CheckUnhookAllRegisteredHooks() {
+    for (uint i = 0; i < unapplyHookFns.Length; i++) {
+        unapplyHookFns[i]();
+    }
 }

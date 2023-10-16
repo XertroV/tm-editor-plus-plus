@@ -32,7 +32,9 @@
 - cursor grid when in inf precision mode
 - inf precision yaw
 - item-rotator tool / UI (like blender sphere rotators)
+- save last in-stadium camera position for farlands camera rescue
 
+- add offzone dependency as optional so it takes precedence
 
 - Map Together
   - [ ] free block placement

@@ -41,8 +41,8 @@ void Unload() {
     FreeAllAllocated();
     Editor::EnableMapThumbnailUpdate();
     Editor::OffzonePatch::Unapply();
-    FarlandsHelper::Unapply();
     FarlandsHelper::UnapplyAddBlockHook();
+    CheckUnhookAllRegisteredHooks();
 }
 
 uint lastInItemEditor = 0;
@@ -52,6 +52,10 @@ bool dismissedPluginEnableRequest = false;
 bool dismissedCamReturnToStadium = false;
 
 void RenderEarly() {
+#if DEV
+    Picker::RenderEarly();
+#endif
+
     if (!UserHasPermissions) return;
     if (!GameVersionSafe) return;
     auto anyEditor = GetApp().Editor;

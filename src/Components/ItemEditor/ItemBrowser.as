@@ -643,17 +643,19 @@ class ItemModelTreeElement {
             auto spawnLoc = vec3(cieModel.SpawnLoc.tx, cieModel.SpawnLoc.ty, cieModel.SpawnLoc.tz);
             auto spawnRot = mat4::Inverse(mat4::Translate(spawnLoc)) * mat4(cieModel.SpawnLoc);
             auto pyr = PitchYawRollFromRotationMatrix(spawnRot);
+            // todo: test update check thing to avoid oscillating matrix calcs from rotation
             if (isEditable) {
                 UI::PushItemWidth(UI::GetContentRegionAvail().x * .5);
-                spawnLoc = UX::InputFloat3("Spawn Pos", spawnLoc, vec3(16, 0, 11.2));
-                pyr = UX::InputAngles3("Spawn Rot", pyr, vec3(0, 0, 0));
+                auto spawnLocOut = UX::InputFloat3("Spawn Pos", spawnLoc, vec3(16, 0, 11.2));
+                auto pyrOut = UX::InputAngles3("Spawn Rot", pyr, vec3(0, 0, 0));
                 UI::PopItemWidth();
-                cieModel.SpawnLoc = iso4(mat4::Translate(spawnLoc) * EulerToMat(pyr));
+                if (!MathX::Vec3Eq(spawnLoc, spawnLocOut) || !MathX::Vec3Eq(pyr, pyrOut)) {
+                    cieModel.SpawnLoc = iso4(mat4::Translate(spawnLoc) * EulerToMat(pyr));
+                }
             } else {
                 LabeledValue("Spawn Pos", spawnLoc);
                 LabeledValue("Spawn Rot", pyr);
             }
-            // mat4::Translate()
             EndTreeNode();
         }
     }

@@ -127,6 +127,8 @@ bool _EditNewMap4(CMwStack &in stack, CMwNod@ nod) {
 
     MwFastBuffer<wstring> _pluginScripts;
     MwFastBuffer<wstring> _pluginArgs;
+    _pluginScripts.Add(wstring("EditorPlusPlus.Script.txt"));
+    _pluginArgs.Add(wstring(""));
     string pluginScriptsTxt;
     string pluginArgsTxt;
     for (uint i = 0; i < pluginScripts.Length; i++) {
@@ -139,8 +141,6 @@ bool _EditNewMap4(CMwStack &in stack, CMwNod@ nod) {
         _pluginArgs.Add(s);
         pluginArgsTxt += (i > 0 ? ", " : "") + s;
     }
-    _pluginScripts.Add(wstring("EditorPlusPlus.Script.txt"));
-    _pluginArgs.Add(wstring("<root></root>"));
 
     dev_trace("environment: " + environment);
     dev_trace("decoration: " + decoration);
