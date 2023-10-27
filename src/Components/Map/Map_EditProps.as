@@ -30,8 +30,9 @@ class MapEditPropsTab : Tab {
 
     void DrawInner() override {
         CGameCtnChallenge@ map = null;
+        CGameCtnEditorFree@ editor = null;
         try {
-            @map = cast<CGameCtnEditorFree>(GetApp().Editor).Challenge;
+            @map = (@editor = cast<CGameCtnEditorFree>(GetApp().Editor)).Challenge;
         } catch {};
         if (map is null) {
             UI::Text("Open a map in the editor.");
@@ -79,7 +80,6 @@ class MapEditPropsTab : Tab {
         UI::BeginDisabled(!f_UnlockStripMetadata);
         if (UX::SmallButton("Clear Metadata")) {
             f_UnlockStripMetadata = false;
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             editor.PluginMapType.ClearMapMetadata();
             ToML::ResyncPlease();
         }
@@ -114,14 +114,22 @@ class MapEditPropsTab : Tab {
 
         UI::Separator();
 
+
         auto deco = map.Decoration;
         UI::Text("Decoration: " + deco.IdName);
         if (m_deco == MapDecoChoice::XXX_Last) {
             m_deco = DecoIdToEnum(deco.IdName);
         }
 
+        UI::Indent();
+        auto newTOD = UI::SliderFloat("Time of Day", editor.MoodTimeOfDay01, 0.0, 1.0, Time::Format(int64(editor.MoodTimeOfDay01 * 86400) * 1000, false, true, true, true));
+        // avoid changing this value very slightly cause it triggers updating lighting
+        if (Math::Abs(editor.MoodTimeOfDay01 - newTOD) > 0.00001) {
+            editor.MoodTimeOfDay01 = newTOD;
+        }
+        editor.MoodIsDynamicTime = UI::Checkbox("Dynamic Time of Day", editor.MoodIsDynamicTime);
+
         if (map.IdName.Length > 10) {
-            UI::Indent();
             m_deco = DrawComboMapDecoChoice("New Decoration", m_deco);
             UI::BeginDisabled(m_deco == DecoIdToEnum(deco.IdName));
             if (UI::Button("Apply Decoration")) {
@@ -130,12 +138,14 @@ class MapEditPropsTab : Tab {
                     @map.Decoration = newDeco;
                     startnew(CoroutineFuncUserdata(this.RevertDeco), deco);
                 }
-
             }
             AddSimpleTooltip("Note: will save and reload the map");
             UI::EndDisabled();
-            UI::Unindent();
+        } else {
+            UI::Text("Save the map to change the map decoration.");
         }
+
+        UI::Unindent();
 
         UI::Separator();
 
