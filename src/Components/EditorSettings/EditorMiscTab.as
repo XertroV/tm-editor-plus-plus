@@ -178,7 +178,7 @@ class EditorMiscTab : Tab {
             S_HideBlockHelpers = editor.HideBlockHelpers;
         }
 
-        S_SyncBlockInvSelections = UI::Checkbox("Sync Inventory Folders between Normal Block mode and Ghost/Free mode", S_SyncBlockInvSelections);
+        S_SyncBlockInvSelections = UI::Checkbox("Sync Inventory Folders between Normal Block mode and Ghost/Free mode" + NewIndicator, S_SyncBlockInvSelections);
 
         S_BlockEscape = UI::Checkbox("Block escape key from leaving the editor", S_BlockEscape);
 

@@ -91,7 +91,7 @@ namespace FarlandsHelper {
     }
 
     // free block stuff
-
+    // return true to block click -- always returns false atm
     bool CheckPlacingFreeBlock() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return false;
@@ -100,6 +100,7 @@ namespace FarlandsHelper {
         if (!cursor.UseFreePos) return false;
         if (!Editor::IsInFreeBlockPlacementMode(editor, true)) return false;
         if (cursor.Color != cursor.CannotPlaceNorJoinColor) return false;
+        if (GetApp().Viewport.Picker.Overlay !is null) return false;
         _addBlockSetPos = cursor.FreePosInMap;
         @_prevCursorState = Editor::GetCursorRot(cursor);
         _addBlockSetRot = _prevCursorState.euler;
@@ -115,8 +116,8 @@ namespace FarlandsHelper {
         cursor.Pitch = 0;
         cursor.Roll = 0;
         cursor.Dir = CGameCursorBlock::ECardinalDirEnum::North;
-        // choose a random spot in the map
-        cursor.FreePosInMap = vec3(Math::Rand(0.0, g_MapBounds.x - 32.), Math::Rand(0.0, g_MapBounds.y - 32.), Math::Rand(0.0, g_MapBounds.z - 32.));
+        // choose a random spot in the map, below the ground
+        cursor.FreePosInMap = vec3(Math::Rand(0.0, g_MapBounds.x - 32.), Math::Rand(0.0, 16.), Math::Rand(0.0, g_MapBounds.z - 32.));
         // attempt to avoid missing a click input
         skipNextFrame = true;
 
@@ -178,8 +179,7 @@ namespace FarlandsHelper {
             NotifyWarning("on add block hook got null block!");
         } else {
             Editor::SetBlockLocation(block, _addBlockSetPos);
-            // for whatever reason, setting this here resets the rotation to 0, but not setting it works fine.
-            // Editor::SetBlockRotation(block, _addBlockSetRot);
+            Editor::SetBlockRotation(block, _addBlockSetRot);
         }
         if (!UnapplyAddBlockHook()) {
             NotifyWarning("Failed to unapply add block hook");
