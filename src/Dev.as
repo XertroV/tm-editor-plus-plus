@@ -316,3 +316,13 @@ const uint16 O_ENTREF_MODELFID = GetOffset("NPlugPrefab_SEntRef", "ModelFid");
 const uint16 O_VARLIST_VARIANTS = GetOffset("NPlugItem_SVariantList", "Variants");
 const uint32 SZ_VARLIST_VARIANT = 0x28;
 const uint16 O_SVARIANT_MODELFID = GetOffset("NPlugItem_SVariant", "EntityModelFidForReload");
+
+
+const uint16 O_INVENTORY_NormHideFolderDepth = 0xF8;
+const uint16 O_INVENTORY_NormSelectedFolder = 0x100;
+
+const uint16 O_INVENTORY_GhostHideFolderDepth = 0x148;
+const uint16 O_INVENTORY_GhostSelectedFolder = 0x150;
+
+const uint16 O_INVENTORY_ItemHideFolderDepth = 0x1E8;
+const uint16 O_INVENTORY_ItemSelectedFolder = 0x1F0;

@@ -46,6 +46,9 @@ bool S_HideBlockHelpers = false;
 bool S_ControlBlockHelpers = false;
 
 [Setting hidden]
+bool S_SyncBlockInvSelections = true;
+
+[Setting hidden]
 bool S_BlockEscape = false;
 
 [Setting hidden]

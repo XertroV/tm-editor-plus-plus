@@ -197,10 +197,22 @@ namespace Editor {
         return false;
     }
 
+    bool IsInNormBlockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (checkEditMode && !IsInPlacementMode(editor)) return false;
+        return GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Block;
+    }
+    bool IsInGhostBlockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (checkEditMode && !IsInPlacementMode(editor)) return false;
+        return GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::GhostBlock;
+    }
     bool IsInFreeBlockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
         if (checkEditMode && !IsInPlacementMode(editor)) return false;
+        return GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::FreeBlock;
+    }
+    bool IsInGhostOrFreeBlockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (checkEditMode && !IsInPlacementMode(editor)) return false;
         auto pm = GetPlacementMode(editor);
-        return pm == CGameEditorPluginMap::EPlaceMode::FreeBlock;
+        return pm == CGameEditorPluginMap::EPlaceMode::FreeBlock || pm == CGameEditorPluginMap::EPlaceMode::GhostBlock;
     }
 
     // checks placement mode, with optional edit mode checking

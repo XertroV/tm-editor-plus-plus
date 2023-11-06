@@ -2,6 +2,8 @@
 bool S_AutoUnlockCamera = false;
 
 class EditorMiscTab : Tab {
+    bool lastBlockTypeWasGhost = false;
+
     EditorMiscTab(TabGroup@ parent) {
         super(parent, "Editor Misc", Icons::Cog + Icons::Camera);
         RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad), this.tabName);
@@ -14,6 +16,7 @@ class EditorMiscTab : Tab {
             if (!IsInEditor) continue;
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             CheckSetHideBlockHelpers(editor);
+            CheckSetInvDirectories(editor);
         }
     }
 
@@ -21,6 +24,51 @@ class EditorMiscTab : Tab {
         if (S_ControlBlockHelpers && S_HideBlockHelpers != editor.HideBlockHelpers) {
             editor.HideBlockHelpers = S_HideBlockHelpers;
         }
+    }
+
+    void CheckSetInvDirectories(CGameCtnEditorFree@ editor) {
+        if (S_SyncBlockInvSelections && Editor::IsInPlacementMode(editor)) {
+            auto isBlock = Editor::IsInNormBlockPlacementMode(editor);
+            auto isGhostFree = Editor::IsInGhostOrFreeBlockPlacementMode(editor);
+            if (lastBlockTypeWasGhost == isGhostFree) return;
+            if (!isBlock && !isGhostFree) return;
+            lastBlockTypeWasGhost = isGhostFree;
+            // a change from ghost/free to normal or vice versa
+            auto inv = editor.PluginMapType.Inventory;
+            // get the directory we'll select
+            auto dir = isBlock ? Editor::GetInventoryGhostBlockSelectedFolder(inv)
+                : Editor::GetInventoryBlockSelectedFolder(inv);
+            if (dir is null) return;
+            // set current directory
+            SelectDirectoryInCurrBlockTree(inv, dir);
+            // sync depths
+            auto depth = isBlock ? Editor::GetInventoryGhostBlockHiddenFolderDepth(inv)
+                : Editor::GetInventoryBlockHiddenFolderDepth(inv);
+            if (isBlock) Editor::SetInventoryBlockHiddenFolderDepth(inv, depth);
+            else Editor::SetInventoryGhostBlockHiddenFolderDepth(inv, depth);
+        }
+    }
+
+    void SelectDirectoryInCurrBlockTree(CGameEditorGenericInventory@ inv, CGameCtnArticleNodeDirectory@ dir) {
+        string[] path;
+        while (string(dir.Name) != "" && dir.ParentNode !is null) {
+            path.InsertAt(0, dir.Name);
+            @dir = dir.ParentNode;
+        }
+        auto node = inv.CurrentRootNode;
+        int i = 0;
+        while (i < path.Length) {
+            string name = path[i];
+            for (uint j = 0; j < node.ChildNodes.Length; j++) {
+                auto item = node.ChildNodes[j];
+                if (item.IsDirectory && name == string(item.Name)) {
+                    @node = cast<CGameCtnArticleNodeDirectory>(item);
+                    i++;
+                    break;
+                }
+            }
+        }
+        inv.OpenDirectory(node);
     }
 
     bool _cameraUnlocked = false;
@@ -129,6 +177,8 @@ class EditorMiscTab : Tab {
         if (S_ControlBlockHelpers) {
             S_HideBlockHelpers = editor.HideBlockHelpers;
         }
+
+        S_SyncBlockInvSelections = UI::Checkbox("Sync Inventory Folders between Normal Block mode and Ghost/Free mode", S_SyncBlockInvSelections);
 
         S_BlockEscape = UI::Checkbox("Block escape key from leaving the editor", S_BlockEscape);
 

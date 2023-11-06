@@ -29,7 +29,31 @@ namespace Editor {
     }
 
     // 0 = show all. 1 = hide 1 level. 2 = hide 2 levels. If set to more than the available number of levels it will reset to 0;
-    void SetInventoryHiddenFolderDepth(CGameEditorGenericInventory@ inventory, uint8 v) {
-        Dev::SetOffset(inventory, 0x1E8, v);
+    void SetInventoryItemHiddenFolderDepth(CGameEditorGenericInventory@ inventory, uint8 v) {
+        Dev::SetOffset(inventory, O_INVENTORY_ItemHideFolderDepth, v);
+    }
+    void SetInventoryBlockHiddenFolderDepth(CGameEditorGenericInventory@ inventory, uint8 v) {
+        Dev::SetOffset(inventory, O_INVENTORY_NormHideFolderDepth, v);
+    }
+    void SetInventoryGhostBlockHiddenFolderDepth(CGameEditorGenericInventory@ inventory, uint8 v) {
+        Dev::SetOffset(inventory, O_INVENTORY_GhostHideFolderDepth, v);
+    }
+    uint8 GetInventoryItemHiddenFolderDepth(CGameEditorGenericInventory@ inventory) {
+        return Dev::GetOffsetUint8(inventory, O_INVENTORY_ItemHideFolderDepth);
+    }
+    uint8 GetInventoryBlockHiddenFolderDepth(CGameEditorGenericInventory@ inventory) {
+        return Dev::GetOffsetUint8(inventory, O_INVENTORY_NormHideFolderDepth);
+    }
+    uint8 GetInventoryGhostBlockHiddenFolderDepth(CGameEditorGenericInventory@ inventory) {
+        return Dev::GetOffsetUint8(inventory, O_INVENTORY_GhostHideFolderDepth);
+    }
+    CGameCtnArticleNodeDirectory@ GetInventoryItemSelectedFolder(CGameEditorGenericInventory@ inventory) {
+        return cast<CGameCtnArticleNodeDirectory>(Dev::GetOffsetNod(inventory, O_INVENTORY_ItemSelectedFolder));
+    }
+    CGameCtnArticleNodeDirectory@ GetInventoryBlockSelectedFolder(CGameEditorGenericInventory@ inventory) {
+        return cast<CGameCtnArticleNodeDirectory>(Dev::GetOffsetNod(inventory, O_INVENTORY_NormSelectedFolder));
+    }
+    CGameCtnArticleNodeDirectory@ GetInventoryGhostBlockSelectedFolder(CGameEditorGenericInventory@ inventory) {
+        return cast<CGameCtnArticleNodeDirectory>(Dev::GetOffsetNod(inventory, O_INVENTORY_GhostSelectedFolder));
     }
 }
