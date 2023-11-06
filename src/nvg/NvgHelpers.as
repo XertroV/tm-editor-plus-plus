@@ -21,19 +21,19 @@ void nvgCircleScreenPos(vec2 xy, vec4 col = vec4(1, .5, 0, 1), float radius = 5.
     nvg::ClosePath();
 }
 
-void nvgDrawHorizGridHelper(vec3 worldPos, vec4 col, float strokeWidth, float gridSize = 32.) {
+void nvgDrawHorizGridHelper(vec3 worldPos, vec4 col, float strokeWidth, float gridSize = 32., int gridStepsOut = 1) {
+    gridStepsOut = Math::Abs(gridStepsOut);
     nvg::Reset();
     nvg::BeginPath();
     nvg::StrokeWidth(strokeWidth);
     nvg::StrokeColor(col);
-    auto origin = worldPos;
-    vec3 stepV = vec3(gridSize, 0, gridSize);
     float step = gridSize / 2.;
-    for (int i = -1; i < 2; i++) {
-        auto top = worldPos - vec3(-step, 0, step * i);
-        auto bottom = worldPos - vec3(step, 0, step * i);
-        auto left = worldPos - vec3(step * i, 0, -step);
-        auto right = worldPos - vec3(step * i, 0, step);
+    float maxStep = step * gridStepsOut;
+    for (int i = -gridStepsOut; i <= gridStepsOut; i++) {
+        auto top = worldPos - vec3(-maxStep, 0, step * i);
+        auto bottom = worldPos - vec3(maxStep, 0, step * i);
+        auto left = worldPos - vec3(step * i, 0, -maxStep);
+        auto right = worldPos - vec3(step * i, 0, maxStep);
         nvgMoveToWorldPos(top);
         nvgToWorldPos(bottom, col);
         nvgMoveToWorldPos(left);

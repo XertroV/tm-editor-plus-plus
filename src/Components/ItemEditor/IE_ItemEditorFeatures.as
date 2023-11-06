@@ -7,7 +7,7 @@ uint S_AutoThumbnailDirection = 0;
 
 class IE_FeaturesTab : Tab {
     IE_FeaturesTab(TabGroup@ p) {
-        super(p, "Features" + NewIndicator, Icons::Star);
+        super(p, "Features", Icons::Star);
         startnew(CoroutineFunc(WatchForFeatures));
     }
 

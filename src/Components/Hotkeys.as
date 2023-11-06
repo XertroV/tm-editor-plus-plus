@@ -1,6 +1,6 @@
 class HotkeysTab : Tab {
     HotkeysTab(TabGroup@ p) {
-        super(p, "Hotkeys" + NewIndicator, Icons::Fire + Icons::KeyboardO);
+        super(p, "Hotkeys", Icons::Fire + Icons::KeyboardO);
     }
 
     void DrawInner() override {

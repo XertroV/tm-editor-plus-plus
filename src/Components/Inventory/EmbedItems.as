@@ -1,6 +1,6 @@
 class ItemEmbedTab : Tab {
     ItemEmbedTab(TabGroup@ p) {
-        super(p, "Refresh Items" + NewIndicator, Icons::FolderOpenO + Icons::Refresh);
+        super(p, "Refresh Items", Icons::FolderOpenO + Icons::Refresh);
     }
 
     uint step = 1;

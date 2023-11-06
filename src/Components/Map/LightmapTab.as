@@ -2,7 +2,7 @@ class LightmapTab : Tab {
     LMAnalysisWindow@ lmWindow;
 
     LightmapTab(TabGroup@ p) {
-        super(p, "Lightmap" + NewIndicator, Icons::MapO + Icons::LightbulbO);
+        super(p, "Lightmap", Icons::MapO + Icons::LightbulbO);
         @lmWindow = LMAnalysisWindow(this.Children);
     }
 

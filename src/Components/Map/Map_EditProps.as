@@ -124,7 +124,7 @@ class MapEditPropsTab : Tab {
         UI::Indent();
         auto newTOD = UI::SliderFloat("Time of Day", editor.MoodTimeOfDay01, 0.0, 1.0, Time::Format(int64(editor.MoodTimeOfDay01 * 86400) * 1000, false, true, true, true));
         // avoid changing this value very slightly cause it triggers updating lighting
-        if (Math::Abs(editor.MoodTimeOfDay01 - newTOD) > 0.00001) {
+        if ((Time::Now - lastTimeEnteredEditor > 5000) && Math::Abs(editor.MoodTimeOfDay01 - newTOD) > 0.00001) {
             editor.MoodTimeOfDay01 = newTOD;
         }
         editor.MoodIsDynamicTime = UI::Checkbox("Dynamic Time of Day", editor.MoodIsDynamicTime);

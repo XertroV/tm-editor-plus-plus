@@ -121,6 +121,7 @@ void Render() {
     UpdateEditorWatchers(IsInEditor ? cast<CGameCtnEditorFree>(GetApp().Editor) : null);
     if (EnteringEditor)
         trace('Done updating editor watchers.');
+    if (IsInEditor) FarlandsHelper::Render();
 }
 
 void RenderInterface() {

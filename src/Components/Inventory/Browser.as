@@ -9,7 +9,7 @@
 
 class InventoryMainV2Tab : Tab {
     InventoryMainV2Tab(TabGroup@ p) {
-        super(p, "Inventory V2" + NewIndicator, Icons::FolderOpenO);
+        super(p, "Inventory V2", Icons::FolderOpenO);
         canPopOut = true;
     }
 

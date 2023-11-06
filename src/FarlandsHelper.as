@@ -5,15 +5,22 @@
 
 namespace FarlandsHelper {
     // float CustomRotation = 0.1;
-    bool FL_Helper_Active = true;
+    bool FL_Helper_Active = false;
     bool drawDebugFarlandsHelper = false;
     bool skipNextFrame = false;
+    vec3 lastCursorPos;
 
     bool IsCameraInFarlands() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cam = Editor::GetCurrentCamState(editor);
         // 210m is a little more than 3 * (256*32)^2;
         return cam.Pos.LengthSquared() > 210e6;
+    }
+
+    void Render() {
+        if (FL_Helper_Active) {
+            // nvgDrawHorizGridHelper(lastCursorPos, vec4(1), 1.5, 32., 3);
+        }
     }
 
     void CursorLoop() {
@@ -42,8 +49,8 @@ namespace FarlandsHelper {
             if (!atEdge && !S_EnableInfinitePrecisionFreeBlocks) continue;
 
             auto occ = editor.OrbitalCameraControl;
-            auto pos = Picker::GetMouseToWorldAtHeight(occ.m_TargetedPosition.y);
-            cursor.FreePosInMap = pos;
+            lastCursorPos = Picker::GetMouseToWorldAtHeight(occ.m_TargetedPosition.y);
+            cursor.FreePosInMap = lastCursorPos;
         }
     }
 
@@ -160,16 +167,19 @@ namespace FarlandsHelper {
     EditorRotation@ _prevCursorState;
 
     void OnAddBlockHook(uint64 rdx) {
-        print('on add block hook');
+        dev_trace('on add block hook');
         // return;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
         auto map = editor.Challenge;
+        if (map is null) return;
         auto block = map.Blocks[map.Blocks.Length - 1];
         if (block is null) {
             NotifyWarning("on add block hook got null block!");
         } else {
             Editor::SetBlockLocation(block, _addBlockSetPos);
-            Editor::SetBlockRotation(block, _addBlockSetRot);
+            // for whatever reason, setting this here resets the rotation to 0, but not setting it works fine.
+            // Editor::SetBlockRotation(block, _addBlockSetRot);
         }
         if (!UnapplyAddBlockHook()) {
             NotifyWarning("Failed to unapply add block hook");

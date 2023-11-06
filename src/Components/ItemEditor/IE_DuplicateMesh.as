@@ -42,12 +42,30 @@ namespace MeshDuplication {
             // prefabs can have fids in the model immediately after .EntityModel ptr
             // ignore for now, but maybe zero if need be
             ZeroFids(prefab);
+        } else {
+            ZeroFidsUnknownModelNod(em);
         }
 
         ZeroFids(model.DefaultPlacementParam_Content);
 
         if (model.MaterialModifier !is null) {
             ZeroFids(model.MaterialModifier);
+        }
+
+        if (model.ArchetypeRef.Filename.Length > 0) {
+            // todo, zero the reference and load the fid nod (CGameItemModel) and set to .ArchetypeFid
+            auto archetypeRefOffset = GetOffset(model, "ArchetypeRef");
+            // string at 0x8, needs to have 0x0 termination to match length (or null string mb)
+            // length and string
+            Dev::SetOffset(model, archetypeRefOffset + 0x8, uint64(0));
+            Dev::SetOffset(model, archetypeRefOffset + 0x10, uint64(0));
+            // hmm, shows up as null, rather than empty string, if 4 bytes at 0x10 aren't zerod
+
+            // 0x1E8 -> ptr to archetype
+            // Dev::SetOffset(model, GetOffset(model, "DefaultPlacementParam_Dbg") + 0x10, uint64(0));
+
+            // PhyModelCustom
+            Dev::SetOffset(model, GetOffset(model, "PhyModelCustom"), uint64(0));
         }
     }
 
@@ -144,6 +162,7 @@ namespace MeshDuplication {
         ZeroNodFid(surface);
         // don't zero material Fids
         FixMatsOnShape(surface);
+        // zero skel?
     }
 
     void ZeroFids(CPlugPrefab@ prefab) {
@@ -279,7 +298,7 @@ namespace MeshDuplication {
 
     void ZeroFids(CPlugVehicleVisEmitterModel@ visEM) {
         ZeroNodFid(visEM);
-
+        // 0x18, 20, 28, 30 -> CPlugParticleEmitterModel
     }
 
     void ZeroFids(CPlugParticleEmitterModel@ pem) {
@@ -382,10 +401,16 @@ namespace MeshDuplication {
         ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visModel, 0x20)); // vis geom
         ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visModel, 0x28)); // fx
         ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visModel, 0x30)); // s2m
+        // 0x1c0 - cplugaudioenvironment
+        ZeroFidsUnknownModelNod(Dev::GetOffsetNod(visModel, 0x1c0));
     }
 
     void ZeroFids(CPlugShader@ shader) {
         ZeroNodFid(shader);
+    }
+
+    void ZeroFids(CPlugAudioEnvironment@ audioEnv) {
+        ZeroNodFid(audioEnv);
     }
 
     // note: usually we don't want to zero the mat FID
@@ -396,6 +421,55 @@ namespace MeshDuplication {
     void ZeroFids(CGameItemPlacementParam@ ip) {
         ZeroNodFid(ip);
         ZeroNodFid(ip.PlacementClass);
+    }
+
+    void ZeroFids(CGameVehicleModel@ vModel) {
+        ZeroNodFid(vModel);
+        // nod 0x090EA000 at 0x28 -- no FID; CPlugVehiclePhyModel
+        auto vPhyModel = Dev::GetOffsetNod(vModel, 0x28);
+        ZeroVehiclePhyModelFids(vPhyModel);
+        // at 0x30
+        ZeroNodFid(vModel.VisModel);
+    }
+
+    void ZeroFids(CPlugVehicleCarPhyShape@ vPhyShape) {
+        ZeroNodFid(vPhyShape);
+        // 0x68 CPlugSurface, 0xd0 (buf?) Buf<(MwId, u, u)>
+        auto surface = cast<CPlugSurface>(Dev::GetOffsetNod(vPhyShape, 0x68));
+        ZeroFids(surface);
+        // buf: FLSurf 1 1, FRSurf 1 1, RRSurf 1 0, RLSurf 1 0
+    }
+
+    void ZeroFids(CMwRefBuffer@ refBuf) {
+        ZeroNodFid(refBuf);
+        // seems like the nods dont' have fids
+    }
+
+    void ZeroVehiclePhyModelFids(CMwNod@ vPhyModel) {
+        if (vPhyModel is null) return;
+        ZeroNodFid(vPhyModel);
+        // 0x20 -> 0x090EC000 CPlugVehicleTunings (has FID)
+        // 0x28 -> CMwRefBuffer+FID (0x090f1) common vehicle materials,
+        // 0x30 -> CMwRefBuffer+FID 0x090f1 MaterialsSport,
+        // 0x38 -> CPlugVehicleCarPhysShape
+        auto vTunings = Dev::GetOffsetNod(vPhyModel, 0x20);
+        // ref bufs of CPlugVehiclePhyMaterial(s)?
+        auto commonVMatsRefBuf = cast<CMwRefBuffer>(Dev::GetOffsetNod(vPhyModel, 0x28));
+        auto vMatsRefBuf = cast<CMwRefBuffer>(Dev::GetOffsetNod(vPhyModel, 0x30));
+        auto vCarPhysShape = cast<CPlugVehicleCarPhyShape>(Dev::GetOffsetNod(vPhyModel, 0x38));
+        ZeroVehicleTuningsFids(vTunings);
+        ZeroFids(commonVMatsRefBuf);
+        ZeroFids(vMatsRefBuf);
+        ZeroFids(vCarPhysShape);
+    }
+
+    void ZeroVehicleTuningsFids(CMwNod@ vTunings) {
+        ZeroNodFid(vTunings);
+        // buffer of 90eb at 0x18; only 48b long total (0x30)
+        // 90eb is 14960 B large !?
+        // 0x18, mwid -> 20fev2013
+        // 0x38 -> ptr to + 0x10
+        // doesn't seem like any fids maybe, has lots of fids to ites and things
     }
 
 
@@ -437,6 +511,11 @@ namespace MeshDuplication {
         auto pem = cast<CPlugParticleEmitterModel>(nod);
         auto mat = cast<CPlugMaterial>(nod);
         auto itemPlacement = cast<CGameItemPlacementParam>(nod);
+        auto vModel = cast<CGameVehicleModel>(nod);
+        auto vvisModel = cast<CPlugVehicleVisModel>(nod);
+        auto refBuf = cast<CMwRefBuffer>(nod);
+        auto vPhyShape = cast<CPlugVehicleCarPhyShape>(nod);
+        auto audioEnv = cast<CPlugAudioEnvironment>(nod);
         if (so !is null) {
             ZeroFids(so);
         } else if (itemModel !is null) {
@@ -491,6 +570,16 @@ namespace MeshDuplication {
             ZeroFids(mat);
         } else if (itemPlacement !is null) {
             ZeroFids(itemPlacement);
+        } else if (vModel !is null) {
+            ZeroFids(vModel);
+        } else if (vvisModel !is null) {
+            ZeroFids(vvisModel);
+        } else if (refBuf !is null) {
+            ZeroFids(refBuf);
+        } else if (vPhyShape !is null) {
+            ZeroFids(vPhyShape);
+        } else if (audioEnv !is null) {
+            ZeroFids(audioEnv);
         } else {
             NotifyError("ZeroFidsUnknownModelNod: nod is unknown.");
             NotifyError("ZeroFidsUnknownModelNod: nod type: " + Reflection::TypeOf(nod).Name);

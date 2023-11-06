@@ -11,13 +11,10 @@ namespace Picker {
     vec3 normExtended;
     vec3 normExtendedToScreen;
 
-    vec3 groundPoint;
-
     void RenderEarly() {
-        auto pos = lastMousePos;
         screen = GetScreenVec2();
         if (screen.x == 0 || screen.y == 0) return;
-        uv = pos / (screen - 1.) * 2. - 1.;
+        uv = lastMousePos / (screen - 1.) * 2. - 1.;
 
         auto cam = Camera::GetCurrent();
         if (cam !is null) {
@@ -28,19 +25,16 @@ namespace Picker {
             // smaller value is better! is not distance but more like 1/dist -- you get errors when it's too big
             invUv = invProj * vec3(uv, 0.01);
             normalizedPoint = invUv.xyz / invUv.w;
-            // normToScreen = Camera::ToScreen(normalizedPoint);
             pickDirection = (camPos - normalizedPoint).Normalized();
+            // normToScreen = Camera::ToScreen(normalizedPoint);
             // normExtended = normalizedPoint + pickDirection * 10.;
             // normExtendedToScreen = Camera::ToScreen(normExtended);
 
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            float height = editor is null ? 8. : 8. * (int(editor.Cursor.Coord.y) - 8);
-            // groundPoint = camPos - pickDirection * (camPos.y - 8.) / pickDirection.y;
-            groundPoint = GetMouseToWorldAtHeight(height);
+            // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            // if (editor !is null) DrawTestPoints();
         }
 
         // DrawDebugWindow();
-        // DrawTestPoints();
     }
 
     vec3 GetMouseToWorldAtHeight(float height) {
@@ -60,18 +54,18 @@ namespace Picker {
             LabeledValue("pickDirection", pickDirection.ToString());
             LabeledValue("normExtended", normExtended.ToString());
             LabeledValue("normExtendedToScreen", normExtendedToScreen.ToString());
-            LabeledValue("groundPoint", groundPoint.ToString());
+            // LabeledValue("groundPoint", groundPoint.ToString());
         }
         UI::End();
     }
 
     void DrawTestPoints() {
-        nvgDrawHorizGridHelper(groundPoint, vec4(1), 2);
-        nvgCircleScreenPos(normExtendedToScreen.xy, vec4(1, .5, 1, 1), 10);
-        nvgCircleWorldPos(groundPoint, vec4(1, .5, 0, 1));
-        nvgCircleScreenPos(normToScreen.xy, vec4(.5, .5, 1, 1), 4);
-        // uv, on top
-        nvgCircleScreenPos(UVToScreen(uv), vec4(.5, 1, .5, 1), 2);
+        // nvgDrawHorizGridHelper(groundPoint, vec4(1), 2, 32., 3);
+        // nvgCircleScreenPos(normExtendedToScreen.xy, vec4(1, .5, 1, 1), 10);
+        // nvgCircleWorldPos(groundPoint, vec4(1, .5, 0, 1));
+        // nvgCircleScreenPos(normToScreen.xy, vec4(.5, .5, 1, 1), 4);
+        // // uv, on top
+        // nvgCircleScreenPos(UVToScreen(uv), vec4(.5, 1, .5, 1), 2);
     }
 
     vec2 UVToScreen(vec2 uv) {

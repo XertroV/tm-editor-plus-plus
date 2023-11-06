@@ -274,7 +274,7 @@ bool g_FavoritesWindowHovered = false;
 
 class FavoritesTab : Tab {
     FavoritesTab(TabGroup@ p) {
-        super(p, "Favorites" + NewIndicator, Icons::FolderOpenO + Icons::StarO);
+        super(p, "Favorites", Icons::FolderOpenO + Icons::StarO);
         @favorites = Json::FromFile(FAV_JSON_PATH);
         CheckInitFavs();
         windowOpen = S_FavTabPopped;
