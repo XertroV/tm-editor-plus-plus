@@ -92,14 +92,9 @@ void nvgMoveToWorldPos(vec3 pos) {
     nvgWorldPosLastVisible = true;
 }
 
-void nvgDrawCoordHelpers(mat4 &in m, float size = 10.) {
-    nvg::Reset();
-    nvg::StrokeWidth(3.0);
+// left, up, dir are already translated and rotated! they are the end points
+void nvgDrawCoordHelpers(vec3 &in pos, vec3 &in left, vec3 &in up, vec3 &in dir) {
     vec3 beforePos = nvgLastWorldPos;
-    vec3 pos =  (m * vec3()).xyz;
-    vec3 up =   (m * (vec3(0,1,0) * size)).xyz;
-    vec3 left = (m * (vec3(1,0,0) * size)).xyz;
-    vec3 dir =  (m * (vec3(0,0,1) * size)).xyz;
     nvgMoveToWorldPos(pos);
     nvgToWorldPos(up, cGreen);
     nvgMoveToWorldPos(pos);
@@ -107,6 +102,14 @@ void nvgDrawCoordHelpers(mat4 &in m, float size = 10.) {
     nvgMoveToWorldPos(pos);
     nvgToWorldPos(left, cRed);
     nvgMoveToWorldPos(beforePos);
+}
+
+void nvgDrawCoordHelpers(mat4 &in m, float size = 10.) {
+    vec3 pos =  (m * vec3()).xyz;
+    vec3 up =   (m * (vec3(0,1,0) * size)).xyz;
+    vec3 left = (m * (vec3(1,0,0) * size)).xyz;
+    vec3 dir =  (m * (vec3(0,0,1) * size)).xyz;
+    nvgDrawCoordHelpers(pos, left, up, dir);
 }
 
 void nvgDrawBlockBox(mat4 &in m, vec3 size) {

@@ -195,6 +195,8 @@ namespace MenuBar {
                 if (UI::MenuItem("Refresh Map Block/Item Cache")) {
                     Editor::GetMapCache().RefreshCacheSoon();
                 }
+                UI::AlignTextToFramePadding();
+                UI::TextDisabled("Duplicate Free Blocks: " + Editor::GetMapCache().NbDuplicateFreeBlocks);
                 if (UI::MenuItem("Refresh Inventory Cache")) {
                     Editor::GetInventoryCache().RefreshCacheSoon();
                 }
@@ -251,6 +253,8 @@ namespace MenuBar {
                 if (Editor::GetMapCache().isRefreshing) {
                     UI::MenuItem("Map Objs Cache: " + Editor::GetMapCache().LoadingStatus());
                 }
+                UI::AlignTextToFramePadding();
+                UI::TextDisabled("Duplicate Free Blocks: " + Editor::GetMapCache().NbDuplicateFreeBlocks);
                 if (Editor::GetInventoryCache().isRefreshing) {
                     UI::MenuItem("Inventory Cache: " + Editor::GetInventoryCache().LoadingStatus());
                 }

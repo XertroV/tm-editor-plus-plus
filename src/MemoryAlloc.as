@@ -1,4 +1,4 @@
-uint64[] memoryAllocations;
+uint64[] memoryAllocations = array<uint64>();
 
 uint64 RequestMemory(uint size) {
     auto ptr = Dev::Allocate(size);

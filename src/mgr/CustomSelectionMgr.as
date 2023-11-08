@@ -26,6 +26,7 @@ class CustomSelectionMgr {
         startnew(CoroutineFunc(Enable));
         @doneCB = OnCustomSelectionDoneF(this.OnFillSelectionComplete);
         dev_trace('running enable hotkey');
+        // blocks editor inputs, unblock next frame
         Editor::EnableCustomCameraInputs();
         startnew(Editor::DisableCustomCameraInputs);
         return UI::InputBlocking::DoNothing;
@@ -232,7 +233,7 @@ class CustomSelectionMgr {
             } else {
                 NotifyWarning("Unsupported for fill mode: " + tostring(origPlacementMode));
             }
-
+            CheckPause();
         }
         pmt.AutoSave();
         // pmt.Selection

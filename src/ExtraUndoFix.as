@@ -28,6 +28,9 @@ namespace ExtraUndoFix {
             throw("Attempted to enable undo when patch was not applied!");
         }
         if (patternPtr == 0) {
+            patternPtr = Dev::FindPattern(AutosavePattern);
+        }
+        if (patternPtr == 0) {
             warn('[EnableUndo] Failed to find AddUndo pattern, please report this to the plugin support thread.');
             return;
         }

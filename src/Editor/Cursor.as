@@ -19,6 +19,19 @@ namespace Editor {
         return EditorRotation(cursor);
     }
 
+    vec3 GetItemCursorPos(CGameCursorItem@ itemCursor) {
+        return itemCursor.CurrentPos;
+    }
+
+    mat4 GetItemCursorMat(CGameCursorItem@ itemCursor) {
+        // bit of a placeholder. vectors Left, Up, Dir immediately before current pos in memory.
+        auto posOffset = GetOffset(itemCursor, "CurrentPos");
+        auto leftOffset = posOffset - 0x24;
+        // auto upOffset = posOffset - 0x18;
+        // auto dirOffset = posOffset - 0xC;
+        return mat4(Dev::GetOffsetIso4(itemCursor, leftOffset));
+    }
+
     // 4 bools (A,B,C,D); A,B true for blocks and macroblocks, C true for all, D true for all but items
     bool IsAnythingBeingDrawn(CGameCursorBlock@ cursor) {
         return Dev::GetOffsetUint8(cursor, O_CURSOR_SUBDIV + (0x1F8 - 0x1E4)) == 0x1;

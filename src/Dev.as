@@ -23,6 +23,13 @@ uint64[]@ Dev_GetOffsetBytes(CMwNod@ nod, uint offset, uint length) {
     }
     return bs;
 }
+uint64[]@ Dev_GetBytes(uint64 ptr, uint length) {
+    auto bs = array<uint64>();
+    for (uint i = 0; i < length; i += 0x8) {
+        bs.InsertLast(Dev::ReadUInt64(ptr + i));
+    }
+    return bs;
+}
 
 void Dev_SetOffsetBytes(CMwNod@ nod, uint offset, uint64[]@ bs) {
     for (uint i = 0; i < bs.Length; i++) {
@@ -326,3 +333,8 @@ const uint16 O_INVENTORY_GhostSelectedFolder = 0x150;
 
 const uint16 O_INVENTORY_ItemHideFolderDepth = 0x1E8;
 const uint16 O_INVENTORY_ItemSelectedFolder = 0x1F0;
+
+
+const uint16 O_ITEMCURSOR_CurrentModelsBuf = 0xB8;
+// const uint16 O_ITEMCURSOR_VariantOrNbMaybe = 0xC0;
+// const uint16 O_ITEMCURSOR_MaxVariantMaybe = 0xC4;

@@ -1,10 +1,14 @@
 namespace UX {
     shared vec3 InputAngles3(const string &in label, vec3 angles, vec3 _default = vec3()) {
-        auto val = MathX::ToRad(UI::InputFloat3(label, MathX::ToDeg(angles)));
+        auto d1 = MathX::ToDeg(angles);
+        auto d2 = UI::InputFloat3(label, d1);
+        auto val = MathX::ToRad(d2);
         UI::SameLine();
         if (UI::Button("Reset##"+label)) {
             return _default;
         }
+        // check if we actually changed anything
+        if (MathX::Vec3Eq(d1, d2)) return angles;
         return val;
     }
 

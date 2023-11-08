@@ -88,6 +88,8 @@ bool CheckPlacingItemFreeMode() {
     // dev_trace('CheckPlacingItemFreeMode');
     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
     if (!S_HelpPlaceItemsOnFreeBlocks || editor is null) return false;
+    auto picker = GetApp().Viewport.Picker;
+    if (picker.Overlay !is null) return false;
     auto pmt = editor.PluginMapType;
     if (Editor::IsInAnyItemPlacementMode(editor, true) && Editor::GetItemPlacementMode() == Editor::ItemMode::Normal) {
         auto coord = Nat3ToInt3(pmt.CursorCoord);
@@ -115,6 +117,7 @@ void _WatchAndCleanUp(ref@ r) {
     ExtraUndoFix::EnableUndo();
     auto coord = cast<nat3[]>(r)[0];
     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    if (editor is null) return;
     auto pmt = editor.PluginMapType;
     auto inv = Editor::GetInventoryCache();
     auto article = inv.GetBlockByName("TrackWallSlopeUTop");

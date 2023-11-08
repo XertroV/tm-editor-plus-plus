@@ -106,6 +106,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         UI::SameLine();
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(block)));
 #endif
+
         UI::NextColumn();
 
         LabeledValue("Is Ghost", block.IsGhostBlock());
@@ -121,7 +122,6 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(block.BlockInfo)));
 #endif
         UI::Columns(1);
-
 
         UI::Separator();
 
@@ -181,6 +181,9 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         if (Editor::IsBlockFree(block)) {
             UI::Text("Nudge block:");
             m_BlockChanged = DrawNudgeFor(block) || m_BlockChanged;
+            if (m_BlockChanged) {
+                dev_trace('Nudge block: changed');
+            }
         } else {
             UI::Text("Cannot nudge non-free blocks.");
         }
@@ -192,12 +195,25 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             || !MathX::Vec3Eq(preDesc.Rot, desc.Rot)
             ;
 
+        // UI::Text("m_BlockChanged: " + m_BlockChanged);
+
         if (!m_BlockChanged && preDesc.Color != block.MapElemColor) {
             safeToRefresh = true;
             m_BlockChanged = true;
         }
 
-        if (m_BlockChanged) trace('block changed');
+        if (m_BlockChanged) {
+#if DEV
+            dev_trace('block changed');
+            dev_trace('poss: ' + preDesc.Pos.ToString() + " -> " + desc.Pos.ToString());
+            dev_trace('pos changed: ' + !MathX::Vec3Eq(preDesc.Pos, desc.Pos));
+            dev_trace('rots: ' + preDesc.Rot.ToString() + " -> " + desc.Rot.ToString());
+            dev_trace('rot changed: ' + !MathX::Vec3Eq(preDesc.Rot, desc.Rot));
+            dev_trace('rot delta len sq: ' + (preDesc.Rot - desc.Rot).LengthSquared());
+            dev_trace('rot delta len sq: ' + ((preDesc.Rot - desc.Rot).LengthSquared() < 1e10));
+            dev_trace('color changed: ' + (preDesc.Color != block.MapElemColor));
+#endif
+        }
 
         if (m_BlockChanged && safeToRefresh) {
             trace('Updating picked/pinned block');
