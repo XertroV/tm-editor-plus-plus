@@ -161,11 +161,11 @@ class ItemPlacementTab : Tab {
                 UI::Text("" + i + ". ");
                 UI::SameLine();
                 UI::SetNextItemWidth(200);
-                pp_content.m_MagnetLocs_Degrees[i].Trans = UI::InputFloat3("T (x,y,z)   ", pp_content.m_MagnetLocs_Degrees[i].Trans);
+                pp_content.m_MagnetLocs_Degrees[i].Trans = UI::InputFloat3("T (x,y,z)   ##"+i , pp_content.m_MagnetLocs_Degrees[i].Trans);
                 UI::SameLine();
                 UI::SetNextItemWidth(200);
                 auto angles = MathX::ToRad(vec3(pp_content.m_MagnetLocs_Degrees[i].PitchDeg, pp_content.m_MagnetLocs_Degrees[i].YawDeg, pp_content.m_MagnetLocs_Degrees[i].RollDeg));
-                angles = MathX::ToDeg(UX::InputAngles3("R (p,y,r)", angles));
+                angles = MathX::ToDeg(UX::InputAngles3("R (p,y,r)##"+i, angles));
                 pp_content.m_MagnetLocs_Degrees[i].PitchDeg = angles.x;
                 pp_content.m_MagnetLocs_Degrees[i].YawDeg = angles.y;
                 pp_content.m_MagnetLocs_Degrees[i].RollDeg = angles.z;
