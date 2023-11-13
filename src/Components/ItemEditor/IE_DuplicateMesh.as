@@ -909,11 +909,22 @@ namespace MeshDuplication {
             if (newMat !is null) {
                 trace('applying setting new mat ['+i+']: ' + string(newMat.FileName));
                 ManipPtrs::Replace(matBufFakeNod, i * 0x8, newMat.Nod, true);
-                // Dev::SetOffset(matBufFakeNod, i * 0x8, newMat.Nod);
                 newMat.Nod.MwAddRef();
             }
         }
-        trace('applied mat mods to mesh (nbMats: '+nbMats+')');
+        auto lightBuffer = Dev::GetOffsetNod(mesh, 0x168);
+        auto lightBufferCount = Dev::GetOffsetUint32(mesh, 0x168 + 0x8);
+        trace('applied mat mods to mesh (lightBufferCount: '+lightBufferCount+')');
+        for (int i = 0; i < lightBufferCount; i++) {
+            auto light = cast<CPlugLight>(Dev::GetOffsetNod(lightBuffer, 0x60 * i + 0x58));
+            auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(light, 0x8));
+            auto newLight = MatMod_FidToReplacement(fid);
+            if (newLight !is null) {
+                trace('applying setting new light ['+i+']: ' + string(newLight.FileName));
+                ManipPtrs::Replace(lightBuffer, 0x60 * i + 0x58, newLight.Nod, true);
+                newLight.Nod.MwAddRef();
+            }
+        }
     }
 
     void ApplyMaterialMods(CPlugPrefab@ prefab) {
