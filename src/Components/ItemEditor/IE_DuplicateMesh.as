@@ -164,6 +164,7 @@ namespace MeshDuplication {
 
     void ZeroFids(CPlugSurface@ surface) {
         ZeroNodFid(surface);
+        ApplyMaterialMods(surface);
         // don't zero material Fids
         FixMatsOnShape(surface);
         // zero skel?
@@ -923,6 +924,26 @@ namespace MeshDuplication {
                 trace('applying setting new light ['+i+']: ' + string(newLight.FileName));
                 ManipPtrs::Replace(lightBuffer, 0x60 * i + 0x58, newLight.Nod, true);
                 newLight.Nod.MwAddRef();
+            }
+        }
+    }
+
+    void ApplyMaterialMods(CPlugSurface@ surface) {
+        if (!enableReplaceMatsViaMatMod) return;
+        if (matMod is null) return;
+        // check materials
+        if (surface.Materials.Length == 0) return;
+        trace('applying mat mods to surface');
+        auto surfMatsBufFakeNod = Dev::GetOffsetNod(surface, GetOffset(surface, "Materials"));
+        for (int i = 0; i < surface.Materials.Length; i++) {
+            auto mat = surface.Materials[i];
+            if (mat is null) continue;
+            auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(mat, 0x8));
+            auto newMat = MatMod_FidToReplacement(fid);
+            if (newMat !is null) {
+                trace('applying setting surface new mat ['+i+']: ' + string(newMat.FileName));
+                ManipPtrs::Replace(surfMatsBufFakeNod, i * 0x8, newMat.Nod, true);
+                newMat.Nod.MwAddRef();
             }
         }
     }

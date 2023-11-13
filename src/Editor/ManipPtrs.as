@@ -88,8 +88,12 @@ namespace ManipPtrs {
                 if (fidPtr > 0 && releaseNodOnUnmod) {
                     trace('releasing nod from pointer... ('+Text::FormatPointer(ptr)+')');
                     auto nod = Dev_GetNodFromPointer(Dev::ReadUInt64(ptr));
-                    nod.MwRelease();
-                    trace('released.');
+                    if (nod is null) {
+                        trace('null nod ptr');
+                    } else {
+                        nod.MwRelease();
+                        trace('released.');
+                    }
                 }
                 Dev::Write(ptr, fidPtr);
                 canUnzero = false;
