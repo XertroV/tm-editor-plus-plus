@@ -73,7 +73,8 @@ class JitterEffectTab : EffectTab {
         UI::Separator();
         jitterRot = UI::Checkbox("Apply Rotation Jitter", jitterRot);
         AddSimpleTooltip("Apply a randomization to placed items' rotations");
-        jitterRotAmt = UX::InputAngles3("Rotation Jitter (Deg)", jitterRotAmt, vec3(Math::PI));
+        // jitterRotAmt = UX::InputAngles3("Rotation Jitter (Deg)", jitterRotAmt, vec3(Math::PI));
+        jitterRotAmt = UX::InputAngles3Raw("Rotation Jitter (Deg)", jitterRotAmt, vec3(Math::PI));
         AddSimpleTooltip("Rotation will have a random amount added to it, up to +/- the amount specified in radians.\nDefault limits: -3.141 to 3.141 (which is -180 deg to 180 deg)");
 
         UI::Separator();

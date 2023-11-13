@@ -1,5 +1,7 @@
 
 class IE_AdvancedTab : Tab {
+    bool m_PushMatMod = true;
+
     IE_AdvancedTab(TabGroup@ p) {
         super(p, "Advanced", Icons::ExclamationTriangle + Icons::Cogs);
     }
@@ -23,9 +25,11 @@ class IE_AdvancedTab : Tab {
 
         UI::Separator();
 
+        m_PushMatMod = UI::Checkbox("Apply Materials Modifier before Zeroing?", m_PushMatMod);
+
         if (UI::Button("Zero ItemModel Fids")) {
             try {
-                MeshDuplication::ZeroFidsUnknownModelNod(im);
+                MeshDuplication::ZeroFidsOfItemModel_Wrapper(im, m_PushMatMod);
                 NotifySuccess("Zeroed ItemModel FIDs");
             } catch {
                 NotifyError("Exception zeroing fids: " + getExceptionInfo());

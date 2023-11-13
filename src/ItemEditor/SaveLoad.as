@@ -11,6 +11,7 @@ namespace ItemEditor {
             auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
             Editor::DoItemEditorAction(ieditor, Editor::ItemEditorAction::SaveItem);
             yield();
+            yield();
             @frame = GetDialogSaveAs();
         }
         if (frame is null) {
@@ -72,6 +73,21 @@ namespace ItemEditor {
                 UpdateThumbnailAndSaveItem();
             }
         }
+    }
+
+    void ReloadItem(bool unzero) {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null) return;
+        if (!HasItemBeenSaved()) {
+            NotifyError("Please save the item first.\n\nYou must have first saved the item.");
+            return;
+        }
+        OpenItem(ieditor.ItemModel.IdName);
+        yield();
+        if (unzero) {
+            ManipPtrs::RunUnzero();
+        }
+        yield();
     }
 
     void OpenItem(const string &in path) {

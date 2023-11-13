@@ -253,6 +253,7 @@ namespace MenuBar {
                 if (Editor::GetMapCache().isRefreshing) {
                     UI::MenuItem("Map Objs Cache: " + Editor::GetMapCache().LoadingStatus());
                 }
+                // todo: alerts for duplicate free blocks
                 UI::AlignTextToFramePadding();
                 UI::TextDisabled("Duplicate Free Blocks: " + Editor::GetMapCache().NbDuplicateFreeBlocks);
                 if (Editor::GetInventoryCache().isRefreshing) {

@@ -48,13 +48,15 @@ namespace MeshDuplication {
 
         ZeroFids(model.DefaultPlacementParam_Content);
 
+        // todo: we can save with material modifier?
         if (model.MaterialModifier !is null) {
             ZeroFids(model.MaterialModifier);
+            Dev::SetOffset(model, GetOffset(model, "MaterialModifier"), uint64(0));
         }
 
+        auto archetypeRefOffset = GetOffset(model, "ArchetypeRef");
         if (model.ArchetypeRef.Filename.Length > 0) {
             // todo, zero the reference and load the fid nod (CGameItemModel) and set to .ArchetypeFid
-            auto archetypeRefOffset = GetOffset(model, "ArchetypeRef");
             // string at 0x8, needs to have 0x0 termination to match length (or null string mb)
             // length and string
             Dev::SetOffset(model, archetypeRefOffset + 0x8, uint64(0));
@@ -64,9 +66,11 @@ namespace MeshDuplication {
             // 0x1E8 -> ptr to archetype
             // Dev::SetOffset(model, GetOffset(model, "DefaultPlacementParam_Dbg") + 0x10, uint64(0));
 
-            // PhyModelCustom
-            Dev::SetOffset(model, GetOffset(model, "PhyModelCustom"), uint64(0));
+            // // PhyModelCustom -- vehicles
+            // Dev::SetOffset(model, GetOffset(model, "PhyModelCustom"), uint64(0));
         }
+        // we also want to zero the ArchitypeFid if it exists
+        Dev::SetOffset(model, archetypeRefOffset + 0x18, uint64(0));
     }
 
     void ZeroFids(CGameCommonItemEntityModel@ ciModel) {
@@ -209,6 +213,7 @@ namespace MeshDuplication {
 
     }
 
+    // copy from 1 to 2
     void CopyEntRefParams(CPlugPrefab@ prefab1, int entityIx1, CPlugPrefab@ prefab2, int entityIx2) {
         // size: NPlugPrefab_SEntRef: 0x50
         auto ents1 = Dev::GetOffsetNod(prefab1, GetOffset("CPlugPrefab", "Ents"));
@@ -270,6 +275,7 @@ namespace MeshDuplication {
 
     void ZeroFids(NPlugTrigger_SSpecial@ wp) {
         // todo: check memory
+        // seems fine
         AlertIfFid(wp);
         ZeroNodFid(wp);
         ZeroFids(wp.TriggerShape);
@@ -481,6 +487,12 @@ namespace MeshDuplication {
         }
     }
 
+    void ZeroFidsOfItemModel_Wrapper(CGameItemModel@ im, bool pushMatMod = true) {
+        bool applyMod = pushMatMod && im.MaterialModifier !is null;
+        if (applyMod) PushMaterialModifier(im.MaterialModifier);
+        ZeroFidsUnknownModelNod(im);
+        if (applyMod) PopMaterialModifier();
+    }
 
     void ZeroFidsUnknownModelNod(CMwNod@ nod) {
         if (nod is null) return;
@@ -901,7 +913,7 @@ namespace MeshDuplication {
                 newMat.Nod.MwAddRef();
             }
         }
-        trace('applied mat mods to mesh');
+        trace('applied mat mods to mesh (nbMats: '+nbMats+')');
     }
 
     void ApplyMaterialMods(CPlugPrefab@ prefab) {
@@ -930,7 +942,7 @@ namespace MeshDuplication {
         string replacementName = "";
         for (uint i = 0; i < fidBufC; i++) {
             auto skinFid = cast<CSystemFidFile>(Dev::GetOffsetNod(fidBuf, 0x8 * i));
-            if (skinFid !is null && string(fid.FileName) == string(skinFid.FileName)) {
+            if (skinFid !is null && string(fid.FileName).Split("?", 2)[0] == string(skinFid.FileName)) {
                 // found index
                 replacementName = Dev::GetOffsetString(strBuf, 0x10 * i);
                 break;

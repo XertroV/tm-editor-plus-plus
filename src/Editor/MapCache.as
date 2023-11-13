@@ -94,7 +94,7 @@ namespace Editor {
         string hashStr;
 
         BlockInMap(uint i, CGameCtnBlock@ block) {
-            dev_trace("Adding block: " + block.BlockInfo.Name);
+            // dev_trace("Adding block: " + block.BlockInfo.Name);
             super(i);
             pos = Editor::GetBlockLocation(block);
             rot = Editor::GetBlockRotation(block);
@@ -102,7 +102,7 @@ namespace Editor {
             // that would be 4*3*2+4 bytes = 28 bytes
             hash = GetBlockHash(pos, rot, block.BlockInfo.Id.Value, block.BlockInfoVariantIndex, block.MobilVariantIndex);
             hashStr = tostring(hash);
-            dev_trace("Block hash: " + hashStr);
+            // dev_trace("Block hash: " + hashStr);
             color = int(block.MapElemColor);
             Id = block.BlockInfo.Id.Value;
             IdName = block.BlockInfo.IdName;

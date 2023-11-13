@@ -12,6 +12,15 @@ namespace UX {
         return val;
     }
 
+    shared vec3 InputAngles3Raw(const string &in label, vec3 angles, vec3 _default = vec3()) {
+        auto val = MathX::ToRad(UI::InputFloat3(label, MathX::ToDeg(angles)));
+        UI::SameLine();
+        if (UI::Button("Reset##"+label)) {
+            return _default;
+        }
+        return val;
+    }
+
     shared vec3 InputFloat3(const string &in label, vec3 val, vec3 _default = vec3()) {
         auto ret = UI::InputFloat3(label, val);
         UI::SameLine();

@@ -9,7 +9,8 @@
 - recently selected blocks and items history
 - [x] Quick idea please, would it be possible to redirect to the "Picked Item" tab when clicking this button on the "Blocks & Items" tab?
 - [x] edit block coord of item
-
+- [ ] duplicate free blocks helpers
+- [ ]
 
 - ~~copy placement params from 1 item to another~~
 - script to do item manipulation

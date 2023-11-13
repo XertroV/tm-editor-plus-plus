@@ -505,7 +505,7 @@ class ItemModelTreeElement {
                 if (StartTreeNode(".Variant["+i+"]:", true)) {
                     if (drawProperties) {
                         UI::Text("nbPlacementTags: " + varList.Variants[i].Tags.Length + "  { " + GetVariantTagsStr(varList, i) + " }");
-                        LabeledValue("HiddenInManualCycle", varList.Variants[i].HiddenInManualCycle);
+                        varList.Variants[i].HiddenInManualCycle = UI::Checkbox("HiddenInManualCycle", varList.Variants[i].HiddenInManualCycle);
                     }
                     MkAndDrawChildNode(varList.Variants[i].EntityModel, "EntityModel");
                     EndTreeNode();
@@ -1985,7 +1985,7 @@ void DrawMaterialModifier(CPlugGameSkinAndFolder@ matMod) {
     DrawMMSkin(matMod);
     UI::Unindent();
     // UI::Separator();
-    UI::Text("RemapFolder:");
+    UI::Text("RemapFolder: " + matMod.RemapFolder.DirName);
     UI::Indent();
     DrawMMFids(matMod);
     UI::Unindent();

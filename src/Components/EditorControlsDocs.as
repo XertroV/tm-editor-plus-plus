@@ -26,6 +26,7 @@ class EditorControlsDocsTab : Tab {
         UI::LabelText("Show/hide in-game helpers", "H");
         UI::LabelText("Avoid blocks snapping to free-blocks", "Hold Shift");
         UI::LabelText("Disable all editor plugins", "Ctrl + P");
+        UI::LabelText("Cycle Item Variants (e.g., trees)", "Middle Click");
 
         UI::PopStyleVar();
 
