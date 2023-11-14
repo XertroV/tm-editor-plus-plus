@@ -48,7 +48,7 @@ namespace MeshDuplication {
 
         ZeroFids(model.DefaultPlacementParam_Content);
 
-        // todo: we can save with material modifier?
+        // can we save with material modifier? no
         if (model.MaterialModifier !is null) {
             ZeroFids(model.MaterialModifier);
             Dev::SetOffset(model, GetOffset(model, "MaterialModifier"), uint64(0));
@@ -263,6 +263,11 @@ namespace MeshDuplication {
     void ZeroFids(CPlugSolid2Model@ mesh) {
         ApplyMaterialMods(mesh);
         ZeroNodFid(mesh);
+        auto tgaFile = Dev::GetOffsetNod(mesh, 0x280);
+        // todo: this may crash servers or something mb? idk
+        if (tgaFile !is null) {
+            ZeroNodFid(tgaFile);
+        }
         FixMatsOnMesh(mesh);
         FixLightsOnMesh(mesh);
     }
@@ -994,11 +999,3 @@ namespace MeshDuplication {
         return null;
     }
 }
-
-
-
-// namespace Editor {
-//     void SetItemModelSkinDir(CGameItemModel@ model, const string &in skinDir) {
-//         Dev::SetOffset(model, GetOffset("CGameItemModel", "SkinDirectory"), skinDir);
-//     }
-// }

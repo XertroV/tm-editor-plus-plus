@@ -47,7 +47,7 @@ class ItemModel {
     }
 
     void DrawSkin() {
-        auto skin = cast<CPlugGameSkin>(Dev::GetOffsetNod(item, 0xA0));
+        auto skin = cast<CPlugGameSkin>(Dev::GetOffsetNod(item, O_ITEM_MODEL_SKIN));
         if (skin !is null) {
             auto el = ItemModelTreeElement(null, -1, skin, "GameSkin", drawProperties, O_ITEM_MODEL_SKIN, isEditable);
             el.Draw();
