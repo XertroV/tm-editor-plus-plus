@@ -473,6 +473,7 @@ class IE_ManipulateMeshesTab : Tab {
         bool hasSouce = sourceDyna !is null || sourceStatic !is null;
 
         if (destDyna !is null && hasSouce) {
+            // auto skel = destDyna.Skel;
             if (sourceDyna !is null) {
                 ManipPtrs::Replace(destDyna, GetOffset(destDyna, "Mesh"), sourceDyna.Mesh, true);
                 ManipPtrs::Replace(destDyna, GetOffset(destDyna, "DynaShape"), sourceDyna.DynaShape, true);
@@ -495,6 +496,7 @@ class IE_ManipulateMeshesTab : Tab {
                 if (sourceDyna.Mesh !is null) sourceDyna.Mesh.MwAddRef();
                 if (sourceDyna.DynaShape !is null) sourceDyna.DynaShape.MwAddRef();
             } else {
+                auto skel = Dev::GetOffsetNod(sourceStatic, 0x78);
                 ManipPtrs::Replace(destStatic, GetOffset(destStatic, "Mesh"), sourceStatic.Mesh, true);
                 ManipPtrs::Replace(destStatic, GetOffset(destStatic, "Shape"), sourceStatic.Shape, true);
                 if (sourceStatic.Mesh !is null) sourceStatic.Mesh.MwAddRef();

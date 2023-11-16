@@ -27,6 +27,16 @@ class IE_DevTab : Tab {
             ItemEditor::ClickConfirmOpenOrSave();
         }
 
+        if (UI::CollapsingHeader("Inputs")) {
+            auto input = ieditor.MainPLugin.Input;
+            string inputsStr;
+            for (int i = 0; i < 256; i++) {
+                bool isPressed = input.IsKeyPressed(i);
+                inputsStr += "[ " + i + ": "+(isPressed ? Icons::Check : Icons::Times)+"]  ";
+            }
+            UI::TextWrapped(inputsStr);
+        }
+
 
         // if (UI::Button("Set ItemModel.EntityModel to a CGameObjectModel")) {
         //     Dev::SetOffset(im, GetOffset(im, "EntityModel"), CGameObjectModel());

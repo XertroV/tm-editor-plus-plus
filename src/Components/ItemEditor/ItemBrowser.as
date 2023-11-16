@@ -451,7 +451,10 @@ class ItemModelTreeElement {
                 g_NewNbEnts = UI::InputInt("New Capacity", g_NewNbEnts);
                 UI::SameLine();
                 if (UI::Button("Update")) {
-                    Dev_UpdateMwSArrayCapacity(Dev_GetPointerForNod(prefab) + O_PREFAB_ENTS, g_NewNbEnts, SZ_ENT_REF);
+                    auto editor = cast<CGameCtnEditorFree>(GetApp().Switcher.ModuleStack[0]);
+                    // left or right shift key held
+                    bool fromFront = editor !is null && (editor.PluginMapType.Input.IsKeyPressed(68) || editor.PluginMapType.Input.IsKeyPressed(112));
+                    Dev_UpdateMwSArrayCapacity(Dev_GetPointerForNod(prefab) + O_PREFAB_ENTS, g_NewNbEnts, SZ_ENT_REF, fromFront);
                     ManipPtrs::AddSignalEntry();
                 }
             }
@@ -615,7 +618,9 @@ class ItemModelTreeElement {
     void Draw(CPlugEditorHelper@ editorHelper) {
         if (StartTreeNode(name + " :: \\$f8fCPlugEditorHelper", UI::TreeNodeFlags::DefaultOpen)) {
             auto nod = editorHelper.PrefabFid is null ? null : editorHelper.PrefabFid.Nod;
-            MkAndDrawChildNode(nod, "PrefabFid");
+            MkAndDrawChildNode(editorHelper.PrefabFid, 0x18, "PrefabFid");
+            auto prefabNod = Dev::GetOffsetNod(editorHelper, 0x20);
+            MkAndDrawChildNode(prefabNod, 0x20, "Prefab");
             EndTreeNode();
         }
     }

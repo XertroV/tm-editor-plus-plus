@@ -10,18 +10,23 @@ class IE_CreateObjectMacroTab : Tab {
     }
 
     void DrawInner() override {
-        UI::Markdown("""
-- Expand VarList to correct length (2)
-- Populate VarLists with prefabs
-- Expand prefab EntList to 5x2
-- Populate Prefabs with unique DynaObjects and KinamaticConstraints
-  - set index on kinematic constraints, set no static shadows
-- Populate DynaObjects with common rocks
-        """);
+//         UI::Markdown("""
+// - Expand VarList to correct length (2)
+// - Populate VarLists with prefabs
+// - Expand prefab EntList to 5x2
+// - Populate Prefabs with unique DynaObjects and KinamaticConstraints
+//   - set index on kinematic constraints, set no static shadows
+// - Populate DynaObjects with common rocks
+//         """);
         if (UI::Button("Create Glitched Rock out of Curr Item")) {
             startnew(CreateObj::MakeGlitchedRock);
         }
+        if (UI::Button("Create Lightning Bolt + Rock Explosion (replaces current)")) {
+            startnew(CreateObj::MakeExplodingRocksLightning);
+        }
+
         UI::Separator();
+
         UI::Text("AR_Down Firework:");
         if (UI::Button("ExpandEntList")) ExpandEntList();
         if (UI::Button("(Opt) FillModels")) FillModels();
@@ -84,15 +89,29 @@ namespace CreateObj {
         "Tmpl\\VarList11.Item.Gbx"
     };
 
-    // string fireworkSource = "Tmpl\\Firework-50-Kinematics.Item.Gbx";
-    // string fireworkSource2 = "Tmpl\\Firework-50-Kinematics2.Item.Gbx";
+    string kinSimple = "Tmpl\\KinematicSimple.Item.Gbx";
+    string kinSimple2 = "Tmpl\\KinematicSimple2.Item.Gbx";
+    string kinSimple3 = "Tmpl\\KinematicSimple3.Item.Gbx";
+    string kinSimple4 = "Tmpl\\KinematicSimple4.Item.Gbx";
+    string kinSimple5 = "Tmpl\\KinematicSimple5.Item.Gbx";
+    string prefab7_1 = "Tmpl\\Prefab7-1.Item.Gbx";
+    string prefab7_2 = "Tmpl\\Prefab7-2.Item.Gbx";
+    string prefab7_3 = "Tmpl\\Prefab7-3.Item.Gbx";
+    string prefab7_4 = "Tmpl\\Prefab7-4.Item.Gbx";
+    string prefab7_5 = "Tmpl\\Prefab7-5.Item.Gbx";
+    string dynaSources = "Tmpl\\Firework-50-Kinematics.Item.Gbx";
+    string dynaSources2 = "Tmpl\\Firework-50-Kinematics2.Item.Gbx";
+    string dynaSources3 = "Tmpl\\Firework-50-Kinematics3.Item.Gbx";
+    string dynaSources4 = "Tmpl\\Firework-50-Kinematics4.Item.Gbx";
     string fireworkSource = "yyy_MovedFromRoot\\zzzy_DOWN_FIREWORK_8.Item.Gbx";
     string fireworkSource2 = "yyy_MovedFromRoot\\zzzy_DOWN_FIREWORK_9.Item.Gbx";
     string fireworkSource3 = "yyy_MovedFromRoot\\zzzy_DOWN_FIREWORK_7.Item.Gbx";
 
-    string grBaseDir = "DTC\\Prometheius\\GlitchedRock\\";
+    string farAwayShapeSource = "Work\\EmptyShapeItem.Item.Gbx";
+
+    string grBaseDir = "DTC\\Prometheus\\";
     string workFilenameBase = grBaseDir + "Work\\";
-    string itemName = "GlitchedRock";
+    string _itemName = "GlitchedRock";
 
     string[] rockNames = {
         "GlitchedRock\\top.Item.Gbx",
@@ -103,10 +122,208 @@ namespace CreateObj {
         "GlitchedRock\\Core.Item.Gbx"
     };
 
-    void SaveWork(const string &in suffix) {
+    void SaveWork(const string &in itemName, const string &in suffix) {
         ItemEditor::SaveItemAs(workFilenameBase + itemName + suffix);
         ItemEditor::ReloadItem(true);
     }
+
+    string boltSource = "Work\\Lightning\\LightningBolt.Item.Gbx";
+    string explRockSource = "Work\\ExplodingRock\\ExplodedRock";
+    vec3[] explRockOffsets = {
+        vec3(-24.1864, 0.0000, -6.7492), // "ExplodedRock1"
+        vec3(-0.5666, 0.0000, -46.8823), // "ExplodedRock2"
+        vec3(-26.3640, 0.0000, 7.4169), // "ExplodedRock3"
+        vec3(-21.1237, 0.0000, 18.6746), // "ExplodedRock4"
+        vec3(26.9871, 0.0000, 15.0569), // "ExplodedRock5"
+        vec3(-15.4046, 0.0000, -25.1279), // "ExplodedRock6"
+        vec3(-15.8160, 0.0000, 24.4962), // "ExplodedRock7"
+        vec3(20.5205, 0.0000, -12.5596), // "ExplodedRock8"
+        vec3(-23.9299, 0.0000, -26.4440), // "ExplodedRock9"
+        vec3(9.7260, 0.0000, -31.0201) // "ExplodedRock10"
+    };
+
+    float[] explRockRots = {
+        -1.8565,
+        -3.1301,
+        -1.2987,
+        -0.8511,
+        1.0547,
+        -2.5902,
+        -0.5710,
+        2.1174,
+        -2.4027,
+        2.8376
+    };
+   /*
+        - Expand Varlist
+        - Prefabs
+        - Prefab expand
+        - Add unique kinematic constraints
+        - add empty shape
+     */
+    void MakeExplodingRocksLightning() {
+        string itemName = "ExplodingRocksLightning";
+
+        auto vl = ExpandVarList(null, 4);
+
+        auto explRock = CreateExplodingRockVariant(vl, 0);
+        auto lightningBolt = CreateLightningVariant(vl, 1);
+        auto lightningBolt11 = PrepareLightning11();
+        CreateCombinedVariant(vl, 2, {explRock, lightningBolt11}, prefab7_1);
+        CreateCombinedVariant(vl, 2, {explRock, lightningBolt11}, prefab7_2);
+    }
+
+    CPlugPrefab@ CreateCombinedVariant(NPlugItem_SVariantList@ vl, uint ix, CMwNod@[]@ models, const string &in tmplItem) {
+        auto pf7 = SetVarListVariantModel(vl, ix, tmplItem);
+        auto dest = cast<CPlugPrefab>(vl.Variants[ix].EntityModel);
+        ExpandEntList(dest, models.Length);
+        for (uint i = 0; i < dest.Ents.Length; i++) {
+            dest.Ents[i].Location.Trans = vec3(0);
+            dest.Ents[i].Location.Quat = quat(1, 0, 0, 0);
+            MeshDuplication::SetEntRefModel(dest, i, models[i]);
+            // MeshDuplication::SetEntRef
+            // todo: change params?
+        }
+        return dest;
+    }
+
+    CPlugPrefab@ PrepareLightning11() {
+        // lightning bolt
+        auto farShapeItem = GetModelFromSource(farAwayShapeSource);
+        auto farShape = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(farShapeItem.EntityModel).StaticObject).Shape;
+        auto bolt = GetModelFromSource(boltSource);
+        auto boltMesh = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(bolt.EntityModel).StaticObject).Mesh;
+        auto dest = cast<CPlugPrefab>(GetModelFromSource(kinSimple2).EntityModel);
+        dest.Ents[0].Location.Trans = vec3(0, 2, 0);
+        // dest.Ents[0].Location.Trans = vec3(0);
+        dest.Ents[0].Location.Quat = quat(vec3(Math::PI, 0, 0));
+        auto dyna = cast<CPlugDynaObjectModel>(dest.Ents[0].Model);
+        auto kinCon = cast<NPlugDyna_SKinematicConstraint>(dest.Ents[0 + 1].Model);
+
+        if (dyna is null) throw('null dyna');
+        if (kinCon is null) throw('null kinCon');
+        if (dest is null) throw('null dest');
+        if (boltMesh is null) throw('null boltMesh');
+        if (farShape is null) throw('null farShape');
+
+        ExpandKCToMaxAnimFuncs(kinCon);
+        SetKCBolt(kinCon);
+        // zero indexed, so 11th dyna is index 10
+        // SetKinConTargetIx(dest, 1, 10);
+
+        ManipPtrs::Replace(dyna, GetOffset(dyna, "Mesh"), boltMesh, true);
+        ManipPtrs::Replace(dyna, GetOffset(dyna, "DynaShape"), farShape, true);
+        ManipPtrs::Replace(dyna, GetOffset(dyna, "StaticShape"), null, false);
+        if (dyna.Mesh !is null) dyna.Mesh.MwAddRef();
+        if (dyna.DynaShape !is null) dyna.DynaShape.MwAddRef();
+        if (dyna.StaticShape !is null) dyna.StaticShape.MwAddRef();
+
+        return dest;
+    }
+
+    CPlugPrefab@ CreateLightningVariant(NPlugItem_SVariantList@ vl, uint ix) {
+        // lightning bolt
+        auto farShapeItem = GetModelFromSource(farAwayShapeSource);
+        auto farShape = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(farShapeItem.EntityModel).StaticObject).Shape;
+        auto fw1 = SetVarListVariantModel(vl, ix, kinSimple);
+        auto bolt = GetModelFromSource(boltSource);
+        auto boltMesh = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(bolt.EntityModel).StaticObject).Mesh;
+        auto dest = cast<CPlugPrefab>(vl.Variants[ix].EntityModel);
+
+        dest.Ents[0].Location.Trans = vec3(0, 2, 0);
+        // dest.Ents[0].Location.Trans = vec3(0);
+        dest.Ents[0].Location.Quat = quat(vec3(Math::PI, 0, 0));
+        auto dyna = cast<CPlugDynaObjectModel>(dest.Ents[0].Model);
+        auto kinCon = cast<NPlugDyna_SKinematicConstraint>(dest.Ents[0 + 1].Model);
+
+        ExpandKCToMaxAnimFuncs(kinCon);
+        SetKCBolt(kinCon);
+
+        ManipPtrs::Replace(dyna, GetOffset(dyna, "Mesh"), boltMesh, true);
+        ManipPtrs::Replace(dyna, GetOffset(dyna, "DynaShape"), farShape, true);
+        ManipPtrs::Replace(dyna, GetOffset(dyna, "StaticShape"), null, false);
+        if (dyna.Mesh !is null) dyna.Mesh.MwAddRef();
+        if (dyna.DynaShape !is null) dyna.DynaShape.MwAddRef();
+        if (dyna.StaticShape !is null) dyna.StaticShape.MwAddRef();
+
+        return dest;
+    }
+
+
+    CPlugPrefab@ CreateExplodingRockVariant(NPlugItem_SVariantList@ vl, uint ix) {
+        auto farShapeItem = GetModelFromSource(farAwayShapeSource);
+        auto farShape = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(farShapeItem.EntityModel).StaticObject).Shape;
+        auto fw1 = SetVarListVariantModel(vl, ix, dynaSources);
+        auto dest = cast<CPlugPrefab>(vl.Variants[ix].EntityModel);
+        ExpandEntList(dest, 20);
+        for (int i = 0; i < 10; i++) {
+            auto name = explRockSource + tostring(i + 1);
+            auto rock = GetModelFromSource(name + ".Item.Gbx");
+            auto rockIEM = cast<CGameCommonItemEntityModel>(rock.EntityModel);
+            auto rockStatic = cast<CPlugStaticObjectModel>(rockIEM.StaticObject);
+            dest.Ents[2 * i].Location.Trans = explRockOffsets[i] * vec3(1., 1., -1.);
+            // dest.Ents[2 * i].Location.Trans = vec3(0);
+            dest.Ents[2 * i].Location.Quat = quat(vec3(Math::PI, explRockRots[i], 0));
+            auto dyna = cast<CPlugDynaObjectModel>(dest.Ents[2 * i].Model);
+            auto kinCon = cast<NPlugDyna_SKinematicConstraint>(dest.Ents[2 * i + 1].Model);
+
+            SetKinConTargetIx(dest, 2 * i + 1, i);
+            SetKCExplodingRock(kinCon);
+
+            ManipPtrs::Replace(dyna, GetOffset(dyna, "Mesh"), rockStatic.Mesh, true);
+            ManipPtrs::Replace(dyna, GetOffset(dyna, "DynaShape"), farShape, true);
+            ManipPtrs::Replace(dyna, GetOffset(dyna, "StaticShape"), null, false);
+            if (dyna.Mesh !is null) dyna.Mesh.MwAddRef();
+            if (dyna.DynaShape !is null) dyna.DynaShape.MwAddRef();
+            if (dyna.StaticShape !is null) dyna.StaticShape.MwAddRef();
+            // auto rockSurfFid = Fids::GetUser(name + ".Shape.Gbx");
+            // Fids::Preload(rockSurfFid);
+        }
+
+        return dest;
+    }
+
+    uint boltPreExplode = 15;
+    uint delayFromStart = 6100;
+    uint boltShowDuration = 40;
+    uint explodeDuration = 1600;
+    // uint afterExplodeResetDelay = 300 * 1000; // 5 min
+    uint afterExplodeResetDelay = 2000; // 2 seconds
+
+    void SetKCBolt(NPlugDyna_SKinematicConstraint@ kc) {
+        kc.RotAxis = EAxis::y;
+        kc.AngleMinDeg = 0;
+        kc.AngleMaxDeg = 0;
+        kc.TransAxis = EAxis::y;
+        kc.TransMin = 0;
+        kc.TransMax = -20000.;
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, true, delayFromStart - boltPreExplode);
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::None, false, boltShowDuration + boltPreExplode);
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, true, explodeDuration - boltShowDuration + afterExplodeResetDelay);
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, delayFromStart);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::Linear, false, explodeDuration);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
+    }
+
+    void SetKCExplodingRock(NPlugDyna_SKinematicConstraint@ kc) {
+        kc.RotAxis = EAxis::x;
+        kc.AngleMinDeg = 0;
+        kc.AngleMaxDeg = -210;
+        kc.TransAxis = EAxis::z;
+        kc.TransMin = 0;
+        kc.TransMax = -20.;
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, false, delayFromStart);
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::Linear, false, explodeDuration);
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay);
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, false, 0);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, delayFromStart);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::Linear, false, explodeDuration);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
+    }
+
 
     /*
         - Expand VarList to correct length (2)
@@ -123,7 +340,7 @@ namespace CreateObj {
         auto fw3 = SetVarListVariantModel(vl, 2, fireworkSource3);
         @vl = null;
         NotifySuccess("set varlist models");
-        SaveWork("-1");
+        SaveWork("GlitchedRock", "-1");
         // entities in model are now unique from fw1 and fw2
         auto vl2 = GetRootVL();
         auto inner1 = cast<CPlugPrefab>(vl2.Variants[0].EntityModel);
@@ -137,11 +354,11 @@ namespace CreateObj {
         CopyDynaKinematicsFromTo(cast<CPlugPrefab>(fw3.EntityModel), inner3);
         // ExpandEntList(inner3, 11);
         MeshDuplication::SetEntRefModel(inner3, 10, cast<CGameCommonItemEntityModel>(GetModelFromSource(rockNames[5]).EntityModel).StaticObject);
-        SaveWork("-2");
+        SaveWork("GlitchedRock", "-2");
         // we now have unique dyna objects to play with
         FinalizeGlitchedRock();
         inner3.Ents[10].Location.Trans = vec3(0, .35, 0);
-        SaveWork("-3");
+        SaveWork("GlitchedRock", "-3");
         // auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         // auto im = ieditor.ItemModel;
     }
@@ -555,12 +772,7 @@ namespace CreateObjDownStar {
 
         int randDeviation = int(Math::Rand(-500., 500.));
 
-        while (SAnimFunc_GetLength(kc, transAnimFuncOffset) < 4) {
-            SAnimFunc_IncrementEasingCountSetDefaults(kc, transAnimFuncOffset);
-        }
-        while (SAnimFunc_GetLength(kc, rotAnimFuncOffset) < 4) {
-            SAnimFunc_IncrementEasingCountSetDefaults(kc, rotAnimFuncOffset);
-        }
+        ExpandKCToMaxAnimFuncs(kc);
         SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, false, launchDuraiton);
         SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::QuadOut, false, starDuration - randDeviation);
         SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, false, downtime + randDeviation);
@@ -575,13 +787,60 @@ namespace CreateObjDownStar {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         auto model = ieditor.ItemModel;
         auto prefab = cast<CPlugPrefab>(model.EntityModel);
-        auto firstDyna = cast<CPlugDynaObjectModel>(prefab.Ents[4].Model);
+        auto firstDyna = cast<CPlugDynaObjectModel>(prefab.Ents[0].Model);
         if (firstDyna is null) throw('null first dyna');
-        for (uint i = 6; i < prefab.Ents.Length; i += 2) {
+        for (uint i = 1; i < prefab.Ents.Length; i += 1) {
             auto dyna = cast<CPlugDynaObjectModel>(prefab.Ents[i].Model);
-            if (dyna is null) throw("null dyna at ix " + i);
-            MeshDuplication::SetEntRefModel(prefab, i, firstDyna);
+            if (dyna is null) continue;
+            // create a new one
+            @dyna = CPlugDynaObjectModel();
+            dyna.MwAddRef();
+            MeshDuplication::SetEntRefModel(prefab, i, dyna);
+            ManipPtrs::Replace(dyna, GetOffset(dyna, "Mesh"), firstDyna.Mesh, true);
+            ManipPtrs::Replace(dyna, GetOffset(dyna, "DynaShape"), firstDyna.DynaShape, true);
+            ManipPtrs::Replace(dyna, GetOffset(dyna, "StaticShape"), firstDyna.StaticShape, true);
+            if (dyna.Mesh !is null) dyna.Mesh.MwAddRef();
+            if (dyna.DynaShape !is null) dyna.DynaShape.MwAddRef();
+            if (dyna.StaticShape !is null) dyna.StaticShape.MwAddRef();
         }
     }
 }
+
+
+
+void SetKinConTargetIx(CPlugPrefab@ prefab, uint ix, uint kinEntId) {
+    auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
+
+    auto ptr1 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * ix + GetOffset("NPlugPrefab_SEntRef", "Params"));
+    auto ptr2 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * ix + GetOffset("NPlugPrefab_SEntRef", "Params") + 0x8);
+
+    if (ptr2 > 0 && ptr2 % 8 == 0) {
+        auto type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
+        auto clsId = Dev::ReadUInt32(ptr2 + 0x10);
+        if (clsId == 0x2f0c8000 || type == "NPlugDyna::SPrefabConstraintParams") {
+            Dev::Write(ptr1 + 0x4, kinEntId);
+        } else {
+            warn("got wrong params classid " + clsId + "; ix: " + ix);
+        }
+    } else {
+        warn('params ptr null but expected it ' + ix);
+        }
+}
+
+void ExpandKCToMaxAnimFuncs(NPlugDyna_SKinematicConstraint@ kc) {
+    while (SAnimFunc_GetLength(kc, transAnimFuncOffset) < 4) {
+        SAnimFunc_IncrementEasingCountSetDefaults(kc, transAnimFuncOffset);
+    }
+    while (SAnimFunc_GetLength(kc, rotAnimFuncOffset) < 4) {
+        SAnimFunc_IncrementEasingCountSetDefaults(kc, rotAnimFuncOffset);
+    }
+}
+
+// CPlugDynaObject is 264 bytes long
+void CloneDynaObjects() {
+    // auto x = CPlugDynaObjectModel();
+
+}
+
+
 #endif

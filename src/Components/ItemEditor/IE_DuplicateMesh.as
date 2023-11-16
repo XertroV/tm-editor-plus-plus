@@ -196,8 +196,11 @@ namespace MeshDuplication {
                 trace('zeroing CPlugFxSystem model (cannot save map with custom items that use this)');
                 SetEntRefModel(prefab, i, null);
             } else if (eh !is null) {
-                trace('zeroing editor helper model (cannot save with one)');
-                SetEntRefModel(prefab, i, null);
+                // trace('zeroing editor helper model (cannot save with one)');
+                // SetEntRefModel(prefab, i, null);
+                ManipPtrs::Replace(eh, 0x18, uint64(0));
+                auto ehPrefab = Dev::GetOffsetNod(eh, 0x20);
+                ZeroFidsUnknownModelNod(ehPrefab);
             } else {
                 ZeroFidsUnknownModelNod(prefab.Ents[i].Model);
             }
