@@ -53,11 +53,12 @@ void Dev_WriteBytes(uint64 ptr, uint64[]@ bs) {
     return;
 }
 
-void Dev_UpdateMwSArrayCapacity(uint64 ptr, uint newSize, uint elsize) {
+void Dev_UpdateMwSArrayCapacity(uint64 ptr, uint newSize, uint elsize, bool reduceFromFront = false) {
+    bool isExpanding = Dev::ReadUInt32(ptr + 0x8) < newSize;
     while (Dev::ReadUInt32(ptr + 0x8) < newSize) {
         Dev_DoubleMwSArray(ptr, elsize);
     }
-    Dev_ReduceMwSArray(ptr, newSize);
+    Dev_ReduceMwSArray(ptr, newSize, !isExpanding && reduceFromFront);
 }
 
 void Dev_ReduceMwSArray(uint64 ptr, float newSizeProp) {
@@ -69,11 +70,18 @@ void Dev_ReduceMwSArray(uint64 ptr, float newSizeProp) {
     Dev::Write(ptr + 0x8, newSize);
 }
 
-void Dev_ReduceMwSArray(uint64 ptr, uint newSize) {
+void Dev_ReduceMwSArray(uint64 ptr, uint newSize, bool reduceFromFront = false, int elSize = -1) {
     auto len = Dev::ReadUInt32(ptr + 0x8);
+    auto capacity = Dev::ReadUInt32(ptr + 0xC);
     if (newSize > len) throw("only reduces");
     newSize = Math::Min(len, newSize);
     Dev::Write(ptr + 0x8, newSize);
+    if (reduceFromFront) {
+        if (elSize < 1) throw("invalid elSize for reducing from front");
+        if (capacity >= len) capacity = newSize;
+        Dev::Write(ptr + 0xC, capacity);
+        Dev::Write(ptr, Dev::ReadUInt64(ptr) + uint64(elSize) * (len - newSize));
+    }
 }
 
 void Dev_DoubleMwSArray(uint64 ptr, uint elSize) {
