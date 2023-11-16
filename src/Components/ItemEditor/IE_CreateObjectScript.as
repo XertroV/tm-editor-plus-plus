@@ -209,7 +209,7 @@ namespace CreateObj {
         ExpandKCToMaxAnimFuncs(kinCon);
         SetKCBolt(kinCon);
         // zero indexed, so 11th dyna is index 10
-        // SetKinConTargetIx(dest, 1, 10);
+        SetKinConTargetIx(dest, 1, 10);
 
         ManipPtrs::Replace(dyna, GetOffset(dyna, "Mesh"), boltMesh, true);
         ManipPtrs::Replace(dyna, GetOffset(dyna, "DynaShape"), farShape, true);
