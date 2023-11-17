@@ -24,6 +24,9 @@ class IE_CreateObjectMacroTab : Tab {
         if (UI::Button("Create Lightning Bolt + Rock Explosion (replaces current)")) {
             startnew(CreateObj::MakeExplodingRocksLightning);
         }
+        if (UI::Button("Create Stormy Rain")) {
+            startnew(CreateObj::MakeStormyRain);
+        }
 
         UI::Separator();
 
@@ -108,6 +111,7 @@ namespace CreateObj {
     string fireworkSource3 = "yyy_MovedFromRoot\\zzzy_DOWN_FIREWORK_7.Item.Gbx";
 
     string farAwayShapeSource = "Work\\EmptyShapeItem.Item.Gbx";
+    string cubeForSelectionSource = "Tmpl\\CubeForSelection.Item.Gbx";
 
     string grBaseDir = "DTC\\Prometheus\\";
     string workFilenameBase = grBaseDir + "Work\\";
@@ -154,13 +158,92 @@ namespace CreateObj {
         -2.4027,
         2.8376
     };
-   /*
-        - Expand Varlist
-        - Prefabs
-        - Prefab expand
-        - Add unique kinematic constraints
-        - add empty shape
-     */
+
+
+    void MakeStormyRain() {
+        uint nbSpeeds = 3;
+        uint nbDensities = 4;
+        auto vl = ExpandVarList(null, nbSpeeds * nbDensities);
+        auto varIx = 0;
+        for (uint s = 0; s < nbSpeeds; s++) {
+            for (uint d = 0; d < nbDensities; d++) {
+                float speed = s == 0 ? 1.0 : s == 1 ? 0.5 : s == 2 ? -0.1 : 1.0;
+                uint density = d + 1;
+                auto stormyRainVar = CreateStormyRainVariant(vl, varIx, speed, density);
+                varIx++;
+            }
+        }
+        // todo: variants
+        // - various densities (add in some position and rotation jitter)
+        // - 2x speeds
+    }
+
+    CPlugPrefab@ CreateStormyRainVariant(NPlugItem_SVariantList@ vl, uint ix) {
+        auto farShapeItem = GetModelFromSource(farAwayShapeSource);
+        auto farShape = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(farShapeItem.EntityModel).StaticObject).Shape;
+        auto fw1 = SetVarListVariantModel(vl, ix, dynaSources);
+        auto im = GetModelFromSource("Work\\StormyRain2.Item.Gbx");
+        auto rainMesh = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(im.EntityModel).StaticObject).Mesh;
+        auto cubeIm = GetModelFromSource(cubeForSelectionSource);
+        auto cube = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(cubeIm.EntityModel).StaticObject);
+        auto dest = cast<CPlugPrefab>(vl.Variants[ix].EntityModel);
+
+        // testing
+        // @rainMesh = cube.Mesh;
+
+        if (farShape is null) throw("farShape is null");
+        if (rainMesh is null) throw("rainMesh is null");
+        if (cube is null) throw("cube is null");
+
+        uint nbCopies = 4;
+        ExpandEntList(dest, 2 * nbCopies + 1);
+        uint startRestIx = 2 * nbCopies;
+
+        // grid y
+        for (uint gy = 0; gy < nbCopies; gy++) {
+            dest.Ents[2*gy].Location.Trans = vec3(0, 128.0 * float(gy) - 196.0, 0);
+            dest.Ents[2*gy].Location.Quat = quat(vec3(Math::PI, 0, 0));
+            auto dyna = cast<CPlugDynaObjectModel>(dest.Ents[2*gy].Model);
+            auto kinCon = cast<NPlugDyna_SKinematicConstraint>(dest.Ents[2*gy + 1].Model);
+
+            ExpandKCToMaxAnimFuncs(kinCon);
+            SetKCRain(kinCon);
+            SetKinConTargetIx(dest, 2*gy+1, gy);
+
+            ManipPtrs::Replace(dyna, GetOffset(dyna, "Mesh"), rainMesh, true);
+            ManipPtrs::Replace(dyna, GetOffset(dyna, "DynaShape"), farShape, true);
+            ManipPtrs::Replace(dyna, GetOffset(dyna, "StaticShape"), null, false);
+            if (dyna.Mesh !is null) dyna.Mesh.MwAddRef();
+            if (dyna.DynaShape !is null) dyna.DynaShape.MwAddRef();
+            if (dyna.StaticShape !is null) dyna.StaticShape.MwAddRef();
+        }
+
+        auto cubeIx = startRestIx;
+        MeshDuplication::SetEntRefModel(dest, cubeIx, cube);
+        dest.Ents[cubeIx].Location.Trans = vec3(0, -256, 0);
+        dest.Ents[cubeIx].Location.Quat = quat(vec3(Math::PI, 0, 0));
+
+        return dest;
+    }
+
+    uint rainDuration = 750;
+    void SetKCRain(NPlugDyna_SKinematicConstraint@ kc) {
+        kc.RotAxis = EAxis::y;
+        kc.AngleMinDeg = 0;
+        kc.AngleMaxDeg = 0;
+        kc.TransAxis = EAxis::y;
+        kc.TransMin = -0;
+        kc.TransMax = 128.;
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::Linear, true, rainDuration);
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::None, false, 0);
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, true, 0);
+        SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, 100);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::Linear, false, 100);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, 100);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
+    }
+
     void MakeExplodingRocksLightning() {
         string itemName = "ExplodingRocksLightning";
 
@@ -194,7 +277,7 @@ namespace CreateObj {
         auto bolt = GetModelFromSource(boltSource);
         auto boltMesh = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(bolt.EntityModel).StaticObject).Mesh;
         auto dest = cast<CPlugPrefab>(GetModelFromSource(kinSimple2).EntityModel);
-        dest.Ents[0].Location.Trans = vec3(0, 2, 0);
+        dest.Ents[0].Location.Trans = vec3(0, 4, 0);
         // dest.Ents[0].Location.Trans = vec3(0);
         dest.Ents[0].Location.Quat = quat(vec3(Math::PI, 0, 0));
         auto dyna = cast<CPlugDynaObjectModel>(dest.Ents[0].Model);
@@ -230,7 +313,7 @@ namespace CreateObj {
         auto boltMesh = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(bolt.EntityModel).StaticObject).Mesh;
         auto dest = cast<CPlugPrefab>(vl.Variants[ix].EntityModel);
 
-        dest.Ents[0].Location.Trans = vec3(0, 2, 0);
+        dest.Ents[0].Location.Trans = vec3(0, 4, 0);
         // dest.Ents[0].Location.Trans = vec3(0);
         dest.Ents[0].Location.Quat = quat(vec3(Math::PI, 0, 0));
         auto dyna = cast<CPlugDynaObjectModel>(dest.Ents[0].Model);
@@ -789,8 +872,14 @@ namespace CreateObjDownStar {
         auto prefab = cast<CPlugPrefab>(model.EntityModel);
         auto firstDyna = cast<CPlugDynaObjectModel>(prefab.Ents[0].Model);
         if (firstDyna is null) throw('null first dyna');
+        auto nbKinCon = 0;
         for (uint i = 1; i < prefab.Ents.Length; i += 1) {
             auto dyna = cast<CPlugDynaObjectModel>(prefab.Ents[i].Model);
+            auto kc = cast<NPlugDyna_SKinematicConstraint>(prefab.Ents[i].Model);
+            if (kc !is null) {
+                SetKinConTargetIx(prefab, i, nbKinCon);
+                nbKinCon++;
+            }
             if (dyna is null) continue;
             // create a new one
             @dyna = CPlugDynaObjectModel();
