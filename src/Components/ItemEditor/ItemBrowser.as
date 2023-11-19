@@ -1393,7 +1393,11 @@ class ItemModelTreeElement {
             UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(2, 0));
         }
         if (open && nod !is null) {
+            UI::PushID(this.nodOffset);
+            UI::PushID(this.name);
             DrawPickable();
+            UI::PopID();
+            UI::PopID();
         }
         if (open && !suppressDev && !isPicker && nod !is null) {
             auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(nod, 0x8));

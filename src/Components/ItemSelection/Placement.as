@@ -64,6 +64,8 @@ class ItemPlacementTab : Tab {
         AddSimpleTooltip("In item mode: will only allow yaw to be changed. Note: keeps rotations set before YawOnly is checked -- it's like YawOnly just blocks the inputs to change Pitch and Roll, but doesn't reset prior rotations.");
         pp_content.SwitchPivotManually = UI::Checkbox("SwitchPivotManually", pp_content.SwitchPivotManually);
         AddSimpleTooltip("If true: you need to press Q to change the pivot. Otherwise the game does this automatically, which can be annoying.");
+        pp_content.NotOnObject = UI::Checkbox("NotOnObject", pp_content.NotOnObject);
+        AddSimpleTooltip("If true: you will only be able to place this item on ground if the ground is a block.");
 
         // pp_content.Cube_Center = UI::InputFloat3("Cube_Center", pp_content.Cube_Center);
         // AddSimpleTooltip("Usually 0,0,0");

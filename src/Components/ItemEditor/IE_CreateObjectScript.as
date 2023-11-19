@@ -21,11 +21,21 @@ class IE_CreateObjectMacroTab : Tab {
         if (UI::Button("Create Glitched Rock out of Curr Item")) {
             startnew(CreateObj::MakeGlitchedRock);
         }
+        UI::Separator();
         if (UI::Button("Create Lightning Bolt + Rock Explosion (replaces current)")) {
             startnew(CreateObj::MakeExplodingRocksLightning);
         }
+        UI::Separator();
         if (UI::Button("Create Stormy Rain")) {
             startnew(CreateObj::MakeStormyRain);
+        }
+        UI::Separator();
+        if (UI::Button("Create Waterfall")) {
+            startnew(CreateObj::MakeWaterfall);
+        }
+        UI::Separator();
+        if (UI::Button("Create Clouds")) {
+            startnew(CreateObj::MakeClouds);
         }
 
         UI::Separator();
@@ -194,6 +204,12 @@ namespace CreateObj {
         // - 2x speeds
     }
 
+
+    CPlugStaticObjectModel@ GetStaticObjFromSource(const string &in name) {
+        return cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(GetModelFromSource(name).EntityModel).StaticObject);
+    }
+
+
     CPlugPrefab@ CreateStormyRainVariant(NPlugItem_SVariantList@ vl, uint ix, float speed, uint density) {
         auto farShapeItem = GetModelFromSource(farAwayShapeSource);
         auto farShape = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(farShapeItem.EntityModel).StaticObject).Shape;
@@ -272,6 +288,8 @@ namespace CreateObj {
 
     void MakeExplodingRocksLightning() {
         string itemName = "ExplodingRocksLightning";
+
+        // todo, alternate timings, and lightning field
 
         auto vl = ExpandVarList(null, 4);
 
@@ -433,11 +451,13 @@ namespace CreateObj {
     }
 
     uint boltPreExplode = 15;
-    uint delayFromStart = 610; //0;
+    uint delayFromStart = 6100;
     uint boltShowDuration = 40; //40;
     uint explodeDuration = 1600;
+    uint angleExtraDuration = explodeDuration / 4;
     // uint afterExplodeResetDelay = 300 * 1000; // 5 min
-    uint afterExplodeResetDelay = 2000; // 2 seconds
+    // uint afterExplodeResetDelay = 2000; // 2 seconds
+    uint afterExplodeResetDelay = 180000; // 180 seconds / 3 min
 
     void SetKCBolt(NPlugDyna_SKinematicConstraint@ kc) {
         kc.RotAxis = EAxis::y;
@@ -455,6 +475,7 @@ namespace CreateObj {
         SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay);
         SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
     }
+
     void SetKCBoulder(NPlugDyna_SKinematicConstraint@ kc) {
         kc.RotAxis = EAxis::y;
         kc.AngleMinDeg = 0;
@@ -484,8 +505,8 @@ namespace CreateObj {
         SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay);
         SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, false, 0);
         SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, delayFromStart);
-        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::Linear, false, explodeDuration);
-        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::Linear, false, explodeDuration + angleExtraDuration);
+        SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay - angleExtraDuration);
         SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
     }
 
@@ -991,7 +1012,7 @@ void SetKinConTargetIx(CPlugPrefab@ prefab, uint ix, uint kinEntId) {
         if (clsId == 0x2f0c8000 || type == "NPlugDyna::SPrefabConstraintParams") {
             Dev::Write(ptr1 + 0x4, kinEntId);
         } else {
-            warn("got wrong params classid " + clsId + "; ix: " + ix);
+            NotifyWarning("got wrong params classid " + Text::Format("%08x", clsId) + "; ix: " + ix);
         }
     } else {
         warn('params ptr null but expected it ' + ix);
