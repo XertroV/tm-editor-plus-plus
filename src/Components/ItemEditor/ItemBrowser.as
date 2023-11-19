@@ -436,6 +436,11 @@ class ItemModelTreeElement {
 
     void Draw(CPlugStaticObjectModel@ so) {
         if (StartTreeNode(name + " :: \\$f8fCPlugStaticObjectModel", UI::TreeNodeFlags::DefaultOpen)) {
+            if (isEditable) {
+                UX::CheckboxDevUint32("Generate Shape from Mesh", so, 0x38);
+            } else {
+                LabeledValue("Generate Shape from Mesh", Dev::GetOffsetUint32(so, 0x38) == 1);
+            }
             MkAndDrawChildNode(so.Mesh, "Mesh");
             MkAndDrawChildNode(so.Shape, "Shape");
             EndTreeNode();

@@ -104,4 +104,11 @@ namespace UX {
         }
         return ret;
     }
+
+    // draw a checkbox that is directly linked to an offset of 4 bytes
+    void CheckboxDevUint32(const string &in label, CMwNod@ nod, uint16 offset) {
+        auto val = Dev::GetOffsetUint32(nod, offset) == 1;
+        val = UI::Checkbox(label, val);
+        Dev::SetOffset(nod, offset, uint32(val ? 1 : 0));
+    }
 }
