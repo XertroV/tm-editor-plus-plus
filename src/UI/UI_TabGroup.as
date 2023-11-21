@@ -78,7 +78,7 @@ class TabGroup {
     void DrawTabsAsSidebar(const string &in title = "") {
         framePadding = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
         regionSize = UI::GetContentRegionAvail();
-        auto sbWidth = (sideBarExpanded ? 170. : 60.) + framePadding.x * 2.;
+        auto sbWidth = (sideBarExpanded ? 170. : 60.) * UI::GetScale() + framePadding.x * 2.;
         UI::PushStyleColor(UI::Col::Border, vec4(1));
         if (UI::BeginChild("sidebar-left|" + fullName, vec2(sbWidth, 0), true)) {
             if (title.Length > 0) {

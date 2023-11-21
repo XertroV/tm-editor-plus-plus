@@ -95,6 +95,7 @@ bool CheckPlacingItemFreeMode() {
         auto coord = Nat3ToInt3(pmt.CursorCoord);
         auto inv = Editor::GetInventoryCache();
         auto article = inv.GetBlockByName("TrackWallSlopeUTop");
+        if (article is null) return false;
         auto bm = cast<CGameCtnBlockInfo>(article.GetCollectorNod());
         bool shouldPlace = pmt.CanPlaceBlock_NoDestruction(bm, coord, pmt.CursorDir, false, 0);
         dev_trace('shouldPlace: ' + shouldPlace);

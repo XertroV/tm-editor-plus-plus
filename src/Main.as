@@ -21,7 +21,7 @@ void Main() {
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
     startnew(Editor::OffzonePatch::Apply);
-    startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
+    // startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
 
     sleep(500);
     CallbacksEnabledPostInit = true;
@@ -121,7 +121,7 @@ void Render() {
     UpdateEditorWatchers(IsInEditor ? cast<CGameCtnEditorFree>(GetApp().Editor) : null);
     if (EnteringEditor)
         trace('Done updating editor watchers.');
-    if (IsInEditor) FarlandsHelper::Render();
+    // if (IsInEditor) FarlandsHelper::Render();
 }
 
 void RenderInterface() {
@@ -179,21 +179,10 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     bool lmbDown = down && button == 0;
     bool block = lmbDown && CheckPlaceMacroblockAirMode();
     block = (lmbDown && CheckPlacingItemFreeMode()) || block;
-    block = (lmbDown && FarlandsHelper::CheckPlacingFreeBlock()) || block;
+    // block = (lmbDown && FarlandsHelper::CheckPlacingFreeBlock()) || block;
 
     block = block || g_IsDragging || g_WasDragging;
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
-    // print('mb ' + (down ? 'down' : 'up'));
-    // if (button == 0) {
-    //     g_LmbDown = down;
-    //     print('lmb ' + (down ? 'down' : 'up'));
-    // } else if (button == 1) {
-    //     g_RmbDown = down;
-    // } else if (button == 2) {
-    //     g_MmbDown = down;
-    // }
-    // if (down)
-    //     lastMbClickPos = vec2(x, y);
 }
 
 // only updates when not hovering imgui and input not carried off imgui

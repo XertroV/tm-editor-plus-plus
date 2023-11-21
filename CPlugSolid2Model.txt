@@ -1,4 +1,5 @@
 90BB000
+Solid2Model (0x390 bytes; 912 bytes)
 
 0x18: ?? uint, uint ??
 0x20: ptr -> struct?

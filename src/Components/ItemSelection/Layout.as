@@ -82,7 +82,7 @@ class ItemLayoutTab : Tab {
             UI::Text("Fill Dir: " + tostring(layout.FillDir));
             UI::SameLine();
             if (UI::Button("Swap")) {
-                layout.FillDir = layout.FillDir == EFillDir::U ? EFillDir::V : EFillDir::U;
+                layout.FillDir = layout.FillDir == NPlugItemPlacement::EFillDir::U ? NPlugItemPlacement::EFillDir::V : NPlugItemPlacement::EFillDir::U;
             }
 
             layout.ItemCount = UI::SliderInt("Item Count", layout.ItemCount, 0, 20);
@@ -91,9 +91,9 @@ class ItemLayoutTab : Tab {
             layout.ItemSpacing = UI::SliderFloat("Item Spacing", layout.ItemSpacing, 0., 16., "%.0f");
 
             if (UI::BeginCombo("Fill Align", tostring(layout.FillAlign))) {
-                if (UI::Selectable(tostring(EAlign::Center), layout.FillAlign == EAlign::Center)) layout.FillAlign = EAlign::Center;
-                if (UI::Selectable(tostring(EAlign::Begin), layout.FillAlign == EAlign::Begin)) layout.FillAlign = EAlign::Begin;
-                if (UI::Selectable(tostring(EAlign::End), layout.FillAlign == EAlign::End)) layout.FillAlign = EAlign::End;
+                if (UI::Selectable(tostring(NPlugItemPlacement::EAlign::Center), layout.FillAlign == NPlugItemPlacement::EAlign::Center)) layout.FillAlign = NPlugItemPlacement::EAlign::Center;
+                if (UI::Selectable(tostring(NPlugItemPlacement::EAlign::Begin), layout.FillAlign == NPlugItemPlacement::EAlign::Begin)) layout.FillAlign = NPlugItemPlacement::EAlign::Begin;
+                if (UI::Selectable(tostring(NPlugItemPlacement::EAlign::End), layout.FillAlign == NPlugItemPlacement::EAlign::End)) layout.FillAlign = NPlugItemPlacement::EAlign::End;
                 UI::EndCombo();
             }
 

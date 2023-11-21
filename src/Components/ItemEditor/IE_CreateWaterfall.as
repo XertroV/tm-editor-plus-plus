@@ -98,8 +98,8 @@ namespace CreateObj {
             SetKinConTargetIx(dest, ex+1, pairIx);
             SetDynaMeshes(dyna, foamBarrel.Mesh, farShape.Shape, null);
             KinematicConstraint(kinCon)
-                .Rot(EAxis::x).AnglesMM(0, 360)
-                .Trans(EAxis::z).PosMM(-2.0, 2.0)
+                .Rot(NPlugDyna::EAxis::x).AnglesMM(0, 360)
+                .Trans(NPlugDyna::EAxis::z).PosMM(-2.0, 2.0)
                 .SimpleOscilate(false, (3000 + 1300 * Rand()) / speed)
                 .SimpleLoop(true, (700 + 277 * Rand()) / speed, false);
 
@@ -131,9 +131,9 @@ namespace CreateObj {
             SetKinConTargetIx(dest, ex+1, pairIx);
             SetDynaMeshes(dyna, foamClump.Mesh, farShape.Shape, null);
             KinematicConstraint(kinCon)
-                .Rot(EAxis::x).AnglesMM(0, 360 * int(1. + Rand() * 4.))
+                .Rot(NPlugDyna::EAxis::x).AnglesMM(0, 360 * int(1. + Rand() * 4.))
                 .SimpleLoop(true, clumpPeriod * 11 / 7)
-                .Trans(EAxis::z).PosMM(0, -42)
+                .Trans(NPlugDyna::EAxis::z).PosMM(0, -42)
                 .LoopWithPause(false, timeOffset, clumpPeriod * (.85 + .3 * Rand()), endWait);
 
             pairIx++;
@@ -161,9 +161,9 @@ namespace CreateObj {
             SetKinConTargetIx(dest, ex+1, pairIx);
             SetDynaMeshes(dyna, (Rand() < 0.5 ? blueStar : goldStar).Mesh, farShape.Shape, null);
             KinematicConstraint(kinCon)
-                .Rot(EAxis::z).AnglesMM(0, 360 * int(1. + Rand() * 4.))
+                .Rot(NPlugDyna::EAxis::z).AnglesMM(0, 360 * int(1. + Rand() * 4.))
                 .SimpleLoop(true, clumpPeriod * 11 / 7, false)
-                .Trans(EAxis::z).PosMM(0, -42)
+                .Trans(NPlugDyna::EAxis::z).PosMM(0, -42)
                 .LoopWithPause(false, timeOffset, clumpPeriod * (.85 + .3 * Rand()), endWait);
 
             pairIx++;
@@ -175,20 +175,23 @@ namespace CreateObj {
         MeshDuplication::SetEntRefModel(dest, ex, waterfall);
     }
 
-    void SetPlacementVars() {
+    void SetPlacementVars(float ghStep = 1, float ghOff = 0, float gvStep = 1, float gvOffset = 0, float flyStep = 1,
+        bool autoRot = false, bool ghost = true, bool notOnObj = false, bool switchPivMan = true, bool yawOnly = false
+    ) {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         auto im = ieditor.ItemModel;
         auto pv = im.DefaultPlacementParam_Content;
-        pv.AutoRotation = false;
-        pv.FlyOffset = -1;
-        pv.FlyStep = -1;
-        pv.GridSnap_HOffset = 8;
-        pv.GridSnap_HStep = 16;
-        pv.GridSnap_VOffset = 0;
-        pv.GridSnap_VStep = 0;
-        pv.SwitchPivotManually = true;
-        pv.GhostMode = true;
-        pv.NotOnObject = false;
+        pv.AutoRotation = autoRot;
+        pv.FlyOffset = flyStep;
+        pv.FlyStep = flyStep;
+        pv.GridSnap_HOffset = ghOff;
+        pv.GridSnap_HStep = ghStep;
+        pv.GridSnap_VOffset = gvOffset;
+        pv.GridSnap_VStep = gvStep;
+        pv.SwitchPivotManually = switchPivMan;
+        pv.GhostMode = ghost;
+        pv.NotOnObject = notOnObj;
+        pv.YawOnly = yawOnly;
     }
 
     void CreateRisingStarsVariant(NPlugItem_SVariantList@ vl, uint ix, float speed, uint starsOpt) {
@@ -199,13 +202,14 @@ namespace CreateObj {
     }
 
 
+    // returns in [0.0, 1.0]
     float Rand() {
         return Math::Rand(0.0, 1.0);
     }
 
     void SetKC_WfBarrel(NPlugDyna_SKinematicConstraint@ kc, float speed) {
         KinematicConstraint(kc)
-            .Rot(EAxis::y).AnglesMM(0, 360).Trans(EAxis::z).PosMM(-2, 2)
+            .Rot(NPlugDyna::EAxis::y).AnglesMM(0, 360).Trans(NPlugDyna::EAxis::z).PosMM(-2, 2)
             .SimpleOscilate(false, (3000 + 1300 * Rand()) * speed)
             .SimpleLoop(true, (1700 + 577 * Rand()) * speed, false);
     }
@@ -224,6 +228,16 @@ namespace CreateObj {
         if (dyna.StaticShape !is null) dyna.StaticShape.MwAddRef();
     }
 
+    void SetStaticMeshes(CPlugStaticObjectModel@ static, CPlugSolid2Model@ s2m, CPlugSurface@ surf) {
+        if (static is null) throw("static null");
+        if (surf is null) throw("surf null");
+        if (s2m is null) throw("s2m null");
+        ManipPtrs::Replace(static, GetOffset(static, "Mesh"), s2m, true);
+        ManipPtrs::Replace(static, GetOffset(static, "Shape"), surf, true);
+        if (static.Mesh !is null) static.Mesh.MwAddRef();
+        if (static.Shape !is null) static.Shape.MwAddRef();
+    }
+
     class KinematicConstraint {
         NPlugDyna_SKinematicConstraint@ kc;
         KinematicConstraint(NPlugDyna_SKinematicConstraint@ kc) {
@@ -239,11 +253,11 @@ namespace CreateObj {
             this.AnimDoNothing(true);
         }
 
-        KinematicConstraint@ Rot(EAxis a) {
+        KinematicConstraint@ Rot(NPlugDyna::EAxis a) {
             kc.RotAxis = a;
             return this;
         }
-        KinematicConstraint@ Trans(EAxis a) {
+        KinematicConstraint@ Trans(NPlugDyna::EAxis a) {
             kc.TransAxis = a;
             return this;
         }

@@ -45,7 +45,7 @@ layer_pops: [6.5, 12.8, 19.1, 25.4, 31.7, 38.01, 44.2, 50.5, 56.86, 63.14]
     // overwrite cloudRingDisks and cloudRingPops
     void GenRingStats() {
         float cloud_r = 150;
-        float inner_r = 200;
+        float inner_r = 300;
         float outer_r = 3200;
         float delta_r = outer_r - inner_r;
         auto layers = int(Math::Floor(delta_r / cloud_r) + 1);
@@ -83,6 +83,7 @@ layer_pops: [6.5, 12.8, 19.1, 25.4, 31.7, 38.01, 44.2, 50.5, 56.86, 63.14]
         int extraEntKcOffset = ix > 0 ? -1 : 1;
         int totalElems = pop * 2 + extraEnt;
 
+        auto farShape = GetStaticObjFromSource(farAwayShapeSource);
         auto cloud = GetStaticObjFromSource(cloudDistIdSource.Replace("{ID}", tostring(ix)));
         auto existingPrefab = cast<CPlugPrefab>(vl.Variants[ix].EntityModel);
         if (existingPrefab is null || existingPrefab.Ents.Length < totalElems) {
@@ -109,6 +110,8 @@ layer_pops: [6.5, 12.8, 19.1, 25.4, 31.7, 38.01, 44.2, 50.5, 56.86, 63.14]
         }
 
         float speed = 1.0;
+        float ringRandYaw = TAU * Rand();
+        float ringSpeedRand = (Rand() / .4 + .8);
 
         for (int cix = 0; cix < int(pop); cix++) {
             auto ex = cix * 2 + extraEnt * 2;
@@ -117,18 +120,19 @@ layer_pops: [6.5, 12.8, 19.1, 25.4, 31.7, 38.01, 44.2, 50.5, 56.86, 63.14]
 
             dest.Ents[ex].Location.Trans = vec3(0.);
             dest.Ents[ex].Location.Quat = quat(1, 0, 0, 0)
-                * quat(vec3(0, TAU * cix / pop, 0));
+                * quat(vec3(0, TAU * cix / pop + ringRandYaw, 0));
             auto dyna = CPlugDynaObjectModel();
             auto kinCon = NPlugDyna_SKinematicConstraint();
             MeshDuplication::SetEntRefModel(dest, ex, dyna);
             MeshDuplication::SetEntRefModel(dest, exkc, kinCon);
 
             SetKinConTargetIx(dest, exkc, kcIx);
-            SetDynaMeshes(dyna, cloud.Mesh, cloud.Shape, null);
+            SetDynaInstanceVars(dest, ex, false, true);
+            SetDynaMeshes(dyna, cloud.Mesh, farShape.Shape, null);
             KinematicConstraint(kinCon)
-                .Rot(EAxis::y).AnglesMM(0, 360)
-                .Trans(EAxis::z).PosMM(0, 0)
-                .SimpleLoop(true, (ringDist * 20) / speed, false);
+                .Rot(NPlugDyna::EAxis::y).AnglesMM(0, 360)
+                .Trans(NPlugDyna::EAxis::z).PosMM(0, 0)
+                .SimpleLoop(true, (ringDist * 200. * ringSpeedRand) / speed, false);
 
             kcIx++;
         }

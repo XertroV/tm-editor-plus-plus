@@ -176,7 +176,7 @@ EPlugSurfaceMaterialId DrawComboEPlugSurfaceMaterialId(const string &in label, E
 EPlugSurfaceGameplayId DrawComboEPlugSurfaceGameplayId(const string &in label, EPlugSurfaceGameplayId val) {
     return EPlugSurfaceGameplayId(
         // exclude XXX_Null by -1 nbVals (20 instead of 21)
-        DrawArbitraryEnum(label, int(val), 20, function(int v) {
+        DrawArbitraryEnum(label, int(val), int(EPlugSurfaceGameplayId::XXX_Null), function(int v) {
             return tostring(EPlugSurfaceGameplayId(v));
         })
     );
@@ -190,10 +190,10 @@ EGmSurfType DrawComboEGmSurfType(const string &in label, EGmSurfType val) {
     );
 }
 
-EAxis DrawComboEAxis(const string &in label, EAxis val) {
-    return EAxis(
+NPlugDyna::EAxis DrawComboEAxis(const string &in label, NPlugDyna::EAxis val) {
+    return NPlugDyna::EAxis(
         DrawArbitraryEnum(label, int(val), 3, function(int v) {
-            return tostring(EAxis(v));
+            return tostring(NPlugDyna::EAxis(v));
         })
     );
 }

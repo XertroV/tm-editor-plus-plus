@@ -1,9 +1,6 @@
 bool GameVersionSafe = false;
 const string[] KnownSafeVersions = {
-    "2023-03-31_13_17", "2023-04-28_17_34",
-    "2023-05-05_21_05", "2023-06-23_16_27",
-    "2023-07-10_19_57", "2023-08-31_17_17",
-    "2023-09-19_19_09", "2023-09-25_23_51",
+    "2023-11-15_11_56",
     };
 const string configUrl = "https://openplanet.dev/plugin/editor/config/version-compat";
 

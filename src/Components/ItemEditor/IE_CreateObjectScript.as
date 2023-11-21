@@ -37,6 +37,16 @@ class IE_CreateObjectMacroTab : Tab {
         if (UI::Button("Create Clouds")) {
             startnew(CreateObj::MakeClouds);
         }
+        UI::Separator();
+        if (UI::Button("Create Fire(0)")) {
+            startnew(CreateObj::MakeFire, uint(0));
+        }
+        if (UI::Button("Create Fire(1)")) {
+            startnew(CreateObj::MakeFire, uint(1));
+        }
+        if (UI::Button("Create Fire(2)")) {
+            startnew(CreateObj::MakeFire, uint(2));
+        }
 
         UI::Separator();
 
@@ -206,6 +216,7 @@ namespace CreateObj {
 
 
     CPlugStaticObjectModel@ GetStaticObjFromSource(const string &in name) {
+        trace("Getting source: " + name);
         return cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(GetModelFromSource(name).EntityModel).StaticObject);
     }
 
@@ -269,10 +280,10 @@ namespace CreateObj {
 
     uint rainDuration = 500;
     void SetKCRain(NPlugDyna_SKinematicConstraint@ kc, float speed) {
-        kc.RotAxis = EAxis::y;
+        kc.RotAxis = NPlugDyna::EAxis::y;
         kc.AngleMinDeg = 0;
         kc.AngleMaxDeg = 0;
-        kc.TransAxis = EAxis::y;
+        kc.TransAxis = NPlugDyna::EAxis::y;
         kc.TransMin = 0.;
         kc.TransMax = speed > 0 ? 128. : -128.;
         speed = Math::Abs(speed);
@@ -460,10 +471,10 @@ namespace CreateObj {
     uint afterExplodeResetDelay = 180000; // 180 seconds / 3 min
 
     void SetKCBolt(NPlugDyna_SKinematicConstraint@ kc) {
-        kc.RotAxis = EAxis::y;
+        kc.RotAxis = NPlugDyna::EAxis::y;
         kc.AngleMinDeg = 0;
         kc.AngleMaxDeg = 0;
-        kc.TransAxis = EAxis::y;
+        kc.TransAxis = NPlugDyna::EAxis::y;
         kc.TransMin = 0;
         kc.TransMax = -20000.;
         SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, true, delayFromStart - boltPreExplode);
@@ -477,10 +488,10 @@ namespace CreateObj {
     }
 
     void SetKCBoulder(NPlugDyna_SKinematicConstraint@ kc) {
-        kc.RotAxis = EAxis::y;
+        kc.RotAxis = NPlugDyna::EAxis::y;
         kc.AngleMinDeg = 0;
         kc.AngleMaxDeg = 0;
-        kc.TransAxis = EAxis::y;
+        kc.TransAxis = NPlugDyna::EAxis::y;
         kc.TransMin = 0;
         kc.TransMax = -20000.;
         SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, true, delayFromStart - boltPreExplode);
@@ -494,10 +505,10 @@ namespace CreateObj {
     }
 
     void SetKCExplodingRock(NPlugDyna_SKinematicConstraint@ kc) {
-        kc.RotAxis = EAxis::x;
+        kc.RotAxis = NPlugDyna::EAxis::x;
         kc.AngleMinDeg = 0;
         kc.AngleMaxDeg = -210;
-        kc.TransAxis = EAxis::z;
+        kc.TransAxis = NPlugDyna::EAxis::z;
         kc.TransMin = 0;
         kc.TransMax = 20.;
         SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, false, delayFromStart);
@@ -590,13 +601,13 @@ namespace CreateObj {
     void SetGlitchedRockAnim(NPlugDyna_SKinematicConstraint@ kc, uint variant, uint ix) {
         kc.AngleMaxDeg = 360;
         kc.AngleMinDeg = 0;
-        kc.RotAxis = EAxis::y;
-        kc.TransAxis = EAxis::z;
+        kc.RotAxis = NPlugDyna::EAxis::y;
+        kc.TransAxis = NPlugDyna::EAxis::z;
         kc.TransMin = 0;
         kc.TransMax = 0.6 * (ix % 2 == 0 ? 1.0 : -1.0);
 
         if (variant == 2) {
-            kc.TransAxis = EAxis::y;
+            kc.TransAxis = NPlugDyna::EAxis::y;
             kc.TransMax = (ix < 2 ? 1.0 : ix == 2 ? 0.0 : -1.0);
             if (ix == 1 || ix == 3) kc.TransMax *= .5;
             kc.AngleMaxDeg = 0.;
@@ -674,9 +685,7 @@ namespace CreateObj {
 
     NPlugItem_SVariantList@ ExpandVarList(NPlugItem_SVariantList@ varList, uint newCapacity) {
         if (varList is null) {
-            auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
-            auto model = ieditor.ItemModel;
-            @varList = cast<NPlugItem_SVariantList>(model.EntityModel);
+            @varList = GetRootVL();
         }
         if (newCapacity == 0 || newCapacity > 20000) throw('new capacity seems out of bounds');
         if (varList is null) throw('var list null');
@@ -894,8 +903,8 @@ namespace CreateObjDownStar {
 
         kc.AngleMaxDeg = 360;
         kc.AngleMinDeg = 0;
-        kc.RotAxis = EAxis::y;
-        kc.TransAxis = EAxis::y;
+        kc.RotAxis = NPlugDyna::EAxis::y;
+        kc.TransAxis = NPlugDyna::EAxis::y;
         kc.TransMin = 0;
         kc.TransMax = fireworkHeight;
 
@@ -951,8 +960,8 @@ namespace CreateObjDownStar {
 
         kc.AngleMaxDeg = 360 + Math::Rand(0, 720);
         kc.AngleMinDeg = -360;
-        kc.RotAxis = EAxis::y;
-        kc.TransAxis = EAxis::z;
+        kc.RotAxis = NPlugDyna::EAxis::y;
+        kc.TransAxis = NPlugDyna::EAxis::z;
         kc.TransMin = 0;
         kc.TransMax = d;
 
@@ -1016,7 +1025,30 @@ void SetKinConTargetIx(CPlugPrefab@ prefab, uint ix, uint kinEntId) {
         }
     } else {
         warn('params ptr null but expected it ' + ix);
+    }
+}
+
+void SetDynaInstanceVars(CPlugPrefab@ prefab, uint ix, bool castStaticShadow = false, bool isKinematic = true) {
+    auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
+
+    auto ptr1 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * ix + GetOffset("NPlugPrefab_SEntRef", "Params"));
+    auto ptr2 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * ix + GetOffset("NPlugPrefab_SEntRef", "Params") + 0x8);
+
+    if (ptr2 > 0 && ptr2 % 8 == 0) {
+        auto type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
+        auto clsId = Dev::ReadUInt32(ptr2 + 0x10);
+        uint expectedClsId = 0x2f0b6000;
+        if (clsId == expectedClsId || type == "NPlugDynaObjectModel::SInstanceParams") {
+            auto offsetCSS = GetOffset("NPlugDynaObjectModel_SInstanceParams", "CastStaticShadow");
+            auto offsetIK = GetOffset("NPlugDynaObjectModel_SInstanceParams", "IsKinematic");
+            Dev::Write(ptr1 + offsetCSS, uint(castStaticShadow ? 1 : 0));
+            Dev::Write(ptr1 + offsetIK, uint(isKinematic ? 1 : 0));
+        } else {
+            NotifyWarning("got wrong params classid " + Text::Format("%08x", clsId) + "; expected: "+Text::Format("%08x", expectedClsId)+"; ix: " + ix);
         }
+    } else {
+        warn('params ptr null but expected it ' + ix);
+    }
 }
 
 void ExpandKCToMaxAnimFuncs(NPlugDyna_SKinematicConstraint@ kc) {
