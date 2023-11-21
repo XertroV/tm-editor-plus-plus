@@ -20,6 +20,20 @@ class MaterialsListTab : Tab {
             return;
         }
 
+        if (UI::Button("Refresh Materials")) {
+            g_MaterialCache.RefreshCacheBg();
+        }
+        UI::SameLine();
+        if (UI::Button("Update Fid Trees")) {
+            startnew(CoroutineFunc(g_MaterialCache.UpdateAllFidTreesYields));
+        }
+        UI::SameLine();
+        if (UI::Button("Expanded Search")) {
+            startnew(CoroutineFunc(g_MaterialCache.SearchEverywhereYields));
+        }
+
+        UI::Text("Nb Materials Found: " + g_MaterialCache.files.Length);
+
         UI::Text("Material Paths:");
 
         bool changed = false;
@@ -37,7 +51,8 @@ class MaterialsListTab : Tab {
         while (clip.Step()) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                 auto item = files[i];
-                auto folder = string(item.ParentFolder.FullDirName).Split("GameData\\")[1];
+                auto parts = string(item.ParentFolder.FullDirName).Split("GameData\\");
+                auto folder = parts[parts.Length - 1];
                 CopiableValue(folder + item.ShortFileName);
             }
         }
