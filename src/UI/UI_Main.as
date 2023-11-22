@@ -47,7 +47,7 @@ void UI_Main_Render() {
     newCollapsedBg.w = .9;
     UI::PushStyleColor(UI::Col::FrameBg, vec4(.2, .2, .2, .5));
     UI::PushStyleColor(UI::Col::TitleBgCollapsed, newCollapsedBg);
-    RootTabGroup_Editor.DrawWindows();
+    tabToDraw.DrawWindows();
 
     if (ShowWindow) {
         vec2 size = vec2(800, 800);

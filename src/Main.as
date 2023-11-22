@@ -122,6 +122,7 @@ void Render() {
     if (EnteringEditor)
         trace('Done updating editor watchers.');
     // if (IsInEditor) FarlandsHelper::Render();
+    RenderItemEditorButtons();
 }
 
 void RenderInterface() {
