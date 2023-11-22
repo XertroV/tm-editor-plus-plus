@@ -329,11 +329,12 @@ TabGroup@ CreateItemEditorRT() {
 
 PickedBlockTab@ g_PickedBlockTab;
 PickedItemTab@ g_PickedItemTab;
+MapEditPropsTab@ g_MapPropsTab;
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
     ChangelogTab(root);
-    MapEditPropsTab(root);
+    @g_MapPropsTab = MapEditPropsTab(root);
     LightmapTab(root);
     BI_MainTab(root);
     TodoTab(root, "Pinned B&I", Icons::MapO + Icons::MapMarker, "lists of pinned blocks and items");

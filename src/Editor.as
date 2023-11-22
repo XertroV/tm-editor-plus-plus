@@ -215,6 +215,12 @@ namespace Editor {
         return pm == CGameEditorPluginMap::EPlaceMode::FreeBlock || pm == CGameEditorPluginMap::EPlaceMode::GhostBlock;
     }
 
+    // checks placement mode - test = placing vehicle
+    bool IsInTestPlacementMode(CGameCtnEditorFree@ editor) {
+        return IsInPlacementMode(editor)
+            && GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Test;
+    }
+
     // checks placement mode, with optional edit mode checking
     bool IsInAnyItemPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
         return (!checkEditMode || IsInPlacementMode(editor))

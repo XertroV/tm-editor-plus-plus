@@ -5,13 +5,72 @@ class MapEditPropsTab : Tab {
         RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEnterEditor), this.tabName);
     }
 
+    uint carSportId = GetMwId("CarSport");
+    uint carSnowId = GetMwId("CarSnow");
+    uint characterPilotId = GetMwId("CharacterPilot");
+    uint nadeoId = GetMwId("Nadeo");
+
     void OnEnterEditor() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
         newSizeX = map.Size.x;
         newSizeY = map.Size.y;
         newSizeZ = map.Size.z;
+        CachePlayerModel();
+        startnew(CoroutineFunc(WatchVehiclePlacement));
     }
+
+    void WatchVehiclePlacement() {
+        yield();
+        while (IsInEditor) {
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (Editor::IsInTestPlacementMode(editor) && S_ShowVehicleTestWindow) {
+                drawTestPlacementWindow = true;
+            } else if (drawTestPlacementWindow) {
+                drawTestPlacementWindow = false;
+            }
+            yield();
+        }
+    }
+
+    private bool drawTestPlacementWindow = false;
+    void MarkDrawTestPlacementOptionsThisFrame() {
+        drawTestPlacementWindow = true;
+    }
+
+    uint origPlayerModel = 0xFFFFFFFF;
+    uint origPlayerModelAuthor = 0xFFFFFFFF;
+    uint origPlayerModelCollection = 0xFFFFFFFF;
+
+    void ResetMapPlayerModel() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        Editor::SetMapPlayerModel(editor.Challenge, origPlayerModel, origPlayerModelAuthor, origPlayerModelCollection);
+    }
+
+    void CachePlayerModel() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        auto x = Editor::GetMapPlayerModel(editor.Challenge);
+        origPlayerModel = x.x;
+        origPlayerModelAuthor = x.y;
+        origPlayerModelCollection = x.z;
+    }
+
+    VehicleToPlace m_VehicleTestType = VehicleToPlace::Map_Default;
+
+    void DrawTestPlacementWindows() {
+        if (!drawTestPlacementWindow) return;
+        if (GetApp().CurrentPlayground !is null) return;
+        bool open = S_ShowVehicleTestWindow;
+        if (UI::Begin("Test Vehicle Type", open, UI::WindowFlags::AlwaysAutoResize)) {
+            DrawMapVehicleChoices();
+        }
+        UI::End();
+        if (!open) S_ShowVehicleTestWindow = false;
+    }
+
+
 
     uint newSizeX = 0;
     uint newSizeY = 0;
@@ -177,7 +236,39 @@ class MapEditPropsTab : Tab {
 
         UI::Separator();
 
-        UI::Text("Todo: add setting to save and camera pos in the thumbnail data slots.");
+        S_ShowVehicleTestWindow = UI::Checkbox("Show choice of vehicle when testing?", S_ShowVehicleTestWindow);
+        AddSimpleTooltip("When testing the map, show a window that allows you to choose between different vehicles. (excludes validating mode)");
+
+        if (UI::CollapsingHeader("Map Vehicle Properties")) {
+            DrawMapVehicleChoices();
+        }
+    }
+
+    void DrawMapVehicleChoices() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+
+        auto currVehicleStuff = Editor::GetMapPlayerModel(editor.Challenge);
+        LabeledValue("Current Vehicle Name", GetMwIdName(currVehicleStuff.x));
+        LabeledValue("Vehicle Author", GetMwIdName(currVehicleStuff.y));
+        LabeledValue("Vehicle Collection", GetMwIdName(currVehicleStuff.z));
+
+        UI::Separator();
+
+        UI::AlignTextToFramePadding();
+        UI::Text("Set Vehicle:");
+        m_VehicleTestType = DrawComboVehicleToPlace("Map Vehicle", m_VehicleTestType);
+        if (UI::Button("Update##map-vehicle")) {
+            auto setVehicleType = m_VehicleTestType == VehicleToPlace::Map_Default ? origPlayerModel
+                : m_VehicleTestType == VehicleToPlace::CharacterPilot ? characterPilotId
+                : m_VehicleTestType == VehicleToPlace::CarSnow ? carSnowId
+                : carSportId;
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            Editor::SetMapPlayerModel(editor.Challenge, setVehicleType, nadeoId, 10003);
+        }
+        UI::SameLine();
+        if (UI::Button("Reset##map-vehicle")) {
+            ResetMapPlayerModel();
+        }
     }
 
     void DrawMediaTrackerSettings() {
@@ -338,4 +429,12 @@ CGameCtnDecoration@ GetDecoration(MapDecoChoice d) {
         }
     }
     return null;
+}
+
+enum VehicleToPlace {
+    Map_Default = 0,
+    CarSport = 1,
+    CarSnow = 2,
+    CharacterPilot,
+    LAST
 }

@@ -1,4 +1,20 @@
 namespace Editor {
+    void SetMapPlayerModel(CGameCtnChallenge@ map, uint playerModel, uint playerModelAuthor, uint playerModelCollection) {
+        Dev::SetOffset(map, O_MAP_PLAYERMODEL_MWID_OFFSET, playerModel);
+        // ~~author doesn't seem necessary
+        Dev::SetOffset(map, O_MAP_PLAYERMODEL_AUTHOR_MWID_OFFSET, playerModelAuthor);
+        Dev::SetOffset(map, O_MAP_PLAYERMODEL_COLLECTION_MWID_OFFSET, playerModelCollection);
+        // todo: is collection necessary for mp4 cars?
+    }
+
+    // returns model id, model author id, and model collection id
+    nat3 GetMapPlayerModel(CGameCtnChallenge@ map) {
+        uint playerModel = Dev::GetOffsetUint32(map, O_MAP_PLAYERMODEL_MWID_OFFSET);
+        uint playerModelAuthor = Dev::GetOffsetUint32(map, O_MAP_PLAYERMODEL_AUTHOR_MWID_OFFSET);
+        uint playerModelCollection = Dev::GetOffsetUint32(map, O_MAP_PLAYERMODEL_COLLECTION_MWID_OFFSET);
+        return nat3(playerModel, playerModelAuthor, playerModelCollection);
+    }
+
     const uint16 ChallengeSizeOffset = GetOffset("CGameCtnChallenge", "Size");
 
     // works for Y only!! will crash otherwise

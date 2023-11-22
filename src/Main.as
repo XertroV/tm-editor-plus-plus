@@ -33,6 +33,7 @@ void Main() {
 }
 
 
+
 void OnDestroyed() { Unload(); }
 void OnDisabled() { Unload(); }
 void Unload() {
@@ -123,6 +124,7 @@ void Render() {
         trace('Done updating editor watchers.');
     // if (IsInEditor) FarlandsHelper::Render();
     RenderItemEditorButtons();
+    if (g_MapPropsTab !is null) g_MapPropsTab.DrawTestPlacementWindows();
 }
 
 void RenderInterface() {

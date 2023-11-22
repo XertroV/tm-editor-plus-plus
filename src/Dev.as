@@ -147,7 +147,15 @@ CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
 }
 
 
-
+uint32 GetMwId(const string &in name) {
+    auto x = MwId();
+    x.SetName(name);
+    return x.Value;
+}
+string GetMwIdName(uint id) {
+    auto x = MwId(id);
+    return x.GetName();
+}
 
 
 class ReferencedNod {
@@ -255,9 +263,16 @@ class ReferencedNod {
 
 
 
+const uint16 O_MAP_COLLECTION_ID_OFFSET1 = 0x54;
+const uint16 O_MAP_COLLECTION_ID_OFFSET2 = 0x6C;
+const uint16 O_MAP_AUTHORLOGIN_MWID_OFFSET = 0x58;
+const uint16 O_MAP_PLAYERMODEL_MWID_OFFSET = 0x5C;
+// e.g., 10003 for TM2020 player/vehicles (mp4 vehicles are )
+const uint16 O_MAP_PLAYERMODEL_COLLECTION_MWID_OFFSET = 0x60;
+const uint16 O_MAP_PLAYERMODEL_AUTHOR_MWID_OFFSET = 0x64;
+const uint16 O_MAP_MTSIZE_OFFSET = 0x1F0;
 const uint16 O_MAP_OFFZONE_BUF_OFFSET = 0x690;
 const uint16 O_MAP_OFFZONE_SIZE_OFFSET = 0x680;
-const uint16 O_MAP_MTSIZE_OFFSET = 0x1F0;
 const uint16 O_MAP_COORD_SIZE_XY = 0x7B8;
 const uint16 O_MAP_EXTENDS_BELOW_0 = 0x7C0;
 

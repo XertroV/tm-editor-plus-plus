@@ -1,7 +1,9 @@
 namespace Editor {
     const uint16 offsetMouseDown = 0xBB8; // +4: right click, +8 duplicate left click
     // updates sometimes, not always
-    const uint16 secOffsetPickMode = 0xBE8; // uint, = 0 place, 1 = ?, 2 = delete, 3 = pick, 4 = select?, mb more
+    const uint16 secOffsetPickMode = 0xBE8; // uint, 1 = block, 0x14=ghost, 0x21 = freeblock, 0x3 = skinable, 4 = vehicle test, 5 = items, 6 = macroblocks, 0x8 = blockproperties, 0x10 = copypaste, 0x22 = free macroblock, 0x13 = offzone, 0x11 = plugins
+    (vehicle also requres 0x4 at BE4)
+
     const uint16 offsetPickMode = 0xBF0; // uint, = 0 place, 1 = ?, 2 = delete, 3 = pick, 4 = select?, mb more
     uint8 DeleteItemFromMap(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ item) {
         //

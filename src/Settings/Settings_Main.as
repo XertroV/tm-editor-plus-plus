@@ -53,3 +53,6 @@ bool S_BlockEscape = false;
 
 [Setting hidden]
 bool S_EnableInfinitePrecisionFreeBlocks = false;
+
+[Setting hidden]
+bool S_ShowVehicleTestWindow = true;

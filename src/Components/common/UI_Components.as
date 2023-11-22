@@ -225,6 +225,13 @@ MapDecoChoice DrawComboMapDecoChoice(const string &in label, MapDecoChoice val) 
         })
     );
 }
+VehicleToPlace DrawComboVehicleToPlace(const string &in label, VehicleToPlace val) {
+    return VehicleToPlace(
+        DrawArbitraryEnum(label, int(val), VehicleToPlace::LAST, function(int v) {
+            return tostring(VehicleToPlace(v));
+        })
+    );
+}
 
 int DrawColorBtnChoice(const string &in label, int val) {
     if (DrawBtnMbActive("Default##"+label, val == 0))
