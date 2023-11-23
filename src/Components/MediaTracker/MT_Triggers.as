@@ -162,13 +162,48 @@ class MTClipGroupTrigger {
 #if SIG_DEVELOPER
             CopiableLabeledValue("ptr", Text::FormatPointer(ptr));
 #endif
+            LabeledValue("Number of Coords", Length);
             LabeledValue("Min Bounding Box Coord", minBoundingBoxCoords);
             LabeledValue("Max Bounding Box Coord", maxBoundingBoxCoords);
+
+            UI::Text("Trigger Patterns:");
+            UI::Indent();
+                UI::TextWrapped("This eliminate some of this trigger's coordinates so that they are in some pattern.");
+                if (UI::Button("Checkerboard A")) {
+                    MakeCheckerboard(true);
+                }
+                UI::SameLine();
+                if (UI::Button("Checkerboard B")) {
+                    MakeCheckerboard(false);
+                }
+            UI::Unindent();
+
             if (UI::CollapsingHeader("Trigger Coordinates")) {
                 DrawCoords();
             }
             UI::TreePop();
         }
+    }
+
+    void MakeCheckerboard(bool includeOrigin) {
+        // if includeOrigin, then coord X/Z need to both be even, or both be odd. Otherwise, the alternative is true.
+        auto len = Length;
+        nat3[] keepCoords;
+        keepCoords.Reserve(Length / 2 + 1);
+        for (uint i = 0; i < len; i++) {
+            nat3 c = this[i];
+            bool xEven = c.x % 2 == 0;
+            bool zEven = c.z % 2 == 0;
+            if ((includeOrigin && (xEven == zEven))
+            || (!includeOrigin && (xEven != zEven))) {
+                keepCoords.InsertLast(c);
+            }
+        }
+        for (uint i = 0; i < keepCoords.Length; i++) {
+            this[i] = keepCoords[i];
+        }
+        ResizeSafe(keepCoords.Length);
+        NotifySuccess("Made into checkboard!");
     }
 
     void DrawCoords() {

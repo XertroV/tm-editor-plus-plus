@@ -20,6 +20,7 @@
 TabGroup@ RootTabGroup_Editor = CreateRootTabGroup();
 TabGroup@ RootTabGroup_ItemEditor = CreateItemEditorRT();
 TabGroup@ RootTabGroup_MeshEditor = CreateMeshEditorRT();
+TabGroup@ RootTabGroup_MediaTracker = CreateMTEditorRT();
 TabGroup@ ToolsTG = CreateToolsTabGroup();
 
 void UI_Main_Render() {
@@ -36,6 +37,8 @@ void UI_Main_Render() {
         @tabToDraw = RootTabGroup_ItemEditor;
     } else if (IsInMeshEditor) {
         @tabToDraw = RootTabGroup_MeshEditor;
+    } else if (IsInMediaTracker) {
+        @tabToDraw = RootTabGroup_MediaTracker;
     } else if (!IsInEditor) {
         return;
     }
@@ -308,6 +311,14 @@ TabGroup@ CreateMeshEditorRT() {
     return root;
 }
 
+TabGroup@ CreateMTEditorRT() {
+    auto root = RootTabGroupCls();
+    MT_TriggersTab(root);
+    // MT_TracksTab(root);
+    // MT_SavedTracksTab(root);
+    return root;
+}
+
 TabGroup@ CreateItemEditorRT() {
     auto root = RootTabGroupCls();
     IE_FeaturesTab(root);
@@ -335,6 +346,9 @@ TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
     ChangelogTab(root);
     @g_MapPropsTab = MapEditPropsTab(root);
+#if DEV
+    MapExtractItems(root);
+#endif
     LightmapTab(root);
     BI_MainTab(root);
     TodoTab(root, "Pinned B&I", Icons::MapO + Icons::MapMarker, "lists of pinned blocks and items");

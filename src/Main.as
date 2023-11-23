@@ -63,6 +63,7 @@ void RenderEarly() {
     auto editor = cast<CGameCtnEditorFree>(anyEditor);
     auto itemEditor = cast<CGameEditorItem>(anyEditor);
     auto meshEditor = cast<CGameEditorMesh>(anyEditor);
+    auto mtEditor = cast<CGameEditorMediaTracker>(anyEditor);
     auto currPg = cast<CSmArenaClient>(GetApp().CurrentPlayground);
 
     WasInPlayground = IsInCurrentPlayground;
@@ -74,6 +75,7 @@ void RenderEarly() {
     EnteringItemEditor = IsInItemEditor && EnteringItemEditor;
 
     IsInMeshEditor = meshEditor !is null;
+    IsInMediaTracker = mtEditor !is null;
 
     WasInEditor = IsInEditor;
     EnteringEditor = !IsInEditor;

@@ -139,6 +139,7 @@ CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
         return null;
     }
     auto tmpNod = CMwNod();
+
     uint64 tmp = Dev::GetOffsetUint64(tmpNod, 0);
     Dev::SetOffset(tmpNod, 0, ptr);
     auto nod = Dev::GetOffsetNod(tmpNod, 0);
