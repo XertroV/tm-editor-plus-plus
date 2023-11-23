@@ -19,7 +19,7 @@ class MapExtractItems : Tab {
             return;
         }
 
-        auto fidFolder = Fids::GetFakeFolder("<fake>\\MemoryTemp\\CurrentMap_EmbeddedFiles\\ContentLoaded");
+        auto fidFolder = Fids::GetFakeFolder("MemoryTemp/CurrentMap_EmbeddedFiles/ContentLoaded");
         if (fidFolder is null) {
             UI::Text("Failed to get folder for embedded items.");
             return;
@@ -38,8 +38,40 @@ void DrawFidFolderBrowser(CSystemFidsFolder@ folder, uint depth = 0) {
 
     auto treeFlags = depth < 3 ? UI::TreeNodeFlags::DefaultOpen : UI::TreeNodeFlags::None;
     if (UI::TreeNode(string(folder.DirName), treeFlags)) {
+        UI::PushID(folder.DirName);
 
+#if SIG_DEVELOPER
+        if (UI::Button("Explore FidFolder " + Icons::Cube)) {
+            ExploreNod("FidFolder " + string(folder.DirName), folder);
+        }
+        UI::SameLine();
+        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(folder)));
+#endif
+        uint nbLeaves = folder.Leaves.Length;
+        uint nbTrees = folder.Trees.Length;
+        for (uint i = 0; i < nbTrees; i++) {
+            DrawFidFolderBrowser(folder.Trees[i], depth == 0 && nbLeaves == 0 ? 0 : depth + 1);
+        }
+        for (uint i = 0; i < nbLeaves; i++) {
+            DrawFidFileBrowser(folder.Leaves[i]);
+        }
 
+        UI::PopID();
         UI::TreePop();
     }
+}
+
+void DrawFidFileBrowser(CSystemFidFile@ file) {
+    UI::PushID(file);
+
+#if SIG_DEVELOPER
+    if (UI::Button("Explore Nod " + Icons::Cube)) {
+        ExploreNod("FidFile " + file.FileName, file);
+    }
+    UI::SameLine();
+    CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(file)));
+#endif
+    UI::Text(string(file.FileName));
+
+    UI::PopID();
 }
