@@ -76,6 +76,7 @@ void Dev_ReduceMwSArray(uint64 ptr, uint newSize, bool reduceFromFront = false, 
     if (newSize > len) throw("only reduces");
     newSize = Math::Min(len, newSize);
     Dev::Write(ptr + 0x8, newSize);
+
     if (reduceFromFront) {
         if (elSize < 1) throw("invalid elSize for reducing from front");
         if (capacity >= len) capacity = newSize;
@@ -303,6 +304,7 @@ const uint16 O_EDITOR_CURR_PIVOT_OFFSET = GetOffset("CGameCtnEditorFree", "Under
 
 const uint16 O_ITEM_MODEL_SKIN = 0xA0;
 
+const uint16 O_STATICOBJMODEL_GENSHAPE = 0x38;
 
 const uint16 O_SOLID2MODEL_LIGHTS_BUF = 0x168;
 const uint16 O_SOLID2MODEL_LIGHTS_BUF_STRUCT_SIZE = 0x60;

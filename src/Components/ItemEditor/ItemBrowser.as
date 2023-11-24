@@ -437,9 +437,9 @@ class ItemModelTreeElement {
     void Draw(CPlugStaticObjectModel@ so) {
         if (StartTreeNode(name + " :: \\$f8fCPlugStaticObjectModel", UI::TreeNodeFlags::DefaultOpen)) {
             if (isEditable) {
-                UX::CheckboxDevUint32("Generate Shape from Mesh", so, 0x38);
+                UX::CheckboxDevUint32("Generate Shape from Mesh", so, O_STATICOBJMODEL_GENSHAPE);
             } else {
-                LabeledValue("Generate Shape from Mesh", Dev::GetOffsetUint32(so, 0x38) == 1);
+                LabeledValue("Generate Shape from Mesh", Dev::GetOffsetUint32(so, O_STATICOBJMODEL_GENSHAPE) == 1);
             }
             MkAndDrawChildNode(so.Mesh, "Mesh");
             MkAndDrawChildNode(so.Shape, "Shape");
