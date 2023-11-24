@@ -33,6 +33,12 @@ class LightmapTab : Tab {
             UI::TextWrapped("\\$f84 Unable to analyze LM. Please " + ((pimp is null || pimp.CacheSmall is null) ? "calculate shadows on Fast or better (and save the map if that doesn't work)." : "save the map (note: you usually just need to open the prompt, if that doens't work, calculate shadows again)."));
         }
 
+        if (lmWindow.IsLoaded && !lmWindow.windowOpen) {
+            if (UI::Button("Reopen Lightmap")) {
+                lmWindow.windowOpen = true;
+            }
+        }
+
 #if DEV
         // dev below
         if (UI::CollapsingHeader("dev / testing")) {
@@ -351,6 +357,10 @@ class LMAnalysisWindow : Tab {
         super(p, "LM Analysis", Icons::LightbulbO + Icons::Search);
     }
 
+    bool get_IsLoaded() {
+        return lmTextures.Length > 0;
+    }
+
     void Reset() {
         lmTextures.RemoveRange(0, lmTextures.Length);
         loadedTexturesStarted = false;
@@ -394,10 +404,12 @@ class LMAnalysisWindow : Tab {
         }
     }
 
+    bool m_DrawOverlay = true;
     vec2 imgTL;
     string currTab;
     void DrawTextureTab(uint i, LmMappingCache@ mapping) {
         if (UI::BeginTabItem(lmFileNames[i])) {
+            m_DrawOverlay = UI::Checkbox("Draw Overlay", m_DrawOverlay);
             currTab = lmFileNames[i];
             auto tex = lmTextures.Length > i ? lmTextures[i] : null;
             if (tex is null) {
@@ -405,7 +417,7 @@ class LMAnalysisWindow : Tab {
             } else {
                 auto imgTL = UI::GetWindowPos() + UI::GetCursorPos();
                 UI::Dummy(vec2(1024));
-                DrawMappingOverlay(tex, imgTL, mapping, !currTab.StartsWith("ProbeGrid"));
+                DrawMappingOverlay(tex, imgTL, mapping, m_DrawOverlay && !currTab.StartsWith("ProbeGrid"));
             }
             UI::EndTabItem();
         }
