@@ -147,6 +147,13 @@ CGameCtnBlockInfo::EWayPointType DrawComboEWayPointType(const string &in label, 
         })
     );
 }
+EGameItemWaypointType DrawComboEGameItemWaypointType(const string &in label, EGameItemWaypointType val) {
+    return EGameItemWaypointType(
+        DrawArbitraryEnum(label, int(val), 6, function(int v) {
+            return tostring(EGameItemWaypointType(v));
+        })
+    );
+}
 CGameCtnBlockInfo::EMultiDirEnum DrawComboEMultiDirEnum(const string &in label, CGameCtnBlockInfo::EMultiDirEnum val) {
     return CGameCtnBlockInfo::EMultiDirEnum(
         DrawArbitraryEnum(label, int(val), 7, function(int v) {

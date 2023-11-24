@@ -34,6 +34,7 @@ class MTClipGroup {
     uint64 ptr;
     MTClipGroup(CGameCtnMediaClipGroup@ cg) {
         @this.cg = cg;
+        if (cg is null) return;
         ptr = Dev_GetPointerForNod(cg);
     }
 

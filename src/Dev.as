@@ -58,7 +58,7 @@ void Dev_UpdateMwSArrayCapacity(uint64 ptr, uint newSize, uint elsize, bool redu
     while (Dev::ReadUInt32(ptr + 0x8) < newSize) {
         Dev_DoubleMwSArray(ptr, elsize);
     }
-    Dev_ReduceMwSArray(ptr, newSize, !isExpanding && reduceFromFront);
+    Dev_ReduceMwSArray(ptr, newSize, !isExpanding && reduceFromFront, int(elsize));
 }
 
 void Dev_ReduceMwSArray(uint64 ptr, float newSizeProp) {
