@@ -632,8 +632,13 @@ class ItemModelTreeElement {
     void Draw(NPlugTrigger_SWaypoint@ sWaypoint) {
         if (StartTreeNode(name + " :: \\$f8fNPlugTrigger_SWaypoint", UI::TreeNodeFlags::DefaultOpen)) {
             if (drawProperties) {
-                LabeledValue("NoRespawn", sWaypoint.NoRespawn);
-                LabeledValue("sWaypoint.Type", tostring(sWaypoint.Type));
+                if (isEditable) {
+                    sWaypoint.NoRespawn = UI::Checkbox("NoRespawn", sWaypoint.NoRespawn);
+                    sWaypoint.Type = DrawComboEGameItemWaypointType("Type", sWaypoint.Type);
+                } else {
+                    LabeledValue("NoRespawn", sWaypoint.NoRespawn);
+                    LabeledValue("sWaypoint.Type", tostring(sWaypoint.Type));
+                }
             }
             MkAndDrawChildNode(sWaypoint.TriggerShape, "TriggerShape");
             EndTreeNode();
