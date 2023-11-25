@@ -106,7 +106,7 @@ void UI_Main_Render() {
     }
 
     auto now = Time::Now;
-    if (IsInEditor && now - lastTimeEnteredEditor > 2000 && now - FromML::lastEventTime > 2000 && !dismissedPluginEnableRequest) {
+    if (IsInEditor && now - lastTimeEnteredEditor > 2000 && now - FromML::lastEventTime > 2000 && !dismissedPluginEnableRequest && GetApp().BasicDialogs.Dialog != CGameDialogs::EDialog::WaitMessage) {
         vec2 size = vec2(300, 120);
         vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
         pos.y = 200;

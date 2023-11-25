@@ -50,6 +50,21 @@ class IE_CreateObjectMacroTab : Tab {
 
         UI::Separator();
 
+        if (UI::Button("Set all DynaObj.DyanShape to the Test Shape")) {
+            startnew(CreateObj::DoDyanShapeTest);
+        }
+        if (UI::Button("Count DynaObjects in Clouds")) {
+            startnew(CreateObj::CountDynaObjects);
+        }
+
+        UI::Separator();
+
+        if (UI::Button("Create SnowCar Moving Variants")) {
+            startnew(CreateObj::MakeSnowCars);
+        }
+
+        UI::Separator();
+
         UI::Text("AR_Down Firework:");
         if (UI::Button("ExpandEntList")) ExpandEntList();
         if (UI::Button("(Opt) FillModels")) FillModels();
