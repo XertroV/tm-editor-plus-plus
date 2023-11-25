@@ -82,7 +82,7 @@ class MT_GpsHelperTab : Tab {
         }
 
         if (gpsWarningClips.Length == 0) {
-            UI::Text("\\$3b3GPS Camera Target Checker: OK");
+            UI::TextWrapped("\\$3b3GPS Camera Target Checker: OK\n\\$888(This checks that no Player Cameras target the local player when there are ghosts in the same clip/trigger.)");
         } else {
             UI::TextWrapped("\\$f80Clips with a Player Camera set to Local Player (if it's a GPS, this should be fixed):\n> " + string::Join(gpsWarningClips, ", "));
             if (UI::Button("Set all bad player camera tracks to target 1st ghost")) {

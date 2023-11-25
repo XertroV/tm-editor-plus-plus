@@ -163,7 +163,7 @@ class MTClipGroupTrigger {
 
             UI::Text("Trigger Patterns:");
             UI::Indent();
-                UI::TextWrapped("This eliminate some of this trigger's coordinates so that they are in some pattern.");
+                UI::TextWrapped("This eliminate some of this trigger's coordinates so that they are in some pattern. \\$888(Will not update until a refresh is triggered.)");
                 if (UI::Button("Checkerboard A")) {
                     MakeCheckerboard(true);
                 }
