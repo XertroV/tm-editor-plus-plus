@@ -22,12 +22,6 @@ class MT_TriggersTab : Tab {
 }
 
 
-uint16 O_MT_CLIPGROUP_TRIGGER_BUF = 0x28;
-uint16 O_MT_CLIPGROUP_TRIGGER_BUF_LEN = 0x30;
-
-uint16 SZ_CLIPGROUP_TRIGGER_STRUCT = 0x40;
-
-
 class MTClipGroup {
     private uint16 o_buf_Triggers = 0x28;
     CGameCtnMediaClipGroup@ cg;

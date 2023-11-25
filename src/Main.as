@@ -74,8 +74,11 @@ void RenderEarly() {
     if (IsInItemEditor) lastInItemEditor = Time::Now;
     EnteringItemEditor = IsInItemEditor && EnteringItemEditor;
 
+    EnteringMTEditor = !IsInMTEditor;
+    IsInMTEditor = mtEditor !is null;
+    EnteringMTEditor = IsInMTEditor && EnteringMTEditor;
+
     IsInMeshEditor = meshEditor !is null;
-    IsInMediaTracker = mtEditor !is null;
 
     WasInEditor = IsInEditor;
     EnteringEditor = !IsInEditor;
@@ -104,6 +107,9 @@ void RenderEarly() {
 
     if (EnteringItemEditor) {
         Event::RunOnItemEditorLoadCbs();
+    }
+    if (EnteringMTEditor) {
+        Event::RunOnMTEditorLoadCbs();
     }
 
     if (IsLeavingPlayground && IsInEditor) {

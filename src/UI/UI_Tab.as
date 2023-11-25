@@ -21,6 +21,8 @@ class Tab {
     bool expandWindowNextFrame = false;
     bool windowExpanded = false;
 
+    bool tabInWarningState = false;
+
     Tab(TabGroup@ parent, const string &in tabName, const string &in icon) {
         this.tabName = tabName;
         // .Parent set here
@@ -37,6 +39,9 @@ class Tab {
     }
 
     const string get_DisplayIconAndName() {
+        if (tabInWarningState) {
+            return "\\$f80" + tabIconAndName + "  " + Icons::ExclamationTriangle;
+        }
         return tabIconAndName;
     }
 

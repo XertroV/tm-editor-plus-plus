@@ -37,7 +37,7 @@ void UI_Main_Render() {
         @tabToDraw = RootTabGroup_ItemEditor;
     } else if (IsInMeshEditor) {
         @tabToDraw = RootTabGroup_MeshEditor;
-    } else if (IsInMediaTracker) {
+    } else if (IsInMTEditor) {
         @tabToDraw = RootTabGroup_MediaTracker;
     } else if (!IsInEditor) {
         return;
@@ -317,6 +317,7 @@ TabGroup@ CreateMeshEditorRT() {
 TabGroup@ CreateMTEditorRT() {
     auto root = RootTabGroupCls();
     MT_TriggersTab(root);
+    MT_GpsHelperTab(root);
     // MT_TracksTab(root);
     // MT_SavedTracksTab(root);
     return root;

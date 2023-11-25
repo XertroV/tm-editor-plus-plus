@@ -14,9 +14,9 @@ class EffectTab : Tab {
 
     const string get_DisplayIconAndName() override property {
         if (_IsActive) {
-            return "\\$af0\\$s" + tabIconAndName;
+            return "\\$af0\\$s" + Tab::get_DisplayIconAndName();
         }
-        return tabIconAndName;
+        return Tab::get_DisplayIconAndName();
     }
 
     const string get_DisplayIcon() override property {

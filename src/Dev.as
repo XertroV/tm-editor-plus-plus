@@ -367,3 +367,12 @@ const uint16 O_INVENTORY_ItemSelectedFolder = 0x1F0;
 const uint16 O_ITEMCURSOR_CurrentModelsBuf = 0xB8;
 // const uint16 O_ITEMCURSOR_VariantOrNbMaybe = 0xC0;
 // const uint16 O_ITEMCURSOR_MaxVariantMaybe = 0xC4;
+
+
+// MEDIA TRACKER STUFF
+
+
+uint16 O_MT_CLIPGROUP_TRIGGER_BUF = 0x28;
+uint16 O_MT_CLIPGROUP_TRIGGER_BUF_LEN = 0x30;
+
+uint16 SZ_CLIPGROUP_TRIGGER_STRUCT = 0x40;

@@ -6,6 +6,8 @@ CoroutineFunc@[] onEditorLoadCbs;
 string[] onEditorLoadCbNames;
 CoroutineFunc@[] onItemEditorLoadCbs;
 string[] onItemEditorLoadCbNames;
+CoroutineFunc@[] onMTEditorLoadCbs;
+string[] onMTEditorLoadCbNames;
 CoroutineFunc@[] onEditorUnloadCbs;
 string[] onEditorUnloadCbNames;
 ProcessItem@[] itemCallbacks;
@@ -31,6 +33,12 @@ void RegisterOnItemEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
         onItemEditorLoadCbs.InsertLast(f);
         onItemEditorLoadCbNames.InsertLast(name);
+    }
+}
+void RegisterOnMTEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
+    if (f !is null) {
+        onMTEditorLoadCbs.InsertLast(f);
+        onMTEditorLoadCbNames.InsertLast(name);
     }
 }
 void RegisterOnEditorUnloadCallback(CoroutineFunc@ f, const string &in name) {
@@ -87,7 +95,14 @@ namespace Event {
         for (uint i = 0; i < onItemEditorLoadCbs.Length; i++) {
             onItemEditorLoadCbs[i]();
         }
-        trace("Finished OnEditorLoad callbacks");
+        trace("Finished OnItemEditorLoad callbacks");
+    }
+    void RunOnMTEditorLoadCbs() {
+        trace("Running OnMTEditorLoad callbacks");
+        for (uint i = 0; i < onMTEditorLoadCbs.Length; i++) {
+            onMTEditorLoadCbs[i]();
+        }
+        trace("Finished OnMTEditorLoad callbacks");
     }
     void RunOnEditorUnloadCbs() {
         trace("Running OnEditorUnload callbacks");
