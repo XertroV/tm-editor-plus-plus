@@ -53,6 +53,9 @@ namespace MathX {
     shared bool Nat3Eq(nat3 &in a, nat3 &in b) {
         return a.x == b.x && a.y == b.y && a.z == b.z;
     }
+    shared bool Int3Eq(int3 &in a, int3 &in b) {
+        return a.x == b.x && a.y == b.y && a.z == b.z;
+    }
 
     shared bool QuatEq(quat &in a, quat &in b) {
         return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;

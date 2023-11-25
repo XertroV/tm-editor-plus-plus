@@ -49,8 +49,8 @@ shared vec3 MTCoordToPos(int3 mtCoord) {
     return vec3((mtCoord.x + 0) * 10.66666, (mtCoord.y - 8) * 8., (mtCoord.z + 0) * 10.66666);
 }
 
-shared vec3 CoordDistToPos(nat3 coord) {
-    return vec3(coord.x * 32, (int(coord.y)) * 8, coord.z * 32);
+shared vec3 CoordDistToPos(int3 coord) {
+    return vec3(coord.x * 32, coord.y * 8, coord.z * 32);
 }
 
 shared vec3 CoordDistToPos(vec3 coord) {
@@ -65,8 +65,8 @@ shared nat3 PosToCoord(vec3 pos) {
     );
 }
 
-shared nat3 PosToCoordDist(vec3 pos) {
-    return nat3(
+shared int3 PosToCoordDist(vec3 pos) {
+    return int3(
         uint(Math::Floor(pos.x / 32.)),
         uint(Math::Floor(pos.y / 8.)),
         uint(Math::Floor(pos.z / 32.))

@@ -241,7 +241,7 @@ namespace MenuBar {
                 if (UI::MenuItem("Tutorial: Editing Material IDs (Physics/Gameplay)")) {
                     OpenBrowserURL("https://youtu.be/dmFzAL9ZzbA");
                 }
-                if (UI::MenuItem("Tutorial: Custom Snapping Trees (Thanks KamiKalas)")) {
+                if (UI::MenuItem("Tutorial: Custom Snapping Trees \\$888by Kamikalash")) {
                     OpenBrowserURL("https://youtu.be/PIV2j9BgAmU");
                 }
                 if (UI::MenuItem("Plugin Support Thread")) {

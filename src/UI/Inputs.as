@@ -70,6 +70,13 @@ namespace UX {
         return val;
     }
 
+    shared int3 InputInt3XYZ(const string &in label, int3 val) {
+        auto x = UI::InputInt("(X) " + label, val.x);
+        auto y = UI::InputInt("(Y) " + label, val.y);
+        auto z = UI::InputInt("(Z) " + label, val.z);
+        return int3(x, y, z);
+    }
+
     shared nat3 InputNat3XYZ(const string &in label, nat3 val) {
         auto x = UI::InputInt("(X) " + label, val.x);
         auto y = UI::InputInt("(Y) " + label, val.y);

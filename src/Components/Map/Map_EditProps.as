@@ -122,13 +122,13 @@ class MapEditPropsTab : Tab {
             ToML::SendMessage("LockThumbnail", {tostring(!FromML::lockedThumbnail)});
         }
         AddSimpleTooltip("When locked, the thumbnail will not be updated when the map is saved. This setting is saved as metadata on the map. Only works when the E++ Editor Plugin is active.");
-        SameLineNewIndicator();
+        // SameLineNewIndicator();
         UI::Text("LightMapCacheSmall (KB): " + map.LightMapCacheSmall_KBytes);
         UI::Text("Time spent mapping: " + TimeFormatSecs(FromML::mappingTime));
         if (UI::IsItemHovered()) {
             AddSimpleTooltip("Editor: " + TimeFormatSecs(FromML::mappingTimeMapping) + " / Testing: " + TimeFormatSecs(FromML::mappingTimeTesting) + " / Validating: " + TimeFormatSecs(FromML::mappingTimeValidating));
         }
-        SameLineNewIndicator();
+        // SameLineNewIndicator();
         UI::Text("Times loaded map in editor: " + FromML::pluginLoads);
         UI::Text("Times tested/validated map: " + FromML::pgSwitches);
 
@@ -143,7 +143,7 @@ class MapEditPropsTab : Tab {
             ToML::ResyncPlease();
         }
         UI::EndDisabled();
-        SameLineNewIndicator();
+        // SameLineNewIndicator();
 
         UI::Unindent();
 
