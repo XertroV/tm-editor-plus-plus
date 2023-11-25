@@ -5,7 +5,7 @@ class ApplyTranslationTab : GenericApplyTab {
     }
 
     vec3 posOff = vec3();
-    nat3 coordsOff = nat3();
+    int3 coordsOff = int3();
     void DrawInner() override {
         UI::TextWrapped("Move blocks and items in the map. Optionally filter by name and/or location.");
         UI::TextWrapped("\\$f80Note:\\$z Normal/Ghost blocks cannot be moved outside of the map base (but Free blocks can).");
@@ -13,12 +13,12 @@ class ApplyTranslationTab : GenericApplyTab {
         UI::TextWrapped("For application to specific blocks/items, see 'Picked Block/Item'.");
         UI::Separator();
         vec3 origPO = posOff;
-        nat3 origCO = coordsOff;
+        int3 origCO = coordsOff;
         posOff = UI::InputFloat3("Position Offset", posOff);
-        coordsOff = UX::InputNat3XYZ("Coords Offset", coordsOff);
+        coordsOff = UX::InputInt3XYZ("Coords Offset", coordsOff);
         if (!MathX::Vec3Eq(origPO, posOff)) {
             coordsOff = PosToCoordDist(posOff);
-        } else if (!MathX::Nat3Eq(origCO, coordsOff)) {
+        } else if (!MathX::Int3Eq(origCO, coordsOff)) {
             posOff = CoordDistToPos(coordsOff);
         }
         UI::Separator();
@@ -29,7 +29,7 @@ class ApplyTranslationTab : GenericApplyTab {
         if (Editor::IsBlockFree(block)) {
             Editor::SetBlockLocation(block, Editor::GetBlockLocation(block) + posOff);
         } else {
-            Editor::SetBlockCoord(block, Editor::GetBlockCoord(block) + coordsOff);
+            Editor::SetBlockCoord(block, Editor::GetBlockCoord(block) + Int3ToNat3(coordsOff));
         }
     }
     void ApplyTo(CGameCtnAnchoredObject@ item) override {
