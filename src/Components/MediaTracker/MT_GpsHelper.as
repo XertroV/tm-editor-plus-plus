@@ -28,6 +28,8 @@ class MT_GpsHelperTab : Tab {
         gpsWarningClips.RemoveRange(0, gpsWarningClips.Length);
         auto api = cast<CGameEditorMediaTrackerPluginAPI>(mteditor.PluginAPI);
         auto cg = api.ClipGroup;
+        // cg is null in the replay editor
+        if (cg is null) return;
         for (uint i = 0; i < cg.Clips.Length; i++) {
             auto clip = cg.Clips[i];
             CGameCtnMediaBlockCameraGame@ badCamBlock;

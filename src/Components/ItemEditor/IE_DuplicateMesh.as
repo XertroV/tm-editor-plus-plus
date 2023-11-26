@@ -331,6 +331,8 @@ namespace MeshDuplication {
         ZeroFidsUnknownModelNod(subModel.Render.Mesh);
         ZeroFidsUnknownModelNod(subModel.Render.Light);
         ZeroFidsUnknownModelNod(subModel.Render.Shader);
+        ZeroFidsUnknownModelNod(subModel.GpuModel);
+        ZeroFidsUnknownModelNod(subModel.GpuSpawn);
     }
 
     void ZeroFids(CPlugDynaObjectModel@ dynaObj) {

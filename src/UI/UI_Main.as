@@ -318,6 +318,7 @@ TabGroup@ CreateMTEditorRT() {
     auto root = RootTabGroupCls();
     MT_TriggersTab(root);
     MT_GpsHelperTab(root);
+    MT_RipGhostPathTab(root);
     // MT_TracksTab(root);
     // MT_SavedTracksTab(root);
     return root;
