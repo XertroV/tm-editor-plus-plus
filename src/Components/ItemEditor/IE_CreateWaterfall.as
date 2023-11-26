@@ -2,7 +2,8 @@
 #if DEV
 
 namespace CreateObj {
-    string wfTallSource = "Work\\Waterfall\\WaterFallTall.Item.Gbx";
+    // string wfTallSource = "Work\\Waterfall\\WaterFallTall.Item.Gbx";
+    string wfTallSource = "Work\\Waterfall\\WaterFallTall2.Item.Gbx";
     string wfMainSource = "Work\\Waterfall\\MainWaterFall.Item.Gbx";
     string starBlueSource = "Work\\Waterfall\\StarBlue.Item.Gbx";
     string starYellowSource = "Work\\Waterfall\\StarYellow.Item.Gbx";
@@ -53,7 +54,7 @@ namespace CreateObj {
     uint wfClumpPeriod = 3000;
 
     void CreateWaterfallVariant(NPlugItem_SVariantList@ vl, uint ix, float speed, uint density, bool hasStars) {
-        auto farShape = GetStaticObjFromSource(farAwayShapeSource);
+        auto farShape = GetStaticObjFromSource(newEmptyShapeSource);
         auto waterfall = GetStaticObjFromSource(wfTallSource);
         auto foamClump = GetStaticObjFromSource(waterFoamClumpSource);
         auto foamBarrel = GetStaticObjFromSource(waterFoamBarrelSource);
@@ -77,6 +78,13 @@ namespace CreateObj {
 
         uint pairIx = 0;
 
+        float wfFoamZOff = 1.;
+        float wfFallingItemsZOff = 8.5;
+        float wfItemsXOff = -7.5;
+        // quat foamRot = quat(vec3(0, 0, TAU * .278));
+        quat foamRot = quat(vec3(0, 0, TAU * .290));
+
+
         // foam barrels
         for (uint d = 0; d < xBarrels; d++) {
             auto ex = pairIx * 2;
@@ -85,9 +93,9 @@ namespace CreateObj {
             float xJitter = Math::Rand(-1.0, 1.0) * .5;
             float zJitter = Math::Rand(-1.0, 1.0) * 1.5;
             float y = Math::Rand(0.5, 1.5);
-            float xOffset = 0.0; // -7.5;
+            float xOffset = 0.0;
 
-            dest.Ents[ex].Location.Trans = vec3(xJitter + xOffset, wfHeightOffset + y, zJitter + 9.);
+            dest.Ents[ex].Location.Trans = vec3(xJitter + xOffset, wfHeightOffset + y, zJitter + wfFoamZOff);
             dest.Ents[ex].Location.Quat = quat(1, 0, 0, 0); // * quat(vec3(0, 0, Rand() * TAU));
             auto dyna = CPlugDynaObjectModel();
             auto kinCon = NPlugDyna_SKinematicConstraint();
@@ -106,8 +114,6 @@ namespace CreateObj {
             pairIx++;
         }
 
-        quat foamRot = quat(vec3(0, 0, TAU * .278));
-
         // foam clumps
         for (uint d = 0; d < xClumps; d++) {
             auto ex = pairIx * 2;
@@ -120,7 +126,7 @@ namespace CreateObj {
             // float y = Math::Rand(0.0, 3.0);
             float y = -2.0;
 
-            dest.Ents[ex].Location.Trans = vec3(-7.5 + xJitter, wfHeightOffset + y, 17);
+            dest.Ents[ex].Location.Trans = vec3(wfItemsXOff + xJitter, wfHeightOffset + y, wfFallingItemsZOff);
             dest.Ents[ex].Location.Quat = quat(1, 0, 0, 0) * foamRot;
             auto dyna = CPlugDynaObjectModel();
             auto kinCon = NPlugDyna_SKinematicConstraint();
@@ -150,7 +156,7 @@ namespace CreateObj {
             // float y = Math::Rand(0.0, 3.0);
             float y = -2.0;
 
-            dest.Ents[ex].Location.Trans = vec3(-7.5 + xJitter, wfHeightOffset + y, 17);
+            dest.Ents[ex].Location.Trans = vec3(wfItemsXOff + xJitter, wfHeightOffset + y, wfFallingItemsZOff);
             dest.Ents[ex].Location.Quat = quat(1, 0, 0, 0) * foamRot;
             auto dyna = CPlugDynaObjectModel();
             auto kinCon = NPlugDyna_SKinematicConstraint();
