@@ -80,6 +80,14 @@ void OverrideGameSafetyCheck() {
     UI::Text("Check request started: " + tostring(requestStarted));
     UI::Text("Check request ended: " + tostring(requestEnded));
     if (!GameVersionSafe && UI::Button("Disable safety features and run anyway")) {
-        GameVersionSafe = true;
+        OverrideGameSafetyCheck_EditorPP();
     }
+}
+
+void OverrideGameSafetyCheck_EditorPP(bool safe = true) {
+    GameVersionSafe = safe;
+}
+
+bool IsGameVersionSafe_EditorPP() {
+    return GameVersionSafe;
 }
