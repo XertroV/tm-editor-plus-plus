@@ -256,11 +256,11 @@ class LmFile {
     MemoryBuffer@ data;
     LmFile(MemoryBuffer@ buf) {
         auto nameLen = buf.ReadUInt32();
-        if (nameLen > 2 * 1024 * 1024) throw("name looks too long! " + nameLen + ", " + Text::Format("0x%08x", nameLen));
+        if (nameLen > 1024) throw("name looks too long! " + nameLen + ", " + Text::Format("0x%08x", nameLen));
         name = buf.ReadString(nameLen);
         auto dataLen = buf.ReadUInt32();
         trace('LmFile reading ' + name + ' (length: '+dataLen+')');
-        if (dataLen > 2 * 1024 * 1024) throw("data looks too long! " + dataLen + ", " + Text::Format("0x%08x", dataLen));
+        if (dataLen > 4 * 1024 * 1024) throw("data looks too long! " + dataLen + ", " + Text::Format("0x%08x", dataLen));
         @data = buf.ReadBuffer(dataLen);
         buf.Seek(dataLen, 1);
     }

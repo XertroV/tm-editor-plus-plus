@@ -246,6 +246,7 @@ class MapEditPropsTab : Tab {
 
     void DrawMapVehicleChoices() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
 
         auto currVehicleStuff = Editor::GetMapPlayerModel(editor.Challenge);
         LabeledValue("Current Vehicle Name", GetMwIdName(currVehicleStuff.x));
