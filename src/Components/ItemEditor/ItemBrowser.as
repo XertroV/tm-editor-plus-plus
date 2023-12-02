@@ -1749,6 +1749,11 @@ class ItemModelTarget {
         if (parent is null) return null;
         return parent.nod;
     }
+    CMwNod@ GetNodForZeroing() {
+        if (parent !is null) return parent.nod;
+        if (child !is null) return child.nod;
+        return null;
+    }
     const string get_TypeName() {
         if (child !is null) {
             return child.TypeName;

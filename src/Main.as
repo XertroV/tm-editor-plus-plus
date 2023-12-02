@@ -218,7 +218,8 @@ bool[] hotkeysFlags = array<bool>(256);
 */
 UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
     auto app = GetApp();
-    if (app.Editor is null) return UI::InputBlocking::DoNothing;
+    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    if (editor is null) return UI::InputBlocking::DoNothing;
     bool block = false;
     block = block || (S_BlockEscape && down && key == VirtualKey::Escape && app.CurrentPlayground is null);
     // trace('key down: ' + tostring(key));

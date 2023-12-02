@@ -234,10 +234,16 @@ namespace CreateObj {
         return total;
     }
 
-    void DoDyanShapeTest() {
+    void DoDynaShapeTest() {
         auto testItem = GetStaticObjFromSource("Cavern_Rail_Broken2.Item.Gbx");
         auto vl = GetRootVL();
         SetDynaShape_Rec_VarList(vl, testItem.Shape);
+    }
+
+    void DoDynaShapeSafe() {
+        auto safeItem = GetStaticObjFromSource(farAwayShapeSource);
+        auto vl = GetRootVL();
+        SetDynaShape_Rec_VarList(vl, safeItem.Shape);
     }
 
     void SetDynaShape_Rec_Unk(CMwNod@ nod, CPlugSurface@ shape) {

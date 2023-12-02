@@ -27,6 +27,9 @@ class EditorControlsDocsTab : Tab {
         UI::LabelText("Avoid blocks snapping to free-blocks", "Hold Shift");
         UI::LabelText("Disable all editor plugins", "Ctrl + P");
         UI::LabelText("Cycle Item Variants (e.g., trees)", "Middle Click");
+        UI::Separator();
+        UI::Text("Mesh Modeler");
+        UI::LabelText("Select faces with same material", "Ctrl + Q");
 
         UI::PopStyleVar();
 

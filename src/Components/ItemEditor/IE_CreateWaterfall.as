@@ -24,21 +24,31 @@ namespace CreateObj {
         uint nbStarsOpts = 2;
         uint nbRisingVars = 3;
 
-        uint nbTotal = nbSpeeds * nbDensities * nbStarsOpts;
+        uint nbTotal = nbSpeeds * (nbDensities * nbStarsOpts + 1);
             // + nbRisingVars + nbSpeeds;
 
         SetPlacementVars();
+
+        auto preLen = GetRootVL().Variants.Length;
         auto vl = ExpandVarList(null, nbTotal);
+        if (preLen < vl.Variants.Length) {
+            ItemEditor::SaveAndReloadItem(false);
+            NotifyWarning("Please start again -- saved and reloaded after expanding var list.");
+            // return;
+        }
+
         auto varIx = 0;
         for (uint s = 0; s < nbSpeeds; s++) {
-            for (uint d = 0; d < nbDensities; d++) {
-                for (uint hasStars = 0; hasStars < 2; hasStars++) {
+            float speed = s == 0 ? .75 : 1.25;
+            for (uint hasStars = 0; hasStars < 2; hasStars++) {
+                for (uint d = 0; d < nbDensities; d++) {
                     // float speed = s == 0 ? 1.0 : s == 1 ? 0.5 : s == 2 ? -0.1 : 1.0;
-                    float speed = s == 0 ? .75 : 1.25;
                     CreateWaterfallVariant(vl, varIx, speed, d, hasStars == 1);
                     varIx++;
                 }
             }
+            CreateWaterfallVariant(vl, varIx, speed, 2, false, true);
+            varIx++;
         }
         return;
         for (uint s = 0; s < nbSpeeds; s++) {
@@ -53,8 +63,8 @@ namespace CreateObj {
 
     uint wfClumpPeriod = 3000;
 
-    void CreateWaterfallVariant(NPlugItem_SVariantList@ vl, uint ix, float speed, uint density, bool hasStars) {
-        auto farShape = GetStaticObjFromSource(newEmptyShapeSource);
+    void CreateWaterfallVariant(NPlugItem_SVariantList@ vl, uint ix, float speed, uint density, bool hasStars, bool onlyFoam = false) {
+        auto farShape = GetStaticObjFromSource(farAwayShapeSource);
         auto waterfall = GetStaticObjFromSource(wfTallSource);
         auto foamClump = GetStaticObjFromSource(waterFoamClumpSource);
         auto foamBarrel = GetStaticObjFromSource(waterFoamBarrelSource);
@@ -68,8 +78,12 @@ namespace CreateObj {
         auto xBarrels = (density + 1) * 2;
         auto xClumps = (density + 2) * 2;
         auto xStars = hasStars ? (density * 3) + 3 : 0;
+
+        if (onlyFoam) { xClumps = 0; xStars = 0; }
+
         uint totalPairs = xBarrels + xStars + xClumps;
-        uint totalElems = totalPairs * 2 + 1;
+        uint totalWaterfalls = onlyFoam ? 0 : 1;
+        uint totalElems = totalPairs * 2 + totalWaterfalls;
 
         auto dest = cast<CPlugPrefab>(vl.Variants[ix].EntityModel);
         ExpandEntList(dest, totalElems);
@@ -175,10 +189,12 @@ namespace CreateObj {
             pairIx++;
         }
 
-        auto ex = dest.Ents.Length - 1;
-        dest.Ents[ex].Location.Trans = vec3(0);
-        dest.Ents[ex].Location.Quat = quat(1, 0, 0, 0);
-        MeshDuplication::SetEntRefModel(dest, ex, waterfall);
+        if (!onlyFoam) {
+            auto ex = dest.Ents.Length - 1;
+            dest.Ents[ex].Location.Trans = vec3(0);
+            dest.Ents[ex].Location.Quat = quat(1, 0, 0, 0);
+            MeshDuplication::SetEntRefModel(dest, ex, waterfall);
+        }
     }
 
     void SetPlacementVars(float ghStep = 1, float ghOff = 0, float gvStep = 1, float gvOffset = 0, float flyStep = 1,
@@ -211,6 +227,10 @@ namespace CreateObj {
     // returns in [0.0, 1.0]
     float Rand() {
         return Math::Rand(0.0, 1.0);
+    }
+
+    float RandSymmetric() {
+        return Math::Rand(-1.0, 1.0);
     }
 
     void SetKC_WfBarrel(NPlugDyna_SKinematicConstraint@ kc, float speed) {
@@ -319,6 +339,10 @@ namespace CreateObj {
             SAnimFunc_SetIx(kc, offset, 2, SubFuncEasings::None, pauseAtEnd, pauseAfter);
             SAnimFunc_SetIx(kc, offset, 3, SubFuncEasings::None, false, 0);
             return this;
+        }
+
+        KinematicConstraint@ FlashLoop(bool isRot, uint pauseBefore, uint mainAnimDuration, uint pauseAfter, bool pauseAtEnd = true, bool reverse = false, SubFuncEasings easing = SubFuncEasings::None) {
+            return LoopWithPause(isRot, pauseBefore, mainAnimDuration, pauseAfter, pauseAtEnd, reverse, easing);
         }
     }
 }

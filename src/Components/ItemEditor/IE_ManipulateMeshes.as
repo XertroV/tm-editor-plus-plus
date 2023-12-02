@@ -14,8 +14,11 @@ class IE_ManipulateMeshesTab : Tab {
     }
 
     CGameCtnArticleNodeArticle@ selectedInvNode = null;
+    CMwNod@ selectedFileSource = null;
 
     CMwNod@ GetInventorySelectionModel() {
+        if (selectedInvNode is null && selectedFileSource !is null)
+            return selectedFileSource;
         auto @itemNode = selectedInvNode;
         // might load the full item?
         itemNode.GetCollectorNod();
@@ -27,6 +30,10 @@ class IE_ManipulateMeshesTab : Tab {
 
     CGameItemModel@ GetInventorySelectionModel_Item() {
         return cast<CGameItemModel>(GetInventorySelectionModel());
+    }
+
+    bool get_HasSelectedInvNodeOrFile() {
+        return selectedFileSource !is null || selectedInvNode !is null;
     }
 
     void DrawInner() override {
@@ -51,7 +58,7 @@ class IE_ManipulateMeshesTab : Tab {
             """);
         }
 
-        if (selectedInvNode is null) {
+        if (!HasSelectedInvNodeOrFile) {
             DrawSelectSouceItem();
         } else if (dest is null) {
             DrawPickDestinationNod();
@@ -64,7 +71,7 @@ class IE_ManipulateMeshesTab : Tab {
 
     void DrawSelectedSourceStatus() {
         auto srcItem = GetInventorySelectionModel();
-        UI::Text("Selected Source Item: " + (srcItem is null ? "null" : string(srcItem.IdName)));
+        UI::Text("Selected Source Item: " + (srcItem is null ? "null" : srcItem.IdName.Length > 0 ? string(srcItem.IdName) : "Unknown (but non-null)"));
     }
     void DrawDestinationNodStatus() {
         string msg;
@@ -108,6 +115,9 @@ class IE_ManipulateMeshesTab : Tab {
             // null
             OnPickedSource(ItemModelTarget());
         }
+        if (selectedFileSource !is null && dest.IsAnyChild && UI::Button("Use root Nod")) {
+            OnPickedSource(ItemModelTarget(null, selectedFileSource, 0xFFFF));
+        }
 
         UI::Indent();
         if (UI::BeginChild("pick src nod")) {
@@ -130,6 +140,7 @@ class IE_ManipulateMeshesTab : Tab {
         @source = null;
         @lookingFor = null;
         @selectedInvNode = null;
+        @selectedFileSource = null;
         hasRunMsg = "";
     }
 
@@ -143,6 +154,8 @@ class IE_ManipulateMeshesTab : Tab {
             @lookingFor = null;
         } else if (selectedInvNode !is null) {
             @selectedInvNode = null;
+        } else if (selectedFileSource !is null) {
+            @selectedFileSource = null;
         }
     }
 
@@ -248,9 +261,44 @@ class IE_ManipulateMeshesTab : Tab {
     }
 
     ItemSearcher@ itemPicker = ItemSearcher();
-
+    string m_FromFilePath = "";
+    bool fromFileFound = false;
     void DrawSelectSouceItem() {
         UI::Text("Select \\$f80source\\$z item (the destination item is the one you're editing)");
+        if (UI::CollapsingHeader("From File")) {
+            UI::Indent();
+            UI::TextWrapped("Paste a file path to a .gbx file, relative to your Documents\\Trackmania folder. Example: 'Items\\BlenderExports\\CoolObject.Shape.Gbx'. (Items, Shapes, Meshes supported)");
+            bool changed;
+            m_FromFilePath = UI::InputText("UserData File Path", m_FromFilePath, changed);
+            if (changed) {
+                fromFileFound = IO::FileExists(IO::FromUserGameFolder(m_FromFilePath.Trim()));
+            }
+            if (fromFileFound) {
+                if (UI::Button("Use file as source")) {
+                    auto fid = Fids::GetUser(m_FromFilePath);
+                    do {
+                        if (fid is null) {
+                            NotifyWarning("Failed to get FID for file.");
+                            break;
+                        }
+                        if (fid.Nod is null) {
+                            @selectedFileSource = Fids::Preload(fid);
+                            if (selectedFileSource is null) {
+                                NotifyWarning("Failed to Preload the Nod");
+                                break;
+                            }
+                            selectedFileSource.MwAddRef();
+                        } else {
+                            @selectedFileSource = fid.Nod;
+                        }
+                    } while (false); // so we can break
+                }
+            } else {
+                UI::AlignTextToFramePadding();
+                UI::Text("\\$f80File not found.");
+            }
+            UI::Unindent();
+        }
         auto picked = itemPicker.DrawPrompt();
         if (picked !is null) {
             @selectedInvNode = picked;
@@ -317,10 +365,11 @@ class IE_ManipulateMeshesTab : Tab {
         }
 
 
-        auto model = cast<CGameItemModel>(selectedInvNode.GetCollectorNod());
+        auto model = selectedInvNode is null ? null : cast<CGameItemModel>(selectedInvNode.GetCollectorNod());
         if (model !is null && model.MaterialModifier !is null) {
             MeshDuplication::PushMaterialModifier(model.MaterialModifier);
         }
+        // auto fileSource = selectedFileSource;
 
         if (isOverwriteChild) {
             _RunReplaceChild();
@@ -352,8 +401,8 @@ class IE_ManipulateMeshesTab : Tab {
 
     protected bool _RunReplaceChild() {
         AppendRunMsg("started _RunReplaceChild");
-        MeshDuplication::ZeroFidsUnknownModelNod(dest.GetParentNod());
-        MeshDuplication::ZeroFidsUnknownModelNod(source.GetParentNod());
+        MeshDuplication::ZeroFidsUnknownModelNod(dest.GetNodForZeroing());
+        MeshDuplication::ZeroFidsUnknownModelNod(source.GetNodForZeroing());
         if (dest.ty == ModelTargetType::IndirectChild) {
             // prefab or varlist
             auto prefab = dest.parent.As_CPlugPrefab();
@@ -413,8 +462,8 @@ class IE_ManipulateMeshesTab : Tab {
     protected void _RunReplaceElement() {
         AppendRunMsg("started _RunReplaceElement");
         AppendRunMsg("\\$f80 ? Not yet implemented");
-        MeshDuplication::ZeroFidsUnknownModelNod(dest.GetParentNod());
-        MeshDuplication::ZeroFidsUnknownModelNod(source.GetParentNod());
+        MeshDuplication::ZeroFidsUnknownModelNod(dest.GetNodForZeroing());
+        MeshDuplication::ZeroFidsUnknownModelNod(source.GetNodForZeroing());
         AppendRunMsg("zeroed FIDs");
         auto dParentVL = dest.parent.As_NPlugItem_SVariantList();
         auto sParentVL = source.parent.As_NPlugItem_SVariantList();
@@ -462,8 +511,8 @@ class IE_ManipulateMeshesTab : Tab {
 
     protected bool _RunReplaceChildren() {
         AppendRunMsg("started _RunReplaceChildren");
-        MeshDuplication::ZeroFidsUnknownModelNod(dest.GetParentNod());
-        MeshDuplication::ZeroFidsUnknownModelNod(source.GetParentNod());
+        MeshDuplication::ZeroFidsUnknownModelNod(dest.GetNodForZeroing());
+        MeshDuplication::ZeroFidsUnknownModelNod(source.GetNodForZeroing());
         AppendRunMsg("zeroed FIDs");
         auto destDyna = dest.parent.As_CPlugDynaObjectModel();
         auto destStatic = dest.parent.As_CPlugStaticObjectModel();
@@ -511,7 +560,7 @@ class IE_ManipulateMeshesTab : Tab {
 
 
     bool UnknownDestSourceImplementation() {
-        AppendRunMsg("\\$f80Error: no implementation for combination.\\$z Source: " + source.ToString() + " / Destination: " + dest.ToString() + " -- child of a "+UnkType(dest.GetParentNod()));
+        AppendRunMsg("\\$f80Error: no implementation for combination.\\$z Source: " + source.ToString() + " / Destination: " + dest.ToString() + " -- child of a "+UnkType(dest.GetNodForZeroing()));
         return false;
     }
 }

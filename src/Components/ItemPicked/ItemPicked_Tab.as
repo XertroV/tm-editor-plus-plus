@@ -119,6 +119,17 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             Editor::OpenItemEditor(editor, item);
         }
 
+        if (UI::Button("Open Item Folder")) {
+            try {
+                auto fid = GetFidFromNod(item.ItemModel);
+                if (fid is null) NotifyWarning("Failed to get FID for this item.");
+                else if (fid.FullFileName.Contains("<virtual>")) NotifyWarning("Cannot open folder for a vanilla item.");
+                else OpenExplorerPath(fid.ParentFolder.FullDirName);
+            } catch {
+                NotifyError(getExceptionInfo());
+            }
+        }
+
         UI::Columns(1);
         UI::Separator();
 

@@ -196,6 +196,7 @@ class Tab {
             }
             expandWindowNextFrame = false;
             windowExpanded = false;
+            _BeforeBeginWindow();
             if (UI::Begin(fullName + "##" + windowExtraId, windowOpen, WindowFlags)) {
                 windowExpanded = true;
                 // DrawTogglePop();
@@ -209,6 +210,10 @@ class Tab {
         WindowChildren.DrawWindowsAndRemoveTabsWhenClosed();
 
         return windowOpen;
+    }
+
+    void _BeforeBeginWindow() {
+        // override
     }
 }
 

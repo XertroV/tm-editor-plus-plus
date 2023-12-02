@@ -260,7 +260,7 @@ class LmFile {
         name = buf.ReadString(nameLen);
         auto dataLen = buf.ReadUInt32();
         trace('LmFile reading ' + name + ' (length: '+dataLen+')');
-        if (dataLen > 4 * 1024 * 1024) throw("data looks too long! " + dataLen + ", " + Text::Format("0x%08x", dataLen));
+        if (dataLen > 9 * 1024 * 1024) throw("data looks too long! " + dataLen + ", " + Text::Format("0x%08x", dataLen));
         @data = buf.ReadBuffer(dataLen);
         buf.Seek(dataLen, 1);
     }
@@ -294,7 +294,7 @@ class LmMappingCache {
         auto startPtr = Dev::ReadUInt64(bufPtr);
         auto objSize = SZ_LM_SPIMP_Buf2_EL;
         for (uint i = 0; i < bufLen; i++) {
-            trace('getting lm obj ' + i);
+            // trace('getting lm obj ' + i);
             objs.InsertLast(LmCachedObj(startPtr + i * objSize));
         }
     }
@@ -357,6 +357,14 @@ class LMAnalysisWindow : Tab {
         super(p, "LM Analysis", Icons::LightbulbO + Icons::Search);
     }
 
+    int get_WindowFlags() override property {
+        return UI::WindowFlags::HorizontalScrollbar;
+    }
+
+    void _BeforeBeginWindow() override {
+        UI::SetNextWindowSize(1048, 1060, UI::Cond::Appearing);
+    }
+
     bool get_IsLoaded() {
         return lmTextures.Length > 0;
     }
@@ -416,7 +424,7 @@ class LMAnalysisWindow : Tab {
                 UI::Text("\\$f80No texture...");
             } else {
                 auto imgTL = UI::GetWindowPos() + UI::GetCursorPos();
-                UI::Dummy(vec2(1024));
+                UI::Dummy(tex.GetSize());
                 DrawMappingOverlay(tex, imgTL, mapping, m_DrawOverlay && !currTab.StartsWith("ProbeGrid"));
             }
             UI::EndTabItem();
@@ -426,7 +434,7 @@ class LMAnalysisWindow : Tab {
 
 
 void DrawMappingOverlay(UI::Texture@ tex, vec2 imgTL, LmMappingCache@ mapping, bool drawMapping = true) {
-    auto size = vec2(1024);
+    auto size = vec2(tex.GetSize());
     auto dl = UI::GetWindowDrawList();
     auto fg = UI::GetForegroundDrawList();
     dl.AddImage(tex, imgTL, size);
@@ -456,6 +464,9 @@ void DrawMappingOverlay(UI::Texture@ tex, vec2 imgTL, LmMappingCache@ mapping, b
             fg.AddRectFilled(vec4(rectTL, rectSize), vec4(.1, .1, .1, .9));
             DrawList_AddTextWithStroke(fg, imgTL + vec2(1024 + 20, yOffset), vec4(1, 1, 0, 1), vec4(0), item.fidFileName, g_BigFont, 26);
             nbHovered++;
+            if (UI::IsMouseClicked(UI::MouseButton::Left)) {
+                Editor::SetCamAnimationGoTo(vec2(TAU / 8., TAU / 8.), item.objPos, 120.);
+            }
         }
     }
 }

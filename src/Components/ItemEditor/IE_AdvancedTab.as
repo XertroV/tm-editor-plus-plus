@@ -75,6 +75,8 @@ bool IE_LoadAndSetCurrentItemsShape() {
         auto im = ieditor.ItemModel;
         auto staticObj = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(im.EntityModel).StaticObject);
         ManipPtrs::Replace(staticObj, GetOffset(staticObj, "Shape"), shape, true);
+        // and more refs so it isn't unloaded
+        if (staticObj.Shape !is null) staticObj.Shape.MwAddRef();
         if (staticObj.Shape !is null) staticObj.Shape.MwAddRef();
         // turn off shape generation if it's on
         Dev::SetOffset(staticObj, O_STATICOBJMODEL_GENSHAPE, uint32(0));

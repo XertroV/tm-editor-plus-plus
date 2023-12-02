@@ -12,6 +12,8 @@
 - [ ] duplicate free blocks helper tool
 - [ ] where is EditorHelpers color set?
 
+- [ ] 3d move/rotate handle draggable things <https://discord.com/channels/276076890714800129/1103713844288819311/1103935116188844083>
+
 - ~~copy placement params from 1 item to another~~
 - script to do item manipulation
 - investigate placing items on freeblocks when a normally placed block is close

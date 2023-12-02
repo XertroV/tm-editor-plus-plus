@@ -907,7 +907,7 @@ namespace MeshDuplication {
 
     void ApplyMaterialMods(CPlugSolid2Model@ mesh) {
         if (!enableReplaceMatsViaMatMod) return;
-        if (matMod is null) return;
+        if (matMod is null || mesh is null) return;
         // check materials
         trace('applying mat mods to mesh');
         auto matBufFakeNod = Dev::GetOffsetNod(mesh, 0xC8);
@@ -940,7 +940,7 @@ namespace MeshDuplication {
 
     void ApplyMaterialMods(CPlugSurface@ surface) {
         if (!enableReplaceMatsViaMatMod) return;
-        if (matMod is null) return;
+        if (matMod is null || surface is null) return;
         // check materials
         if (surface.Materials.Length == 0) return;
         trace('applying mat mods to surface');
@@ -960,7 +960,7 @@ namespace MeshDuplication {
 
     void ApplyMaterialMods(CPlugPrefab@ prefab) {
         if (!enableReplaceMatsViaMatMod) return;
-        if (matMod is null) return;
+        if (matMod is null || prefab is null) return;
         // check materials
         trace('applying mat mods to prefab');
         for (uint i = 0; i < prefab.Ents.Length; i++) {

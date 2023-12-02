@@ -26,6 +26,10 @@ class IE_CreateObjectMacroTab : Tab {
             startnew(CreateObj::MakeExplodingRocksLightning);
         }
         UI::Separator();
+        if (UI::Button("Make Lightning Field")) {
+            startnew(CreateObj::MakeLightningField);
+        }
+        UI::Separator();
         if (UI::Button("Create Stormy Rain")) {
             startnew(CreateObj::MakeStormyRain);
         }
@@ -50,8 +54,12 @@ class IE_CreateObjectMacroTab : Tab {
 
         UI::Separator();
 
+        if (UI::Button("Set all DynaObj.DyanShape to the Safe Shape")) {
+            startnew(CreateObj::DoDynaShapeSafe);
+        }
+
         if (UI::Button("Set all DynaObj.DyanShape to the Test Shape")) {
-            startnew(CreateObj::DoDyanShapeTest);
+            startnew(CreateObj::DoDynaShapeTest);
         }
         if (UI::Button("Count DynaObjects in Clouds")) {
             startnew(CreateObj::CountDynaObjects);
@@ -477,7 +485,7 @@ namespace CreateObj {
     }
 
     uint boltPreExplode = 15;
-    uint delayFromStart = 6100;
+    uint delayFromStart = 6300;
     uint boltShowDuration = 40; //40;
     uint explodeDuration = 1600;
     uint angleExtraDuration = explodeDuration / 4;
