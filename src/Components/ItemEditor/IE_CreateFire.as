@@ -35,16 +35,16 @@ namespace CreateObj {
         startKCix += CreateFireVariant(vl, varIx + 1, 0, size, FireVarType::Dyna, 1);
         startKCix += CreateFireVariant(vl, varIx + 2, 0, size, FireVarType::Dyna, 1, true);
         startKCix += CreateFireVariant(vl, varIx + 3, 0, size, FireVarType::Static, 2);
-        startKCix += CreateFireVariant(vl, varIx + 4, 0, size, FireVarType::Dyna, 2);
-        startKCix += CreateFireVariant(vl, varIx + 5, 0, size, FireVarType::Dyna, 2, true);
+        startKCix += CreateFireVariant(vl, varIx + 4, 0, size, FireVarType::Static, 2);
+        startKCix += CreateFireVariant(vl, varIx + 5, 0, size, FireVarType::Static, 2, true);
         varIx += 6;
         for (uint j = 0; j < nbComplexVarsPerSize; j++) {
-            startKCix += CreateFireVariant(vl, varIx, 0, size, FireVarType::Complex, j + 1);
+            startKCix += CreateFireVariant(vl, varIx, 0, size, FireVarType::Complex, j*0 + 1);
             varIx++;
         }
         // continue; // debug
         for (uint j = 0; j < nbComplexVarsPerSize; j++) {
-            startKCix += CreateFireVariant(vl, varIx, 0, size, FireVarType::Complex, j + 1, true);
+            startKCix += CreateFireVariant(vl, varIx, 0, size, FireVarType::Complex, j*0 + 1, true);
             varIx++;
         }
 
@@ -105,7 +105,7 @@ namespace CreateObj {
             auto exKc = pairIx * 2 + 1;
 
             auto model = isSimpleMoving ? simpleModel : pairIx == 0 ? flame2 : flame1;
-            bool randForModel1 = pairIx > 0;
+            bool randForModel1 = true; // pairIx > 0;
             float yPos = !randForModel1 ? 0. : 0.5 + (_size == 2 ? 16.0 : _size == 1 ? 4.0 : 1.0) * Rand();
             float xPos = !randForModel1 ? 0. : (_size == 2 ? 8.0 : _size == 1 ? 2.0 : .5) * (Rand() * 2. - 1.);
             float zPos = !randForModel1 ? 0. : (_size == 2 ? 8.0 : _size == 1 ? 2.0 : .5) * (Rand() * 2. - 1.);

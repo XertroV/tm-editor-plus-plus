@@ -43,11 +43,11 @@ namespace CreateObj {
             for (uint hasStars = 0; hasStars < 2; hasStars++) {
                 for (uint d = 0; d < nbDensities; d++) {
                     // float speed = s == 0 ? 1.0 : s == 1 ? 0.5 : s == 2 ? -0.1 : 1.0;
-                    CreateWaterfallVariant(vl, varIx, speed, d, hasStars == 1);
+                    CreateWaterfallVariant(vl, varIx, speed, d*0, hasStars == 1);
                     varIx++;
                 }
             }
-            CreateWaterfallVariant(vl, varIx, speed, 2, false, true);
+            CreateWaterfallVariant(vl, varIx, speed, 1, false, true);
             varIx++;
         }
         return;

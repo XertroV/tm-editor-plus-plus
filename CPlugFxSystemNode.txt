@@ -1,0 +1,25 @@
+CPlugFxSystemNode
+
+0x18 ??
+0x1c name mwid
+
+CPlugFxSystemNode_Parallel
+
+- 0x20 buffer children
+- 0x30 ?? anything? 00 20 6d 69 6e 29 00 44
+
+
+
+
+CPlugFxSystemNode_ParticleEmitter
+
+
+better hooks
+
+
+
+
+
+
+
+CPlugParticleGpuModel <- has texture thing

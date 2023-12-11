@@ -1,0 +1,98 @@
+NHmsCollision_SMgr (..4A70)
+
+(at 0x70 offset for IScenePhys; collisions at 0x20)
+
+0x0: ptr? (to ..D410 -> collisions mgr)
+0x8: 0x0, 0x230
+
+items:
+
+SItemState has 0x40: vel, 0x4c: AngularVel
+
+0x10: buf of CPlugDynaModel
+0x20: buf of structs, 0x38 large; 0xC always 1.9?
+0x30: buf of ?? 31 11 01 41 01 c1 81 01 e1 11 01 41 01 c1 81 01
+0x40: buf of struct 0x10 long;
+    0x0: classId: 3007b000 (NGamePrefabPhy_SInst)
+    0x4: 0x25 (for all)
+    0x8: 0x18, 0x19 a bunch, 0x1A a bunch, 0x1B... (seems to increment with unknown repetitions; 0x238 to 0x23B skipped at end)
+    0xC: 0x0
+0x50: buf of ptrs to 3007b000 things? 0xc8 large struct; linked list i think
+0x60: buf of 0x0
+0x70: buf, struct, 0x58 large - SItemState?? yep
+    0x0: iso4
+    0x30: quat
+    0x40: unk: vec3, vec3
+0x80: buf, 0x10 large, positions? vec3 (or vec4 and .w == 0)
+0x90: buf, 0x8 large; F8 31 03 00, unit16 ix (counts up from 0), uint8 flags? (00, 53, 33, FF, CA, 02, CD)
+0xA0: buf, 0x0
+0xB0: buf uint32; just indexes counting up
+0xc0: 0x95e, 8.1105
+0xc8: buf uint32 indexes
+0xd8: FFFFFFFF x 3, 0x0
+0xe8: u32 0x0 x 4
+0xF8: D0 07 00 02 00 00 00 00
+0x100: ptr? to 0xc8
+0x108: ptr?
+0x110: 00 00 00 00 00 02 00 00
+0x118: ptr
+0x120: 0x0, 0x1
+0x128: ptr indexes? junk?
+0x130: 0x0, 0x0
+0x138: 0x10, 0.82408
+0x140: ptr -- base addr, 00 00 00 07, mwid: TcScale_BRNH, Meters_Depth, SelfIllum_Scale, RefractIndex, vec2 somewhere
+0x148: 0x0, 0x10
+...
+0x1d8: buf, indexes
+
+-- end SItemArrayDyn : Items --
+
+0x1f0: buf kinematic constrants (NSceneDyna_SKinematicConstraint; 0x40 large)
+    - 0xFFFFFFFF, index (mb from EntList)
+    - -1.0, 0x0
+    - 2e bd bb 33, 0x0
+    - <1.0, 0x0>
+    - 2e bd bb b3, 0x0
+    - -1, 1477.64
+    - 811.273, 1634.55
+    - ptr -> ptr -> NPlugDyna_SKinematicConstraint
+
+0x200: buf SKinematicSharedSignal
+
+....
+some numbers, counts, ratios, and flags? for a while, till 0x2A8 (0s then new memory)
+
+
+
+
+
+CPlugDynaModel
+often CPlugDynaObjectModel next
+0x98 - CPlugSolid2Model
+    0x338 -> ItemFid
+0xA8 - CPlugSurface
+
+
+
+
+GameScene + 0x10 -> NHmsMgrInstDyna_SMgr
+NHmsMgrInstDyna_SMgr, 640 large (0x280)
+
+0x60 -> buf struct 0x78 large
+    0x0 -> s2m
+    0x8 - uint, uint
+    0x10 -> s2m?
+    0x18 -> ptr? lods or something? (cplugvisualindexedtriangles, shaderapply, ptr, ptr, material)
+    0x20 - uint, garb
+    0x28 -> ptr? lods or something?
+    0x30 - uint, garb
+    0x38 -> ptr to [0x28] + 0x18
+    0x40 -> uint, garb
+    0x48 -> [0x28] + 0x130
+    0x50 - uint, garb
+    0x58 - 0x12, 0x0
+    0x60 - vec4? (not quat/normed)
+    0x70 - 0x0, 0x0
+
+
+0x98

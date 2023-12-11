@@ -248,7 +248,7 @@ namespace CreateObj {
         auto farShapeItem = GetModelFromSource(farAwayShapeSource);
         auto farShape = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(farShapeItem.EntityModel).StaticObject).Shape;
         auto fw1 = SetVarListVariantModel(vl, ix, dynaSourcesId.Replace("{ID}", tostring(ix)));
-        auto im = GetModelFromSource("Work\\StormyRain2.Item.Gbx");
+        auto im = GetModelFromSource("Work\\StormyRain3.Item.Gbx");
         auto rainMesh = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(im.EntityModel).StaticObject).Mesh;
         auto cubeIm = GetModelFromSource(cubeForSelectionSource);
         auto cube = cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(cubeIm.EntityModel).StaticObject);
@@ -261,20 +261,22 @@ namespace CreateObj {
         if (rainMesh is null) throw("rainMesh is null");
         if (cube is null) throw("cube is null");
 
-        uint nbCopies = 4;
+        uint nbCopies = 3;
         uint totalCopies = nbCopies * density;
         ExpandEntList(dest, 2 * totalCopies + 1);
         uint startRestIx = 2 * totalCopies;
+
+        float rainHeight = 256.0;
 
         // grid y
         uint kcIx = 0;
         for (uint d = 0; d < density; d++) {
             uint ixOffset = d * nbCopies * 2;
-            float yRot = d == 0 ? 0.0 : Math::Rand(-180.0, 180.0);
-            float hJitter = d == 0 ? 0.0 : Math::Rand(-8.0, 8.0);
+            float yRot = d == 0 ? 0.0 : 90.0 * float(d);
+            float hJitter = d == 0 ? 0.0 : Math::Rand(-8.0, 0.0);
             for (uint gy = 0; gy < nbCopies; gy++) {
                 auto ex = ixOffset + 2 * gy;
-                dest.Ents[ex].Location.Trans = vec3(0, 128.0 * float(gy) - (speed > 0 ? 196.0 : 80.0) + hJitter, 0);
+                dest.Ents[ex].Location.Trans = vec3(0, rainHeight * float(gy) - rainHeight * 0.7 + hJitter, 0);
                 dest.Ents[ex].Location.Quat = quat(vec3(Math::PI, Math::ToRad(yRot), 0));
                 auto dyna = cast<CPlugDynaObjectModel>(dest.Ents[ex].Model);
                 auto kinCon = cast<NPlugDyna_SKinematicConstraint>(dest.Ents[ex+1].Model);
@@ -734,7 +736,7 @@ namespace CreateObj {
 
     CGameItemModel@ SetVarListVariantModel(NPlugItem_SVariantList@ varList, uint ix, const string &in source) {
         auto model = GetModelFromSource(source);
-        if (model is null || model.EntityModel is null) throw("Model or entity model is null");
+        if (model is null || model.EntityModel is null) throw("Model or entity model is null: " + source);
         MeshDuplication::SetVariantModel(varList, ix, model.EntityModel);
         NotifySuccess("Set varlist ix " + ix + " to " + source);
         return model;
