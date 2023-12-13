@@ -100,8 +100,7 @@ namespace Editor {
             rot = Editor::GetBlockRotation(block);
             // for duplicate detection, we need to hash pos + rot + info.Id / info.IdName
             // that would be 4*3*2+4 bytes = 28 bytes
-            hash = GetBlockHash(pos, rot, block.BlockInfo.Id.Value, block.BlockInfoVariantIndex, block.MobilVariantIndex);
-            hashStr = tostring(hash);
+            hashStr = GetBlockHash(pos, rot, block.BlockInfo.Name, block.BlockInfoVariantIndex, block.MobilVariantIndex);
             // dev_trace("Block hash: " + hashStr);
             color = int(block.MapElemColor);
             Id = block.BlockInfo.Id.Value;
@@ -112,23 +111,25 @@ namespace Editor {
         }
 
         // if any of these differ, it's a different block
-        uint64 GetBlockHash(vec3 &in pos, vec3 &in rot, uint id, uint varIx, uint mobIx) {
-            if (SwapMem100 == 0) SwapMem100 = RequestMemory(100);
-            Dev::Write(SwapMem100, pos);
-            Dev::Write(SwapMem100 + 0xC, rot);
-            Dev::Write(SwapMem100 + 0x18, id);
-            Dev::Write(SwapMem100 + 0x1C, varIx);
-            Dev::Write(SwapMem100 + 0x20, mobIx);
-            // ensure the rest of the memory region is zeroed
-            Dev::Write(SwapMem100 + 0x24, uint32(0));
-            auto bytes = Dev_GetBytes(SwapMem100, 0x24);
-            uint64 somePrime = 6256056576578937913;
-            uint64 mid = somePrime;
-            for (uint i = 0; i < bytes.Length; i++) {
-                mid = mid + (bytes[i] ^ somePrime);
-                mid = (mid << 13) + (mid >> 51);
-            }
-            return mid;
+        string GetBlockHash(vec3 &in pos, vec3 &in rot, const string &in id, uint varIx, uint mobIx) {
+            return Crypto::MD5(pos.ToString() + rot.ToString() + id + varIx + mobIx);
+            // if (SwapMem100 == 0) SwapMem100 = RequestMemory(100);
+            // Dev::Write(SwapMem100, pos);
+            // Dev::Write(SwapMem100 + 0xC, rot);
+            // Dev::Write(SwapMem100 + 0x18, id);
+            // Dev::Write(SwapMem100 + 0x1C, varIx);
+            // Dev::Write(SwapMem100 + 0x20, mobIx);
+            // // ensure the rest of the memory region is zeroed
+            // Dev::Write(SwapMem100 + 0x24, uint32(0));
+            // auto bytes = Dev_GetBytes(SwapMem100, 0x24);
+
+            // uint64 somePrime = 6256056576578937913;
+            // uint64 mid = somePrime;
+            // for (uint i = 0; i < bytes.Length; i++) {
+            //     mid = mid + (bytes[i] ^ somePrime);
+            //     mid = (mid << 7) + (mid >> 51);
+            // }
+            // return mid;
         }
 
         bool IsStale(CGameEditorPluginMap@ pmt) override {
@@ -280,6 +281,7 @@ namespace Editor {
         string[] BlockTypesLower;
         string[] ItemTypesLower;
         string[] DuplicateBlockKeys;
+        int[] DuplicateBlockIxs;
         uint NbDuplicateFreeBlocks = 0;
 
         protected void AddBlock(BlockInMap@ b) {
@@ -294,6 +296,7 @@ namespace Editor {
             if (_BlocksByHash.Exists(b.hashStr)) {
                 auto dupes = cast<BlockInMap@[]>(_BlocksByHash[b.hashStr]);
                 dupes.InsertLast(b);
+                DuplicateBlockIxs.InsertLast(b.ix);
                 NbDuplicateFreeBlocks++;
                 if (dupes.Length == 2) {
                     DuplicateBlockKeys.InsertLast(b.hashStr);
@@ -306,6 +309,13 @@ namespace Editor {
             }
 
             GetBlocksByType(b.IdName).InsertLast(b);
+        }
+
+        BlockInMap@[]@ GetBlocksByHash(const string &in blockHash) {
+            if (_BlocksByHash.Exists(blockHash)) {
+                return cast<BlockInMap@[]>(_BlocksByHash[blockHash]);
+            }
+            return {};
         }
 
         protected void AddItem(ItemInMap@ b) {
@@ -342,4 +352,80 @@ namespace Editor {
             return _Blocks.Length;
         }
     }
+
+    // todo: does not work
+    void FixDuplicateBlocks() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) {
+            NotifyWarning("Cannot fix duplicate blocks when editor is null.");
+            return;
+        }
+        auto mapCache = GetMapCache();
+        auto @dupKeys = mapCache.DuplicateBlockKeys;
+        uint[] moveIxs = {};
+        for (uint i = 0; i < dupKeys.Length; i++) {
+            auto dupBlocks = mapCache.GetBlocksByHash(dupKeys[i]);
+            for (uint j = 1; j < dupBlocks.Length; j++) {
+                moveIxs.InsertLast(dupBlocks[j].ix);
+                if (j < 5)
+                    print(dupBlocks[j].IdName + ", " + dupBlocks[j].pos.ToString() + ", " + dupBlocks[j].rot.ToString());
+            }
+            yield();
+        }
+        auto map = editor.Challenge;
+        int nbBlocks = map.Blocks.Length;
+        int nbToDel = moveIxs.Length;
+
+        int[] fakeBlocks = {};
+        for (uint i = 0; i < nbBlocks; i++) {
+            fakeBlocks.InsertLast(i);
+        }
+
+        NotifyWarning("About to delete " + nbToDel + " blocks");
+        moveIxs.SortAsc();
+
+        auto o_map_blocks = GetOffset(map, "Blocks");
+        auto mapBlocksBufFakeNod = Dev::GetOffsetNod(map, o_map_blocks);
+        uint32 mapBlocksBufLen = Dev::GetOffsetUint32(map, o_map_blocks + 0x8);
+        if (mapBlocksBufLen != nbBlocks) throw("map blocks buf length != .Blocks.Length");
+
+        for (int i = nbBlocks - 1; nbToDel > 0; i--) {
+            nbToDel--;
+            auto badIx = moveIxs[nbToDel];
+            auto goodBlock = map.Blocks[i];
+            auto badBlock = map.Blocks[badIx];
+            // auto goodBlock = fakeBlocks[i];
+            // auto badBlock = fakeBlocks[badIx];
+
+            // swap
+            Dev::SetOffset(mapBlocksBufFakeNod, 0x8 * i, badBlock);
+            Dev::SetOffset(mapBlocksBufFakeNod, 0x8 * badIx, goodBlock);
+
+            // fakeBlocks[i] = badBlock;
+            // fakeBlocks[badIx] = goodBlock;
+
+        }
+
+        Dev::SetOffset(map, o_map_blocks + 0x8, uint(nbBlocks - nbToDel));
+
+        SaveAndReloadMap();
+
+        // string[] newOrder = {};
+        // for (uint i = 0; i < fakeBlocks.Length; i++) {
+        //     newOrder.InsertLast(tostring(fakeBlocks[i]));
+        // }
+        // yield();
+        // string msg = "";
+        // print("new block order: ");
+        // for (uint i = 0; i < newOrder.Length; i++) {
+        //     if (i % 100 == 99) {
+        //         print(msg);
+        //         msg = "";
+        //         yield();
+        //     }
+        //     msg += newOrder[i] + ", ";
+        // }
+        // print(msg);
+    }
+
 }

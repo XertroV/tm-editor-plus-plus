@@ -56,3 +56,9 @@ bool S_EnableInfinitePrecisionFreeBlocks = false;
 
 [Setting hidden]
 bool S_ShowVehicleTestWindow = true;
+
+[Setting hidden]
+bool S_SetEditorFarZ = false;
+
+[Setting hidden]
+float  S_SetEditorFarZValue = 1500.0;

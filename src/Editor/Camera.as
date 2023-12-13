@@ -7,6 +7,7 @@ namespace Editor {
         Dev::SetOffset(occ, GetOffset(occ, "m_TargetedPosition") + 0x18, vec2(-90000000)); // occ_MinXZ
         Dev::SetOffset(occ, GetOffset(occ, "m_TargetedPosition") + 0x20, vec2(90000000)); // occ_MaxXZ
         Dev::SetOffset(occ, GetOffset(occ, "m_TargetedPosition") + 0x28, vec2(-90000000, 90000000)); // occ_YBounds
+        occ.m_MinDistance = 0.1;
     }
 
     void EnableCustomCameraInputs() {

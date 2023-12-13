@@ -118,4 +118,12 @@ namespace UX {
         val = UI::Checkbox(label, val);
         Dev::SetOffset(nod, offset, uint32(val ? 1 : 0));
     }
+
+    void InputIntDevUint32(const string &in label, CMwNod@ nod, uint16 offset, uint clampMin = 0, uint clampMax = 0xFFFFFFFF) {
+        auto val = Dev::GetOffsetUint32(nod, offset);
+        val = UI::InputInt(label, val);
+        if (val < clampMin) val = clampMin;
+        if (val > clampMax) val = clampMax;
+        Dev::SetOffset(nod, offset, val);
+    }
 }

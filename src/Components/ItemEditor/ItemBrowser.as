@@ -142,6 +142,11 @@ class ItemModelTreeElement {
     CPlugGameSkinAndFolder@ matMod;
     CHmsLightMapCache@ lmCache;
     CHmsLightMap@ lm;
+    CPlugFxSystemNode_Parallel@ fxNodeParallel;
+    CPlugFxSystemNode@ fxNode;
+    CPlugFxSystemNode_ParticleEmitter@ fxNodeParticle;
+    CPlugParticleGpuModel@ particleGpuModel;
+    CPlugParticleEmitterModel@ particleEmitterModel;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
         @this.parent = parent;
@@ -184,6 +189,11 @@ class ItemModelTreeElement {
         @this.matMod = cast<CPlugGameSkinAndFolder>(nod);
         @this.lmCache = cast<CHmsLightMapCache>(nod);
         @this.lm = cast<CHmsLightMap>(nod);
+        @this.fxNodeParallel = cast<CPlugFxSystemNode_Parallel>(nod);
+        @this.fxNode = cast<CPlugFxSystemNode>(nod);
+        @this.fxNodeParticle = cast<CPlugFxSystemNode_ParticleEmitter>(nod);
+        @this.particleEmitterModel = cast<CPlugParticleEmitterModel>(nod);
+        @this.particleGpuModel = cast<CPlugParticleGpuModel>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -298,6 +308,16 @@ class ItemModelTreeElement {
             Draw(lmCache);
         } else if (lm !is null) {
             Draw(lm);
+        } else if (fxNodeParallel !is null) {
+            Draw(fxNodeParallel);
+        } else if (fxNodeParticle !is null) {
+            Draw(fxNodeParticle);
+        } else if (fxNode !is null) {
+            Draw(fxNode);
+        } else if (particleGpuModel !is null) {
+            Draw(particleGpuModel);
+        } else if (particleEmitterModel !is null) {
+            Draw(particleEmitterModel);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
@@ -325,6 +345,49 @@ class ItemModelTreeElement {
             // print("CGameCommonItemEntityModelEdition.Id: " + tostring(commonEME.Id));
             EndTreeNode();
         }
+    }
+
+    void Draw(CPlugParticleGpuModel@ particleGpuModel) {
+        if (StartTreeNode(name + " :: \\$f8f CPlugParticleGpuModel", UI::TreeNodeFlags::DefaultOpen)) {
+            UI::Text("todo: particleGpuModel");
+            EndTreeNode();
+        }
+    }
+    void Draw(CPlugParticleEmitterModel@ particleEmitterModel) {
+        if (StartTreeNode(name + " :: \\$f8f CPlugParticleEmitterModel", UI::TreeNodeFlags::DefaultOpen)) {
+            // particleEmitterModel.ParticleEmitterSubModels
+            UI::Text("todo: particleEmitterModel");
+            EndTreeNode();
+        }
+    }
+    void Draw(CPlugFxSystemNode_Parallel@ fxNodeParallel) {
+        if (StartTreeNode(name + " :: \\$f8f CPlugFxSystemNode_Parallel", UI::TreeNodeFlags::DefaultOpen)) {
+            if (StartTreeNode("Children", true)) {
+                for (uint i = 0; i < fxNodeParallel.Children.Length; i++) {
+                    MkAndDrawChildNode(fxNodeParallel.Children[i], 0x8 * i, "Child " + i);
+                }
+                EndTreeNode();
+            }
+            // UI::TextDisabled("CPlugFxSystemNode");
+            DrawFxNodeInner(cast<CPlugFxSystemNode>(fxNodeParallel));
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CPlugFxSystemNode_ParticleEmitter@ fxNodeParticle) {
+        if (StartTreeNode(name + " :: \\$f8f CPlugFxSystemNode_ParticleEmitter", UI::TreeNodeFlags::DefaultOpen)) {
+            MkAndDrawChildNode(fxNodeParticle.Model, GetOffset(fxNodeParticle, "Model"), "Model");
+            // UI::TextDisabled("CPlugFxSystemNode");
+            DrawFxNodeInner(cast<CPlugFxSystemNode>(fxNodeParticle));
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CPlugFxSystemNode@ fxNode) {
+    }
+
+    void DrawFxNodeInner(CPlugFxSystemNode@ fxNode) {
+        CopiableLabeledValue("Name", fxNode.Name.GetName());
     }
 
     void Draw(CGameCtnBlockInfo@ blockInfo) {
@@ -1845,10 +1908,10 @@ class ItemModelTreePicker : ItemModelTreeElement {
         ItemModelTreePicker(this, currentIndex, nod, name, callback, matcher, offset).Draw();
     }
 
-    string get_pickDirectChildLabel() { return "This Nod (Direct)"; }
-    string get_pickIndirectChildLabel() { return "This Nod (Indirect)"; }
-    string get_pickArrayElementLabel() { return "This Element"; }
-    string get_pickAllChildrenLabel() { return "All Children"; }
+    string get_pickDirectChildLabel() { return "This Nod (Direct)##"+this.name+this.nodOffset+this.currentIndex+this.parentIx; }
+    string get_pickIndirectChildLabel() { return "This Nod (Indirect)##"+this.name+this.nodOffset+this.currentIndex+this.parentIx; }
+    string get_pickArrayElementLabel() { return "This Element##"+this.name+this.nodOffset+this.currentIndex+this.parentIx; }
+    string get_pickAllChildrenLabel() { return "All Children##"+this.name+this.nodOffset+this.currentIndex+this.parentIx; }
 
     void DrawPickable() override {
         bool matchDirectChild = MyNodClassMatches(ModelTargetType::DirectChild);

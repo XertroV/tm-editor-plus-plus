@@ -23,6 +23,8 @@ void Main() {
     startnew(Editor::OffzonePatch::Apply);
     // startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
 
+    startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
+
     sleep(500);
     CallbacksEnabledPostInit = true;
 

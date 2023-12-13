@@ -147,6 +147,10 @@ class EditorMiscTab : Tab {
         editor.OrbitalCameraControl.m_TargetedPosition = targetPos;
         editor.OrbitalCameraControl.m_CameraToTargetDistance = targetDist;
 
+        S_SetEditorFarZ = UI::Checkbox("Force Max Draw Distance (like Tweaker)", S_SetEditorFarZ);
+        S_SetEditorFarZValue = UI::SliderFloat("Max Draw Dist (FarZ)", S_SetEditorFarZValue, 500.0, 10000.0);
+
+        CopiableLabeledValue("Target Position", targetPos.ToString());
         CopiableLabeledValue("Camera Position", editor.OrbitalCameraControl.Pos.ToString());
         // editor.OrbitalCameraControl.m_TargetedPosition = pmt.CameraTargetPosition;
 

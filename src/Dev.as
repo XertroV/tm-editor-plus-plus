@@ -122,6 +122,7 @@ CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
     auto ptr = Dev::GetOffsetUint64(target, offset);
     if (ptr < 0x100000000) return null;
     if (ptr % 8 != 0) return null;
+    if (ptr > Dev::BaseAddressEnd()) return null;
     return Dev::GetOffsetNod(target, offset);
 }
 
@@ -312,6 +313,8 @@ const uint16 O_SOLID2MODEL_LIGHTS_BUF_STRUCT_LIGHT = 0x58;
 
 const uint16 O_SOLID2MODEL_USERMAT_BUF = 0xF8;
 const uint16 O_SOLID2MODEL_CUSTMAT_BUF = 0x1F8;
+
+const uint16 O_SOLID2MODEL_ITEM_FID = 0x338;
 
 
 // no more than 0x170 bytes

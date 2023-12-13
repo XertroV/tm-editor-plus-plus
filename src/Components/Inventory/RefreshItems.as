@@ -237,6 +237,10 @@ class ItemEmbedTab : Tab {
         if (initModel is null) NotifyWarning("Attempting to load init model but it is null");
         Editor::OpenItemEditor(editor, initModel);
 
+        // todo: push some flag that disables item editor features that auto-change the item
+        auto renameFeatureActive = S_UpdateItemNameFromFileName;
+        S_UpdateItemNameFromFileName = false;
+
         yield();
         for (uint i = 0; i < items.Length; i++) {
             RunLoadItem(editor, items[i], i == 0);
@@ -253,6 +257,8 @@ class ItemEmbedTab : Tab {
         yield();
 
         while (inv.isRefreshing) yield();
+
+        S_UpdateItemNameFromFileName = renameFeatureActive;
 
         for (uint i = 0; i < items.Length; i++) {
             auto node = inv.GetItemByPath(items[i]);

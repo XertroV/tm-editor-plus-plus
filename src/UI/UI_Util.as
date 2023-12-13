@@ -100,3 +100,14 @@ shared void LabeledValue(const string &in label, vec4 &in value, bool clickToCop
 shared void LabeledValue(const string &in label, int3 &in value, bool clickToCopy = false) {
     (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Int3(value));
 }
+
+
+
+shared bool CopiableLabeledValueTooltip(const string &in label, const string &in value) {
+    bool clicked = ClickableLabel(label, "", "");
+    AddSimpleTooltip(value);
+    if (clicked) {
+        SetClipboard(value);
+    }
+    return clicked;
+}

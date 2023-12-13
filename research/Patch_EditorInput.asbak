@@ -34,7 +34,6 @@ class MemPatcher {
             Dev::Patch(ptr + offsets[i], origBytes[i]);
         }
     }
-
 }
 
 // 0x74 = je, 75 = jne,

@@ -372,6 +372,7 @@ class GenericApplyTab : EffectTab {
 
     bool DrawNameFilterResults(vec2 pos) {
         // UI::SetNextWindowSize(400, -1, UI::Cond::Always);
+        pos = pos / UI::GetScale();
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
         UI::PushStyleColor(UI::Col::PopupBg, vec4(0, 0, 0, .99));
         UI::PushStyleColor(UI::Col::Border, vec4(.9));

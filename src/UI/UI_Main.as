@@ -146,6 +146,9 @@ void UI_Main_Render() {
 }
 
 
+const string WARNING_TRIANGLE_START = "\\$f80" + Icons::ExclamationTriangle + " ";
+
+
 namespace MenuBar {
     string m_MenuSearch;
 
@@ -194,12 +197,32 @@ namespace MenuBar {
                 UI::EndMenu();
             }
 
+            auto mapCache = Editor::GetMapCache();
+            bool hasDupes = mapCache !is null && mapCache.NbDuplicateFreeBlocks > 0;
+
+            // (hasDupes ? WARNING_TRIANGLE_START : "") +
             if (UI::BeginMenu("Caches")) {
                 if (UI::MenuItem("Refresh Map Block/Item Cache")) {
-                    Editor::GetMapCache().RefreshCacheSoon();
+                    mapCache.RefreshCacheSoon();
                 }
                 UI::AlignTextToFramePadding();
-                UI::TextDisabled("Duplicate Free Blocks: " + Editor::GetMapCache().NbDuplicateFreeBlocks);
+                if (!hasDupes) {
+                    UI::TextDisabled("Duplicate Free Blocks: " + mapCache.NbDuplicateFreeBlocks);
+                } else {
+                    UI::Text(WARNING_TRIANGLE_START + "Duplicate Free Blocks: " + mapCache.NbDuplicateFreeBlocks);
+                    if (!mapCache.isRefreshing && UI::MenuItem("Log Duplicate Free Blocks + Copy to Clipboard")) {
+                        string msg = "";
+                        for (uint i = 0; i < mapCache.DuplicateBlockIxs.Length; i++) {
+                            msg += mapCache.DuplicateBlockIxs[i] + ", ";
+                        }
+                        print("Duplicate block indexes:");
+                        print(msg);
+                        IO::SetClipboard(msg);
+                    }
+                    // if (!mapCache.isRefreshing && UI::MenuItem("Remove Duplicate Free Blocks (MAKE A BACKUP FIRST!)")) {
+                    //     // startnew(Editor::FixDuplicateBlocks);
+                    // }
+                }
                 if (UI::MenuItem("Refresh Inventory Cache")) {
                     Editor::GetInventoryCache().RefreshCacheSoon();
                 }
@@ -319,6 +342,7 @@ TabGroup@ CreateMTEditorRT() {
     MT_TriggersTab(root);
     MT_GpsHelperTab(root);
     MT_RipGhostPathTab(root);
+    MT_CursorAndTriggerPlacementTab(root);
     // MT_TracksTab(root);
     // MT_SavedTracksTab(root);
     return root;
@@ -370,6 +394,7 @@ TabGroup@ CreateRootTabGroup() {
     GlobalPlacementOptionsTab(root);
     // SkinsMainTab(root);
     MacroblockOptsTab(root);
+    ViewKinematicsTab(root);
 
     // - filtered view of blocks/items show just checkpoints
     // - set linked order

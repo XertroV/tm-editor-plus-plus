@@ -6,8 +6,7 @@ Trackmania.exe.text+636B56 - 48 89 6C 24 58        - mov [rsp+58],rbp
 Trackmania.exe.text+636B5B - 33 ED                 - xor ebp,ebp
 Trackmania.exe.text+636B5D - 48 89 74 24 60        - mov [rsp+60],rsi
 Trackmania.exe.text+636B62 - F3 0F11 91 080D0000   - movss [rcx+00000D08],xmm2
-Trackmania.exe.text+636B6A - 89 91 040D0000        - mov [rcx+00000D04],edx { THIS SETS GAME TIME THAT DETERMINES VISUAL PERIOD OF MESH
- }
+Trackmania.exe.text+636B6A - 89 91 040D0000        - mov [rcx+00000D04],edx { THIS SETS GAME TIME THAT DETERMINES VISUAL PERIOD OF MESH }
 Trackmania.exe.text+636B70 - 8B 05 8A528B01        - mov eax,[Trackmania.exe+1EECE00] { (60) }
 Trackmania.exe.text+636B76 - 48 89 7C 24 28        - mov [rsp+28],rdi
 Trackmania.exe.text+636B7B - 4C 89 7C 24 20        - mov [rsp+20],r15
