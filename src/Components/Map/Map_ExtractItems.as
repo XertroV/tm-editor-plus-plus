@@ -21,11 +21,17 @@ class MapExtractItems : Tab {
 
         auto mapContentZip = Fids::GetFake("MemoryTemp/CurrentMap_EmbeddedFiles/MapContentLoaded.zip");
         auto fidFolder = Fids::GetFakeFolder("MemoryTemp/CurrentMap_EmbeddedFiles/ContentLoaded");
+        // zip
         if (mapContentZip !is null) {
             UI::Text(mapContentZip.FileName);
             UI::AlignTextToFramePadding();
             auto zipNod = cast<CPlugFileZip>(mapContentZip.Nod);
             UI::SameLine();
+            if (UX::SmallButton(Icons::Cube + "##map-zip-fid-explore")) {
+                ExploreNod("Map .zip Fid", mapContentZip);
+            }
+            UI::SameLine();
+            UI::BeginDisabled(zipNod is null);
             if (UX::SmallButton("Extract .zip")) {
                 if (Fids::Extract(mapContentZip)) {
                     NotifySuccess("Extracted MapContentLoaded.zip");
@@ -34,6 +40,7 @@ class MapExtractItems : Tab {
                     NotifyError("Failed to extract MapContentLoaded.zip");
                 }
             }
+            UI::EndDisabled();
             if (zipNod !is null) {
                 LabeledValue("NbFiles", zipNod.NbFiles);
             } else {

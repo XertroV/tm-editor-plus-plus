@@ -23,6 +23,8 @@ class MT_CursorAndTriggerPlacementTab : Tab {
             if (UI::Button("Set MT Placement to Camera Target")) {
                 Dev::SetOffset(api, O_MTAPI_PlaceHeight, uint(editorCam.m_TargetedPosition.y / 8. + 8.));
             }
+        } else {
+            UI::Text("Could not get orbital cam");
         }
 
         UI::PopItemWidth();

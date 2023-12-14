@@ -9,7 +9,7 @@ class ViewKinematicsTab : Tab {
     MemPatcher kinematicsControlPatch("89 91 04 0D 00 00 8B 05 ?? ?? ?? ?? 48 89 7C 24 28 4C 89 7C 24 20 85 C0 74 2D 8B FD 8B F0", {0}, {"90 90 90 90 90 90"});
 
     ViewKinematicsTab(TabGroup@ p) {
-        super(p, "Kinematic Items", Icons::PauseCircle);
+        super(p, "Kinematic Items" + NewIndicator, Icons::PauseCircle);
         RegisterOnEditorLoadCallback(CoroutineFunc(OnEditorLoad), tabName);
         RegisterOnEditorLoadCallback(CoroutineFunc(OnEditorUnload), tabName);
     }
