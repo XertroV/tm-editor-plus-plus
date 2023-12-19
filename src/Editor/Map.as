@@ -143,4 +143,9 @@ namespace Editor {
         }
         return RelativeMapFolderPath(folder.ParentFolder) + folder.DirName + "/";
     }
+
+    CHmsLightMapCache@ GetMapLightmapCache(CGameCtnChallenge@ map) {
+        auto midNod = Dev_GetOffsetNodSafe(map, O_MAP_LIGHTMAP_STRUCT);
+        return cast<CHmsLightMapCache>(Dev_GetOffsetNodSafe(midNod, 0x0));
+    }
 }
