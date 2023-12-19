@@ -25,6 +25,16 @@ namespace ManipPtrs {
         recentlyModifiedPtrs.InsertLast(PtrModRecord(ptr));
     }
 
+    /* DataRef: 0x18 [u64 nodPtr, u64 strPtr, u24 unk, u8 stringFlag, u32 strLen].
+       Returns the nod behind the data ref if it exists
+    */
+    CMwNod@ ZeroDataRef(CMwNod@ nod, uint16 offset) {
+        auto inner = Dev_GetOffsetNodSafe(nod, offset);
+        Replace(nod, offset + 0x8, 0, false);
+        Replace(nod, offset + 0x10, 0, false);
+        return inner;
+    }
+
     void Replace(CMwNod@ nod, uint16 offset, CMwNod@ newNod, bool releaseNodOnUnmod = false) {
         auto newPtr = newNod is null ? 0 : Dev_GetPointerForNod(newNod);
         Replace(nod, offset, newPtr, releaseNodOnUnmod);
