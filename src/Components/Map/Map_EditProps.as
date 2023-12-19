@@ -124,6 +124,9 @@ class MapEditPropsTab : Tab {
         AddSimpleTooltip("When locked, the thumbnail will not be updated when the map is saved. This setting is saved as metadata on the map. Only works when the E++ Editor Plugin is active.");
         // SameLineNewIndicator();
         UI::Text("LightMapCacheSmall (KB): " + map.LightMapCacheSmall_KBytes);
+        auto mapFid = GetFidFromNod(map);
+        LabeledValue("Map File Size (KB)", mapFid !is null ? mapFid.ByteSizeEd : 0);
+        UI::Separator();
         UI::Text("Time spent mapping: " + TimeFormatSecs(FromML::mappingTime));
         if (UI::IsItemHovered()) {
             AddSimpleTooltip("Editor: " + TimeFormatSecs(FromML::mappingTimeMapping) + " / Testing: " + TimeFormatSecs(FromML::mappingTimeTesting) + " / Validating: " + TimeFormatSecs(FromML::mappingTimeValidating));
