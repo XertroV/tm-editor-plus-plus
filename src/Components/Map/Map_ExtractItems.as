@@ -1,6 +1,6 @@
 class MapExtractItems : Tab {
     MapExtractItems(TabGroup@ parent) {
-        super(parent, "\\$f00Extract Items", Icons::MapO + Icons::ArrowRight + Icons::FolderOpenO);
+        super(parent, "Extract Items" + NewIndicator, Icons::MapO + Icons::ArrowRight + Icons::FolderOpenO);
         removable = false;
         // RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEnterEditor), this.tabName);
     }
@@ -26,13 +26,15 @@ class MapExtractItems : Tab {
             UI::Text(mapContentZip.FileName);
             UI::AlignTextToFramePadding();
             auto zipNod = cast<CPlugFileZip>(mapContentZip.Nod);
+#if SIG_DEVELOPER
             UI::SameLine();
             if (UX::SmallButton(Icons::Cube + "##map-zip-fid-explore")) {
                 ExploreNod("Map .zip Fid", mapContentZip);
             }
+#endif
             UI::SameLine();
             UI::BeginDisabled(zipNod is null);
-            if (UX::SmallButton("Extract .zip")) {
+            if (UX::SmallButton("Copy entire MapContentLoaded.zip")) {
                 if (Fids::Extract(mapContentZip)) {
                     NotifySuccess("Extracted MapContentLoaded.zip");
                     OpenExplorerPath(IO::FromDataFolder("Extract/MemoryTemp/CurrentMap_EmbeddedFiles"));
