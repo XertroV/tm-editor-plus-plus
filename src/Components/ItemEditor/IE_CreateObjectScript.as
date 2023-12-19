@@ -54,6 +54,12 @@ class IE_CreateObjectMacroTab : Tab {
 
         UI::Separator();
 
+        if (UI::Button("Create PhyModel")) {
+            startnew(CreateObj::TryCreatePhyModel);
+        }
+
+        UI::Separator();
+
         if (UI::Button("Set all DynaObj.DyanShape to the Safe Shape")) {
             startnew(CreateObj::DoDynaShapeSafe);
         }
@@ -127,6 +133,31 @@ class IE_CreateObjectMacroTab : Tab {
     }
 }
 
+
+namespace CreateObj {
+    void TryCreatePhyModel() {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        auto item = ieditor.ItemModel;
+        auto iem = cast<CGameCommonItemEntityModel>(item.EntityModel);
+        auto @PhyModel = CGameObjectPhyModel();
+        auto @VisModel = CGameObjectVisModel();
+        VisModel.MwAddRef();
+        PhyModel.MwAddRef();
+
+        auto staticObj = cast<CPlugStaticObjectModel>(iem.StaticObject);
+
+        Dev::SetOffset(VisModel, GetOffset(VisModel, "MeshShaded"), staticObj.Mesh);
+        VisModel.MeshShaded.MwAddRef();
+
+        Dev::SetOffset(PhyModel, GetOffset(PhyModel, "MoveShapeFid"), staticObj.Shape);
+        PhyModel.MoveShapeFid.MwAddRef();
+
+        // @iem.PhyModel = PhyModel;
+        @iem.VisModel = VisModel;
+
+        // auto @staticObj = cast<CPlugStaticObjectModel>(iem.StaticObject);
+    }
+}
 
 
 namespace CreateObj {
