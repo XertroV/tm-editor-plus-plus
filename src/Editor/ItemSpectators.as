@@ -104,8 +104,9 @@ SpectatorQT@[]@ LoadItemSpectatorsImportFile(const string &in folder) {
     IO::File csv(folder + "Import.csv", IO::FileMode::Read);
     auto lines = csv.ReadToEnd().Split("\n");
     for (uint line = 0; line < lines.Length; line++) {
-        if (lines[line].Length == 0) continue;
-        ret.InsertLast(SpectatorQT(lines[line]));
+        auto trimmed = lines[line].Trim();
+        if (trimmed.Length == 0 || trimmed.StartsWith("q")) continue;
+        ret.InsertLast(SpectatorQT(trimmed));
     }
     return ret;
 }
