@@ -43,6 +43,8 @@ class ViewKinematicsTab : Tab {
                 Notify("Enabled Kinematics Time Control");
             }
         }
+        UI::SameLine();
+        UI::Text("\\$b88Note: Effects only visuals; physics unchanged.");
 
         UI::BeginDisabled(!kinematicsControlPatch.IsApplied);
 
