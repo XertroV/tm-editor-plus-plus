@@ -107,28 +107,28 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         UI::NextColumn();
 
 #if SIG_DEVELOPER
-        UI::AlignTextToFramePadding();
-        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(item)));
-        if (UI::Button(Icons::Cube + " Explore AnchoredObj##picked")) {
+        // UI::AlignTextToFramePadding();
+        if (UX::SmallButton(Icons::Cube + " Explore AnchoredObj##picked")) {
             ExploreNod("Item " + Editor::GetItemUniqueBlockID(item), item);
         }
-        // UI::SameLine();
+        UI::SameLine();
+        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(item)));
 #endif
-
         if (UI::Button("Edit This Item")) {
             Editor::OpenItemEditor(editor, item);
         }
 
+        auto modelFid = GetFidFromNod(item.ItemModel);
         if (UI::Button("Open Item Folder")) {
             try {
-                auto fid = GetFidFromNod(item.ItemModel);
-                if (fid is null) NotifyWarning("Failed to get FID for this item.");
-                else if (fid.FullFileName.Contains("<virtual>")) NotifyWarning("Cannot open folder for a vanilla item.");
-                else OpenExplorerPath(fid.ParentFolder.FullDirName);
+                if (modelFid is null) NotifyWarning("Failed to get FID for this item.");
+                else if (modelFid.FullFileName.Contains("<virtual>")) NotifyWarning("Cannot open folder for a vanilla item.");
+                else OpenExplorerPath(modelFid.ParentFolder.FullDirName);
             } catch {
                 NotifyError(getExceptionInfo());
             }
         }
+        LabeledValue("Size (KB)", modelFid !is null ? tostring(modelFid.ByteSizeEd) : "?");
 
         UI::Columns(1);
         UI::Separator();
