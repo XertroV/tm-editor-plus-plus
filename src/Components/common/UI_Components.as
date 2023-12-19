@@ -239,6 +239,13 @@ VehicleToPlace DrawComboVehicleToPlace(const string &in label, VehicleToPlace va
         })
     );
 }
+GenericApplyTypes DrawComboGenericApplyTypes(const string &in label, GenericApplyTypes val) {
+    return GenericApplyTypes(
+        DrawArbitraryEnum(label, int(val), GenericApplyTypes::LAST, function(int v) {
+            return tostring(GenericApplyTypes(v));
+        })
+    );
+}
 
 int DrawColorBtnChoice(const string &in label, int val) {
     if (DrawBtnMbActive("Default##"+label, val == 0))
