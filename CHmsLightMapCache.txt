@@ -1,0 +1,41 @@
+- 0x30 uint, size? (0x49e1ce = 4841934)
+
+- 0x60 buffer?
+  - ??
+  - 0x1C, class ID, 900657
+- 0x70 buf?
+  - ??
+-
+- 0x88 uint, uint (0x800 / 2048, maybe size/texels?)
+-
+- 0xA0 ptr
+    - 0x0 ptr
+    - 0x8 buf len? uint, uint (0x766c = 30316 = nb objects in buffer)
+        - unknown packed?
+- 0xA8 ptr
+    - 0x0 buf / 0x8 len? uint, uint (0x766c = 30316 = nb objects in buffer)
+- 0xB0 ptr
+    - 0x0 buf / 0x8 len? uint, uint (0x766c = 30316 = nb objects in buffer)
+- 0xB8 ?? junk?
+- 0xC0 ptr to 0xA0
+
+
+- 0x118 buf objects in cache?
+    - just -1 (float) over and over
+    - data1?
+- 0x128 buf objects in cache?
+    - (uint, uint) ? first one counts up and then resets, u2 increases by 4 or 0x20 or something, counts up
+    - objectBindings? (u32 meshId, u16 objIdx, u16 objGroupidx)
+- 0x138 buf objects in cache?
+    - (u8, u8) ? 2nd number always small (<= 7)
+    Positions
+- 0x148 buf objects in cache?
+    - u16s?
+    sizes
+
+
+0x2a0 ish -- frames, embedded; possibly starts at 0x2a4
+
+
+
+- 0x400 ptr to ?
