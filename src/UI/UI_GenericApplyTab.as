@@ -12,6 +12,12 @@ shared SourceSelection DrawComboSourceSelection(const string &in label, SourceSe
     );
 }
 
+enum GenericApplyTypes {
+    Blocks_And_Items = 0,
+    Only_Blocks = 1,
+    Only_Items = 2,
+    LAST
+}
 
 // todo, make shared
 class GenericApplyTab : EffectTab {
@@ -30,6 +36,7 @@ class GenericApplyTab : EffectTab {
 
     SourceSelection currScope = SourceSelection::Everywhere;
 
+    GenericApplyTypes m_applyToTypes = GenericApplyTypes::Blocks_And_Items;
     nat3 m_coordsMin;
     nat3 m_coordsMax;
     vec3 m_posMin;
@@ -110,6 +117,10 @@ class GenericApplyTab : EffectTab {
         } else if (currScope == SourceSelection::Selected_Region) {
             UI::Text("Location: Selected regions (as in copy mode)");
         }
+
+        UI::Separator();
+
+        m_applyToTypes = DrawComboGenericApplyTypes("Apply To Types", m_applyToTypes);
 
         UI::Separator();
 
@@ -201,6 +212,7 @@ class GenericApplyTab : EffectTab {
 
     CGameCtnBlock@[] ApplyingToCalcBlocks(CGameEditorPluginMap@ pmt) {
         CGameCtnBlock@[] objs;
+        if (m_applyToTypes != GenericApplyTypes::Blocks_And_Items && m_applyToTypes != GenericApplyTypes::Only_Blocks) return objs;
         for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
             if (MatchesConditions(pmt.ClassicBlocks[i])) {
                 objs.InsertLast(pmt.ClassicBlocks[i]);
@@ -215,6 +227,7 @@ class GenericApplyTab : EffectTab {
     }
     CGameCtnAnchoredObject@[] ApplyingToCalcItems(CGameEditorPluginMap@ pmt) {
         CGameCtnAnchoredObject@[] objs;
+        if (m_applyToTypes != GenericApplyTypes::Blocks_And_Items && m_applyToTypes != GenericApplyTypes::Only_Items) return objs;
         for (uint i = 0; i < pmt.Map.AnchoredObjects.Length; i++) {
             if (MatchesConditions(pmt.Map.AnchoredObjects[i])) {
                 objs.InsertLast(pmt.Map.AnchoredObjects[i]);
