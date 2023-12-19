@@ -1,0 +1,42 @@
+Location:
+    .Editor at 0x1268 = "Radius" + 0x10
+
+NOTE: might there be a version thing for when loading old ones?
+No it must be defaults or things, wouldn't make sense otherwise
+
+
+- 0x18 buffer, 1 element per CP?
+    struct, 752 bytes long = 0x2F0
+    loaded in 80 byte chunks
+
+    0x2D8: some kind of counter (counts down)
+    0x2E0: 0x0FF00000, MwId = CarSport
+    0x2E8: 10003 (2020vehicles collection id); MwId = Nadeo
+
+
+- 0x28 buffer, maybe like 0x1B elements per CP?
+    - struct, 872 bytes (= 0x368)
+        - vis ent ID
+
+
+read by
+Trackmania.exe+12A6BF7 - 48 8D 15 821F9A00     - lea rdx,[Trackmania.exe.rdata+367B80] { ("SmClient::SwitchToPlayground") }
++12A6D01 - call to a function
+
+Trackmania.exe+12A6830 - 48 89 5C 24 08        - mov [rsp+08],rbx
+Trackmania.exe+12A6835 - 48 89 6C 24 10        - mov [rsp+10],rbp
+Trackmania.exe+12A683A - 48 89 74 24 18        - mov [rsp+18],rsi
+Trackmania.exe+12A683F - 48 89 7C 24 20        - mov [rsp+20],rdi
+Trackmania.exe+12A6844 - 41 56                 - push r14
+Trackmania.exe+12A6846 - 48 83 EC 30           - sub rsp,30
+Trackmania.exe+12A684A - 4C 8B 72 18           - mov r14,[rdx+18]
+Trackmania.exe+12A684E - 48 8B F2              - mov rsi,rdx
+Trackmania.exe+12A6851 - 48 8B D9              - mov rbx,rcx
+Trackmania.exe+12A6854 - 49 8B BE 00020000     - mov rdi,[r14+00000200]
+Trackmania.exe+12A685B - 48 85 C9              - test rcx,rcx
+Trackmania.exe+12A685E - 0F84 39010000         - je Trackmania.exe.text+12A599D
+Trackmania.exe+12A6864 - 48 8B A9 68120000     - mov rbp,[rcx+00001268]
+
++12A6AB3 -> call to the function to copy launched CP data to stack
+
+many references to 0x2F0 length around here
