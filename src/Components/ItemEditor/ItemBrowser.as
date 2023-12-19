@@ -26,6 +26,7 @@ class ItemModel {
     void DrawTree() {
         // UI::TreeNodeFlags::OpenOnArrow
         if (UI::TreeNode(item.IdName, UI::TreeNodeFlags::DefaultOpen)) {
+            UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(2, 0));
 #if SIG_DEVELOPER
             if (UX::SmallButton(Icons::Cube + " Explore ItemModel")) {
                 ExploreNod(item);
@@ -34,10 +35,18 @@ class ItemModel {
             CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(item)));
 #endif
             ClickableLabel("Author", item.Author.GetName());
+            LabeledValue("CollectionId", int(item.CollectionId));
+            if (!isEditable) {
+                LabeledValue("CollectionId_Text", item.CollectionId_Text);
+            } else {
+                item.CollectionId_Text = UI::InputText("CollectionId_Text", item.CollectionId_Text);
+            }
             DrawSkin();
             DrawMatModifier();
             DrawEMEdition();
             DrawEMTree();
+
+            UI::PopStyleVar();
             UI::TreePop();
         }
     }
@@ -147,6 +156,8 @@ class ItemModelTreeElement {
     CPlugFxSystemNode_ParticleEmitter@ fxNodeParticle;
     CPlugParticleGpuModel@ particleGpuModel;
     CPlugParticleEmitterModel@ particleEmitterModel;
+    CPlugTurret@ turret;
+    CGameSaveLaunchedCheckpoints@ gslcps;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
         @this.parent = parent;
@@ -194,6 +205,8 @@ class ItemModelTreeElement {
         @this.fxNodeParticle = cast<CPlugFxSystemNode_ParticleEmitter>(nod);
         @this.particleEmitterModel = cast<CPlugParticleEmitterModel>(nod);
         @this.particleGpuModel = cast<CPlugParticleGpuModel>(nod);
+        @this.turret = cast<CPlugTurret>(nod);
+        @this.gslcps = cast<CGameSaveLaunchedCheckpoints>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -318,6 +331,10 @@ class ItemModelTreeElement {
             Draw(particleGpuModel);
         } else if (particleEmitterModel !is null) {
             Draw(particleEmitterModel);
+        } else if (turret !is null) {
+            Draw(turret);
+        } else if (gslcps !is null) {
+            Draw(gslcps);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
@@ -487,7 +504,15 @@ class ItemModelTreeElement {
     }
 
     void Draw(CSystemFidFile@ fid) {
-        if (StartTreeNode(name + " ::\\$f8f CSystemFidFile", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CSystemFidFile \\$8f8" + fid.FileName, UI::TreeNodeFlags::DefaultOpen)) {
+            LabeledValue("Size (KB)", fid.ByteSizeEd);
+#if SIG_DEVELOPER
+            LabeledValue("Container", fid.Container.FileName);
+            UI::SameLine();
+            if (UI::Button(Icons::Cube + "##fid-container")) {
+                ExploreNod("Container", fid.Container);
+            }
+#endif
             if (fid.Nod is null && UI::Button("Load Nod")) {
                 Fids::Preload(fid);
             } else {
@@ -1257,7 +1282,7 @@ class ItemModelTreeElement {
         if (StartTreeNode(_name + " :: \\$f8fGmSurf", true, UI::TreeNodeFlags::DefaultOpen)) {
             if (isEditable) {
                 gmSurf.GmSurfType = DrawComboEGmSurfType("GmSurfType", gmSurf.GmSurfType);
-                AddSimpleTooltip("Almost always mesh? Unknown effects. Seems to crash the game for other values.");
+                AddSimpleTooltip("MUST match the type of this surface -- do not touch if you don't know what you're doing. Game will crash for incorrect values.");
                 gmSurf.GameplayMainDir = UI::InputFloat3("GameplayMainDir", gmSurf.GameplayMainDir);
                 AddSimpleTooltip("Allows customizing bumper and booster parameters");
 #if SIG_DEVELOPER
@@ -1270,6 +1295,20 @@ class ItemModelTreeElement {
                 UI::Text("GmSurfType: " + tostring(gmSurf.GmSurfType));
                 UI::Text("GameplayMainDir: " + tostring(gmSurf.GameplayMainDir));
             }
+
+            if (gmSurf.GmSurfType == EGmSurfType::Mesh) {
+                auto nbVerts = Dev::GetOffsetUint32(gmSurf, 0x28);
+                auto nbTris = Dev::GetOffsetUint32(gmSurf, 0x38);
+                LabeledValue("Nb Verts", nbVerts);
+                LabeledValue("Nb Tris", nbTris);
+                if (isEditable && UI::Button("Zero Vert/Tris Buffers")) {
+                    ManipPtrs::Replace(gmSurf, 0x28, 0, false);
+                    ManipPtrs::Replace(gmSurf, 0x38, 0, false);
+                    // Dev::SetOffset(gmSurf, 0x28, uint32(0));
+                    // Dev::SetOffset(gmSurf, 0x38, uint32(0));
+                }
+            }
+
             EndTreeNode();
         }
     }
@@ -1328,6 +1367,7 @@ class ItemModelTreeElement {
             CopiableLabeledValue("Checksum", sysPackDesc.Checksum);
             CopiableLabeledValue("AutoUpdate", tostring(sysPackDesc.AutoUpdate));
             CopiableLabeledValue("LocatorFileName", sysPackDesc.LocatorFileName);
+            MkAndDrawChildNode(sysPackDesc.Fid, GetOffset(sysPackDesc, "Fid"), "Fid");
             EndTreeNode();
         }
     }
@@ -1441,8 +1481,111 @@ class ItemModelTreeElement {
     }
 
     void Draw(CHmsLightMapCache@ lmCache) {
-        if (StartTreeNode(name + " ::\\$f8f CHmsLightMapCache", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CHmsLightMapCache", UI::TreeNodeFlags::None)) {
+            LabeledValue("m_Id_IdCollection", lmCache.m_Id_IdCollection.GetName());
+            LabeledValue("m_Id_IdDecoration", lmCache.m_Id_IdDecoration.GetName());
+            LabeledValue("Challenge", lmCache.Challenge);
+            LabeledValue("MostRecentSolid", lmCache.MostRecentSolid);
+            LabeledValue("MostRecentBlock", lmCache.MostRecentBlock);
+            LabeledValue("m_MapperTexelCountX", lmCache.m_MapperTexelCountX);
+            LabeledValue("m_SortMode", tostring(lmCache.m_SortMode));
+            LabeledValue("m_AllocMode", tostring(lmCache.m_AllocMode));
+            LabeledValue("m_GpuPlatform", tostring(lmCache.m_GpuPlatform));
+            LabeledValue("AmbSamples", lmCache.AmbSamples);
+            LabeledValue("DirSamples", lmCache.DirSamples);
+            LabeledValue("PntSamples", lmCache.PntSamples);
+            LabeledValue("m_CompressMode", tostring(lmCache.m_CompressMode));
+            LabeledValue("m_Version", tostring(lmCache.m_Version));
+            LabeledValue("m_Quality", tostring(lmCache.m_Quality));
+            LabeledValue("m_QualityVer", tostring(lmCache.m_QualityVer));
+            LabeledValue("m_Bump", tostring(lmCache.m_Bump));
+            LabeledValue("m_AllocatedTexelByMeter", lmCache.m_AllocatedTexelByMeter);
+            LabeledValue("m_SpriteOriginY_WasWronglyTop", lmCache.m_SpriteOriginY_WasWronglyTop);
+            LabeledValue("cDecal2d", lmCache.cDecal2d);
+            LabeledValue("cDecal3d", lmCache.cDecal3d);
+            LabeledValue("IdName", lmCache.IdName);
+            LabeledValue("NbFrames", lmCache.Frames.Length);
+            // todo: NHmsLightMapCache_SFrame
+            EndTreeNode();
+        }
+    }
 
+
+    void Draw(CPlugTurret@ turret) {
+        if (StartTreeNode(name + " ::\\$f8f CPlugTurret", UI::TreeNodeFlags::DefaultOpen)) {
+
+            // turret. /*todo -- check variable declaration below.*/;
+            auto tmp = turret;
+            LabeledValue("CPlugTurret.AimEnabled", turret.AimEnabled);
+            LabeledValue("CPlugTurret.AimDetectRadius", turret.AimDetectRadius);
+            LabeledValue("CPlugTurret.AimDetectFOVDeg", turret.AimDetectFOVDeg);
+            LabeledValue("CPlugTurret.AimMaxTrackDist", turret.AimMaxTrackDist);
+            LabeledValue("CPlugTurret.AimAnticipation", turret.AimAnticipation);
+            LabeledValue("CPlugTurret.AimKeepAimingDurationMs", turret.AimKeepAimingDurationMs);
+            LabeledValue("CPlugTurret.AimFireTargetChangeDelayMs", turret.AimFireTargetChangeDelayMs);
+            LabeledValue("CPlugTurret.AimFireMaxAngleDeg", turret.AimFireMaxAngleDeg);
+            LabeledValue("CPlugTurret.AimFireMaxDist", turret.AimFireMaxDist);
+            LabeledValue("CPlugTurret.FixedAngleSignal", turret.FixedAngleSignal);
+            LabeledValue("CPlugTurret.FixedAnglePeriodMs", turret.FixedAnglePeriodMs);
+            LabeledValue("CPlugTurret.FixedAngleMinDeg", turret.FixedAngleMinDeg);
+            LabeledValue("CPlugTurret.FixedAngleMaxDeg", turret.FixedAngleMaxDeg);
+            LabeledValue("CPlugTurret.LifeArmorMax", turret.LifeArmorMax);
+            LabeledValue("CPlugTurret.LifeDisabledDuration", turret.LifeDisabledDuration);
+            LabeledValue("CPlugTurret.LifeOnArmorEmtpy", turret.LifeOnArmorEmtpy);
+            LabeledValue("CPlugTurret.IsControllable", turret.IsControllable);
+            LabeledValue("CPlugTurret.FirePeriodMs", turret.FirePeriodMs);
+            LabeledValue("CPlugTurret.Joint0Name", turret.Joint0Name.GetName());
+            LabeledValue("CPlugTurret.Joint0LocalAxis", turret.Joint0LocalAxis);
+            LabeledValue("CPlugTurret.Joint0MinAngleDeg", turret.Joint0MinAngleDeg);
+            LabeledValue("CPlugTurret.Joint0MaxAngleDeg", turret.Joint0MaxAngleDeg);
+            LabeledValue("CPlugTurret.Joint0SpeedDegPerS", turret.Joint0SpeedDegPerS);
+            LabeledValue("CPlugTurret.Joint0NextJointUpdateAngleMaxDeg", turret.Joint0NextJointUpdateAngleMaxDeg);
+            LabeledValue("CPlugTurret.Joint1Name", turret.Joint1Name.GetName());
+            LabeledValue("CPlugTurret.Joint1LocalAxis", turret.Joint1LocalAxis);
+            LabeledValue("CPlugTurret.Joint1MinAngleDeg", turret.Joint1MinAngleDeg);
+            LabeledValue("CPlugTurret.Joint1MaxAngleDeg", turret.Joint1MaxAngleDeg);
+            LabeledValue("CPlugTurret.Joint1SpeedDegPerS", turret.Joint1SpeedDegPerS);
+            LabeledValue("CPlugTurret.Joint1NextJointUpdateAngleMaxDeg", turret.Joint1NextJointUpdateAngleMaxDeg);
+            LabeledValue("CPlugTurret.JointFireName", turret.JointFireName.GetName());
+            LabeledValue("CPlugTurret.JointFireLocalAxis", turret.JointFireLocalAxis);
+            LabeledValue("CPlugTurret.JointRadarName", turret.JointRadarName.GetName());
+            LabeledValue("CPlugTurret.IsDyna", turret.IsDyna);
+
+            MkAndDrawChildNode(turret.DynaModel, GetOffset(turret, "DynaModel"), "DynaModel");
+            MkAndDrawChildNode(turret.OnFireParticle, GetOffset(turret, "OnFireParticle"), "OnFireParticle");
+
+            DrawDataRef(turret, GetOffset(turret, "Skel"), "Skel");
+            DrawDataRef(turret, GetOffset(turret, "Shape"), "Shape");
+            DrawDataRef(turret, GetOffset(turret, "BulletModel"), "BulletModel");
+            DrawDataRef(turret, GetOffset(turret, "Mesh"), "Mesh");
+            DrawDataRef(turret, GetOffset(turret, "RotateSound1"), "RotateSound1");
+            DrawDataRef(turret, GetOffset(turret, "VisEntFx"), "VisEntFx");
+
+            EndTreeNode();
+        }
+    }
+
+    void DrawDataRef(CMwNod@ nod, uint16 offset, const string &in name) {
+        auto inner = Dev_GetOffsetNodSafe(nod, offset);
+        auto filename = nod !is null ? Dev::GetOffsetString(nod, offset+0x8) : "(null)";
+        LabeledValue(name+".Filename", filename);
+        MkAndDrawChildNode(inner, offset, name);
+    }
+
+    void Draw(CGameSaveLaunchedCheckpoints@ gslcps) {
+        if (StartTreeNode(name + " ::\\$f8f CGameSaveLaunchedCheckpoints", UI::TreeNodeFlags::DefaultOpen)) {
+            auto cps = _GameSaveLaunchedCheckpoints(gslcps);
+            auto ptr = Dev_GetPointerForNod(gslcps);
+            auto cpsIndex = cps.GetCPsIndex();
+            auto launchStates = cps.GetLaunchStates();
+            if (StartTreeNode("Nb CPs: " + cpsIndex.Length + "###lcps-index-" + ptr, true, UI::TreeNodeFlags::DefaultOpen)) {
+
+                EndTreeNode();
+            }
+            if (StartTreeNode("Nb States: " + launchStates.Length + "###states-" + ptr, true)) {
+
+                EndTreeNode();
+            }
             EndTreeNode();
         }
     }
