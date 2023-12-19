@@ -462,6 +462,24 @@ namespace MeshDuplication {
         // seems like the nods dont' have fids
     }
 
+    void ZeroFids(CPlugTurret@ turret) {
+        ZeroNodFid(turret);
+        auto Skel = ManipPtrs::ZeroDataRef(turret, GetOffset(turret, "Skel"));
+        auto Shape = ManipPtrs::ZeroDataRef(turret, GetOffset(turret, "Shape"));
+        // auto BulletModel = ManipPtrs::ZeroDataRef(turret, GetOffset(turret, "BulletModel"));
+        auto Mesh = ManipPtrs::ZeroDataRef(turret, GetOffset(turret, "Mesh"));
+        auto RotateSound1 = ManipPtrs::ZeroDataRef(turret, GetOffset(turret, "RotateSound1"));
+        if (Skel !is null) ZeroFidsUnknownModelNod(Skel);
+        if (Shape !is null) ZeroFidsUnknownModelNod(Shape);
+        // if (BulletModel !is null) ZeroFidsUnknownModelNod(BulletModel);
+        if (Mesh !is null) ZeroFidsUnknownModelNod(Mesh);
+        if (RotateSound1 !is null) ZeroFidsUnknownModelNod(RotateSound1);
+        auto _s2m = cast<CPlugSolid2Model>(Mesh);
+        auto _surf = cast<CPlugSurface>(Shape);
+        if (_s2m !is null && _surf !is null) MeshDuplication::SyncUserMatsToShapeIfMissing(_s2m, _surf);
+        // ManipPtrs::ZeroDataRef(turret, GetOffset(turret, "VisEntFx"));
+    }
+
     void ZeroVehiclePhyModelFids(CMwNod@ vPhyModel) {
         if (vPhyModel is null) return;
         ZeroNodFid(vPhyModel);
@@ -539,6 +557,9 @@ namespace MeshDuplication {
         auto refBuf = cast<CMwRefBuffer>(nod);
         auto vPhyShape = cast<CPlugVehicleCarPhyShape>(nod);
         auto audioEnv = cast<CPlugAudioEnvironment>(nod);
+        auto turret = cast<CPlugTurret>(nod);
+        auto surface = cast<CPlugSurface>(nod);
+        auto bulletModel = cast<CPlugBulletModel>(nod);
         if (so !is null) {
             ZeroFids(so);
         } else if (itemModel !is null) {
@@ -603,9 +624,15 @@ namespace MeshDuplication {
             ZeroFids(vPhyShape);
         } else if (audioEnv !is null) {
             ZeroFids(audioEnv);
+        } else if (turret !is null) {
+            ZeroFids(turret);
+        } else if (surface !is null) {
+            ZeroFids(surface);
+        // } else if (bulletModel !is null) {
+        //     ZeroFids(bulletModel);
         } else {
             NotifyError("ZeroFidsUnknownModelNod: nod is unknown.");
-            NotifyError("ZeroFidsUnknownModelNod: nod type: " + Reflection::TypeOf(nod).Name);
+            NotifyError("> ZeroFidsUnknownModelNod: nod type: " + Reflection::TypeOf(nod).Name);
         }
     }
 
