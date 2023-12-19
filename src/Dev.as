@@ -117,18 +117,27 @@ void Dev_CopyArrayStruct(uint64 sBufPtr, int sIx, uint64 dBufPtr, int dIx, uint1
 
 
 
+bool Dev_PointerLooksBad(uint64 ptr) {
+    if (ptr < 0x10000000000) return true;
+    if (ptr % 8 != 0) return true;
+    if (ptr > Dev::BaseAddressEnd()) return true;
+    return false;
+}
+
+
+
 CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
     if (target is null) return null;
     auto ptr = Dev::GetOffsetUint64(target, offset);
-    if (ptr < 0x100000000) return null;
-    if (ptr % 8 != 0) return null;
-    if (ptr > Dev::BaseAddressEnd()) return null;
+    if (Dev_PointerLooksBad(ptr)) return null;
     return Dev::GetOffsetNod(target, offset);
 }
 
+CMwNod@ g_TmpNod = CMwNod();
+
 uint64 Dev_GetPointerForNod(CMwNod@ nod) {
     if (nod is null) throw('nod was null');
-    auto tmpNod = CMwNod();
+    auto @tmpNod = g_TmpNod !is null ? g_TmpNod : CMwNod();
     uint64 tmp = Dev::GetOffsetUint64(tmpNod, 0);
     Dev::SetOffset(tmpNod, 0, nod);
     uint64 ptr = Dev::GetOffsetUint64(tmpNod, 0);
@@ -266,18 +275,31 @@ class ReferencedNod {
 
 
 
-const uint16 O_MAP_COLLECTION_ID_OFFSET1 = 0x54;
-const uint16 O_MAP_COLLECTION_ID_OFFSET2 = 0x6C;
-const uint16 O_MAP_AUTHORLOGIN_MWID_OFFSET = 0x58;
-const uint16 O_MAP_PLAYERMODEL_MWID_OFFSET = 0x5C;
+const uint16 O_MAP_TITLEID = GetOffset("CGameCtnChallenge", "TitleId");
+const uint16 O_MAP_COLLECTION_ID_OFFSET1 = O_MAP_TITLEID - (0x74 - 0x54);
+const uint16 O_MAP_COLLECTION_ID_OFFSET2 = O_MAP_TITLEID - (0x74 - 0x6C);
+const uint16 O_MAP_AUTHORLOGIN_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x58);
+const uint16 O_MAP_PLAYERMODEL_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x5C);
 // e.g., 10003 for TM2020 player/vehicles (mp4 vehicles are )
-const uint16 O_MAP_PLAYERMODEL_COLLECTION_MWID_OFFSET = 0x60;
-const uint16 O_MAP_PLAYERMODEL_AUTHOR_MWID_OFFSET = 0x64;
-const uint16 O_MAP_MTSIZE_OFFSET = 0x1F0;
-const uint16 O_MAP_OFFZONE_BUF_OFFSET = 0x690;
-const uint16 O_MAP_OFFZONE_SIZE_OFFSET = 0x680;
-const uint16 O_MAP_COORD_SIZE_XY = 0x7B8;
-const uint16 O_MAP_EXTENDS_BELOW_0 = 0x7C0;
+const uint16 O_MAP_PLAYERMODEL_COLLECTION_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x14); // 0x60 - 0x74
+const uint16 O_MAP_PLAYERMODEL_AUTHOR_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x10); // 0x64 - 0x74;
+const uint16 O_MAP_CLIPAMBIANCE = GetOffset("CGameCtnChallenge", "ClipAmbiance");
+const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8;
+const uint16 O_MAP_SIZE = GetOffset("CGameCtnChallenge", "Size");
+// ptr at 0x0 of this struct: CHmsLightMapCache
+const uint16 O_MAP_LIGHTMAP_STRUCT = O_MAP_SIZE - 0x20;
+const uint16 O_LIGHTMAPSTRUCT_CACHE = 0x0;
+const uint16 O_LIGHTMAPSTRUCT_IMAGE_1 = 0x10;
+const uint16 O_LIGHTMAPSTRUCT_IMAGE_2 = 0x18;
+const uint16 O_LIGHTMAPSTRUCT_IMAGE_3 = 0x20;
+// this points to IMAGE_1
+const uint16 O_LIGHTMAPSTRUCT_IMAGES = 0x30;
+
+const uint16 O_MAP_SCRIPTMETADATA = GetOffset("CGameCtnChallenge", "ScriptMetadata");
+const uint16 O_MAP_OFFZONE_BUF_OFFSET = O_MAP_SCRIPTMETADATA + (0x690 - 0x688);
+const uint16 O_MAP_OFFZONE_SIZE_OFFSET = O_MAP_SCRIPTMETADATA + (0x680 - 0x688);
+const uint16 O_MAP_COORD_SIZE_XY = O_MAP_SCRIPTMETADATA + (0x7B8 - 0x688);
+const uint16 O_MAP_EXTENDS_BELOW_0 = O_MAP_SCRIPTMETADATA + (0x7C0 - 0x688);
 
 /*
 todo: set flag to false and experiment with the other flag
@@ -301,7 +323,7 @@ const uint16 SZ_LM_SPIMP_Buf2_EL = 0x58;
 
 // is a unit
 const uint16 O_EDITOR_CURR_PIVOT_OFFSET = GetOffset("CGameCtnEditorFree", "UndergroundBox") + (0xBC4 - 0xAC0);
-
+const uint16 O_EDITOR_LAUNCHEDCPS = GetOffset("CGameCtnEditorFree", "Radius") + 0x10;
 
 const uint16 O_ITEM_MODEL_SKIN = 0xA0;
 
@@ -379,3 +401,79 @@ uint16 O_MT_CLIPGROUP_TRIGGER_BUF = 0x28;
 uint16 O_MT_CLIPGROUP_TRIGGER_BUF_LEN = 0x30;
 
 uint16 SZ_CLIPGROUP_TRIGGER_STRUCT = 0x40;
+
+
+
+
+
+
+
+
+
+
+class RawBuffer {
+    uint64 ptr;
+    uint size;
+    RawBuffer(CMwNod@ nod, uint16 offset, uint structSize = 0x8) {
+        _Setup(Dev_GetPointerForNod(nod) + offset, structSize);
+    }
+    RawBuffer(uint64 bufPtr, uint structSize = 0x8) {
+        _Setup(bufPtr, structSize);
+    }
+
+    private void _Setup(uint64 bufPtr, uint structSize) {
+        // print("RawBuffer: " + Text::FormatPointer(bufPtr) + ", size: " + Text::FormatPointer(structSize));
+        if (Dev_PointerLooksBad(bufPtr)) throw("Bad buffer pointer: " + Text::FormatPointer(bufPtr));
+        this.ptr = bufPtr;
+        size = structSize;
+        // print("RawBuffer inner ptr: " + Text::FormatPointer(Dev::ReadUInt64(bufPtr)));
+        // print("RawBuffer memory: " + Dev::Read(ptr, 0x10));
+    }
+
+    uint get_Length() {
+        return Dev::ReadUInt32(ptr + 0x8);
+    }
+    uint get_Reserved() {
+        return Dev::ReadUInt32(ptr + 0xC);
+    }
+
+    RawBufferElem@ opIndex(uint i) {
+        if (i >= Length) throw("RawBufferElem out of range!");
+        uint64 ptr2 = Dev::ReadUInt64(ptr);
+        return RawBufferElem(ptr2 + i * size, size);
+    }
+}
+
+class RawBufferElem {
+    uint64 ptr;
+    uint size;
+    RawBufferElem(uint64 ptr, uint size) {
+        this.ptr = ptr;
+        this.size = size;
+    }
+    void CheckOffset(uint o, uint len) {
+        if (o+len > size) throw("index out of range");
+    }
+    uint64 opIndex(uint i) {
+        uint o = i * 0x8;
+        CheckOffset(o, 8);
+        return ptr + o;
+    }
+    uint64 GetUint64(uint o) {
+        CheckOffset(o, 8);
+        return Dev::ReadUInt64(ptr + o);
+    }
+
+    uint32 GetUint32(uint o) {
+        CheckOffset(o, 4);
+        return Dev::ReadUInt32(ptr + o);
+    }
+    float GetFloat(uint o) {
+        CheckOffset(o, 4);
+        return Dev::ReadFloat(ptr + o);
+    }
+    int32 GetInt32(uint o) {
+        CheckOffset(o, 4);
+        return Dev::ReadInt32(ptr + o);
+    }
+}
