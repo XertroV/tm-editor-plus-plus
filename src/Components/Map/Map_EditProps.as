@@ -112,7 +112,17 @@ class MapEditPropsTab : Tab {
         UI::Indent();
         map.MapName = UI::InputText("Name", map.MapName);
         map.Comments = UI::InputTextMultiline("Comment", map.Comments, vec2(0, UI::GetTextLineHeight() * 3.6));
+
+        UI::Columns(2, "map-props-cols", false);
+
         UI::Text("Author: " + map.AuthorNickName);
+        // todo: test
+        UI::BeginDisabled(map.MapInfo.FileName == "Unnamed");
+        if (UX::SmallButton(Icons::FolderOpenO+"##map-folder")) {
+            OpenExplorerPath(IO::FromUserGameFolder("Maps/" + map.MapInfo.Path));
+        }
+        UI::EndDisabled();
+        UI::SameLine();
         UI::Text("Filename: " + map.MapInfo.FileName);
         UI::Text("Thumbnail (KB): " + map.Thumbnail_KBytes);
         UI::SameLine();
@@ -126,7 +136,11 @@ class MapEditPropsTab : Tab {
         UI::Text("LightMapCacheSmall (KB): " + map.LightMapCacheSmall_KBytes);
         auto mapFid = GetFidFromNod(map);
         LabeledValue("Map File Size (KB)", mapFid !is null ? mapFid.ByteSizeEd : 0);
-        UI::Separator();
+
+        // UI::Separator();
+        UI::NextColumn();
+
+
         UI::Text("Time spent mapping: " + TimeFormatSecs(FromML::mappingTime));
         if (UI::IsItemHovered()) {
             AddSimpleTooltip("Editor: " + TimeFormatSecs(FromML::mappingTimeMapping) + " / Testing: " + TimeFormatSecs(FromML::mappingTimeTesting) + " / Validating: " + TimeFormatSecs(FromML::mappingTimeValidating));
@@ -146,7 +160,9 @@ class MapEditPropsTab : Tab {
             ToML::ResyncPlease();
         }
         UI::EndDisabled();
-        // SameLineNewIndicator();
+
+
+        UI::Columns(1);
 
         UI::Unindent();
 
