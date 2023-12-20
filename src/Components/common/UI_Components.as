@@ -246,6 +246,13 @@ GenericApplyTypes DrawComboGenericApplyTypes(const string &in label, GenericAppl
         })
     );
 }
+RV_ValueRenderTypes DrawComboRV_ValueRenderTypes(const string &in label, RV_ValueRenderTypes val) {
+    return RV_ValueRenderTypes(
+        DrawArbitraryEnum(label, int(val), RV_ValueRenderTypes::LAST, function(int v) {
+            return tostring(RV_ValueRenderTypes(v));
+        })
+    );
+}
 
 int DrawColorBtnChoice(const string &in label, int val) {
     if (DrawBtnMbActive("Default##"+label, val == 0))

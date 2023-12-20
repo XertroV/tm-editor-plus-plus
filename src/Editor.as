@@ -227,12 +227,29 @@ namespace Editor {
             && GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Item;
     }
 
+    // macroblocks, blocks, and items
+    bool IsInAnyFreePlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (checkEditMode && !IsInPlacementMode(editor))
+            return false;
+        auto mode = GetPlacementMode(editor);
+        return mode == CGameEditorPluginMap::EPlaceMode::FreeBlock
+            || mode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock
+            || GetItemPlacementMode() == ItemMode::Free;
+    }
+
+    // normal or free
     bool IsInMacroblockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
         if (checkEditMode && !IsInPlacementMode(editor))
             return false;
         auto mode = GetPlacementMode(editor);
         return mode == CGameEditorPluginMap::EPlaceMode::Macroblock
             || mode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock;
+    }
+
+    bool IsInFreeMacroblockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (checkEditMode && !IsInPlacementMode(editor))
+            return false;
+        return GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::FreeMacroblock;
     }
 
     void EnsureItemPlacementMode(CGameCtnEditorFree@ editor) {

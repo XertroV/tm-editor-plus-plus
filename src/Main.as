@@ -21,7 +21,7 @@ void Main() {
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
     startnew(Editor::OffzonePatch::Apply);
-    // startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
+    startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
 
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
 
@@ -53,11 +53,15 @@ bool everEnteredEditor = false;
 uint lastTimeEnteredEditor = 0;
 bool dismissedPluginEnableRequest = false;
 bool dismissedCamReturnToStadium = false;
+uint g_PriorRenderEarlyTime;
+uint g_ThisRenderEarlyTime;
 
 void RenderEarly() {
 #if DEV
     Picker::RenderEarly();
 #endif
+    g_PriorRenderEarlyTime = g_ThisRenderEarlyTime;
+    g_ThisRenderEarlyTime = Time::Now;
 
     if (!UserHasPermissions) return;
     if (!GameVersionSafe) return;
@@ -120,6 +124,8 @@ void RenderEarly() {
 
     g_WasDragging = g_IsDragging;
     g_LmbDown = IsLMBPressed();
+
+    UpdateScrollCache();
 }
 
 void Render() {
@@ -202,6 +208,28 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
 void OnMouseMove(int x, int y) {
     lastMousePos = vec2(x, y);
     // trace(lastMousePos.ToString());
+}
+
+int2 g_ScrollThisFrame = int2();
+int2 g_LastScroll = int2();
+uint g_NewScrollTime;
+
+/** Called whenever the mouse wheel is scrolled. `x` and `y` are the scroll delta values.
+*/
+UI::InputBlocking OnMouseWheel(int x, int y) {
+    g_LastScroll = int2(x, y);
+    g_NewScrollTime = Time::Now;
+    return UI::InputBlocking::DoNothing;
+}
+
+void UpdateScrollCache() {
+    if (g_NewScrollTime > 0) {
+        g_ScrollThisFrame = g_LastScroll;
+        g_NewScrollTime = 0;
+    }
+    else {
+        g_ScrollThisFrame = int2();
+    }
 }
 
 float g_FrameTime = 10.;
