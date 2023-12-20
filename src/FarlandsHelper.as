@@ -39,9 +39,10 @@ namespace FarlandsHelper {
             if (editor is null) continue;
             auto cursor = editor.Cursor;
             // do some checks first
-            if (!cursor.UseFreePos) continue;
-            if (!Editor::IsBlockOrMacroblockBeingDrawn(cursor)) continue;
-            if (!Editor::IsInFreeBlockPlacementMode(editor)) continue;
+            bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor);
+            if (!Editor::IsAnythingBeingDrawn(cursor)) continue;
+            if (!Editor::IsInAnyFreePlacementMode(editor)) continue;
+            if (!cursor.UseFreePos && !isPlacingItem) continue;
             // check if block cursor is at the edge of the map
             bool atEdge = (0 == cursor.Coord.x * cursor.Coord.y * cursor.Coord.z)
                 || (cursor.Coord.x == g_MapCoordBounds.x - 1 || cursor.Coord.y == g_MapCoordBounds.y - 1 || cursor.Coord.z == g_MapCoordBounds.z - 1)
@@ -51,6 +52,9 @@ namespace FarlandsHelper {
             auto occ = editor.OrbitalCameraControl;
             lastCursorPos = Picker::GetMouseToWorldAtHeight(occ.m_TargetedPosition.y);
             cursor.FreePosInMap = lastCursorPos;
+            if (isPlacingItem) {
+                Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, lastCursorPos);
+            }
         }
     }
 
@@ -106,7 +110,7 @@ namespace FarlandsHelper {
         _addBlockSetRot = _prevCursorState.euler;
 
         if (!FarlandsHelper::ApplyAddBlockHook()) {
-            warn("FAILED TO APPLY FARLANDS ADD BLOCK PATCH");
+            NotifyWarning("FAILED TO APPLY FARLANDS ADD BLOCK PATCH");
         } else {
             dev_trace("Applied on block hook");
         }
