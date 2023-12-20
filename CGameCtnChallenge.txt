@@ -1,0 +1,40 @@
+launchedcps: 0x200 (clipAmb + x28)
+
+LM Struct: size - 0x20
+0x238
+
+macroblock infos: anchoredObjs + x20
+0x2b8; buf of (int (index?), mwid (macroblock path/name))
+
+MapInfo + 0x10 = 0x308
++0x00 buf
++0x10 buf
++0x20 buf
++0x30 buf
++0x40 buf
++0x50 buf
++0x60 buf
++0x70 buf
+
+0x388: x1c2, x400
+0x390: x1c2, x315
+
+0x3a8: ptr
+0x3b0: ptr
+0x3b8: ptr - many block structures, 0x30 large; ptr to CGameCtnBlock (clips?)
+
+these arrays seem all 0s or all Fs
+0x408: ptr (array?)
+0x418: ptr -> 0x420
+0x420: ptr (array?)
+0x430: ptr (array?)
+
+0x500: ptr to grass
+
+
+0x520: ptr CGameLeague
+0x528: ptr CPlugBitmap
+
+0x618: buffer (len, 0x1F8), CGameCtnBlock; deco wall base pillar
+0x628: buffer (len, 0x900), CGameCtnBlock; grass?
+0x638: buffer (len, 0xE), CGameCtnBlock; checkpoints?
