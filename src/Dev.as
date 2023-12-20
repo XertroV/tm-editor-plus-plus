@@ -285,7 +285,9 @@ const uint16 O_MAP_PLAYERMODEL_COLLECTION_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 
 const uint16 O_MAP_PLAYERMODEL_AUTHOR_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x10); // 0x64 - 0x74;
 const uint16 O_MAP_CLIPAMBIANCE = GetOffset("CGameCtnChallenge", "ClipAmbiance");
 const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8;
+const uint16 O_MAP_LAUNCHEDCPS = O_MAP_CLIPAMBIANCE + 0x28; // 0x200 - 0x1D8;
 const uint16 O_MAP_SIZE = GetOffset("CGameCtnChallenge", "Size");
+
 // ptr at 0x0 of this struct: CHmsLightMapCache
 const uint16 O_MAP_LIGHTMAP_STRUCT = O_MAP_SIZE - 0x20;
 const uint16 O_LIGHTMAPSTRUCT_CACHE = 0x0;
@@ -294,6 +296,8 @@ const uint16 O_LIGHTMAPSTRUCT_IMAGE_2 = 0x18;
 const uint16 O_LIGHTMAPSTRUCT_IMAGE_3 = 0x20;
 // this points to IMAGE_1
 const uint16 O_LIGHTMAPSTRUCT_IMAGES = 0x30;
+
+const uint16 O_MAP_MACROBLOCK_INFOS = GetOffset("CGameCtnChallenge", "AnchoredObjects") + 0x20;
 
 const uint16 O_MAP_SCRIPTMETADATA = GetOffset("CGameCtnChallenge", "ScriptMetadata");
 const uint16 O_MAP_OFFZONE_BUF_OFFSET = O_MAP_SCRIPTMETADATA + (0x690 - 0x688);
