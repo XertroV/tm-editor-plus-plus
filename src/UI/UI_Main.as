@@ -30,9 +30,12 @@ void UI_Main_Render() {
     auto tabToDraw = RootTabGroup_Editor;
 
     if (IsInEditor && IsInCurrentPlayground) {
+#if DEV
+#else
         // draw playground UI
         // @tabToDraw = ;
         return;
+#endif
     } else if (IsInItemEditor) {
         @tabToDraw = RootTabGroup_ItemEditor;
     } else if (IsInMeshEditor) {
@@ -266,6 +269,9 @@ namespace MenuBar {
                 }
                 if (UI::MenuItem("Tutorial: Custom Snapping Trees \\$888by Kamikalash")) {
                     OpenBrowserURL("https://youtu.be/PIV2j9BgAmU");
+                }
+                if (UI::MenuItem("Tutorial: Add Spectators using Blender \\$888by florenzius")) {
+                    OpenBrowserURL("https://youtu.be/e07qjOw_S8g");
                 }
                 if (UI::MenuItem("Plugin Support Thread")) {
                     OpenBrowserURL("https://discord.com/channels/276076890714800129/1103713844288819311");
