@@ -389,7 +389,8 @@ const uint16 O_INVENTORY_ItemHideFolderDepth = 0x1E8;
 const uint16 O_INVENTORY_ItemSelectedFolder = 0x1F0;
 
 
-const uint16 O_ITEMCURSOR_CurrentModelsBuf = 0xB8;
+const uint16 O_ITEMCURSOR_CurrentPos = GetOffset("CGameCursorItem", "MagnetSnapping_LocalRotation_Deg") + 0x40;
+const uint16 O_ITEMCURSOR_CurrentModelsBuf = GetOffset("CGameCursorItem", "HelperMobil") + 0x8;
 // const uint16 O_ITEMCURSOR_VariantOrNbMaybe = 0xC0;
 // const uint16 O_ITEMCURSOR_MaxVariantMaybe = 0xC4;
 
@@ -412,8 +413,9 @@ uint16 SZ_CLIPGROUP_TRIGGER_STRUCT = 0x40;
 
 
 class RawBuffer {
-    uint64 ptr;
-    uint size;
+    protected uint64 ptr;
+    protected uint size;
+
     RawBuffer(CMwNod@ nod, uint16 offset, uint structSize = 0x8) {
         _Setup(Dev_GetPointerForNod(nod) + offset, structSize);
     }
@@ -422,13 +424,13 @@ class RawBuffer {
     }
 
     private void _Setup(uint64 bufPtr, uint structSize) {
-        // print("RawBuffer: " + Text::FormatPointer(bufPtr) + ", size: " + Text::FormatPointer(structSize));
         if (Dev_PointerLooksBad(bufPtr)) throw("Bad buffer pointer: " + Text::FormatPointer(bufPtr));
         this.ptr = bufPtr;
         size = structSize;
-        // print("RawBuffer inner ptr: " + Text::FormatPointer(Dev::ReadUInt64(bufPtr)));
-        // print("RawBuffer memory: " + Dev::Read(ptr, 0x10));
     }
+
+    uint64 get_Ptr() { return ptr; }
+    uint64 get_ElSize() { return size; }
 
     uint get_Length() {
         return Dev::ReadUInt32(ptr + 0x8);
@@ -445,12 +447,16 @@ class RawBuffer {
 }
 
 class RawBufferElem {
-    uint64 ptr;
-    uint size;
+    protected uint64 ptr;
+    protected uint size;
     RawBufferElem(uint64 ptr, uint size) {
         this.ptr = ptr;
         this.size = size;
     }
+
+    uint64 get_Ptr() { return ptr; }
+    uint64 get_ElSize() { return size; }
+
     void CheckOffset(uint o, uint len) {
         if (o+len > size) throw("index out of range");
     }
@@ -476,4 +482,215 @@ class RawBufferElem {
         CheckOffset(o, 4);
         return Dev::ReadInt32(ptr + o);
     }
+
+    void DrawResearchView() {
+        UI::PushFont(g_MonoFont);
+        g_RV_RenderAs = DrawComboRV_ValueRenderTypes("Render Values", g_RV_RenderAs);
+
+        auto nbSegments = size / RV_SEGMENT_SIZE;
+        for (uint i = 0; i < nbSegments; i++) {
+            DrawSegment(i);
+        }
+        auto remainder = size - (nbSegments * RV_SEGMENT_SIZE);
+        if (remainder >= RV_SEGMENT_SIZE) throw("Error caclulating remainder size");
+        DrawSegment(nbSegments, remainder);
+
+        UI::PopFont();
+    }
+
+    void DrawSegment(uint n, int limit = -1) {
+        if (limit == 0) return;
+        limit = limit < 0 ? RV_SEGMENT_SIZE : limit;
+        auto segPtr = ptr + RV_SEGMENT_SIZE * n;
+        UI::AlignTextToFramePadding();
+        UI::Text("\\$888" + Text::Format("0x%03x  ", n * RV_SEGMENT_SIZE));
+        if (UI::IsItemClicked()) {
+            SetClipboard(Text::FormatPointer(segPtr));
+        }
+        UI::SameLine();
+        string mem;
+        for (uint o = 0; o < RV_SEGMENT_SIZE; o += 4) {
+            mem = o >= limit ? "__ __ __ __" : Dev::Read(segPtr + o, Math::Min(limit, 4));
+            UI::Text(mem);
+            UI::SameLine();
+            if (o % 8 != 0) {
+                UI::Dummy(vec2(10, 0));
+            }
+            UI::SameLine();
+        }
+        DrawRawValues(segPtr, limit);
+        UI::Dummy(vec2());
+    }
+
+    void DrawRawValues(uint64 segPtr, int bytesToRead) {
+        switch (g_RV_RenderAs) {
+            case RV_ValueRenderTypes::Float: DrawRawValuesFloat(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::Uint32: DrawRawValuesUint32(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::Uint32D: DrawRawValuesUint32D(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::Uint64: DrawRawValuesUint64(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::Uint16: DrawRawValuesUint16(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::Uint16D: DrawRawValuesUint16D(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::Uint8: DrawRawValuesUint8(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::Uint8D: DrawRawValuesUint8D(segPtr, bytesToRead); return;
+            // case RV_ValueRenderTypes::Int32: DrawRawValuesInt32(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::Int32D: DrawRawValuesInt32D(segPtr, bytesToRead); return;
+            // case RV_ValueRenderTypes::Int16: DrawRawValuesInt16(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::Int16D: DrawRawValuesInt16D(segPtr, bytesToRead); return;
+            // case RV_ValueRenderTypes::Int8: DrawRawValuesInt8(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::Int8D: DrawRawValuesInt8D(segPtr, bytesToRead); return;
+            default: {}
+        }
+        UI::Text("no impl: " + tostring(g_RV_RenderAs));
+    }
+
+    void DrawRawValuesFloat(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 4) {
+            _DrawRawValueFloat(segPtr + i);
+        }
+    }
+    void DrawRawValuesUint32(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 4) {
+            _DrawRawValueUint32(segPtr + i);
+        }
+    }
+    void DrawRawValuesUint32D(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 4) {
+            _DrawRawValueUint32D(segPtr + i);
+        }
+    }
+    void DrawRawValuesUint64(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 8) {
+            _DrawRawValueUint64(segPtr + i);
+        }
+    }
+    void DrawRawValuesUint16(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 2) {
+            _DrawRawValueUint16(segPtr + i);
+        }
+    }
+    void DrawRawValuesUint16D(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 2) {
+            _DrawRawValueUint16D(segPtr + i);
+        }
+    }
+    void DrawRawValuesUint8(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 1) {
+            _DrawRawValueUint8(segPtr + i);
+        }
+    }
+    void DrawRawValuesUint8D(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 1) {
+            _DrawRawValueUint8D(segPtr + i);
+        }
+    }
+    void DrawRawValuesInt32(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 4) {
+            _DrawRawValueInt32(segPtr + i);
+        }
+    }
+    void DrawRawValuesInt32D(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 4) {
+            _DrawRawValueInt32D(segPtr + i);
+        }
+    }
+    void DrawRawValuesInt16(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 2) {
+            _DrawRawValueInt16(segPtr + i);
+        }
+    }
+    void DrawRawValuesInt16D(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 2) {
+            _DrawRawValueInt16D(segPtr + i);
+        }
+    }
+    void DrawRawValuesInt8(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 1) {
+            _DrawRawValueInt8(segPtr + i);
+        }
+    }
+    void DrawRawValuesInt8D(uint64 segPtr, int bytesToRead) {
+        for (uint i = 0; i < bytesToRead; i += 1) {
+            _DrawRawValueInt8D(segPtr + i);
+        }
+    }
+
+    void _DrawRawValueFloat(uint64 valPtr) {
+        RV_CopiableValue(tostring(Dev::ReadFloat(valPtr)));
+    }
+    void _DrawRawValueUint32(uint64 valPtr) {
+        RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt32(valPtr)));
+    }
+    void _DrawRawValueUint32D(uint64 valPtr) {
+        RV_CopiableValue(tostring(Dev::ReadUInt32(valPtr)));
+    }
+    void _DrawRawValueUint16(uint64 valPtr) {
+        RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt16(valPtr)));
+    }
+    void _DrawRawValueUint16D(uint64 valPtr) {
+        RV_CopiableValue(tostring(Dev::ReadUInt16(valPtr)));
+    }
+    void _DrawRawValueUint8(uint64 valPtr) {
+        RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt8(valPtr)));
+    }
+    void _DrawRawValueUint8D(uint64 valPtr) {
+        RV_CopiableValue(tostring(Dev::ReadUInt8(valPtr)));
+    }
+    void _DrawRawValueInt32(uint64 valPtr) {
+        RV_CopiableValue(Text::Format("0x%x", Dev::ReadInt32(valPtr)));
+    }
+    void _DrawRawValueInt32D(uint64 valPtr) {
+        RV_CopiableValue(tostring(Dev::ReadInt32(valPtr)));
+    }
+    void _DrawRawValueInt16(uint64 valPtr) {
+        RV_CopiableValue(Text::Format("0x%x", Dev::ReadInt16(valPtr)));
+    }
+    void _DrawRawValueInt16D(uint64 valPtr) {
+        RV_CopiableValue(tostring(Dev::ReadInt16(valPtr)));
+    }
+    void _DrawRawValueInt8(uint64 valPtr) {
+        RV_CopiableValue(Text::Format("0x%x", Dev::ReadInt8(valPtr)));
+    }
+    void _DrawRawValueInt8D(uint64 valPtr) {
+        RV_CopiableValue(tostring(Dev::ReadInt8(valPtr)));
+    }
+    void _DrawRawValueUint64(uint64 valPtr) {
+        RV_CopiableValue(Text::FormatPointer(Dev::ReadUInt64(valPtr)));
+    }
+
+    bool RV_CopiableValue(const string &in value) {
+        auto ret = CopiableValue(value);
+        if (UI::IsItemHovered()) {
+            if (UI::IsMouseClicked(UI::MouseButton::Middle)) {
+                g_RV_RenderAs = RV_ValueRenderTypes((int(g_RV_RenderAs) - 1) % RV_ValueRenderTypes::LAST);
+            }
+            if (UI::IsMouseClicked(UI::MouseButton::Right)) {
+                g_RV_RenderAs = RV_ValueRenderTypes((int(g_RV_RenderAs) + 1) % RV_ValueRenderTypes::LAST);
+            }
+            // auto scrollDelta = Math::Clamp(g_ScrollThisFrame.x, -1, 1);
+            // g_RV_RenderAs = RV_ValueRenderTypes(Math::Clamp(int(g_RV_RenderAs) + scrollDelta, 0, RV_ValueRenderTypes::LAST - 1));
+        }
+        UI::SameLine();
+        return ret;
+    }
 }
+
+
+// Research View segment size
+const uint RV_SEGMENT_SIZE = 0x10;
+
+enum RV_ValueRenderTypes {
+    Float = 0,
+    Uint64,
+    Uint32,
+    Uint32D,
+    Uint16,
+    Uint16D,
+    Uint8,
+    Uint8D,
+    Int32D,
+    Int16D,
+    Int8D,
+    LAST
+}
+
+RV_ValueRenderTypes g_RV_RenderAs = RV_ValueRenderTypes::Float;

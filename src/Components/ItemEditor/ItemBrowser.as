@@ -1302,10 +1302,10 @@ class ItemModelTreeElement {
                 LabeledValue("Nb Verts", nbVerts);
                 LabeledValue("Nb Tris", nbTris);
                 if (isEditable && UI::Button("Zero Vert/Tris Buffers")) {
-                    ManipPtrs::Replace(gmSurf, 0x28, 0, false);
-                    ManipPtrs::Replace(gmSurf, 0x38, 0, false);
-                    // Dev::SetOffset(gmSurf, 0x28, uint32(0));
-                    // Dev::SetOffset(gmSurf, 0x38, uint32(0));
+                    // ManipPtrs::Replace(gmSurf, 0x28, 0, false);
+                    // ManipPtrs::Replace(gmSurf, 0x38, 0, false);
+                    Dev::SetOffset(gmSurf, 0x28, uint(0));
+                    Dev::SetOffset(gmSurf, 0x38, uint(0));
                 }
             }
 
@@ -1579,15 +1579,45 @@ class ItemModelTreeElement {
             auto cpsIndex = cps.GetCPsIndex();
             auto launchStates = cps.GetLaunchStates();
             if (StartTreeNode("Nb CPs: " + cpsIndex.Length + "###lcps-index-" + ptr, true, UI::TreeNodeFlags::DefaultOpen)) {
-
+                DrawLaunchedCPsIndex(cpsIndex);
                 EndTreeNode();
             }
-            if (StartTreeNode("Nb States: " + launchStates.Length + "###states-" + ptr, true)) {
-
+            if (StartTreeNode("Nb States: " + launchStates.Length + "###states-" + ptr, true, UI::TreeNodeFlags::None)) {
+                DrawLaunchedCPsStates(launchStates);
                 EndTreeNode();
             }
             EndTreeNode();
         }
+    }
+
+    void DrawLaunchedCPsIndex(RawBuffer@ buf) {
+        auto len = buf.Length;
+        for (uint i = 0; i < len; i++) {
+            auto item = buf[i];
+            if (StartTreeNode("CP " + (i + 1.) + "##launched", true, UI::TreeNodeFlags::None)) {
+                DrawLaunchedCPsIndexElement(item);
+                EndTreeNode();
+            }
+        }
+    }
+
+    void DrawLaunchedCPsIndexElement(RawBufferElem@ elem) {
+        elem.DrawResearchView();
+    }
+
+    void DrawLaunchedCPsStates(RawBuffer@ buf) {
+        auto len = buf.Length;
+        for (uint i = 0; i < len; i++) {
+            auto item = buf[i];
+            if (StartTreeNode("State " + (i + 1.) + "##states", true, UI::TreeNodeFlags::None)) {
+                DrawLaunchedCPsStateElement(item);
+                EndTreeNode();
+            }
+        }
+    }
+
+    void DrawLaunchedCPsStateElement(RawBufferElem@ elem) {
+        elem.DrawResearchView();
     }
 
 
