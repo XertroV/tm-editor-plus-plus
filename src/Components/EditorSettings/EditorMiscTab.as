@@ -186,6 +186,8 @@ class EditorMiscTab : Tab {
 
         S_BlockEscape = UI::Checkbox("Block escape key from leaving the editor", S_BlockEscape);
 
+        editor.ExperimentalFeatures.SaveLaunchedCheckpointsInMap = UI::Checkbox("Save Launched CPs in Map", editor.ExperimentalFeatures.SaveLaunchedCheckpointsInMap);
+
         // set values in case they changed
         UpdateEditorValuesSync(editor);
     }
