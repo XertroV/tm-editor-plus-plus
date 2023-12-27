@@ -329,6 +329,7 @@ class MapEditPropsTab : Tab {
     void DrawOffzoneSettings() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
+        UI::Text("" + O_MAP_OFFZONE_SIZE_OFFSET);
         nat3 ozPerBlock = Dev::GetOffsetNat3(map, O_MAP_OFFZONE_SIZE_OFFSET);
         nat3 origOzPerBlock = ozPerBlock;
         if (UI::CollapsingHeader("Offzone Trigger:")) {
@@ -342,10 +343,10 @@ class MapEditPropsTab : Tab {
                     ozPerBlock = nat3(3, 1, 3);
                 }
                 if (ozPerBlock != origOzPerBlock) {
-                    Dev::SetOffset(map, O_MAP_MTSIZE_OFFSET, ozPerBlock);
+                    Dev::SetOffset(map, O_MAP_OFFZONE_SIZE_OFFSET, ozPerBlock);
                 }
-                auto mtBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
-                UI::Text("Offzone Trigger Size: " + mtBlockSize.ToString());
+                auto ozBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
+                UI::Text("Offzone Trigger Size: " + ozBlockSize.ToString());
                 // UI::EndChild();
             UI::Unindent();
         }
