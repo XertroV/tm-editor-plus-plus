@@ -299,11 +299,24 @@ const uint16 O_LIGHTMAPSTRUCT_IMAGES = 0x30;
 
 const uint16 O_MAP_MACROBLOCK_INFOS = GetOffset("CGameCtnChallenge", "AnchoredObjects") + 0x20;
 
+// 0x668
 const uint16 O_MAP_SCRIPTMETADATA = GetOffset("CGameCtnChallenge", "ScriptMetadata");
-const uint16 O_MAP_OFFZONE_BUF_OFFSET = O_MAP_SCRIPTMETADATA + 0x8;
 const uint16 O_MAP_OFFZONE_SIZE_OFFSET = O_MAP_SCRIPTMETADATA + (0x6A0 - 0x668);
-const uint16 O_MAP_COORD_SIZE_XY = O_MAP_SCRIPTMETADATA + (0x7B8 - 0x688);
-const uint16 O_MAP_EXTENDS_BELOW_0 = O_MAP_SCRIPTMETADATA + (0x7C0 - 0x688);
+const uint16 O_MAP_OFFZONE_BUF_OFFSET = O_MAP_SCRIPTMETADATA + (0x6B0 - 0x668);
+const uint16 O_MAP_COORD_SIZE_XY = O_MAP_SCRIPTMETADATA + (0x7D8 - 0x668);
+const uint16 O_MAP_EXTENDS_BELOW_0 = O_MAP_SCRIPTMETADATA + (0x7E0 - 0x668);
+
+// ptr to zip of embedded items -- populated on map load (not save)
+const uint16 O_MAP_EMBEDDEDITEMS_VIRT_FOLDER_FID = O_MAP_SCRIPTMETADATA + (0x730 - 0x668);
+const uint16 O_MAP_EMBEDDEDITEMS_ZIP_FID = O_MAP_SCRIPTMETADATA + (0x738 - 0x668);
+const uint16 O_MAP_EMBEDDEDITEMS_ZIP = O_MAP_SCRIPTMETADATA + (0x740 - 0x668);
+// buf of ptrs to CGameItemModel -- popualted on map load (not save)
+const uint16 O_MAP_EMBEDDEDITEMS_BUF1 = O_MAP_SCRIPTMETADATA + (0x758 - 0x668);
+// buf of (MwId name, uint Collect (0x1a = 26), MwId author) -- populated on map load (not save)
+const uint16 O_MAP_EMBEDDEDITEMS_BUF2 = O_MAP_SCRIPTMETADATA + (0x788 - 0x668);
+// buf of (mwid name, uint collection, mwid author) -- populated on ctrl+s (includes blocks and items)
+const uint16 O_MAP_EMBEDDEDITEMS_BUF3 = O_MAP_SCRIPTMETADATA + (0x7A8 - 0x668);
+
 
 /*
 todo: set flag to false and experiment with the other flag
@@ -311,9 +324,6 @@ todo: set flag to false and experiment with the other flag
 7F8: flag
 - when false
 => load 7C8 (1.0f)
-
-
-
 
 some editor mode things (+BE8); tests like this:
 0x21, 0x20, 0x0x17, 0x16, 0x15, 0xA

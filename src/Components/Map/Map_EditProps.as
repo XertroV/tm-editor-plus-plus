@@ -329,7 +329,6 @@ class MapEditPropsTab : Tab {
     void DrawOffzoneSettings() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
-        UI::Text("" + O_MAP_OFFZONE_SIZE_OFFSET);
         nat3 ozPerBlock = Dev::GetOffsetNat3(map, O_MAP_OFFZONE_SIZE_OFFSET);
         nat3 origOzPerBlock = ozPerBlock;
         if (UI::CollapsingHeader("Offzone Trigger:")) {
