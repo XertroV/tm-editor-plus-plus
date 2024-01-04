@@ -151,10 +151,12 @@ class Tab {
     bool get_favEnabled() {return false;}
     bool favIsFolder = false;
     bool favIsItem = false;
+    bool favIsMacroblock = false;
 
-    void SetupFav(bool isItem, bool isFolder) {
+    void SetupFav(bool isItem, bool isFolder, bool isMacroblock = false) {
         favIsFolder = isFolder;
         favIsItem = isItem;
+        favIsMacroblock = isMacroblock;
     }
 
     void DrawFavoriteButton() {

@@ -397,6 +397,7 @@ TabGroup@ CreateRootTabGroup() {
     ItemEmbedTab(root);
     BlockSelectionTab(root);
     ItemSelectionTab(root);
+    MacroblockSelectionTab(root);
     GlobalPlacementOptionsTab(root);
     // SkinsMainTab(root);
     MacroblockOptsTab(root);
