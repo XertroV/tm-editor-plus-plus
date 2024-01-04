@@ -54,6 +54,12 @@ class IE_CreateObjectMacroTab : Tab {
 
         UI::Separator();
 
+        if (UI::Button("AddCPlugDynaPointModel_CGameObjectModel")) {
+            startnew(CreateObj::AddCPlugDynaPointModel_CGameObjectModel);
+        }
+        if (UI::Button("SetEntityModelTo_CGameObjectModel")) {
+            startnew(CreateObj::SetEntityModelTo_CGameObjectModel);
+        }
         if (UI::Button("Create PhyModel")) {
             startnew(CreateObj::TryCreatePhyModel);
         }
@@ -135,6 +141,46 @@ class IE_CreateObjectMacroTab : Tab {
 
 
 namespace CreateObj {
+    void AddCPlugDynaPointModel_CGameObjectModel() {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        auto item = ieditor.ItemModel;
+        auto objModel = cast<CGameObjectModel>(item.EntityModel);
+        auto phyModel = objModel.Phy;
+        auto dynaPointModel = CPlugDynaPointModel();
+        dynaPointModel.MwAddRef();
+        dynaPointModel.Radius = 4.0;
+        dynaPointModel.Friction = 1.0;
+        dynaPointModel.Restitution = 1.0;
+        // @phyModel.DynaPointModel = dynaPointModel;
+        auto dynaModel = CPlugDynaModel();
+        dynaModel.MwAddRef();
+        dynaModel.LinearMass = 1.0;
+        dynaModel.MaxDistPerStep = 100.0;
+        dynaModel.CenterOfMass = vec3();
+        dynaModel.AngularSpeedClamp = 10.;
+        dynaModel.Use_TM_Simulation = true;
+        dynaModel.EnableSubStepping = true;
+        @phyModel.DynaModel = dynaModel;
+    }
+
+    void SetEntityModelTo_CGameObjectModel() {
+        auto objModel = CGameObjectModel();
+        objModel.MwAddRef();
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        auto item = ieditor.ItemModel;
+        auto iem = cast<CGameCommonItemEntityModel>(item.EntityModel);
+        @item.EntityModel = objModel;
+        trace('assinged objModel');
+        auto Phy = CGameObjectPhyModel();
+        Phy.MwAddRef();
+        @objModel.Phy = Phy;
+        trace('assinged phy');
+        // auto Vis = CGameObjectVisModel();
+        // Vis.MwAddRef();
+        // @objModel.Vis = Vis;
+        // trace('assinged vis');
+    }
+
     void TryCreatePhyModel() {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         auto item = ieditor.ItemModel;
@@ -149,8 +195,8 @@ namespace CreateObj {
         Dev::SetOffset(VisModel, GetOffset(VisModel, "MeshShaded"), staticObj.Mesh);
         VisModel.MeshShaded.MwAddRef();
 
-        Dev::SetOffset(PhyModel, GetOffset(PhyModel, "MoveShapeFid"), staticObj.Shape);
-        PhyModel.MoveShapeFid.MwAddRef();
+        // Dev::SetOffset(PhyModel, GetOffset(PhyModel, "MoveShapeFid"), staticObj.Shape);
+        // PhyModel.MoveShapeFid.MwAddRef();
 
         // @iem.PhyModel = PhyModel;
         @iem.VisModel = VisModel;

@@ -403,7 +403,9 @@ TabGroup@ CreateRootTabGroup() {
     MacroblockOptsTab(root);
     ViewKinematicsTab(root);
 
+#if DEV
     LaunchedCPsTab(root);
+#endif
 
     // - filtered view of blocks/items show just checkpoints
     // - set linked order

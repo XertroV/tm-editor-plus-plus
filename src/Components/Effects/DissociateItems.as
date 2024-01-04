@@ -42,6 +42,14 @@ class DissociateItemsTab : EffectTab {
         if (UI::Button("Dissociate Items from Blocks")) {
             RunDissociation(editor);
         }
+
+        UI::AlignTextToFramePadding();
+        UI::TextWrapped("Set All block-coords on items. This will mean you can delete a block without deleting the items on that block (but which aren't associated with a block).");
+        if (UI::Button("Set all block coords to be far away.")) {
+            RunSetBlockCoords(editor);
+        }
+
+
         UI::Separator();
         UI::AlignTextToFramePadding();
         UI::TextWrapped("Selected Dissociation");
@@ -96,6 +104,21 @@ class DissociateItemsTab : EffectTab {
             Notify("Items dissociated: " + dissociatedCount);
         } catch {
             NotifyWarning("Exception during RunDissociation: " + getExceptionInfo());
+        }
+    }
+
+    void RunSetBlockCoords(CGameCtnEditorFree@ editor) {
+        try {
+            auto map = editor.Challenge;
+            uint dissociatedCount = 0;
+            for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
+                auto item = map.AnchoredObjects[i];
+                item.BlockUnitCoord = nat3(99999, 99999, 99999);
+                dissociatedCount++;
+            }
+            Notify("Items set block unit coord: " + dissociatedCount);
+        } catch {
+            NotifyWarning("Exception during RunSetBlockCoords: " + getExceptionInfo());
         }
     }
 }

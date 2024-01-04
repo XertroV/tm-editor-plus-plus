@@ -7,7 +7,7 @@ class BI_MainTab : Tab {
         ViewAllItemsTab(Children);
         ViewClassicBlocksTab(Children);
         ViewGhostBlocksTab(Children);
-        ViewKinematicsTab(Children);
+        // ViewKinematicsTab(Children);
     }
 
     void DrawInner() override {
