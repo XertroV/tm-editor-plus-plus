@@ -8,7 +8,11 @@ class MapEditPropsTab : Tab {
     uint carSportId = GetMwId("CarSport");
     uint carSnowId = GetMwId("CarSnow");
     uint characterPilotId = GetMwId("CharacterPilot");
+    uint rallyCarId = GetMwId("RallyCar");
+    uint canyonCarId = GetMwId("CanyonCar");
+    uint lagoonCarId = GetMwId("LagoonCar");
     uint nadeoId = GetMwId("Nadeo");
+    uint vehiclesId = GetMwId("Vehicles");
 
     void OnEnterEditor() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -281,9 +285,15 @@ class MapEditPropsTab : Tab {
             auto setVehicleType = m_VehicleTestType == VehicleToPlace::Map_Default ? origPlayerModel
                 : m_VehicleTestType == VehicleToPlace::CharacterPilot ? characterPilotId
                 : m_VehicleTestType == VehicleToPlace::CarSnow ? carSnowId
+                : m_VehicleTestType == VehicleToPlace::RallyCar ? rallyCarId
+                : m_VehicleTestType == VehicleToPlace::CanyonCar ? canyonCarId
+                : m_VehicleTestType == VehicleToPlace::LagoonCar ? lagoonCarId
                 : carSportId;
+            // 15 == Vehicles collection
+            auto collectionId = m_VehicleTestType == VehicleToPlace::Map_Default ? origPlayerModelCollection :
+                                int(m_VehicleTestType) <= 3 ? 10003 : vehiclesId;
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            Editor::SetMapPlayerModel(editor.Challenge, setVehicleType, nadeoId, 10003);
+            Editor::SetMapPlayerModel(editor.Challenge, setVehicleType, nadeoId, collectionId);
         }
         UI::SameLine();
         if (UI::Button("Reset##map-vehicle")) {
@@ -319,6 +329,7 @@ class MapEditPropsTab : Tab {
     void DrawOffzoneSettings() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
+        UI::Text("" + O_MAP_OFFZONE_SIZE_OFFSET);
         nat3 ozPerBlock = Dev::GetOffsetNat3(map, O_MAP_OFFZONE_SIZE_OFFSET);
         nat3 origOzPerBlock = ozPerBlock;
         if (UI::CollapsingHeader("Offzone Trigger:")) {
@@ -332,10 +343,10 @@ class MapEditPropsTab : Tab {
                     ozPerBlock = nat3(3, 1, 3);
                 }
                 if (ozPerBlock != origOzPerBlock) {
-                    Dev::SetOffset(map, O_MAP_MTSIZE_OFFSET, ozPerBlock);
+                    Dev::SetOffset(map, O_MAP_OFFZONE_SIZE_OFFSET, ozPerBlock);
                 }
-                auto mtBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
-                UI::Text("Offzone Trigger Size: " + mtBlockSize.ToString());
+                auto ozBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
+                UI::Text("Offzone Trigger Size: " + ozBlockSize.ToString());
                 // UI::EndChild();
             UI::Unindent();
         }
@@ -456,5 +467,8 @@ enum VehicleToPlace {
     CarSport = 1,
     CarSnow = 2,
     CharacterPilot,
+    RallyCar,
+    CanyonCar,
+    LagoonCar,
     LAST
 }
