@@ -8,9 +8,9 @@ class MapEditPropsTab : Tab {
     uint carSportId = GetMwId("CarSport");
     uint carSnowId = GetMwId("CarSnow");
     uint characterPilotId = GetMwId("CharacterPilot");
-    uint rallyCarId = GetMwId("RallyCar");
-    uint canyonCarId = GetMwId("CanyonCar");
-    uint lagoonCarId = GetMwId("LagoonCar");
+    // uint rallyCarId = GetMwId("RallyCar");
+    // uint canyonCarId = GetMwId("CanyonCar");
+    // uint lagoonCarId = GetMwId("LagoonCar");
     uint nadeoId = GetMwId("Nadeo");
     uint vehiclesId = GetMwId("Vehicles");
 
@@ -282,18 +282,21 @@ class MapEditPropsTab : Tab {
         UI::Text("Set Vehicle:");
         m_VehicleTestType = DrawComboVehicleToPlace("Map Vehicle", m_VehicleTestType);
         if (UI::Button("Update##map-vehicle")) {
-            auto setVehicleType = m_VehicleTestType == VehicleToPlace::Map_Default ? origPlayerModel
+            bool useDefault = m_VehicleTestType == VehicleToPlace::Map_Default;
+            auto setVehicleType = useDefault ? origPlayerModel
                 : m_VehicleTestType == VehicleToPlace::CharacterPilot ? characterPilotId
                 : m_VehicleTestType == VehicleToPlace::CarSnow ? carSnowId
-                : m_VehicleTestType == VehicleToPlace::RallyCar ? rallyCarId
-                : m_VehicleTestType == VehicleToPlace::CanyonCar ? canyonCarId
-                : m_VehicleTestType == VehicleToPlace::LagoonCar ? lagoonCarId
-                : carSportId;
+                : m_VehicleTestType == VehicleToPlace::CarSport ? carSportId
+                : origPlayerModel;
+                // : m_VehicleTestType == VehicleToPlace::RallyCar ? rallyCarId
+                // : m_VehicleTestType == VehicleToPlace::CanyonCar ? canyonCarId
+                // : m_VehicleTestType == VehicleToPlace::LagoonCar ? lagoonCarId
             // 15 == Vehicles collection
-            auto collectionId = m_VehicleTestType == VehicleToPlace::Map_Default ? origPlayerModelCollection :
+            auto collectionId = useDefault ? origPlayerModelCollection :
                                 int(m_VehicleTestType) <= 3 ? 10003 : vehiclesId;
+            auto authorId = useDefault ? origPlayerModelAuthor : nadeoId;
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            Editor::SetMapPlayerModel(editor.Challenge, setVehicleType, nadeoId, collectionId);
+            Editor::SetMapPlayerModel(editor.Challenge, setVehicleType, authorId, collectionId);
         }
         UI::SameLine();
         if (UI::Button("Reset##map-vehicle")) {
@@ -466,8 +469,8 @@ enum VehicleToPlace {
     CarSport = 1,
     CarSnow = 2,
     CharacterPilot,
+    LAST,
     RallyCar,
     CanyonCar,
     LagoonCar,
-    LAST
 }

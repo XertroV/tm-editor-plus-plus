@@ -20,7 +20,7 @@ void Main() {
     ExtraUndoFix::OnLoad();
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
-    startnew(Editor::OffzonePatch::Apply);
+    // startnew(Editor::OffzonePatch::Apply);
     startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
 
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
