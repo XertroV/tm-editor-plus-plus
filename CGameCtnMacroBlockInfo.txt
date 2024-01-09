@@ -1,0 +1,67 @@
+0x130 - buf
+
+0x138 - buf to skins?
+
+0x150 - buf for blocks, pointers to structs
+    struct len: 0x70
+    0x0 mwid name, collection, author, 0x0
+    0xC nat3 coord (FFx4, 00x4, FFx4 if free)
+    0x18 uint dir? (unsure, needs to match after block info ptr)
+    0x1c vec3 pos (free, or 000 otherwise)
+    0x28 vec3 PYR?
+    0x34 u8 color, u8 lmquality, junk16,
+    0x38 u32 bool pillar?
+    0x3C u32 mobil variant?
+    0x40 u32 variant
+    0x44 1 byte, 04 = free, 02 = ghost? 00 = normal? 01=ground, 03 = ghost ground,
+
+    0x48 ptr -> null / CGameWaypointSpecialProperty
+    0x50 ptr -> CGameBlockInfoClassic
+    0x58 direction, junk?
+    0x60 junk
+    0x68 junk? BF 53 58 DA 00 90 02 90
+        last 4 bytes increments like
+            00 90 02 90
+            00 91 02 90
+            00 92 02 90
+        - some kind of heap allocation? always set by ntdll Rtl functions
+
+0x160 - buf for skins on blocks, pointers to structs
+    struct len: 0x18
+    0x0 ptr -> CGameCtnBlockSkin
+    0x14 uint32 -> index of block in prior buf
+
+0x170 - buf for items, pointers to structs
+    struct 0xC0 long
+    0x0 mwid item name / path
+    0x4 0x1a uint? collection
+    0x8 mwid author
+    0xc nat3 block coord
+    0x18 nan FFFF..., x, y, z (within block)
+    0x28 p, y, r (rads)
+    0x34 float scale
+    0x38 u8, u8, u8, (color, lm quality, phase), junk8, ffffffff
+    0x40 0, 0, 0, 0
+    0x50 ffffffff, 1.0, 0, 0
+    0x60 0, 1.0, 0, 0
+    0x70 0, 1.0,
+    0x78 vec3 PivotPos
+    0x84 u1 isFlying
+    0x84 u32? (>>1 then it's variant index)
+    0x86 u16 junk
+    0x88 ptr -> CGameWaypointSpecialProperty
+    0x90 0xFFFFFFFF (4 times) / 3, ffff.., 0, ffff..
+    0x90 associated block index
+    0x94 0xFFFFFFFF
+    0x98 0 or 0xFFFFFFFF (it is read, unknown purpose)
+    0xA0 ptr -> CSystemPackDesc (Skins\Stadium\LightColors\Pink.dds)
+    0xA8 ptr -> CSystemPackDesc (top skin)
+    0xB0 ptr -> CGameItemModel
+    0xB8 junk? D4 1A 17 E3 00 CB 02 88
+
+    0xC0 mwid name, collection, author, 0
+
+    0x160 ptr -> CSystemPackDesc (Skins\Stadium\LightColors\Pink.dds)
+
+
+0x1f8 - buf to pointers to autoterrain
