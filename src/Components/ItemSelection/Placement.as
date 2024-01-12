@@ -1,10 +1,24 @@
+[Setting hidden]
+bool S_ShowMagnetsInItemCursor = false;
+
 class ItemPlacementTab : Tab {
     ItemPlacementTab(TabGroup@ parent) {
         super(parent, "Placement", "");
+        _Setup();
     }
 
     ItemPlacementTab(TabGroup@ parent, const string &in name, const string &in icon) {
         super(parent, name, icon);
+        _Setup();
+    }
+
+    void _Setup() {
+        RegisterOnEditorLoadCallback(CoroutineFunc(OnEditorLoad), "Item Placement | " + tabName);
+    }
+
+    void OnEditorLoad() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        editor.ExperimentalFeatures.ShowMagnetsInItemCursor = S_ShowMagnetsInItemCursor;
     }
 
     CGameItemModel@ GetItemModel() {
@@ -275,8 +289,11 @@ class ItemPlacementTab : Tab {
             auto ef = editor.ExperimentalFeatures;
             ef.MagnetSnapDistance = UI::SliderFloat("Item Snap Dist.", ef.MagnetSnapDistance, 0., 64.);
             AddSimpleTooltip("Default: 1.25");
-            ef.ShowMagnetsInItemCursor = UI::Checkbox("Show Item Magnet Points", ef.ShowMagnetsInItemCursor);
+            S_ShowMagnetsInItemCursor = UI::Checkbox("Show Item Magnet Points", S_ShowMagnetsInItemCursor);
             AddSimpleTooltip("Similar to block connection indicators for items that snap together.");
+            if (ef.ShowMagnetsInItemCursor != S_ShowMagnetsInItemCursor) {
+                ef.ShowMagnetsInItemCursor = S_ShowMagnetsInItemCursor;
+            }
         }
     }
 }
