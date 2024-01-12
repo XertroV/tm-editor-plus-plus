@@ -1,3 +1,7 @@
+const float hueRed = 0.0;
+const float hueGreen = 0.3;
+const float hueBlue = 0.6;
+
 mixin class NudgeItemBlock {
     float m_PosStepSize = 0.1;
     float m_RotStepSize = .01745;
@@ -16,54 +20,54 @@ mixin class NudgeItemBlock {
         UI::AlignTextToFramePadding();
         UI::Text("Pos:");
         UI::SameLine();
-        if (UI::Button("X+")) {
+        if (UI::ButtonColored("X+", hueRed)) {
             itemPosMod = vec3(m_PosStepSize, 0, 0);
         }
         UI::SameLine();
-        if (UI::Button("X-")) {
+        if (UI::ButtonColored("X-", hueRed)) {
             itemPosMod = vec3(-m_PosStepSize, 0, 0);
         }
         UI::SameLine();
-        if (UI::Button("Y+")) {
+        if (UI::ButtonColored("Y+", hueGreen)) {
             itemPosMod = vec3(0, m_PosStepSize, 0);
         }
         UI::SameLine();
-        if (UI::Button("Y-")) {
+        if (UI::ButtonColored("Y-", hueGreen)) {
             itemPosMod = vec3(0, -m_PosStepSize, 0);
         }
         UI::SameLine();
-        if (UI::Button("Z+")) {
+        if (UI::ButtonColored("Z+", hueBlue)) {
             itemPosMod = vec3(0, 0, m_PosStepSize);
         }
         UI::SameLine();
-        if (UI::Button("Z-")) {
+        if (UI::ButtonColored("Z-", hueBlue)) {
             itemPosMod = vec3(0, 0, -m_PosStepSize);
         }
 
         UI::AlignTextToFramePadding();
         UI::Text("Rot:");
         UI::SameLine();
-        if (UI::Button("P+")) {
+        if (UI::ButtonColored("P+", hueRed)) {
             itemRotMod = vec3(m_RotStepSize, 0, 0);
         }
         UI::SameLine();
-        if (UI::Button("P-")) {
+        if (UI::ButtonColored("P-", hueRed)) {
             itemRotMod = vec3(-m_RotStepSize, 0, 0);
         }
         UI::SameLine();
-        if (UI::Button("Y+##yaw")) {
+        if (UI::ButtonColored("Y+##yaw", hueGreen)) {
             itemRotMod = vec3(0, m_RotStepSize, 0);
         }
         UI::SameLine();
-        if (UI::Button("Y-##yaw")) {
+        if (UI::ButtonColored("Y-##yaw", hueGreen)) {
             itemRotMod = vec3(0, -m_RotStepSize, 0);
         }
         UI::SameLine();
-        if (UI::Button("R+")) {
+        if (UI::ButtonColored("R+", hueBlue)) {
             itemRotMod = vec3(0, 0, m_RotStepSize);
         }
         UI::SameLine();
-        if (UI::Button("R-")) {
+        if (UI::ButtonColored("R-", hueBlue)) {
             itemRotMod = vec3(0, 0, -m_RotStepSize);
         }
 
