@@ -280,9 +280,12 @@ const uint16 O_MAP_COLLECTION_ID_OFFSET1 = O_MAP_TITLEID - (0x74 - 0x54);
 const uint16 O_MAP_COLLECTION_ID_OFFSET2 = O_MAP_TITLEID - (0x74 - 0x6C);
 const uint16 O_MAP_AUTHORLOGIN_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x58);
 const uint16 O_MAP_PLAYERMODEL_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x5C);
-// e.g., 10003 for TM2020 player/vehicles (mp4 vehicles are )
+// e.g., 10003 for TM2020 player/vehicles (mp4 vehicles are possible, have a different collection)
 const uint16 O_MAP_PLAYERMODEL_COLLECTION_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x60); // 0x60 - 0x74
 const uint16 O_MAP_PLAYERMODEL_AUTHOR_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x64); // 0x64 - 0x74;
+//
+const uint16 O_MAP_BUILDINFO_STR = O_MAP_TITLEID + 0x4;
+
 const uint16 O_MAP_CLIPAMBIANCE = GetOffset("CGameCtnChallenge", "ClipAmbiance");
 const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8;
 const uint16 O_MAP_LAUNCHEDCPS = O_MAP_CLIPAMBIANCE + 0x28; // 0x200 - 0x1D8;
@@ -299,7 +302,8 @@ const uint16 O_LIGHTMAPSTRUCT_IMAGES = 0x30;
 
 const uint16 O_MAP_MACROBLOCK_INFOS = GetOffset("CGameCtnChallenge", "AnchoredObjects") + 0x20;
 
-// 0x668
+// 2023-11-20: 0x668
+// 2024-01-09: 0x658
 const uint16 O_MAP_SCRIPTMETADATA = GetOffset("CGameCtnChallenge", "ScriptMetadata");
 const uint16 O_MAP_OFFZONE_SIZE_OFFSET = O_MAP_SCRIPTMETADATA + (0x6A0 - 0x668);
 const uint16 O_MAP_OFFZONE_BUF_OFFSET = O_MAP_SCRIPTMETADATA + (0x6B0 - 0x668);
@@ -361,8 +365,9 @@ const uint16 O_GAMESKIN_FILENAME_BUF = 0x68;
 const uint16 O_GAMESKIN_FID_CLASSID_BUF = 0x78;
 const uint16 O_GAMESKIN_PATH3 = 0x120;
 
-
-const uint16 O_ANCHOREDOBJ_SKIN_PACKDESC = 0x98;
+const uint16 O_ANCHOREDOBJ_SKIN_SCALE = GetOffset("CGameCtnAnchoredObject", "Scale");
+const uint16 O_ANCHOREDOBJ_BGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x18;
+const uint16 O_ANCHOREDOBJ_FGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x20;
 
 
 const uint16 O_MATERIAL_PHYSICS_ID = 0x28;
@@ -409,6 +414,11 @@ const uint16 O_ITEMCURSOR_CurrentModelsBuf = GetOffset("CGameCursorItem", "Helpe
 // const uint16 O_ITEMCURSOR_MaxVariantMaybe = 0xC4;
 
 
+const uint16 O_MACROBLOCK_BLOCKSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x8; // 0x148 + 8 = 0x150
+const uint16 O_MACROBLOCK_ITEMSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x28; // 0x148 + 0x28 = 0x170
+
+
+
 // MEDIA TRACKER STUFF
 
 
@@ -429,18 +439,20 @@ uint16 SZ_CLIPGROUP_TRIGGER_STRUCT = 0x40;
 class RawBuffer {
     protected uint64 ptr;
     protected uint size;
+    protected bool structBehindPtr = false;
 
-    RawBuffer(CMwNod@ nod, uint16 offset, uint structSize = 0x8) {
-        _Setup(Dev_GetPointerForNod(nod) + offset, structSize);
+    RawBuffer(CMwNod@ nod, uint16 offset, uint structSize = 0x8, bool structBehindPointer = false) {
+        _Setup(Dev_GetPointerForNod(nod) + offset, structSize, structBehindPointer);
     }
-    RawBuffer(uint64 bufPtr, uint structSize = 0x8) {
-        _Setup(bufPtr, structSize);
+    RawBuffer(uint64 bufPtr, uint structSize = 0x8, bool structBehindPointer = false) {
+        _Setup(bufPtr, structSize, structBehindPointer);
     }
 
-    private void _Setup(uint64 bufPtr, uint structSize) {
+    private void _Setup(uint64 bufPtr, uint structSize, bool structBehindPtr) {
         if (Dev_PointerLooksBad(bufPtr)) throw("Bad buffer pointer: " + Text::FormatPointer(bufPtr));
         this.ptr = bufPtr;
         size = structSize;
+        this.structBehindPtr = structBehindPtr;
     }
 
     uint64 get_Ptr() { return ptr; }
@@ -456,7 +468,13 @@ class RawBuffer {
     RawBufferElem@ opIndex(uint i) {
         if (i >= Length) throw("RawBufferElem out of range!");
         uint64 ptr2 = Dev::ReadUInt64(ptr);
-        return RawBufferElem(ptr2 + i * size, size);
+        uint elStartOffset = i * size;
+        if (structBehindPtr) {
+            ptr2 = ptr2 + i * 0x8;
+            ptr2 = Dev::ReadUInt64(ptr2);
+            elStartOffset = 0;
+        }
+        return RawBufferElem(ptr2 + elStartOffset, size);
     }
 }
 
@@ -472,22 +490,41 @@ class RawBufferElem {
     uint64 get_ElSize() { return size; }
 
     void CheckOffset(uint o, uint len) {
-        if (o+len > size) throw("index out of range");
+        if (o+len > size) throw("index out of range: " + o + " + " + len);
     }
     uint64 opIndex(uint i) {
         uint o = i * 0x8;
         CheckOffset(o, 8);
         return ptr + o;
     }
+
+    CMwNod@ GetNod(uint o) {
+        return Dev_GetNodFromPointer(GetUint64(o));
+    }
+
     uint64 GetUint64(uint o) {
         CheckOffset(o, 8);
         return Dev::ReadUInt64(ptr + o);
     }
 
+    string GetMwIdValue(uint o) {
+        CheckOffset(o, 4);
+        return GetMwIdName(Dev::ReadUInt32(ptr + o));
+    }
     uint32 GetUint32(uint o) {
         CheckOffset(o, 4);
         return Dev::ReadUInt32(ptr + o);
     }
+    uint16 GetUint16(uint o) {
+        CheckOffset(o, 2);
+        return Dev::ReadUInt16(ptr + o);
+    }
+    uint8 GetUint8(uint o) {
+        CheckOffset(o, 1);
+        return Dev::ReadUInt8(ptr + o);
+    }
+
+
     float GetFloat(uint o) {
         CheckOffset(o, 4);
         return Dev::ReadFloat(ptr + o);
@@ -497,9 +534,31 @@ class RawBufferElem {
         return Dev::ReadInt32(ptr + o);
     }
 
+    nat3 GetNat3(uint o) {
+        CheckOffset(o, 12);
+        return Dev::ReadNat3(ptr + o);
+    }
+    int3 GetInt3(uint o) {
+        CheckOffset(o, 12);
+        return Dev::ReadInt3(ptr + o);
+    }
+
+    vec2 GetVec2(uint o) {
+        CheckOffset(o, 8);
+        return Dev::ReadVec2(ptr + o);
+    }
+    vec3 GetVec3(uint o) {
+        CheckOffset(o, 12);
+        return Dev::ReadVec3(ptr + o);
+    }
+    vec4 GetVec4(uint o) {
+        CheckOffset(o, 16);
+        return Dev::ReadVec4(ptr + o);
+    }
+
     void DrawResearchView() {
         UI::PushFont(g_MonoFont);
-        g_RV_RenderAs = DrawComboRV_ValueRenderTypes("Render Values", g_RV_RenderAs);
+        g_RV_RenderAs = DrawComboRV_ValueRenderTypes("Render Values##"+ptr, g_RV_RenderAs);
 
         auto nbSegments = size / RV_SEGMENT_SIZE;
         for (uint i = 0; i < nbSegments; i++) {
