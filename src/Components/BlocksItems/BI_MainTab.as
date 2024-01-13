@@ -57,6 +57,11 @@ class ViewSkinnedBlocksTab : ViewAllBlocksTab {
         nbCols = 9;
     }
 
+
+    void DrawInnerEarly() override {
+        UI::Text("To update list: Caches > Refresh Map Block/Item Cache");
+    }
+
     uint GetNbObjects(CGameCtnChallenge@ map) override {
         return Editor::GetMapCache().SkinnedBlocks.Length;
     }
@@ -266,6 +271,10 @@ class ViewAllItemsTab : BlockItemListTab {
 class ViewSkinnedItemsTab : ViewAllItemsTab {
     ViewSkinnedItemsTab(TabGroup@ p) {
         super(p, "Skinned Items", Icons::Tree, BIListTabType::Items);
+    }
+
+    void DrawInnerEarly() override {
+        UI::Text("To update list: Caches > Refresh Map Block/Item Cache");
     }
 
     uint GetNbObjects(CGameCtnChallenge@ map) override {

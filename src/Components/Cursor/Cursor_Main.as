@@ -11,6 +11,18 @@ class CursorTab : Tab {
     }
 
     void DrawInner() override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        auto cursor = editor.Cursor;
+        if (cursor is null) return;
+#if SIG_DEVELOPER
+        // UI::AlignTextToFramePadding();
+        if (UX::SmallButton(Icons::Cube + " Explore Cursor##c")) {
+            ExploreNod("Editor Cursor", cursor);
+        }
+        UI::SameLine();
+        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(cursor)));
+#endif
         Children.DrawTabsAsList();
     }
 }
