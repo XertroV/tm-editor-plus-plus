@@ -424,49 +424,59 @@ class LMAnalysisWindow : Tab {
                 UI::Text("\\$f80No texture...");
             } else {
                 auto imgTL = UI::GetWindowPos() + UI::GetCursorPos();
-                UI::Dummy(tex.GetSize());
-                DrawMappingOverlay(tex, imgTL, mapping, m_DrawOverlay && !currTab.StartsWith("ProbeGrid"));
+                if (UI::BeginChild("lm-tex")) {
+                    DrawMappingOverlay(tex, imgTL, mapping, m_DrawOverlay && !currTab.StartsWith("ProbeGrid"));
+                }
+                UI::EndChild();
             }
             UI::EndTabItem();
         }
     }
 }
 
+float g_LightMapScrollScale = 1.0;
 
 void DrawMappingOverlay(UI::Texture@ tex, vec2 imgTL, LmMappingCache@ mapping, bool drawMapping = true) {
-    auto size = vec2(tex.GetSize());
-    auto dl = UI::GetWindowDrawList();
-    auto fg = UI::GetForegroundDrawList();
-    dl.AddImage(tex, imgTL, size);
+    bool windowActive = UI::IsWindowFocused();
+        if (windowActive) {
+            // if ()
+        }
+        auto size = vec2(tex.GetSize());
+        auto dl = UI::GetWindowDrawList();
+        auto fg = UI::GetForegroundDrawList();
+        auto scale = vec2(1024.0) / size;
+        auto scale4 = vec4(scale, scale);
+        dl.AddImage(tex, imgTL, size * scale);
 
-    if (!drawMapping || mapping is null) return;
+        if (mapping is null) return;
+        if (!drawMapping) return;
 
-    auto nbHovered = 0;
-    auto mousePos = UI::GetMousePos();
-    for (uint i = 0; i < mapping.objs.Length; i++) {
-        auto item = mapping.objs[i];
-        // auto pos = item.size;
-        auto itemAdjRect = vec4(imgTL - vec2(1.25), vec2(1.25)) + item.imgRect;
-        bool hovered = MathX::Within(mousePos, itemAdjRect);
-        auto c = hovered ? 1.0 : 0.;
-        auto col = vec4(c, c, c, 1);
-        if (!hovered) col = vec4(1, 1, 0, 1);
-        // thickness 2 for first 2 images and thickness 1 for final image.
-        if (hovered)
-            dl.AddRectFilled(itemAdjRect, vec4(.1, .1, .1, .9));
-        dl.AddRect(itemAdjRect, col, 0, 1);
-        if (hovered) {
-            auto yOffset = 34.0 * nbHovered;
-            auto textTL = imgTL + vec2(1024 + 20, yOffset);
-            auto rectTL = textTL - vec2(4);
-            auto textSize = Draw::MeasureString(item.fidFileName, g_BigFont, 26);
-            auto rectSize = textSize + vec2(8);
-            fg.AddRectFilled(vec4(rectTL, rectSize), vec4(.1, .1, .1, .9));
-            DrawList_AddTextWithStroke(fg, imgTL + vec2(1024 + 20, yOffset), vec4(1, 1, 0, 1), vec4(0), item.fidFileName, g_BigFont, 26);
-            nbHovered++;
-            if (UI::IsMouseClicked(UI::MouseButton::Left)) {
-                Editor::SetCamAnimationGoTo(vec2(TAU / 8., TAU / 8.), item.objPos, 120.);
+        auto nbHovered = 0;
+        auto mousePos = UI::GetMousePos();
+        for (uint i = 0; i < mapping.objs.Length; i++) {
+            auto item = mapping.objs[i];
+            // auto pos = item.size;
+            auto itemAdjRect = vec4(imgTL - vec2(1.25), vec2(1.25)) + item.imgRect * scale4;
+            bool hovered = MathX::Within(mousePos, itemAdjRect);
+            auto c = hovered ? 1.0 : 0.;
+            auto col = vec4(c, c, c, 1);
+            if (!hovered) col = vec4(1, 1, 0, 1);
+            // thickness 2 for first 2 images and thickness 1 for final image.
+            if (hovered)
+                dl.AddRectFilled(itemAdjRect, vec4(.1, .1, .1, .9));
+            if (drawMapping) dl.AddRect(itemAdjRect, col, 0, 1);
+            if (hovered) {
+                auto yOffset = 34.0 * nbHovered;
+                auto textTL = imgTL + vec2(1024 + 20, yOffset);
+                auto rectTL = textTL - vec2(4);
+                auto textSize = Draw::MeasureString(item.fidFileName, g_BigFont, 26);
+                auto rectSize = textSize + vec2(8);
+                fg.AddRectFilled(vec4(rectTL, rectSize), vec4(.1, .1, .1, .9));
+                DrawList_AddTextWithStroke(fg, imgTL + vec2(1024 + 20, yOffset), vec4(1, 1, 0, 1), vec4(0), item.fidFileName, g_BigFont, 26);
+                nbHovered++;
+                if (UI::IsMouseClicked(UI::MouseButton::Left)) {
+                    Editor::SetCamAnimationGoTo(vec2(TAU / 8., TAU / 8.), item.objPos, 120.);
+                }
             }
         }
-    }
 }
