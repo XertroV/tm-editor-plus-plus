@@ -23,7 +23,20 @@ class GlobalPlacementOptionsTab : EffectTab {
         pmt.ForceMacroblockColor = UI::Checkbox("ForceMacroblockColor", pmt.ForceMacroblockColor);
         pmt.ForceMacroblockLightmapQuality = UI::Checkbox("ForceMacroblockLightmapQuality", pmt.ForceMacroblockLightmapQuality);
         editor.PasteAsFreeMacroBlock = UI::Checkbox("PasteAsFreeMacroBlock", editor.PasteAsFreeMacroBlock);
-        g_PlaceMacroblockAirModeActive = UI::Checkbox("Place Macroblocks in Air Mode", g_PlaceMacroblockAirModeActive);
+        AddSimpleTooltip("Appears to not work.");
+
+        UI::Separator();
+
+        editor.UseNewPillars = UI::Checkbox("UseNewPillars (False = No Pillars for MacroBlocks, including paste, but can't enter block air mode)", editor.UseNewPillars);
+
+        editor.ExperimentalFeatures.IsAutoAirMappingEnabled = UI::Checkbox("IsAutoAirMappingEnabled", editor.ExperimentalFeatures.IsAutoAirMappingEnabled);
+        AddSimpleTooltip("Can be used to do macroblocks in air mode");
+        editor.ExperimentalFeatures.AutoAirMapping_MaxPillarCount = Math::Clamp(UI::InputInt("AutoAirMapping_MaxPillarCount", editor.ExperimentalFeatures.AutoAirMapping_MaxPillarCount), 0, 255);
+
+        g_PlaceMacroblockAirModeActive = UI::Checkbox("Place Macroblocks in Air Mode (Deprecated atl to UseNewPillars)", g_PlaceMacroblockAirModeActive);
+
+        UI::Separator();
+
         S_HelpPlaceItemsOnFreeBlocks = UI::Checkbox("Help place autorotated items on free blocks", S_HelpPlaceItemsOnFreeBlocks);
         AddSimpleTooltip("Normally, the game doesn't let you place freelay anchorable and autorotated items on free blocks. Checking this box will enable the helper so that you can place these items.\n\nItem Placement Requirements: 0 for GridSnap_HStep and GridSnap_VStep, AutoRotation=true, GhostMode=false, IsFreelyAnchorable=true.");
         S_EnableInfinitePrecisionFreeBlocks = UI::Checkbox("Enable infinite precision for free blocks / items / macroblocks" + NewIndicator, S_EnableInfinitePrecisionFreeBlocks);
