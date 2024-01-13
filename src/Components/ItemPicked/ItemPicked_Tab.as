@@ -76,33 +76,6 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         CopiableLabeledValue("Pos", item.AbsolutePositionInMap.ToString());
         CopiableLabeledValue("P,Y,R (Deg)", MathX::ToDeg(initRot).ToString());
         CopiableLabeledValue("Coord", item.BlockUnitCoord.ToString());
-        auto assocBlock = Editor::GetItemsBlockAssociation(item);
-        if (assocBlock is null) {
-            UI::SameLine();
-            if (UX::SmallButton("Set BlockUnitCoord from Pos")) {
-                item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
-            }
-        }
-        if (assocBlock is null) {
-            UI::TextDisabled("No associated block.");
-        } else {
-            if (UI::CollapsingHeader("Associated Block")) {
-                UI::Indent();
-                CopiableLabeledValue("Name", assocBlock.DescId.GetName());
-                CopiableLabeledValue("Coord", assocBlock.Coord.ToString());
-                if (UI::Button("Remove Association")) {
-                    Editor::DissociateItem(item);
-                }
-                UI::Unindent();
-            }
-        }
-
-        auto skin = cast<CSystemPackDesc>(Dev::GetOffsetNod(item, O_ANCHOREDOBJ_SKIN_PACKDESC));
-        if (skin !is null) {
-            ItemModelTreeElement(null, -1, skin, "Skin", true, O_ANCHOREDOBJ_SKIN_PACKDESC).Draw();
-        } else {
-            UI::TextDisabled("No skin");
-        }
 
         UI::NextColumn();
 
@@ -131,6 +104,42 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         LabeledValue("Size (KB)", modelFid !is null ? tostring(modelFid.ByteSizeEd) : "?");
 
         UI::Columns(1);
+
+        // full width
+        auto assocBlock = Editor::GetItemsBlockAssociation(item);
+        if (assocBlock is null) {
+            UI::SameLine();
+            if (UX::SmallButton("Set BlockUnitCoord from Pos")) {
+                item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
+            }
+        }
+        if (assocBlock is null) {
+            UI::TextDisabled("No associated block.");
+        } else {
+            if (UI::CollapsingHeader("Associated Block")) {
+                UI::Indent();
+                CopiableLabeledValue("Name", assocBlock.DescId.GetName());
+                CopiableLabeledValue("Coord", assocBlock.Coord.ToString());
+                if (UI::Button("Remove Association")) {
+                    Editor::DissociateItem(item);
+                }
+                UI::Unindent();
+            }
+        }
+
+        auto bgskin = Editor::GetItemBGSkin(item);
+        if (bgskin !is null) {
+            ItemModelTreeElement(null, -1, bgskin, "BG Skin", true, O_ANCHOREDOBJ_BGSKIN_PACKDESC).Draw();
+        } else {
+            UI::TextDisabled("No BG skin");
+        }
+        auto fgskin = Editor::GetItemFGSkin(item);
+        if (fgskin !is null) {
+            ItemModelTreeElement(null, -1, fgskin, "FG Skin", true, O_ANCHOREDOBJ_FGSKIN_PACKDESC).Draw();
+        } else {
+            UI::TextDisabled("No FG skin");
+        }
+
         UI::Separator();
 
         if (ShowHelpers) {
