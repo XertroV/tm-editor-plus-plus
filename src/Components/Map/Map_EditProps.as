@@ -434,36 +434,42 @@ class MapEditPropsTab : Tab {
 
 MapDecoChoice DecoIdToEnum(const string &in id) {
     bool isNS = id.StartsWith("NoStadium");
-    auto parts = id.Split("48x48");
+    bool isNew = id.StartsWith("48x48Screen155");
+    bool isOld = (!isNS && !isNew);
+    uint enumOff = isNew ? 8 : isNS ? 4 : 0;
+    auto moodStr = id.SubStr(isNS ? 14 : isNew ? 14 : 5);
     uint8 time = 0;
-    if (parts.Length > 1) {
-        if (parts[1] == "Night") time = 1;
-        if (parts[1] == "Sunrise") time = 2;
-        if (parts[1] == "Sunset") time = 3;
-    }
-    return MapDecoChoice(time + (isNS ? 4 : 0));
+    if (moodStr == "Night") time = 1;
+    else if (moodStr == "Sunrise") time = 2;
+    else if (moodStr == "Sunset") time = 3;
+    return MapDecoChoice(time + enumOff);
 }
 
 enum MapDecoChoice {
-    Base_Day,
-    Base_Night,
-    Base_Sunrise,
-    Base_Sunset,
-    NoStadium_Day,
-    NoStadium_Night,
-    NoStadium_Sunrise,
-    NoStadium_Sunset,
+    Base_Day = 0,
+    Base_Night = 1,
+    Base_Sunrise = 2,
+    Base_Sunset = 3,
+    NoStadium_Day = 4,
+    NoStadium_Night = 5,
+    NoStadium_Sunrise = 6,
+    NoStadium_Sunset = 7,
+    Screen155_Day = 8,
+    Screen155_Night = 9,
+    Screen155_Sunrise = 10,
+    Screen155_Sunset = 11,
     XXX_Last
 }
 
 string DecoEnumToName(MapDecoChoice d) {
     string n = "48x48";
-    n = (d <= 3 ? "" : "NoStadium") + n;
-    n += d % 4 == 0 ? "Day"
+    auto prefix = (d >= 4 && d <= 7 ? "NoStadium" : "");
+    auto suffix = (d >= 8 && d <= 11 ? "Screen155" : "");
+    auto mood = d % 4 == 0 ? "Day"
         : d % 4 == 1 ? "Night"
         : d % 4 == 2 ? "Sunrise"
         : "Sunset";
-    return n; // + ".Decoration.Gbx";
+    return prefix + n + suffix + mood; // + ".Decoration.Gbx";
 }
 
 CGameCtnDecoration@ GetDecoration(MapDecoChoice d) {
@@ -496,6 +502,7 @@ CGameCtnDecoration@ GetDecoration(MapDecoChoice d) {
             }
             if (deco is null) NotifyError("Returning deco that is null: " + item.IdName);
             if (deco is null) continue;
+            deco.MwAddRef();
             return deco;
         }
     }
@@ -508,6 +515,8 @@ enum VehicleToPlace {
     CarSnow = 2,
     CharacterPilot,
     LAST,
+    CarRally,
+    CarDesert,
     RallyCar,
     CanyonCar,
     LagoonCar,
