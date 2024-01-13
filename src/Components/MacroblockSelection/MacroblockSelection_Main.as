@@ -43,6 +43,10 @@ class MacroblockSelectionTab : Tab {
         if (UX::SmallButton("[DEV] Make " + (mbi.IsGround ? "Air" : "Ground"))) {
             Dev::SetOffset(mbi, GetOffset(mbi, "IsGround"), uint(mbi.IsGround ? 0 : 1));
         }
+
+        if (UX::SmallButton("[DEV] place and delete test")) {
+            // Editor::GetInventoryItemFolder
+        }
 #endif
 
         UI::NextColumn();
@@ -77,8 +81,8 @@ class MacroblockSelectionTab : Tab {
 
 
 void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
-    auto blocksBuf = RawBuffer(mbi, O_MACROBLOCK_BLOCKSBUF, 0x70, true);
-    auto itemsBuf = RawBuffer(mbi, O_MACROBLOCK_ITEMSBUF, 0xC0, true);
+    auto blocksBuf = RawBuffer(mbi, O_MACROBLOCK_BLOCKSBUF, SZ_MACROBLOCK_BLOCKSBUFEL, true);
+    auto itemsBuf = RawBuffer(mbi, O_MACROBLOCK_ITEMSBUF, SZ_MACROBLOCK_ITEMSBUFEL, true);
     auto len = blocksBuf.Length;
     if (UI::TreeNode("Blocks: " + len + "###mbBlocksBuf")) {
         UI::ListClipper clip(len);
@@ -86,25 +90,6 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                 auto item = DGameCtnMacroBlockInfo_ElBlock(blocksBuf[i]);
                 UI::PushID(i);
-                // auto name = item.GetMwIdValue(0);
-                // auto collection = item.GetUint32(4);
-                // auto author = item.GetMwIdValue(8);
-                // auto coord = item.GetNat3(0xC);
-                // auto dir2 = item.GetUint32(0x18);
-                // auto dir = item.GetUint32(0x58);
-                // auto pos = item.GetVec3(0x1C);
-                // auto pyr = item.GetVec3(0x28);
-                // auto color = item.GetUint8(0x34);
-                // auto lmQual = item.GetUint8(0x35);
-                // auto mobilIndex = item.GetUint32(0x38);
-                // auto mobilVariant = item.GetUint32(0x3C);
-                // auto variant = item.GetUint32(0x40);
-                // auto flags = item.GetUint8(0x44);
-                // bool isGround = flags & 1 == 1;
-                // bool isNorm = flags < 2;
-                // bool isGhost = flags & 2 == 2;
-                // bool isFree = flags & 4 == 4;
-
 #if DEV
                 CopiableLabeledPtr(item.Ptr);
 #endif
@@ -131,6 +116,7 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
                 auto blockInfo = item.BlockInfo;
                 CopiableLabeledValue("Has Waypoint", '' + (waypoint !is null));
                 CopiableLabeledValue("BlockInfo", blockInfo.IdName);
+                UI::Separator();
 
 
 // #if DEV
@@ -144,131 +130,42 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
 
     len = itemsBuf.Length;
     if (UI::TreeNode("Items: " + len + "###mbItemsBuf")) {
-
         UI::ListClipper clip(len);
         while (clip.Step()) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
-                auto item = itemsBuf[i];
                 UI::PushID(i);
+                // auto item = itemsBuf[i];
+                auto item = DGameCtnMacroBlockInfo_ElItem(itemsBuf[i]);
+
+#if DEV
+                CopiableLabeledPtr(item.Ptr);
+#endif
+                CopiableLabeledValue("Name", item.name);
+                CopiableLabeledValue("Collection", '' + item.collection);
+                CopiableLabeledValue("Author", item.author);
+                CopiableLabeledValue("Coord", item.coord.ToString());
+                CopiableLabeledValue("Dir", tostring(CGameCtnBlock::ECardinalDirections(item.dir)));
+                CopiableLabeledValue("Pos", item.pos.ToString());
+                CopiableLabeledValue("PYR", item.pyr.ToString());
+                CopiableLabeledValue("Color", tostring(item.color));
+                CopiableLabeledValue("lmQual", tostring(item.lmQual));
+                CopiableLabeledValue("phase", tostring(item.phase));
+                CopiableLabeledValue("variantIx", tostring(item.variantIx));
+                CopiableLabeledValue("pivotPos", item.pivotPos.ToString());
+                UI::Text("F: " + BoolIcon(item.isFlying));
+                AddSimpleTooltip("F = Flying");
+                CopiableLabeledValue("Has Waypoint", '' + (item.Waypoint !is null));
+                CopiableLabeledValue("Has FG Skin", '' + (item.FGSkin !is null));
+                CopiableLabeledValue("Has BG Skin", '' + (item.BGSkin !is null));
+                CopiableLabeledValue("Model", item.Model.IdName);
+#if DEV
+                UI::Separator();
                 item.DrawResearchView();
+#endif
+                UI::Separator();
                 UI::PopID();
             }
         }
         UI::TreePop();
     }
 }
-
-
-
-
-// #if SIG_DEVELOPER
-// class ItemSelection_DevTab : Tab {
-//     ItemSelection_DevTab(TabGroup@ p) {
-//         super(p, "Dev", Icons::ExclamationTriangle);
-//     }
-
-//     CGameItemModel@ GetItemModel() {
-//         if (selectedItemModel !is null)
-//             return selectedItemModel.AsItemModel();
-//         return null;
-//     }
-
-//     void DrawInner() override {
-//         auto itemModel = GetItemModel();
-//         if (itemModel is null) {
-//             UI::Text("Select an item.");
-//             return;
-//         }
-
-//         if (UI::Button(Icons::Cube + " Explore ItemModel")) {
-//             ExploreNod(itemModel);
-//         }
-
-//         UI::Separator();
-
-//         auto varList = cast<NPlugItem_SVariantList>(itemModel.EntityModel);
-//         auto prefab = cast<CPlugPrefab>(itemModel.EntityModel);
-
-//         if (varList !is null) {
-//             UI::Text("VariantList: " + varList.Variants.Length);
-//             for (uint i = 0; i < varList.Variants.Length; i++) {
-//                 if (UI::Button(Icons::Cube + " Explore EntityModel for Variant " + i)) {
-//                     ExploreNod(varList.Variants[i].EntityModel);
-//                 }
-//             }
-//         } else if (prefab !is null) {
-//             UI::Text("Prefab.Ents: " + prefab.Ents.Length);
-//             for (uint i = 0; i < prefab.Ents.Length; i++) {
-//                 CPlugStaticObjectModel@ staticmodel = cast<CPlugStaticObjectModel>(prefab.Ents[i].Model);
-//                 if (staticmodel is null) continue;
-//                 CopiableLabeledValue("Solid2Model Ptr ." + i, Text::FormatPointer(Dev::GetOffsetUint64(staticmodel, GetOffset("CPlugStaticObjectModel", "Mesh"))));
-//             }
-//         }
-
-//         UI::Separator();
-
-//         DrawMaterialModifier(itemModel.MaterialModifier);
-
-
-// #if DEV
-//         UI::Separator();
-//         if (UI::Button(Icons::Cube + " Explore a new CPlugMaterialUserInst")) {
-//             auto mui = CPlugMaterialUserInst();
-//             mui.MwAddRef();
-//             ExploreNod(mui);
-//         }
-
-//         if (itemModel.Name == "Screen1x1") {
-//             @prefab = cast<CPlugPrefab>(varList.Variants[0].EntityModel);
-//             auto som = cast<CPlugStaticObjectModel>(prefab.Ents[0].Model);
-//             CopiableLabeledValue("Solid2Model Ptr", Text::FormatPointer(Dev::GetOffsetUint64(som, GetOffset("CPlugStaticObjectModel", "Mesh"))));
-//         }
-// #endif
-
-//     }
-// }
-// #endif
-
-
-
-// class ItemSceneryPlacementTab : Tab {
-//     ItemSceneryPlacementTab(TabGroup@ parent) {
-//         super(parent, "Scenery Placement", "");
-//     }
-
-//     void DrawInner() override {
-//         if (selectedItemModel is null || selectedItemModel.AsItemModel() is null) {
-//             UI::Text("Select an item");
-//             return;
-//         }
-//         auto itemModel = selectedItemModel.AsItemModel();
-//         auto varList = cast<NPlugItem_SVariantList>(itemModel.EntityModel);
-
-//         if (varList is null) {
-//             UI::Text("item does not have a list of variants");
-//             return;
-//         }
-
-//         UI::TextWrapped("");
-
-//         if (lastPickedBlock is null || lastPickedBlock.AsBlock() is null) {
-//             UI::Text("Next, pick a block");
-//             return;
-//         }
-//         auto block = lastPickedBlock.AsBlock();
-//         auto bi = block.BlockInfo;
-
-//         if (bi.MatModifierPlacementTag is null) {
-//             UI::Text("Block does nod have a scenery placement tag");
-//             return;
-//         }
-
-//         UI::Text("Add " + block.DescId.GetName() + " to variants of " + itemModel.IdName);
-//         if (UI::Button("Add Block Placement Tag to Variants")) {
-//             for (uint i = 0; i < varList.Variants.Length; i++) {
-//                 varList.Variants[i].Tags;
-//             }
-//             // bi.MatModifierPlacementTag
-//         }
-//     }
-// }

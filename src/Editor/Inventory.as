@@ -28,6 +28,10 @@ namespace Editor {
         return rn.ChildNodes[folder];
     }
 
+    CGameCtnArticleNode@ GetInventoryMacroblockFolder() {
+        return GetInventoryRootNode(InventoryRootNode::Macroblocks);
+    }
+
     // 0 = show all. 1 = hide 1 level. 2 = hide 2 levels. If set to more than the available number of levels it will reset to 0;
     void SetInventoryItemHiddenFolderDepth(CGameEditorGenericInventory@ inventory, uint8 v) {
         Dev::SetOffset(inventory, O_INVENTORY_ItemHideFolderDepth, v);
@@ -55,5 +59,26 @@ namespace Editor {
     }
     CGameCtnArticleNodeDirectory@ GetInventoryGhostBlockSelectedFolder(CGameEditorGenericInventory@ inventory) {
         return cast<CGameCtnArticleNodeDirectory>(Dev::GetOffsetNod(inventory, O_INVENTORY_GhostSelectedFolder));
+    }
+
+
+    CGameCtnArticle@ FindMacroblockArticleByID(const string &in id) {
+        auto mbRoot = cast<CGameCtnArticleNodeDirectory>(GetInventoryMacroblockFolder());
+        return FindInventoryArticleByID(mbRoot, id);
+    }
+
+    CGameCtnArticle@ FindInventoryArticleByID(CGameCtnArticleNodeDirectory@ dir, const string &in id) {
+        if (dir is null) return null;
+        for (uint i = 0; i < dir.ChildNodes.Length; i++) {
+            auto item = dir.ChildNodes[i];
+            if (item.IsDirectory) {
+                return FindInventoryArticleByID(cast<CGameCtnArticleNodeDirectory>(item), id);
+            } else {
+                auto article = cast<CGameCtnArticleNodeArticle>(item);
+                if (article is null) continue;
+                if (article.IdName == id) return article.Article;
+            }
+        }
+        return null;
     }
 }

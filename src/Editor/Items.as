@@ -49,6 +49,8 @@ namespace Editor {
         Item Association:
         - At .Scale+0x10 there's a pointer to a short (0x20b) structure that looks to be part of a linked list
         - at that pointer +0x0 there's a pointer to the associated block.
+
+        - 0x10 type? corresponds to macroblock things -- which part of the block it is grouped with!, FFFFFFFF
     */
 
     // Gets the block that this item is associated with / placed on.

@@ -1,0 +1,3 @@
+CGameCtnBlock
+
+0x28 block model

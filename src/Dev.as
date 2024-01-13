@@ -420,6 +420,8 @@ const uint16 O_ITEMCURSOR_CurrentModelsBuf = GetOffset("CGameCursorItem", "Helpe
 const uint16 O_MACROBLOCK_BLOCKSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x8; // 0x148 + 8 = 0x150
 const uint16 O_MACROBLOCK_ITEMSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x28; // 0x148 + 0x28 = 0x170
 
+const uint16 SZ_MACROBLOCK_BLOCKSBUFEL = 0x70;
+const uint16 SZ_MACROBLOCK_ITEMSBUFEL = 0xC0;
 
 
 // MEDIA TRACKER STUFF
@@ -557,6 +559,10 @@ class RawBufferElem {
     vec4 GetVec4(uint o) {
         CheckOffset(o, 16);
         return Dev::ReadVec4(ptr + o);
+    }
+    mat3 GetMat3(uint o) {
+        CheckOffset(o, 36);
+        return mat3(Dev::ReadVec3(ptr + o), Dev::ReadVec3(ptr + o + 12), Dev::ReadVec3(ptr + o + 24));
     }
 
     void DrawResearchView() {

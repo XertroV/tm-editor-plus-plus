@@ -41,11 +41,12 @@
     0x28 p, y, r (rads)
     0x34 float scale
     0x38 u8, u8, u8, (color, lm quality, phase), junk8, ffffffff
-    0x40 0, 0, 0, 0
-    0x50 ffffffff, 1.0, 0, 0
-    0x60 0, 1.0, 0, 0
-    0x70 0, 1.0,
+    0x40 0, 0, 0, 0 [NOT READ, no effect?]
+    0x50 ffffffff, 1.0, 0, 0 [only 1.0 value read; corresponds to offset 0x50 in item]
+    0x60 0, 1.0, 0, 0 [ corresponds to some matrix? stretches/shears items when non1.0 and collision not affected.]
+    0x70 0, 1.0, [starts at 0x50 and copies up to 0x80 (last float at 0x80), which includes pivot pos]
     0x78 vec3 PivotPos
+    // 0x54 -> 0x50 in item, 0x84 -> 0x80 in item.
     0x84 u1 isFlying
     0x84 u32? (>>1 then it's variant index)
     0x86 u16 junk
@@ -53,7 +54,7 @@
     0x90 0xFFFFFFFF (4 times) / 3, ffff.., 0, ffff..
     0x90 associated block index
     0x94 0xFFFFFFFF
-    0x98 0 or 0xFFFFFFFF (it is read, unknown purpose)
+    0x98 0/1/2 or 0xFFFFFFFF (it is read, unknown purpose, placed on item?)
     0xA0 ptr -> CSystemPackDesc (Skins\Stadium\LightColors\Pink.dds)
     0xA8 ptr -> CSystemPackDesc (top skin)
     0xB0 ptr -> CGameItemModel
