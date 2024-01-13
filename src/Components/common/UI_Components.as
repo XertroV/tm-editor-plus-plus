@@ -308,6 +308,17 @@ bool DrawBtnMbActive(const string &in label, bool isActive, vec2 size = vec2()) 
 }
 
 
+const string _BoolCheck = Icons::Check;
+const string _BoolTimes = Icons::Times;
+const string _BoolCheckColored = "\\$<\\$af4" + _BoolCheck + "\\$>";
+const string _BoolTimesColored = "\\$<\\$f66" + _BoolTimes + "\\$>";
+
+string BoolIcon(bool val, bool colored = true) {
+    return colored
+        ? (val ? _BoolCheckColored : _BoolTimesColored)
+        : (val ? _BoolCheck : _BoolTimes);
+}
+
 
 
 UI::Font@ g_MonoFont;
