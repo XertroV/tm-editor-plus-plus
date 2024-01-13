@@ -10,6 +10,7 @@ namespace Editor {
         vec3 rot;
         int color;
         bool Exists = true;
+        bool _hasSkin;
         uint Id;
         string IdName;
         mat4 mat;
@@ -23,6 +24,9 @@ namespace Editor {
         bool IsStale(CGameEditorPluginMap@ pmt) {
             throw('overload me');
             return true;
+        }
+        bool get_HasSkin() {
+            return _hasSkin;
         }
     }
 
@@ -39,12 +43,13 @@ namespace Editor {
             Id = item.ItemModel.Id.Value;
             IdName = item.ItemModel.IdName;
             mat = mat4::Translate(pos) * EulerToMat(rot);
+            _hasSkin = Editor::GetItemBGSkin(item) !is null || Editor::GetItemFGSkin(item) !is null;
         }
 
         bool IsStale(CGameEditorPluginMap@ pmt) override {
             Exists = ix < pmt.Map.AnchoredObjects.Length
                 && Matches(pmt.Map.AnchoredObjects[ix]);
-            return Exists;
+            return !Exists;
         }
 
         bool ReFindObj(CGameEditorPluginMap@ pmt) override {
@@ -108,6 +113,7 @@ namespace Editor {
             IsClassicElseGhost = !block.IsGhostBlock();
             size = Editor::GetBlockSize(block);
             mat = mat4::Translate(pos) * EulerToMat(rot);
+            _hasSkin = block.Skin !is null;
         }
 
         // if any of these differ, it's a different block
@@ -134,7 +140,7 @@ namespace Editor {
 
         bool IsStale(CGameEditorPluginMap@ pmt) override {
             Exists = ix < NbPmtBlocks(pmt) && Matches(GetPmtBlock(pmt, ix));
-            return Exists;
+            return !Exists;
         }
 
         protected uint NbPmtBlocks(CGameEditorPluginMap@ pmt) {
@@ -197,8 +203,12 @@ namespace Editor {
 
         protected BlockInMap@[] _Blocks;
         const BlockInMap@[] get_Blocks() { return _Blocks; }
+        protected BlockInMap@[] _SkinnedBlocks;
+        const BlockInMap@[] get_SkinnedBlocks() { return _SkinnedBlocks; }
         protected ItemInMap@[] _Items;
         const ItemInMap@[] get_Items() { return _Items; }
+        protected ItemInMap@[] _SkinnedItems;
+        const ItemInMap@[] get_SkinnedItems() { return _SkinnedItems; }
 
         uint lastRefreshNonce = 0;
         void RefreshCache() {
@@ -210,6 +220,8 @@ namespace Editor {
             _BlocksByHash.DeleteAll();
             _Items.RemoveRange(0, _Items.Length);
             _Blocks.RemoveRange(0, _Blocks.Length);
+            _SkinnedItems.RemoveRange(0, _SkinnedItems.Length);
+            _SkinnedBlocks.RemoveRange(0, _SkinnedBlocks.Length);
             ItemTypes.RemoveRange(0, ItemTypes.Length);
             BlockTypes.RemoveRange(0, BlockTypes.Length);
             ItemTypesLower.RemoveRange(0, ItemTypesLower.Length);
@@ -287,6 +299,7 @@ namespace Editor {
         protected void AddBlock(BlockInMap@ b) {
             loadProgress++;
             _Blocks.InsertLast(b);
+            if (b.HasSkin) _SkinnedBlocks.InsertLast(b);
             if (!_BlockIdNameMap.Exists(b.IdName)) {
                 @_BlockIdNameMap[b.IdName] = array<BlockInMap@>();
                 BlockTypes.InsertLast(b.IdName);
@@ -320,6 +333,8 @@ namespace Editor {
 
         protected void AddItem(ItemInMap@ b) {
             loadProgress++;
+            _Items.InsertLast(b);
+            if (b.HasSkin) _SkinnedItems.InsertLast(b);
             if (!_ItemIdNameMap.Exists(b.IdName)) {
                 @_ItemIdNameMap[b.IdName] = array<ItemInMap@>();
                 ItemTypes.InsertLast(b.IdName);
