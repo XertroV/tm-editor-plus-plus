@@ -4,7 +4,9 @@ class BI_MainTab : Tab {
         canPopOut = false;
         ViewAllBlocksTab(Children);
         ViewAllBlocksTab(Children, true);
+        ViewSkinnedBlocksTab(Children);
         ViewAllItemsTab(Children);
+        ViewSkinnedItemsTab(Children);
         ViewClassicBlocksTab(Children);
         ViewGhostBlocksTab(Children);
         // ViewKinematicsTab(Children);
@@ -49,6 +51,22 @@ class ViewGhostBlocksTab : ViewAllBlocksTab {
     }
 }
 
+class ViewSkinnedBlocksTab : ViewAllBlocksTab {
+    ViewSkinnedBlocksTab(TabGroup@ p) {
+        super(p, "Skinned Blocks", Icons::Cubes, BIListTabType::Blocks);
+        nbCols = 9;
+    }
+
+    uint GetNbObjects(CGameCtnChallenge@ map) override {
+        return Editor::GetMapCache().SkinnedBlocks.Length;
+    }
+
+    CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return Editor::GetMapCache().SkinnedBlocks[i].FindMe(editor.PluginMapType);
+    }
+}
+
 
 class ViewAllBlocksTab : BlockItemListTab {
     ViewAllBlocksTab(TabGroup@ p, bool isBaked = false) {
@@ -79,11 +97,17 @@ class ViewAllBlocksTab : BlockItemListTab {
     }
 
     void DrawObjectInfo(CGameCtnChallenge@ map, int i) override {
-        auto block = GetBlock(map, i);
-        bool isCP = block.WaypointSpecialProperty !is null;
-
-        auto blockId = Editor::GetBlockUniqueID(block);
         UI::TableNextRow();
+        auto block = GetBlock(map, i);
+
+        if (block is null) {
+            UI::TableNextColumn();
+            UI::Text("<null>");
+            return;
+        }
+
+        bool isCP = block.WaypointSpecialProperty !is null;
+        auto blockId = Editor::GetBlockUniqueID(block);
 
         UI::TableNextColumn();
         UI::Text(tostring(i));
@@ -151,6 +175,12 @@ class ViewAllItemsTab : BlockItemListTab {
         nbCols = 8;
     }
 
+    // Passthrough constructor
+    ViewAllItemsTab(TabGroup@ p, const string &in title, const string &in icon, BIListTabType ty) {
+        super(p, title, icon, ty);
+        nbCols = 8;
+    }
+
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
         float bigNumberColWidth = 110;
         float stdNumberColWidth = 90;
@@ -167,11 +197,17 @@ class ViewAllItemsTab : BlockItemListTab {
     }
 
     void DrawObjectInfo(CGameCtnChallenge@ map, int i) override {
+        UI::TableNextRow();
         auto item = GetItem(map, i);
+        if (item is null) {
+            UI::TableNextColumn();
+            UI::Text("<null>");
+            return;
+        }
+
         auto blockId = Editor::GetItemUniqueBlockID(item);
         bool isCP = item.WaypointSpecialProperty !is null;
 
-        UI::TableNextRow();
 
         UI::TableNextColumn();
         UI::Text(tostring(i));
@@ -224,4 +260,20 @@ class ViewAllItemsTab : BlockItemListTab {
     //     map.AnchoredObjects.Remove(_removeIx);
     //     item.MwRelease();
     // }
+}
+
+
+class ViewSkinnedItemsTab : ViewAllItemsTab {
+    ViewSkinnedItemsTab(TabGroup@ p) {
+        super(p, "Skinned Items", Icons::Tree, BIListTabType::Items);
+    }
+
+    uint GetNbObjects(CGameCtnChallenge@ map) override {
+        return Editor::GetMapCache().SkinnedItems.Length;
+    }
+
+    CGameCtnAnchoredObject@ GetItem(CGameCtnChallenge@ map, uint i) override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return Editor::GetMapCache().SkinnedItems[i].FindMe(editor.PluginMapType);
+    }
 }
