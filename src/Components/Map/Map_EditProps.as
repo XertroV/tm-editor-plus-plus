@@ -273,7 +273,7 @@ class MapEditPropsTab : Tab {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
         auto origBuildInfo = Editor::GetMapBuildInfo(map);
-        auto clicked = ClickableLabel("Game Build", origBuildInfo.SubStr(5, 16));
+        auto clicked = ClickableLabel("Map Game Build", origBuildInfo.SubStr(5, 16));
         AddSimpleTooltip(origBuildInfo + "\n\nTo Update:\n1. Save map\n2. Set build date when *overwrite* prompt shown.\n3. Finish saving, exit and reload the map.\n*Saving after this will overwrite the build date.*");
         if (clicked) SetClipboard(origBuildInfo);
         UI::SameLine();
@@ -284,6 +284,25 @@ class MapEditPropsTab : Tab {
         if (UX::SmallButton("NW", "Set build date for New Wood")) {
             Editor::SetMapBuildInfo(map, "date=2024-01-10_12_53 git=126731-1573de4d161 GameVersion=3.3.0");
         }
+#if SIG_DEVELOPER
+        try {
+            string editorSetsBuild = Editor::GetEditorWritesMapBuildInfo();
+            string esbDate = editorSetsBuild.Length > 21 ? editorSetsBuild.SubStr(5, 16) : "Not Found";
+            if (editorSetsBuild.Length == 0) editorSetsBuild = esbDate;
+            CopiableLabeledValue("[DEV] Editor Sets", esbDate);
+            AddSimpleTooltip(editorSetsBuild+"\n\nThis is the build that the editor sets. Overwriting it will automatically set the new version on saved maps.");
+            UI::SameLine();
+            if (UX::SmallButton("OW##setEditorSetsBuild", "Set build date for Old Wood (2023-09-09_09_09)")) {
+                Editor::SetEditorWritesMapBuildInfo("date=2023-09-09_09_09 git=126731-1573de4d161 GameVersion=3.3.0");
+            }
+            UI::SameLine();
+            if (UX::SmallButton("NW##setEditorSetsBuild", "Set build date for New Wood (2024-01-10_12_53)")) {
+                Editor::SetEditorWritesMapBuildInfo("date=2024-01-10_12_53 git=126731-1573de4d161 GameVersion=3.3.0");
+            }
+        } catch {
+            UI::TextWrapped("[DEV] Error getting the Editor's build (which is set in the map when saving)");
+        }
+#endif
     }
 
     void DrawMapVehicleChoices() {
