@@ -137,6 +137,10 @@ class SelectRandomBlockTab : EffectTab {
     void DrawInner() override {
         UI::TextWrapped("After placing a block, select a new random block.");
         _IsActive = UI::Checkbox("Enable next block randomization", _IsActive);
+        UI::SameLine();
+        if (UI::Button("Select a random Block")) {
+            startnew(CoroutineFunc(SelectRandomBlock));
+        }
     }
 
     void SelectRandomBlock() {
@@ -168,6 +172,10 @@ class SelectRandomItemTab : EffectTab {
     void DrawInner() override {
         UI::TextWrapped("After placing an item, select a new random item.");
         _IsActive = UI::Checkbox("Enable next item randomization", _IsActive);
+        UI::SameLine();
+        if (UI::Button("Select a random Item")) {
+            startnew(CoroutineFunc(SelectRandomItem));
+        }
     }
 
     void SelectRandomItem() {

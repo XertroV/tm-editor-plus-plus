@@ -157,4 +157,47 @@ namespace Editor {
         Dev::SetOffset(map, O_MAP_BUILDINFO_STR, newBuildInfo);
         // Editor::MarkRefreshUnsafe();
     }
+
+    // long pattern but lots of matches otherwise
+    const string PATTERN_COPY_BUILD_STRING_SAVING_MAP = "48 83 EC 38 89 51 74 48 8D 05 ?? ?? ?? ?? 48 83 C1 78 48 8D 54 24 20 80 3D ?? ?? ?? ?? 00 48 0F 45 05 ?? ?? ?? ?? 48 89 44 24 20 8B 05 ?? ?? ?? ?? 89 44 24 28 0F 28 44 24 20 66 0F 7F 44 24 20 E8 ?? ?? ?? ?? 48 83 C4 38";
+    uint64 g_EditorWritesMapBuildInfoPtr = 0;
+
+    uint64 GetEditorWritesMapBuildInfoPtr() {
+        if (g_EditorWritesMapBuildInfoPtr == 0) {
+            g_EditorWritesMapBuildInfoPtr = Dev::FindPattern(PATTERN_COPY_BUILD_STRING_SAVING_MAP);
+        }
+        return g_EditorWritesMapBuildInfoPtr;
+    }
+
+    void SetEditorWritesMapBuildInfo(const string &in newBuildInfo) {
+        auto ptr = GetEditorWritesMapBuildInfoPtr();
+        if (ptr > Dev::BaseAddress() && ptr < Dev::BaseAddressEnd()) {
+            auto offset = Dev::ReadInt32(ptr + 10);
+            auto fakeNod = Dev_GetNodFromPointer(ptr + 14 + offset);
+            Dev::SetOffset(fakeNod, 0x0, newBuildInfo);
+        }
+    }
+
+    string GetEditorWritesMapBuildInfo() {
+        auto ptr = GetEditorWritesMapBuildInfoPtr();
+        if (ptr > Dev::BaseAddress() && ptr < Dev::BaseAddressEnd()) {
+            auto offset = Dev::ReadInt32(ptr + 10);
+            auto fakeNod = Dev_GetNodFromPointer(ptr + 14 + offset);
+            return Dev::GetOffsetString(fakeNod, 0x0);
+        }
+        return "";
+    }
 }
+
+/*
+
+Trackmania.exe.text+B17A0E - 48 0F45 05 2A464B01   - cmovne rax,[Trackmania.exe+1FCD040] { (1C60CD5AE41) }
+
+48 0F 45 05 2A 46 4B 01 48 89 44 24 20 8B 05 2B 46 4B 01 89 44 24 28
+48 0F 45 05 ?? ?? ?? ?? 48 89 44 24 20 8B 05 ?? ?? ?? ?? 89 44 24 28 0F 28 44 24 20 66 0F 7F 44 24 20 E8
+
+48 83 EC 38 89 51 74 48 8D 05 ?? ?? ?? ?? 48 83 C1 78 48 8D 54 24 20 80 3D ?? ?? ?? ?? 00 48 0F 45 05 ?? ?? ?? ?? 48 89 44 24 20 8B 05 ?? ?? ?? ?? 89 44 24 28 0F 28 44 24 20 66 0F 7F 44 24 20 E8 ?? ?? ?? ?? 48 83 C4 38
+
+ptr + 14 + int(2A464B01)
+
+*/
