@@ -397,15 +397,13 @@ TabGroup@ CreateRootTabGroup() {
     ItemEmbedTab(root);
     BlockSelectionTab(root);
     ItemSelectionTab(root);
-    // MacroblockSelectionTab(root);
+#if DEV
+    MacroblockSelectionTab(root);
+#endif
     GlobalPlacementOptionsTab(root);
     // SkinsMainTab(root);
     MacroblockOptsTab(root);
     ViewKinematicsTab(root);
-
-#if DEV
-    LaunchedCPsTab(root);
-#endif
 
     // - filtered view of blocks/items show just checkpoints
     // - set linked order
@@ -441,6 +439,10 @@ TabGroup@ CreateRootTabGroup() {
     DevMainTab(root);
 #endif
     AboutTab(root);
+
+#if DEV
+    LaunchedCPsTab(root);
+#endif
 
     return root;
 }

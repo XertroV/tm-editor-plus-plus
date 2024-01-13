@@ -194,11 +194,20 @@ bool g_IsDragging = false;
 // track drag status for last frame
 bool g_WasDragging = false;
 
+bool g_LastMouseBDown = false;
+int g_LastMouseButton = 0;
+int2 g_LastMouseButtonPos = int2();
+
 UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     bool lmbDown = down && button == 0;
     bool block = lmbDown && CheckPlaceMacroblockAirMode();
     block = (lmbDown && CheckPlacingItemFreeMode()) || block;
     // block = (lmbDown && FarlandsHelper::CheckPlacingFreeBlock()) || block;
+
+    g_LastMouseBDown = down;
+    g_LastMouseButton = button;
+    g_LastMouseButtonPos = int2(x, y);
+    dev_trace('LastMouseButton: ' + down + ", " + button + ", " + g_LastMouseButtonPos.ToString());
 
     block = block || g_IsDragging || g_WasDragging;
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
@@ -221,6 +230,7 @@ UI::InputBlocking OnMouseWheel(int x, int y) {
     g_NewScrollTime = Time::Now;
     return UI::InputBlocking::DoNothing;
 }
+
 
 void UpdateScrollCache() {
     if (g_NewScrollTime > 0) {

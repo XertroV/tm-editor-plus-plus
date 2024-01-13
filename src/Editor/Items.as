@@ -206,6 +206,12 @@ namespace Editor {
         return item;
     }
 
+    CSystemPackDesc@ GetItemBGSkin(CGameCtnAnchoredObject@ item) {
+        return cast<CSystemPackDesc>(Dev::GetOffsetNod(item, O_ANCHOREDOBJ_BGSKIN_PACKDESC));
+    }
+    CSystemPackDesc@ GetItemFGSkin(CGameCtnAnchoredObject@ item) {
+        return cast<CSystemPackDesc>(Dev::GetOffsetNod(item, O_ANCHOREDOBJ_FGSKIN_PACKDESC));
+    }
 
     // // test; Stadium\\Blah
     // void LoadItemInInventoryFromPath(CGameCtnEditorFree@ editor, const string &in path) {
