@@ -1,9 +1,16 @@
 namespace Editor {
-
-    const uint16 FreeBlockPosOffset = GetOffset("CGameCtnBlock", "Dir") + 0x8;
+    const uint16 O_CGameCtnBlock_DirOffset = GetOffset("CGameCtnBlock", "Dir");
+    const uint16 FreeBlockPosOffset = O_CGameCtnBlock_DirOffset + 0x8;
     const uint16 FreeBlockRotOffset = FreeBlockPosOffset + 0xC;
     const uint16 O_CGameCtnBlock_BlockUnitsEOffset = GetOffset("CGameCtnBlock", "BlockUnitsE");
     const uint16 O_CGameCtnBlock_CoordOffset = GetOffset("CGameCtnBlock", "Coord");
+    const uint16 O_CGameCtnBlock_ = GetOffset("CGameCtnBlock", "Coord");
+
+const uint16 O_CGameCtnBlock_BlockMapBlocksIndex   = O_CGameCtnBlock_DirOffset + (0x8c - 0x64) ; // (0x8c + 0x8 - 0x6c)
+const uint16 O_CGameCtnBlock_BlockUniqueSaveID     = O_CGameCtnBlock_DirOffset + (0x90 - 0x64) ; // (0x90 + 0x8 - 0x6c)
+const uint16 O_CGameCtnBlock_BlockUniqueID         = O_CGameCtnBlock_DirOffset + (0x98 - 0x64) ; // (0x98 + 0x8 - 0x6c)
+const uint16 O_CGameCtnBlock_BlockMwIDRaw          = O_CGameCtnBlock_DirOffset + (0xA4 - 0x64) ; // (0xA4 + 0x8 - 0x6c)
+const uint16 O_CGameCtnBlock_BlockPlacedCountIndex = O_CGameCtnBlock_DirOffset + (0xAC - 0x64) ; // (0xAC + 0x8 - 0x6c)
 
     vec3 GetBlockLocation(CGameCtnBlock@ block, bool forceFree = false) {
         if (IsBlockFree(block) || forceFree) {
@@ -163,29 +170,31 @@ namespace Editor {
         }
     }
 
+
+
     // the index of the block in the main blocks array
     uint GetBlockMapBlocksIndex(CGameCtnBlock@ block) {
-        return Dev::GetOffsetUint32(block, 0x8c);
+        return Dev::GetOffsetUint32(block, O_CGameCtnBlock_BlockMapBlocksIndex);
     }
 
     // set on save, similar to items
     uint GetBlockUniqueSaveID(CGameCtnBlock@ block) {
-        return Dev::GetOffsetUint32(block, 0x90);
+        return Dev::GetOffsetUint32(block, O_CGameCtnBlock_BlockUniqueSaveID);
     }
 
     // Block ID -- incremented by items and blocks
     uint GetBlockUniqueID(CGameCtnBlock@ block) {
-        return Dev::GetOffsetUint32(block, 0x98);
+        return Dev::GetOffsetUint32(block, O_CGameCtnBlock_BlockUniqueID);
     }
 
     // unknown ID, increments with block ID
     uint GetBlockMwIDRaw(CGameCtnBlock@ block) {
-        return Dev::GetOffsetUint32(block, 0xA4);
+        return Dev::GetOffsetUint32(block, O_CGameCtnBlock_BlockMwIDRaw);
     }
 
     // Count of *placed* blocks (excludes grass), starts at 0 and increments
     uint GetBlockPlacedCountIndex(CGameCtnBlock@ block) {
-        return Dev::GetOffsetUint32(block, 0xAC);
+        return Dev::GetOffsetUint32(block, O_CGameCtnBlock_BlockPlacedCountIndex);
     }
 
     void ConvertNormalToFree(CGameCtnBlock@ block, vec3 pos, vec3 rot) {

@@ -1,6 +1,6 @@
 class MacroblockSelectionTab : Tab {
     MacroblockSelectionTab(TabGroup@ parent) {
-        super(parent, "[DEV] Current Macroblock" + NewIndicator, Icons::FolderOpenO + Icons::Cubes);
+        super(parent, "[DEV] Current MB" + NewIndicator, Icons::FolderOpenO + Icons::Cubes);
         canPopOut = false;
         // todo: macroblock favs
         // SetupFav(true, false);
