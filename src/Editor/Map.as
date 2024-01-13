@@ -148,4 +148,13 @@ namespace Editor {
         auto midNod = Dev_GetOffsetNodSafe(map, O_MAP_LIGHTMAP_STRUCT);
         return cast<CHmsLightMapCache>(Dev_GetOffsetNodSafe(midNod, 0x0));
     }
+
+    string GetMapBuildInfo(CGameCtnChallenge@ map) {
+        return Dev::GetOffsetString(map, O_MAP_BUILDINFO_STR);
+    }
+
+    void SetMapBuildInfo(CGameCtnChallenge@ map, const string &in newBuildInfo) {
+        Dev::SetOffset(map, O_MAP_BUILDINFO_STR, newBuildInfo);
+        // Editor::MarkRefreshUnsafe();
+    }
 }
