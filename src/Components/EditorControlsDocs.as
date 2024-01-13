@@ -30,30 +30,34 @@ class EditorControlsDocsTab : Tab {
     }
 }
 
-const string[][] EditorControls = {
-    {"Erase Mode", "Hold X"},
-    {"Delete free/ghost blocks on hover", "Hold Del"},
-    {"Place many free/ghost blocks", "Hold space"},
-    {"Pivot Change", "Q"},
-    {"Toggle Cursor Helper Plane", "M"},
-    {"Camera Rotations", "Numpad 1-9"},
-    {"Reset Cursor or Rotate 90deg", "Numpad /"},
-    {"Folder/Article Selection", "Numbers 0-9"},
-    {"Close Folder", "` (backtick/tilde)"},
-    {"Camera Up/Down", "Page Up/Down"},
-    {"Cursor Pitch/Roll", "Arrow Keys"},
-    {"Cursor Yaw", "Home/End"},
-    {"Cursor Yaw", "Numpad +/-"},
-    {"Enter copy mode", "C"},
-    {"Show/Hide Inventory", "Tab"},
-    {"Skinning Mode - Apply Last", "Shift Click"},
-    {"Select picked block/item", "Ctrl + Click"},
-    {"Focus on picked block/item", "Ctrl + R-Click"},
-    {"Show/hide in-game helpers", "H"},
-    {"Avoid blocks snapping to free-blocks", "Hold Shift"},
-    {"Disable all editor plugins", "Ctrl + P"},
-    {"Cycle Item Variants (e.g., trees)", "Middle Click"}
-};
+const string[][] EditorControls = GenEditorControlsArray();
+
+string[][]@ GenEditorControlsArray() {
+    string[][] r;
+    r.InsertLast({"Erase Mode", "Hold X"});
+    r.InsertLast({"Delete free/ghost blocks on hover", "Hold Del"});
+    r.InsertLast({"Place many free/ghost blocks", "Hold space"});
+    r.InsertLast({"Pivot Change", "Q"});
+    r.InsertLast({"Toggle Cursor Helper Plane", "M"});
+    r.InsertLast({"Camera Rotations", "Numpad 1-9"});
+    r.InsertLast({"Reset Cursor or Rotate 90deg", "Numpad /"});
+    r.InsertLast({"Folder/Article Selection", "Numbers 0-9"});
+    r.InsertLast({"Close Folder", "` (backtick/tilde)"});
+    r.InsertLast({"Camera Up/Down", "Page Up/Down"});
+    r.InsertLast({"Cursor Pitch/Roll", "Arrow Keys"});
+    r.InsertLast({"Cursor Yaw", "Home/End"});
+    r.InsertLast({"Cursor Yaw", "Numpad +/-"});
+    r.InsertLast({"Enter copy mode", "C"});
+    r.InsertLast({"Show/Hide Inventory", "Tab"});
+    r.InsertLast({"Skinning Mode - Apply Last", "Shift Click"});
+    r.InsertLast({"Select picked block/item", "Ctrl + Click"});
+    r.InsertLast({"Focus on picked block/item", "Ctrl + R-Click"});
+    r.InsertLast({"Show/hide in-game helpers", "H"});
+    r.InsertLast({"Avoid blocks snapping to free-blocks", "Hold Shift"});
+    r.InsertLast({"Disable all editor plugins", "Ctrl + P"});
+    r.InsertLast({"Cycle Item Variants (e.g., trees)", "Middle Click"});
+    return r;
+}
 
 const string[][] MeshModelerControls = {
     {"Select faces with same material", "Ctrl + Q"}
