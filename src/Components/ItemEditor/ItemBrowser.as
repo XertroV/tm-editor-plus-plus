@@ -1,5 +1,5 @@
 const uint16 IM_GameSkinOffset = 0xA0;
-const uint16 IM_AuthorOffset = 0xA0;
+// const uint16 IM_AuthorOffset = 0xA0;
 
 // used for expanding/contracting entity lists
 uint g_NewNbEnts = 10;
@@ -831,7 +831,7 @@ class ItemModelTreeElement {
             } else {
                 CopiableLabeledValue("m_DualCenterToLight", light.m_DualCenterToLight.ToString());
                 CopiableLabeledValue("AnimTimerName", light.AnimTimerName.GetName());
-                CopiableLabeledValue("NightOnly", tostring(light.NightOnly));
+                CopiableLabeledValue("NightOnly##pl", tostring(light.NightOnly));
                 CopiableLabeledValue("ReflectByGround", tostring(light.ReflectByGround));
                 CopiableLabeledValue("DuplicateGxLight", tostring(light.DuplicateGxLight));
                 CopiableLabeledValue("SceneLightOnlyWhenTreeVisible", tostring(light.SceneLightOnlyWhenTreeVisible));
@@ -847,7 +847,7 @@ class ItemModelTreeElement {
             if (isEditable) {
                 gxLight.Color = UI::InputColor3("Color", gxLight.Color);
                 gxLight.ShadowRGB = UI::InputColor3("ShadowRGB", gxLight.ShadowRGB);
-                gxLight.Intensity = UI::InputFloat("Intensity", gxLight.Intensity);
+                gxLight.Intensity = UI::InputFloat("Intensity##gxl", gxLight.Intensity);
                 gxLight.DiffuseIntensity = UI::InputFloat("DiffuseIntensity", gxLight.DiffuseIntensity);
                 gxLight.ShadowIntensity = UI::InputFloat("ShadowIntensity", gxLight.ShadowIntensity);
                 gxLight.FlareIntensity = UI::InputFloat("FlareIntensity", gxLight.FlareIntensity);
@@ -1068,21 +1068,21 @@ class ItemModelTreeElement {
     }
 
     void Draw(CPlugLightUserModel@ userLight) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugLightUserModel###" + Dev_GetPointerForNod(nod), UI::TreeNodeFlags::None)) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugLightUserModel###" + Dev_GetPointerForNod(userLight), UI::TreeNodeFlags::None)) {
             if (isEditable) {
                 if (UI::Button("Copy Light Color to Siblings")) {
                     CopyLightUserColorToSiblings(this.parent.nod, userLight.Color);
                 }
                 userLight.Color = UI::InputColor3("Color", userLight.Color);
-                userLight.Intensity = UI::InputFloat("Intensity", userLight.Intensity);
-                userLight.Distance = UI::InputFloat("Distance", userLight.Distance);
+                userLight.Intensity = UI::InputFloat("Intensity##ul", userLight.Intensity);
+                userLight.Distance = UI::InputFloat("Distance##ul", userLight.Distance);
                 userLight.PointEmissionRadius = UI::InputFloat("PointEmissionRadius", userLight.PointEmissionRadius);
                 userLight.PointEmissionLength = UI::InputFloat("PointEmissionLength", userLight.PointEmissionLength);
                 userLight.SpotInnerAngle = UI::InputFloat("SpotInnerAngle", userLight.SpotInnerAngle);
                 userLight.SpotOuterAngle = UI::InputFloat("SpotOuterAngle", userLight.SpotOuterAngle);
                 userLight.SpotEmissionSizeX = UI::InputFloat("SpotEmissionSizeX", userLight.SpotEmissionSizeX);
                 userLight.SpotEmissionSizeY = UI::InputFloat("SpotEmissionSizeY", userLight.SpotEmissionSizeY);
-                userLight.NightOnly = UI::Checkbox("NightOnly", userLight.NightOnly);
+                userLight.NightOnly = UI::Checkbox("NightOnly##ul", userLight.NightOnly);
             } else {
                 UI::BeginDisabled();
                 userLight.Color = UI::InputColor3("Color", userLight.Color);

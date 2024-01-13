@@ -62,6 +62,8 @@ class BlockItemListTab : Tab {
         return null;
     }
 
+    void DrawInnerEarly() {}
+
     bool wholeListShown = false;
     bool autoscroll = false;
     bool skipXZStarting = true;
@@ -72,6 +74,8 @@ class BlockItemListTab : Tab {
         auto sizeXZ = map.Size.x * map.Size.z - 4;
         auto nbBlocks = GetNbObjects(map);
         uint nbBlocksToSkip = Math::Min(nbBlocks - 4, sizeXZ);
+
+        DrawInnerEarly();
 
         UI::AlignTextToFramePadding();
         UI::Text("Total: " + nbBlocks + "   |");
