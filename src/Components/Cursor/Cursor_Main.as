@@ -33,6 +33,9 @@ bool S_CursorWindowOpen = false;
 [Setting hidden]
 bool S_CursorWindowRotControls = true;
 
+[Setting hidden]
+bool S_AutoActivateCustomRotations = false;
+
 // activated from the tools menu, see UI_Main
 class CursorPosition : Tab {
     CursorPosition(TabGroup@ parent) {
@@ -44,6 +47,7 @@ class CursorPosition : Tab {
 
     void OnEditor() {
         this.windowOpen = S_CursorWindowOpen;
+        if (S_AutoActivateCustomRotations) CustomCursorRotations::Active = true;
     }
 
     bool get_windowOpen() override property {
@@ -207,7 +211,12 @@ class CursorPropsTab : Tab {
 
         UI::Separator();
         CustomCursorRotations::Active = UI::Checkbox("Enable Custom Cursor Rotation Amounts", CustomCursorRotations::Active);
+        AddSimpleTooltip("Only works for Pitch and Roll");
         CustomCursorRotations::DrawSettings();
+        // S_AutoActivateCustomRotations is checked in OnEditor for cursor window
+        S_AutoActivateCustomRotations = UI::Checkbox("Auto-activate custom cursor rotations", S_AutoActivateCustomRotations);
+        AddSimpleTooltip("Activates when entering the editor");
+
     }
 }
 
@@ -223,7 +232,6 @@ void ResetCursor(CGameCursorBlock@ cursor) {
 
 
 namespace CustomCursorRotations {
-    // uint64 g_CustomRotFloatPtr = 0;
     [Setting hidden]
     float customRot = TAU / 4. / 12.;
 
@@ -236,24 +244,11 @@ namespace CustomCursorRotations {
         if (crNewDec != crDeg) customRot = Math::ToRad(crNewDec);
     }
 
-    // uint64 GetCustomCursorRotPtr() {
-    //     if (g_CustomRotFloatPtr == 0) {
-    //         g_CustomRotFloatPtr = RequestMemory(4, true);
-    //     }
-    //     return g_CustomRotFloatPtr;
-    // }
-
     void SetCustomCursorRot(float _customRot) {
         customRot = _customRot;
-        // auto ptr = GetCustomCursorRotPtr();
-        // if (ptr == 0) throw('custom cursor rot ptr is zero');
-        // Dev::Write(ptr, customRot);
     }
 
     float GetCustomCursorRot() {
-        // auto ptr = GetCustomCursorRotPtr();
-        // if (ptr == 0) throw('custom cursor rot ptr is zero');
-        // return Dev::ReadFloat(ptr);
         return customRot;
     }
 
@@ -296,16 +291,4 @@ namespace CustomCursorRotations {
             ccRot2.SetApplied(value);
         }
     }
-
-    // MemPatcher@ customCursorRotPatch;
-
-    // MemPatcher@ GetPatch() {
-    //     if (customCursorRotPatch is null) {
-    //         @customCursorRotPatch = MemPatcher(
-    //             "F3 0F 10 05 ?? ?? ?? ?? EB 08 F3 0F 10 05 ?? ?? ?? ?? 85 F6 74 07 0F 57 05",
-    //             {4}, {}
-    //         )
-    //     }
-    //     return customCursorRotPatch;
-    // }
 }

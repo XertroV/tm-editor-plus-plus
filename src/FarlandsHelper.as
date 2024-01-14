@@ -329,11 +329,15 @@ class HookHelper {
         this.offset = offset;
         this.padding = padding;
         this.functionName = functionName;
-        RegisterUnhookFunction(UnapplyHookFn(this.Unapply));
+        startnew(CoroutineFunc(_RegisterUnhookCall));
     }
 
     ~HookHelper() {
         Unapply();
+    }
+
+    void _RegisterUnhookCall() {
+        RegisterUnhookFunction(UnapplyHookFn(this.Unapply));
     }
 
     bool Apply() {

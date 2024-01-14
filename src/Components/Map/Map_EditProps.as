@@ -474,15 +474,7 @@ string DecoEnumToName(MapDecoChoice d) {
 
 CGameCtnDecoration@ GetDecoration(MapDecoChoice d) {
     auto name = DecoEnumToName(d);
-    print("looking for: " + name);
-
-    // auto fname = name.StartsWith("4") ? ("Base" + name) : name;
-    // auto path = "Stadium/GameCtnDecoration/" + fname + ".Decoration.Gbx";
-    // auto newDecoFid = Fids::GetGame(path);
-    // if (newDecoFid is null) return null;
-    // auto newDeco = cast<CGameCtnDecoration>(Fids::Preload(newDecoFid));
-    // if (newDeco is null) NotifyError("Returning deco that is null: " + path);
-    // return newDeco;
+    // print("looking for: " + name);
 
     auto app = GetApp();
     auto ch = app.GlobalCatalog.Chapters[3];
