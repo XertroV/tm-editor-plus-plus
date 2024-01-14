@@ -3,6 +3,8 @@ const string PluginIcon = "\\$ff3" + Icons::Bolt + "\\$3af" + Icons::Cogs + "\\$
 const string MenuTitle = PluginIcon + "\\$s " + Meta::ExecutingPlugin().Name;
 
 const double TAU = 6.28318530717958647692;
+const double PI = TAU / 2.;
+const double NegPI = PI * -1.0;
 
 const int TWO_BILLION = 2000000000;
 
