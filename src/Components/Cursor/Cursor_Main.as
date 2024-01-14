@@ -205,6 +205,9 @@ class CursorPropsTab : Tab {
         }
         S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls", S_CursorWindowRotControls);
 
+        UI::Separator();
+        CustomCursorRotations::Active = UI::Checkbox("Enable Custom Cursor Rotation Amounts", CustomCursorRotations::Active);
+        CustomCursorRotations::DrawSettings();
     }
 }
 
@@ -213,4 +216,96 @@ void ResetCursor(CGameCursorBlock@ cursor) {
     cursor.Roll = 0;
     cursor.AdditionalDir = CGameCursorBlock::EAdditionalDirEnum::P0deg;
     cursor.Dir = CGameCursorBlock::ECardinalDirEnum::North;
+}
+
+
+
+
+
+namespace CustomCursorRotations {
+    // uint64 g_CustomRotFloatPtr = 0;
+    [Setting hidden]
+    float customRot = TAU / 4. / 12.;
+
+    void DrawSettings() {
+        int origParts = Math::Round(TAU / 4. / customRot);
+        int newParts = Math::Clamp(UI::InputInt("Taps per 90 degrees", origParts), 2, 128);
+        if (origParts != newParts) customRot = TAU / 4. / float(newParts);
+        float crDeg = Math::ToDeg(customRot);
+        float crNewDec = UI::InputFloat("Rotation (Deg)", crDeg);
+        if (crNewDec != crDeg) customRot = Math::ToRad(crNewDec);
+    }
+
+    // uint64 GetCustomCursorRotPtr() {
+    //     if (g_CustomRotFloatPtr == 0) {
+    //         g_CustomRotFloatPtr = RequestMemory(4, true);
+    //     }
+    //     return g_CustomRotFloatPtr;
+    // }
+
+    void SetCustomCursorRot(float _customRot) {
+        customRot = _customRot;
+        // auto ptr = GetCustomCursorRotPtr();
+        // if (ptr == 0) throw('custom cursor rot ptr is zero');
+        // Dev::Write(ptr, customRot);
+    }
+
+    float GetCustomCursorRot() {
+        // auto ptr = GetCustomCursorRotPtr();
+        // if (ptr == 0) throw('custom cursor rot ptr is zero');
+        // return Dev::ReadFloat(ptr);
+        return customRot;
+    }
+
+    HookHelper@ ccRot1 = HookHelper(
+        "F3 0F 11 83 8C 00 00 00 EB 15 F3 0F 58 83 94 00 00 00 E8 ?? ?? ?? ?? F3 0F 11 83 94 00 00 00 48 8B 5C 24 30 48 8B 6C 24 38 48 8B 74 24 40",
+        0, 3, "CustomCursorRotations::OnSetRot1"
+    );
+    HookHelper@ ccRot2 = HookHelper(
+        "EB 15 F3 0F 58 83 94 00 00 00 E8 ?? ?? ?? ?? F3 0F 11 83 94 00 00 00 48 8B 5C 24 30 48 8B 6C 24 38 48 8B 74 24 40",
+        15, 3, "CustomCursorRotations::OnSetRot2"
+    );
+
+    void OnSetRot1(uint64 rbx) {
+        trace('rbx rot 1: ' + Text::FormatPointer(rbx));
+        UpdateInferCustomRot(rbx, 0x8C);
+    }
+    void OnSetRot2(uint64 rbx) {
+        trace('rbx rot 2: ' + Text::FormatPointer(rbx));
+        UpdateInferCustomRot(rbx, 0x94);
+    }
+
+    void UpdateInferCustomRot(uint64 ptr, uint offset) {
+        // before and after
+        vec2 ba = Dev::ReadVec2(ptr + offset - 0x4);
+        // trace("got BA: " + ba.ToString());
+        float diff = Math::Abs(ba.y - ba.x);
+        float sign = ba.y > ba.x ? 1.0 : -1.0;
+        if (diff > PI) sign = ba.y > 0.0 ? -1.0 : 1.0;
+        float new = ba.x + sign * customRot;
+        if (new > PI) new -= TAU;
+        if (new < NegPI) new += TAU;
+        Dev::Write(ptr + offset, new);
+    }
+    bool Active {
+        get {
+            return ccRot1.IsApplied() && ccRot2.IsApplied();
+        }
+        set {
+            ccRot1.SetApplied(value);
+            ccRot2.SetApplied(value);
+        }
+    }
+
+    // MemPatcher@ customCursorRotPatch;
+
+    // MemPatcher@ GetPatch() {
+    //     if (customCursorRotPatch is null) {
+    //         @customCursorRotPatch = MemPatcher(
+    //             "F3 0F 10 05 ?? ?? ?? ?? EB 08 F3 0F 10 05 ?? ?? ?? ?? 85 F6 74 07 0F 57 05",
+    //             {4}, {}
+    //         )
+    //     }
+    //     return customCursorRotPatch;
+    // }
 }

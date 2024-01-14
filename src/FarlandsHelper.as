@@ -353,6 +353,17 @@ class HookHelper {
         @hookInfo = null;
         return true;
     }
+
+    bool IsApplied() {
+        return hookInfo !is null;
+    }
+
+    void SetApplied(bool v) {
+        if (v && hookInfo !is null) return;
+        if (!v && hookInfo is null) return;
+        if (v) Apply();
+        else Unapply();
+    }
 }
 
 funcdef bool UnapplyHookFn();

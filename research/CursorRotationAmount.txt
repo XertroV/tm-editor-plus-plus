@@ -1,0 +1,63 @@
+Trackmania.exe+F793A7 - F3 0F10 05 A9CDD200   - movss xmm0,[Trackmania.exe.rdata+39B158] { rotations for PR
+
+ }
+Trackmania.exe+F793AF - EB 08                 - jmp Trackmania.exe.text+F783B9 { ->Trackmania.exe+F793B9 }
+Trackmania.exe+F793B1 - F3 0F10 05 07D2D200   - movss xmm0,[Trackmania.exe.rdata+39B5C0] { (1.57) }
+Trackmania.exe+F793B9 - 85 F6                 - test esi,esi
+Trackmania.exe+F793BB - 74 07                 - je Trackmania.exe.text+F783C4 { ->Trackmania.exe+F793C4 }
+Trackmania.exe+F793BD - 0F57 05 BCF8D200      - xorps xmm0,[Trackmania.exe.rdata+39DC80] { (-2147483648) }
+Trackmania.exe+F793C4 - 83 FD 01              - cmp ebp,01 { 1 }
+Trackmania.exe+F793C7 - 75 17                 - jne Trackmania.exe.text+F783E0 { ->Trackmania.exe+F793E0 }
+Trackmania.exe+F793C9 - F3 0F58 83 8C000000   - addss xmm0,[rbx+0000008C]
+Trackmania.exe+F793D1 - E8 8A480100           - call Trackmania.exe.text+F8CC60 { ->Trackmania.exe+F8DC60 }
+Trackmania.exe+F793D6 - F3 0F11 83 8C000000   - movss [rbx+0000008C],xmm0
+Trackmania.exe+F793DE - EB 15                 - jmp Trackmania.exe.text+F783F5 { ->Trackmania.exe+F793F5 }
+Trackmania.exe+F793E0 - F3 0F58 83 94000000   - addss xmm0,[rbx+00000094]
+Trackmania.exe+F793E8 - E8 73480100           - call Trackmania.exe.text+F8CC60 { edit rot 1
+ }
+Trackmania.exe+F793ED - F3 0F11 83 94000000   - movss [rbx+00000094],xmm0
+
+rbx 000000C2124FF0E0
+rdx 000000C2124FF164
+rsp 000000C2124FEFB0
+r10 000000C2124FEDA0
+r11 000000C2124FEE10
+
+
+earlier in rotation function:
+F3 0F 10 05 ?? ?? ?? ?? EB 08 F3 0F 10 05 ?? ?? ?? ?? 85 F6 74 07 0F 57 05
+
+this is the end of the set rotation function:
+pattern: F3 0F 58 83 94 00 00 00 E8 ?? ?? ?? ?? F3 0F 11 83 94 00 00 00 48 8B 5C 24 30 48 8B 6C 24 38 48 8B 74 24 40 48 8B 7C 24 48 48 83 C4 20 41 5E C3
+alt (12 bytes shorter): F3 0F 58 83 94 00 00 00 E8 ?? ?? ?? ?? F3 0F 11 83 94 00 00 00 48 8B 5C 24 30 48 8B 6C 24 38 48 8B 74 24 40
+
+but part of that is a branch (end of add 90deg rotation)
+branch (21 b): F3 0F 58 83 94 00 00 00 E8 ?? ?? ?? ?? F3 0F 11 83 94 00 00 00
+cleanup (27 b): 48 8B 5C 24 30 48 8B 6C 24 38 48 8B 74 24 40 48 8B 7C 24 48 48 83 C4 20 41 5E C3
+
+we want to hook cleanup, conveniently next instruction is 5 bytes
+offset = 21
+padding = 0
+
+then, we want what was in the rbx register; luckily it's at 0x0 from in rsp.
+these addresses are very close together
+
+hmm, might need to hook each write to rbx+8c/94 instead, the "F3 0F 11 83 ?? ?? ?? ??" instructions:
+snippet of writes to rbx+offset: F3 0F 11 83 8C 00 00 00 EB 15 F3 0F 58 83 94 00 00 00 E8 ?? ?? ?? ?? F3 0F 11 83 94 00 00 00
+```
+Trackmania.exe+F793D6 - F3 0F11 83 8C000000   - movss [rbx+0000008C],xmm0
+Trackmania.exe+F793DE - EB 15                 - jmp Trackmania.exe.text+F783F5
+Trackmania.exe+F793E0 - F3 0F58 83 94000000   - addss xmm0,[rbx+00000094]
+Trackmania.exe+F793E8 - E8 73480100           - call Trackmania.exe.text+F8CC60
+Trackmania.exe+F793ED - F3 0F11 83 94000000   - movss [rbx+00000094],xmm0
+```
+padding = 3
+
+
+P1: F3 0F 11 83 8C 00 00 00 EB 15 F3 0F 58 83 94 00 00 00 E8 ?? ?? ?? ?? F3 0F 11 83 94 00 00 00 48 8B 5C 24 30 48 8B 6C 24 38 48 8B 74 24 40
+offset 1 = 0
+padding 1 = 3
+
+P2: EB 15 F3 0F 58 83 94 00 00 00 E8 ?? ?? ?? ?? F3 0F 11 83 94 00 00 00 48 8B 5C 24 30 48 8B 6C 24 38 48 8B 74 24 40
+offset 2 = 15
+padding 2 = 3
