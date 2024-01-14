@@ -207,7 +207,7 @@ class CursorPropsTab : Tab {
         if (g_CursorPositionWindow !is null) {
             g_CursorPositionWindow.windowOpen = UI::Checkbox("Show Cursor Info Window", g_CursorPositionWindow.windowOpen);
         }
-        S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls", S_CursorWindowRotControls);
+        S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls" + NewIndicator, S_CursorWindowRotControls);
 
         UI::Separator();
         CustomCursorRotations::Active = UI::Checkbox("Enable Custom Cursor Rotation Amounts", CustomCursorRotations::Active);

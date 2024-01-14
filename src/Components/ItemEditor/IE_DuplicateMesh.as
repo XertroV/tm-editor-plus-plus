@@ -751,19 +751,19 @@ namespace MeshDuplication {
 
     void FixLightsOnMesh(CPlugSolid2Model@ mesh) {
         if (mesh is null) return;
-        auto lightBuffer = Dev::GetOffsetNod(mesh, 0x168);
-        auto lightBufferCount = Dev::GetOffsetUint32(mesh, 0x168 + 0x8);
-        auto usrLightBufCount = Dev::GetOffsetUint32(mesh, 0x178 + 0x8);
+        auto lightBuffer = Dev::GetOffsetNod(mesh, O_SOLID2MODEL_LIGHTS_BUF);
+        auto lightBufferCount = Dev::GetOffsetUint32(mesh, O_SOLID2MODEL_LIGHTS_BUF + 0x8);
+        auto usrLightBufCount = Dev::GetOffsetUint32(mesh, O_SOLID2MODEL_USERLIGHTS_BUF + 0x8);
         trace('lights: zeroing fids for ' + lightBufferCount);
         if (usrLightBufCount > 0) {
             trace('skipping processing lights buffer because userLight array is non-empty');
-        } if (lightBufferCount > 0 && lightBuffer !is null) {
+        } else if (lightBufferCount > 0 && lightBuffer !is null) {
             trace('light buffer not null');
 
             trace('allocating user lights');
             auto userLightBufPtr = RequestMemory(0x8 * lightBufferCount);
-            ManipPtrs::Replace(mesh, 0x178, userLightBufPtr, false);
-            ManipPtrs::Replace(mesh, 0x178 + 0x8, (uint64(lightBufferCount) << 32) + lightBufferCount, false);
+            ManipPtrs::Replace(mesh, O_SOLID2MODEL_USERLIGHTS_BUF, userLightBufPtr, false);
+            ManipPtrs::Replace(mesh, O_SOLID2MODEL_USERLIGHTS_BUF + 0x8, (uint64(lightBufferCount) << 32) + lightBufferCount, false);
             // Dev::SetOffset(mesh, 0x178 + 0xC, lightBufferCount);
             trace('set and init buffer');
 
