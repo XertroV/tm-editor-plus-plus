@@ -831,7 +831,7 @@ class ItemModelTreeElement {
             } else {
                 CopiableLabeledValue("m_DualCenterToLight", light.m_DualCenterToLight.ToString());
                 CopiableLabeledValue("AnimTimerName", light.AnimTimerName.GetName());
-                CopiableLabeledValue("NightOnly##pl", tostring(light.NightOnly));
+                CopiableLabeledValue("NightOnly", tostring(light.NightOnly));
                 CopiableLabeledValue("ReflectByGround", tostring(light.ReflectByGround));
                 CopiableLabeledValue("DuplicateGxLight", tostring(light.DuplicateGxLight));
                 CopiableLabeledValue("SceneLightOnlyWhenTreeVisible", tostring(light.SceneLightOnlyWhenTreeVisible));

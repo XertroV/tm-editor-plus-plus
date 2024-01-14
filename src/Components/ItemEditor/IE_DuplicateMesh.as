@@ -797,23 +797,29 @@ namespace MeshDuplication {
                     auto userLightBufNod = Dev::GetOffsetNod(mesh, 0x178);
                     trace('got user light buf ptrnod');
                     auto userLight = CPlugLightUserModel();
+                    // userLight.Distance = light.m_GxLightModel.
+                    userLight.NightOnly = light.NightOnly;
                     userLight.Intensity = light.m_GxLightModel.Intensity;
                     userLight.Color = light.m_GxLightModel.Color;
+                    auto lightBall = cast<CGxLightBall>(light.m_GxLightModel);
+                    if (lightBall !is null) {
+                        userLight.Distance = lightBall.Radius;
+                        userLight.PointEmissionRadius = lightBall.EmittingRadius;
+                        userLight.PointEmissionLength = lightBall.EmittingCylinderLenZ;
+                    }
+                    auto lightSpot = cast<CGxLightSpot>(light.m_GxLightModel);
+                    if (lightSpot !is null) {
+                        // userLight.SpotEmissionSizeX = lightSpot.SubLightCountX;
+                        // userLight.SpotEmissionSizeY = lightSpot.SubLightCountY;
+                        userLight.SpotInnerAngle = lightSpot.AngleInner;
+                        userLight.SpotOuterAngle = lightSpot.AngleOuter;
+                    }
                     Dev::SetOffset(userLightBufNod, 0x8 * i, userLight);
                     trace('created CPlugLightUserModel ' + i);
                 }
             }
 
             trace('done lights');
-
-            if (false) {
-                // zero the lights array
-                // Dev::SetOffset(mesh, 0x168, uint64(0));
-                // Dev::SetOffset(mesh, 0x168 + 8, uint64(0));
-                auto ptr = Dev_GetPointerForNod(mesh) + 0x168;
-                ManipPtrs::Zero(ptr);
-                ManipPtrs::Zero(ptr + 0x8);
-            }
         }
     }
 
