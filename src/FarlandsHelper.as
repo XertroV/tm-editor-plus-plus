@@ -329,6 +329,7 @@ class HookHelper {
         this.offset = offset;
         this.padding = padding;
         this.functionName = functionName;
+        RegisterUnhookFunction(UnapplyHookFn(this.Unapply));
     }
 
     ~HookHelper() {
@@ -343,7 +344,6 @@ class HookHelper {
             return false;
         }
         @hookInfo = Dev::Hook(patternPtr + offset, padding, functionName, Dev::PushRegisters::SSE);
-        RegisterUnhookFunction(UnapplyHookFn(this.Unapply));
         return true;
     }
 
