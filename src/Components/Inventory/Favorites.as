@@ -895,8 +895,9 @@ class FavObj {
 
     CGameCtnArticleNode@ GetInvArticle(Editor::InventoryCache@ inv) {
         if (isSpecialFolder) {
+            int noClubCorrection = specialIx == 3 && !inv.hasClubItems ? 1 : 0;
             if (specialIx == 0) return Editor::GetInventoryRootNode(Editor::InventoryRootNode::Blocks);
-            else if (specialIx < 4) return Editor::GetInventoryItemFolder(Editor::InventoryItemsFolder(specialIx - 1));
+            else if (specialIx < 4) return Editor::GetInventoryItemFolder(Editor::InventoryItemsFolder(specialIx - 1 - noClubCorrection));
             else if (specialIx == 4) return Editor::GetInventoryRootNode(Editor::InventoryRootNode::Macroblocks);
             return null;
         }

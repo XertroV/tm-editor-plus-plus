@@ -8,6 +8,7 @@ namespace Editor {
             RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon), "InventoryCache");
         }
         bool isRefreshing = false;
+        bool hasClubItems = false;
 
         uint loadProgress = 0;
         uint loadTotal = 0;
@@ -20,6 +21,7 @@ namespace Editor {
             while (PAUSE_INVENTORY_CACHING) yield();
             isRefreshing = true;
             auto myNonce = ++cacheRefreshNonce;
+            hasClubItems = false;
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
             cachedInvItemNames.RemoveRange(0, cachedInvItemNames.Length);
             cachedInvBlockNames.RemoveRange(0, cachedInvBlockNames.Length);
@@ -50,6 +52,7 @@ namespace Editor {
             if (myNonce != cacheRefreshNonce) return;
             trace('Caching inventory items...');
             _IsScanningItems = true;
+            hasClubItems = itemRN.ChildNodes.Length >= 3;
             CacheInvNode(itemRN, myNonce);
             trace('Caching inventory complete.');
             if (myNonce == cacheRefreshNonce) {
