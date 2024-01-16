@@ -359,6 +359,9 @@ const uint16 O_SOLID2MODEL_CUSTMAT_BUF = 0x1F8;
 const uint16 O_SOLID2MODEL_ITEM_FID = 0x338;
 
 
+const uint16 O_CTNBLOCK_SKIN = GetOffset("CGameCtnBlock", "Skin");
+
+
 // no more than 0x170 bytes
 const uint16 O_GAMESKIN_PATH1 = 0x18;
 const uint16 O_GAMESKIN_PATH2 = 0x28;

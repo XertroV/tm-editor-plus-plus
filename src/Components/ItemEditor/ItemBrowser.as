@@ -140,6 +140,7 @@ class ItemModelTreeElement {
     GxLight@ gxLight;
     CGameItemModel@ itemModel;
     CSystemPackDesc@ sysPackDesc;
+    CGameCtnBlockSkin@ blockSkin;
     CGameBlockItem@ blockItem;
     CPlugCrystal@ crystal;
     CGameCtnBlockInfo@ blockInfo;
@@ -189,6 +190,7 @@ class ItemModelTreeElement {
         @this.userMat = cast<CPlugMaterialUserInst>(nod);
         @this.gxLight = cast<GxLight>(nod);
         @this.sysPackDesc = cast<CSystemPackDesc>(nod);
+        @this.blockSkin = cast<CGameCtnBlockSkin>(nod);
         @this.blockItem = cast<CGameBlockItem>(nod);
         @this.crystal = cast<CPlugCrystal>(nod);
         @this.blockInfo = cast<CGameCtnBlockInfo>(nod);
@@ -287,6 +289,8 @@ class ItemModelTreeElement {
             Draw(surf);
         } else if (skin !is null) {
             Draw(skin);
+        } else if (blockSkin !is null) {
+            Draw(blockSkin);
         } else if (userLight !is null) {
             Draw(userLight);
         } else if (userMat !is null) {
@@ -1311,6 +1315,17 @@ class ItemModelTreeElement {
 
             EndTreeNode();
         }
+    }
+
+
+    void Draw(CGameCtnBlockSkin@ blockSkin) {
+        if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockSkin", UI::TreeNodeFlags::None)) {
+            MkAndDrawChildNode(blockSkin.PackDesc, GetOffset(blockSkin, "PackDesc"), "PackDesc");
+            MkAndDrawChildNode(blockSkin.ForegroundPackDesc, GetOffset(blockSkin, "ForegroundPackDesc"), "ForegroundPackDesc");
+            MkAndDrawChildNode(blockSkin.ParentPackDesc, GetOffset(blockSkin, "ParentPackDesc"), "ParentPackDesc");
+            EndTreeNode();
+        }
+
     }
 
 

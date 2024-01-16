@@ -123,6 +123,12 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 #endif
         UI::Columns(1);
 
+        if (block.Skin is null) {
+            UI::TextDisabled("No Skin");
+        } else {
+            ItemModelTreeElement(null, -1, block.Skin, "Skin", true, O_CTNBLOCK_SKIN).Draw();
+        }
+
         UI::Separator();
 
         ShowHelpers = UI::Checkbox("Draw block rotation helpers##" + idNonce, ShowHelpers);
