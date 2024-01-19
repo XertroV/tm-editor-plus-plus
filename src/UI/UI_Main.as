@@ -349,6 +349,7 @@ TabGroup@ CreateMTEditorRT() {
     MT_GpsHelperTab(root);
     MT_RipGhostPathTab(root);
     MT_CursorAndTriggerPlacementTab(root);
+    MT_GhostTracks(root);
     // MT_TracksTab(root);
     // MT_SavedTracksTab(root);
     return root;

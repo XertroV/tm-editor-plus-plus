@@ -1,16 +1,16 @@
 void SetUpEditMapIntercepts() {
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap", _EditMap);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap2", _EditMap2);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap3", _EditMap3);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap4", _EditMap4);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap5", _EditMap5);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMap1", _EditNewMap1);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMap2", _EditNewMap2);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMap3", _EditNewMap3);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMap4", _EditNewMap4);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap", _EditNewMapFromBaseMap);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap2", _EditNewMapFromBaseMap2);
-    Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap3", _EditNewMapFromBaseMap3);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap", _EditMap);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap2", _EditMap2);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap3", _EditMap3);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap4", _EditMap4);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap5", _EditMap5);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMap1", _EditNewMap1);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMap2", _EditNewMap2);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMap3", _EditNewMap3);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMap4", _EditNewMap4);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap", _EditNewMapFromBaseMap);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap2", _EditNewMapFromBaseMap2);
+    // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap3", _EditNewMapFromBaseMap3);
     Dev::InterceptProc("CGameEditorPluginMap", "LayerCustomEvent", _CGameEditorPluginMap_LayerCustomEvent);
 }
 

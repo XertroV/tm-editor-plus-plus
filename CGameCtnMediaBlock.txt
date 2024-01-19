@@ -1,0 +1,21 @@
+CGameCtnMediaBlock
+
+
+CGameCtnMediaBlockEntity
+
+0x60 - float start offset
+0x68 - ghost name
+
+0x88 - bool force hue
+
+0xA0 -> fids folder: my replays
+
+0xB8 -> CSystemPackDesc skin zip
+0xC0 -> CSystemPackDesc horn
+
+0x120 -> keys, buffer of structs
+    0x0 float start time
+    0x4 enum lights (0=auto, 1=on, 2=off)
+    0x8 vec3 trail color, also 0x24 => size = 0x1C
+    0x14 float trail intensity
+    0x18 float selfillum intensity

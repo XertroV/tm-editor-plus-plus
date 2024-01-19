@@ -302,6 +302,8 @@ const uint16 O_LIGHTMAPSTRUCT_IMAGES = 0x30;
 
 const uint16 O_MAP_MACROBLOCK_INFOS = GetOffset("CGameCtnChallenge", "AnchoredObjects") + 0x20;
 
+// const uint16 O_MAP_NBITEMS = 0x4c4 or something; // used in a map syncro function called every frame, maybe to check for updates. ` >-> ` in label next to it in asm.
+
 // 2023-11-20: 0x668
 // 2024-01-09: 0x658
 const uint16 O_MAP_SCRIPTMETADATA = GetOffset("CGameCtnChallenge", "ScriptMetadata");
@@ -437,7 +439,8 @@ uint16 O_MT_CLIPGROUP_TRIGGER_BUF_LEN = 0x30;
 
 uint16 SZ_CLIPGROUP_TRIGGER_STRUCT = 0x40;
 
-
+uint16 SZ_MEDIABLOCKENTITY = 392; // 0x188
+uint16 SZ_MEDIABLOCKENTITY_KEY = 0x1C;
 
 
 
@@ -467,6 +470,7 @@ class RawBuffer {
 
     uint64 get_Ptr() { return ptr; }
     uint64 get_ElSize() { return size; }
+    bool get_StructBehindPtr() { return structBehindPtr; }
 
     uint get_Length() {
         return Dev::ReadUInt32(ptr + 0x8);
@@ -508,6 +512,17 @@ class RawBufferElem {
         return ptr + o;
     }
 
+    RawBuffer@ GetBuffer(uint o, uint size, bool behindPointer = false) {
+        CheckOffset(o, 16);
+        return RawBuffer(ptr + o, size, behindPointer);
+    }
+
+    string GetString(uint o) {
+        CheckOffset(o, 16);
+        auto nod = Dev_GetNodFromPointer(ptr + o);
+        return Dev::GetOffsetString(nod, 0);
+    }
+
     CMwNod@ GetNod(uint o) {
         return Dev_GetNodFromPointer(GetUint64(o));
     }
@@ -525,6 +540,10 @@ class RawBufferElem {
         CheckOffset(o, 4);
         return Dev::ReadUInt32(ptr + o);
     }
+    void SetUint32(uint o, uint value) {
+        CheckOffset(o, 4);
+        Dev::Write(ptr + o, value);
+    }
     uint16 GetUint16(uint o) {
         CheckOffset(o, 2);
         return Dev::ReadUInt16(ptr + o);
@@ -533,11 +552,27 @@ class RawBufferElem {
         CheckOffset(o, 1);
         return Dev::ReadUInt8(ptr + o);
     }
+    void SetUint8(uint o, uint8 value) {
+        CheckOffset(o, 1);
+        Dev::Write(ptr + o, value);
+    }
+    bool GetBool(uint o) {
+        CheckOffset(o, 1);
+        return Dev::ReadUInt8(ptr + o) != 0;
+    }
+    void SetBool(uint o, bool value) {
+        CheckOffset(o, 1);
+        Dev::Write(ptr + o, uint8(value ? 1 : 0));
+    }
 
 
     float GetFloat(uint o) {
         CheckOffset(o, 4);
         return Dev::ReadFloat(ptr + o);
+    }
+    void SetFloat(uint o, float value) {
+        CheckOffset(o, 4);
+        Dev::Write(ptr + o, value);
     }
     int32 GetInt32(uint o) {
         CheckOffset(o, 4);
@@ -560,6 +595,10 @@ class RawBufferElem {
     vec3 GetVec3(uint o) {
         CheckOffset(o, 12);
         return Dev::ReadVec3(ptr + o);
+    }
+    void SetVec3(uint o, vec3 value) {
+        CheckOffset(o, 12);
+        Dev::Write(ptr + o, value);
     }
     vec4 GetVec4(uint o) {
         CheckOffset(o, 16);

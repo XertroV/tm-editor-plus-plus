@@ -333,6 +333,10 @@ void LoadFonts() {
 }
 
 
+string toHex(uint v) {
+    return Text::Format("0x%08x", v);
+}
+
 /*
     CGameEditorPluginMap::EditMode DrawComboEditMode(const string &in label, CGameEditorPluginMap::EditMode val) {
         int v = DrawArbitraryEnum(label, int(val), 7, function(int v) {

@@ -415,7 +415,7 @@ class ItemModelTreeElement {
         if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfo", UI::TreeNodeFlags::DefaultOpen)) {
             auto mmOffset = GetOffset(blockInfo, "MatModifierPlacementTag");
             auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
-            CopiableLabeledValue("Name MwID", tostring(blockInfo.Id.Value));
+            CopiableLabeledValue("Name MwID", toHex(blockInfo.Id.Value));
             if (isEditable) {
                 Dev::SetOffset(blockInfo, mmOffset, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
             } else {

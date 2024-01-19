@@ -101,3 +101,7 @@ shared mat4 EulerToMat(vec3 euler) {
     mat4 roll = mat4::Rotate(-euler.z,vec3(0,0,1));
     return mat4::Inverse(pitch*roll*yaw/* *translation */);
 }
+
+float Rand01() {
+    return Math::Rand(0.0, 1.0);
+}
