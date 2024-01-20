@@ -1,49 +1,46 @@
-todo:
-- add time constraint on LM map requests
-- fav folders bug
-- rate limit item conversion requests
-- lightmap req debounce
-- cotd limitation
-- lm open current results
-- lm click to select a bunch of blocks/items and reduce LM quality
-- LM cached reload -- cache prior mapping also
-- lm zoom
-- lm draw controls (color, turn off unhovered boxes)
-- detailed b/item info in inventory v2
-- macroblocks for inv v2
-- validation time bugged
-
-----
-
-Hotkeys
-- Add support for hotkeys
-- Add ctrl+f to click-and-drag fill a space with blocks (normal and ghost mode supported atm; items planned soon)
-
-General
-- (API) Add Get/Set Air Block mode; Clear CustomSelectionCoords
-- Add E++ EditorPlugin
-- Add option to block escape key from exiting the editor (note: global block)
-- Added changelog tab
-- Add updated offzone patch
-- switch tab to picked block/item when picking from the Blocks & Items tab
-- fix unselectable main tabs when collapsed
-- add Block Coords of items as editable (useful for moving a free item temporarily before deleting a block in that coord)
-
-Map Properties
-- Added option to lock map thumbnail
-- Stats: time mapping (split into mapping, testing, and validating)
-- Add option to remove all map metadata
-
-Editor Misc
-- Improve camera control inputs
-- add persistance to helpers
-- add persistent 'default to air mode' option
-
-Repeat Items
-- add 'set grid based on item placement params' option to automate grid sizing
-
-Next Placed
-- add 'place macroblock in air mode' option (for non-free macroblocks)
-- add auto-rotated item placement helper
-
-----
+- add extract items from map tab
+- add kinematics controls to pause animations
+- update changing deco to support Screen155 bases
+- add fg skins to picked item
+- allow setting build version of the map for new/old wood
+- fix drawing larger lightmaps (rescales to 1024x1024 atm)
+- add Skinned Blocks and Skinned Items sub-tabs to Blocks & Items tab
+- add more next placed options, particularly useful for pasting in air mode and MB placement
+- add select random block/item buttons to randomizer tab
+- persist show magnets in cursor setting
+- add colors to nudge buttons corresponding to helper
+- fix some offsets for offzone / MT stuff in maps
+- fix not setting player/vehicle model things correctly
+- add 'open folder' button for map
+- improve editor controls UI
+- add florenzius's tutorial
+- enable farlands helper / infinite precision free placement
+- allow column headers in ItemSpectators import
+- add block/item/both selector when filtering effects
+- add some things to item browser
+- fix bug: interaction between item editor rename feature and automation
+- add limit max draw distance in editor (like tweaker)
+- add copiable camera target pos
+- zero fids when applying shape from local file
+- fix some buttons in manipulate meshes not working
+- when camera unlocked, reduce MinDistance from 10 to 0.1
+- warn on duplicate free blocks under Caches menu
+- fix filtering UI on blocks/items with UI scale /= 1
+- add MT cursor and trigger placement tab in MT UI
+- fix some mesh duplication material modifer exceptions
+- add loading a source from file in manipulate meshes
+- add open item folder button
+- allow bigger lightmap uploads
+- add lightmap click to view object
+- fix blocking escape in item editor and MT
+- add rip ghost positions from MT
+- Kamikalash tutorial
+- fix translating a map with negative coords
+- fix showing previews in effect tabs when using coord ranges
+- add MT gps helper for camera targets
+- fix showing editor plugin warning when calculating shadows
+- turn off shape generation for static objects when attaching a shape
+- add lightmap overlay toggle + reopen last analyzed
+- NPlugTrigger_SWaypoint editable props
+- add checkerboard trigger pattern for MT editor
+- update safe game versions
