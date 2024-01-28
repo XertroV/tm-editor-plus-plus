@@ -119,7 +119,7 @@ class CursorPosition : Tab {
         vec3 mod = vec3();
         mod += addPitch ? vec3(Math::ToRad(15), 0, 0) : vec3();
         mod += subPitch ? vec3(Math::ToRad(-15), 0, 0) : vec3();
-        mod += addYaw ? vec3(0, Math::ToRad(15), 0) : vec3();
+        mod += addYaw ? vec3(0, Math::ToRad(15.001), 0) : vec3();
         mod += subYaw ? vec3(0, Math::ToRad(-15), 0) : vec3();
         mod += addRoll ? vec3(0, 0, Math::ToRad(15)) : vec3();
         mod += subRoll ? vec3(0, 0, Math::ToRad(-15)) : vec3();

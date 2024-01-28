@@ -11,7 +11,7 @@ namespace Editor {
     // prefer GetCursorRot
     vec3 GetCursorPitchRollYaw(CGameCursorBlock@ cursor) {
         return vec3(cursor.Pitch,
-            float(cursor.AdditionalDir) / 5.0 * 75.0 / 180.0 * Math::PI,
+            Math::ToRad(float(cursor.AdditionalDir) / 5.0 * 75.0),
             cursor.Roll);
     }
 

@@ -237,7 +237,7 @@ class EditorRotation {
         }
         // auto yQuarter = yaw % (HALF_PI);
         // multiply by 1.001 so we avoid rounding errors from yaw ranges -- actually not sure if we need it
-        int yawStep = Math::Clamp(int(Math::Floor(yaw / Math::PI * 2. * 6. * 1.00) % 6), 0, 5);
+        int yawStep = Math::Clamp(int(Math::Floor(yaw / Math::PI * 2. * 6. + 0.0001) % 6), 0, 5);
         additionalDir = CGameCursorBlock::EAdditionalDirEnum(yawStep);
     }
 
