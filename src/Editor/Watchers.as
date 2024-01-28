@@ -213,31 +213,31 @@ class EditorRotation {
     }
 
     void UpdateYawFromDir() {
-        if (dir == CGameCursorBlock::ECardinalDirEnum::East)
-            euler.y = Math::PI * 3. / 2.;
-        else if (dir == CGameCursorBlock::ECardinalDirEnum::South)
-            euler.y = Math::PI;
-        else if (dir == CGameCursorBlock::ECardinalDirEnum::West)
-            euler.y = Math::PI / 2.;
-        else if (dir == CGameCursorBlock::ECardinalDirEnum::North)
-            euler.y = 0;
-        euler.y += float(int(additionalDir)) / 6. * Math::PI / 2.;
+        euler.y = CardinalDirectionToYaw(dir);
+        // if (dir == CGameCursorBlock::ECardinalDirEnum::East)
+        //     euler.y = Math::PI * 3. / 2.;
+        // else if (dir == CGameCursorBlock::ECardinalDirEnum::South)
+        //     euler.y = Math::PI;
+        // else if (dir == CGameCursorBlock::ECardinalDirEnum::West)
+        //     euler.y = HALF_PI;
+        // else if (dir == CGameCursorBlock::ECardinalDirEnum::North)
+        //     euler.y = 0;
+        euler.y += float(int(additionalDir)) / 6. * HALF_PI;
     }
 
     void UpdateDirFromPry() {
         NormalizeAngles();
-        auto yaw = ((euler.y + Math::PI * 2.) % (Math::PI * 2.));
-        dir = yaw < Math::PI
-            ? yaw < Math::PI/2.
-                ? CGameCursorBlock::ECardinalDirEnum::North
-                : CGameCursorBlock::ECardinalDirEnum::West
-            : yaw < Math::PI/2.*3.
-                ? CGameCursorBlock::ECardinalDirEnum::South
-                : CGameCursorBlock::ECardinalDirEnum::East
-            ;
-        auto yQuarter = yaw % (Math::PI / 2.);
+        auto yaw = euler.y;
+        dir = CGameCursorBlock::ECardinalDirEnum(YawToCardinalDirection(yaw));
+        while (yaw < 0) {
+            yaw += TAU;
+        }
+        while (yaw > HALF_PI) {
+            yaw -= HALF_PI;
+        }
+        // auto yQuarter = yaw % (HALF_PI);
         // multiply by 1.001 so we avoid rounding errors from yaw ranges -- actually not sure if we need it
-        int yawStep = Math::Clamp(int(Math::Floor(yQuarter / Math::PI * 2. * 6. * 1.001) % 6), 0, 5);
+        int yawStep = Math::Clamp(int(Math::Floor(yaw / Math::PI * 2. * 6. * 1.00) % 6), 0, 5);
         additionalDir = CGameCursorBlock::EAdditionalDirEnum(yawStep);
     }
 

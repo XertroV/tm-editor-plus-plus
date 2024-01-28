@@ -20,6 +20,7 @@ void Main() {
     ExtraUndoFix::OnLoad();
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
+    startnew(PlacementHooks::SetupHooks);
     // startnew(Editor::OffzonePatch::Apply);
     startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
 
@@ -41,7 +42,7 @@ void OnDisabled() { Unload(); }
 void Unload() {
     // hmm not sure this is a great idea b/c some of it might be used by the game.
     // still, openplanet frees it anyway, so i guess nbd.
-    FreeAllAllocated();
+    // FreeAllAllocated();
     Editor::EnableMapThumbnailUpdate();
     Editor::OffzonePatch::Unapply();
     FarlandsHelper::UnapplyAddBlockHook();

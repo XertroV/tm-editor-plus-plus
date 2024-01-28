@@ -7,7 +7,7 @@ namespace FarlandsHelper {
     // float CustomRotation = 0.1;
     bool FL_Helper_Active = false;
     bool drawDebugFarlandsHelper = false;
-    bool skipNextFrame = false;
+    bool resetCursorAfterNextPlacement = false;
     vec3 lastCursorPos;
 
     bool IsCameraInFarlands() {
@@ -28,11 +28,11 @@ namespace FarlandsHelper {
         GetCursorRotation_ForDrawing_Hook.Apply();
         while (true) {
             yield();
-            if (skipNextFrame) {
-                yield();
-                skipNextFrame = false;
-                continue;
-            }
+            // if (skipNextFrame) {
+            //     yield();
+            //     skipNextFrame = false;
+            //     continue;
+            // }
             if (!IsInEditor) continue;
             // get the cursor
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -49,8 +49,9 @@ namespace FarlandsHelper {
                 ;
             if (!atEdge && !S_EnableInfinitePrecisionFreeBlocks) continue;
 
-            auto occ = editor.OrbitalCameraControl;
-            lastCursorPos = Picker::GetMouseToWorldAtHeight(occ.m_TargetedPosition.y);
+            // auto occ = editor.OrbitalCameraControl;
+            auto camTarget = editor.PluginMapType.CameraTargetPosition;
+            lastCursorPos = Picker::GetMouseToWorldAtHeight(camTarget.y);
             cursor.FreePosInMap = lastCursorPos;
             if (isPlacingItem) {
                 Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, lastCursorPos);
@@ -121,9 +122,9 @@ namespace FarlandsHelper {
         cursor.Roll = 0;
         cursor.Dir = CGameCursorBlock::ECardinalDirEnum::North;
         // choose a random spot in the map, below the ground
-        cursor.FreePosInMap = vec3(Math::Rand(0.0, g_MapBounds.x - 32.), Math::Rand(0.0, 16.), Math::Rand(0.0, g_MapBounds.z - 32.));
+        cursor.FreePosInMap = vec3(Math::Rand(32.0, g_MapBounds.x - 32.), Math::Rand(8.0, 16.), Math::Rand(32.0, g_MapBounds.z - 32.));
         // attempt to avoid missing a click input
-        skipNextFrame = true;
+        resetCursorAfterNextPlacement = true;
 
         return false;
 
@@ -145,26 +146,35 @@ namespace FarlandsHelper {
 
     const string IncrBlocksArrayLenPattern = "E8 ?? ?? ?? ?? 48 8B 9C 24 28 01 00 00 C7 85 F0 05 00 00 01 00 00 00 48 85 DB 0F 85 F8 00 00 00 45 85 E4 75 10 49 8B CE E8 ?? ?? ?? ?? 85 C0 0F 84 D5 00 00 00 8B 94 24 F8 00 00 00 49 8B CE BB FF FF FF FF";
 
+    HookHelper@ IncrBlocksArrayLenHook = HookHelper(
+        IncrBlocksArrayLenPattern,
+        5, 3, "FarlandsHelper::OnAddBlockHook"
+    );
+
     uint64 incrBlocksArrayLenPtr;
     Dev::HookInfo@ incrBlocksArrayLenHook;
     bool ApplyAddBlockHook() {
-        if (incrBlocksArrayLenHook !is null) return false;
-        if (incrBlocksArrayLenPtr == 0) {
-            incrBlocksArrayLenPtr = Dev::FindPattern(IncrBlocksArrayLenPattern);
-        }
-        if (incrBlocksArrayLenPtr == 0) {
-            warn_every_60_s("Could not find IncrBlocksArrayLenPattern");
-            return false;
-        }
-        @incrBlocksArrayLenHook = Dev::Hook(incrBlocksArrayLenPtr + 5, 3, "FarlandsHelper::OnAddBlockHook", Dev::PushRegisters::SSE);
-        return true;
+        if (IncrBlocksArrayLenHook.IsApplied()) return true;
+        return IncrBlocksArrayLenHook.Apply();
+        // if (incrBlocksArrayLenHook !is null) return false;
+        // if (incrBlocksArrayLenPtr == 0) {
+        //     incrBlocksArrayLenPtr = Dev::FindPattern(IncrBlocksArrayLenPattern);
+        // }
+        // if (incrBlocksArrayLenPtr == 0) {
+        //     warn_every_60_s("Could not find IncrBlocksArrayLenPattern");
+        //     return false;
+        // }
+        // @incrBlocksArrayLenHook = Dev::Hook(incrBlocksArrayLenPtr + 5, 3, "FarlandsHelper::OnAddBlockHook", Dev::PushRegisters::SSE);
+        // return true;
     }
 
     bool UnapplyAddBlockHook() {
-        if (incrBlocksArrayLenHook is null) return false;
-        Dev::Unhook(incrBlocksArrayLenHook);
-        @incrBlocksArrayLenHook = null;
-        return true;
+        if (IncrBlocksArrayLenHook is null) return false;
+        if (!IncrBlocksArrayLenHook.IsApplied()) return true;
+        return IncrBlocksArrayLenHook.Unapply();
+        // Dev::Unhook(incrBlocksArrayLenHook);
+        // @incrBlocksArrayLenHook = null;
+        // return true;
     }
 
     vec3 _addBlockSetPos;
