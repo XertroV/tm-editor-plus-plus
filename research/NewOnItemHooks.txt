@@ -1,0 +1,150 @@
+NewOnBlockItemHooks.txt
+
+
+for updating items (works for all items! MBs untested)
+
+E8 ?? ?? ?? ?? FF 86 ?? ?? 00 00 48 8B C3 48 8B 5C 24 30 48 8B 74 24 38 48 83 C4 20 5F C3
+1 match
+rdx and rbx: ptr -> item
+
+
+pattern
+Trackmania.exe+B183D4 - E8 670064FF           - call Trackmania.exe.text+157440
+E8 67 00 64 FF
+
+Trackmania.exe+B183D4 - E8 670064FF           - call Trackmania.exe.text+157440 { incr items free
+ }
+Trackmania.exe+B183D9 - FF 86 C8040000        - inc [rsi+000004C8] { incr items free
+ }
+Trackmania.exe+B183DF - 48 8B C3              - mov rax,rbx
+Trackmania.exe+B183E2 - 48 8B 5C 24 30        - mov rbx,[rsp+30]
+Trackmania.exe+B183E7 - 48 8B 74 24 38        - mov rsi,[rsp+38]
+Trackmania.exe+B183EC - 48 83 C4 20           - add rsp,20 { 32 }
+Trackmania.exe+B183F0 - 5F                    - pop rdi
+Trackmania.exe+B183F1 - C3                    - ret
+
+
+
+full:
+Trackmania.exe+B1837F - 48 8B CB              - mov rcx,rbx
+Trackmania.exe+B18382 - E8 99A5FFFF           - call Trackmania.exe.text+B11920 { ->Trackmania.exe+B12920 }
+Trackmania.exe+B18387 - 48 8D 8B F0000000     - lea rcx,[rbx+000000F0]
+Trackmania.exe+B1838E - E8 DDB565FF           - call Trackmania.exe.text+172970 { ->Trackmania.exe+173970 }
+Trackmania.exe+B18393 - 48 8D 8B 24010000     - lea rcx,[rbx+00000124]
+Trackmania.exe+B1839A - E8 D1B565FF           - call Trackmania.exe.text+172970 { ->Trackmania.exe+173970 }
+Trackmania.exe+B1839F - 8B 8F A0020000        - mov ecx,[rdi+000002A0] { read length
+ }
+Trackmania.exe+B183A5 - 48 8B D3              - mov rdx,rbx
+Trackmania.exe+B183A8 - 89 8B 78010000        - mov [rbx+00000178],ecx
+Trackmania.exe+B183AE - C7 83 20010000 01000000 - mov [rbx+00000120],00000001 { 1 }
+Trackmania.exe+B183B8 - 8B 8E CC040000        - mov ecx,[rsi+000004CC]
+Trackmania.exe+B183BE - 8D 41 01              - lea eax,[rcx+01]
+Trackmania.exe+B183C1 - 89 86 CC040000        - mov [rsi+000004CC],eax
+Trackmania.exe+B183C7 - 89 8B 6C010000        - mov [rbx+0000016C],ecx
+Trackmania.exe+B183CD - 48 8D 8E 98020000     - lea rcx,[rsi+00000298]
+Trackmania.exe+B183D4 - E8 670064FF           - call Trackmania.exe.text+157440 { incr items free
+ }
+Trackmania.exe+B183D9 - FF 86 C8040000        - inc [rsi+000004C8] { incr items free
+ }
+Trackmania.exe+B183DF - 48 8B C3              - mov rax,rbx
+Trackmania.exe+B183E2 - 48 8B 5C 24 30        - mov rbx,[rsp+30]
+Trackmania.exe+B183E7 - 48 8B 74 24 38        - mov rsi,[rsp+38]
+Trackmania.exe+B183EC - 48 83 C4 20           - add rsp,20 { 32 }
+Trackmania.exe+B183F0 - 5F                    - pop rdi
+Trackmania.exe+B183F1 - C3                    - ret
+
+
+
+
+
+this is called by (multiple times in case of macro block):
+
+Trackmania.exe+10FC37C - 83 BB F0000000 0E     - cmp dword ptr [rbx+000000F0],0E { 14 }
+Trackmania.exe+10FC383 - 4C 8B F0              - mov r14,rax
+Trackmania.exe+10FC386 - 0F84 98000000         - je Trackmania.exe.text+10FB424 { ->Trackmania.exe+10FC424 }
+Trackmania.exe+10FC38C - 48 8B 8E A0040000     - mov rcx,[rsi+000004A0]
+Trackmania.exe+10FC393 - 4C 8B C5              - mov r8,rbp
+Trackmania.exe+10FC396 - 48 8B D3              - mov rdx,rbx
+>> Trackmania.exe+10FC399 - E8 72BFA1FF           - call Trackmania.exe.text+B17310 { incr items free
+ }
+Trackmania.exe+10FC39E - 41 F6 46 48 40        - test byte ptr [r14+48],40 { 64 }
+Trackmania.exe+10FC3A3 - 48 8B D8              - mov rbx,rax
+Trackmania.exe+10FC3A6 - 74 6D                 - je Trackmania.exe.text+10FB415 { ->Trackmania.exe+10FC415 }
+Trackmania.exe+10FC3A8 - 48 8B 88 58010000     - mov rcx,[rax+00000158]
+Trackmania.exe+10FC3AF - 83 B9 F0000000 03     - cmp dword ptr [rcx+000000F0],03 { 3 }
+Trackmania.exe+10FC3B6 - 75 5D                 - jne Trackmania.exe.text+10FB415 { ->Trackmania.exe+10FC415 }
+
+
+
+which is inturned called here (this only happens once)
+
+Trackmania.exe+ED73A2 - 74 2D                 - je Trackmania.exe.text+ED63D1 { ->Trackmania.exe+ED73D1 }
+Trackmania.exe+ED73A4 - 85 C0                 - test eax,eax
+Trackmania.exe+ED73A6 - 75 13                 - jne Trackmania.exe.text+ED63BB { ->Trackmania.exe+ED73BB }
+Trackmania.exe+ED73A8 - 44 39 7F 14           - cmp [rdi+14],r15d
+Trackmania.exe+ED73AC - 74 0D                 - je Trackmania.exe.text+ED63BB { ->Trackmania.exe+ED73BB }
+Trackmania.exe+ED73AE - 48 8B D7              - mov rdx,rdi
+Trackmania.exe+ED73B1 - 48 8B CB              - mov rcx,rbx
+Trackmania.exe+ED73B4 - E8 A71B0000           - call Trackmania.exe.text+ED7F60 { incr items free
+ }
+Trackmania.exe+ED73B9 - EB 2E                 - jmp Trackmania.exe.text+ED63E9 { ->Trackmania.exe+ED73E9 }
+Trackmania.exe+ED73BB - 44 39 BB 640A0000     - cmp [rbx+00000A64],r15d
+Trackmania.exe+ED73C2 - 74 25                 - je Trackmania.exe.text+ED63E9 { ->Trackmania.exe+ED73E9 }
+Trackmania.exe+ED73C4 - 48 8B D7              - mov rdx,rdi
+Trackmania.exe+ED73C7 - 48 8B CB              - mov rcx,rbx
+Trackmania.exe+ED73CA - E8 B1200000           - call Trackmania.exe.text+ED8480 { ->Trackmania.exe+ED9480 }
+Trackmania.exe+ED73CF - EB 18                 - jmp Trackmania.exe.text+ED63E9 { ->Trackmania.exe+ED73E9 }
+Trackmania.exe+ED73D1 - 85 C0                 - test eax,eax
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+called once for a macroblock
+Trackmania.exe+10F4083 - 48 89 44 24 38        - mov [rsp+38],rax
+Trackmania.exe+10F4088 - 48 8B D7              - mov rdx,rdi
+Trackmania.exe+10F408B - 89 74 24 30           - mov [rsp+30],esi
+Trackmania.exe+10F408F - 4C 89 74 24 28        - mov [rsp+28],r14
+Trackmania.exe+10F4094 - 4C 89 4C 24 20        - mov [rsp+20],r9
+Trackmania.exe+10F4099 - 4C 8D 8D 58010000     - lea r9,[rbp+00000158]
+Trackmania.exe+10F40A0 - E8 CBA9FFFF           - call Trackmania.exe.text+10EDA70 { placing a macroblock item
+ }
+Trackmania.exe+10F40A5 - 4C 8B 44 24 70        - mov r8,[rsp+70]
+Trackmania.exe+10F40AA - 48 8D 4D 30           - lea rcx,[rbp+30]
+Trackmania.exe+10F40AE - 49 8B D5              - mov rdx,r13
+Trackmania.exe+10F40B1 - E8 7A0AA3FF           - call Trackmania.exe.text+B23B30 { ->Trackmania.exe+B24B30 }
+Trackmania.exe+10F40B6 - F2 41 0F10 4D 00      - movsd xmm1,[r13+00]
+Trackmania.exe+10F40BC - 4C 8D 44 24 60        - lea r8,[rsp+60]
+Trackmania.exe+10F40C1 - 41 8B 45 08           - mov eax,[r13+08]
+
+
+
+
+called once per item in a macroblock
+Trackmania.exe+10EF264 - 48 8B FE              - mov rdi,rsi
+Trackmania.exe+10EF267 - 48 89 B5 58010000     - mov [rbp+00000158],rsi
+Trackmania.exe+10EF26E - 48 8B 93 B0000000     - mov rdx,[rbx+000000B0]
+Trackmania.exe+10EF275 - 4C 8D 4C 24 28        - lea r9,[rsp+28]
+Trackmania.exe+10EF27A - 48 8B 4D 48           - mov rcx,[rbp+48]
+Trackmania.exe+10EF27E - 4C 8D 85 E0000000     - lea r8,[rbp+000000E0]
+Trackmania.exe+10EF285 - E8 A6D00000           - call Trackmania.exe.text+10FB330 { placing a macroblock item
+ }
+Trackmania.exe+10EF28A - 48 8B 8B 88000000     - mov rcx,[rbx+00000088]
+Trackmania.exe+10EF291 - 85 C0                 - test eax,eax
+Trackmania.exe+10EF293 - 48 8B 74 24 28        - mov rsi,[rsp+28]
+Trackmania.exe+10EF298 - B8 00000000           - mov eax,00000000 { 0 }
+Trackmania.exe+10EF29D - 44 0F44 E0            - cmove r12d,eax
+Trackmania.exe+10EF2A1 - 44 89 64 24 48        - mov [rsp+48],r12d
+Trackmania.exe+10EF2A6 - 48 85 C9              - test rcx,rcx

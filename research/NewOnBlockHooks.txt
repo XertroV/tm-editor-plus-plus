@@ -1,0 +1,16 @@
+NewOnBlockHooks.txt
+
+called twice to check you can place there, and then once for each pillar segment (usually less than height; e.g., called 5 times for block at height 6)
+works for normal, ghost, free, air, ground
+
+E8 02 11 64 FF 48 8B 9C 24 28 01 00 00 C7 85 00 06 00 00 01 00 00 00 48 85 DB
+E8 ?? ?? ?? ?? 48 8B 9C 24 ?? ?? 00 00 C7 85 ?? ?? 00 00 01 00 00 00 48 85 DB
+
+
+
+
+Trackmania.exe+B17339 - E8 021164FF           - call Trackmania.exe.text+157440 { normal block placement
+ }
+Trackmania.exe+B1733E - 48 8B 9C 24 28010000  - mov rbx,[rsp+00000128]
+Trackmania.exe+B17346 - C7 85 00060000 01000000 - mov [rbp+00000600],00000001 { 1 }
+Trackmania.exe+B17350 - 48 85 DB              - test rbx,rbx
