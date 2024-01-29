@@ -8,15 +8,16 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     UpdateSelectedBlockItem(editor);
 
     CheckForNewSelectedItem(editor);
-    bool update = false;
-    update = CheckForNewBlocks(editor) || update;
-    if (update) trace("Updating after a block was placed");
-    update = CheckForNewItems(editor) || update;
-    if (update) trace("Updating after an item was placed");
+    //! No need to check for items/blocks anymore after new hooks. These hooks also work before the block/item is rendered, so no refresh needed
+    // bool update = false;
+    // update = CheckForNewBlocks(editor) || update;
+    // if (update) trace("Updating after a block was placed");
+    // update = CheckForNewItems(editor) || update;
+    // if (update) trace("Updating after an item was placed");
 
-    if (update) {
-        Editor::RefreshBlocksAndItems(editor);
-    }
+    // if (update) {
+    //     Editor::RefreshBlocksAndItems(editor);
+    // }
 }
 
 namespace EditorPriv {

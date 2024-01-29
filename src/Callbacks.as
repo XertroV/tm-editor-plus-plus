@@ -41,6 +41,7 @@ void RegisterOnMTEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
         onMTEditorLoadCbNames.InsertLast(name);
     }
 }
+
 void RegisterOnEditorUnloadCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
         onEditorUnloadCbs.InsertLast(f);
@@ -48,11 +49,23 @@ void RegisterOnEditorUnloadCallback(CoroutineFunc@ f, const string &in name) {
     }
 }
 
+void RegisterNewItemCallback_Private(ProcessItem@ f, const string &in name, uint index) {
+    if (f is null) throw("null callback passed to RegisterNewItemCallback_Private");
+    itemCallbacks.InsertAt(index, f);
+    itemCallbackNames.InsertAt(index, name);
+}
+
 void RegisterNewItemCallback(ProcessItem@ f, const string &in name) {
     if (f !is null) {
         itemCallbacks.InsertLast(f);
         itemCallbackNames.InsertLast(name);
     }
+}
+
+void RegisterNewBlockCallback_Private(ProcessBlock@ f, const string &in name, uint index) {
+    if (f is null) throw("null callback passed to RegisterNewBlockCallback_Private");
+    blockCallbacks.InsertAt(index, f);
+    blockCallbackNames.InsertAt(index, name);
 }
 
 void RegisterNewBlockCallback(ProcessBlock@ f, const string &in name) {
@@ -152,7 +165,8 @@ namespace Event {
 uint m_LastNbBlocks = 0;
 uint m_LastNbItems = 0;
 
-bool CheckForNewBlocks(CGameCtnEditorFree@ editor) {
+// Deprecated
+bool CheckForNewBlocks_Deprecated(CGameCtnEditorFree@ editor) {
     if (editor is null) return false;
     if (m_LastNbBlocks != editor.Challenge.Blocks.Length) {
         int newBlocks = int(editor.Challenge.Blocks.Length) - int(m_LastNbBlocks);
@@ -174,8 +188,8 @@ bool CheckForNewBlocks(CGameCtnEditorFree@ editor) {
     return false;
 }
 
-
-bool CheckForNewItems(CGameCtnEditorFree@ editor) {
+// Deprecated
+bool CheckForNewItems_Deprecated(CGameCtnEditorFree@ editor) {
     if (editor is null) return false;
     if (m_LastNbItems != editor.Challenge.AnchoredObjects.Length) {
         int newItems = int(editor.Challenge.AnchoredObjects.Length) - int(m_LastNbItems);

@@ -223,7 +223,7 @@ shared class UDEntry : BufUtils {
     }
 
     UDIcon@ AsIcon() {
-        if (clsId != 0x2E001004) return null;
+        if (clsId != GBX_CHUNK_IDS::CGameItemModel_Icon) return null;
         return UDIcon(data, log);
     }
 }
@@ -364,7 +364,7 @@ void runGbxTest() {
     // Gbx@ test1 = Gbx(IO::FromUserGameFolder("Items/zzzy_DOWN_FIREWORK_10.Item.Gbx"));
     // Gbx@ test2 = Gbx("C:\\Users\\xertrov\\OpenplanetNext\\Extract\\GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\RoadBumpBranchCross.EDClassic.Gbx");
     // Gbx@ test3 = Gbx("C:\\Users\\xertrov\\OpenplanetNext\\Extract\\GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\DecoHillSlope2Curve2In.EDClassic.Gbx");
-    // auto iconChunk = test.GetHeaderChunk(0x2E001004);
+    // auto iconChunk = test.GetHeaderChunk(GBX_CHUNK_IDS::CGameItemModel_Icon);
     // auto icon = iconChunk.AsIcon();
     // @testTexture = UI::LoadTexture(icon.imgBytes);
     // auto iconBase64 = icon.imgBytes.ReadToBase64(icon.imgBytes.GetSize());

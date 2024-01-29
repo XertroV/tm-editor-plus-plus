@@ -1,6 +1,10 @@
 bool UserHasPermissions = false;
 
 void Main() {
+    // callbacks that must be registered first
+    RegisterNewBlockCallback_Private(PlacementHooks::OnNewBlock, "PlacementHooks::OnNewBlock", 0);
+    RegisterNewItemCallback_Private(PlacementHooks::OnNewItem, "PlacementHooks::OnNewItem", 0);
+
     startnew(LoadFonts);
     UserHasPermissions = Permissions::OpenAdvancedMapEditor();
     if (!UserHasPermissions) {
@@ -12,15 +16,18 @@ void Main() {
     if (GetApp().Editor !is null) {
         startnew(Editor::CacheMaterials);
     }
+
     startnew(UpdateEditorPlugin);
     RegisterOnEditorLoadCallback(Editor::CacheMaterials, "CacheMaterials");
     RegisterOnItemEditorLoadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
     RegisterOnEditorUnloadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
 
+    RegisterOnEditorLoadCallback(PlacementHooks::SetupHooks, "PlacementHooks::SetupHooks");
+    RegisterOnEditorUnloadCallback(PlacementHooks::UnloadHooks, "PlacementHooks::UnloadHooks");
+
     ExtraUndoFix::OnLoad();
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
-    startnew(PlacementHooks::SetupHooks);
     // startnew(Editor::OffzonePatch::Apply);
     startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
 
