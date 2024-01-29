@@ -262,11 +262,11 @@ namespace CustomCursorRotations {
     );
 
     void OnSetRot1(uint64 rbx) {
-        trace('rbx rot 1: ' + Text::FormatPointer(rbx));
+        dev_trace('rbx rot 1: ' + Text::FormatPointer(rbx));
         UpdateInferCustomRot(rbx, 0x8C);
     }
     void OnSetRot2(uint64 rbx) {
-        trace('rbx rot 2: ' + Text::FormatPointer(rbx));
+        dev_trace('rbx rot 2: ' + Text::FormatPointer(rbx));
         UpdateInferCustomRot(rbx, 0x94);
     }
 

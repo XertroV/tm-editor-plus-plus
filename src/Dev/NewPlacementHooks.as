@@ -14,9 +14,25 @@ namespace PlacementHooks {
         "E8 ?? ?? ?? ?? 48 8B 9C 24 ?? ?? 00 00 C7 85 ?? ?? 00 00 01 00 00 00 48 85 DB",
         5, 3, "PlacementHooks::OnAddBlockHook_RdxRdi"
     );
+
+    FunctionHookHelper@ OnGetCursorRotation = FunctionHookHelper(
+        "E8 6A FF 3A FF 0F 28 45 70 48 8D 55 80 48 8D 8D 08 01 00 00 66 0F 7F 45 80 E8 61 88 3A FF 8B 86 E8 0B 00 00 45 8B F5 44 89 6C 24 50 83 F8 04 0F 85 E8 02 00 00 85 FF",
+        0, 0, "PlacementHooks::OnGetCursorRotation_Rbp70"
+    );
+
+
     void SetupHooks() {
         OnItemPlacedHook.Apply();
         OnBlockPlacedHook.Apply();
+        OnGetCursorRotation.Apply();
+    }
+
+    void OnGetCursorRotation_Rbp70(uint64 rbp) {
+        dev_trace("OnGetCursorRotation! rbp: " + Text::FormatPointer(rbp));
+        // quat at rbp + 0x70
+        vec4 vq = Dev::ReadVec4(rbp + 0x70);
+        quat q = quat(vq.x, vq.y, vq.z, vq.w);
+        dev_trace("q: " + q.ToString());
     }
 
     void OnItemPlaced_RbxRdx(uint64 rbx, uint64 rdx) {

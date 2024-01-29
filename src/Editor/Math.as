@@ -1,10 +1,17 @@
 // radians
 float NormalizeAngle(float angle) {
-    while (angle < -Math::PI) {
+    float orig = angle;
+    uint count = 0;
+    while (angle < NegPI && count < 100) {
         angle += TAU;
+        count++;
     }
-    while (angle >= Math::PI) {
+    while (angle >= PI && count < 100) {
         angle -= TAU;
+        count++;
+    }
+    if (count >= 100) {
+        print("NormalizeAngle: count >= 100, " + orig + " -> " + angle);
     }
     return angle;
 }
