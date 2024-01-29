@@ -30,15 +30,40 @@ namespace PlacementHooks {
     void OnGetCursorRotation_Rbp70(uint64 rbp) {
         dev_trace("OnGetCursorRotation! rbp: " + Text::FormatPointer(rbp));
         // quat at rbp + 0x70
-        vec4 vq = Dev::ReadVec4(rbp + 0x70);
+        auto addr = rbp + 0x70;
+        vec4 vq = Dev::ReadVec4(addr);
         quat q = quat(vq.x, vq.y, vq.z, vq.w);
         dev_trace("q: " + q.ToString());
+        if (!IsInEditor) {
+            warn_every_60_s("OnGetCursorRotation_Rbp70: called outside editor!");
+        }
+        // todo: check if active, if so, write quaternion
+        q = q * quat(vec3(0, Math::Sin(float(Time::Now) / 1000.0f) * PI, 0));
+        dev_trace("new q: " + q.ToString());
+        Dev::Write(addr, vec4(q.x, q.y, q.z, q.w));
     }
 
     void OnItemPlaced_RbxRdx(uint64 rbx, uint64 rdx) {
         dev_trace("OnItemPlaced! rbx: " + Text::FormatPointer(rbx));
-        if (rbx != rdx) {
-            dev_trace("rbx != rdx: " + Text::FormatPointer(rbx) + " != " + Text::FormatPointer(rdx));
+        // if (rbx != rdx) {
+        //     dev_trace("rbx != rdx: " + Text::FormatPointer(rbx) + " != " + Text::FormatPointer(rdx));
+        // }
+        // often they are not equal, in this case rbx is correct
+        auto nod = Dev_GetNodFromPointer(rbx);
+        if (nod is null) {
+            dev_trace("rbx nod null");
+            warn_every_60_s("rbx nod null");
+            return;
+        }
+        auto item = cast<CGameCtnAnchoredObject>(nod);
+        if (item is null) {
+            dev_trace("rbx item null, checking type...");
+            dev_trace("rbx item type: " + Reflection::TypeOf(nod).Name);
+            warn_every_60_s("rbx item type: " + Reflection::TypeOf(nod).Name);
+            return;
+        }
+        if (!IsInEditor) {
+            warn_every_60_s("OnItemPlaced_RbxRdx: called outside editor! (this is a bug)");
         }
     }
 
@@ -47,5 +72,9 @@ namespace PlacementHooks {
         // if (rdx !is null) {
         //     dev_trace("rdx block: " + rdx.IdName);
         // }
+        if (!IsInEditor) {
+            warn_every_60_s("OnAddBlockHook_RdxRdi: called outside editor! (this is a bug)");
+        }
+        //
     }
 }
