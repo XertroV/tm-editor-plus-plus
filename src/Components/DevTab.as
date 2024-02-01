@@ -56,6 +56,13 @@ class DevMiscTab : Tab {
 
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+
+        UI::Text("Placement Mode: " + tostring(Editor::GetPlacementMode(editor)));
+        UI::Text("Item Mode: " + tostring(Editor::GetItemPlacementMode()));
+        UI::Text("Custom Rot Mode: " + Editor::IsInCustomRotPlacementMode(editor));
+
+        UI::Separator();
+
         if (UI::Button("Remove 50% of items")) {
             startnew(CoroutineFunc(Remove50PctItemsTest));
         }

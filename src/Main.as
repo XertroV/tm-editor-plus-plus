@@ -1,9 +1,11 @@
 bool UserHasPermissions = false;
 
 void Main() {
+    VTables::InitVTableAddrs();
+
     // callbacks that must be registered first
-    RegisterNewBlockCallback_Private(PlacementHooks::OnNewBlock, "PlacementHooks::OnNewBlock", 0);
-    RegisterNewItemCallback_Private(PlacementHooks::OnNewItem, "PlacementHooks::OnNewItem", 0);
+    RegisterNewBlockCallback_Private(CustomCursorRotations::OnNewBlock, "CustomCursorRotations::OnNewBlock", 0);
+    RegisterNewItemCallback_Private(CustomCursorRotations::OnNewItem, "CustomCursorRotations::OnNewItem", 0);
 
     startnew(LoadFonts);
     UserHasPermissions = Permissions::OpenAdvancedMapEditor();

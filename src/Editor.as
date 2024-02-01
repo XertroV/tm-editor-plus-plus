@@ -10,9 +10,9 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     CheckForNewSelectedItem(editor);
     //! No need to check for items/blocks anymore after new hooks. These hooks also work before the block/item is rendered, so no refresh needed
     // bool update = false;
-    // update = CheckForNewBlocks(editor) || update;
+    // update = CheckForNewBlocks_Deprecated(editor) || update;
     // if (update) trace("Updating after a block was placed");
-    // update = CheckForNewItems(editor) || update;
+    // update = CheckForNewItems_Deprecated(editor) || update;
     // if (update) trace("Updating after an item was placed");
 
     // if (update) {
@@ -101,6 +101,7 @@ namespace Editor {
         Free = 3
     }
 
+    // might be broken
     const uint16 O_EDITOR_ITEM_PLACEMENT_OFFSET = GetOffset("CGameCtnEditorFree", "EnableMapProcX2") - (0x1254 - 0x1238);  // item mode offset originally 0x1238
     ItemMode GetItemPlacementMode_Raw(CGameCtnEditorFree@ editor) {
         if (!IsInAnyItemPlacementMode(editor, true)) return ItemMode::None;
@@ -108,8 +109,10 @@ namespace Editor {
     }
 
     ItemMode GetItemPlacementMode() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (!IsInAnyItemPlacementMode(editor, true)) return ItemMode::None;
         try {
-            auto root = cast<CGameCtnEditorFree>(GetApp().Editor).EditorInterface.InterfaceRoot;
+            auto root = editor.EditorInterface.InterfaceRoot;
             auto main = cast<CControlFrame>(root.Childs[0]);
             auto bottomLeft = cast<CControlFrame>(main.Childs[15]);
             auto itemSubMode = cast<CControlFrame>(bottomLeft.Childs[1]);
@@ -236,6 +239,16 @@ namespace Editor {
         return mode == CGameEditorPluginMap::EPlaceMode::FreeBlock
             || mode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock
             || GetItemPlacementMode() == ItemMode::Free;
+    }
+
+    // any mode we can do custom rotations in: free macroblocks, free blocks, and any item mode
+    bool IsInCustomRotPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (checkEditMode && !IsInPlacementMode(editor))
+            return false;
+        auto mode = GetPlacementMode(editor);
+        return mode == CGameEditorPluginMap::EPlaceMode::FreeBlock
+            || mode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock
+            || GetItemPlacementMode() != ItemMode::None;
     }
 
     // normal or free

@@ -1,0 +1,17 @@
+[DGameCtnMediaBlockEntity_Key: SZ_MEDIABLOCKENTITY_KEY]
+StartTime = float, 0x0, G
+Lights = uint, 0x4, GS
+TrailColor = vec3, 0x8, GS
+TrailIntensity = float, 0x14, GS
+SelfIllumIntensity = float, 0x18, GS
+
+
+[DGameCtnMediaBlockEntity: SZ_MEDIABLOCKENTITY]
+NativeClass = CGameCtnMediaBlockEntity
+StartOffset = float, 0x60, GS
+GhostName = string, 0x68, G
+ForceHue = bool, 0x88, GS
+Skin = CSystemPackDesc, 0xB8, G
+Horn = CSystemPackDesc, 0xC0, G
+Buffer: Keys = DGameCtnMediaBlockEntity_Keys, 0x120, SZ_MEDIABLOCKENTITY_KEY
+# Buffer: Ghosts = DGameCtnMediaBlockEntity_Ghosts, 0x130, SZ_MEDIABLOCKENTITY_GHOST

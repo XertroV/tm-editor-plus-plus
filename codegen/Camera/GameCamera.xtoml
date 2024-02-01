@@ -1,0 +1,65 @@
+[DGameCamera: 0x690]
+# first 0x10 bytes: uint 0x3, 0x12, 0x13, 0x14
+# can be 1 (norm) or 2 (alt)
+Cam1OrAlt = uint8, 0x24, GS
+# can be 1 (norm) or 2 (alt)
+Cam2OrAlt = uint8, 0x25, GS
+# can be 1 (norm) or 2 (alt)
+Cam3OrAlt = uint8, 0x26, GS
+
+t1 = uint, 0x28, G
+t2 = uint, 0x2c, G
+FrameDelta = float, 0x30, G
+
+UnkVisEntId1 = float, 0x3C, G
+Float1 = float, 0x40, G
+VisEntId1 = uint, 0x44, G
+PlayerClassId = uint, 0x48, G
+UnkVisEntId2 = uint, 0x50, G
+PlayerClassId2 = uint, 0x60, G
+CurrentCamClassId = uint, 0x68, G
+CurrentCam = CPlugCamControlModel, 0x70, G
+Unk78 = uint, 0x78, G
+Unk7C = uint, 0x7C, G
+CurrentCamCtrl = CGameControlCamera, 0x80, G
+CurrentBwCamCtrl = CGameControlCameraVehicleInternal, 0x88, G
+
+FromCameraTween = CGameResources, 0xA8, G
+# relative to t2
+StartCameraTweenTime = uint, 0xB0, G
+# 0xB4 seems unused
+#
+GameResources = CGameResources, 0xB8, G
+GameScene = ISceneVis, 0xC0, G
+# 0 normally, 4 when bw, 1 forces no direction change, 0x1 and 0x10 byte not set
+OverrideCam = uint, 0xC8, G
+
+VisEntId2 = uint, 0xDC, G
+PlayerClassId3 = uint, 0xE0, G
+VehicleVisClassId = uint, 0xE8, G
+VehicleVis = CSceneVehicleVis, 0xF0, G
+VehicleMatrix = iso4, 0xF8, G
+
+# 0x130: vec3, unknonw purpose, not overwritten in editor, but yes in pg
+#
+IsMouseOverWindow = bool, 0x178, G
+CameraPos = vec3, 0x17C, G
+CursorPickDirection = vec3, 0x188, G
+GameMgrMap = NGameMgrMap_SMgr, 0x198, G
+
+# Free = 0x2, Cam1 = 0x12
+ChosenCamera = uint, 0x1A8, GS
+# unknown purpose, spec cam or something?
+UnkCameraThing = uint, 0x1AC, 0x15
+
+# 0x230: ptr to unk
+#
+CameraMatrix = iso4, 0x260, G
+
+Fov = float, 0x294, GS
+
+UnkVisEntId2B8 = uint, 0x2b8, GS
+VisEntId2BC = uint, 0x2bC, GS
+UnkVisEntId2C0 = uint, 0x2C0, GS
+
+CurrentCamControl = CGameControlCamera, 0x2D0, G

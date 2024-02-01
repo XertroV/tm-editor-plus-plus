@@ -3,13 +3,13 @@ class JitterEffectTab : EffectTab {
         super(p, "Jitter", Icons::Magic + Icons::Arrows);
         RegisterNewItemCallback(ProcessItem(OnNewItem), this.tabName);
         RegisterNewBlockCallback(ProcessBlock(OnNewBlock), this.tabName);
-        startnew(CoroutineFunc(AutorefreshLoop));
+        // startnew(CoroutineFunc(AutorefreshLoop));
     }
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
         if (!_IsActive) return false;
         ApplyJitter(item);
-        refreshThisFrame = true;
+        // refreshThisFrame = true;
         return true;
     }
 
@@ -18,17 +18,18 @@ class JitterEffectTab : EffectTab {
         return false;
     }
 
-    bool refreshThisFrame = false;
-    void AutorefreshLoop() {
-        while (true) {
-            yield();
-            if (refreshThisFrame) {
-                auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-                Editor::RefreshBlocksAndItems(editor);
-                refreshThisFrame = false;
-            }
-        }
-    }
+    // don't need this anymore
+    // bool refreshThisFrame = false;
+    // void AutorefreshLoop() {
+    //     while (true) {
+    //         yield();
+    //         if (refreshThisFrame) {
+    //             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    //             Editor::RefreshBlocksAndItems(editor);
+    //             refreshThisFrame = false;
+    //         }
+    //     }
+    // }
 
     bool _IsActive = false;
 

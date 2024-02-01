@@ -1,0 +1,109 @@
+DisableSnapping.txt
+
+
+
+ITEM METHOD
+
+
+      V jmp offs           v editor offset      v stack ptr          v stack ptr
+0F 84 CE 00 00 00 48 8B 96 78 04 00 00 4C 8D 85 D0 00 00 00 48 8B 85 58 01 00 00
+
+0F 84 ?? ?? 00 00 48 8B 96 78 04 00 00 4C 8D 85 ?? ?? 00 00 48 8B 85 ?? ?? 00 00
+
+and it's unique! (also with 4x?? for first addr unique)
+
+patch to 90 E9 (JMP)
+
+
+
+
+
+
+
+
+
+
+
+
+
+can nop `mov rcx,[rbx+0x620]`
+found by looking for code that writes to use snapped loc
+only one option really after investigation
+
+
+
+Trackmania.exe.text+ED6716 - 48 8B 8B 20060000     - mov rcx,[rbx+00000620] { load cursor }
+Trackmania.exe.text+ED671D - 89 81 6C010000        - mov [rcx+0000016C],eax { set use snapped loc }
+Trackmania.exe.text+ED6723 - 0F10 87 D8000000      - movups xmm0,[rdi+000000D8]
+Trackmania.exe.text+ED672A - 48 8B 83 20060000     - mov rax,[rbx+00000620]
+Trackmania.exe.text+ED6731 - 0F11 80 70010000      - movups [rax+00000170],xmm0 { snapped loc pos }
+Trackmania.exe.text+ED6738 - F2 0F10 8F E8000000   - movsd xmm1,[rdi+000000E8]
+Trackmania.exe.text+ED6740 - F2 0F11 88 80010000   - movsd [rax+00000180],xmm1 { snapped loc rot }
+Trackmania.exe.text+ED6748 - F2 0F10 47 54         - movsd xmm0,[rdi+54]
+Trackmania.exe.text+ED674D - 8B 8B E80B0000        - mov ecx,[rbx+00000BE8]
+Trackmania.exe.text+ED6753 - F2 0F11 83 280A0000   - movsd [rbx+00000A28],xmm0
+Trackmania.exe.text+ED675B - 8B 47 5C              - mov eax,[rdi+5C]
+Trackmania.exe.text+ED675E - 89 83 300A0000        - mov [rbx+00000A30],eax
+Trackmania.exe.text+ED6764 - 8B 83 74050000        - mov eax,[rbx+00000574]
+Trackmania.exe.text+ED676A - 89 83 FC0B0000        - mov [rbx+00000BFC],eax
+Trackmania.exe.text+ED6770 - 8B 83 B80B0000        - mov eax,[rbx+00000BB8]
+Trackmania.exe.text+ED6776 - 89 83 C00B0000        - mov [rbx+00000BC0],eax
+
+Trackmania.exe+F7D9B5 - 0A19EE50,00000000,FFFFFFFF,0A19F008,...
+Trackmania.exe+F7A353 - BF69D2C0,000A786B,00000000,00000001,...
+Trackmania.exe+10FE153 - 00000000,00000010,8AA1F980,44983EC0,...
+Trackmania.exe+F787AE - FFFFFFFF,00000000,00000000,39061273,...
+Trackmania.exe+2A5DDA - 00000011,045E1CC0,DFBE3FDF,045E1C60,...
+Trackmania.exe+283DC5 - 045E1CC0,00000000,00000010,00000000,...
+Trackmania.exe+88A38E - 0442BD80,0A19F410,00000000,574B0A8D,...
+Trackmania.exe+F4449 - 8B1D0E46,8B63E48F,8B2111E6,8B563928,...
+Trackmania.exe+A30A00 - 8B52CD97,8B617197,00000246,00000000,...
+Trackmania.exe+A340E7 - 00000000,00000000,0A19F410,00000000,...
+Trackmania.exe+14F78DA - 0000000A,0000000A,00000000,00000001,...
+KERNEL32.BaseThreadInitThunk+1D - 00000000,00000000,00000000,00000000,...
+ntdll.RtlUserThreadStart+28 - 00000000,00000000,00000000,00000000,...
+00000000             - 00000000,00000000,00000000,00000000,...
+
+
+
+Trackmania.exe.text+F7C9A5 - 48 8B 07              - mov rax,[rdi]
+Trackmania.exe.text+F7C9A8 - 48 8D 55 00           - lea rdx,[rbp+00]
+Trackmania.exe.text+F7C9AC - 48 8B CF              - mov rcx,rdi
+Trackmania.exe.text+F7C9AF - FF 90 28020000        - call qword ptr [rax+00000228] { calls update cursor  }
+Trackmania.exe.text+F7C9B5 - 83 7D F4 00           - cmp dword ptr [rbp-0C],00 { 0 }
+Trackmania.exe.text+F7C9B9 - 74 23                 - je Trackmania.exe.text+F7C9DE
+Trackmania.exe.text+F7C9BB - 48 8B 4F 68           - mov rcx,[rdi+68]
+Trackmania.exe.text+F7C9BF - BA 41000000           - mov edx,00000041 { 65 }
+Trackmania.exe.text+F7C9C4 - 4C 8B 01              - mov r8,[rcx]
+Trackmania.exe.text+F7C9C7 - 41 FF 90 08010000     - call qword ptr [r8+00000108]
+Trackmania.exe.text+F7C9CE - 85 C0                 - test eax,eax
+Trackmania.exe.text+F7C9D0 - 75 0C                 - jne Trackmania.exe.text+F7C9DE
+Trackmania.exe.text+F7C9D2 - 48 8D 55 00           - lea rdx,[rbp+00]
+Trackmania.exe.text+F7C9D6 - 48 8B CF              - mov rcx,rdi
+Trackmania.exe.text+F7C9D9 - E8 92480000           - call Trackmania.exe.text+F81270
+Trackmania.exe.text+F7C9DE - 41 8B C5              - mov eax,r13d
+
+
+
+
+Trackmania.exe.text+F7934E - E8 3D070000           - call Trackmania.exe.text+F79A90 { call some update routine, which then calls update cursor  }
+Trackmania.exe.text+F79353 - 85 C0                 - test eax,eax
+Trackmania.exe.text+F79355 - 75 04                 - jne Trackmania.exe.text+F7935B
+Trackmania.exe.text+F79357 - 85 DB                 - test ebx,ebx
+Trackmania.exe.text+F79359 - 74 05                 - je Trackmania.exe.text+F79360
+Trackmania.exe.text+F7935B - BB 01000000           - mov ebx,00000001 { 1 }
+Trackmania.exe.text+F79360 - 48 83 C7 30           - add rdi,30 { 48 }
+Trackmania.exe.text+F79364 - 48 83 ED 01           - sub rbp,01 { 1 }
+Trackmania.exe.text+F79368 - 75 D6                 - jne Trackmania.exe.text+F79340
+Trackmania.exe.text+F7936A - 8B C3                 - mov eax,ebx
+Trackmania.exe.text+F7936C - EB 05                 - jmp Trackmania.exe.text+F79373
+Trackmania.exe.text+F7936E - B8 01000000           - mov eax,00000001 { 1 }
+Trackmania.exe.text+F79373 - 48 8B 8C 24 10010000  - mov rcx,[rsp+00000110]
+Trackmania.exe.text+F7937B - 48 33 CC              - xor rcx,rsp
+Trackmania.exe.text+F7937E - E8 CDD25700           - call Trackmania.exe.text+14F6650
+Trackmania.exe.text+F79383 - 48 81 C4 20010000     - add rsp,00000120 { 288 }
+Trackmania.exe.text+F7938A - 41 5E                 - pop r14
+Trackmania.exe.text+F7938C - 5F                    - pop rdi
+Trackmania.exe.text+F7938D - 5E                    - pop rsi
+Trackmania.exe.text+F7938E - 5D                    - pop rbp
+Trackmania.exe.text+F7938F - 5B                    - pop rbx

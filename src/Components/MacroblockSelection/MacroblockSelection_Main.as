@@ -88,7 +88,7 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
         UI::ListClipper clip(len);
         while (clip.Step()) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
-                auto item = DGameCtnMacroBlockInfo_ElBlock(blocksBuf[i]);
+                auto item = DGameCtnMacroBlockInfo_Block(blocksBuf[i]);
                 UI::PushID(i);
 #if DEV
                 CopiableLabeledPtr(item.Ptr);
@@ -135,7 +135,7 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                 UI::PushID(i);
                 // auto item = itemsBuf[i];
-                auto item = DGameCtnMacroBlockInfo_ElItem(itemsBuf[i]);
+                auto item = DGameCtnMacroBlockInfo_Item(itemsBuf[i]);
 
 #if DEV
                 CopiableLabeledPtr(item.Ptr);

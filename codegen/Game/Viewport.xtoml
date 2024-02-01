@@ -1,0 +1,22 @@
+[Viewport: 29248]
+NativeClass = CDx11Viewport
+# DisplayNames + 0x10
+Struct: mDxRenderStuff = DxRenderStuff, 0x6E0, G
+Buffer: mDepthBufferStructs = DepthBufferStructs, 0x840, 0x20, false
+
+[DxRenderStuff: 0x158]
+Struct: mSwapChain = SwapChain, 0x110, G
+
+[DepthBufferStruct: 0x20]
+# todo: check offsets
+Bitmap = CPlugBitmap, 0x0, G
+Struct: DxStuff = DxStuff, 0x08, G
+u1 = uint, 0x10, G
+width = uint, 0x14, G
+height = uint, 0x18, G
+u2 = uint, 0x1C, G
+
+[SwapChain: 0x8]
+vtable = uint64, 0x0, G
+
+[DxStuff: 0x0]

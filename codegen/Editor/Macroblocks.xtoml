@@ -1,0 +1,61 @@
+[DGameCtnMacroBlockInfo_Block: SZ_MACROBLOCK_BLOCKSBUFEL]
+name = string, 0, GS, MwIdValue
+nameId = uint, 0, GS
+collection = uint, 4, GS
+author = string, 8, GS, MwIdValue
+authorId = uint, 8, GS
+coord = nat3, 0xC, GS
+dir2 = CGameCtnBlock::ECardinalDirections(4), 0x18, GS
+dir = CGameCtnBlock::ECardinalDirections(4), 0x58, GS
+pos = vec3, 0x1C, GS
+pyr = vec3, 0x28, GS
+color = CGameCtnBlock::EMapElemColor(1), 0x34, GS
+lmQual = CGameCtnBlock::EMapElemLightmapQuality(1), 0x35, GS
+mobilIndex = uint, 0x38, GS
+mobilVariant = uint, 0x3C, GS
+variant = uint, 0x40, GS
+flags = uint8, 0x44, GS
+Inline: bool get_isGround() { return flags & 1 == 1; }
+Inline: void set_isGround(bool value) { flags = value ? flags | 1 : flags & (0xFF ^ 1); }
+Inline: bool get_isNorm() { return flags < 2; }
+Inline: void makeNorm() { flags = flags & (0xFF ^ 6); }
+Inline: bool get_isGhost() { return flags & 2 == 2; }
+Inline: void set_isGhost(bool value) { flags = value ? flags | 2 : flags & (0xFF ^ 2); }
+Inline: bool get_isFree() { return flags & 4 == 4; }
+Inline: void set_isFree(bool value) { flags = value ? flags | 4 : flags & (0xFF ^ 4); }
+Waypoint = CGameWaypointSpecialProperty, 0x48, GS
+BlockInfo = CGameCtnBlockInfoClassic, 0x50, GS
+
+[DGameCtnMacroBlockInfo: SZ_CTNMACROBLOCK]
+NativeClass = CGameCtnMacroBlockInfo
+Buffer: Blocks = DGameCtnMacroBlockInfo_Blocks, O_MACROBLOCK_BLOCKSBUF, SZ_MACROBLOCK_BLOCKSBUFEL, true
+# Buffer: Skins = DGameCtnMacroBlockInfo_Skins, 0x160, 0x18, true
+#
+Buffer: Items = DGameCtnMacroBlockInfo_Items, O_MACROBLOCK_ITEMSBUF, SZ_MACROBLOCK_ITEMSBUFEL, true
+
+[DGameCtnMacroBlockInfo_Item: SZ_MACROBLOCK_ITEMSBUFEL]
+name = string, 0, GS, MwIdValue
+nameId = uint, 0, GS
+collection = uint, 4, GS
+author = string, 8, GS, MwIdValue
+authorId = uint, 8, GS
+coord = nat3, 0xC, GS
+dir = CGameCtnAnchoredObject::ECardinalDirections(4), 0x18, GS
+pos = vec3, 0x1C, GS
+pyr = vec3, 0x28, GS
+scale = float, 0x34, GS
+color = CGameCtnAnchoredObject::EMapElemColor(1), 0x34, GS
+lmQual = CGameCtnAnchoredObject::EMapElemLightmapQuality(1), 0x35, GS
+phase = CGameCtnAnchoredObject::EPhaseOffset(1), 0x36, GS
+visualRot = mat3, 0x54, G
+pivotPos = vec3, 0x78, GS
+Inline: bool get_isFlying() { return this.GetUint8(0x84) & 1 == 1; }
+Inline: void set_isFlying(bool value) { this.SetUint8(0x84, (variantIx << 1) + (value ? 1 : 0)); }
+Inline: uint16 get_variantIx() { return this.GetUint16(0x84) >> 1; }
+Inline: void set_variantIx(uint16 value) { this.SetUint8(0x84, (value << 1) + (isFlying ? 1 : 0)); }
+associatedBlockIx = uint, 0x90, GS
+itemGroupOnBlock = uint, 0x98, GS
+Waypoint = CGameWaypointSpecialProperty, 0x88, GS
+BGSkin = CSystemPackDesc, 0xA0, GS
+FGSkin = CSystemPackDesc, 0xA8, GS
+Model = CGameItemModel, 0xB0, GS

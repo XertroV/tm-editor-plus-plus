@@ -182,6 +182,7 @@ class CursorPropsTab : Tab {
             }
             UI::EndCombo();
         }
+
         if (UI::BeginCombo("AdditionalDir", tostring(cursor.AdditionalDir))) {
             for (uint i = 0; i < 6; i++) {
                 auto d = CGameCursorBlock::EAdditionalDirEnum(i);
@@ -207,16 +208,16 @@ class CursorPropsTab : Tab {
         if (g_CursorPositionWindow !is null) {
             g_CursorPositionWindow.windowOpen = UI::Checkbox("Show Cursor Info Window", g_CursorPositionWindow.windowOpen);
         }
-        S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls" + NewIndicator, S_CursorWindowRotControls);
+        S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls", S_CursorWindowRotControls);
 
         UI::Separator();
+        CustomCursorRotations::ItemStappingEnabled = UI::Checkbox("Item Snapping Enabled" + NewIndicator, CustomCursorRotations::ItemStappingEnabled);
         CustomCursorRotations::Active = UI::Checkbox("Enable Custom Cursor Rotation Amounts", CustomCursorRotations::Active);
         AddSimpleTooltip("Only works for Pitch and Roll");
         CustomCursorRotations::DrawSettings();
         // S_AutoActivateCustomRotations is checked in OnEditor for cursor window
         S_AutoActivateCustomRotations = UI::Checkbox("Auto-activate custom cursor rotations", S_AutoActivateCustomRotations);
         AddSimpleTooltip("Activates when entering the editor");
-
     }
 }
 
@@ -230,10 +231,11 @@ void ResetCursor(CGameCursorBlock@ cursor) {
 
 
 
-
 namespace CustomCursorRotations {
     [Setting hidden]
     float customRot = TAU / 4. / 12.;
+
+    vec3 cursorCustomPYR = vec3();
 
     void DrawSettings() {
         int origParts = Math::Round(TAU / 4. / customRot);
@@ -252,25 +254,87 @@ namespace CustomCursorRotations {
         return customRot;
     }
 
+    bool ItemStappingEnabled {
+        get {
+            return !DisableItemSnapping.IsApplied;
+        }
+        set {
+            DisableItemSnapping.IsApplied = !value;
+        }
+    }
+
+    // just after rot1 is written to the stack
     HookHelper@ ccRot1 = HookHelper(
         "F3 0F 11 83 8C 00 00 00 EB 15 F3 0F 58 83 94 00 00 00 E8 ?? ?? ?? ?? F3 0F 11 83 94 00 00 00 48 8B 5C 24 30 48 8B 6C 24 38 48 8B 74 24 40",
         0, 3, "CustomCursorRotations::OnSetRot1"
     );
+    // just after rot2 is written to the stack
     HookHelper@ ccRot2 = HookHelper(
         "EB 15 F3 0F 58 83 94 00 00 00 E8 ?? ?? ?? ?? F3 0F 11 83 94 00 00 00 48 8B 5C 24 30 48 8B 6C 24 38 48 8B 74 24 40",
         15, 3, "CustomCursorRotations::OnSetRot2"
     );
 
+    // idea is to use this to overwrite cursor stuff right after it's been set
+    HookHelper@ AfterCursorUpdateHook = HookHelper(
+     // "FF 90 28 02 00 00 83 7D F4 00 74 23 48 8B 4F 68 BA 41 00 00 00 4C 8B 01 41 FF 90 08 01 00 00 85 C0",
+        "FF 90 ?? ?? 00 00 83 7D F4 00 74 ?? 48 8B 4F ?? BA ?? 00 00 00 4C 8B 01 41 FF 90 ?? ?? 00 00 85 C0",
+        0, 1, "CustomCursorRotations::AfterCursorUpdate"
+    );
+
+    // patches to always JMP like there was nothing to snap to
+    MemPatcher@ DisableItemSnapping = MemPatcher(
+        "0F 84 ?? ?? 00 00 48 8B 96 78 04 00 00 4C 8D 85 ?? ?? 00 00 48 8B 85 ?? ?? 00 00",
+        {0}, {"90 E9"}, /* expected */ {"0F 84"}
+        // turn JE into NOP, JMP
+    );
+
     void OnSetRot1(uint64 rbx) {
         dev_trace('rbx rot 1: ' + Text::FormatPointer(rbx));
-        UpdateInferCustomRot(rbx, 0x8C);
+        cursorCustomPYR.x = UpdateInferCustomRot(rbx, 0x8C);
     }
     void OnSetRot2(uint64 rbx) {
         dev_trace('rbx rot 2: ' + Text::FormatPointer(rbx));
-        UpdateInferCustomRot(rbx, 0x94);
+        cursorCustomPYR.z = UpdateInferCustomRot(rbx, 0x94);
     }
 
-    void UpdateInferCustomRot(uint64 ptr, uint offset) {
+    // overwrite cursor properties here if we want
+    void AfterCursorUpdate() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        auto cursor = editor.Cursor;
+        if (cursor is null) return;
+        // make sure we're in a good mode, any item takes precedence over any free mode
+        if (Editor::IsInAnyItemPlacementMode(editor)) {
+            auto @itemCursor = DGameCursorItem(editor.ItemCursor);
+            auto pos = itemCursor.pos;
+            itemCursor.mat = iso4(EulerToMat(cursorCustomPYR));
+            itemCursor.pos = pos;
+        } else if (Editor::IsInAnyFreePlacementMode(editor)) {
+            // this is false in item mode: if (!cursor.UseFreePos) return;
+            // b/c snapping can be disabled
+            if (cursor.UseSnappedLoc) return;
+
+            // cursor.UseSnappedLoc = true;
+            // cursor.SnappedLocInMap_Trans = cursor.FreePosInMap;
+            // auto angle = float(Time::Now % 1000) / 1000.0f * TAU;
+            // // cursor.SnappedLocInMap_Trans = ;
+            // cursor.SnappedLocInMap_Pitch = NormalizeAngle(cursor.Pitch + angle);
+            // cursor.SnappedLocInMap_Roll = NormalizeAngle(cursor.Roll - angle / 3.);
+
+            // cursorCustomPYR.x = cursor.Pitch;
+            // // cursorCustomPYR.y;
+            // cursorCustomPYR.z = cursor.Roll;
+
+            cursor.SnappedLocInMap_Pitch = NormalizeAngle(cursorCustomPYR.x);
+            cursor.SnappedLocInMap_Roll = NormalizeAngle(cursorCustomPYR.z);
+            cursor.SnappedLocInMap_Yaw = NormalizeAngle(cursorCustomPYR.y);
+            cursor.SnappedLocInMap_Trans = cursor.FreePosInMap;
+            cursor.UseSnappedLoc = true;
+        }
+    }
+
+    // based on the prior and next rotations, infer the direction and overwrite new rotation
+    float UpdateInferCustomRot(uint64 ptr, uint offset) {
         // before and after
         vec2 ba = Dev::ReadVec2(ptr + offset - 0x4);
         // trace("got BA: " + ba.ToString());
@@ -281,14 +345,61 @@ namespace CustomCursorRotations {
         if (new > PI) new -= TAU;
         if (new < NegPI) new += TAU;
         Dev::Write(ptr + offset, new);
+        return new;
     }
+
     bool Active {
         get {
-            return ccRot1.IsApplied() && ccRot2.IsApplied();
+            return ccRot1.IsApplied() && ccRot2.IsApplied()
+                && AfterCursorUpdateHook.IsApplied();
         }
         set {
             ccRot1.SetApplied(value);
             ccRot2.SetApplied(value);
+            AfterCursorUpdateHook.SetApplied(value);
+            if (value) {
+                UpdateCachedCursorXZ();
+            }
         }
+    }
+
+    void UpdateCachedCursorXZ() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        if (!Editor::IsInCustomRotPlacementMode(editor)) return;
+        auto cursor = editor.Cursor;
+        if (cursor is null) return;
+        cursorCustomPYR.x = cursor.Pitch;
+        cursorCustomPYR.z = cursor.Roll;
+        cursorCustomPYR.y = EditorRotation(cursor).Yaw;
+    }
+
+    // offset may change, in which case pattern will not match (pattern in NewPlacementHooks.as)
+    void OnGetCursorRotation_Rbp70(uint64 rbp) {
+        dev_trace("OnGetCursorRotation! rbp: " + Text::FormatPointer(rbp));
+        // quat at rbp + 0x70
+        auto addr = rbp + 0x70;
+        vec4 vq = Dev::ReadVec4(addr);
+        quat q = quat(vq.x, vq.y, vq.z, vq.w);
+        dev_trace("q: " + q.ToString());
+        if (!IsInEditor) {
+            warn_every_60_s("OnGetCursorRotation_Rbp70: called outside editor!");
+        }
+        // todo: check if active, if so, write quaternion
+        q = q * quat(vec3(0, Math::Sin(float(Time::Now) / 1000.0f) * PI, 0));
+        dev_trace("new q: " + q.ToString());
+        Dev::Write(addr, vec4(q.x, q.y, q.z, q.w));
+    }
+
+    bool OnNewBlock(CGameCtnBlock@ block) {
+        // todo: custom yaw
+
+        return false;
+    }
+
+    bool OnNewItem(CGameCtnAnchoredObject@ item) {
+        // todo: custom yaw
+
+        return false;
     }
 }

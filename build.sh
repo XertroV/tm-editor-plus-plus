@@ -28,6 +28,11 @@ _colortext16 green "🏗️ preprocessing .Script.txt files in ml-scripts"
 
 python3 ./pre-proc-scripts.py
 
+_colortext16 green "🏗️ preprocessing .xtoml files in codegen"
+
+python3 ./run_codegen.py ./codegen ./src/DevStructs/ -e epp-codegen \
+  || (_colortext16 yellow "⚠ Error: codegen failed. Continuing in 2s..." ; sleep 2)
+
 pluginSources=( 'src' )
 
 for pluginSrc in ${pluginSources[@]}; do

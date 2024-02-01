@@ -1,0 +1,18 @@
+[DGameCursorItem: SZ_CGAMECURSORITEM]
+NativeClass = CGameCursorItem
+mat = iso4, 0x38, GS
+pos = vec3, (0x38 + 0x24), GS
+snappedBlock = CGameCtnBlock, 0x70, G
+mouseInWorld = vec3, 0x8C, G
+resource = CGameResources, 0xA0, G
+itemModel = CGameItemModel, 0xA8, G
+Buffer: displayedItems = DGameCursorItem_ItemDescs, 0xB8, 0xA0, false
+
+[DGameCursorItem_ItemDesc: 0xA0]
+# -1 when not drawn
+u1 = uint, 0x0, GS
+# unused i think
+u2 = uint, 0x4, GS
+itemModel = CGameItemModel, 0x8, G
+# 0x10 to 0x94 unused? maybe a matrix (identity, mostly) in front of it
+matrix = iso4, 0x70, G

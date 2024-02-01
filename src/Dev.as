@@ -368,6 +368,8 @@ const uint16 SZ_LM_SPIMP_Buf2_EL = 0x58;
 const uint16 O_EDITOR_CURR_PIVOT_OFFSET = GetOffset("CGameCtnEditorFree", "UndergroundBox") + (0xBC4 - 0xAC0);
 const uint16 O_EDITOR_LAUNCHEDCPS = GetOffset("CGameCtnEditorFree", "Radius") + 0x10;
 
+const uint16 SZ_CGAMECURSORITEM = 0xE8;
+
 const uint16 O_ITEM_MODEL_SKIN = 0xA0;
 
 const uint16 O_STATICOBJMODEL_GENSHAPE = 0x38;
@@ -452,6 +454,7 @@ const uint16 O_MACROBLOCK_ITEMSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMul
 
 const uint16 SZ_MACROBLOCK_BLOCKSBUFEL = 0x70;
 const uint16 SZ_MACROBLOCK_ITEMSBUFEL = 0xC0;
+const uint16 SZ_CTNMACROBLOCK = 0x248;
 
 
 // MEDIA TRACKER STUFF
@@ -465,6 +468,36 @@ uint16 SZ_CLIPGROUP_TRIGGER_STRUCT = 0x40;
 uint16 SZ_MEDIABLOCKENTITY = 392; // 0x188
 uint16 SZ_MEDIABLOCKENTITY_KEY = 0x1C;
 
+
+/// Yb    dP 888888    db    88""Yb 88     888888 .dP"Y8
+///  Yb  dP    88     dPYb   88__dP 88     88__   `Ybo."
+///   YbdP     88    dP__Yb  88""Yb 88  .o 88""   o.`Y8b
+///    YP      88   dP""""Yb 88oodP 88ood8 888888 8bodP'
+
+namespace VTables {
+
+    uint64 GetVTableFor(CMwNod@ nod) {
+        if (nod is null) throw("Null nod passed to GetVTableFor");
+        return Dev::GetOffsetUint64(nod, 0);
+    }
+
+    // expected should be a pointer to a vtable, e.g., VTables::CGameCtnBlock
+    bool CheckVTable(CMwNod@ nod, uint64 expected) {
+        if (nod is null) return false;
+        return CheckVTable(Dev::GetOffsetUint64(nod, 0), expected);
+    }
+    // check that a vtablePtr matches the expected vtable, e.g., VTables::CGameCtnBlock
+    bool CheckVTable(uint64 vtablePtr, uint64 expected) {
+        if (expected == 0) return false;
+        return vtablePtr == expected;
+    }
+
+    uint64 CGameCtnBlock = 0;
+
+    void InitVTableAddrs() {
+        CGameCtnBlock = GetVTableFor(::CGameCtnBlock());
+    }
+}
 
 
 
@@ -553,15 +586,21 @@ class RawBufferElem {
     CMwNod@ GetNod(uint o) {
         return Dev_GetNodFromPointer(GetUint64(o));
     }
-
+    void SetNod(uint o, CMwNod@ nod) {
+        CheckOffset(o, 8);
+        Dev::SetOffset(Dev_GetNodFromPointer(ptr), o, nod);
+    }
     uint64 GetUint64(uint o) {
         CheckOffset(o, 8);
         return Dev::ReadUInt64(ptr + o);
     }
-
     string GetMwIdValue(uint o) {
         CheckOffset(o, 4);
         return GetMwIdName(Dev::ReadUInt32(ptr + o));
+    }
+    void SetMwIdValue(uint o, const string &in value) {
+        CheckOffset(o, 4);
+        Dev::Write(ptr + o, GetMwId(value));
     }
     uint32 GetUint32(uint o) {
         CheckOffset(o, 4);
@@ -591,8 +630,6 @@ class RawBufferElem {
         CheckOffset(o, 1);
         Dev::Write(ptr + o, uint8(value ? 1 : 0));
     }
-
-
     float GetFloat(uint o) {
         CheckOffset(o, 4);
         return Dev::ReadFloat(ptr + o);
@@ -605,19 +642,29 @@ class RawBufferElem {
         CheckOffset(o, 4);
         return Dev::ReadInt32(ptr + o);
     }
-
     nat3 GetNat3(uint o) {
         CheckOffset(o, 12);
         return Dev::ReadNat3(ptr + o);
+    }
+    void SetNat3(uint o, const nat3 &in value) {
+        CheckOffset(o, 12);
+        Dev::Write(ptr + o, value);
     }
     int3 GetInt3(uint o) {
         CheckOffset(o, 12);
         return Dev::ReadInt3(ptr + o);
     }
-
+    void SetInt3(uint o, const int3 &in value) {
+        CheckOffset(o, 12);
+        Dev::Write(ptr + o, value);
+    }
     vec2 GetVec2(uint o) {
         CheckOffset(o, 8);
         return Dev::ReadVec2(ptr + o);
+    }
+    void SetVec2(uint o, vec2 value) {
+        CheckOffset(o, 8);
+        Dev::Write(ptr + o, value);
     }
     vec3 GetVec3(uint o) {
         CheckOffset(o, 12);
@@ -634,6 +681,34 @@ class RawBufferElem {
     mat3 GetMat3(uint o) {
         CheckOffset(o, 36);
         return mat3(Dev::ReadVec3(ptr + o), Dev::ReadVec3(ptr + o + 12), Dev::ReadVec3(ptr + o + 24));
+    }
+    iso4 GetIso4(uint o) {
+        CheckOffset(o, 48);
+        mat4 m = mat4(vec4(Dev::ReadVec3(ptr + o), 0.0), vec4(Dev::ReadVec3(ptr + o + 12), 0.0), vec4(Dev::ReadVec3(ptr + o + 24), 0.0), vec4(Dev::ReadVec3(ptr + o + 36), 1.0));
+        return iso4(m);
+    }
+    mat4 GetMat4(uint o) {
+        CheckOffset(o, 64);
+        return mat4(Dev::ReadVec4(ptr + o), Dev::ReadVec4(ptr + o + 16), Dev::ReadVec4(ptr + o + 32), Dev::ReadVec4(ptr + o + 48));
+    }
+    void SetMat3(uint o, const mat3 &in value) {
+        CheckOffset(o, 36);
+        Dev::Write(ptr + o, vec4(value.xx, value.xy, value.xz, value.yx));
+        Dev::Write(ptr + o + 16, vec4(value.yy, value.yz, value.zx, value.zy));
+        Dev::Write(ptr + o + 32, value.zz);
+    }
+    void SetIso4(uint o, const iso4 &in value) {
+        CheckOffset(o, 48);
+        Dev::Write(ptr + o, vec4(value.xx, value.xy, value.xz, value.yx));
+        Dev::Write(ptr + o + 16, vec4(value.yy, value.yz, value.zx, value.zy));
+        Dev::Write(ptr + o + 32, vec4(value.zz, value.tx, value.ty, value.tz));
+    }
+    void SetMat4(uint o, const mat4 &in value) {
+        CheckOffset(o, 64);
+        Dev::Write(ptr + o, vec4(value.xx, value.xy, value.xz, value.xw));
+        Dev::Write(ptr + o + 16, vec4(value.yx, value.yy, value.yz, value.yw));
+        Dev::Write(ptr + o + 32, vec4(value.zx, value.zy, value.zz, value.zw));
+        Dev::Write(ptr + o + 48, vec4(value.tx, value.ty, value.tz, value.tw));
     }
 
     void DrawResearchView() {
@@ -946,8 +1021,9 @@ class FunctionHookHelper : HookHelper {
     bool Apply() override {
         if (IsApplied()) return true;
         if (!HookHelper::Apply()) return false;
+        dev_trace("FunctionHookHelper::Apply for " + functionName);
         // read offset assuming jmp [offset]; 5 bytes
-        auto caveRelOffset = Dev::ReadInt32(patternPtr + offset + 1);
+        auto caveRelOffset = Dev::ReadInt32(patternPtr +  + 1);
         dev_trace("caveRelOffset: " + caveRelOffset);
         // calculate the address of the cave
         cavePtr = patternPtr + offset + 5 + caveRelOffset;
