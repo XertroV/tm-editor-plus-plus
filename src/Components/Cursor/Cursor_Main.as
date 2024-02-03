@@ -300,6 +300,7 @@ void ResetCursor(CGameCursorBlock@ cursor) {
     cursor.Roll = 0;
     cursor.AdditionalDir = CGameCursorBlock::EAdditionalDirEnum::P0deg;
     cursor.Dir = CGameCursorBlock::ECardinalDirEnum::North;
+    CustomCursorRotations::cursorCustomPYR = vec3();
 }
 
 
@@ -314,9 +315,9 @@ namespace CustomCursorRotations {
     vec3 cursorCustomPYR = vec3();
 
     void DrawSettings() {
-        if (customRot <= 0.001) customRot = 0.001;
+        if (customRot <= 0.0005) customRot = 0.0005;
         int origParts = Math::Round(TAU / 4. / customRot);
-        int newParts = Math::Clamp(UI::InputInt("Taps per 90 degrees", origParts), 2, 128);
+        int newParts = Math::Clamp(UI::InputInt("Taps per 90 degrees", origParts), 2, 360);
         if (origParts != newParts) customRot = TAU / 4. / float(newParts);
         float crDeg = Math::ToDeg(customRot);
         float crNewDec = UI::InputFloat("Rotation (Deg)", crDeg);
