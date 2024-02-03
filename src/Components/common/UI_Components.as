@@ -100,6 +100,21 @@ CGameEditorPluginMap::ECardinalDirections DrawComboECardinalDir(const string &in
         })
     );
 }
+CGameCursorBlock::ECardinalDirEnum DrawComboCursorECardinalDir(const string &in label, CGameCursorBlock::ECardinalDirEnum val) {
+    return CGameCursorBlock::ECardinalDirEnum(
+        DrawArbitraryEnum(label, int(val), 4, function(int v) {
+            return tostring(CGameCursorBlock::ECardinalDirEnum(v));
+        })
+    );
+}
+
+CGameCursorBlock::EAdditionalDirEnum DrawComboCursorEAdditionalDirEnum(const string &in label, CGameCursorBlock::EAdditionalDirEnum val) {
+    return CGameCursorBlock::EAdditionalDirEnum(
+        DrawArbitraryEnum(label, int(val), 6, function(int v) {
+            return tostring(CGameCursorBlock::EAdditionalDirEnum(v));
+        })
+    );
+}
 
 CGameEditorPluginMap::EPlaceMode DrawComboEPlaceMode(const string &in label, CGameEditorPluginMap::EPlaceMode val) {
     return CGameEditorPluginMap::EPlaceMode(

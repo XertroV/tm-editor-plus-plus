@@ -27,6 +27,10 @@ void Main() {
     RegisterOnEditorLoadCallback(PlacementHooks::SetupHooks, "PlacementHooks::SetupHooks");
     RegisterOnEditorUnloadCallback(PlacementHooks::UnloadHooks, "PlacementHooks::UnloadHooks");
 
+    // need to start this on load so that it's active when we enter the editor
+    if (S_EnablePromiscuousItemSnapping) {
+        CustomCursorRotations::PromiscuousItemToBlockSnapping.Apply();
+    }
     ExtraUndoFix::OnLoad();
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
@@ -56,6 +60,7 @@ void Unload() {
     Editor::OffzonePatch::Unapply();
     FarlandsHelper::UnapplyAddBlockHook();
     CheckUnhookAllRegisteredHooks();
+    CustomCursorRotations::PromiscuousItemToBlockSnapping.Unapply();
 }
 
 uint lastInItemEditor = 0;

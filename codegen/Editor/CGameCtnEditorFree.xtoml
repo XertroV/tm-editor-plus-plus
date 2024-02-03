@@ -1,0 +1,4 @@
+[DGameCtnEditorFree: 5560]
+NativeClass = CGameCtnEditorFree
+IsCalculatingShadows = bool, 0x1264, G
+LaunchedCheckpoints = CGameSaveLaunchedCheckpoints, 0x1268, G

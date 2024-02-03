@@ -23,13 +23,13 @@ namespace PlacementHooks {
     void SetupHooks() {
         OnItemPlacedHook.Apply();
         OnBlockPlacedHook.Apply();
-        // OnGetCursorRotation.Apply();
+        OnGetCursorRotation.Apply();
     }
 
     void UnloadHooks() {
         OnItemPlacedHook.Unapply();
         OnBlockPlacedHook.Unapply();
-        // OnGetCursorRotation.Unapply();
+        OnGetCursorRotation.Unapply();
     }
 
     void OnItemPlaced_RbxRdx(uint64 rbx) {

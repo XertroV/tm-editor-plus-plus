@@ -212,6 +212,10 @@ class EditorRotation {
         cursor.AdditionalDir = AdditionalDir;
     }
 
+    float YawWithCustomExtra(float extra) {
+        return CardinalDirectionToYaw(dir) + extra;
+    }
+
     void UpdateYawFromDir() {
         euler.y = CardinalDirectionToYaw(dir);
         // if (dir == CGameCursorBlock::ECardinalDirEnum::East)

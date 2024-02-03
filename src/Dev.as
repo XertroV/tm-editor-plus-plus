@@ -297,6 +297,7 @@ class ReferencedNod {
 
 
 
+const uint16 SZ_CTNCHALLENGE = 0x870;
 // map.TitleId
 const uint16 O_MAP_TITLEID = GetOffset("CGameCtnChallenge", "TitleId");
 const uint16 O_MAP_COLLECTION_ID_OFFSET1 = O_MAP_TITLEID - (0x74 - 0x54);
@@ -323,7 +324,9 @@ const uint16 O_LIGHTMAPSTRUCT_IMAGE_3 = 0x20;
 // this points to IMAGE_1
 const uint16 O_LIGHTMAPSTRUCT_IMAGES = 0x30;
 
-const uint16 O_MAP_MACROBLOCK_INFOS = GetOffset("CGameCtnChallenge", "AnchoredObjects") + 0x20;
+// 0x298
+const uint16 O_MAP_ANCHOREDOBJS = GetOffset("CGameCtnChallenge", "AnchoredObjects");
+const uint16 O_MAP_MACROBLOCK_INFOS = O_MAP_ANCHOREDOBJS + 0x20;
 
 // const uint16 O_MAP_NBITEMS = 0x4c4 or something; // used in a map syncro function called every frame, maybe to check for updates. ` >-> ` in label next to it in asm.
 
@@ -684,8 +687,9 @@ class RawBufferElem {
     }
     iso4 GetIso4(uint o) {
         CheckOffset(o, 48);
-        mat4 m = mat4(vec4(Dev::ReadVec3(ptr + o), 0.0), vec4(Dev::ReadVec3(ptr + o + 12), 0.0), vec4(Dev::ReadVec3(ptr + o + 24), 0.0), vec4(Dev::ReadVec3(ptr + o + 36), 1.0));
-        return iso4(m);
+        return Dev::ReadIso4(ptr + o);
+        // return iso4(Dev::ReadVec3(ptr + o), Dev::ReadVec3(ptr + o + 12), Dev::ReadVec3(ptr + o + 24), Dev::ReadVec3(ptr + o + 36));
+        return iso4(mat4(vec4(Dev::ReadVec3(ptr + o), 0), vec4(Dev::ReadVec3(ptr + o + 12), 0), vec4(Dev::ReadVec3(ptr + o + 24), 0), vec4(Dev::ReadVec3(ptr + o + 36), 0)));
     }
     mat4 GetMat4(uint o) {
         CheckOffset(o, 64);
@@ -699,9 +703,10 @@ class RawBufferElem {
     }
     void SetIso4(uint o, const iso4 &in value) {
         CheckOffset(o, 48);
-        Dev::Write(ptr + o, vec4(value.xx, value.xy, value.xz, value.yx));
-        Dev::Write(ptr + o + 16, vec4(value.yy, value.yz, value.zx, value.zy));
-        Dev::Write(ptr + o + 32, vec4(value.zz, value.tx, value.ty, value.tz));
+        Dev::Write(ptr + o, value);
+        // Dev::Write(ptr + o, vec4(value.xx, value.xy, value.xz, value.yx));
+        // Dev::Write(ptr + o + 16, vec4(value.yy, value.yz, value.zx, value.zy));
+        // Dev::Write(ptr + o + 32, vec4(value.zz, value.tx, value.ty, value.tz));
     }
     void SetMat4(uint o, const mat4 &in value) {
         CheckOffset(o, 64);
@@ -737,7 +742,7 @@ class RawBufferElem {
         }
         UI::SameLine();
         string mem;
-        for (uint o = 0; o < RV_SEGMENT_SIZE; o += 4) {
+        for (int o = 0; o < RV_SEGMENT_SIZE; o += 4) {
             mem = o >= limit ? "__ __ __ __" : Dev::Read(segPtr + o, Math::Min(limit, 4));
             UI::Text(mem);
             UI::SameLine();
@@ -772,72 +777,72 @@ class RawBufferElem {
     }
 
     void DrawRawValuesFloat(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 4) {
+        for (int i = 0; i < bytesToRead; i += 4) {
             _DrawRawValueFloat(segPtr + i);
         }
     }
     void DrawRawValuesUint32(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 4) {
+        for (int i = 0; i < bytesToRead; i += 4) {
             _DrawRawValueUint32(segPtr + i);
         }
     }
     void DrawRawValuesUint32D(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 4) {
+        for (int i = 0; i < bytesToRead; i += 4) {
             _DrawRawValueUint32D(segPtr + i);
         }
     }
     void DrawRawValuesUint64(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 8) {
+        for (int i = 0; i < bytesToRead; i += 8) {
             _DrawRawValueUint64(segPtr + i);
         }
     }
     void DrawRawValuesUint16(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 2) {
+        for (int i = 0; i < bytesToRead; i += 2) {
             _DrawRawValueUint16(segPtr + i);
         }
     }
     void DrawRawValuesUint16D(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 2) {
+        for (int i = 0; i < bytesToRead; i += 2) {
             _DrawRawValueUint16D(segPtr + i);
         }
     }
     void DrawRawValuesUint8(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 1) {
+        for (int i = 0; i < bytesToRead; i += 1) {
             _DrawRawValueUint8(segPtr + i);
         }
     }
     void DrawRawValuesUint8D(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 1) {
+        for (int i = 0; i < bytesToRead; i += 1) {
             _DrawRawValueUint8D(segPtr + i);
         }
     }
     void DrawRawValuesInt32(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 4) {
+        for (int i = 0; i < bytesToRead; i += 4) {
             _DrawRawValueInt32(segPtr + i);
         }
     }
     void DrawRawValuesInt32D(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 4) {
+        for (int i = 0; i < bytesToRead; i += 4) {
             _DrawRawValueInt32D(segPtr + i);
         }
     }
     void DrawRawValuesInt16(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 2) {
+        for (int i = 0; i < bytesToRead; i += 2) {
             _DrawRawValueInt16(segPtr + i);
         }
     }
     void DrawRawValuesInt16D(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 2) {
+        for (int i = 0; i < bytesToRead; i += 2) {
             _DrawRawValueInt16D(segPtr + i);
         }
     }
     void DrawRawValuesInt8(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 1) {
+        for (int i = 0; i < bytesToRead; i += 1) {
             _DrawRawValueInt8(segPtr + i);
         }
     }
     void DrawRawValuesInt8D(uint64 segPtr, int bytesToRead) {
-        for (uint i = 0; i < bytesToRead; i += 1) {
+        for (int i = 0; i < bytesToRead; i += 1) {
             _DrawRawValueInt8D(segPtr + i);
         }
     }

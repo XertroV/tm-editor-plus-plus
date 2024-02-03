@@ -11,13 +11,13 @@ class DGameCtnMacroBlockInfo_Block : RawBufferElem {
 	}
 
 	string get_name() { return (this.GetMwIdValue(0)); }
-	void set_name(string value) { this.SetMwIdValue(0, value); }
+	void set_name(const string &in value) { this.SetMwIdValue(0, value); }
 	uint get_nameId() { return (this.GetUint32(0)); }
 	void set_nameId(uint value) { this.SetUint32(0, value); }
 	uint get_collection() { return (this.GetUint32(4)); }
 	void set_collection(uint value) { this.SetUint32(4, value); }
 	string get_author() { return (this.GetMwIdValue(8)); }
-	void set_author(string value) { this.SetMwIdValue(8, value); }
+	void set_author(const string &in value) { this.SetMwIdValue(8, value); }
 	uint get_authorId() { return (this.GetUint32(8)); }
 	void set_authorId(uint value) { this.SetUint32(8, value); }
 	nat3 get_coord() { return (this.GetNat3(0xC)); }
@@ -108,13 +108,13 @@ class DGameCtnMacroBlockInfo_Item : RawBufferElem {
 	}
 
 	string get_name() { return (this.GetMwIdValue(0)); }
-	void set_name(string value) { this.SetMwIdValue(0, value); }
+	void set_name(const string &in value) { this.SetMwIdValue(0, value); }
 	uint get_nameId() { return (this.GetUint32(0)); }
 	void set_nameId(uint value) { this.SetUint32(0, value); }
 	uint get_collection() { return (this.GetUint32(4)); }
 	void set_collection(uint value) { this.SetUint32(4, value); }
 	string get_author() { return (this.GetMwIdValue(8)); }
-	void set_author(string value) { this.SetMwIdValue(8, value); }
+	void set_author(const string &in value) { this.SetMwIdValue(8, value); }
 	uint get_authorId() { return (this.GetUint32(8)); }
 	void set_authorId(uint value) { this.SetUint32(8, value); }
 	nat3 get_coord() { return (this.GetNat3(0xC)); }

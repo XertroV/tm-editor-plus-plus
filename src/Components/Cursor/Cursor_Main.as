@@ -166,33 +166,30 @@ class CursorPropsTab : Tab {
         if (editor is null) return;
         S_CopyPickedItemRotation = UI::Checkbox("Copy Rotations from Picked Items (ctrl+hover)", S_CopyPickedItemRotation);
         S_CopyPickedBlockRotation = UI::Checkbox("Copy Rotations from Picked Blocks (ctrl+hover)", S_CopyPickedBlockRotation);
-        UI::Text("Cursor:");
-        // this only works for blocks and is to do with freeblock positioning i think
-        // g_UseSnappedLoc = UI::Checkbox("Force Snapped Location", g_UseSnappedLoc);
+
         auto cursor = editor.Cursor;
+
+        UI::Columns(2, "cursor-rot", false);
+        UI::Text("Cursor:");
         cursor.Pitch = Math::ToRad(UI::InputFloat("Pitch (Deg)", Math::ToDeg(cursor.Pitch), Math::PI / 24.));
         cursor.Roll = Math::ToRad(UI::InputFloat("Roll (Deg)", Math::ToDeg(cursor.Roll), Math::PI / 24.));
+        cursor.Dir = DrawComboCursorECardinalDir("Dir", cursor.Dir);
+        cursor.AdditionalDir = DrawComboCursorEAdditionalDirEnum("AdditionalDir", cursor.AdditionalDir);
+        UI::AlignTextToFramePadding();
+        CopiableLabeledValue("Pos", cursor.FreePosInMap.ToString());
 
-        if (UI::BeginCombo("Dir", tostring(cursor.Dir))) {
-            for (uint i = 0; i < 4; i++) {
-                auto d = CGameCursorBlock::ECardinalDirEnum(i);
-                if (UI::Selectable(tostring(d), d == cursor.Dir)) {
-                    cursor.Dir = d;
-                }
-            }
-            UI::EndCombo();
-        }
+        UI::NextColumn();
+        UI::Text("Snapped:");
+        UI::BeginDisabled();
+        cursor.UseSnappedLoc = UI::Checkbox("Use Snapped Location", cursor.UseSnappedLoc);
+        cursor.SnappedLocInMap_Pitch = Math::ToRad(UI::InputFloat("S Pitch (Deg)", Math::ToDeg(cursor.SnappedLocInMap_Pitch), Math::PI / 24.));
+        cursor.SnappedLocInMap_Roll = Math::ToRad(UI::InputFloat("S Roll (Deg)", Math::ToDeg(cursor.SnappedLocInMap_Roll), Math::PI / 24.));
+        cursor.SnappedLocInMap_Yaw = Math::ToRad(UI::InputFloat("S Yaw (Deg)", Math::ToDeg(cursor.SnappedLocInMap_Yaw), Math::PI / 24.));
+        UI::EndDisabled();
+        UI::AlignTextToFramePadding();
+        CopiableLabeledValue("Pos", cursor.SnappedLocInMap_Trans.ToString());
 
-        if (UI::BeginCombo("AdditionalDir", tostring(cursor.AdditionalDir))) {
-            for (uint i = 0; i < 6; i++) {
-                auto d = CGameCursorBlock::EAdditionalDirEnum(i);
-                if (UI::Selectable(tostring(d), d == cursor.AdditionalDir)) {
-                    cursor.AdditionalDir = d;
-                }
-            }
-            UI::EndCombo();
-        }
-
+        UI::Columns(1);
         // if (UI::Button(Icons::StarO + "##add-fav-cursor")) {
             // cursorTab.cursorFavs.SaveFavorite(cursor);
         // }
@@ -211,13 +208,20 @@ class CursorPropsTab : Tab {
         S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls", S_CursorWindowRotControls);
 
         UI::Separator();
-        CustomCursorRotations::ItemStappingEnabled = UI::Checkbox("Item Snapping Enabled" + NewIndicator, CustomCursorRotations::ItemStappingEnabled);
-        CustomCursorRotations::Active = UI::Checkbox("Enable Custom Cursor Rotation Amounts", CustomCursorRotations::Active);
+
+        CustomCursorRotations::ItemStappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled" + NewIndicator, CustomCursorRotations::ItemStappingEnabled);
+        bool wasActive = CustomCursorRotations::Active;
+        auto nextActive = UI::Checkbox("Enable Custom Cursor Rotation Amounts", wasActive);
+        if (wasActive != nextActive) CustomCursorRotations::Active = nextActive;
+
         AddSimpleTooltip("Only works for Pitch and Roll");
         CustomCursorRotations::DrawSettings();
         // S_AutoActivateCustomRotations is checked in OnEditor for cursor window
         S_AutoActivateCustomRotations = UI::Checkbox("Auto-activate custom cursor rotations", S_AutoActivateCustomRotations);
         AddSimpleTooltip("Activates when entering the editor");
+
+        S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping", S_EnablePromiscuousItemSnapping);
+        AddSimpleTooltip("Items that snap to blocks will be less picky about which blocks they snap to.\n\nNOTE: If you toggle this, it will only take effect for newly placed blocks, or when you reload the map.");
     }
 }
 
@@ -229,7 +233,8 @@ void ResetCursor(CGameCursorBlock@ cursor) {
 }
 
 
-
+[Setting hidden]
+bool S_EnablePromiscuousItemSnapping = true;
 
 namespace CustomCursorRotations {
     [Setting hidden]
@@ -288,6 +293,14 @@ namespace CustomCursorRotations {
         // turn JE into NOP, JMP
     );
 
+    // todo: test placement layouts
+    // Items are less picky about the blocks they snap to. Needs to be enabled before blocks are placed, or before they are loaded (i.e., before the map is loaded in the editor)
+    MemPatcher@ PromiscuousItemToBlockSnapping = MemPatcher(
+        // "48 8b 80 ?? ?? 00 00 0f 28 85 ?? ?? 00 00 48 8d 14 ba f2 0f 11 8d ?? ?? 00 00 0f 28 8d ?? ?? 00 00",
+        "48 8b 80 ?? ?? 00 00 0f 28 85 ?? ?? 00 00 48 8d 14 ba",
+        {0}, {"48 31 C0 48 FF C8 90"}, /* expected */ {"48 8B 80 30 02 00 00"}
+    );
+
     void OnSetRot1(uint64 rbx) {
         dev_trace('rbx rot 1: ' + Text::FormatPointer(rbx));
         cursorCustomPYR.x = UpdateInferCustomRot(rbx, 0x8C);
@@ -297,7 +310,12 @@ namespace CustomCursorRotations {
         cursorCustomPYR.z = UpdateInferCustomRot(rbx, 0x94);
     }
 
-    // overwrite cursor properties here if we want
+    // after direction or additional dir is changed
+    void AfterCursorYawUpdate() {
+
+    }
+
+    // overwrite cursor properties here if we want, after the whole cursor has been updated (I think...)
     void AfterCursorUpdate() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
@@ -307,9 +325,16 @@ namespace CustomCursorRotations {
         if (Editor::IsInAnyItemPlacementMode(editor)) {
             auto @itemCursor = DGameCursorItem(editor.ItemCursor);
             auto pos = itemCursor.pos;
-            itemCursor.mat = iso4(EulerToMat(cursorCustomPYR));
+            // todo, this is weird with snapping items and seems to rotate things in the wrong direction (but correct axis)
+            // auto pyr = EditorRotation(cursor).euler;
+            auto pyr = cursorCustomPYR;
+            pyr.y = EditorRotation(cursor).YawWithCustomExtra(pyr.y);
+            // pyr.y =
+            itemCursor.mat = iso4(mat4::Inverse(EulerToMat(cursorCustomPYR)));
             itemCursor.pos = pos;
-        } else if (Editor::IsInAnyFreePlacementMode(editor)) {
+        }
+        // but we also want to set snapped location b/c that's used later on
+        if (Editor::IsInAnyFreePlacementMode(editor)) {
             // this is false in item mode: if (!cursor.UseFreePos) return;
             // b/c snapping can be disabled
             if (cursor.UseSnappedLoc) return;
@@ -371,7 +396,8 @@ namespace CustomCursorRotations {
         if (cursor is null) return;
         cursorCustomPYR.x = cursor.Pitch;
         cursorCustomPYR.z = cursor.Roll;
-        cursorCustomPYR.y = EditorRotation(cursor).Yaw;
+        cursorCustomPYR.y = cursorCustomPYR.y;
+        dev_trace("Updated Cached Cursor PYR: " + cursorCustomPYR.ToString());
     }
 
     // offset may change, in which case pattern will not match (pattern in NewPlacementHooks.as)
@@ -386,9 +412,9 @@ namespace CustomCursorRotations {
             warn_every_60_s("OnGetCursorRotation_Rbp70: called outside editor!");
         }
         // todo: check if active, if so, write quaternion
-        q = q * quat(vec3(0, Math::Sin(float(Time::Now) / 1000.0f) * PI, 0));
-        dev_trace("new q: " + q.ToString());
-        Dev::Write(addr, vec4(q.x, q.y, q.z, q.w));
+        // q = q * quat(vec3(0, Math::Sin(float(Time::Now) / 1000.0f) * PI, 0));
+        // dev_trace("new q: " + q.ToString());
+        // Dev::Write(addr, vec4(q.x, q.y, q.z, q.w));
     }
 
     bool OnNewBlock(CGameCtnBlock@ block) {

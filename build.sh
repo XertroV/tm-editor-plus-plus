@@ -30,8 +30,24 @@ python3 ./pre-proc-scripts.py
 
 _colortext16 green "🏗️ preprocessing .xtoml files in codegen"
 
-python3 ./run_codegen.py ./codegen ./src/DevStructs/ -e epp-codegen \
-  || (_colortext16 yellow "⚠ Error: codegen failed. Continuing in 2s..." ; sleep 2)
+EPP_CODEGEN_EXISTS="$(epp-codegen --version || true)"
+
+set +e
+python3 ./run_codegen.py ./codegen ./src/DevStructs/ -e epp-codegen
+CODEGEN_SUCCEEDED=$?
+echo "codegen succeeded: $CODEGEN_SUCCEEDED"
+set -e
+
+# if codegen exists but failed, then exit
+if [[ -n "$EPP_CODEGEN_EXISTS" && "$CODEGEN_SUCCEEDED" != "0" ]]; then
+  _colortext16 red "⚠ Error: codegen failed."
+  exit -1
+elif [[ -z "$EPP_CODEGEN_EXISTS" ]]; then
+  _colortext16 yellow "⚠ Warning: epp-codegen not found. Skipping codegen."
+  sleep 2
+fi
+
+
 
 pluginSources=( 'src' )
 
