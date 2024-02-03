@@ -264,7 +264,7 @@ class CursorPropsTab : Tab {
             g_CursorPositionWindow.windowOpen = UI::Checkbox("Show Cursor Info Window", g_CursorPositionWindow.windowOpen);
         }
         S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls", S_CursorWindowRotControls);
-        S_CursorWindowShowDetailed = UI::Checkbox("Show Details: exact position and snapping", S_CursorWindowShowDetailed);
+        S_CursorWindowShowDetailed = UI::Checkbox("Show Details: exact position and snapping" + NewIndicator, S_CursorWindowShowDetailed);
 
         UI::Separator();
 
@@ -314,6 +314,7 @@ namespace CustomCursorRotations {
     vec3 cursorCustomPYR = vec3();
 
     void DrawSettings() {
+        if (customRot <= 0.001) customRot = 0.001;
         int origParts = Math::Round(TAU / 4. / customRot);
         int newParts = Math::Clamp(UI::InputInt("Taps per 90 degrees", origParts), 2, 128);
         if (origParts != newParts) customRot = TAU / 4. / float(newParts);
