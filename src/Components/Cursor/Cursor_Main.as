@@ -317,8 +317,6 @@ namespace CustomCursorRotations {
         set {
             ccRot1.SetApplied(value);
             ccRot2.SetApplied(value);
-            AfterCursorUpdateHook.SetApplied(value);
-            AfterSetCursorRotationHook.SetApplied(value);
             if (value) {
                 UpdateCachedCursorXZ();
             }
