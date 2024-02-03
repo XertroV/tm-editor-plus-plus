@@ -36,6 +36,9 @@ bool S_CursorWindowRotControls = true;
 [Setting hidden]
 bool S_AutoActivateCustomRotations = false;
 
+[Setting hidden]
+bool S_AutoActivateCustomYaw = false;
+
 // activated from the tools menu, see UI_Main
 class CursorPosition : Tab {
     CursorPosition(TabGroup@ parent) {
@@ -48,6 +51,7 @@ class CursorPosition : Tab {
     void OnEditor() {
         this.windowOpen = S_CursorWindowOpen;
         if (S_AutoActivateCustomRotations) CustomCursorRotations::Active = true;
+        if (S_AutoActivateCustomYaw) CustomCursorRotations::CustomYawActive = true;
     }
 
     bool get_windowOpen() override property {
@@ -213,15 +217,26 @@ class CursorPropsTab : Tab {
         bool wasActive = CustomCursorRotations::Active;
         auto nextActive = UI::Checkbox("Enable Custom Cursor Rotation Amounts", wasActive);
         if (wasActive != nextActive) CustomCursorRotations::Active = nextActive;
-
         AddSimpleTooltip("Only works for Pitch and Roll");
+
+        wasActive = CustomCursorRotations::CustomYawActive;
+        nextActive = UI::Checkbox("Enable Custom Yaw \\$f80BETA!" + NewIndicator, wasActive);
+        if (wasActive != nextActive) CustomCursorRotations::CustomYawActive = nextActive;
+        AddSimpleTooltip("Note: this currently does not work correctly with item-to-block snapping.");
+
         CustomCursorRotations::DrawSettings();
         // S_AutoActivateCustomRotations is checked in OnEditor for cursor window
-        S_AutoActivateCustomRotations = UI::Checkbox("Auto-activate custom cursor rotations", S_AutoActivateCustomRotations);
+        S_AutoActivateCustomRotations = UI::Checkbox("Auto-activate custom cursor rotations (Pitch, Roll)", S_AutoActivateCustomRotations);
+        AddSimpleTooltip("Activates when entering the editor");
+        S_AutoActivateCustomYaw = UI::Checkbox("Auto-activate custom cursor rotations (Yaw)", S_AutoActivateCustomYaw);
         AddSimpleTooltip("Activates when entering the editor");
 
-        S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping", S_EnablePromiscuousItemSnapping);
-        AddSimpleTooltip("Items that snap to blocks will be less picky about which blocks they snap to.\n\nNOTE: If you toggle this, it will only take effect for newly placed blocks, or when you reload the map.");
+        wasActive = S_EnablePromiscuousItemSnapping;
+        S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping" + NewIndicator, S_EnablePromiscuousItemSnapping);
+        AddSimpleTooltip("Items that snap to blocks will be less picky about which blocks they snap to. Example: trees will now snap to all terrain.\n\nNOTE: If you toggle this, it will only take effect for newly placed blocks, or when you reload the map.");
+        if (wasActive != S_EnablePromiscuousItemSnapping) {
+            CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
+        }
     }
 }
 
@@ -240,6 +255,7 @@ namespace CustomCursorRotations {
     [Setting hidden]
     float customRot = TAU / 4. / 12.;
 
+    // yaw tracks extra direction only (between 0 and 90deg), but pitch and roll are full rotations
     vec3 cursorCustomPYR = vec3();
 
     void DrawSettings() {
@@ -257,6 +273,35 @@ namespace CustomCursorRotations {
 
     float GetCustomCursorRot() {
         return customRot;
+    }
+
+    bool Active {
+        get {
+            return ccRot1.IsApplied()
+                && ccRot2.IsApplied()
+                ;
+        }
+        set {
+            ccRot1.SetApplied(value);
+            ccRot2.SetApplied(value);
+            AfterCursorUpdateHook.SetApplied(value);
+            AfterSetCursorRotationHook.SetApplied(value);
+            if (value) {
+                UpdateCachedCursorXZ();
+            }
+        }
+    }
+
+    bool CustomYawActive {
+        get {
+            return AfterCursorUpdateHook.IsApplied()
+                && AfterSetCursorRotationHook.IsApplied()
+                ;
+        }
+        set {
+            AfterCursorUpdateHook.SetApplied(value);
+            AfterSetCursorRotationHook.SetApplied(value);
+        }
     }
 
     bool ItemStappingEnabled {
@@ -286,6 +331,12 @@ namespace CustomCursorRotations {
         0, 1, "CustomCursorRotations::AfterCursorUpdate"
     );
 
+    // this gives access to the stack values that update the cursor rotations
+    HookHelper@ AfterSetCursorRotationHook = HookHelper(
+        "8B 87 8C 00 00 00 89 81 ?? ?? 00 00 48 8B 8B ?? ?? 00 00 8B 87 94 00 00 00",
+        19, 1, "CustomCursorRotations::AfterSetCursorRotation_Rdi_7C"
+    );
+
     // patches to always JMP like there was nothing to snap to
     MemPatcher@ DisableItemSnapping = MemPatcher(
         "0F 84 ?? ?? 00 00 48 8B 96 78 04 00 00 4C 8D 85 ?? ?? 00 00 48 8B 85 ?? ?? 00 00",
@@ -301,18 +352,15 @@ namespace CustomCursorRotations {
         {0}, {"48 31 C0 48 FF C8 90"}, /* expected */ {"48 8B 80 30 02 00 00"}
     );
 
+    // rotation is written to the stack, and then we can overwrite it before it's written to the cursor
     void OnSetRot1(uint64 rbx) {
         dev_trace('rbx rot 1: ' + Text::FormatPointer(rbx));
         cursorCustomPYR.x = UpdateInferCustomRot(rbx, 0x8C);
     }
+    // rotation is written to the stack, and then we can overwrite it before it's written to the cursor
     void OnSetRot2(uint64 rbx) {
         dev_trace('rbx rot 2: ' + Text::FormatPointer(rbx));
         cursorCustomPYR.z = UpdateInferCustomRot(rbx, 0x94);
-    }
-
-    // after direction or additional dir is changed
-    void AfterCursorYawUpdate() {
-
     }
 
     // overwrite cursor properties here if we want, after the whole cursor has been updated (I think...)
@@ -330,11 +378,11 @@ namespace CustomCursorRotations {
             auto pyr = cursorCustomPYR;
             pyr.y = EditorRotation(cursor).YawWithCustomExtra(pyr.y);
             // pyr.y =
-            itemCursor.mat = iso4(mat4::Inverse(EulerToMat(cursorCustomPYR)));
+            itemCursor.mat = iso4(mat4::Inverse(EulerToMat(pyr)));
             itemCursor.pos = pos;
         }
         // but we also want to set snapped location b/c that's used later on
-        if (Editor::IsInAnyFreePlacementMode(editor)) {
+        if (Editor::IsInCustomRotPlacementMode(editor)) {
             // this is false in item mode: if (!cursor.UseFreePos) return;
             // b/c snapping can be disabled
             if (cursor.UseSnappedLoc) return;
@@ -352,13 +400,14 @@ namespace CustomCursorRotations {
 
             cursor.SnappedLocInMap_Pitch = NormalizeAngle(cursorCustomPYR.x);
             cursor.SnappedLocInMap_Roll = NormalizeAngle(cursorCustomPYR.z);
-            cursor.SnappedLocInMap_Yaw = NormalizeAngle(cursorCustomPYR.y);
+            cursor.SnappedLocInMap_Yaw = EditorRotation(cursor).YawWithCustomExtra(cursorCustomPYR.y);
             cursor.SnappedLocInMap_Trans = cursor.FreePosInMap;
             cursor.UseSnappedLoc = true;
+            dev_trace("After Cursor Update: " + cursor.UseSnappedLoc);
         }
     }
 
-    // based on the prior and next rotations, infer the direction and overwrite new rotation
+    // based on the prior and next rotations, infer the direction and overwrite new rotation (pitch/roll only)
     float UpdateInferCustomRot(uint64 ptr, uint offset) {
         // before and after
         vec2 ba = Dev::ReadVec2(ptr + offset - 0x4);
@@ -373,20 +422,102 @@ namespace CustomCursorRotations {
         return new;
     }
 
-    bool Active {
-        get {
-            return ccRot1.IsApplied() && ccRot2.IsApplied()
-                && AfterCursorUpdateHook.IsApplied();
+
+    // after direction or additional dir is changed. rbx = editor, rdi = stack
+    void AfterSetCursorRotation_Rdi_7C(uint64 rbx, uint64 rdi) {
+        dev_trace('editor pointer: ' + Text::FormatPointer(rbx));
+        dev_trace('rdi: ' + Text::FormatPointer(rdi));
+        // 0x78: last dir, 0x7C: next dir
+        // 0x80: last additional dir, 0x84: next additional dir
+        // 0x88: last pitch, 0x8C: next pitch
+        // 0x90: last roll, 0x94: next roll
+        // 0xB8: last use snapped, 0xBC: next use snapped loc
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto cursor = editor.Cursor;
+
+        // infer direction
+        auto lastDir = Dev::ReadInt32(rdi + 0x78);
+        auto nextDir = Dev::ReadInt32(rdi + 0x7C);
+        auto lastAddDir = Dev::ReadInt32(rdi + 0x80);
+        auto nextAddDir = Dev::ReadInt32(rdi + 0x84);
+        dev_trace("lastDir: " + lastDir + ", nextDir: " + nextDir);
+        dev_trace("lastAddDir: " + lastAddDir + ", nextAddDir: " + nextAddDir);
+        auto dirChanged = lastDir != nextDir;
+        auto addDirChanged = lastAddDir != nextAddDir;
+        // rmb with nonzero addDir: reset addDir
+        // rmb with no addDir: +1 to dir
+        // pg up with addDir < 5: +1 to addDir
+        // pg up with addDir == 5: -1 to dir, reset addDir
+        // pg down with addDir > 0: -1 to addDir
+        // pg down with addDir == 0: +1 to dir, addDir = 5
+
+        // will be 0 unless game is setting it to true. We check it before the game does, so it will still set this value.
+        // I guess we could set it here, but we set it later anyway.
+        int lastUseSnapPos = Dev::ReadInt32(rdi + 0xB8);
+        dev_trace("lastUseSnapPos: " + lastUseSnapPos);
+        int nextUseSnapPos = Dev::ReadInt32(rdi + 0xBC);
+        dev_trace("nextUseSnapPos: " + nextUseSnapPos);
+        Dev::Write(rdi + 0xBC, 0); // force no use snaped loc (we set it later if needed)
+
+        // do nothing if rotation wasn't changed.
+        if (!dirChanged && !addDirChanged) {
+            return;
         }
-        set {
-            ccRot1.SetApplied(value);
-            ccRot2.SetApplied(value);
-            AfterCursorUpdateHook.SetApplied(value);
-            if (value) {
-                UpdateCachedCursorXZ();
+
+        bool rmbPressed = Dev::ReadUInt8(rbx + O_EDITOR_RMB_PRESSED1) != 0;
+        dev_trace("rmbPressed: " + rmbPressed);
+        // if (dirChanged) {
+        //     dev_trace("Direction changed: " + lastDir + " -> " + nextDir);
+        // }
+        // if (addDirChanged) {
+        //     dev_trace("Additional direction changed: " + lastAddDir + " -> " + nextAddDir);
+        // }
+
+        if (rmbPressed) {
+            bool yawWasNonzero = cursorCustomPYR.y != 0.0;
+            dev_trace("RMB pressed, resetting custom yaw. yaw was nonZero: " + yawWasNonzero);
+            cursorCustomPYR.y = 0;
+            if (yawWasNonzero) {
+                // need to undo cursor rotation b/c we might have been at 0 additional dir
+                cursor.Dir = CGameCursorBlock::ECardinalDirEnum(lastDir);
             }
+            return;
         }
+
+        bool dirDecr = lastAddDir == 5 && nextAddDir == 0;
+        bool dirIncr = lastAddDir == 0 && nextAddDir == 5;
+        bool addDirIncr = (lastAddDir < nextAddDir && !dirIncr) || dirDecr;
+        bool addDirDecr = (lastAddDir > nextAddDir && !dirDecr) || dirIncr;
+        dev_trace("dirIncr: " + dirDecr + ", dirDecr: " + dirIncr);
+        dev_trace("addDirIncr: " + addDirIncr + ", addDirDecr: " + addDirDecr);
+
+        // reset direction change because we adjust it later if needed
+        cursor.Dir = CGameCursorBlock::ECardinalDirEnum(lastDir);
+
+        dev_trace("1. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
+        if (addDirIncr) {
+            cursorCustomPYR.y += customRot;
+
+        } else if (addDirDecr) {
+            cursorCustomPYR.y -= customRot;
+        }
+        dev_trace("2. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
+        if (cursorCustomPYR.y > HALF_PI - 0.0001) {
+            cursorCustomPYR.y -= HALF_PI;
+            cursor.Dir = CGameCursorBlock::ECardinalDirEnum((lastDir + 3) % 4);
+        } else if (cursorCustomPYR.y < 0.0001) {
+            cursorCustomPYR.y += HALF_PI;
+            cursor.Dir = CGameCursorBlock::ECardinalDirEnum((lastDir + 1) % 4);
+        }
+        cursorCustomPYR.y = Math::Clamp(cursorCustomPYR.y, 0.0, HALF_PI);
+        dev_trace("3. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
+        cursor.AdditionalDir = YawToAdditionalDir(cursorCustomPYR.y);
+        dev_trace("UseSnappedLoc: " + nextUseSnapPos + " (return early if true)");
+        if (nextUseSnapPos > 0) return;
     }
+
+    bool skipNextSetSnapped = false;
+
 
     void UpdateCachedCursorXZ() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -396,9 +527,10 @@ namespace CustomCursorRotations {
         if (cursor is null) return;
         cursorCustomPYR.x = cursor.Pitch;
         cursorCustomPYR.z = cursor.Roll;
-        cursorCustomPYR.y = cursorCustomPYR.y;
+        // cursorCustomPYR.y = (cursorCustomPYR.y);
         dev_trace("Updated Cached Cursor PYR: " + cursorCustomPYR.ToString());
     }
+
 
     // offset may change, in which case pattern will not match (pattern in NewPlacementHooks.as)
     void OnGetCursorRotation_Rbp70(uint64 rbp) {
@@ -412,6 +544,13 @@ namespace CustomCursorRotations {
             warn_every_60_s("OnGetCursorRotation_Rbp70: called outside editor!");
         }
         // todo: check if active, if so, write quaternion
+        // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        // auto cursor = editor.Cursor;
+        // auto rots = EditorRotation(cursorCustomPYR);
+        // rots.Dir = cursor.Dir;
+        // float yaw = rots.YawWithCustomExtra(cursorCustomPYR.y);
+
+        // rots.euler
         // q = q * quat(vec3(0, Math::Sin(float(Time::Now) / 1000.0f) * PI, 0));
         // dev_trace("new q: " + q.ToString());
         // Dev::Write(addr, vec4(q.x, q.y, q.z, q.w));
@@ -419,13 +558,17 @@ namespace CustomCursorRotations {
 
     bool OnNewBlock(CGameCtnBlock@ block) {
         // todo: custom yaw
-
+        // nothing to do: snapped loc takes care of it
         return false;
     }
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
         // todo: custom yaw
-
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto cursor = editor.Cursor;
+        if (CustomYawActive) {
+            item.Yaw += cursorCustomPYR.y - AdditionalDirToYaw(cursor.AdditionalDir);
+        }
         return false;
     }
 }

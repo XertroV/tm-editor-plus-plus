@@ -34,6 +34,18 @@ int YawToCardinalDirection(float yaw) {
     return dir % 4;
 }
 
+CGameCursorBlock::EAdditionalDirEnum YawToAdditionalDir(float yaw) {
+    if (yaw < 0 || yaw > HALF_PI) {
+        NotifyWarning("YawToAdditionalDir: yaw out of range: " + yaw);
+    }
+    int yawStep = Math::Clamp(int(Math::Floor(yaw / HALF_PI * 6. + 0.0001) % 6), 0, 5);
+    return CGameCursorBlock::EAdditionalDirEnum(yawStep);
+}
+
+float AdditionalDirToYaw(CGameCursorBlock::EAdditionalDirEnum aDir) {
+    return float(int(aDir)) / 6. * HALF_PI;
+}
+
 vec2 Nat2ToVec2(nat2 coord) {
     return vec2(coord.x, coord.y);
 }

@@ -371,6 +371,16 @@ const uint16 SZ_LM_SPIMP_Buf2_EL = 0x58;
 const uint16 O_EDITOR_CURR_PIVOT_OFFSET = GetOffset("CGameCtnEditorFree", "UndergroundBox") + (0xBC4 - 0xAC0);
 const uint16 O_EDITOR_LAUNCHEDCPS = GetOffset("CGameCtnEditorFree", "Radius") + 0x10;
 
+// 0xAC0 originally
+const uint16 O_EDITOR_UndergroundBox = GetOffset("CGameCtnEditorFree", "UndergroundBox");
+
+const uint16 O_EDITOR_LAST_LMB_PRESSED = O_EDITOR_UndergroundBox + 0xF0; // 0xBB0 - 0xAC0;
+const uint16 O_EDITOR_LAST_RMB_PRESSED = O_EDITOR_LAST_LMB_PRESSED + 0x4; // 0xBB4
+const uint16 O_EDITOR_LMB_PRESSED1 = O_EDITOR_LAST_RMB_PRESSED + 0x4; // 0xBB8
+const uint16 O_EDITOR_RMB_PRESSED1 = O_EDITOR_LMB_PRESSED1 + 0x4; // 0xBBC
+const uint16 O_EDITOR_LMB_PRESSED2 = O_EDITOR_RMB_PRESSED1 + 0x4; // 0xBC0
+
+
 const uint16 SZ_CGAMECURSORITEM = 0xE8;
 
 const uint16 O_ITEM_MODEL_SKIN = 0xA0;

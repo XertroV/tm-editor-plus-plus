@@ -28,9 +28,7 @@ void Main() {
     RegisterOnEditorUnloadCallback(PlacementHooks::UnloadHooks, "PlacementHooks::UnloadHooks");
 
     // need to start this on load so that it's active when we enter the editor
-    if (S_EnablePromiscuousItemSnapping) {
-        CustomCursorRotations::PromiscuousItemToBlockSnapping.Apply();
-    }
+    CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
     ExtraUndoFix::OnLoad();
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
@@ -55,7 +53,7 @@ void OnDisabled() { Unload(); }
 void Unload() {
     // hmm not sure this is a great idea b/c some of it might be used by the game.
     // still, openplanet frees it anyway, so i guess nbd.
-    // FreeAllAllocated();
+    FreeAllAllocated();
     Editor::EnableMapThumbnailUpdate();
     Editor::OffzonePatch::Unapply();
     FarlandsHelper::UnapplyAddBlockHook();

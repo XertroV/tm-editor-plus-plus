@@ -226,7 +226,7 @@ class EditorRotation {
         //     euler.y = HALF_PI;
         // else if (dir == CGameCursorBlock::ECardinalDirEnum::North)
         //     euler.y = 0;
-        euler.y += float(int(additionalDir)) / 6. * HALF_PI;
+        euler.y += AdditionalDirToYaw(additionalDir);
     }
 
     void UpdateDirFromPry() {
@@ -241,8 +241,9 @@ class EditorRotation {
         }
         // auto yQuarter = yaw % (HALF_PI);
         // multiply by 1.001 so we avoid rounding errors from yaw ranges -- actually not sure if we need it
-        int yawStep = Math::Clamp(int(Math::Floor(yaw / Math::PI * 2. * 6. + 0.0001) % 6), 0, 5);
-        additionalDir = CGameCursorBlock::EAdditionalDirEnum(yawStep);
+        // int yawStep = Math::Clamp(int(Math::Floor(yaw / Math::PI * 2. * 6. + 0.0001) % 6), 0, 5);
+        // additionalDir = CGameCursorBlock::EAdditionalDirEnum(yawStep);
+        additionalDir = YawToAdditionalDir(yaw);
     }
 
     float get_Pitch() {

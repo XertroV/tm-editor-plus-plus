@@ -66,7 +66,36 @@ padding 2 = 3
 
 -------------
 
+after cursor updates
 
+code:
+Trackmania.exe.text+ED5FCA - mov rcx,[rbx+00000620]
+Trackmania.exe.text+ED5FD1 - mov eax,[rdi+7C]
+Trackmania.exe.text+ED5FD4 - mov [rcx+00000148],eax
+Trackmania.exe.text+ED5FDA - mov [rcx+00000150],eax
+Trackmania.exe.text+ED5FE0 - mov rcx,[rbx+00000620]
+Trackmania.exe.text+ED5FE7 - mov eax,[rdi+00000084]
+Trackmania.exe.text+ED5FED - mov [rcx+0000014C],eax
+Trackmania.exe.text+ED5FF3 - mov rcx,[rbx+00000620]
+Trackmania.exe.text+ED5FFA - mov eax,[rdi+0000008C]
+Trackmania.exe.text+ED6000 - mov [rcx+00000154],eax
+Trackmania.exe.text+ED6006 - mov rcx,[rbx+00000620]
+Trackmania.exe.text+ED600D - mov eax,[rdi+00000094]
+
+// we target the end of this
+48 8B 8B 20 06 00 00 8B 47 7C 89 81 48 01 00 00 89 81 50 01 00 00 48 8B 8B 20 06 00 00 8B 87 84 00 00 00 89 81 4C 01 00 00 48 8B 8B 20 06 00 00 8B 87 8C 00 00 00 89 81 54 01 00 00 48 8B 8B 20 06 00 00 8B 87 94 00 00 00
+
+// keep the stack offsets because we need those to be exact
+8B 87 8C 00 00 00 89 81 ?? ?? 00 00 48 8B 8B ?? ?? 00 00 8B 87 94 00 00 00
+
+// want to replace last 6 bytes; 57/3 = 19 bytes in
+offset = 19, padding = 1
+
+
+
+
+
+-----------
 
 custom rotations:
 
