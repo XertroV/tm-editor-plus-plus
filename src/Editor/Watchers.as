@@ -241,17 +241,13 @@ class EditorRotation {
         yaw -= CardinalDirectionToYaw(dir);
         // this can happen transitioning directions sometimes.
         if (yaw > PI) yaw -= TAU;
-        trace('yaw: ' + yaw);
+        // trace('yaw: ' + yaw);
         yaw = Math::Clamp(yaw, 0.0, HALF_PI);
         if (yaw + 0.01 > HALF_PI) {
             yaw = 0.0;
             dir = CGameCursorBlock::ECardinalDirEnum((int(dir) + 3) % 4);
         }
-        trace('yaw2: ' + yaw);
-        // auto yQuarter = yaw % (HALF_PI);
-        // multiply by 1.001 so we avoid rounding errors from yaw ranges -- actually not sure if we need it
-        // int yawStep = Math::Clamp(int(Math::Floor(yaw / Math::PI * 2. * 6. + 0.0001) % 6), 0, 5);
-        // additionalDir = CGameCursorBlock::EAdditionalDirEnum(yawStep);
+        // trace('yaw2: ' + yaw);
         additionalDir = YawToAdditionalDir(yaw);
     }
 
