@@ -56,6 +56,9 @@ namespace FarlandsHelper {
             if (isPlacingItem) {
                 Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, lastCursorPos);
             }
+            if (CustomCursorRotations::CustomYawActive && cursor.UseSnappedLoc) {
+                cursor.SnappedLocInMap_Trans = lastCursorPos;
+            }
         }
     }
 

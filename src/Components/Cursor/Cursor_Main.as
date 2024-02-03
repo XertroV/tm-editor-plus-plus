@@ -39,6 +39,9 @@ bool S_AutoActivateCustomRotations = false;
 [Setting hidden]
 bool S_AutoActivateCustomYaw = false;
 
+[Setting hidden]
+bool S_CursorWindowShowDetailed = false;
+
 // activated from the tools menu, see UI_Main
 class CursorPosition : Tab {
     CursorPosition(TabGroup@ parent) {
@@ -68,12 +71,16 @@ class CursorPosition : Tab {
         return UI::WindowFlags::AlwaysAutoResize | UI::WindowFlags::NoCollapse | UI::WindowFlags::NoTitleBar;
     }
 
+    void _BeforeBeginWindow() override {
+        UI::SetNextWindowSize(130, 0, UI::Cond::Always);
+    }
+
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
         auto cursor = editor.Cursor;
         if (cursor is null) return;
-
+        auto itemCursor = editor.ItemCursor;
         UI::PushFont(g_BigFont);
         UI::Text("Cursor   ");
         auto width = UI::GetWindowContentRegionWidth();
@@ -81,9 +88,23 @@ class CursorPosition : Tab {
         DrawLabledCoord("Y", Text::Format("% 3d", cursor.Coord.y));
         DrawLabledCoord("Z", Text::Format("% 3d", cursor.Coord.z));
         UI::Text(tostring(cursor.Dir));
-        UI::Text("Pivot: " + Editor::GetCurrentPivot(editor));
         UI::PopFont();
+        bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor);
+        if (S_CursorWindowShowDetailed) {
+            if (isPlacingItem) {
+                CopiableLabeledValue("Pos", FormatX::Vec3_NewLines(itemCursor.CurrentPos));
+            } else {
+                CopiableLabeledValue("Pos", FormatX::Vec3_NewLines(cursor.FreePosInMap));
+            }
+        }
+        UI::Text("Pivot: " + Editor::GetCurrentPivot(editor));
         DrawCursorControls(cursor);
+        if (cursor.UseSnappedLoc && S_CursorWindowShowDetailed) {
+            UI::Text("\\$aaa -- Snapped -- ");
+            CopiableLabeledValue("Pos", FormatX::Vec3_NewLines(cursor.SnappedLocInMap_Trans));
+            vec3 snappedRot = MathX::ToDeg(vec3(cursor.SnappedLocInMap_Pitch, cursor.SnappedLocInMap_Yaw, cursor.SnappedLocInMap_Roll));
+            CopiableLabeledValue("Rot", FormatX::Vec3_NewLines(snappedRot, 3));
+        }
     }
 
     void DrawCursorControls(CGameCursorBlock@ cursor) {
@@ -243,6 +264,7 @@ class CursorPropsTab : Tab {
             g_CursorPositionWindow.windowOpen = UI::Checkbox("Show Cursor Info Window", g_CursorPositionWindow.windowOpen);
         }
         S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls", S_CursorWindowRotControls);
+        S_CursorWindowShowDetailed = UI::Checkbox("Show Details: exact position and snapping", S_CursorWindowShowDetailed);
 
         UI::Separator();
 

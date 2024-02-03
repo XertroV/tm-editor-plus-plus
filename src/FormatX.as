@@ -8,6 +8,17 @@ namespace FormatX {
             + Text::Format("%.0f, ", v.y)
             + Text::Format("%.0f>", v.z);
     }
+    shared string Vec3_NewLines(vec3 &in v, uint dps = 1, const string &in spacing = "  ") {
+        auto fmtString = "\n" + spacing + "%."+dps+"f ";
+        return Text::Format(fmtString, v.x)
+            + Text::Format(fmtString, v.y)
+            + Text::Format(fmtString, v.z);
+    }
+    shared string Vec3_1DPS(vec3 &in v) {
+        return Text::Format("<%.1f, ", v.x)
+            + Text::Format("%.1f, ", v.y)
+            + Text::Format("%.1f>", v.z);
+    }
     shared string Vec2_2DPS(vec2 &in v) {
         return Text::Format("<%.2f, ", v.x)
             + Text::Format("%.2f>", v.y);
