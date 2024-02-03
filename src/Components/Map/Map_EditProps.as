@@ -112,6 +112,12 @@ class MapEditPropsTab : Tab {
 
         UI::Separator();
 
+        // // todo: remove
+        // if (UI::Button("Dump Map Hex")) {
+        //     auto read = Dev::Read(Dev_GetPointerForNod(map), SZ_CTNCHALLENGE);
+        //     SetClipboard(read);
+        // }
+
         UI::Text("Map: " + ColoredString(map.MapName));
         UI::Indent();
         map.MapName = UI::InputText("Name", map.MapName);

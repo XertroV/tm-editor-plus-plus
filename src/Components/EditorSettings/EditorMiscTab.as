@@ -1,5 +1,8 @@
 [Setting hidden]
 bool S_AutoUnlockCamera = false;
+[Setting hidden]
+float S_BleacherSpectatorsFillRatio = -0.010;
+uint S_BleacherSpectatorsCount = 0;
 
 class EditorMiscTab : Tab {
     bool lastBlockTypeWasGhost = false;
@@ -77,6 +80,9 @@ class EditorMiscTab : Tab {
         _cameraUnlocked = false;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         UpdateEditorValuesSync(editor);
+
+        editor.PluginMapType.BleacherSpectatorsFillRatio = S_BleacherSpectatorsFillRatio;
+        editor.PluginMapType.BleacherSpectatorsCount = S_BleacherSpectatorsCount;
 
         if (S_DefaultToAirMode) {
             // editor.ButtonAirBlockModeOnClick();
@@ -160,7 +166,9 @@ class EditorMiscTab : Tab {
         UI::Text("Spectators:");
 
         pmt.BleacherSpectatorsFillRatio = UI::InputFloat("BleacherSpectatorsFillRatio", pmt.BleacherSpectatorsFillRatio, .1);
+        S_BleacherSpectatorsFillRatio = pmt.BleacherSpectatorsFillRatio;
         pmt.BleacherSpectatorsCount = UI::InputInt("BleacherSpectatorsCount", pmt.BleacherSpectatorsCount);
+        S_BleacherSpectatorsCount = pmt.BleacherSpectatorsCount;
 
         UI::Separator();
 
