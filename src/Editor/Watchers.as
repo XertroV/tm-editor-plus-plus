@@ -156,9 +156,9 @@ void EnsureSnappedLoc(CGameCtnEditorFree@ editor) {
 
 
 class EditorRotation {
-    vec3 euler;
-    CGameCursorBlock::ECardinalDirEnum dir;
-    CGameCursorBlock::EAdditionalDirEnum additionalDir;
+    protected vec3 euler;
+    protected CGameCursorBlock::ECardinalDirEnum dir;
+    protected CGameCursorBlock::EAdditionalDirEnum additionalDir;
 
     EditorRotation(vec3 euler) {
         this.euler = euler;
@@ -210,6 +210,11 @@ class EditorRotation {
         cursor.Roll = Roll;
         cursor.Dir = Dir;
         cursor.AdditionalDir = AdditionalDir;
+        if (cursor.UseSnappedLoc) {
+            cursor.SnappedLocInMap_Pitch = Pitch;
+            cursor.SnappedLocInMap_Roll = Roll;
+            cursor.SnappedLocInMap_Yaw = Yaw;
+        }
     }
 
     float YawWithCustomExtra(float extra) {
@@ -233,12 +238,16 @@ class EditorRotation {
         NormalizeAngles();
         auto yaw = euler.y;
         dir = CGameCursorBlock::ECardinalDirEnum(YawToCardinalDirection(yaw));
-        while (yaw < 0) {
-            yaw += TAU;
+        yaw -= CardinalDirectionToYaw(dir);
+        // this can happen transitioning directions sometimes.
+        if (yaw > PI) yaw -= TAU;
+        trace('yaw: ' + yaw);
+        yaw = Math::Clamp(yaw, 0.0, HALF_PI);
+        if (yaw + 0.01 > HALF_PI) {
+            yaw = 0.0;
+            dir = CGameCursorBlock::ECardinalDirEnum((int(dir) + 3) % 4);
         }
-        while (yaw > HALF_PI) {
-            yaw -= HALF_PI;
-        }
+        trace('yaw2: ' + yaw);
         // auto yQuarter = yaw % (HALF_PI);
         // multiply by 1.001 so we avoid rounding errors from yaw ranges -- actually not sure if we need it
         // int yawStep = Math::Clamp(int(Math::Floor(yaw / Math::PI * 2. * 6. + 0.0001) % 6), 0, 5);
@@ -291,6 +300,13 @@ class EditorRotation {
     }
     CGameCursorBlock::EAdditionalDirEnum get_AdditionalDir() {
         return additionalDir;
+    }
+    vec3 get_Euler() {
+        return euler;
+    }
+    void set_Euler(const vec3 &in value) {
+        euler = value;
+        UpdateDirFromPry();
     }
     const string ToString() const {
         return euler.ToString();

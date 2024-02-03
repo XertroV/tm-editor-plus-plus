@@ -108,7 +108,7 @@ namespace FarlandsHelper {
         if (GetApp().Viewport.Picker.Overlay !is null) return false;
         _addBlockSetPos = cursor.FreePosInMap;
         @_prevCursorState = Editor::GetCursorRot(cursor);
-        _addBlockSetRot = _prevCursorState.euler;
+        _addBlockSetRot = _prevCursorState.Euler;
 
         if (!FarlandsHelper::ApplyAddBlockHook()) {
             NotifyWarning("FAILED TO APPLY FARLANDS ADD BLOCK PATCH");

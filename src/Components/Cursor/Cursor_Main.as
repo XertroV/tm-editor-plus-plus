@@ -89,6 +89,9 @@ class CursorPosition : Tab {
     void DrawCursorControls(CGameCursorBlock@ cursor) {
         if (!S_CursorWindowRotControls) return;
         auto rot = Editor::GetCursorRot(cursor);
+        if (cursor.UseSnappedLoc) {
+            rot.Euler = vec3(cursor.SnappedLocInMap_Pitch, cursor.SnappedLocInMap_Yaw, cursor.SnappedLocInMap_Roll);
+        }
         UI::AlignTextToFramePadding();
         // UI::SetNextItemWidth(30.);
         bool addPitch = UI::Button("P+", vec2(30., 0.)); UI::SameLine();
@@ -121,16 +124,39 @@ class CursorPosition : Tab {
         }
 
         vec3 mod = vec3();
-        mod += addPitch ? vec3(Math::ToRad(15), 0, 0) : vec3();
-        mod += subPitch ? vec3(Math::ToRad(-15), 0, 0) : vec3();
-        mod += addYaw ? vec3(0, Math::ToRad(15.001), 0) : vec3();
-        mod += subYaw ? vec3(0, Math::ToRad(-15), 0) : vec3();
-        mod += addRoll ? vec3(0, 0, Math::ToRad(15)) : vec3();
-        mod += subRoll ? vec3(0, 0, Math::ToRad(-15)) : vec3();
+        bool customPR = CustomCursorRotations::Active;
+        bool customYaw = CustomCursorRotations::CustomYawActive;
+        float toAdd = Math::ToRad(15);
+        float toAddYaw = Math::ToRad(15);
+        if (customPR) toAdd = CustomCursorRotations::GetCustomCursorRot();
+        if (customYaw) toAddYaw = 0.0;
+        mod += addPitch ? vec3((toAdd), 0, 0) : vec3();
+        mod += subPitch ? vec3((-toAdd), 0, 0) : vec3();
+        mod += addYaw ? vec3(0, (toAddYaw), 0) : vec3();
+        mod += subYaw ? vec3(0, (-toAddYaw), 0) : vec3();
+        mod += addRoll ? vec3(0, 0, (toAdd)) : vec3();
+        mod += subRoll ? vec3(0, 0, (-toAdd)) : vec3();
 
-        rot.euler += mod;
-        rot.UpdateDirFromPry();
+        rot.Euler += mod;
         rot.SetCursor(cursor);
+        auto customPYR = CustomCursorRotations::cursorCustomPYR;
+        if (customYaw) {
+            float deltaYaw = addYaw ? toAdd : subYaw ? -toAdd : 0.0;
+            customPYR.y += deltaYaw;
+            CustomCursorRotations::NormalizeCustomYaw(cursor, cursor.Dir);
+            if (cursor.UseSnappedLoc) {
+                cursor.SnappedLocInMap_Yaw = EditorRotation(cursor).YawWithCustomExtra(customPYR.y);
+            }
+            CustomCursorRotations::cursorCustomPYR.y = customPYR.y;
+        }
+        if (customPR) {
+            customPYR.x = rot.Pitch;
+            customPYR.z = rot.Roll;
+            if (cursor.UseSnappedLoc) {
+                cursor.SnappedLocInMap_Pitch = NormalizeAngle(customPYR.x);
+                cursor.SnappedLocInMap_Roll = NormalizeAngle(customPYR.z);
+            }
+        }
     }
 
     void DrawLabledCoord(const string &in axis, const string &in value) {
@@ -175,10 +201,17 @@ class CursorPropsTab : Tab {
 
         UI::Columns(2, "cursor-rot", false);
         UI::Text("Cursor:");
-        cursor.Pitch = Math::ToRad(UI::InputFloat("Pitch (Deg)", Math::ToDeg(cursor.Pitch), Math::PI / 24.));
-        cursor.Roll = Math::ToRad(UI::InputFloat("Roll (Deg)", Math::ToDeg(cursor.Roll), Math::PI / 24.));
+        float step = Math::PI / 24.;
+        if (CustomCursorRotations::Active) step = Math::ToDeg(CustomCursorRotations::customRot);
+        cursor.Pitch = Math::ToRad(UI::InputFloat("Pitch (Deg)", Math::ToDeg(cursor.Pitch), step));
+        cursor.Roll = Math::ToRad(UI::InputFloat("Roll (Deg)", Math::ToDeg(cursor.Roll), step));
         cursor.Dir = DrawComboCursorECardinalDir("Dir", cursor.Dir);
-        cursor.AdditionalDir = DrawComboCursorEAdditionalDirEnum("AdditionalDir", cursor.AdditionalDir);
+        if (CustomCursorRotations::CustomYawActive) {
+            CustomCursorRotations::cursorCustomPYR.y = Math::ToRad(UI::InputFloat("Add. Yaw (Deg)", Math::ToDeg(CustomCursorRotations::cursorCustomPYR.y), step));
+            CustomCursorRotations::NormalizeCustomYaw(cursor, cursor.Dir);
+        } else {
+            cursor.AdditionalDir = DrawComboCursorEAdditionalDirEnum("AdditionalDir", cursor.AdditionalDir);
+        }
         UI::AlignTextToFramePadding();
         CopiableLabeledValue("Pos", cursor.FreePosInMap.ToString());
 
@@ -502,21 +535,24 @@ namespace CustomCursorRotations {
             cursorCustomPYR.y -= customRot;
         }
         dev_trace("2. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
-        if (cursorCustomPYR.y > HALF_PI - 0.0001) {
-            cursorCustomPYR.y -= HALF_PI;
-            cursor.Dir = CGameCursorBlock::ECardinalDirEnum((lastDir + 3) % 4);
-        } else if (cursorCustomPYR.y < 0.0001) {
-            cursorCustomPYR.y += HALF_PI;
-            cursor.Dir = CGameCursorBlock::ECardinalDirEnum((lastDir + 1) % 4);
-        }
-        cursorCustomPYR.y = Math::Clamp(cursorCustomPYR.y, 0.0, HALF_PI);
+        NormalizeCustomYaw(cursor, lastDir);
         dev_trace("3. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
         cursor.AdditionalDir = YawToAdditionalDir(cursorCustomPYR.y);
         dev_trace("UseSnappedLoc: " + nextUseSnapPos + " (return early if true)");
         if (nextUseSnapPos > 0) return;
     }
 
-    bool skipNextSetSnapped = false;
+
+    void NormalizeCustomYaw(CGameCursorBlock@ cursor, int lastDir) {
+        if (cursorCustomPYR.y > HALF_PI - 0.000) {
+            cursorCustomPYR.y -= HALF_PI;
+            cursor.Dir = CGameCursorBlock::ECardinalDirEnum((lastDir + 3) % 4);
+        } else if (cursorCustomPYR.y < 0.000) {
+            cursorCustomPYR.y += HALF_PI;
+            cursor.Dir = CGameCursorBlock::ECardinalDirEnum((lastDir + 1) % 4);
+        }
+        cursorCustomPYR.y = Math::Clamp(cursorCustomPYR.y, 0.0, HALF_PI);
+    }
 
 
     void UpdateCachedCursorXZ() {
