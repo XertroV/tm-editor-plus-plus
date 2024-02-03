@@ -140,12 +140,18 @@ void UpdateSelectedBlockItem(CGameCtnEditorFree@ editor) {
 // East + 75deg is nearly north.
 void CheckForPickedItem_CopyRotation(CGameCtnEditorFree@ editor) {
     if (editor is null || editor.PickedObject is null) return;
-    EditorRotation(Editor::GetItemRotation(editor.PickedObject)).SetCursor(editor.Cursor);
+    auto rot = EditorRotation(Editor::GetItemRotation(editor.PickedObject));
+    rot.SetCursor(editor.Cursor);
+    CustomCursorRotations::cursorCustomPYR = rot.Euler;
+    CustomCursorRotations::cursorCustomPYR.y = rot.additionalYaw;
 }
 
 void CheckForPickedBlock_CopyRotation(CGameCtnEditorFree@ editor) {
     if (editor is null || editor.PickedBlock is null) return;
-    EditorRotation(Editor::GetBlockRotation(editor.PickedBlock)).SetCursor(editor.Cursor);
+    auto rot = EditorRotation(Editor::GetBlockRotation(editor.PickedBlock));
+    rot.SetCursor(editor.Cursor);
+    CustomCursorRotations::cursorCustomPYR = rot.Euler;
+    CustomCursorRotations::cursorCustomPYR.y = rot.additionalYaw;
 }
 
 void EnsureSnappedLoc(CGameCtnEditorFree@ editor) {
@@ -159,6 +165,7 @@ class EditorRotation {
     protected vec3 euler;
     protected CGameCursorBlock::ECardinalDirEnum dir;
     protected CGameCursorBlock::EAdditionalDirEnum additionalDir;
+    float additionalYaw;
 
     EditorRotation(vec3 euler) {
         this.euler = euler;
@@ -231,7 +238,8 @@ class EditorRotation {
         //     euler.y = HALF_PI;
         // else if (dir == CGameCursorBlock::ECardinalDirEnum::North)
         //     euler.y = 0;
-        euler.y += AdditionalDirToYaw(additionalDir);
+        additionalYaw = AdditionalDirToYaw(additionalDir);
+        euler.y += additionalYaw;
     }
 
     void UpdateDirFromPry() {
@@ -249,6 +257,7 @@ class EditorRotation {
         }
         // trace('yaw2: ' + yaw);
         additionalDir = YawToAdditionalDir(yaw);
+        additionalYaw = yaw;
     }
 
     float get_Pitch() {
