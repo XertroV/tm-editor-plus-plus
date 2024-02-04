@@ -81,6 +81,7 @@ class CursorPosition : Tab {
         auto cursor = editor.Cursor;
         if (cursor is null) return;
         auto itemCursor = editor.ItemCursor;
+        if (itemCursor is null) return;
         UI::PushFont(g_BigFont);
         UI::Text("Cursor   ");
         auto width = UI::GetWindowContentRegionWidth();

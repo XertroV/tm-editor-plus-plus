@@ -16,6 +16,13 @@ class LightmapTab : Tab {
         }
 #endif
 
+        if (UI::CollapsingHeader("Custom Lightmap Resolution")) {
+            UI::Indent();
+            LightMapCustomRes::DrawInterface();
+            UI::Unindent();
+            UI::Separator();
+        }
+
         ItemModelTreeElement(null, -1, lm, "Light Map").Draw();
 
         auto pimp = lm !is null ? lm.m_PImp : null;
@@ -479,4 +486,64 @@ void DrawMappingOverlay(UI::Texture@ tex, vec2 imgTL, LmMappingCache@ mapping, b
                 }
             }
         }
+}
+
+
+
+
+
+namespace LightMapCustomRes {
+    // small function that returns 0x400, 0x800, or 0x1000 for LM resolution
+    const string LMResPattern = "85 C9 74 16 83 E9 01 74 0B 83 F9 01 75 06 B8 00 10 00 00 C3 B8 00 08 00 00 C3 B8 00 04 00 00 C3";
+    const uint CustomLMResolutionOffset = 0x15; //21
+    uint CustomLMResolution = 0x800;
+    uint64 g_LMResPatternAddr = 0;
+
+    bool hasSetCustomLM = false;
+
+    void CheckInitAddr() {
+        if (g_LMResPatternAddr == 0) {
+            g_LMResPatternAddr = Dev::FindPattern(LMResPattern);
+            if (g_LMResPatternAddr == 0) {
+                NotifyError("Failed to find LM resolution pattern");
+            }
+        }
+    }
+
+    uint GetLMResolution() {
+        CheckInitAddr();
+        if (g_LMResPatternAddr == 0) return -1;
+        return Dev::ReadUInt32(g_LMResPatternAddr + CustomLMResolutionOffset);
+    }
+
+    void SetLMResolution(uint res) {
+        CheckInitAddr();
+        if (g_LMResPatternAddr == 0) return;
+        trace('Setting LM res. Pattern at: ' + Text::FormatPointer(g_LMResPatternAddr));
+        trace('UintToBytes(res): ' + UintToBytes(res));
+        auto origBytes = Dev::Patch(g_LMResPatternAddr + CustomLMResolutionOffset, UintToBytes(res));
+        trace('Set LM res. Previous res: ' + origBytes);
+        // Dev::Write(g_LMResPatternAddr + CustomLMResolutionOffset, res);
+        hasSetCustomLM = CustomLMResolution != 0x800;
+    }
+
+    void SetLMResCoro() {
+        SetLMResolution(CustomLMResolution);
+    }
+
+    void DrawInterface() {
+        LabeledValue("LM Resolution", GetLMResolution());
+        CustomLMResolution = UI::InputInt("Custom LM Resolution", CustomLMResolution, 256);
+        CustomLMResolution = Math::Clamp(CustomLMResolution, 256, 4096*4);
+        AddSimpleTooltip("Can cause a crash if the LM is too large. 6144 tested succesfully, 12K, however, crashed.");
+        if (UI::Button("Update LM Resolution")) {
+            startnew(SetLMResCoro);
+        }
+    }
+
+    void Unpatch() {
+        if (hasSetCustomLM) {
+            SetLMResolution(0x800);
+        }
+    }
 }

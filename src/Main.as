@@ -62,6 +62,7 @@ void Unload() {
     FarlandsHelper::UnapplyAddBlockHook();
     CheckUnhookAllRegisteredHooks();
     CustomCursorRotations::PromiscuousItemToBlockSnapping.Unapply();
+    LightMapCustomRes::Unpatch();
 }
 
 uint lastInItemEditor = 0;

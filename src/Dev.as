@@ -183,6 +183,13 @@ CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
 }
 
 
+string UintToBytes(uint x) {
+    NodPtrs::InitializeTmpPointer();
+    Dev::Write(NodPtrs::g_TmpPtrSpace, x);
+    return Dev::Read(NodPtrs::g_TmpPtrSpace, 4);
+}
+
+
 uint32 GetMwId(const string &in name) {
     auto x = MwId();
     x.SetName(name);
