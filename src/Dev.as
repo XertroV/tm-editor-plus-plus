@@ -134,7 +134,6 @@ bool Dev_PointerLooksBad(uint64 ptr) {
 }
 
 
-
 CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
     if (target is null) return null;
     auto ptr = Dev::GetOffsetUint64(target, offset);
@@ -142,29 +141,45 @@ CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
     return Dev::GetOffsetNod(target, offset);
 }
 
-CMwNod@ g_TmpNod = CMwNod();
+
+
+namespace NodPtrs {
+    void InitializeTmpPointer() {
+        g_TmpPtrSpace = RequestMemory(0x1000);
+        auto nod = CMwNod();
+        uint64 tmp = Dev::GetOffsetUint64(nod, 0);
+        Dev::SetOffset(nod, 0, g_TmpPtrSpace);
+        @g_TmpSpaceAsNod = Dev::GetOffsetNod(nod, 0);
+        Dev::SetOffset(nod, 0, tmp);
+    }
+
+    uint64 g_TmpPtrSpace = 0;
+    CMwNod@ g_TmpSpaceAsNod = null;
+}
+
+CMwNod@ Dev_GetArbitraryNodAt(uint64 ptr) {
+    if (NodPtrs::g_TmpPtrSpace == 0) {
+        NodPtrs::InitializeTmpPointer();
+    }
+    if (ptr == 0) throw('null pointer passed');
+    Dev::SetOffset(NodPtrs::g_TmpSpaceAsNod, 0, ptr);
+    return Dev::GetOffsetNod(NodPtrs::g_TmpSpaceAsNod, 0);
+}
 
 uint64 Dev_GetPointerForNod(CMwNod@ nod) {
-    if (nod is null) throw('nod was null');
-    auto @tmpNod = g_TmpNod !is null ? g_TmpNod : CMwNod();
-    uint64 tmp = Dev::GetOffsetUint64(tmpNod, 0);
-    Dev::SetOffset(tmpNod, 0, nod);
-    uint64 ptr = Dev::GetOffsetUint64(tmpNod, 0);
-    Dev::SetOffset(tmpNod, 0, tmp);
-    return ptr;
+    if (NodPtrs::g_TmpPtrSpace == 0) {
+        NodPtrs::InitializeTmpPointer();
+    }
+    if (nod is null) return 0;
+    Dev::SetOffset(NodPtrs::g_TmpSpaceAsNod, 0, nod);
+    return Dev::GetOffsetUint64(NodPtrs::g_TmpSpaceAsNod, 0);
 }
 
 CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
     if (ptr < 0xFFFFFFFF || ptr % 8 != 0 || ptr >> 48 > 0) {
         return null;
     }
-    auto tmpNod = CMwNod();
-
-    uint64 tmp = Dev::GetOffsetUint64(tmpNod, 0);
-    Dev::SetOffset(tmpNod, 0, ptr);
-    auto nod = Dev::GetOffsetNod(tmpNod, 0);
-    Dev::SetOffset(tmpNod, 0, tmp);
-    return nod;
+    return Dev_GetArbitraryNodAt(ptr);
 }
 
 
@@ -309,6 +324,13 @@ const uint16 O_MAP_PLAYERMODEL_COLLECTION_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 
 const uint16 O_MAP_PLAYERMODEL_AUTHOR_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x64); // 0x64 - 0x74;
 //
 const uint16 O_MAP_BUILDINFO_STR = O_MAP_TITLEID + 0x4;
+
+const uint16 O_MAP_CUSTMUSICPACKDESC = GetOffset("CGameCtnChallenge", "CustomMusicPackDesc");
+// seconds / 86400 * 65535, range 0x0000 to 0xFFFF
+const uint16 O_MAP_TIMEOFDAY_PACKED_U16 = O_MAP_CUSTMUSICPACKDESC + 0x8;
+// default: 300_000 => 300s => 5 min
+const uint16 O_MAP_DAYLENGTH_MS = O_MAP_TIMEOFDAY_PACKED_U16 + 0x4;
+const uint16 O_MAP_DYNAMIC_TIMEOFDAY = O_MAP_TIMEOFDAY_PACKED_U16 + 0x8;
 
 const uint16 O_MAP_CLIPAMBIANCE = GetOffset("CGameCtnChallenge", "ClipAmbiance");
 const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8;
@@ -470,6 +492,11 @@ const uint16 SZ_MACROBLOCK_ITEMSBUFEL = 0xC0;
 const uint16 SZ_CTNMACROBLOCK = 0x248;
 
 
+
+const uint16 SZ_CPlugVisualIndexedTriangles = 0x190;
+
+
+
 // MEDIA TRACKER STUFF
 
 
@@ -488,7 +515,6 @@ uint16 SZ_MEDIABLOCKENTITY_KEY = 0x1C;
 ///    YP      88   dP""""Yb 88oodP 88ood8 888888 8bodP'
 
 namespace VTables {
-
     uint64 GetVTableFor(CMwNod@ nod) {
         if (nod is null) throw("Null nod passed to GetVTableFor");
         return Dev::GetOffsetUint64(nod, 0);
@@ -699,7 +725,7 @@ class RawBufferElem {
         CheckOffset(o, 48);
         return Dev::ReadIso4(ptr + o);
         // return iso4(Dev::ReadVec3(ptr + o), Dev::ReadVec3(ptr + o + 12), Dev::ReadVec3(ptr + o + 24), Dev::ReadVec3(ptr + o + 36));
-        return iso4(mat4(vec4(Dev::ReadVec3(ptr + o), 0), vec4(Dev::ReadVec3(ptr + o + 12), 0), vec4(Dev::ReadVec3(ptr + o + 24), 0), vec4(Dev::ReadVec3(ptr + o + 36), 0)));
+        // return iso4(mat4(vec4(Dev::ReadVec3(ptr + o), 0), vec4(Dev::ReadVec3(ptr + o + 12), 0), vec4(Dev::ReadVec3(ptr + o + 24), 0), vec4(Dev::ReadVec3(ptr + o + 36), 0)));
     }
     mat4 GetMat4(uint o) {
         CheckOffset(o, 64);
@@ -1019,6 +1045,10 @@ class HookHelper {
         if (v) Apply();
         else Unapply();
     }
+
+    void Toggle() {
+        SetApplied(!IsApplied());
+    }
 }
 
 
@@ -1038,7 +1068,7 @@ class FunctionHookHelper : HookHelper {
         if (!HookHelper::Apply()) return false;
         dev_trace("FunctionHookHelper::Apply for " + functionName);
         // read offset assuming jmp [offset]; 5 bytes
-        auto caveRelOffset = Dev::ReadInt32(patternPtr +  + 1);
+        auto caveRelOffset = Dev::ReadInt32(patternPtr + offset + 1);
         dev_trace("caveRelOffset: " + caveRelOffset);
         // calculate the address of the cave
         cavePtr = patternPtr + offset + 5 + caveRelOffset;

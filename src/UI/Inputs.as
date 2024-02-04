@@ -112,7 +112,7 @@ namespace UX {
         return ret;
     }
 
-    // draw a checkbox that is directly linked to an offset of 4 bytes
+    // draw a checkbox that is directly linked to an offset bool of 4 bytes
     void CheckboxDevUint32(const string &in label, CMwNod@ nod, uint16 offset) {
         auto val = Dev::GetOffsetUint32(nod, offset) == 1;
         val = UI::Checkbox(label, val);
@@ -125,5 +125,12 @@ namespace UX {
         if (val < clampMin) val = clampMin;
         if (val > clampMax) val = clampMax;
         Dev::SetOffset(nod, offset, val);
+    }
+
+    bool InputIntSliderDevUint16(const string &in label, CMwNod@ nod, uint16 offset, uint16 min = 0, uint16 max = 0xFFFF, const string &in format = "%d") {
+        auto val = Dev::GetOffsetUint16(nod, offset);
+        uint16 val2 = UI::SliderInt(label, val, min, max, format, UI::SliderFlags::AlwaysClamp);
+        Dev::SetOffset(nod, offset, val2);
+        return val2 != val;
     }
 }

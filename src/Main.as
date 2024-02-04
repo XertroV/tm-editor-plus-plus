@@ -1,6 +1,7 @@
 bool UserHasPermissions = false;
 
 void Main() {
+    // sets vars that should be non-zero asap
     VTables::InitVTableAddrs();
 
     // callbacks that must be registered first
@@ -8,6 +9,7 @@ void Main() {
     RegisterNewItemCallback_Private(CustomCursorRotations::OnNewItem, "CustomCursorRotations::OnNewItem", 0);
 
     startnew(LoadFonts);
+    // check permissions and version
     UserHasPermissions = Permissions::OpenAdvancedMapEditor();
     if (!UserHasPermissions) {
         NotifyWarning("This plugin requires the advanced map editor");
@@ -15,6 +17,7 @@ void Main() {
     }
     CheckAndSetGameVersionSafe();
     while (!GameVersionSafe) sleep(500);
+
     if (GetApp().Editor !is null) {
         startnew(Editor::CacheMaterials);
     }

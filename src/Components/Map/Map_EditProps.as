@@ -204,6 +204,7 @@ class MapEditPropsTab : Tab {
 
         UI::Separator();
 
+        // DECORATION
 
         auto deco = map.Decoration;
         UI::Text("Decoration: " + deco.IdName);
@@ -212,12 +213,6 @@ class MapEditPropsTab : Tab {
         }
 
         UI::Indent();
-        auto newTOD = UI::SliderFloat("Time of Day", editor.MoodTimeOfDay01, 0.0, 1.0, Time::Format(int64(editor.MoodTimeOfDay01 * 86400) * 1000, false, true, true, true));
-        // avoid changing this value very slightly cause it triggers updating lighting
-        if ((Time::Now - lastTimeEnteredEditor > 5000) && Math::Abs(editor.MoodTimeOfDay01 - newTOD) > 0.00001) {
-            editor.MoodTimeOfDay01 = newTOD;
-        }
-        editor.MoodIsDynamicTime = UI::Checkbox("Dynamic Time of Day", editor.MoodIsDynamicTime);
 
         if (map.IdName.Length > 10) {
             m_deco = DrawComboMapDecoChoice("New Decoration", m_deco);
@@ -236,6 +231,32 @@ class MapEditPropsTab : Tab {
         }
 
         UI::Unindent();
+
+        UI::Separator();
+
+        // TIME OF DAY
+
+        if (UI::CollapsingHeader("Time Of Day")) {
+            UI::Indent();
+
+            auto newTOD = UI::SliderFloat("Time of Day", editor.MoodTimeOfDay01, 0.0, 1.0, Time::Format(int64(editor.MoodTimeOfDay01 * 86400) * 1000, false, true, true, true));
+            // avoid changing this value very slightly cause it triggers updating lighting
+            if ((Time::Now - lastTimeEnteredEditor > 5000) && Math::Abs(editor.MoodTimeOfDay01 - newTOD) > 0.00001) {
+                editor.MoodTimeOfDay01 = newTOD;
+            }
+            editor.MoodIsDynamicTime = UI::Checkbox("Dynamic Time of Day##via-editor", editor.MoodIsDynamicTime);
+
+            if (UI::CollapsingHeader("Set Raw Values")) {
+                UI::Indent();
+                UI::TextWrapped("This will set the values directly in the map file. You will need to save and reload the map for them to take effect.");
+                UX::InputIntSliderDevUint16("Time of Day (0-65535)", map, O_MAP_TIMEOFDAY_PACKED_U16);
+                UX::CheckboxDevUint32("Dynamic Time of Day##raw", map, O_MAP_DYNAMIC_TIMEOFDAY);
+                UX::InputIntDevUint32("Length of Day (ms)", map, O_MAP_DAYLENGTH_MS, 1000);
+                UI::Unindent();
+            }
+
+            UI::Unindent();
+        }
 
         UI::Separator();
 
