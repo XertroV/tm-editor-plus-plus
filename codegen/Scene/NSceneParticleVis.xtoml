@@ -1,0 +1,61 @@
+#// const uint16 SZ_NSceneParticleVis_SMgr = 0x2E0;
+[Dev_NSceneParticleVis_SMgr: 0x2E0]
+#GameScene = ISceneVis, 0x0, G
+GameScene = uint64, 0, G
+Zone = CHmsZone, 0x8, G
+SoundMgr = NSceneSound_SMgr, 0x10, G
+Unk1 = uint64, 0x18, G
+mgrVisDynaDecal2d = CHmsMgrVisDynaDecal2d, 0x20, G
+# has some refrences to Clouds_v.hlsli and common shaders
+Unk2 = uint64, 0x28, G
+mgrVisDyna = CHmsMgrVisDyna, 0x30, G
+
+timer = uint32, 0x3C, G
+# EmitterStructs are sorted backwards
+# Buffer: EmitterStructs = X, 0x40, 0x160, true
+# pointer to first element of EmitterStructs? (earliest pointer in memory of above, which are backwards)
+Unk3 = uint64, 0x50, G
+
+Buffer: ActiveEmitters = NSceneParticleVis_ActiveEmitters, 0x118, 0xE8, true
+
+#// const uint16 SZ_NSceneParticleVis_ActiveEmitter = 0xE8;
+[NSceneParticleVis_ActiveEmitter: 0xE8]
+EmitterSubModel = CPlugParticleEmitterSubModel, 0x0, G
+emitterType = uint32, 0x8, GS
+# only set when emitterType == 0 and == currIndex
+indexWhenType0 = uint32, 0xC, GS
+# use by all active emitters
+currIndex = uint32, 0x10, GS
+capacity = uint32, 0x14, GS
+u1 = uint32, 0x18, GS
+limit = uint32, 0x1C, GS
+
+// Buffer: SkidsPoints = NSceneParticleVis_ActiveEmitter_Points, 0x48, 0x58, false
+Struct: PointsStruct = NSceneParticleVis_ActiveEmitter_PointsStruct, 0x48, G
+
+Triangles1 = CPlugVisualIndexedTriangles, 0x78, G
+Triangles2 = CPlugVisualIndexedTriangles, 0x80, G
+Shader = CPlugShaderApply, 0x88, G
+
+frameCountMaybe = uint32, 0x9C, GS
+
+Struct: WheelsStruct = NSceneParticleVis_ActiveEmitter_AllWheels, 0xB0, G
+
+[NSceneParticleVis_ActiveEmitter_PointsStruct: 0x10]
+Buffer: SkidsPoints = NSceneParticleVis_ActiveEmitter_Points, 0x0, 0x58, false
+
+
+[NSceneParticleVis_ActiveEmitter_Point: 0x58]
+Pos = vec3, 0x0, GS
+# crash on change
+NextIdMb = uint, 0xC, G
+# crash on change
+PrevIdMb = uint, 0x10, G
+Invisible = bool, 0x14, GS
+
+[NSceneParticleVis_ActiveEmitter_AllWheels: 0x10]
+Buffer: Wheels = NSceneParticleVis_ActiveEmitter_AllWheels_Wheels, 0x0, 0x48, true
+
+[NSceneParticleVis_ActiveEmitter_AllWheels_Wheel: 0x48]
+Struct: ActiveEmitter = NSceneParticleVis_ActiveEmitter, 0x0, G
+# EmitterModel:
