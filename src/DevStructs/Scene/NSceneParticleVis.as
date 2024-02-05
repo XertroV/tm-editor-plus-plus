@@ -108,6 +108,7 @@ class NSceneParticleVis_ActiveEmitter_Point : RawBufferElem {
 	uint get_NextIdMb() { return (this.GetUint32(0xC)); }
 	// crash on change
 	uint get_PrevIdMb() { return (this.GetUint32(0x10)); }
+	uint16 InvisibleOffset = 0x14;
 	bool get_Invisible() { return (this.GetBool(0x14)); }
 	void set_Invisible(bool value) { this.SetBool(0x14, value); }
 }

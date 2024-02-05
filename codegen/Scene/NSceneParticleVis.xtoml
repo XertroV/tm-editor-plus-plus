@@ -51,6 +51,7 @@ Pos = vec3, 0x0, GS
 NextIdMb = uint, 0xC, G
 # crash on change
 PrevIdMb = uint, 0x10, G
+Inline: uint16 InvisibleOffset = 0x14;
 Invisible = bool, 0x14, GS
 
 [NSceneParticleVis_ActiveEmitter_AllWheels: 0x10]
