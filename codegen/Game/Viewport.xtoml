@@ -1,4 +1,4 @@
-[Viewport: 29248]
+[DDx11Viewport: 29248]
 NativeClass = CDx11Viewport
 # DisplayNames + 0x10
 Struct: mDxRenderStuff = DxRenderStuff, 0x6E0, G

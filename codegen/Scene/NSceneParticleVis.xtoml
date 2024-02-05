@@ -1,5 +1,5 @@
 #// const uint16 SZ_NSceneParticleVis_SMgr = 0x2E0;
-[Dev_NSceneParticleVis_SMgr: 0x2E0]
+[D_NSceneParticleVis_SMgr: 0x2E0]
 #GameScene = ISceneVis, 0x0, G
 GameScene = uint64, 0, G
 Zone = CHmsZone, 0x8, G

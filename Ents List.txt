@@ -1,0 +1,30 @@
+valid classes for the Ents list.
+
+CPlugSolid
+CPlugDynaObjectModel with NPlugDynaObjectModel_SInstanceParams
+CPlugStaticObjectModel with NPlugStaticObjectModel_SInstanceParams
+CPlugVegetTreeModel
+CPlugMapAINode
+CPlugVFXFile
+CPlugLightDyna
+NPlugItemPlacement_SPlacementGroup
+NPlugItemPlacement_SPlacement
+CPlugPath
+CPlugPlacementPatch
+CPlugRoadChunkTraffic
+CPlugRoadChunkCitizen
+NPlugTrigger_SWaypoint
+NPlugTrigger_SSpecial
+CPlugSpawnModel
+CPlugEditorHelper
+CPlugPrefab
+CPlugFxSystem
+CPlugSound
+CPlugSoundMulti
+CPlugFlockModel with SPlugFlockEmitterState
+NPlugDyna_SKinematicConstraint with NPlugDyna_SPrefabConstraintParams
+CPlugDynaConstraintModel with NPlugDyna_SPrefabConstraintParams
+0x914e000 with NPlugDynaObjectModel_SInstanceParams
+0x914f000 with NPlugDynaObjectModel_SInstanceParams
+CPlugPodium
+0x2f0a1000

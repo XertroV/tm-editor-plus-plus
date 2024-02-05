@@ -350,6 +350,7 @@ TabGroup@ CreateMTEditorRT() {
     MT_RipGhostPathTab(root);
     MT_CursorAndTriggerPlacementTab(root);
     MT_GhostTracks(root);
+    MT_LightMapTab(root);
     // MT_TracksTab(root);
     // MT_SavedTracksTab(root);
     return root;

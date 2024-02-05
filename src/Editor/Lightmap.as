@@ -1,6 +1,10 @@
 namespace Editor {
     CHmsLightMap@ GetCurrentLightMap(CGameCtnEditorFree@ editor) {
-        auto map = editor.Challenge;
+        if (editor is null) return null;
+        return GetCurrentLightMapFromMap(editor.Challenge);
+    }
+
+    CHmsLightMap@ GetCurrentLightMapFromMap(CGameCtnChallenge@ map) {
         if (map is null || map.Decoration is null) return null;
         auto mood = map.Decoration.DecoMood;
         if (mood is null || mood.HmsLightMap is null) return null;

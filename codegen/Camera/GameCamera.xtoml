@@ -1,4 +1,5 @@
-[DGameCamera: 0x690]
+# not sure how big this struct actually is
+[DGameCamera: 0x2E8]
 # first 0x10 bytes: uint 0x3, 0x12, 0x13, 0x14
 # can be 1 (norm) or 2 (alt)
 Cam1OrAlt = uint8, 0x24, GS
@@ -15,9 +16,18 @@ UnkVisEntId1 = float, 0x3C, G
 Float1 = float, 0x40, G
 VisEntId1 = uint, 0x44, G
 PlayerClassId = uint, 0x48, G
-UnkVisEntId2 = uint, 0x50, G
-PlayerClassId2 = uint, 0x60, G
-CurrentCamClassId = uint, 0x68, G
+# 0FF00000 or EntIdOfMTGhost
+MTVisEntId = uint, 0x50, G
+Unk54 = uint, 0x54, G
+# 1 when viewing gps
+Unk58 = uint, 0x58, G
+ViewingEntityId = uint, 0x5C, G
+# CGamePlayer, or CGameCtnMediaClip
+ViewingClassId = uint, 0x60, G
+# 0 in freecam
+CurrentRaceCamClassId = uint, 0x68, G
+# is 0 when mouse outside game in cam1,2,3
+Unk6C = uint, 0x6C, G
 CurrentCam = CPlugCamControlModel, 0x70, G
 Unk78 = uint, 0x78, G
 Unk7C = uint, 0x7C, G
@@ -30,6 +40,7 @@ StartCameraTweenTime = uint, 0xB0, G
 # 0xB4 seems unused
 #
 GameResources = CGameResources, 0xB8, G
+# WARNING: Will probs crash the game due to cast (epp-codegen needs updating to handle this case), so just get it via App.GameScene
 GameScene = ISceneVis, 0xC0, G
 # 0 normally, 4 when bw, 1 forces no direction change, 0x1 and 0x10 byte not set
 OverrideCam = uint, 0xC8, G

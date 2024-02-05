@@ -38,14 +38,16 @@ namespace Editor {
 
     void SetCamOrbitalAngle(float h, float v) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
         editor.PluginMapType.CameraHAngle = h;
         editor.PluginMapType.CameraVAngle = v;
     }
 
     bool SetCamAnimationGoTo(vec2 lookAngleHV, vec3 position, float targetDist) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return false;
         Editor::EnableCustomCameraInputs();
         @CameraAnimMgr = AnimMgr(false, S_AnimationDuration);
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cam = editor.OrbitalCameraControl;
         @g_startCamState = CamState(cam);
         @g_endCamState = CamState(lookAngleHV.x, lookAngleHV.y, targetDist, position);
@@ -53,8 +55,7 @@ namespace Editor {
     }
 
     bool SetCamAnimationGoTo(CamState@ cam) {
-        SetCamAnimationGoTo(cam.LookUV, cam.Pos, cam.TargetDist);
-        return true;
+        return SetCamAnimationGoTo(cam.LookUV, cam.Pos, cam.TargetDist);
     }
 
     void FinalizeAnimationNow() {

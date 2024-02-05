@@ -1,0 +1,44 @@
+# from _SPimp, at 0x100 there is an embedded CHmsLightMapParam node
+# SZ_NHmsLightMap_SPImp = 0x4E0;
+[D_NHmsLightMap_SPImp: 0x4E0]
+# CacheSize + 0x80
+Embedded: LightMapParams = DHmsLightMapParam, 0x100, G
+
+# SZ_CHmsLightMapParam = 0x128;
+[DHmsLightMapParam: 0x128]
+NativeClass = CHmsLightMapParam
+
+AmbSamples = uint, 0xA8, GS
+DirSamples = uint, 0xAC, GS
+PntSamples = uint, 0xB0, GS
+
+# values that are 4 by default
+unk1_default4 = uint, 0x30, GS
+unk2_default4 = uint, 0x34, GS
+
+# values that are 3 which might correspond to m_CompressMode, m_Qualit, m_Bump
+unk1_default3 = uint, 0xBC, GS
+unk2_default3 = uint, 0XE4, GS
+
+# values that are 1 by default
+unk1_default1 = uint, 0x18, GS
+unk2_default1 = uint, 0x28, GS
+unk3_default1 = uint, 0x3C, GS
+unk4_default1 = uint, 0x4C, GS
+unk5_default1 = uint, 0x64, GS
+unk6_default1 = uint, 0x7C, GS
+unk7_default1 = uint, 0x84, GS
+unk8_default1 = uint, 0x94, GS
+unk9_default1 = uint, 0xC0, GS
+unk10_default1 = uint, 0xC4, GS
+unk11_default1 = uint, 0xCC, GS
+unk12_default1 = uint, 0xD0, GS
+unk13_default1 = uint, 0xDC, GS
+unk14_default1 = uint, 0xE0, GS
+unk15_default1 = uint, 0xEC, GS
+unk16_default1 = uint, 0xF4, GS
+unk17_default1 = uint, 0xF8, GS
+unk18_default1 = uint, 0xFC, GS
+unk19_default1 = uint, 0xFC, GS
+unk20_default1 = uint, 0x110, GS
+unk21_default1 = uint, 0x114, GS

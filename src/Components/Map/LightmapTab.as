@@ -7,8 +7,9 @@ class LightmapTab : Tab {
     }
 
     void DrawInner() override {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto lm = Editor::GetCurrentLightMap(editor);
+        auto app = GetApp();
+        // auto editor = cast<CGameCtnEditorFree>(app.Editor);
+        auto lm = Editor::GetCurrentLightMapFromMap(app.RootMap);
 
 #if SIG_DEVELOPER
         if (lm !is null && UI::Button("Explore LM")) {
@@ -16,7 +17,7 @@ class LightmapTab : Tab {
         }
 #endif
 
-        if (UI::CollapsingHeader("Custom Lightmap Resolution")) {
+        if (UI::CollapsingHeader("Customize Lightmap")) {
             UI::Indent();
             LightMapCustomRes::DrawInterface();
             UI::Unindent();
@@ -94,8 +95,7 @@ class LightmapTab : Tab {
             IO::CreateFolder(IO::FromStorageFolder("lm"));
         }
         // need to cache current LM
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto lm = Editor::GetCurrentLightMap(editor);
+        auto lm = Editor::GetCurrentLightMapFromMap(GetApp().RootMap);
         trace('caching LM mapping');
         @lmMappingCache = LmMappingCache(lm);
         trace('sending LM for conversion');
@@ -539,6 +539,24 @@ namespace LightMapCustomRes {
         if (UI::Button("Update LM Resolution")) {
             startnew(SetLMResCoro);
         }
+        UI::Separator();
+        auto cache = Editor::GetCurrentLightMapFromMap(GetApp().RootMap);
+        // NHmsLightMap_SPImp offset is 0x18 (very small nod)
+        auto spimpPtr = cache !is null ? Dev::GetOffsetUint64(cache, 0x18) : 0;
+        if (spimpPtr != 0) {
+            auto spimp = D_NHmsLightMap_SPImp(spimpPtr);
+            auto params = spimp.LightMapParams;
+            if (params !is null && params.Nod !is null) {
+                params.AmbSamples = UI::InputInt("AmbSamples", params.AmbSamples);
+                params.DirSamples = UI::InputInt("DirSamples", params.DirSamples);
+                params.PntSamples = UI::InputInt("PntSamples", params.PntSamples);
+            } else {
+                UI::Text("\\$999Params null!");
+            }
+        } else {
+
+        }
+
     }
 
     void Unpatch() {
