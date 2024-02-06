@@ -21,6 +21,7 @@ Buffer: ActiveEmitters = NSceneParticleVis_ActiveEmitters, 0x118, 0xE8, true
 #// const uint16 SZ_NSceneParticleVis_ActiveEmitter = 0xE8;
 [NSceneParticleVis_ActiveEmitter: 0xE8]
 EmitterSubModel = CPlugParticleEmitterSubModel, 0x0, G
+# switch in this order: 0 = Visual_Sprite, 1 = Visual_Beam, 2 = Visual_Triangle, 3 = Visual_Quad, 4 = Visual_Mesh, 5 = Visual_Mark, 6 = RingTrail, 7 = ?, 8 = RingChain, default: return, 13 (0xD) =?
 emitterType = uint32, 0x8, GS
 # only set when emitterType == 0 and == currIndex
 indexWhenType0 = uint32, 0xC, GS
@@ -30,16 +31,46 @@ capacity = uint32, 0x14, GS
 u1 = uint32, 0x18, GS
 limit = uint32, 0x1C, GS
 
-// Buffer: SkidsPoints = NSceneParticleVis_ActiveEmitter_Points, 0x48, 0x58, false
+#// Buffer: SkidsPoints = NSceneParticleVis_ActiveEmitter_Points, 0x48, 0x58, false
+# This is valid for skids (type 5 = VisualMark)
 Struct: PointsStruct = NSceneParticleVis_ActiveEmitter_PointsStruct, 0x48, G
+# this is valid for LightTrail (type 6 = RingTrail)
+Struct: LightRingPoints = NSceneParticleVis_ActiveEmitter_Points2Struct, 0x50, G
 
 Triangles1 = CPlugVisualIndexedTriangles, 0x78, G
 Triangles2 = CPlugVisualIndexedTriangles, 0x80, G
 Shader = CPlugShaderApply, 0x88, G
 
-frameCountMaybe = uint32, 0x9C, GS
-
+#0x98: FFFFFFFF
+Unk98 = uint32, 0x98, G
+# set by game each frame
+GameTimeOfLastPoint = uint32, 0x9C, GS
+# 0xA8: FFFFFFFFFFFFFFFF
+UnkA8 = uint64, 0xA8, G
 Struct: WheelsStruct = NSceneParticleVis_ActiveEmitter_AllWheels, 0xB0, G
+# 5
+UnkB8 = uint32, 0xB8, G
+# random bytes? updated each frame, LSB always ends in 0 tho
+UnkBC = uint32, 0xBC, G
+# 23.2839, 2.89831, not accessed each frame and changing it doesn't seem to do anything
+UnkC0 = vec2, 0xC0, G
+# 4 uints of 0
+UnkC8 = uint32, 0xC8, G
+UnkCC = uint32, 0xCC, G
+UnkD0 = uint32, 0xD0, G
+UnkD4 = uint32, 0xD4, G
+# 0x21, 0.137745, not accessed each frame
+UnkD8 = uint, 0xD8, G
+UnkDC = float, 0xDC, G
+
+
+
+
+[NSceneParticleVis_ActiveEmitter_Points2Struct: 0x8]
+Struct Inner = NSceneParticleVis_ActiveEmitter_Points2InnerStruct, 0x0, G
+
+[NSceneParticleVis_ActiveEmitter_Points2InnerStruct: 0x8]
+Buffer: TrailPoints = NSceneParticleVis_ActiveEmitter_TrailPoints, 0x0, 0x78, false
 
 [NSceneParticleVis_ActiveEmitter_PointsStruct: 0x10]
 Buffer: SkidsPoints = NSceneParticleVis_ActiveEmitter_Points, 0x0, 0x58, false
@@ -60,3 +91,37 @@ Buffer: Wheels = NSceneParticleVis_ActiveEmitter_AllWheels_Wheels, 0x0, 0x48, tr
 [NSceneParticleVis_ActiveEmitter_AllWheels_Wheel: 0x48]
 Struct: ActiveEmitter = NSceneParticleVis_ActiveEmitter, 0x0, G
 # EmitterModel:
+
+
+#
+[NSceneParticleVis_ActiveEmitter_TrailPoints: 0x78]
+Pos = vec3, 0x0, GS
+NexId = uint, 0xC, G
+PrevId = uint, 0x10, G
+Inline: uint16 InvisibleOffset = 0x14;
+Invisible = bool, 0x14, GS
+# -- a pointer when going backwards?! goes to the struct with a pointer to destination submodel and source submodel (the one with fid like LightTrail.ParticleModel.Gbx)
+# often null. i think this is mb this trail's source entry in the LightTrail equiv of wheel structs
+Unk1 = uint64, 0x18, G
+# 0
+Unk3 = uint, 0x20, G
+# color? unknown? 43 bf 71 93, same for both 1st entries, tho
+Unk4 = uint, 0x24, G
+# time set (no offset)
+Unk5 = uint, 0x28, G
+# 20000 - time + 20000 (in mediatracker, it is 20k + timeline ms)
+Unk6 = uint, 0x2C, G
+# 0.09 -- start of 28 bytes of floats (7 total), could be a qaternion and vec3 (first 4 are normalized, and last 3 are normalized), vec3 looks like Dir
+# okay, neither quat nor dir. might be bounding boxes? the vec3 part seems to alter what gets drawn at what viewing angels
+# the first 4 floats can make the trail a lot bigger (dimensions, mb)
+Unk7 = vec4, 0x30, G
+Unk11 = vec3, 0x40, G
+# 0 -- 0x4C to 0x60, all 0s
+# (if local, x = fwd, y = up, z = right)
+PosOffset = vec3, 0x4C, GS
+MinorPosOffset = vec3, 0x58, GS
+# 2.97; 0x67 byte always 40, but changing it to D0+ makes it disappear. setting to all 0s does nothing
+# float, seems like a damening effect on offsets, smoothing mb?
+Unk21 = float, 0x64, G
+Inline: uint16 ColorOffset = 0x68;
+Color = vec4, 0x68, GS

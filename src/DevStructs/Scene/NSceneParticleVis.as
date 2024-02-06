@@ -48,6 +48,7 @@ class NSceneParticleVis_ActiveEmitter : RawBufferElem {
 	}
 
 	CPlugParticleEmitterSubModel@ get_EmitterSubModel() { return cast<CPlugParticleEmitterSubModel>(this.GetNod(0x0)); }
+	// switch in this order: 0 = Visual_Sprite, 1 = Visual_Beam, 2 = Visual_Triangle, 3 = Visual_Quad, 4 = Visual_Mesh, 5 = Visual_Mark, 6 = RingTrail, 7 = ?, 8 = RingChain, default: return, 13 (0xD) =?
 	uint32 get_emitterType() { return (this.GetUint32(0x8)); }
 	void set_emitterType(uint32 value) { this.SetUint32(0x8, value); }
 	// only set when emitterType == 0 and == currIndex
@@ -62,15 +63,72 @@ class NSceneParticleVis_ActiveEmitter : RawBufferElem {
 	void set_u1(uint32 value) { this.SetUint32(0x18, value); }
 	uint32 get_limit() { return (this.GetUint32(0x1C)); }
 	void set_limit(uint32 value) { this.SetUint32(0x1C, value); }
+	// // Buffer: SkidsPoints = NSceneParticleVis_ActiveEmitter_Points, 0x48, 0x58, false
+	// This is valid for skids (type 5 = VisualMark)
 	NSceneParticleVis_ActiveEmitter_PointsStruct@ get_PointsStruct() { return NSceneParticleVis_ActiveEmitter_PointsStruct(this.GetUint64(0x48)); }
+	// this is valid for LightTrail (type 6 = RingTrail)
+	NSceneParticleVis_ActiveEmitter_Points2Struct@ get_LightRingPoints() { return NSceneParticleVis_ActiveEmitter_Points2Struct(this.GetUint64(0x50)); }
 	CPlugVisualIndexedTriangles@ get_Triangles1() { return cast<CPlugVisualIndexedTriangles>(this.GetNod(0x78)); }
 	CPlugVisualIndexedTriangles@ get_Triangles2() { return cast<CPlugVisualIndexedTriangles>(this.GetNod(0x80)); }
 	CPlugShaderApply@ get_Shader() { return cast<CPlugShaderApply>(this.GetNod(0x88)); }
-	uint32 get_frameCountMaybe() { return (this.GetUint32(0x9C)); }
-	void set_frameCountMaybe(uint32 value) { this.SetUint32(0x9C, value); }
+	// 0x98: FFFFFFFF
+	uint32 get_Unk98() { return (this.GetUint32(0x98)); }
+	// set by game each frame
+	uint32 get_GameTimeOfLastPoint() { return (this.GetUint32(0x9C)); }
+	void set_GameTimeOfLastPoint(uint32 value) { this.SetUint32(0x9C, value); }
+	// 0xA8: FFFFFFFFFFFFFFFF
+	uint64 get_UnkA8() { return (this.GetUint64(0xA8)); }
 	NSceneParticleVis_ActiveEmitter_AllWheels@ get_WheelsStruct() { return NSceneParticleVis_ActiveEmitter_AllWheels(this.GetUint64(0xB0)); }
+	// 5
+	uint32 get_UnkB8() { return (this.GetUint32(0xB8)); }
+	// random bytes? updated each frame, LSB always ends in 0 tho
+	uint32 get_UnkBC() { return (this.GetUint32(0xBC)); }
+	// 23.2839, 2.89831, not accessed each frame and changing it doesn't seem to do anything
+	vec2 get_UnkC0() { return (this.GetVec2(0xC0)); }
+	// 4 uints of 0
+	uint32 get_UnkC8() { return (this.GetUint32(0xC8)); }
+	uint32 get_UnkCC() { return (this.GetUint32(0xCC)); }
+	uint32 get_UnkD0() { return (this.GetUint32(0xD0)); }
+	uint32 get_UnkD4() { return (this.GetUint32(0xD4)); }
+	// 0x21, 0.137745, not accessed each frame
+	uint get_UnkD8() { return (this.GetUint32(0xD8)); }
+	float get_UnkDC() { return (this.GetFloat(0xDC)); }
 }
 
+
+class NSceneParticleVis_ActiveEmitter_Points2Struct : RawBufferElem {
+	NSceneParticleVis_ActiveEmitter_Points2Struct(RawBufferElem@ el) {
+		if (el.ElSize != 0x8) throw("invalid size for NSceneParticleVis_ActiveEmitter_Points2Struct");
+		super(el.Ptr, el.ElSize);
+	}
+	NSceneParticleVis_ActiveEmitter_Points2Struct(uint64 ptr) {
+		super(ptr, 0x8);
+	}
+
+	NSceneParticleVis_ActiveEmitter_Points2InnerStruct@ get_Struct Inner() { return cast<NSceneParticleVis_ActiveEmitter_Points2InnerStruct>(this.GetNod(0x0)); }
+}
+
+
+class NSceneParticleVis_ActiveEmitter_Points2InnerStruct : RawBufferElem {
+	NSceneParticleVis_ActiveEmitter_Points2InnerStruct(RawBufferElem@ el) {
+		if (el.ElSize != 0x8) throw("invalid size for NSceneParticleVis_ActiveEmitter_Points2InnerStruct");
+		super(el.Ptr, el.ElSize);
+	}
+	NSceneParticleVis_ActiveEmitter_Points2InnerStruct(uint64 ptr) {
+		super(ptr, 0x8);
+	}
+
+	NSceneParticleVis_ActiveEmitter_TrailPoints@ get_TrailPoints() { return NSceneParticleVis_ActiveEmitter_TrailPoints(this.GetBuffer(0x0, 0x78, false)); }
+}
+
+class NSceneParticleVis_ActiveEmitter_TrailPoints : RawBuffer {
+	NSceneParticleVis_ActiveEmitter_TrailPoints(RawBuffer@ buf) {
+		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
+	}
+	NSceneParticleVis_ActiveEmitter_TrailPoint@ GetTrailPoint(uint i) {
+		return NSceneParticleVis_ActiveEmitter_TrailPoint(this[i]);
+	}
+}
 
 class NSceneParticleVis_ActiveEmitter_PointsStruct : RawBufferElem {
 	NSceneParticleVis_ActiveEmitter_PointsStruct(RawBufferElem@ el) {
@@ -145,6 +203,55 @@ class NSceneParticleVis_ActiveEmitter_AllWheels_Wheel : RawBufferElem {
 	}
 
 	NSceneParticleVis_ActiveEmitter@ get_ActiveEmitter() { return NSceneParticleVis_ActiveEmitter(this.GetUint64(0x0)); }
+}
+
+
+// EmitterModel:
+// 
+class NSceneParticleVis_ActiveEmitter_TrailPoints : RawBufferElem {
+	NSceneParticleVis_ActiveEmitter_TrailPoints(RawBufferElem@ el) {
+		if (el.ElSize != 0x78) throw("invalid size for NSceneParticleVis_ActiveEmitter_TrailPoints");
+		super(el.Ptr, el.ElSize);
+	}
+	NSceneParticleVis_ActiveEmitter_TrailPoints(uint64 ptr) {
+		super(ptr, 0x78);
+	}
+
+	vec3 get_Pos() { return (this.GetVec3(0x0)); }
+	void set_Pos(vec3 value) { this.SetVec3(0x0, value); }
+	uint get_NexId() { return (this.GetUint32(0xC)); }
+	uint get_PrevId() { return (this.GetUint32(0x10)); }
+	uint16 InvisibleOffset = 0x14;
+	bool get_Invisible() { return (this.GetBool(0x14)); }
+	void set_Invisible(bool value) { this.SetBool(0x14, value); }
+	// -- a pointer when going backwards?! goes to the struct with a pointer to destination submodel and source submodel (the one with fid like LightTrail.ParticleModel.Gbx)
+	// often null. i think this is mb this trail's source entry in the LightTrail equiv of wheel structs
+	uint64 get_Unk1() { return (this.GetUint64(0x18)); }
+	// 0
+	uint get_Unk3() { return (this.GetUint32(0x20)); }
+	// color? unknown? 43 bf 71 93, same for both 1st entries, tho
+	uint get_Unk4() { return (this.GetUint32(0x24)); }
+	// time set (no offset)
+	uint get_Unk5() { return (this.GetUint32(0x28)); }
+	// 20000 - time + 20000 (in mediatracker, it is 20k + timeline ms)
+	uint get_Unk6() { return (this.GetUint32(0x2C)); }
+	// 0.09 -- start of 28 bytes of floats (7 total), could be a qaternion and vec3 (first 4 are normalized, and last 3 are normalized), vec3 looks like Dir
+	// okay, neither quat nor dir. might be bounding boxes? the vec3 part seems to alter what gets drawn at what viewing angels
+	// the first 4 floats can make the trail a lot bigger (dimensions, mb)
+	vec4 get_Unk7() { return (this.GetVec4(0x30)); }
+	vec3 get_Unk11() { return (this.GetVec3(0x40)); }
+	// 0 -- 0x4C to 0x60, all 0s
+	// (if local, x = fwd, y = up, z = right)
+	vec3 get_PosOffset() { return (this.GetVec3(0x4C)); }
+	void set_PosOffset(vec3 value) { this.SetVec3(0x4C, value); }
+	vec3 get_MinorPosOffset() { return (this.GetVec3(0x58)); }
+	void set_MinorPosOffset(vec3 value) { this.SetVec3(0x58, value); }
+	// 2.97; 0x67 byte always 40, but changing it to D0+ makes it disappear. setting to all 0s does nothing
+	// float, seems like a damening effect on offsets, smoothing mb?
+	float get_Unk21() { return (this.GetFloat(0x64)); }
+	uint16 ColorOffset = 0x68;
+	vec4 get_Color() { return (this.GetVec4(0x68)); }
+	void set_Color(vec4 value) { this.SetVec4(0x68, value); }
 }
 
 
