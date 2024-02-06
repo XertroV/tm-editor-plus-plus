@@ -12,7 +12,7 @@ namespace PlacementHooks {
         5, 3, "PlacementHooks::OnAddBlockHook_RdxRdi"
     );
 
-    // Hooks over a call to QuaternionFromEuler
+    // Hooks over a call to QuaternionFromEuler, note: we don't use this atm
     FunctionHookHelper@ OnGetCursorRotation = FunctionHookHelper(
         //                       vv this byte is the offset for Rbp, so keep it here so we know if it changes
         "E8 ?? ?? ?? ?? 0F 28 45 70 48 8D 55 ?? 48 8D 8D ?? ?? 00 00 66 0F 7F 45 ?? E8 ?? ?? ?? ?? 8B 86 ?? ?? 00 00", // 45 8B F5 44 89 6C 24 50 83 F8 04 0F 85 E8 02 00 00 85 FF",
@@ -23,13 +23,13 @@ namespace PlacementHooks {
     void SetupHooks() {
         OnItemPlacedHook.Apply();
         OnBlockPlacedHook.Apply();
-        OnGetCursorRotation.Apply();
+        // OnGetCursorRotation.Apply();
     }
 
     void UnloadHooks() {
         OnItemPlacedHook.Unapply();
         OnBlockPlacedHook.Unapply();
-        OnGetCursorRotation.Unapply();
+        // OnGetCursorRotation.Unapply();
     }
 
     void OnItemPlaced_RbxRdx(uint64 rbx) {

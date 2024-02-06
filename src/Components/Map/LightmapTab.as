@@ -1,3 +1,11 @@
+[Setting hidden]
+string S_LMAnalysis_LocalServerAPI = "http://localhost:38120";
+
+[Setting hidden]
+bool S_LMAnalysis_UseLocalServer = false;
+[Setting hidden]
+bool S_LMAnalysis_JustSendFilePath = true;
+
 class LightmapTab : Tab {
     LMAnalysisWindow@ lmWindow;
 
@@ -31,6 +39,22 @@ class LightmapTab : Tab {
         bool canUpload = pimp !is null && pimp.Cache !is null && pimp.CacheSmall !is null
             && pimp.CachePackDesc !is null && pimp.CachePackDesc.Fid !is null;
 
+        UI::Separator();
+
+        S_LMAnalysis_UseLocalServer = UI::Checkbox("Use local server for LM analysis", S_LMAnalysis_UseLocalServer);
+        UI::Markdown("The local server can be downloaded from: <https://openplanet.dev/file/114>. It must be running, but is much better than using the server.");
+        if (S_LMAnalysis_UseLocalServer) {
+
+        S_LMAnalysis_LocalServerAPI = UI::InputText("Local server API", S_LMAnalysis_LocalServerAPI);
+            UI::SameLine();
+            if (UI::Button("Reset##lm-local-server-api")) {
+                S_LMAnalysis_LocalServerAPI = "http://localhost:38120";
+            }
+            S_LMAnalysis_JustSendFilePath = UI::Checkbox("use new request method", S_LMAnalysis_JustSendFilePath);
+        }
+
+        UI::Separator();
+
         UI::AlignTextToFramePadding();
         if (canUpload) {
             UI::Text("\\$8f2 Able to analyze LM!");
@@ -45,6 +69,9 @@ class LightmapTab : Tab {
             if (UI::Button("Reopen Lightmap")) {
                 lmWindow.windowOpen = true;
             }
+        }
+        if (lmWindow.IsLoaded && UI::Button("Open LM Analysis Directory")) {
+            OpenExplorerPath(IO::FromStorageFolder("lm/"));
         }
 
 #if DEV
@@ -96,15 +123,21 @@ class LightmapTab : Tab {
         }
         // need to cache current LM
         auto lm = Editor::GetCurrentLightMapFromMap(GetApp().RootMap);
-        trace('caching LM mapping');
-        @lmMappingCache = LmMappingCache(lm);
-        trace('sending LM for conversion');
+        Notify("Caching LM Object Mapping");
+        yield();
+        if (lmMappingCache is null) {
+            @lmMappingCache = LmMappingCache(lm);
+        } else {
+            lmMappingCache.Update(lm);
+        }
+        Notify("Sending LightMap for Conversion");
         auto filename = lm.m_PImp.CachePackDesc.Fid.FullFileName;
         auto lmFiles = SendLightmapForConversion(filename);
         if (lmFiles is null) {
             LMConversionFailed("No valid files sent back");
             return;
         }
+        Notify("Writing LM Files to Disk");
         for (uint i = 0; i < lmFiles.Length; i++) {
             lmFiles[i].WriteFile();
         }
@@ -112,7 +145,7 @@ class LightmapTab : Tab {
         lmWindow.windowOpen = true;
         @this.lmWindow.mapping = lmMappingCache;
         @this.lmWindow.lmFiles = lmFiles;
-        trace("Finished LM conversion");
+        NotifySuccess("Finished LM conversion");
     }
 
     void LMConversionFailed(const string &in why) {
@@ -122,13 +155,21 @@ class LightmapTab : Tab {
 
     LmFile@[]@ SendLightmapForConversion(const string &in filename) {
         trace('Sending LM for processing: ' + filename);
-        auto zipFile = ReadFile(filename);
         Net::HttpRequest@ req = Net::HttpRequest();
         string baseName = "https://map-monitor.xk.io";
         // string baseName = "http://localhost:8000";
-        req.Url = baseName + "/e++/lm-analysis/convert/webp";
+        if (S_LMAnalysis_UseLocalServer) {
+            baseName = S_LMAnalysis_LocalServerAPI;
+        }
+        string route = S_LMAnalysis_JustSendFilePath ? "/e++/lm-analysis/convert/webp/local" : "/e++/lm-analysis/convert/webp";
+        req.Url = baseName + route;
         trace('LM request: ' + req.Url);
-        req.Body = zipFile.ReadToBase64(zipFile.GetSize());
+        if (S_LMAnalysis_JustSendFilePath) {
+            req.Body = filename;
+        } else {
+            auto zipFile = ReadFile(filename);
+            req.Body = zipFile.ReadToBase64(zipFile.GetSize());
+        }
         req.Method = Net::HttpMethod::Post;
         req.Start();
         while (!req.Finished()) yield();
@@ -267,7 +308,7 @@ class LmFile {
         name = buf.ReadString(nameLen);
         auto dataLen = buf.ReadUInt32();
         trace('LmFile reading ' + name + ' (length: '+dataLen+')');
-        if (dataLen > 9 * 1024 * 1024) throw("data looks too long! " + dataLen + ", " + Text::Format("0x%08x", dataLen));
+        if (dataLen > 90 * 1024 * 1024) throw("data looks too long! " + dataLen + ", " + Text::Format("0x%08x", dataLen));
         @data = buf.ReadBuffer(dataLen);
         buf.Seek(dataLen, 1);
     }
@@ -292,14 +333,20 @@ class LmFile {
 
 
 class LmMappingCache {
-    LmCachedObj@[] objs;
+    LmCachedObj[] objs;
 
     LmMappingCache(CHmsLightMap@ lm) {
+        Update(lm);
+    }
+
+    void Update(CHmsLightMap@ lm) {
         auto pimpPtr = Dev::GetOffsetUint64(lm, GetOffset(lm, "m_PImp"));
         auto bufPtr = pimpPtr + O_LM_PIMP_Buf2;
         auto bufLen = Dev::ReadUInt32(bufPtr + 0x8);
         auto startPtr = Dev::ReadUInt64(bufPtr);
         auto objSize = SZ_LM_SPIMP_Buf2_EL;
+        objs.RemoveRange(0, objs.Length);
+        objs.Reserve(bufLen);
         for (uint i = 0; i < bufLen; i++) {
             // trace('getting lm obj ' + i);
             objs.InsertLast(LmCachedObj(startPtr + i * objSize));
@@ -323,6 +370,8 @@ class LmCachedObj {
     string fidShortName;
     string fidPath;
     string fidParent;
+
+    LmCachedObj() {}
 
     LmCachedObj(uint64 ptr) {
         // struct 2: LM coordinates

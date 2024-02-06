@@ -459,7 +459,7 @@ namespace CustomCursorRotations {
             cursor.SnappedLocInMap_Yaw = EditorRotation(cursor).YawWithCustomExtra(cursorCustomPYR.y);
             cursor.SnappedLocInMap_Trans = cursor.FreePosInMap;
             cursor.UseSnappedLoc = true;
-            dev_trace("After Cursor Update: " + cursor.UseSnappedLoc);
+            // dev_trace("After Cursor Update: " + cursor.UseSnappedLoc);
         }
     }
 
@@ -481,8 +481,8 @@ namespace CustomCursorRotations {
 
     // after direction or additional dir is changed. rbx = editor, rdi = stack
     void AfterSetCursorRotation_Rdi_7C(uint64 rbx, uint64 rdi) {
-        dev_trace('editor pointer: ' + Text::FormatPointer(rbx));
-        dev_trace('rdi: ' + Text::FormatPointer(rdi));
+        // dev_trace('editor pointer: ' + Text::FormatPointer(rbx));
+        // dev_trace('rdi: ' + Text::FormatPointer(rdi));
         // 0x78: last dir, 0x7C: next dir
         // 0x80: last additional dir, 0x84: next additional dir
         // 0x88: last pitch, 0x8C: next pitch
@@ -510,9 +510,9 @@ namespace CustomCursorRotations {
         // will be 0 unless game is setting it to true. We check it before the game does, so it will still set this value.
         // I guess we could set it here, but we set it later anyway.
         int lastUseSnapPos = Dev::ReadInt32(rdi + 0xB8);
-        dev_trace("lastUseSnapPos: " + lastUseSnapPos);
+        // dev_trace("lastUseSnapPos: " + lastUseSnapPos);
         int nextUseSnapPos = Dev::ReadInt32(rdi + 0xBC);
-        dev_trace("nextUseSnapPos: " + nextUseSnapPos);
+        // dev_trace("nextUseSnapPos: " + nextUseSnapPos);
         Dev::Write(rdi + 0xBC, 0); // force no use snaped loc (we set it later if needed)
 
         // do nothing if rotation wasn't changed.
@@ -521,7 +521,7 @@ namespace CustomCursorRotations {
         }
 
         bool rmbPressed = Dev::ReadUInt8(rbx + O_EDITOR_RMB_PRESSED1) != 0;
-        dev_trace("rmbPressed: " + rmbPressed);
+        // dev_trace("rmbPressed: " + rmbPressed);
         // if (dirChanged) {
         //     dev_trace("Direction changed: " + lastDir + " -> " + nextDir);
         // }
@@ -531,7 +531,7 @@ namespace CustomCursorRotations {
 
         if (rmbPressed) {
             bool yawWasNonzero = cursorCustomPYR.y != 0.0;
-            dev_trace("RMB pressed, resetting custom yaw. yaw was nonZero: " + yawWasNonzero);
+            // dev_trace("RMB pressed, resetting custom yaw. yaw was nonZero: " + yawWasNonzero);
             cursorCustomPYR.y = 0;
             if (yawWasNonzero) {
                 // need to undo cursor rotation b/c we might have been at 0 additional dir
@@ -544,24 +544,24 @@ namespace CustomCursorRotations {
         bool dirIncr = lastAddDir == 0 && nextAddDir == 5;
         bool addDirIncr = (lastAddDir < nextAddDir && !dirIncr) || dirDecr;
         bool addDirDecr = (lastAddDir > nextAddDir && !dirDecr) || dirIncr;
-        dev_trace("dirIncr: " + dirDecr + ", dirDecr: " + dirIncr);
-        dev_trace("addDirIncr: " + addDirIncr + ", addDirDecr: " + addDirDecr);
+        // dev_trace("dirIncr: " + dirDecr + ", dirDecr: " + dirIncr);
+        // dev_trace("addDirIncr: " + addDirIncr + ", addDirDecr: " + addDirDecr);
 
         // reset direction change because we adjust it later if needed
         cursor.Dir = CGameCursorBlock::ECardinalDirEnum(lastDir);
 
-        dev_trace("1. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
+        // dev_trace("1. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
         if (addDirIncr) {
             cursorCustomPYR.y += customRot;
 
         } else if (addDirDecr) {
             cursorCustomPYR.y -= customRot;
         }
-        dev_trace("2. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
+        // dev_trace("2. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
         NormalizeCustomYaw(cursor, lastDir);
-        dev_trace("3. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
+        // dev_trace("3. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
         cursor.AdditionalDir = YawToAdditionalDir(cursorCustomPYR.y);
-        dev_trace("UseSnappedLoc: " + nextUseSnapPos + " (return early if true)");
+        // dev_trace("UseSnappedLoc: " + nextUseSnapPos + " (return early if true)");
         if (nextUseSnapPos > 0) return;
     }
 
@@ -587,18 +587,19 @@ namespace CustomCursorRotations {
         cursorCustomPYR.x = cursor.Pitch;
         cursorCustomPYR.z = cursor.Roll;
         // cursorCustomPYR.y = (cursorCustomPYR.y);
-        dev_trace("Updated Cached Cursor PYR: " + cursorCustomPYR.ToString());
+        // dev_trace("Updated Cached Cursor PYR: " + cursorCustomPYR.ToString());
     }
 
 
     // offset may change, in which case pattern will not match (pattern in NewPlacementHooks.as)
+    // don't think we need this hook anymore
     void OnGetCursorRotation_Rbp70(uint64 rbp) {
-        dev_trace("OnGetCursorRotation! rbp: " + Text::FormatPointer(rbp));
+        // dev_trace("OnGetCursorRotation! rbp: " + Text::FormatPointer(rbp));
         // quat at rbp + 0x70
         auto addr = rbp + 0x70;
         vec4 vq = Dev::ReadVec4(addr);
         quat q = quat(vq.x, vq.y, vq.z, vq.w);
-        dev_trace("q: " + q.ToString());
+        // dev_trace("q: " + q.ToString());
         if (!IsInEditor) {
             warn_every_60_s("OnGetCursorRotation_Rbp70: called outside editor!");
         }
