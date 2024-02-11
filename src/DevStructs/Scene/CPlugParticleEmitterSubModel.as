@@ -3,18 +3,18 @@
 
 class DPlugParticleEmitterSubModel : RawBufferElem {
 	DPlugParticleEmitterSubModel(RawBufferElem@ el) {
-		if (el.ElSize != ) throw("invalid size for DPlugParticleEmitterSubModel");
+		if (el.ElSize != 0x6b0) throw("invalid size for DPlugParticleEmitterSubModel");
 		super(el.Ptr, el.ElSize);
 	}
 	DPlugParticleEmitterSubModel(uint64 ptr) {
-		super(ptr, );
+		super(ptr, 0x6b0);
 	}
-	DPlugParticleEmitterSubModel(CPlugParticleEmitterSubModel;@ nod) {
-		if (nod is null) throw("not a CPlugParticleEmitterSubModel;");
-		super(Dev_GetPointerForNod(nod), );
+	DPlugParticleEmitterSubModel(CPlugParticleEmitterSubModel@ nod) {
+		if (nod is null) throw("not a CPlugParticleEmitterSubModel");
+		super(Dev_GetPointerForNod(nod), 0x6b0);
 	}
-	CPlugParticleEmitterSubModel;@ get_Nod() {
-		return cast<CPlugParticleEmitterSubModel;>(Dev_GetNodFromPointer(ptr));
+	CPlugParticleEmitterSubModel@ get_Nod() {
+		return cast<CPlugParticleEmitterSubModel>(Dev_GetNodFromPointer(ptr));
 	}
 
 	CPlugMaterial@ get_Material() { return cast<CPlugMaterial>(this.GetNod(0x120)); }

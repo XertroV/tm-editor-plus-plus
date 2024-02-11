@@ -34,6 +34,7 @@ limit = uint32, 0x1C, GS
 # Buffer: SkidsPoints = NSceneParticleVis_ActiveEmitter_Points, 0x48, 0x58, false
 # This is valid for skids (type 5 = VisualMark)
 Struct: PointsStruct = NSceneParticleVis_ActiveEmitter_PointsStruct, 0x48, G
+
 # this is valid for LightTrail (type 6 = RingTrail)
 Struct: LightRingPoints = NSceneParticleVis_ActiveEmitter_Points2Struct, 0x50, G
 
@@ -41,13 +42,19 @@ Triangles1 = CPlugVisualIndexedTriangles, 0x78, G
 Triangles2 = CPlugVisualIndexedTriangles, 0x80, G
 Shader = CPlugShaderApply, 0x88, G
 
+# something at 0x90, a pointer, not sure to what. Mb a struct with a buffer at 0x18
+UnkPtr0x90 = uint64, 0x90, G
+
 #0x98: FFFFFFFF
 Unk98 = uint32, 0x98, G
 # set by game each frame
 GameTimeOfLastPoint = uint32, 0x9C, GS
 # 0xA8: FFFFFFFFFFFFFFFF
 UnkA8 = uint64, 0xA8, G
-Struct: WheelsStruct = NSceneParticleVis_ActiveEmitter_AllWheels, 0xB0, G
+
+# Source structs, note they're reverse order in memory
+Struct: WheelsStruct = NSceneParticleVis_ActiveEmitter_Sources, 0xB0, G
+
 # 5
 UnkB8 = uint32, 0xB8, G
 # random bytes? updated each frame, LSB always ends in 0 tho
@@ -90,13 +97,46 @@ PrevIdMb = uint, 0x10, G
 Inline: uint16 InvisibleOffset = 0x14;
 Invisible = bool, 0x14, GS
 
-[NSceneParticleVis_ActiveEmitter_AllWheels: 0x10]
-Buffer: Wheels = NSceneParticleVis_ActiveEmitter_AllWheels_Wheels, 0x0, 0x48, true
+[NSceneParticleVis_ActiveEmitter_Sources: 0x10]
+Buffer: Sources = NSceneParticleVis_ActiveEmitter_Sources_Els, 0x0, 0x48, true
 
-[NSceneParticleVis_ActiveEmitter_AllWheels_Wheel: 0x48]
+
+[NSceneParticleVis_ActiveEmitter_Sources_El: 0x48]
 # EmitterModel = todo
 #
 Struct: ActiveEmitter = NSceneParticleVis_ActiveEmitter, 0x0, G
+Struct: EmitterSource = NSceneParticleVis_EmitterSource, 0x8, G
+Pos = vec3, 0x10, GS
+GameTime = uint, 0x1C, GS
+IsActive = bool, 0x20, GS
+# Less than FFFFFFFF
+PointToUpdate = uint, 0x24, GS
+# 0x28 should be 0 to draw
+SkipDrawing = bool, 0x28, GS
+
+
+[NSceneParticleVis_EmitterSource: 0x160]
+ParticleEmitterModel = CPlugParticleEmitterModel, 0x0, G
+# Unsure of 0x8-0x28: FFFFFFFF, 0, FFFFFFBF, 0, vec4(0)
+# mat for the next point?
+Loc = iso4, 0x28, GS
+
+# lots of unknown floats
+# Set to FFFFFFFF when light trail disabled
+GameTimeStarted = uint, 0xD0, GS
+# 0xD4: unused?
+# 0xD8: FFFFFFFF
+
+# pointer back to sources element
+Struct: SourceStruct = NSceneParticleVis_ActiveEmitter_Sources_El, 0xE8, G
+# 0xF0: unk, zeroed array?
+
+HmsItem = CHmsItem, 0x128, G
+
+# 0x8 before the start of one of these structs
+LinkedNextPrevPtrMb = uint64, 0x158, G
+
+
 
 
 #

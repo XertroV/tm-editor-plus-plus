@@ -5,18 +5,35 @@ Struct: mDxRenderStuff = DxRenderStuff, 0x6E0, G
 Buffer: mDepthBufferStructs = DepthBufferStructs, 0x840, 0x20, false
 
 [DxRenderStuff: 0x158]
-Struct: mSwapChain = SwapChain, 0x110, G
+Struct: mDevice = D3D11Device, 0xF0, G
+Struct: mDeviceCtx = D3D11DeviceContext, 0xF8, G
+Struct: mDeviceCtx2 = D3D11DeviceContext, 0x100, G
+Struct: mSwapChain = D3D11SwapChain, 0x110, G
 
 [DepthBufferStruct: 0x20]
 # todo: check offsets
-Bitmap = CPlugBitmap, 0x0, G
-Struct: DxStuff = DxStuff, 0x08, G
+Bitmap = DPlugBitmap, 0x0, G
+Struct: RenderInfo = DRenderInfo, 0x08, G
 u1 = uint, 0x10, G
 width = uint, 0x14, G
 height = uint, 0x18, G
 u2 = uint, 0x1C, G
 
-[SwapChain: 0x8]
+[D3D11SwapChain: 0x8]
 vtable = uint64, 0x0, G
 
-[DxStuff: 0x0]
+[D3D11Device: 0x8]
+vtable = uint64, 0x0, G
+
+[D3D11DeviceContext: 0x8]
+vtable = uint64, 0x0, G
+
+[D3D11Texture: 0x8]
+vtable = uint64, 0x0, G
+
+# unsure of size, seems like 0x280
+[DRenderInfo: 0x280]
+# 0x130? -> 0xD0 to texture also
+Struct: Bitmap = DPlugBitmap, 0x200, G
+PtrTo_0x248 = uint64, 0x250, G
+Struct: Texture = D3D11Texture, 0x258, G

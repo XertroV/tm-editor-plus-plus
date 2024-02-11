@@ -1,5 +1,5 @@
-[DPlugParticleEmitterSubModel: ]
-NativeClass = CPlugParticleEmitterSubModel;
+[DPlugParticleEmitterSubModel: 0x6b0]
+NativeClass = CPlugParticleEmitterSubModel
 
 Material = CPlugMaterial, 0x120, GS
 ShaderApply = CPlugShaderApply, 0x128, GS

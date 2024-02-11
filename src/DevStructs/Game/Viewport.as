@@ -40,7 +40,10 @@ class DxRenderStuff : RawBufferElem {
 		super(ptr, 0x158);
 	}
 
-	SwapChain@ get_mSwapChain() { return SwapChain(this.GetUint64(0x110)); }
+	D3D11Device@ get_mDevice() { return D3D11Device(this.GetUint64(0xF0)); }
+	D3D11DeviceContext@ get_mDeviceCtx() { return D3D11DeviceContext(this.GetUint64(0xF8)); }
+	D3D11DeviceContext@ get_mDeviceCtx2() { return D3D11DeviceContext(this.GetUint64(0x100)); }
+	D3D11SwapChain@ get_mSwapChain() { return D3D11SwapChain(this.GetUint64(0x110)); }
 }
 
 
@@ -54,8 +57,8 @@ class DepthBufferStruct : RawBufferElem {
 	}
 
 	// todo: check offsets
-	CPlugBitmap@ get_Bitmap() { return cast<CPlugBitmap>(this.GetNod(0x0)); }
-	DxStuff@ get_DxStuff() { return DxStuff(this.GetUint64(0x08)); }
+	DPlugBitmap@ get_Bitmap() { return cast<DPlugBitmap>(this.GetNod(0x0)); }
+	DRenderInfo@ get_RenderInfo() { return DRenderInfo(this.GetUint64(0x08)); }
 	uint get_u1() { return (this.GetUint32(0x10)); }
 	uint get_width() { return (this.GetUint32(0x14)); }
 	uint get_height() { return (this.GetUint32(0x18)); }
@@ -63,12 +66,12 @@ class DepthBufferStruct : RawBufferElem {
 }
 
 
-class SwapChain : RawBufferElem {
-	SwapChain(RawBufferElem@ el) {
-		if (el.ElSize != 0x8) throw("invalid size for SwapChain");
+class D3D11SwapChain : RawBufferElem {
+	D3D11SwapChain(RawBufferElem@ el) {
+		if (el.ElSize != 0x8) throw("invalid size for D3D11SwapChain");
 		super(el.Ptr, el.ElSize);
 	}
-	SwapChain(uint64 ptr) {
+	D3D11SwapChain(uint64 ptr) {
 		super(ptr, 0x8);
 	}
 
@@ -76,15 +79,59 @@ class SwapChain : RawBufferElem {
 }
 
 
-class DxStuff : RawBufferElem {
-	DxStuff(RawBufferElem@ el) {
-		if (el.ElSize != 0x0) throw("invalid size for DxStuff");
+class D3D11Device : RawBufferElem {
+	D3D11Device(RawBufferElem@ el) {
+		if (el.ElSize != 0x8) throw("invalid size for D3D11Device");
 		super(el.Ptr, el.ElSize);
 	}
-	DxStuff(uint64 ptr) {
-		super(ptr, 0x0);
+	D3D11Device(uint64 ptr) {
+		super(ptr, 0x8);
 	}
 
+	uint64 get_vtable() { return (this.GetUint64(0x0)); }
+}
+
+
+class D3D11DeviceContext : RawBufferElem {
+	D3D11DeviceContext(RawBufferElem@ el) {
+		if (el.ElSize != 0x8) throw("invalid size for D3D11DeviceContext");
+		super(el.Ptr, el.ElSize);
+	}
+	D3D11DeviceContext(uint64 ptr) {
+		super(ptr, 0x8);
+	}
+
+	uint64 get_vtable() { return (this.GetUint64(0x0)); }
+}
+
+
+class D3D11Texture : RawBufferElem {
+	D3D11Texture(RawBufferElem@ el) {
+		if (el.ElSize != 0x8) throw("invalid size for D3D11Texture");
+		super(el.Ptr, el.ElSize);
+	}
+	D3D11Texture(uint64 ptr) {
+		super(ptr, 0x8);
+	}
+
+	uint64 get_vtable() { return (this.GetUint64(0x0)); }
+}
+
+
+// unsure of size, seems like 0x280
+class DRenderInfo : RawBufferElem {
+	DRenderInfo(RawBufferElem@ el) {
+		if (el.ElSize != 0x280) throw("invalid size for DRenderInfo");
+		super(el.Ptr, el.ElSize);
+	}
+	DRenderInfo(uint64 ptr) {
+		super(ptr, 0x280);
+	}
+
+	// 0x130? -> 0xD0 to texture also
+	DPlugBitmap@ get_Bitmap() { return DPlugBitmap(this.GetUint64(0x200)); }
+	uint64 get_PtrTo_0x248() { return (this.GetUint64(0x250)); }
+	D3D11Texture@ get_Texture() { return D3D11Texture(this.GetUint64(0x258)); }
 }
 
 

@@ -1,0 +1,3 @@
+[DPlugBitmap: 448]
+NativeClass = CPlugBitmap
+Struct: RenderInfo = DRenderInfo, 0xA8, G

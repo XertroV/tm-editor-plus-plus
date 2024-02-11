@@ -1,0 +1,23 @@
+# can find via: game scene: 1c0, 100, 90
+[DGameCtnMediaClipPlayer: 0x338]
+# When false, values are still updated but no light trails are drawn
+ShouldDrawLightTrails = bool, 0x2B8, GS
+
+# when LightTrails are active, offsets 0x2F8 through 0x330 are used
+LightTrails = bool, 0x30C, GS
+
+SecondsFrameTime = float, 0x2F8, GS
+SecondsFloat = float, 0x2FC, GS
+# value: 1.0
+Unk300 = float, 0x300, GS
+SecondsFrameTime2 = float, 0x304, GS
+# unk, value: 1478695
+Unk308 = uint, 0x308, GS
+Ptr310 = uint64, 0x310, GS
+FuncPtr318 = uint64, 0x318, GS
+# 0x7FF7FFFF
+Unk320 = uint, 0x320, GS
+# value: 1.0
+Unk324 = float, 0x324, GS
+SecondsFloat2 = float, 0x328, GS
+SecondsFrameTime3 = float, 0x32C, GS

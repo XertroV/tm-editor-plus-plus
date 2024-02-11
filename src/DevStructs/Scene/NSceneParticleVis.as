@@ -71,6 +71,8 @@ class NSceneParticleVis_ActiveEmitter : RawBufferElem {
 	CPlugVisualIndexedTriangles@ get_Triangles1() { return cast<CPlugVisualIndexedTriangles>(this.GetNod(0x78)); }
 	CPlugVisualIndexedTriangles@ get_Triangles2() { return cast<CPlugVisualIndexedTriangles>(this.GetNod(0x80)); }
 	CPlugShaderApply@ get_Shader() { return cast<CPlugShaderApply>(this.GetNod(0x88)); }
+	// something at 0x90, a pointer, not sure to what. Mb a struct with a buffer at 0x18
+	uint64 get_UnkPtr0x90() { return (this.GetUint64(0x90)); }
 	// 0x98: FFFFFFFF
 	uint32 get_Unk98() { return (this.GetUint32(0x98)); }
 	// set by game each frame
@@ -78,7 +80,8 @@ class NSceneParticleVis_ActiveEmitter : RawBufferElem {
 	void set_GameTimeOfLastPoint(uint32 value) { this.SetUint32(0x9C, value); }
 	// 0xA8: FFFFFFFFFFFFFFFF
 	uint64 get_UnkA8() { return (this.GetUint64(0xA8)); }
-	NSceneParticleVis_ActiveEmitter_AllWheels@ get_WheelsStruct() { return NSceneParticleVis_ActiveEmitter_AllWheels(this.GetUint64(0xB0)); }
+	// Source structs, note they're reverse order in memory
+	NSceneParticleVis_ActiveEmitter_Sources@ get_WheelsStruct() { return NSceneParticleVis_ActiveEmitter_Sources(this.GetUint64(0xB0)); }
 	// 5
 	uint32 get_UnkB8() { return (this.GetUint32(0xB8)); }
 	// random bytes? updated each frame, LSB always ends in 0 tho
@@ -166,39 +169,81 @@ class NSceneParticleVis_ActiveEmitter_Point : RawBufferElem {
 }
 
 
-class NSceneParticleVis_ActiveEmitter_AllWheels : RawBufferElem {
-	NSceneParticleVis_ActiveEmitter_AllWheels(RawBufferElem@ el) {
-		if (el.ElSize != 0x10) throw("invalid size for NSceneParticleVis_ActiveEmitter_AllWheels");
+class NSceneParticleVis_ActiveEmitter_Sources : RawBufferElem {
+	NSceneParticleVis_ActiveEmitter_Sources(RawBufferElem@ el) {
+		if (el.ElSize != 0x10) throw("invalid size for NSceneParticleVis_ActiveEmitter_Sources");
 		super(el.Ptr, el.ElSize);
 	}
-	NSceneParticleVis_ActiveEmitter_AllWheels(uint64 ptr) {
+	NSceneParticleVis_ActiveEmitter_Sources(uint64 ptr) {
 		super(ptr, 0x10);
 	}
 
-	NSceneParticleVis_ActiveEmitter_AllWheels_Wheels@ get_Wheels() { return NSceneParticleVis_ActiveEmitter_AllWheels_Wheels(this.GetBuffer(0x0, 0x48, true)); }
+	NSceneParticleVis_ActiveEmitter_Sources_Els@ get_Sources() { return NSceneParticleVis_ActiveEmitter_Sources_Els(this.GetBuffer(0x0, 0x48, true)); }
 }
 
-class NSceneParticleVis_ActiveEmitter_AllWheels_Wheels : RawBuffer {
-	NSceneParticleVis_ActiveEmitter_AllWheels_Wheels(RawBuffer@ buf) {
+class NSceneParticleVis_ActiveEmitter_Sources_Els : RawBuffer {
+	NSceneParticleVis_ActiveEmitter_Sources_Els(RawBuffer@ buf) {
 		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
 	}
-	NSceneParticleVis_ActiveEmitter_AllWheels_Wheel@ GetWheel(uint i) {
-		return NSceneParticleVis_ActiveEmitter_AllWheels_Wheel(this[i]);
+	NSceneParticleVis_ActiveEmitter_Sources_El@ GetEl(uint i) {
+		return NSceneParticleVis_ActiveEmitter_Sources_El(this[i]);
 	}
 }
 
-class NSceneParticleVis_ActiveEmitter_AllWheels_Wheel : RawBufferElem {
-	NSceneParticleVis_ActiveEmitter_AllWheels_Wheel(RawBufferElem@ el) {
-		if (el.ElSize != 0x48) throw("invalid size for NSceneParticleVis_ActiveEmitter_AllWheels_Wheel");
+class NSceneParticleVis_ActiveEmitter_Sources_El : RawBufferElem {
+	NSceneParticleVis_ActiveEmitter_Sources_El(RawBufferElem@ el) {
+		if (el.ElSize != 0x48) throw("invalid size for NSceneParticleVis_ActiveEmitter_Sources_El");
 		super(el.Ptr, el.ElSize);
 	}
-	NSceneParticleVis_ActiveEmitter_AllWheels_Wheel(uint64 ptr) {
+	NSceneParticleVis_ActiveEmitter_Sources_El(uint64 ptr) {
 		super(ptr, 0x48);
 	}
 
 	// EmitterModel = todo
 	// 
 	NSceneParticleVis_ActiveEmitter@ get_ActiveEmitter() { return NSceneParticleVis_ActiveEmitter(this.GetUint64(0x0)); }
+	NSceneParticleVis_EmitterSource@ get_EmitterSource() { return NSceneParticleVis_EmitterSource(this.GetUint64(0x8)); }
+	vec3 get_Pos() { return (this.GetVec3(0x10)); }
+	void set_Pos(vec3 value) { this.SetVec3(0x10, value); }
+	uint get_GameTime() { return (this.GetUint32(0x1C)); }
+	void set_GameTime(uint value) { this.SetUint32(0x1C, value); }
+	bool get_IsActive() { return (this.GetBool(0x20)); }
+	void set_IsActive(bool value) { this.SetBool(0x20, value); }
+	// Less than FFFFFFFF
+	uint get_PointToUpdate() { return (this.GetUint32(0x24)); }
+	void set_PointToUpdate(uint value) { this.SetUint32(0x24, value); }
+	// 0x28 should be 0 to draw
+	bool get_SkipDrawing() { return (this.GetBool(0x28)); }
+	void set_SkipDrawing(bool value) { this.SetBool(0x28, value); }
+}
+
+
+class NSceneParticleVis_EmitterSource : RawBufferElem {
+	NSceneParticleVis_EmitterSource(RawBufferElem@ el) {
+		if (el.ElSize != 0x160) throw("invalid size for NSceneParticleVis_EmitterSource");
+		super(el.Ptr, el.ElSize);
+	}
+	NSceneParticleVis_EmitterSource(uint64 ptr) {
+		super(ptr, 0x160);
+	}
+
+	CPlugParticleEmitterModel@ get_ParticleEmitterModel() { return cast<CPlugParticleEmitterModel>(this.GetNod(0x0)); }
+	// Unsure of 0x8-0x28: FFFFFFFF, 0, FFFFFFBF, 0, vec4(0)
+	// mat for the next point?
+	iso4 get_Loc() { return (this.GetIso4(0x28)); }
+	void set_Loc(iso4 value) { this.SetIso4(0x28, value); }
+	// lots of unknown floats
+	// Set to FFFFFFFF when light trail disabled
+	uint get_GameTimeStarted() { return (this.GetUint32(0xD0)); }
+	void set_GameTimeStarted(uint value) { this.SetUint32(0xD0, value); }
+	// 0xD4: unused?
+	// 0xD8: FFFFFFFF
+	// pointer back to sources element
+	NSceneParticleVis_ActiveEmitter_Sources_El@ get_SourceStruct() { return NSceneParticleVis_ActiveEmitter_Sources_El(this.GetUint64(0xE8)); }
+	// 0xF0: unk, zeroed array?
+	CHmsItem@ get_HmsItem() { return cast<CHmsItem>(this.GetNod(0x128)); }
+	// 0x8 before the start of one of these structs
+	uint64 get_LinkedNextPrevPtrMb() { return (this.GetUint64(0x158)); }
 }
 
 
