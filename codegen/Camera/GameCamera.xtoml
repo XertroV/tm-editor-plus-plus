@@ -14,6 +14,7 @@ FrameDelta = float, 0x30, G
 
 UnkVisEntId1 = float, 0x3C, G
 Float1 = float, 0x40, G
+# player's vis ent id, either this or 0x50 is updated in FUN_140db6480
 VisEntId1 = uint, 0x44, G
 PlayerClassId = uint, 0x48, G
 # 0FF00000 or EntIdOfMTGhost

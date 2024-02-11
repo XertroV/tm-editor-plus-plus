@@ -26,6 +26,7 @@ class DGameCamera : RawBufferElem {
 	float get_FrameDelta() { return (this.GetFloat(0x30)); }
 	float get_UnkVisEntId1() { return (this.GetFloat(0x3C)); }
 	float get_Float1() { return (this.GetFloat(0x40)); }
+	// player's vis ent id, either this or 0x50 is updated in FUN_140db6480
 	uint get_VisEntId1() { return (this.GetUint32(0x44)); }
 	uint get_PlayerClassId() { return (this.GetUint32(0x48)); }
 	// 0FF00000 or EntIdOfMTGhost

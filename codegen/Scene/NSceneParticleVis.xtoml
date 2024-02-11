@@ -1,4 +1,4 @@
-#// const uint16 SZ_NSceneParticleVis_SMgr = 0x2E0;
+# const uint16 SZ_NSceneParticleVis_SMgr = 0x2E0;
 [D_NSceneParticleVis_SMgr: 0x2E0]
 #GameScene = ISceneVis, 0x0, G
 GameScene = uint64, 0, G
@@ -18,7 +18,7 @@ Unk3 = uint64, 0x50, G
 
 Buffer: ActiveEmitters = NSceneParticleVis_ActiveEmitters, 0x118, 0xE8, true
 
-#// const uint16 SZ_NSceneParticleVis_ActiveEmitter = 0xE8;
+# const uint16 SZ_NSceneParticleVis_ActiveEmitter = 0xE8;
 [NSceneParticleVis_ActiveEmitter: 0xE8]
 EmitterSubModel = CPlugParticleEmitterSubModel, 0x0, G
 # switch in this order: 0 = Visual_Sprite, 1 = Visual_Beam, 2 = Visual_Triangle, 3 = Visual_Quad, 4 = Visual_Mesh, 5 = Visual_Mark, 6 = RingTrail, 7 = ?, 8 = RingChain, default: return, 13 (0xD) =?
@@ -31,7 +31,7 @@ capacity = uint32, 0x14, GS
 u1 = uint32, 0x18, GS
 limit = uint32, 0x1C, GS
 
-#// Buffer: SkidsPoints = NSceneParticleVis_ActiveEmitter_Points, 0x48, 0x58, false
+# Buffer: SkidsPoints = NSceneParticleVis_ActiveEmitter_Points, 0x48, 0x58, false
 # This is valid for skids (type 5 = VisualMark)
 Struct: PointsStruct = NSceneParticleVis_ActiveEmitter_PointsStruct, 0x48, G
 # this is valid for LightTrail (type 6 = RingTrail)
@@ -65,13 +65,18 @@ UnkDC = float, 0xDC, G
 
 
 
-
-[NSceneParticleVis_ActiveEmitter_Points2Struct: 0x8]
-Struct Inner = NSceneParticleVis_ActiveEmitter_Points2InnerStruct, 0x0, G
-
-[NSceneParticleVis_ActiveEmitter_Points2InnerStruct: 0x8]
+# when entityType == 6
+[NSceneParticleVis_ActiveEmitter_Points2Struct: 0x10]
+# Length = uint32, 0x8, G
+# Capacity = uint32, 0xC, G
+# Buffer: Inner = NSceneParticleVis_ActiveEmitter_Points2InnerStruct, 0x0, G
 Buffer: TrailPoints = NSceneParticleVis_ActiveEmitter_TrailPoints, 0x0, 0x78, false
 
+
+# [NSceneParticleVis_ActiveEmitter_Points2InnerStruct: 0x10]
+# Buffer: TrailPoints = NSceneParticleVis_ActiveEmitter_TrailPoints, 0x0, 0x78, false
+
+# when entityType == 5
 [NSceneParticleVis_ActiveEmitter_PointsStruct: 0x10]
 Buffer: SkidsPoints = NSceneParticleVis_ActiveEmitter_Points, 0x0, 0x58, false
 
@@ -89,39 +94,41 @@ Invisible = bool, 0x14, GS
 Buffer: Wheels = NSceneParticleVis_ActiveEmitter_AllWheels_Wheels, 0x0, 0x48, true
 
 [NSceneParticleVis_ActiveEmitter_AllWheels_Wheel: 0x48]
+# EmitterModel = todo
+#
 Struct: ActiveEmitter = NSceneParticleVis_ActiveEmitter, 0x0, G
-# EmitterModel:
 
 
 #
-[NSceneParticleVis_ActiveEmitter_TrailPoints: 0x78]
+[NSceneParticleVis_ActiveEmitter_TrailPoint: 0x78]
 Pos = vec3, 0x0, GS
-NexId = uint, 0xC, G
-PrevId = uint, 0x10, G
+NextId = uint, 0xC, GS
+PrevId = uint, 0x10, GS
 Inline: uint16 InvisibleOffset = 0x14;
 Invisible = bool, 0x14, GS
 # -- a pointer when going backwards?! goes to the struct with a pointer to destination submodel and source submodel (the one with fid like LightTrail.ParticleModel.Gbx)
 # often null. i think this is mb this trail's source entry in the LightTrail equiv of wheel structs
-Unk1 = uint64, 0x18, G
-# 0
-Unk3 = uint, 0x20, G
+PtrToSourceStruct = uint64, 0x18, GS
+# set to 0.0 if PrevId == -1 (or float -NAN)
+Unk3 = float, 0x20, GS
 # color? unknown? 43 bf 71 93, same for both 1st entries, tho
-Unk4 = uint, 0x24, G
+Unk4 = uint, 0x24, GS
 # time set (no offset)
-Unk5 = uint, 0x28, G
+GameTimeWhenSet = uint, 0x28, GS
 # 20000 - time + 20000 (in mediatracker, it is 20k + timeline ms)
-Unk6 = uint, 0x2C, G
+GameTimeWhenSet_Plus20000 = uint, 0x2C, GS
 # 0.09 -- start of 28 bytes of floats (7 total), could be a qaternion and vec3 (first 4 are normalized, and last 3 are normalized), vec3 looks like Dir
 # okay, neither quat nor dir. might be bounding boxes? the vec3 part seems to alter what gets drawn at what viewing angels
-# the first 4 floats can make the trail a lot bigger (dimensions, mb)
-Unk7 = vec4, 0x30, G
-Unk11 = vec3, 0x40, G
+# the first 4 floats can make the trail a lot bigger (dimensions, mb) -- not actually normalized, but close to. example value: vec4(0.09, -0.420252, 0.20176, 0.884693)
+Unk7 = vec4, 0x30, GS
+# appears to be normalized, example: 0.444, 0.896, 0.007
+Unk11 = vec3, 0x40, GS
 # 0 -- 0x4C to 0x60, all 0s
 # (if local, x = fwd, y = up, z = right)
 PosOffset = vec3, 0x4C, GS
 MinorPosOffset = vec3, 0x58, GS
 # 2.97; 0x67 byte always 40, but changing it to D0+ makes it disappear. setting to all 0s does nothing
 # float, seems like a damening effect on offsets, smoothing mb?
-Unk21 = float, 0x64, G
+Unk21 = float, 0x64, GS
 Inline: uint16 ColorOffset = 0x68;
 Color = vec4, 0x68, GS

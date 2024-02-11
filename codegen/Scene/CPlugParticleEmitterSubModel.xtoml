@@ -1,0 +1,23 @@
+[DPlugParticleEmitterSubModel: ]
+NativeClass = CPlugParticleEmitterSubModel;
+
+Material = CPlugMaterial, 0x120, GS
+ShaderApply = CPlugShaderApply, 0x128, GS
+
+CircularTrailVertPartPerCount = uint, 0x188, GS
+
+TextureAtlasAnimationRandomPhase = bool, 0x1b8, GS
+
+BeamSize = vec3, 0x1F0, GS
+SizeBirth = float, 0x1F8, GS
+SizeBirthVariation = float, 0x1FC, GS
+SizeBirthUseEmissionZone = bool, 0x200, GS
+# TrailRadius
+SizeBirthEmissionZoneScale = float, 0x204, GS
+SizeBirthUseIntensity = bool, 0x20C, GS
+
+
+# 0 = Constant, 1 = ColorOverLife
+ColorGradientUse = uint, 0x420, GS
+# 0 = RGB, 1 = RGB+Hue, 2 = Hue00, 3 = LAmbientLocals
+ColorType = uint, 0x428, GS

@@ -627,7 +627,11 @@ namespace CustomCursorRotations {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cursor = editor.Cursor;
         if (CustomYawActive) {
-            item.Yaw += cursorCustomPYR.y - AdditionalDirToYaw(cursor.AdditionalDir);
+            if (Editor::IsInAnyItemPlacementMode(editor)) {
+                item.Yaw += cursorCustomPYR.y - AdditionalDirToYaw(cursor.AdditionalDir);
+            } else {
+                // must be in macroblock mode
+            }
         }
         return false;
     }
