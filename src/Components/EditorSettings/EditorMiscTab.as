@@ -92,7 +92,7 @@ class EditorMiscTab : Tab {
 
     void UpdateEditorValuesSync(CGameCtnEditorFree@ editor) {
         // note: this function must stay cheap due to call in DrawInner
-        if (int(editor.ExperimentalFeatures.AutoSavePeriod) != S_AutosavePeriod && S_AutosavePeriod > 0) {
+        if (int(editor.ExperimentalFeatures.AutoSavePeriod) != S_AutosavePeriod && S_AutosavePeriod > 9) {
             editor.ExperimentalFeatures.AutoSavePeriod = uint(S_AutosavePeriod);
         }
         if (S_ControlBlockHelpers) {

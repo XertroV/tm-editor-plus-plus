@@ -640,6 +640,10 @@ class RawBufferElem {
         CheckOffset(o, 8);
         return Dev::ReadUInt64(ptr + o);
     }
+    void SetUint64(uint o, uint64 value) {
+        CheckOffset(o, 8);
+        Dev::Write(ptr + o, value);
+    }
     string GetMwIdValue(uint o) {
         CheckOffset(o, 4);
         return GetMwIdName(Dev::ReadUInt32(ptr + o));
@@ -723,6 +727,10 @@ class RawBufferElem {
     vec4 GetVec4(uint o) {
         CheckOffset(o, 16);
         return Dev::ReadVec4(ptr + o);
+    }
+    void SetVec4(uint o, const vec4 &in value) {
+        CheckOffset(o, 16);
+        Dev::Write(ptr + o, value);
     }
     mat3 GetMat3(uint o) {
         CheckOffset(o, 36);
