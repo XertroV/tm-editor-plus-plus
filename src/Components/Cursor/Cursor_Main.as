@@ -14,6 +14,7 @@ class CursorTab : Tab {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
         auto cursor = editor.Cursor;
+        auto itemCursor = editor.ItemCursor;
         if (cursor is null) return;
 #if SIG_DEVELOPER
         // UI::AlignTextToFramePadding();
@@ -22,6 +23,11 @@ class CursorTab : Tab {
         }
         UI::SameLine();
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(cursor)));
+        if (UX::SmallButton(Icons::Cube + " Explore Item Cursor##c")) {
+            ExploreNod("Editor Item Cursor", itemCursor);
+        }
+        UI::SameLine();
+        CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(itemCursor)));
 #endif
         Children.DrawTabsAsList();
     }
@@ -428,14 +434,32 @@ namespace CustomCursorRotations {
         // make sure we're in a good mode, any item takes precedence over any free mode
         if (Editor::IsInAnyItemPlacementMode(editor)) {
             auto @itemCursor = DGameCursorItem(editor.ItemCursor);
-            auto pos = itemCursor.pos;
-            // todo, this is weird with snapping items and seems to rotate things in the wrong direction (but correct axis)
-            // auto pyr = EditorRotation(cursor).euler;
+            auto cursorRot = EditorRotation(cursor);
             auto pyr = cursorCustomPYR;
-            pyr.y = EditorRotation(cursor).YawWithCustomExtra(pyr.y);
-            // pyr.y =
-            itemCursor.mat = iso4(mat4::Inverse(EulerToMat(pyr)));
-            itemCursor.pos = pos;
+            pyr.y = cursorRot.YawWithCustomExtra(pyr.y);
+            auto newRot = EulerToMat(pyr);
+            if (!itemCursor.isAutoRotate) {
+                auto pos = itemCursor.pos;
+                // todo, this is weird with snapping items and seems to rotate things in the wrong direction (but correct axis)
+                // pyr.y =
+                itemCursor.mat = iso4(mat4::Inverse(newRot));
+                // part of the mat, need to update after
+                itemCursor.pos = pos;
+            } else {
+                // todo
+                auto pos = itemCursor.pos;
+                auto itemMat = itemCursor.mat;
+                auto translate = mat4::Translate(pos);
+                auto rotation = mat4::Inverse(translate) * itemMat;
+                auto origRotation = EulerToMat(cursorRot.Euler);
+                // auto invOrigRot = origRotation;
+                auto extraRot = (origRotation) * rotation;
+                auto newFinalRot = mat4::Inverse(newRot) * extraRot;
+                // auto origYaw = cursorRot.Yaw;
+                // auto newYaw = cursorRot.YawWithCustomExtra(pyr.y);
+                itemCursor.mat = iso4(newFinalRot);
+                itemCursor.pos = pos;
+            }
         }
         // but we also want to set snapped location b/c that's used later on
         if (Editor::IsInCustomRotPlacementMode(editor)) {
@@ -480,6 +504,7 @@ namespace CustomCursorRotations {
 
 
     // after direction or additional dir is changed. rbx = editor, rdi = stack
+    // we use this to keep the cursor in sync and read the new direction
     void AfterSetCursorRotation_Rdi_7C(uint64 rbx, uint64 rdi) {
         // dev_trace('editor pointer: ' + Text::FormatPointer(rbx));
         // dev_trace('rdi: ' + Text::FormatPointer(rdi));
@@ -626,8 +651,9 @@ namespace CustomCursorRotations {
         // todo: custom yaw
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cursor = editor.Cursor;
+        auto itemCursor = DGameCursorItem(editor.ItemCursor);
         if (CustomYawActive) {
-            if (Editor::IsInAnyItemPlacementMode(editor)) {
+            if (Editor::IsInAnyItemPlacementMode(editor) && !itemCursor.isAutoRotate) {
                 item.Yaw += cursorCustomPYR.y - AdditionalDirToYaw(cursor.AdditionalDir);
             } else {
                 // must be in macroblock mode

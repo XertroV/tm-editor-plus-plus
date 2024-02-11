@@ -17,14 +17,27 @@ class DGameCursorItem : RawBufferElem {
 		return cast<CGameCursorItem>(Dev_GetNodFromPointer(ptr));
 	}
 
+	float get_MagnetSnapping_LocalRotation_Deg() { return (this.GetFloat(0x1C)); }
+	bool get_isFreeMode() { return (this.GetBool(0x20)); }
 	iso4 get_mat() { return (this.GetIso4(0x38)); }
 	void set_mat(iso4 value) { this.SetIso4(0x38, value); }
 	vec3 get_pos() { return (this.GetVec3((0x38 + 0x24))); }
 	void set_pos(vec3 value) { this.SetVec3((0x38 + 0x24), value); }
 	CGameCtnBlock@ get_snappedBlock() { return cast<CGameCtnBlock>(this.GetNod(0x70)); }
+	// changes depending on origin of the snapping, e.g. 1,2 might be for left/right side, and 0,3 for poles in middle of block (2 options)
+	uint get_snappedBlockIx() { return (this.GetUint32(0x80)); }
+	// FFFFFFFF
+	uint get_Unk84() { return (this.GetUint32(0x84)); }
+	// unique for every snappable position in every block
+	uint get_snappedGlobalIx() { return (this.GetUint32(0x88)); }
+	// at least when snapping items
 	vec3 get_mouseInWorld() { return (this.GetVec3(0x8C)); }
+	// Nope, must have been a left over reference: geneology = CGameCtnZoneGenealogy, 0x90, G
+	bool get_isAutoRotate() { return (this.GetBool(0x98)); }
 	CGameResources@ get_resource() { return cast<CGameResources>(this.GetNod(0xA0)); }
 	CGameItemModel@ get_itemModel() { return cast<CGameItemModel>(this.GetNod(0xA8)); }
+	CSceneMobil@ get_helperMobil() { return cast<CSceneMobil>(this.GetNod(0xB0)); }
+	vec4 get_Zeros1() { return (this.GetVec4(0xC8)); }
 	DGameCursorItem_ItemDescs@ get_displayedItems() { return DGameCursorItem_ItemDescs(this.GetBuffer(0xB8, 0xA0, false)); }
 }
 
@@ -46,7 +59,7 @@ class DGameCursorItem_ItemDesc : RawBufferElem {
 		super(ptr, 0xA0);
 	}
 
-	// -1 when not drawn
+	// -1 when not drawn, can be other values like 2b otherwise
 	uint get_u1() { return (this.GetUint32(0x0)); }
 	void set_u1(uint value) { this.SetUint32(0x0, value); }
 	// unused i think
@@ -54,6 +67,8 @@ class DGameCursorItem_ItemDesc : RawBufferElem {
 	void set_u2(uint value) { this.SetUint32(0x4, value); }
 	CGameItemModel@ get_itemModel() { return cast<CGameItemModel>(this.GetNod(0x8)); }
 	// 0x10 to 0x94 unused? maybe a matrix (identity, mostly) in front of it
+	// 0x48, 49, 4a are flags (char)
+	// 0x50 and 0x58 pointers to something? maybe just values buuuut
 	iso4 get_matrix() { return (this.GetIso4(0x70)); }
 }
 

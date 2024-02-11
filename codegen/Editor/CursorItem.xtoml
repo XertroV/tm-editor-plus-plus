@@ -1,18 +1,33 @@
 [DGameCursorItem: SZ_CGAMECURSORITEM]
 NativeClass = CGameCursorItem
+MagnetSnapping_LocalRotation_Deg = float, 0x1C, G
+isFreeMode = bool, 0x20, G
 mat = iso4, 0x38, GS
 pos = vec3, (0x38 + 0x24), GS
 snappedBlock = CGameCtnBlock, 0x70, G
+# changes depending on origin of the snapping, e.g. 1,2 might be for left/right side, and 0,3 for poles in middle of block (2 options)
+snappedBlockIx = uint, 0x80, G
+# FFFFFFFF
+Unk84 = uint, 0x84, G
+# unique for every snappable position in every block
+snappedGlobalIx = uint, 0x88, G
+# at least when snapping items
 mouseInWorld = vec3, 0x8C, G
+# Nope, must have been a left over reference: geneology = CGameCtnZoneGenealogy, 0x90, G
+isAutoRotate = bool, 0x98, G
 resource = CGameResources, 0xA0, G
 itemModel = CGameItemModel, 0xA8, G
+helperMobil = CSceneMobil, 0xB0, G
 Buffer: displayedItems = DGameCursorItem_ItemDescs, 0xB8, 0xA0, false
+Zeros1 = vec4, 0xC8, G
 
 [DGameCursorItem_ItemDesc: 0xA0]
-# -1 when not drawn
+# -1 when not drawn, can be other values like 2b otherwise
 u1 = uint, 0x0, GS
 # unused i think
 u2 = uint, 0x4, GS
 itemModel = CGameItemModel, 0x8, G
 # 0x10 to 0x94 unused? maybe a matrix (identity, mostly) in front of it
+# 0x48, 49, 4a are flags (char)
+# 0x50 and 0x58 pointers to something? maybe just values buuuut
 matrix = iso4, 0x70, G
