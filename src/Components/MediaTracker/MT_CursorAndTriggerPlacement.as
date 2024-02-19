@@ -7,9 +7,11 @@ class MT_CursorAndTriggerPlacementTab : Tab {
     }
 
     void DrawInner() override {
-        UI::PushItemWidth(UI::GetContentRegionAvail().x / 2.);
+        auto app = GetApp();
+        auto mteditor = cast<CGameEditorMediaTracker>(app.Editor);
+        if (mteditor is null) return null;
 
-        auto mteditor = cast<CGameEditorMediaTracker>(GetApp().Editor);
+        UI::PushItemWidth(UI::GetContentRegionAvail().x / 2.);
         auto api = cast<CGameEditorMediaTrackerPluginAPI>(mteditor.PluginAPI);
         UX::InputIntDevUint32("MT Trigger Placement Height (0 - 254)", api, O_MTAPI_PlaceHeight, 0, 0xFE);
         auto blockCursor = cast<CGameCursorBlock>(Dev::GetOffsetNod(api, O_MTAPI_BlockCursor));
@@ -17,7 +19,7 @@ class MT_CursorAndTriggerPlacementTab : Tab {
             LabeledValue("Cursor Coord", blockCursor.Coord, true);
         }
 
-        auto editorCam = GetMTOrbitalCam(api);
+        auto editorCam = GetMTOrbitalCam(mteditor);
         if (editorCam !is null) {
             LabeledValue("Target Pos", editorCam.m_TargetedPosition);
             if (UI::Button("Set MT Placement to Camera Target")) {
@@ -30,9 +32,10 @@ class MT_CursorAndTriggerPlacementTab : Tab {
         UI::PopItemWidth();
     }
 
-    CGameControlCameraEditorOrbital@ GetMTOrbitalCam(CGameEditorMediaTrackerPluginAPI@ api) {
-        auto fakeNod = Dev_GetOffsetNodSafe(api, 0x18);
-        return cast<CGameControlCameraEditorOrbital>(Dev_GetOffsetNodSafe(fakeNod, 0x378));
+    CGameControlCameraEditorOrbital@ GetMTOrbitalCam(CGameEditorMediaTracker@ mtEditor) {
+        if (mtEditor is null) return null;
+        auto cam = DGameCamera(Dev::GetOffsetUint64(mtEditor, 0x60));
+        return cast<CGameControlCameraEditorOrbital>(cam.CurrentCamControl);
     }
 }
 
