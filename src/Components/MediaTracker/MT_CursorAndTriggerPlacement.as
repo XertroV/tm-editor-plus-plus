@@ -9,7 +9,7 @@ class MT_CursorAndTriggerPlacementTab : Tab {
     void DrawInner() override {
         auto app = GetApp();
         auto mteditor = cast<CGameEditorMediaTracker>(app.Editor);
-        if (mteditor is null) return null;
+        if (mteditor is null) return;
 
         UI::PushItemWidth(UI::GetContentRegionAvail().x / 2.);
         auto api = cast<CGameEditorMediaTrackerPluginAPI>(mteditor.PluginAPI);

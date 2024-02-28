@@ -27,10 +27,12 @@ class MacroblockOptsTab : Tab {
         if (UI::Button("Reinitialize Macroblock")) {
             if (editor.CurrentMacroBlockInfo !is null) {
                 editor.CurrentMacroBlockInfo.Initialized = false;
+                Notify("Marked macroblock uninitialized.");
             } else {
                 Notify("No macroblock to reinitialize.");
             }
         }
+        UI::TextWrapped("If it seems to do nothing, select a different macroblock then select this one again.");
     }
 }
 

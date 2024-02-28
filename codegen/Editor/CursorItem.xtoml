@@ -5,11 +5,11 @@ isFreeMode = bool, 0x20, G
 mat = iso4, 0x38, GS
 pos = vec3, (0x38 + 0x24), GS
 snappedBlock = CGameCtnBlock, 0x70, G
-# changes depending on origin of the snapping, e.g. 1,2 might be for left/right side, and 0,3 for poles in middle of block (2 options)
+# changes depending on origin of the snapping, e.g. 1,2 might be for left/right side, and 0,3 for poles in middle of block (2 options), -1 otherwise
 snappedBlockIx = uint, 0x80, G
 # FFFFFFFF
 Unk84 = uint, 0x84, G
-# unique for every snappable position in every block
+# unique for every snappable position in every block, -1 otherwise
 snappedGlobalIx = uint, 0x88, G
 # at least when snapping items
 mouseInWorld = vec3, 0x8C, G

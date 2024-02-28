@@ -25,9 +25,12 @@ Inline: bool get_isFree() { return flags & 4 == 4; }
 Inline: void set_isFree(bool value) { flags = value ? flags | 4 : flags & (0xFF ^ 4); }
 Waypoint = CGameWaypointSpecialProperty, 0x48, GS
 BlockInfo = CGameCtnBlockInfoClassic, 0x50, GS
+# 58 moved into based on free?
+
 
 [DGameCtnMacroBlockInfo: SZ_CTNMACROBLOCK]
 NativeClass = CGameCtnMacroBlockInfo
+# offset: 0x150
 Buffer: Blocks = DGameCtnMacroBlockInfo_Blocks, O_MACROBLOCK_BLOCKSBUF, SZ_MACROBLOCK_BLOCKSBUFEL, true
 # Buffer: Skins = DGameCtnMacroBlockInfo_Skins, 0x160, 0x18, true
 #

@@ -1,0 +1,39 @@
+Viewport
+
+0x15A0
+0x10
+0x258
+
+
+0x1620
+0xA8
+0x130
+0xD0
+
+
+D3D11_TEXTURE2D_DESC { Width: 3440, Height: 1440, MipLevels: 1, ArraySize: 1, Format: DXGI_FORMAT(19), SampleDesc: DXGI_SAMPLE_DESC { Count: 4, Quality: 0 }, Usage: D3D11_USAGE(0), BindFlags: 72, CPUAccessFlags: 0, MiscFlags: 0 }
+
+
+bmp: 0x0000023a68fcd240
+
+dx resource at 0x0000023aede1a6b0
+
+
+
+
+0x1620 = 0x2c4 * 8, so what is at 0x22e
+
+0x1170 = VisionResources
++ 0x200 = BitmapHyperZ fid
++ 0x208 = BitmapHyperZ texture CPlugBitmap
+
+
+
+RenderInfos:
+0xf8: ?
+
+
+0x1b60: Dx11 -> 0xAB8: DepthStencilView
+0x1b68: CHmsCamera
+0x1b70: CHmsZone
+0x1b78: Display_Win32DeviceNames (exposed offset)

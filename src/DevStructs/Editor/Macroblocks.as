@@ -57,6 +57,7 @@ class DGameCtnMacroBlockInfo_Block : RawBufferElem {
 }
 
 
+// 58 moved into based on free?
 class DGameCtnMacroBlockInfo : RawBufferElem {
 	DGameCtnMacroBlockInfo(RawBufferElem@ el) {
 		if (el.ElSize != SZ_CTNMACROBLOCK) throw("invalid size for DGameCtnMacroBlockInfo");
@@ -73,6 +74,7 @@ class DGameCtnMacroBlockInfo : RawBufferElem {
 		return cast<CGameCtnMacroBlockInfo>(Dev_GetNodFromPointer(ptr));
 	}
 
+	// offset: 0x150
 	DGameCtnMacroBlockInfo_Blocks@ get_Blocks() { return DGameCtnMacroBlockInfo_Blocks(this.GetBuffer(O_MACROBLOCK_BLOCKSBUF, SZ_MACROBLOCK_BLOCKSBUFEL, true)); }
 	// Buffer: Skins = DGameCtnMacroBlockInfo_Skins, 0x160, 0x18, true
 	// 

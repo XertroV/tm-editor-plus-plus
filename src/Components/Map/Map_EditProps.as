@@ -7,6 +7,8 @@ class MapEditPropsTab : Tab {
 
     uint carSportId = GetMwId("CarSport");
     uint carSnowId = GetMwId("CarSnow");
+    uint carRallyId = GetMwId("CarRally");
+    uint carDesertId = GetMwId("CarDesert");
     uint characterPilotId = GetMwId("CharacterPilot");
     // uint rallyCarId = GetMwId("RallyCar");
     // uint canyonCarId = GetMwId("CanyonCar");
@@ -352,6 +354,8 @@ class MapEditPropsTab : Tab {
                 : m_VehicleTestType == VehicleToPlace::CharacterPilot ? characterPilotId
                 : m_VehicleTestType == VehicleToPlace::CarSnow ? carSnowId
                 : m_VehicleTestType == VehicleToPlace::CarSport ? carSportId
+                : m_VehicleTestType == VehicleToPlace::CarRally ? carRallyId
+                : m_VehicleTestType == VehicleToPlace::CarDesert ? carDesertId
                 : origPlayerModel;
                 // : m_VehicleTestType == VehicleToPlace::RallyCar ? rallyCarId
                 // : m_VehicleTestType == VehicleToPlace::CanyonCar ? canyonCarId
@@ -532,9 +536,9 @@ enum VehicleToPlace {
     Map_Default = 0,
     CarSport = 1,
     CarSnow = 2,
+    CarRally = 3,
     CharacterPilot,
     LAST,
-    CarRally,
     CarDesert,
     RallyCar,
     CanyonCar,

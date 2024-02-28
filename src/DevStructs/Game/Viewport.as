@@ -19,6 +19,13 @@ class DDx11Viewport : RawBufferElem {
 
 	// DisplayNames + 0x10
 	DxRenderStuff@ get_mDxRenderStuff() { return DxRenderStuff(this.GetUint64(0x6E0)); }
+	// depth buffer: HyperZ texture
+	CVisionResourceFile@ get_VisionResourceFile() { return cast<CVisionResourceFile>(this.GetNod(0x1170)); }
+	// ----------- 0x1b60 - 0x1b80
+	// Some Dx11 related struct
+	Dx11Stuff@ get_mDx11Stuff() { return Dx11Stuff(this.GetUint64(0x1b60)); }
+	CHmsCamera@ get_camera() { return cast<CHmsCamera>(this.GetNod(0x1b68)); }
+	CHmsZone@ get_zone() { return cast<CHmsZone>(this.GetNod(0x1b70)); }
 	DepthBufferStructs@ get_mDepthBufferStructs() { return DepthBufferStructs(this.GetBuffer(0x840, 0x20, false)); }
 }
 
@@ -30,6 +37,22 @@ class DepthBufferStructs : RawBuffer {
 		return DepthBufferStruct(this[i]);
 	}
 }
+
+// UNCHECKED, but it's an exposed offset
+// Buffer: Display_Win32DeviceNames = wstring, 0x1b78, 0x10, false
+// at least 0xAC0 big
+class Dx11Stuff : RawBufferElem {
+	Dx11Stuff(RawBufferElem@ el) {
+		if (el.ElSize != 0xAC0) throw("invalid size for Dx11Stuff");
+		super(el.Ptr, el.ElSize);
+	}
+	Dx11Stuff(uint64 ptr) {
+		super(ptr, 0xAC0);
+	}
+
+	D3D11DepthStencilView@ get_depthStencilView() { return cast<D3D11DepthStencilView>(this.GetNod(0xAB8)); }
+}
+
 
 class DxRenderStuff : RawBufferElem {
 	DxRenderStuff(RawBufferElem@ el) {
@@ -63,6 +86,19 @@ class DepthBufferStruct : RawBufferElem {
 	uint get_width() { return (this.GetUint32(0x14)); }
 	uint get_height() { return (this.GetUint32(0x18)); }
 	uint get_u2() { return (this.GetUint32(0x1C)); }
+}
+
+
+class D3D11DepthStencilView : RawBufferElem {
+	D3D11DepthStencilView(RawBufferElem@ el) {
+		if (el.ElSize != 0x8) throw("invalid size for D3D11DepthStencilView");
+		super(el.Ptr, el.ElSize);
+	}
+	D3D11DepthStencilView(uint64 ptr) {
+		super(ptr, 0x8);
+	}
+
+	uint64 get_vtable() { return (this.GetUint64(0x0)); }
 }
 
 
@@ -118,6 +154,7 @@ class D3D11Texture : RawBufferElem {
 }
 
 
+// stored next to bitmap and also in the bitmap at 0xA8
 // unsure of size, seems like 0x280
 class DRenderInfo : RawBufferElem {
 	DRenderInfo(RawBufferElem@ el) {

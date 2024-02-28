@@ -40,6 +40,8 @@ void Main() {
 
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
 
+    startnew(RegisterEditorLeaveUndoStandingRespawnCheck);
+
     sleep(500);
     CallbacksEnabledPostInit = true;
 

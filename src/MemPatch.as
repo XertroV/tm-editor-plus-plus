@@ -15,6 +15,11 @@ class MemPatcher {
         this.origBytes.Resize(newBytes.Length);
         ptr = Dev::FindPattern(pattern);
         applied = false;
+        if (ptr == 0) {
+            NotifyError("MemPatcher: Pattern not found: " + pattern);
+        } else {
+            trace('Found: ' + pattern + ' at ' + Text::FormatPointer(ptr));
+        }
     }
 
     ~MemPatcher() {
@@ -45,6 +50,7 @@ class MemPatcher {
                 }
             }
             origBytes[i] = Dev::Patch(ptr + offsets[i], newBytes[i]);
+            trace('Patched: ' + pattern + ' at ' + offsets[i] + ' with ' + newBytes[i] + ' (was ' + origBytes[i] + ')');
         }
     }
 

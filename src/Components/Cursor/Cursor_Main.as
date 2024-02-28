@@ -438,7 +438,9 @@ namespace CustomCursorRotations {
             auto pyr = cursorCustomPYR;
             pyr.y = cursorRot.YawWithCustomExtra(pyr.y);
             auto newRot = EulerToMat(pyr);
-            if (!itemCursor.isAutoRotate) {
+            bool isSnapping = itemCursor.snappedGlobalIx != -1;
+            bool autoRotating = !isSnapping && itemCursor.isAutoRotate;
+            if (!autoRotating) {
                 auto pos = itemCursor.pos;
                 // todo, this is weird with snapping items and seems to rotate things in the wrong direction (but correct axis)
                 // pyr.y =
@@ -455,6 +457,8 @@ namespace CustomCursorRotations {
                 // auto invOrigRot = origRotation;
                 auto extraRot = (origRotation) * rotation;
                 auto newFinalRot = mat4::Inverse(newRot) * extraRot;
+                // test
+                // newFinalRot *= mat4::Scale(2.0);
                 // auto origYaw = cursorRot.Yaw;
                 // auto newYaw = cursorRot.YawWithCustomExtra(pyr.y);
                 itemCursor.mat = iso4(newFinalRot);
@@ -652,11 +656,13 @@ namespace CustomCursorRotations {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cursor = editor.Cursor;
         auto itemCursor = DGameCursorItem(editor.ItemCursor);
+        bool autoRotating = itemCursor.snappedGlobalIx == -1 && itemCursor.isAutoRotate;
         if (CustomYawActive) {
-            if (Editor::IsInAnyItemPlacementMode(editor) && !itemCursor.isAutoRotate) {
+            if (!autoRotating && Editor::IsInAnyItemPlacementMode(editor)) {
                 item.Yaw += cursorCustomPYR.y - AdditionalDirToYaw(cursor.AdditionalDir);
             } else {
-                // must be in macroblock mode
+                // we must be in macroblock mode, or autorotate (probably)
+                // so do nothing
             }
         }
         return false;

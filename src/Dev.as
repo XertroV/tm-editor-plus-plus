@@ -492,10 +492,12 @@ const uint16 O_ITEMCURSOR_CurrentModelsBuf = GetOffset("CGameCursorItem", "Helpe
 
 
 const uint16 O_MACROBLOCK_BLOCKSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x8; // 0x148 + 8 = 0x150
+const uint16 O_MACROBLOCK_SKINSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x18; // 0x148 + 0x18 = 0x160
 const uint16 O_MACROBLOCK_ITEMSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x28; // 0x148 + 0x28 = 0x170
 
 const uint16 SZ_MACROBLOCK_BLOCKSBUFEL = 0x70;
 const uint16 SZ_MACROBLOCK_ITEMSBUFEL = 0xC0;
+const uint16 SZ_MACROBLOCK_SKINSBUFEL = 0x18;
 const uint16 SZ_CTNMACROBLOCK = 0x248;
 
 

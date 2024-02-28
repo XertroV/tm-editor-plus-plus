@@ -24,11 +24,11 @@ class DGameCursorItem : RawBufferElem {
 	vec3 get_pos() { return (this.GetVec3((0x38 + 0x24))); }
 	void set_pos(vec3 value) { this.SetVec3((0x38 + 0x24), value); }
 	CGameCtnBlock@ get_snappedBlock() { return cast<CGameCtnBlock>(this.GetNod(0x70)); }
-	// changes depending on origin of the snapping, e.g. 1,2 might be for left/right side, and 0,3 for poles in middle of block (2 options)
+	// changes depending on origin of the snapping, e.g. 1,2 might be for left/right side, and 0,3 for poles in middle of block (2 options), -1 otherwise
 	uint get_snappedBlockIx() { return (this.GetUint32(0x80)); }
 	// FFFFFFFF
 	uint get_Unk84() { return (this.GetUint32(0x84)); }
-	// unique for every snappable position in every block
+	// unique for every snappable position in every block, -1 otherwise
 	uint get_snappedGlobalIx() { return (this.GetUint32(0x88)); }
 	// at least when snapping items
 	vec3 get_mouseInWorld() { return (this.GetVec3(0x8C)); }
