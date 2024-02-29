@@ -8,10 +8,13 @@ SelfIllumIntensity = float, 0x18, GS
 
 [DGameCtnMediaBlockEntity: SZ_MEDIABLOCKENTITY]
 NativeClass = CGameCtnMediaBlockEntity
+EntRecordData = CPlugEntRecordData, 0x58, G
 StartOffset = float, 0x60, GS
 GhostName = string, 0x68, G
 ForceHue = bool, 0x88, GS
 Skin = CSystemPackDesc, 0xB8, G
 Horn = CSystemPackDesc, 0xC0, G
-Buffer: Keys = DGameCtnMediaBlockEntity_Keys, 0x120, SZ_MEDIABLOCKENTITY_KEY
-# Buffer: Ghosts = DGameCtnMediaBlockEntity_Ghosts, 0x130, SZ_MEDIABLOCKENTITY_GHOST
+Trigram = string, 0x108, GS
+RegionString = string, 0x118, G
+Buffer: Keys = DGameCtnMediaBlockEntity_Keys, 0x140, SZ_MEDIABLOCKENTITY_KEY
+# 0x158: something to do with positions or things

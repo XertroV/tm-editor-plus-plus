@@ -630,6 +630,11 @@ class RawBufferElem {
         auto nod = Dev_GetNodFromPointer(ptr + o);
         return Dev::GetOffsetString(nod, 0);
     }
+    void SetString(uint o, const string &in val) {
+        CheckOffset(o, 16);
+        auto nod = Dev_GetNodFromPointer(ptr + o);
+        Dev::SetOffset(nod, 0, val);
+    }
 
     CMwNod@ GetNod(uint o) {
         return Dev_GetNodFromPointer(GetUint64(o));

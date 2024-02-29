@@ -38,6 +38,7 @@ class DGameCtnMediaBlockEntity : RawBufferElem {
 		return cast<CGameCtnMediaBlockEntity>(Dev_GetNodFromPointer(ptr));
 	}
 
+	CPlugEntRecordData@ get_EntRecordData() { return cast<CPlugEntRecordData>(this.GetNod(0x58)); }
 	float get_StartOffset() { return (this.GetFloat(0x60)); }
 	void set_StartOffset(float value) { this.SetFloat(0x60, value); }
 	string get_GhostName() { return (this.GetString(0x68)); }
@@ -45,7 +46,10 @@ class DGameCtnMediaBlockEntity : RawBufferElem {
 	void set_ForceHue(bool value) { this.SetBool(0x88, value); }
 	CSystemPackDesc@ get_Skin() { return cast<CSystemPackDesc>(this.GetNod(0xB8)); }
 	CSystemPackDesc@ get_Horn() { return cast<CSystemPackDesc>(this.GetNod(0xC0)); }
-	DGameCtnMediaBlockEntity_Keys@ get_Keys() { return DGameCtnMediaBlockEntity_Keys(this.GetBuffer(0x120, SZ_MEDIABLOCKENTITY_KEY, false)); }
+	string get_Trigram() { return (this.GetString(0x108)); }
+	void set_Trigram(const string &in value) { this.SetString(0x108, value); }
+	string get_RegionString() { return (this.GetString(0x118)); }
+	DGameCtnMediaBlockEntity_Keys@ get_Keys() { return DGameCtnMediaBlockEntity_Keys(this.GetBuffer(0x140, SZ_MEDIABLOCKENTITY_KEY, false)); }
 }
 
 class DGameCtnMediaBlockEntity_Keys : RawBuffer {

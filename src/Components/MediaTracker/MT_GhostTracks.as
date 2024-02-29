@@ -71,10 +71,14 @@ class MT_GhostTracks : Tab {
         auto name = "Block " + ix + ".##" + trackPtr;
         if (UI::TreeNode(name)) {
             UI::PushID(name);
+#if SIG_DEVELOPER
+            CopiableLabeledPtr(block.Nod);
+#endif
             CopiableLabeledValue("GhostName", block.GhostName);
             block.ForceHue = UI::Checkbox("Force Hue", block.ForceHue);
             block.StartOffset = UI::InputFloat("Start Offset", block.StartOffset);
             // CopiableLabeledValue("Start Offset", tostring(block.StartOffset));
+            block.Trigram = UI::InputText("Trigram", block.Trigram);
             auto keys = block.Keys;
 
             auto nbKeys = keys.Length;
@@ -91,7 +95,7 @@ class MT_GhostTracks : Tab {
                     UI::TreePop();
                 }
             }
-            // UI::Unindent();
+            // // UI::Unindent();
             UI::PopID();
             UI::TreePop();
         }
