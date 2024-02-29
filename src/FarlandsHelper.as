@@ -145,6 +145,7 @@ namespace FarlandsHelper {
         cursor.Coord = editor.Challenge.Size / 2;
         cursor.Coord.y = 8;
         updateBlockPosFHHelper = true;
+        checkedCursorPos = false;
 
         if (isPlacingItem) {
             Editor::SetItemCursorPos(editor.ItemCursor, _addBlockCursorPos);
@@ -170,8 +171,25 @@ namespace FarlandsHelper {
     vec3 _addBlockSetPos;
     vec3 _addBlockCursorPos;
 
-    bool FH_OnAddBlock(CGameCtnBlock@ block) {
+    bool checkedCursorPos = false;
+
+    bool FH_OnBI_CheckCursor() {
         if (!updateBlockPosFHHelper) return false;
+        if (!checkedCursorPos) {
+            checkedCursorPos = true;
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor is null) return false;
+            if (editor.Cursor.FreePosInMap != _addBlockCursorPos) {
+                updateBlockPosFHHelper = false;
+                dev_trace("Detected bad cursor pos, not updating!!");
+            }
+        }
+        return updateBlockPosFHHelper;
+    }
+
+    bool FH_OnAddBlock(CGameCtnBlock@ block) {
+        // updateBlockPosFHHelper check implicit in check cursor
+        if (!FH_OnBI_CheckCursor()) return false;
         if (!Editor::IsBlockFree(block)) return false;
         auto origPos = Editor::GetBlockLocation(block, true);
         auto finalPos = _addBlockSetPos + origPos - _addBlockCursorPos;
@@ -182,7 +200,8 @@ namespace FarlandsHelper {
     }
 
     bool FH_OnAddItem(CGameCtnAnchoredObject@ item) {
-        if (!updateBlockPosFHHelper) return false;
+        // updateBlockPosFHHelper check implicit in check cursor
+        if (!FH_OnBI_CheckCursor()) return false;
         auto origPos = Editor::GetItemLocation(item);
         auto finalPos = _addBlockSetPos + origPos - _addBlockCursorPos;
         Editor::SetItemLocation(item, finalPos);

@@ -475,8 +475,9 @@ namespace CustomCursorRotations {
         // but we also want to set snapped location b/c that's used later on
         if (Editor::IsInCustomRotPlacementMode(editor)) {
             // this is false in item mode: if (!cursor.UseFreePos) return;
-            // b/c snapping can be disabled
+
             HasCustomCursorSnappedPos = !cursor.UseSnappedLoc;
+            // b/c snapping can be disabled
             if (cursor.UseSnappedLoc) return;
 
             // cursor.UseSnappedLoc = true;
