@@ -64,7 +64,7 @@ ChosenCamera = uint, 0x1A8, GS
 # unknown purpose, spec cam or something?
 UnkCameraThing = uint, 0x1AC, 0x15
 
-# 0x230: ptr to unk
+# 0x230: ptr to unk - same as 0x2D0 in MT editor
 #
 CameraMatrix = iso4, 0x260, G
 

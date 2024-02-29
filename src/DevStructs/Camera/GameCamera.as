@@ -70,7 +70,7 @@ class DGameCamera : RawBufferElem {
 	// Free = 0x2, Cam1 = 0x12
 	uint get_ChosenCamera() { return (this.GetUint32(0x1A8)); }
 	void set_ChosenCamera(uint value) { this.SetUint32(0x1A8, value); }
-	// 0x230: ptr to unk
+	// 0x230: ptr to unk - same as 0x2D0 in MT editor
 	// 
 	iso4 get_CameraMatrix() { return (this.GetIso4(0x260)); }
 	float get_Fov() { return (this.GetFloat(0x294)); }
