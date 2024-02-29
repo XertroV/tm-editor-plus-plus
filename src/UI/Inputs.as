@@ -1,24 +1,32 @@
 namespace UX {
+
     vec3 InputAngles3(const string &in label, vec3 angles, vec3 _default = vec3()) {
         auto d1 = MathX::ToDeg(angles);
         auto d2 = UI::InputFloat3(label, d1);
-        auto val = MathX::ToRad(d2);
         UI::SameLine();
         if (UI::Button("Reset##"+label)) {
             return _default;
         }
+
+        d2 = Clipboard::AddCopyPasteAngles3(label, d2);
+
         // check if we actually changed anything
         if (MathX::Vec3Eq(d1, d2)) return angles;
-        return val;
+
+        return MathX::ToRad(d2);
     }
 
     vec3 InputAngles3Raw(const string &in label, vec3 angles, vec3 _default = vec3()) {
-        auto val = MathX::ToRad(UI::InputFloat3(label, MathX::ToDeg(angles)));
+        auto d1 = MathX::ToDeg(angles);
+        auto d2 = UI::InputFloat3(label, d1);
         UI::SameLine();
         if (UI::Button("Reset##"+label)) {
             return _default;
         }
-        return val;
+
+        d2 = Clipboard::AddCopyPasteAngles3(label, d2);
+
+        return MathX::ToRad(d2);;
     }
 
     vec3 InputFloat3(const string &in label, vec3 val, vec3 _default = vec3()) {
@@ -27,6 +35,9 @@ namespace UX {
         if (UI::Button("Reset##"+label)) {
             return _default;
         }
+
+        ret = Clipboard::AddCopyPasteFloat3(label, ret);
+
         return ret;
     }
 
@@ -40,6 +51,9 @@ namespace UX {
         if (UI::Button("Reset##"+label)) {
             return _default;
         }
+
+        ret = Clipboard::AddCopyPasteFloat3(label, ret);
+
         return ret;
     }
 
@@ -53,12 +67,17 @@ namespace UX {
     }
 
     vec3 SliderAngles3(const string &in label, vec3 angles, float min = -180.0, float max = 180.0, const string &in format = "%.1f", vec3 _default = vec3()) {
-        auto val = MathX::ToRad(UI::SliderFloat3(label, MathX::ToDeg(angles), min, max, format));
+        auto d1 = MathX::ToDeg(angles);
+        auto d2 = UI::SliderFloat3(label, d1, min, max, format);
+        
         UI::SameLine();
         if (UI::Button("Reset##"+label)) {
             return _default;
         }
-        return val;
+
+        d2 = Clipboard::AddCopyPasteAngles3(label, d2);
+
+        return MathX::ToRad(d2);
     }
 
     vec2 SliderAngles2(const string &in label, vec2 angles, float min = -180.0, float max = 180.0, const string &in format = "%.1f", vec2 _default = vec2()) {
@@ -81,11 +100,19 @@ namespace UX {
         auto x = UI::InputInt("(X) " + label, val.x);
         auto y = UI::InputInt("(Y) " + label, val.y);
         auto z = UI::InputInt("(Z) " + label, val.z);
-        return nat3(x, y, z);
+        auto ret = nat3(x, y, z);
+
+        ret = Clipboard::AddCopyPasteNat3(label, ret);
+
+        return ret;
     }
 
     nat3 InputNat3(const string &in label, nat3 val) {
-        return Vec3ToNat3(UI::InputFloat3(label, Nat3ToVec3(val)));
+        auto ret = Vec3ToNat3(UI::InputFloat3(label, Nat3ToVec3(val)));
+
+        ret = Clipboard::AddCopyPasteNat3(label, ret);
+
+        return ret;
     }
 
     nat2 InputNat2(const string &in label, nat2 val) {
@@ -109,6 +136,9 @@ namespace UX {
         if (UI::Button("Reset##"+label)) {
             return _default;
         }
+
+        ret = Clipboard::AddCopyPasteQuat(label, ret);
+
         return ret;
     }
 
