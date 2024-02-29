@@ -9,6 +9,9 @@ bool S_LMAnalysis_JustSendFilePath = true;
 class LightmapTab : Tab {
     LMAnalysisWindow@ lmWindow;
 
+    CGameEditorPluginMap::EShadowsQuality m_SetLMQuality = CGameEditorPluginMap::EShadowsQuality::High;
+    // CHmsLightMapCache::EHmsLightMapQuality
+
     LightmapTab(TabGroup@ p) {
         super(p, "Lightmap", Icons::MapO + Icons::LightbulbO);
         @lmWindow = LMAnalysisWindow(this.Children);
@@ -16,7 +19,7 @@ class LightmapTab : Tab {
 
     void DrawInner() override {
         auto app = GetApp();
-        // auto editor = cast<CGameCtnEditorFree>(app.Editor);
+        auto editor = cast<CGameCtnEditorFree>(app.Editor);
         auto lm = Editor::GetCurrentLightMapFromMap(app.RootMap);
 
 #if SIG_DEVELOPER
@@ -31,6 +34,18 @@ class LightmapTab : Tab {
             UI::Unindent();
             UI::Separator();
         }
+
+        bool canRecalc = lm !is null && lm.m_PImp !is null && lm.m_PImp.Cache.m_Quality > 0;
+        UI::BeginDisabled(!canRecalc);
+        UI::SetNextItemWidth(100);
+        m_SetLMQuality = DrawComboEShadowsQuality("Calc LM Quality", m_SetLMQuality);
+        UI::SameLine();
+        if (UI::Button("Recalculate LM")) {
+            // set to VFast
+            Dev::SetOffset(lm.m_PImp.Cache, GetOffset("CHmsLightMapCache", "m_Quality"), int(0));
+            editor.PluginMapType.ComputeShadows1(m_SetLMQuality);
+        }
+        UI::EndDisabled();
 
         ItemModelTreeElement(null, -1, lm, "Light Map").Draw();
 

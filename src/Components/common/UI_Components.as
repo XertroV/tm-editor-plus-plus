@@ -147,6 +147,14 @@ CGameEditorPluginMap::EMapElemLightmapQuality DrawComboEMapElemLightmapQuality(c
     );
 }
 
+CGameEditorPluginMap::EShadowsQuality DrawComboEShadowsQuality(const string &in label, CGameEditorPluginMap::EShadowsQuality val) {
+    return CGameEditorPluginMap::EShadowsQuality(
+        DrawArbitraryEnum(label, int(val), 6, function(int v) {
+            return tostring(CGameEditorPluginMap::EShadowsQuality(v));
+        })
+    );
+}
+
 CGameEditorPluginMap::EMapElemColor DrawComboEMapElemColor(const string &in label, CGameEditorPluginMap::EMapElemColor val) {
     return CGameEditorPluginMap::EMapElemColor(
         DrawArbitraryEnum(label, int(val), 6, function(int v) {
