@@ -276,6 +276,7 @@ class CursorPropsTab : Tab {
         UI::Separator();
 
         CustomCursorRotations::ItemStappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled" + NewIndicator, CustomCursorRotations::ItemStappingEnabled);
+        AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly)");
         bool wasActive = CustomCursorRotations::Active;
         auto nextActive = UI::Checkbox("Enable Custom Cursor Rotation Amounts", wasActive);
         if (wasActive != nextActive) CustomCursorRotations::Active = nextActive;
@@ -287,11 +288,14 @@ class CursorPropsTab : Tab {
         AddSimpleTooltip("Note: this currently does not work correctly with item-to-block snapping.");
 
         CustomCursorRotations::DrawSettings();
+
         // S_AutoActivateCustomRotations is checked in OnEditor for cursor window
         S_AutoActivateCustomRotations = UI::Checkbox("Auto-activate custom cursor rotations (Pitch, Roll)", S_AutoActivateCustomRotations);
         AddSimpleTooltip("Activates when entering the editor");
         S_AutoActivateCustomYaw = UI::Checkbox("Auto-activate custom cursor rotations (Yaw)", S_AutoActivateCustomYaw);
         AddSimpleTooltip("Activates when entering the editor");
+
+        DrawInfinitePrecisionSetting();
 
         wasActive = S_EnablePromiscuousItemSnapping;
         S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping" + NewIndicator, S_EnablePromiscuousItemSnapping);
