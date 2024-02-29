@@ -322,6 +322,9 @@ namespace CustomCursorRotations {
     [Setting hidden]
     float customRot = TAU / 4. / 12.;
 
+    // check this when overwriting SnappedLoc to avoid overwriting in-game snapping
+    bool HasCustomCursorSnappedPos = false;
+
     // yaw tracks extra direction only (between 0 and 90deg), but pitch and roll are full rotations
     vec3 cursorCustomPYR = vec3();
 
@@ -473,6 +476,7 @@ namespace CustomCursorRotations {
         if (Editor::IsInCustomRotPlacementMode(editor)) {
             // this is false in item mode: if (!cursor.UseFreePos) return;
             // b/c snapping can be disabled
+            HasCustomCursorSnappedPos = !cursor.UseSnappedLoc;
             if (cursor.UseSnappedLoc) return;
 
             // cursor.UseSnappedLoc = true;

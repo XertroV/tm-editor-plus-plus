@@ -43,12 +43,15 @@ namespace FarlandsHelper {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) continue;
             auto cursor = editor.Cursor;
+            auto itemCursor = DGameCursorItem(editor.ItemCursor);
             // do some checks first
             bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor);
+            bool isSnapping = itemCursor.snappedGlobalIx != -1;
             if (!Editor::IsAnythingBeingDrawn(cursor)) continue;
             if (!Editor::IsInAnyFreePlacementMode(editor)) continue;
             if (!cursor.UseFreePos && !isPlacingItem) continue;
             if (!S_EnableInfinitePrecisionFreeBlocks) continue;
+            if (isSnapping) continue;
             // waiting for game to place stuff
             // skip if we're setting the cursor pos atm
             if (updateBlockPosFHHelper) continue;
@@ -60,7 +63,10 @@ namespace FarlandsHelper {
             if (isPlacingItem) {
                 Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, lastCursorPos);
             }
-            if (CustomCursorRotations::CustomYawActive && cursor.UseSnappedLoc) {
+            if (CustomCursorRotations::CustomYawActive &&
+                CustomCursorRotations::HasCustomCursorSnappedPos &&
+                cursor.UseSnappedLoc
+            ) {
                 cursor.SnappedLocInMap_Trans = lastCursorPos;
             }
         }
@@ -132,13 +138,16 @@ namespace FarlandsHelper {
         dev_trace('setting cursor to middle of map');
 
         cursor.FreePosInMap = _addBlockCursorPos = Editor::GetMapMidpoint(editor.Challenge);
+        if (!CustomCursorRotations::HasCustomCursorSnappedPos && cursor.UseSnappedLoc) {
+            _addBlockSetPos = cursor.SnappedLocInMap_Trans;
+        }
         cursor.SnappedLocInMap_Trans = _addBlockCursorPos;
         cursor.Coord = editor.Challenge.Size / 2;
         cursor.Coord.y = 8;
         updateBlockPosFHHelper = true;
 
         if (isPlacingItem) {
-            Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, _addBlockCursorPos);
+            Editor::SetItemCursorPos(editor.ItemCursor, _addBlockCursorPos);
         }
 
         startnew(FH_ResetCursorAfterPlaced).WithRunContext(Meta::RunContext::AfterMainLoop);
@@ -147,6 +156,7 @@ namespace FarlandsHelper {
     }
 
     void FH_ResetCursorAfterPlaced() {
+        yield();
         updateBlockPosFHHelper = false;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
