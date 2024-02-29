@@ -35,7 +35,7 @@ class LightmapTab : Tab {
             UI::Separator();
         }
 
-        bool canRecalc = lm !is null && lm.m_PImp !is null && lm.m_PImp.Cache.m_Quality > 0;
+        bool canRecalc = lm !is null && lm.m_PImp !is null && lm.m_PImp.Cache !is null && lm.m_PImp.Cache.m_Quality > 0;
         UI::BeginDisabled(!canRecalc);
         UI::SetNextItemWidth(100);
         m_SetLMQuality = DrawComboEShadowsQuality("Calc LM Quality", m_SetLMQuality);
@@ -43,7 +43,18 @@ class LightmapTab : Tab {
         if (UI::Button("Recalculate LM")) {
             // set to VFast
             Dev::SetOffset(lm.m_PImp.Cache, GetOffset("CHmsLightMapCache", "m_Quality"), int(0));
-            editor.PluginMapType.ComputeShadows1(m_SetLMQuality);
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor !is null) {
+                editor.PluginMapType.ComputeShadows1(m_SetLMQuality);
+            } else {
+                auto mteditor = cast<CGameEditorMediaTracker>(GetApp().Editor);
+                if (mteditor !is null) {
+                    auto api = cast<CGameEditorMediaTrackerPluginAPI>(mteditor.PluginAPI);
+                    if (api !is null) {
+                        api.ComputeShadows();
+                    }
+                }
+            }
         }
         UI::EndDisabled();
 
