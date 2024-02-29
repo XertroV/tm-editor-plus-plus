@@ -457,7 +457,7 @@ namespace CustomCursorRotations {
                 // auto invOrigRot = origRotation;
                 auto extraRot = (origRotation) * rotation;
                 auto newFinalRot = mat4::Inverse(newRot) * extraRot;
-                // test
+                // test -- scale works for preview but not for item (as expected)
                 // newFinalRot *= mat4::Scale(2.0);
                 // auto origYaw = cursorRot.Yaw;
                 // auto newYaw = cursorRot.YawWithCustomExtra(pyr.y);
