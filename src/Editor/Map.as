@@ -22,6 +22,15 @@ namespace Editor {
         Log::Trace('Setting map newsize: ' + newSize.ToString());
         Dev::SetOffset(map, ChallengeSizeOffset, newSize);
         Log::Trace('set offset');
+        CacheMapBounds();
+    }
+
+    vec3 GetMapSize(CGameCtnChallenge@ map) {
+        return CoordToPos(map.Size);
+    }
+
+    vec3 GetMapMidpoint(CGameCtnChallenge@ map) {
+        return CoordToPos(map.Size) / 2;
     }
 
     // this works for height and doesn't crash stuff

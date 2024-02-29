@@ -19,6 +19,10 @@ namespace Editor {
         return EditorRotation(cursor);
     }
 
+    void SetItemCursorPos(CGameCursorItem@ itemCursor, vec3 pos) {
+         Dev::SetOffset(itemCursor, O_ITEMCURSOR_CurrentPos, pos);
+    }
+
     vec3 GetItemCursorPos(CGameCursorItem@ itemCursor) {
         return itemCursor.CurrentPos;
     }

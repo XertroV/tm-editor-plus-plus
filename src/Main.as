@@ -8,6 +8,9 @@ void Main() {
     RegisterNewBlockCallback_Private(CustomCursorRotations::OnNewBlock, "CustomCursorRotations::OnNewBlock", 0);
     RegisterNewItemCallback_Private(CustomCursorRotations::OnNewItem, "CustomCursorRotations::OnNewItem", 0);
 
+    RegisterNewBlockCallback_Private(FarlandsHelper::FH_OnAddBlock, "FarlandsHelper::FH_OnAddBlock", 1);
+    RegisterNewItemCallback_Private(FarlandsHelper::FH_OnAddItem, "FarlandsHelper::FH_OnAddItem", 1);
+
     startnew(LoadFonts);
     // check permissions and version
     UserHasPermissions = Permissions::OpenAdvancedMapEditor();
@@ -61,7 +64,6 @@ void Unload() {
     FreeAllAllocated();
     Editor::EnableMapThumbnailUpdate();
     Editor::OffzonePatch::Unapply();
-    FarlandsHelper::UnapplyAddBlockHook();
     CheckUnhookAllRegisteredHooks();
     CustomCursorRotations::PromiscuousItemToBlockSnapping.Unapply();
     LightMapCustomRes::Unpatch();
@@ -219,9 +221,10 @@ int2 g_LastMouseButtonPos = int2();
 
 UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     bool lmbDown = down && button == 0;
-    bool block = lmbDown && CheckPlaceMacroblockAirMode();
+    bool block = false;
+    block = (FarlandsHelper::FH_CheckPlacing()) || block;
+    block = (lmbDown && CheckPlaceMacroblockAirMode()) || block;
     block = (lmbDown && CheckPlacingItemFreeMode()) || block;
-    // block = (lmbDown && FarlandsHelper::CheckPlacingFreeBlock()) || block;
 
     g_LastMouseBDown = down;
     g_LastMouseButton = button;

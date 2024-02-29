@@ -7,7 +7,7 @@ namespace FarlandsHelper {
     // float CustomRotation = 0.1;
     bool FL_Helper_Active = false;
     bool drawDebugFarlandsHelper = false;
-    bool resetCursorAfterNextPlacement = false;
+    bool updateBlockPosFHHelper = false;
     vec3 lastCursorPos;
 
     bool IsCameraInFarlands() {
@@ -48,6 +48,8 @@ namespace FarlandsHelper {
                 || (cursor.Coord.x == g_MapCoordBounds.x - 1 || cursor.Coord.y == g_MapCoordBounds.y - 1 || cursor.Coord.z == g_MapCoordBounds.z - 1)
                 ;
             if (!atEdge && !S_EnableInfinitePrecisionFreeBlocks) continue;
+            // waiting for game to place stuff
+            if (updateBlockPosFHHelper) continue;
 
             // auto occ = editor.OrbitalCameraControl;
             auto camTarget = editor.PluginMapType.CameraTargetPosition;
@@ -91,7 +93,6 @@ namespace FarlandsHelper {
     void _GetCursorRotation_SetViaRbxPlus0xC(uint64 rbx) {
         // dev_trace("OnGetCursorRotation");
         if (FL_Helper_Active) {
-            // todo, make sure
             Dev::Write(rbx + 0xC, float(CustomRotation)); //  % (TAU / 4.)
             // if (Time::Now / 1000 % 2 == 0)
             // dev_trace("Wrote custom rotation: " + CustomRotation);
@@ -100,34 +101,49 @@ namespace FarlandsHelper {
 
     // free block stuff
     // return true to block click -- always returns false atm
-    bool CheckPlacingFreeBlock() {
+    bool FH_CheckPlacing() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return false;
         auto cursor = editor.Cursor;
-        if (!Editor::IsBlockOrMacroblockBeingDrawn(cursor)) return false;
-        if (!cursor.UseFreePos) return false;
-        if (!Editor::IsInFreeBlockPlacementMode(editor, true)) return false;
-        if (cursor.Color != cursor.CannotPlaceNorJoinColor) return false;
+        // if (!Editor::IsBlockOrMacroblockBeingDrawn(cursor)) return false;
+        bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor);
+        if (!Editor::IsAnythingBeingDrawn(cursor)) return false;
+        if (!Editor::IsInAnyFreePlacementMode(editor)) return false;
+        if (!cursor.UseFreePos && !isPlacingItem) return false;
+        if (!Editor::IsInPlacementMode(editor)) return false;
+
+        // if (!Editor::IsInFreeBlockPlacementMode(editor, true)) return false;
+        // if (cursor.Color != cursor.CannotPlaceNorJoinColor) return false;
+        bool cursorCannotPlaceColor = cursor.Color == cursor.CannotPlaceNorJoinColor;
+        bool cursorOutOfStadium = cursor.FreePosInMap.x < 0 || cursor.FreePosInMap.x > g_MapBounds.x
+            || cursor.FreePosInMap.z < 0 || cursor.FreePosInMap.z > g_MapBounds.z
+            || cursor.FreePosInMap.y < 0 || cursor.FreePosInMap.y > g_MapBounds.y;
+        if (!cursorOutOfStadium && !cursorCannotPlaceColor) return false;
         if (GetApp().Viewport.Picker.Overlay !is null) return false;
         _addBlockSetPos = cursor.FreePosInMap;
-        @_prevCursorState = Editor::GetCursorRot(cursor);
-        _addBlockSetRot = _prevCursorState.Euler;
-
-        if (!FarlandsHelper::ApplyAddBlockHook()) {
-            NotifyWarning("FAILED TO APPLY FARLANDS ADD BLOCK PATCH");
-        } else {
-            dev_trace("Applied on block hook");
-        }
+        trace('setting cursor to middle of map');
+        // @_prevCursorState = Editor::GetCursorRot(cursor);
+        // _addBlockSetRot = _prevCursorState.Euler;
 
         // need to reset cursor rotations b/c some blocks need to be placed flat
-        cursor.AdditionalDir = CGameCursorBlock::EAdditionalDirEnum::P0deg;
-        cursor.Pitch = 0;
-        cursor.Roll = 0;
-        cursor.Dir = CGameCursorBlock::ECardinalDirEnum::North;
+        // cursor.AdditionalDir = CGameCursorBlock::EAdditionalDirEnum::P0deg;
+        // cursor.Pitch = 0;
+        // cursor.Roll = 0;
+        // cursor.Dir = CGameCursorBlock::ECardinalDirEnum::North;
         // choose a random spot in the map, below the ground
-        cursor.FreePosInMap = vec3(Math::Rand(32.0, g_MapBounds.x - 32.), Math::Rand(8.0, 16.), Math::Rand(32.0, g_MapBounds.z - 32.));
+        // cursor.FreePosInMap = vec3(Math::Rand(32.0, g_MapBounds.x - 32.), Math::Rand(8.0, 16.), Math::Rand(32.0, g_MapBounds.z - 32.));
+        cursor.FreePosInMap = _addBlockCursorPos = Editor::GetMapMidpoint(editor.Challenge);
+        cursor.SnappedLocInMap_Trans = _addBlockCursorPos;
+        cursor.Coord = editor.Challenge.Size / 2;
+        cursor.Coord.y = 8;
         // attempt to avoid missing a click input
-        resetCursorAfterNextPlacement = true;
+        updateBlockPosFHHelper = true;
+
+        if (isPlacingItem) {
+            Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, _addBlockCursorPos);
+        }
+
+        startnew(FH_ResetCursorAfterPlaced).WithRunContext(Meta::RunContext::AfterMainLoop);
 
         return false;
 
@@ -147,66 +163,108 @@ namespace FarlandsHelper {
         // return true;
     }
 
-    const string IncrBlocksArrayLenPattern = "E8 ?? ?? ?? ?? 48 8B 9C 24 28 01 00 00 C7 85 F0 05 00 00 01 00 00 00 48 85 DB 0F 85 F8 00 00 00 45 85 E4 75 10 49 8B CE E8 ?? ?? ?? ?? 85 C0 0F 84 D5 00 00 00 8B 94 24 F8 00 00 00 49 8B CE BB FF FF FF FF";
-
-    HookHelper@ IncrBlocksArrayLenHook = HookHelper(
-        IncrBlocksArrayLenPattern,
-        5, 3, "FarlandsHelper::OnAddBlockHook"
-    );
-
-    uint64 incrBlocksArrayLenPtr;
-    Dev::HookInfo@ incrBlocksArrayLenHook;
-    bool ApplyAddBlockHook() {
-        if (IncrBlocksArrayLenHook.IsApplied()) return true;
-        return IncrBlocksArrayLenHook.Apply();
-        // if (incrBlocksArrayLenHook !is null) return false;
-        // if (incrBlocksArrayLenPtr == 0) {
-        //     incrBlocksArrayLenPtr = Dev::FindPattern(IncrBlocksArrayLenPattern);
-        // }
-        // if (incrBlocksArrayLenPtr == 0) {
-        //     warn_every_60_s("Could not find IncrBlocksArrayLenPattern");
-        //     return false;
-        // }
-        // @incrBlocksArrayLenHook = Dev::Hook(incrBlocksArrayLenPtr + 5, 3, "FarlandsHelper::OnAddBlockHook", Dev::PushRegisters::SSE);
-        // return true;
-    }
-
-    bool UnapplyAddBlockHook() {
-        if (IncrBlocksArrayLenHook is null) return false;
-        if (!IncrBlocksArrayLenHook.IsApplied()) return true;
-        return IncrBlocksArrayLenHook.Unapply();
-        // Dev::Unhook(incrBlocksArrayLenHook);
-        // @incrBlocksArrayLenHook = null;
-        // return true;
-    }
-
-    vec3 _addBlockSetPos;
-    vec3 _addBlockSetRot;
-    EditorRotation@ _prevCursorState;
-
-    void OnAddBlockHook(uint64 rdx) {
-        dev_trace('on add block hook');
-        // return;
+    void FH_ResetCursorAfterPlaced() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto cursor = editor.Cursor;
+        trace('cursor.FreePosInMap: ' + cursor.FreePosInMap.ToString());
+        trace('>>> PRE 0xbb8: ' + Dev::GetOffsetUint32(editor, 0xBb8));
+        trace('>>> PRE 0xbc0: ' + Dev::GetOffsetUint32(editor, 0xBc0));
+        // Dev::SetOffset(editor, 0xBc0, uint32(0));
+        // yield();
+        updateBlockPosFHHelper = false;
+        trace('set updateBlockPosFHHelper to false');
         if (editor is null) return;
-        auto map = editor.Challenge;
-        if (map is null) return;
-        auto block = map.Blocks[map.Blocks.Length - 1];
-        if (block is null) {
-            NotifyWarning("on add block hook got null block!");
-        } else {
-            Editor::SetBlockLocation(block, _addBlockSetPos);
-            Editor::SetBlockRotation(block, _addBlockSetRot);
-        }
-        if (!UnapplyAddBlockHook()) {
-            NotifyWarning("Failed to unapply add block hook");
-        } else {
-            dev_trace("unapplied on add block hook");
-        }
-        if (editor.Cursor is null) return;
-        _prevCursorState.SetCursor(editor.Cursor);
-        editor.Cursor.FreePosInMap = _addBlockSetPos;
+        trace('0xbb8: ' + Dev::GetOffsetUint32(editor, 0xBb8));
+        trace('0xbc0: ' + Dev::GetOffsetUint32(editor, 0xBc0));
+        if (cursor is null) return;
+        cursor.FreePosInMap = _addBlockSetPos;
+        cursor.SnappedLocInMap_Trans = _addBlockSetPos;
+        Editor::SetItemCursorPos(editor.ItemCursor, _addBlockSetPos);
     }
+    vec3 _addBlockSetPos;
+    vec3 _addBlockCursorPos;
+
+    bool FH_OnAddBlock(CGameCtnBlock@ block) {
+        if (!updateBlockPosFHHelper) return false;
+        if (!Editor::IsBlockFree(block)) return false;
+        auto origPos = Editor::GetBlockLocation(block, true);
+        auto finalPos = _addBlockSetPos + origPos - _addBlockCursorPos;
+        Editor::SetBlockLocation(block, finalPos);
+        trace('set location on block: ' + block.Id.Value + ': ' + origPos.ToString() + ' -> ' + _addBlockSetPos.ToString() + ' (with cursor pos: '+_addBlockCursorPos.ToString()+')');
+        trace('final pos: ' + finalPos.ToString());
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        trace('0xbb8: ' + Dev::GetOffsetUint32(editor, 0xBb8));
+        trace('0xbb8: ' + Dev::GetOffsetUint32(editor, 0xBb8));
+        trace('0xbc0: ' + Dev::GetOffsetUint32(editor, 0xBc0));
+        return false;
+    }
+
+    bool FH_OnAddItem(CGameCtnAnchoredObject@ item) {
+        if (!updateBlockPosFHHelper) return false;
+        auto origPos = Editor::GetItemLocation(item);
+        auto finalPos = _addBlockSetPos + origPos - _addBlockCursorPos;
+        Editor::SetItemLocation(item, finalPos);
+        trace('set location on block: ' + item.Id.Value + ': ' + origPos.ToString() + ' -> ' + _addBlockSetPos.ToString() + ' (with cursor pos: '+_addBlockCursorPos.ToString()+')');
+        trace('final pos: ' + finalPos.ToString());
+        return false;
+    }
+
+    // const string IncrBlocksArrayLenPattern = "E8 ?? ?? ?? ?? 48 8B 9C 24 28 01 00 00 C7 85 F0 05 00 00 01 00 00 00 48 85 DB 0F 85 F8 00 00 00 45 85 E4 75 10 49 8B CE E8 ?? ?? ?? ?? 85 C0 0F 84 D5 00 00 00 8B 94 24 F8 00 00 00 49 8B CE BB FF FF FF FF";
+
+    // HookHelper@ IncrBlocksArrayLenHook = HookHelper(
+    //     IncrBlocksArrayLenPattern,
+    //     5, 3, "FarlandsHelper::OnAddBlockHook"
+    // );
+
+    // uint64 incrBlocksArrayLenPtr;
+    // Dev::HookInfo@ incrBlocksArrayLenHook;
+    // bool ApplyAddBlockHook() {
+    //     if (IncrBlocksArrayLenHook.IsApplied()) return true;
+    //     return IncrBlocksArrayLenHook.Apply();
+    //     // if (incrBlocksArrayLenHook !is null) return false;
+    //     // if (incrBlocksArrayLenPtr == 0) {
+    //     //     incrBlocksArrayLenPtr = Dev::FindPattern(IncrBlocksArrayLenPattern);
+    //     // }
+    //     // if (incrBlocksArrayLenPtr == 0) {
+    //     //     warn_every_60_s("Could not find IncrBlocksArrayLenPattern");
+    //     //     return false;
+    //     // }
+    //     // @incrBlocksArrayLenHook = Dev::Hook(incrBlocksArrayLenPtr + 5, 3, "FarlandsHelper::OnAddBlockHook", Dev::PushRegisters::SSE);
+    //     // return true;
+    // }
+
+    // bool UnapplyAddBlockHook() {
+    //     if (IncrBlocksArrayLenHook is null) return false;
+    //     if (!IncrBlocksArrayLenHook.IsApplied()) return true;
+    //     return IncrBlocksArrayLenHook.Unapply();
+    //     // Dev::Unhook(incrBlocksArrayLenHook);
+    //     // @incrBlocksArrayLenHook = null;
+    //     // return true;
+    // }
+
+    // void OnAddBlockHook(uint64 rdx) {
+    //     dev_trace('on add block hook');
+    //     // return;
+    //     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    //     if (editor is null) return;
+    //     auto map = editor.Challenge;
+    //     if (map is null) return;
+    //     auto block = map.Blocks[map.Blocks.Length - 1];
+    //     if (block is null) {
+    //         NotifyWarning("on add block hook got null block!");
+    //     } else {
+    //         Editor::SetBlockLocation(block, _addBlockSetPos);
+    //         Editor::SetBlockRotation(block, _addBlockSetRot);
+    //     }
+    //     if (!UnapplyAddBlockHook()) {
+    //         NotifyWarning("Failed to unapply add block hook");
+    //     } else {
+    //         dev_trace("unapplied on add block hook");
+    //     }
+    //     if (editor.Cursor is null) return;
+    //     _prevCursorState.SetCursor(editor.Cursor);
+    //     editor.Cursor.FreePosInMap = _addBlockSetPos;
+    // }
 }
 
 
