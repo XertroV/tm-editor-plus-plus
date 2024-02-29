@@ -1,6 +1,14 @@
+[Setting hidden]
+bool S_MbShowGhostFreeApplied = false;
+
 class MacroblockOptsTab : Tab {
     MacroblockOptsTab(TabGroup@ p) {
         super(p, "Macroblock Opts", Icons::Cubes + Icons::ListAlt);
+        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad), "MacroblockOptsTab");
+    }
+
+    void OnEditorLoad() {
+        IsMbShowGhostFreeApplied = S_MbShowGhostFreeApplied;
     }
 
     void DrawInner() override {
@@ -18,9 +26,9 @@ class MacroblockOptsTab : Tab {
 
         UI::Separator();
 
-        auto newAppliedShowGhostFree = UI::Checkbox("Show Ghost/Free Blocks in Macroblock Cursor", IsMbShowGhostFreeApplied);
-        if (newAppliedShowGhostFree != IsMbShowGhostFreeApplied) {
-            IsMbShowGhostFreeApplied = newAppliedShowGhostFree;
+        S_MbShowGhostFreeApplied = UI::Checkbox("Show Ghost/Free Blocks in Macroblock Cursor", IsMbShowGhostFreeApplied);
+        if (S_MbShowGhostFreeApplied != IsMbShowGhostFreeApplied) {
+            IsMbShowGhostFreeApplied = S_MbShowGhostFreeApplied;
         }
 
         UI::Text("Press this to refresh a MB cursor preview:");
