@@ -1,11 +1,22 @@
 class InventorySearchTab : Tab {
     InvSearcher@ searcher;
+    bool setKbFocusOnSearchbar = false;
 
     InventorySearchTab(TabGroup@ p) {
         super(p, "Inv. Search" + NewIndicator, Icons::FolderOpenO + Icons::Search);
         canPopOut = true;
         @searcher = InvSearcher();
         searcher.SetUpdateCallbacks(CoroutineFunc(this.SearchUpdateStart), CoroutineFunc(this.SearchUpdateEnd));
+        // Oem5 = backslash `\`
+        AddHotkey(VirtualKey::Oem5, false, false, false, HotkeyFunction(this.OnShowSearchWindow));
+        closeWindowOnEscape = true;
+    }
+
+    UI::InputBlocking OnShowSearchWindow() {
+        if (windowOpen) return UI::InputBlocking::DoNothing;
+        windowOpen = true;
+        setKbFocusOnSearchbar = true;
+        return UI::InputBlocking::Block;
     }
 
     int get_WindowFlags() override property {
@@ -38,15 +49,9 @@ class InventorySearchTab : Tab {
         AddMarkdownTooltip("### Search the inventory for items, blocks, and macroblocks.\n"
             "Use \\<space\\> or '*' to indicate wildcards.<br>"
             "Unless the search term is prefixed with '=', a wildcard is automatically inserted before the search term.<br>"
-            // "You can use the following search modifiers:<br>"
-            // "`=`  --  Search for exact matches\n"
-            // "  - i: Search only for items\n"
-            // "  - b: Search only for blocks\n"
-            // "  - mb: Search only for macroblocks\n"
-            // "  - f: Search only for folders\n"
-            // "  - fi: Search only for item folders\n"
-            // "  - fb: Search only for block folders\n"
-            // "  - fmb: Search only for macroblock"
+            "Backslash to quicksearch.\n"
+            "Escape to close the window.\n"
+            // todo: filter on types (blocks, items, macroblocks, folders)
             );
         UI::SameLine();
         UI::SetCursorPos(UI::GetCursorPos() + vec2(0, 5));
@@ -54,6 +59,10 @@ class InventorySearchTab : Tab {
 
         UI::SetCursorPos(promptCursorPos);
         UI::PushFont(g_BigFont);
+        if (setKbFocusOnSearchbar) {
+            UI::SetKeyboardFocusHere();
+            setKbFocusOnSearchbar = false;
+        }
         searcher.DrawPrompt();
         UI::SameLine();
         if (UI::Button("Toggle Labels")) {
@@ -83,9 +92,6 @@ class InventorySearchTab : Tab {
                 } else {
                     UI::Dummy(S_IconSize);
                 }
-                // UI::SameLine();
-                // UI::Text("maxCursorPos: " + maxCursorPos + ", curr: " + currCursorPos);
-                // if (currCursorPos.y > maxCursorY) break;
             }
             if (hasMoreResults) {
                 if (UI::Button("Load next " + pageSize + " results.")) {

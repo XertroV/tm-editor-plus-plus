@@ -280,11 +280,14 @@ bool[] hotkeysFlags = array<bool>(256);
 */
 UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
     auto app = GetApp();
-    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    auto editor = cast<CGameCtnEditorFree>(app.Editor);
     if (editor is null) return UI::InputBlocking::DoNothing;
+    if (app.CurrentPlayground !is null) return UI::InputBlocking::DoNothing;
+    if (DGameCtnEditorFree(editor).IsCalculatingShadows) return UI::InputBlocking::DoNothing;
+    // if (app.BasicDialogs.)
     bool block = false;
     block = block || ShouldBlockEscapePress(down, key, app, editor);
-    // trace('key down: ' + tostring(key));
+    trace('key down: ' + tostring(key));
     if (down && hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
         block = CheckHotkey(key) == UI::InputBlocking::Block || block;

@@ -20,6 +20,7 @@ class Tab {
     void set_windowOpen(bool value) { tabOpen = !value; }
     bool expandWindowNextFrame = false;
     bool windowExpanded = false;
+    bool closeWindowOnEscape = false;
 
     bool tabInWarningState = false;
 
@@ -199,6 +200,9 @@ class Tab {
                 windowExpanded = true;
                 // DrawTogglePop();
                 DrawInnerWrapID();
+                if (closeWindowOnEscape && UI::IsKeyPressed(UI::Key::Escape) && UI::IsWindowFocused(UI::FocusedFlags::RootAndChildWindows)) {
+                    windowOpen = false;
+                }
             }
             lastWindowPos = UI::GetWindowPos();
             UI::End();
