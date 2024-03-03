@@ -8,20 +8,44 @@ class ItemSearcher {
     string m_filterPrompt = "*Cube";
     string f_lastFilterTerm = m_filterPrompt;
 
+    bool drawFilteredResults = true;
+    bool searchFoldersToo = false;
+    string inputFieldLabel = "Name Search";
+
+    CoroutineFunc@ updateStartCallback;
+    CoroutineFunc@ updateEndCallback;
+
+    void SetUpdateCallbacks(CoroutineFunc@ start, CoroutineFunc@ end) {
+        @updateStartCallback = start;
+        @updateEndCallback = end;
+    }
+
     CGameCtnArticleNodeArticle@ DrawPrompt() {
+
+        UI::PushID(idNonce);
         auto inv = Editor::GetInventoryCache();
         if (inv.NbItems == 0) {
             UI::Text("\\$f44Inventory cache empty -- enter main editor to refresh.");
+            if (UI::Button("Refresh##inv-cache")) {
+                inv.RefreshCacheSoon();
+            }
+            UI::PopID();
             return null;
         }
 
         bool pressedEnter;
-        m_filterPrompt = UI::InputText("Name Search", m_filterPrompt, pressedEnter, UI::InputTextFlags::EnterReturnsTrue | UI::InputTextFlags::CallbackAlways, UI::InputTextCallback(NameFilterCallback));
+        m_filterPrompt = UI::InputText(inputFieldLabel, m_filterPrompt, pressedEnter, UI::InputTextFlags::EnterReturnsTrue | UI::InputTextFlags::CallbackAlways, UI::InputTextCallback(NameFilterCallback));
         if (pressedEnter && filtered.Length > 0) {
+            UI::PopID();
             return FindItemNamed(filtered[0]);
         }
 
-        return DrawFilterResults();
+        CGameCtnArticleNodeArticle@ ret = null;
+        if (drawFilteredResults) {
+            @ret = DrawFilterResults();
+        }
+        UI::PopID();
+        return ret;
     }
 
     bool firstRunDone = false;
@@ -125,9 +149,10 @@ class ItemSearcher {
     string[]@ searchParts = {};
 
     void UpdateSearch() {
+        if (updateStartCallback !is null) updateStartCallback();
         auto inv = Editor::GetInventoryCache();
         filtered.RemoveRange(0, filtered.Length);
-        @searchParts = f_lastFilterTerm.ToLower().Split("*");
+        SetSearchParts();
         for (uint i = 0; i < inv.ItemPaths.Length; i++) {
             if (FilterMatchesName(inv.ItemPaths[i].ToLower(), inv.ItemPaths[i])) {
                 filtered.InsertLast(inv.ItemPaths[i]);
@@ -138,6 +163,15 @@ class ItemSearcher {
                 filtered.InsertLast(inv.BlockNames[i]);
             }
         }
+        if (updateEndCallback !is null) updateEndCallback();
+        OnSearchEnd();
+    }
+
+    // for overridding
+    void OnSearchEnd() {}
+
+    void SetSearchParts() {
+        @searchParts = f_lastFilterTerm.ToLower().Split("*");
     }
 
     bool FilterMatchesName(const string &in nameLower, const string &in name) {

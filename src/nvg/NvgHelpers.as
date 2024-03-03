@@ -112,28 +112,29 @@ void nvgDrawCoordHelpers(mat4 &in m, float size = 10.) {
     nvgDrawCoordHelpers(pos, left, up, dir);
 }
 
-void nvgDrawBlockBox(mat4 &in m, vec3 size) {
+void nvgDrawBlockBox(const mat4 &in m, const vec3 &in size, const vec4 &in color = cWhite) {
     nvg::Reset();
+    nvg::StrokeColor(color);
     nvg::StrokeWidth(2.0);
     vec3 prePos = nvgLastWorldPos;
     vec3 pos = (m * vec3()).xyz;
     nvgMoveToWorldPos(pos);
-    nvgToWorldPos(pos);
-    nvgToWorldPos((m * (size * vec3(1, 0, 0))).xyz);
-    nvgToWorldPos((m * (size * vec3(1, 0, 1))).xyz);
-    nvgToWorldPos((m * (size * vec3(0, 0, 1))).xyz);
-    nvgToWorldPos(pos);
-    nvgToWorldPos((m * (size * vec3(0, 1, 0))).xyz);
-    nvgToWorldPos((m * (size * vec3(1, 1, 0))).xyz);
-    nvgToWorldPos((m * (size * vec3(1, 1, 1))).xyz);
-    nvgToWorldPos((m * (size * vec3(0, 1, 1))).xyz);
-    nvgToWorldPos((m * (size * vec3(0, 1, 0))).xyz);
+    nvgToWorldPos(pos, color);
+    nvgToWorldPos((m * (size * vec3(1, 0, 0))).xyz, color);
+    nvgToWorldPos((m * (size * vec3(1, 0, 1))).xyz, color);
+    nvgToWorldPos((m * (size * vec3(0, 0, 1))).xyz, color);
+    nvgToWorldPos(pos, color);
+    nvgToWorldPos((m * (size * vec3(0, 1, 0))).xyz, color);
+    nvgToWorldPos((m * (size * vec3(1, 1, 0))).xyz, color);
+    nvgToWorldPos((m * (size * vec3(1, 1, 1))).xyz, color);
+    nvgToWorldPos((m * (size * vec3(0, 1, 1))).xyz, color);
+    nvgToWorldPos((m * (size * vec3(0, 1, 0))).xyz, color);
     nvgMoveToWorldPos((m * (size * vec3(1, 0, 0))).xyz);
-    nvgToWorldPos((m * (size * vec3(1, 1, 0))).xyz);
+    nvgToWorldPos((m * (size * vec3(1, 1, 0))).xyz, color);
     nvgMoveToWorldPos((m * (size * vec3(1, 0, 1))).xyz);
-    nvgToWorldPos((m * (size * vec3(1, 1, 1))).xyz);
+    nvgToWorldPos((m * (size * vec3(1, 1, 1))).xyz, color);
     nvgMoveToWorldPos((m * (size * vec3(0, 0, 1))).xyz);
-    nvgToWorldPos((m * (size * vec3(0, 1, 1))).xyz);
+    nvgToWorldPos((m * (size * vec3(0, 1, 1))).xyz, color);
     nvgMoveToWorldPos(prePos);
 }
 

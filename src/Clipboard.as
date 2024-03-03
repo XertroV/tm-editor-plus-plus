@@ -1,49 +1,117 @@
-namespace Clipboard {
+enum CBTypes {
+    Float3, Angles3, Nat3, Quat
+}
 
-    const float hueRed = 0.0;
-    const float hueGreen = 0.3;
-    const float hueBlue = 0.6;
+Clipboard@ cbFloat3 = Clipboard(CBTypes::Float3);
+Clipboard@ cbAngles3 = Clipboard(CBTypes::Angles3);
+Clipboard@ cbNat3 = Clipboard(CBTypes::Nat3);
+Clipboard@ cbQuat = Clipboard(CBTypes::Quat);
 
-	vec3 clipboardFloat3;
-	vec3 clipboardAngles3;
-	nat3 clipboardNat3;
-	quat clipboardQuat;
+[Setting hidden]
+vec3 S_ClipboardFloat3;
+[Setting hidden]
+vec3 S_ClipboardAngles3;
+[Setting hidden]
+vec3 S_ClipboardNat3;
+[Setting hidden]
+vec4 S_ClipboardQuat;
 
-    void SetFloat3(vec3 pos) {
-    	clipboardFloat3 = pos;
-        print(pos);
+
+class Clipboard {
+    CBTypes type;
+    string cbTypeStr;
+    string cbPopupTitle;
+    Clipboard(CBTypes type) {
+        this.type = type;
+        cbTypeStr = tostring(type);
+        cbPopupTitle = "E++ Clipboard \\$aaa("+cbTypeStr+")";
+        startnew(CoroutineFunc(this.LoadSavedValues));
     }
 
-    vec3 GetFloat3() {
-    	return clipboardFloat3;
+    void LoadSavedValues() {
+        yield();
+        yield();
+        yield();
+        if (type == CBTypes::Float3) {
+            savedVec3 = S_ClipboardFloat3;
+        } else if (type == CBTypes::Angles3) {
+            savedVec3 = S_ClipboardAngles3;
+        } else if (type == CBTypes::Nat3) {
+            savedNat3 = Vec3ToNat3(S_ClipboardNat3);
+        } else if (type == CBTypes::Quat) {
+            savedQuat = Vec4ToQuat(S_ClipboardQuat);
+        }
     }
 
-    void SetAngles3(vec3 degrees) {
-    	clipboardAngles3 = degrees;
-        print(degrees);
+	vec3 savedVec3;
+	nat3 savedNat3;
+	quat savedQuat;
+
+    vec3 tmpVec3;
+    quat tmpQuat;
+    nat3 tmpNat3;
+
+    Clipboard@ With(vec3 v) {
+        tmpVec3 = v;
+        return this;
     }
 
-    vec3 GetAngles3() {
-    	return clipboardAngles3;
+    Clipboard@ With(quat q) {
+        tmpQuat = q;
+        return this;
     }
 
-    void SetNat3(nat3 pos) {
-    	clipboardNat3 = pos;
-        print(pos);
+    Clipboard@ With(nat3 n) {
+        tmpNat3 = n;
+        return this;
     }
 
+    bool wasHovered;
+
+    Clipboard@ DrawClipboard(const string &in label) {
+        UI::SameLine();
+        UI::PushID(cbTypeStr+"."+label);
+        UI::AlignTextToFramePadding();
+        if (UI::Button("CB")) {
+            UI::OpenPopup("copy-rclick##"+label);
+        }
+        AddSimpleTooltip(cbPopupTitle);
+        if (UI::BeginPopup("copy-rclick##"+label)) {
+            UI::Text(cbPopupTitle);
+            UI::Dummy(vec2());
+            if (type == CBTypes::Float3) {
+                tmpVec3 = AddCopyPasteFloat3(label, tmpVec3);
+                CopiableLabeledValue("\\$aaaCopied", savedVec3.ToString());
+            } else if (type == CBTypes::Angles3) {
+                tmpVec3 = AddCopyPasteAngles3(label, tmpVec3);
+                CopiableLabeledValue("\\$aaaCopied", savedVec3.ToString());
+            } else if (type == CBTypes::Nat3) {
+                tmpNat3 = AddCopyPasteNat3(label, tmpNat3);
+                CopiableLabeledValue("\\$aaaCopied", savedNat3.ToString());
+            } else if (type == CBTypes::Quat) {
+                tmpQuat = AddCopyPasteQuat(label, tmpQuat);
+                CopiableLabeledValue("\\$aaaCopied", savedQuat.ToString());
+            }
+            AddSimpleTooltip("Click to copy to system clipboard");
+            if (!UI::IsWindowFocused()) {
+                UI::CloseCurrentPopup();
+            }
+            UI::EndPopup();
+        }
+        UI::PopID();
+        return this;
+    }
+
+    vec3 GetVec3() {
+        return tmpVec3;
+    }
     nat3 GetNat3() {
-    	return clipboardNat3;
+        return tmpNat3;
     }
-
-    void SetQuat(quat rot) {
-    	clipboardQuat = rot;
-        print(rot);
-    }
-
     quat GetQuat() {
-    	return clipboardQuat;
+        return tmpQuat;
     }
+
 
     vec3 AddCopyPasteFloat3(const string &in label, vec3 val) {
 
@@ -52,19 +120,20 @@ namespace Clipboard {
 
         UI::SameLine();
         if (UI::Button("Copy")) {
-            Clipboard::SetFloat3(val);
+            savedVec3 = val;
+            S_ClipboardFloat3 = val;
         }
         UI::SameLine();
         if (UI::ButtonColored("pX", hueRed)) {
-            val.x = Clipboard::GetFloat3().x;
+            val.x = savedVec3.x;
         }
         UI::SameLine();
         if (UI::ButtonColored("pY", hueGreen)) {
-            val.y = Clipboard::GetFloat3().y;
+            val.y = savedVec3.y;
         }
         UI::SameLine();
         if (UI::ButtonColored("pZ", hueBlue)) {
-            val.z = Clipboard::GetFloat3().z;
+            val.z = savedVec3.z;
         }
 
         UI::PopID();
@@ -77,22 +146,23 @@ namespace Clipboard {
 
         UI::PushID(label);
         UI::PushID("Angles3");
-    	
+
         UI::SameLine();
         if (UI::Button("Copy")) {
-            Clipboard::SetAngles3(degrees);
+            savedVec3 = degrees;
+            S_ClipboardAngles3 = degrees;
         }
         UI::SameLine();
         if (UI::ButtonColored("pP", hueRed)) {
-            degrees.x = Clipboard::GetAngles3().x;
+            degrees.x = savedVec3.x;
         }
         UI::SameLine();
         if (UI::ButtonColored("pY", hueGreen)) {
-            degrees.y = Clipboard::GetAngles3().y;
+            degrees.y = savedVec3.y;
         }
         UI::SameLine();
         if (UI::ButtonColored("pR", hueBlue)) {
-            degrees.z = Clipboard::GetAngles3().z;
+            degrees.z = savedVec3.z;
         }
 
         UI::PopID();
@@ -108,19 +178,20 @@ namespace Clipboard {
 
         UI::SameLine();
         if (UI::Button("Copy")) {
-            Clipboard::SetNat3(val);
+            savedNat3 = val;
+            S_ClipboardNat3 = Nat3ToVec3(val);
         }
         UI::SameLine();
         if (UI::ButtonColored("pX", hueRed)) {
-            val.x = Clipboard::GetNat3().x;
+            val.x = savedNat3.x;
         }
         UI::SameLine();
         if (UI::ButtonColored("pY", hueGreen)) {
-            val.y = Clipboard::GetNat3().y;
+            val.y = savedNat3.y;
         }
         UI::SameLine();
         if (UI::ButtonColored("pZ", hueBlue)) {
-            val.z = Clipboard::GetNat3().z;
+            val.z = savedNat3.z;
         }
 
         UI::PopID();
@@ -136,23 +207,24 @@ namespace Clipboard {
 
         UI::SameLine();
         if (UI::Button("Copy")) {
-            Clipboard::SetQuat(val);
+            savedQuat = val;
+            S_ClipboardQuat = QuatToVec4(val);
         }
         UI::SameLine();
         if (UI::ButtonColored("pX", hueRed)) {
-            val.x = Clipboard::GetQuat().x;
+            val.x = savedQuat.x;
         }
         UI::SameLine();
         if (UI::ButtonColored("pY", hueGreen)) {
-            val.y = Clipboard::GetQuat().y;
+            val.y = savedQuat.y;
         }
         UI::SameLine();
         if (UI::ButtonColored("pZ", hueBlue)) {
-            val.z = Clipboard::GetQuat().z;
+            val.z = savedQuat.z;
         }
         UI::SameLine();
         if (UI::ButtonColored("pW", 0, 0, .2)) {
-            val.w = Clipboard::GetQuat().w;
+            val.w = savedQuat.w;
         }
 
         UI::PopID();

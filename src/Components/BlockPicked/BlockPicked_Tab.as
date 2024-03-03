@@ -4,7 +4,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
     FocusedBlockTab(TabGroup@ parent) {
         super(parent, "Picked Block", Icons::Crosshairs + Icons::Cube);
         removable = true;
-        SetupFav(false, false);
+        SetupFav(InvObjectType::Block);
     }
 
     ReferencedNod@ get_FocusedBlock() {
@@ -150,12 +150,14 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
         UI::Separator();
 
+        UI::PushItemWidth(G_GetSmallerInputWidth());
+
         UI::Text("Set Block Props:");
 
         bool safeToRefresh = true;
 
         if (Editor::IsBlockFree(block)) {
-            Editor::SetBlockLocation(block, UI::InputFloat3("Pos.##pos" + idNonce, Editor::GetBlockLocation(block)));
+            Editor::SetBlockLocation(block, UX::InputFloat3("Pos.##pos" + idNonce, Editor::GetBlockLocation(block)));
             Editor::SetBlockRotation(block, UX::InputAngles3("Rot (Deg)##rot" + idNonce, Editor::GetBlockRotation(block)));
         } else {
             // if (!block.IsGhostBlock()) {
@@ -243,6 +245,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             // startnew(CoroutineFunc(RefreshSoonAsync));
             Editor::MarkRefreshUnsafe();
         }
+
+        UI::PopItemWidth();
     }
 
     BlockDesc@ tmpDesc;

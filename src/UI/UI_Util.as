@@ -30,6 +30,15 @@ shared void AddSimpleTooltip(const string &in msg) {
     }
 }
 
+shared void AddMarkdownTooltip(const string &in msg) {
+    if (UI::IsItemHovered()) {
+        UI::SetNextWindowSize(400, 0, UI::Cond::Appearing);
+        UI::BeginTooltip();
+        UI::Markdown(msg);
+        UI::EndTooltip();
+    }
+}
+
 
 shared void SetClipboard(const string &in msg) {
     IO::SetClipboard(msg);
@@ -110,4 +119,9 @@ shared bool CopiableLabeledValueTooltip(const string &in label, const string &in
         SetClipboard(value);
     }
     return clicked;
+}
+
+
+float G_GetSmallerInputWidth() {
+    return Math::Max(400.0, UI::GetWindowContentRegionWidth() * 0.5);
 }

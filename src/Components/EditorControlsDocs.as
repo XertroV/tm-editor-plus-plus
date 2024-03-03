@@ -56,6 +56,7 @@ string[][]@ GenEditorControlsArray() {
     r.InsertLast({"Avoid blocks snapping to free-blocks", "Hold Shift"});
     r.InsertLast({"Disable all editor plugins", "Ctrl + P"});
     r.InsertLast({"Cycle Item Variants (e.g., trees)", "Middle Click"});
+    r.InsertLast({"Clear all blocks/items/objects", "Backspace"});
     return r;
 }
 

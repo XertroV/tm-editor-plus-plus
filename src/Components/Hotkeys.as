@@ -8,6 +8,7 @@ class HotkeysTab : Tab {
         UI::TextWrapped("\\$fa6Note: under editor plugins, enable the EditorPlusPlus plugin to update the custom selection box.");
         UI::AlignTextToFramePadding();
         UI::Text("Ctrl + F: Fill area with blocks (click + drag)");
+        UI::Text("Backslash: Search Inventory");
     }
 }
 

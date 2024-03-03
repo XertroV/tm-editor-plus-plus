@@ -222,14 +222,14 @@ int2 g_LastMouseButtonPos = int2();
 UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     bool lmbDown = down && button == 0;
     bool block = false;
-    block = (FarlandsHelper::FH_CheckPlacing()) || block;
+    block = (lmbDown && FarlandsHelper::FH_CheckPlacing()) || block;
     block = (lmbDown && CheckPlaceMacroblockAirMode()) || block;
     block = (lmbDown && CheckPlacingItemFreeMode()) || block;
 
     g_LastMouseBDown = down;
     g_LastMouseButton = button;
     g_LastMouseButtonPos = int2(x, y);
-    dev_trace('LastMouseButton: ' + down + ", " + button + ", " + g_LastMouseButtonPos.ToString());
+    // dev_trace('LastMouseButton: ' + down + ", " + button + ", " + g_LastMouseButtonPos.ToString());
 
     block = block || g_IsDragging || g_WasDragging;
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
@@ -280,14 +280,22 @@ bool[] hotkeysFlags = array<bool>(256);
 */
 UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
     auto app = GetApp();
-    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    auto editor = cast<CGameCtnEditorFree>(app.Editor);
     if (editor is null) return UI::InputBlocking::DoNothing;
+    if (app.CurrentPlayground !is null) return UI::InputBlocking::DoNothing;
+    if (DGameCtnEditorFree(editor).IsCalculatingShadows) return UI::InputBlocking::DoNothing;
+    // if (app.BasicDialogs.)
     bool block = false;
-    block = block || (S_BlockEscape && down && key == VirtualKey::Escape && app.CurrentPlayground is null);
+    block = block || ShouldBlockEscapePress(down, key, app, editor);
     // trace('key down: ' + tostring(key));
     if (down && hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
         block = CheckHotkey(key) == UI::InputBlocking::Block || block;
     }
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
+}
+
+bool ShouldBlockEscapePress(bool down, VirtualKey key, CGameCtnApp@ app, CGameCtnEditorFree@ editor) {
+    return S_BlockEscape && down && key == VirtualKey::Escape && app.CurrentPlayground is null
+        && !Editor::IsInTestPlacementMode(editor);
 }

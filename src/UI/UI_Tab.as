@@ -20,6 +20,7 @@ class Tab {
     void set_windowOpen(bool value) { tabOpen = !value; }
     bool expandWindowNextFrame = false;
     bool windowExpanded = false;
+    bool closeWindowOnEscape = false;
 
     bool tabInWarningState = false;
 
@@ -149,14 +150,10 @@ class Tab {
 
     // override me
     bool get_favEnabled() {return false;}
-    bool favIsFolder = false;
-    bool favIsItem = false;
-    bool favIsMacroblock = false;
+    InvObjectType type;
 
-    void SetupFav(bool isItem, bool isFolder, bool isMacroblock = false) {
-        favIsFolder = isFolder;
-        favIsItem = isItem;
-        favIsMacroblock = isMacroblock;
+    void SetupFav(InvObjectType type) {
+        this.type = type;
     }
 
     void DrawFavoriteButton() {
@@ -164,11 +161,11 @@ class Tab {
         auto idName = GetFavIdName();
         if (idName.Length == 0) return;
 
-        bool isFav = g_Favorites.IsFavorited(idName, favIsItem, favIsFolder);
+        bool isFav = g_Favorites.IsFavorited(idName, type);
         if (isFav && UI::ButtonColored(Icons::Star, .4)) {
-            g_Favorites.RemoteFromFavorites(idName, favIsItem, favIsFolder);
+            g_Favorites.RemoteFromFavorites(idName, type);
         } else if (!isFav && UI::Button(Icons::Star)) {
-            g_Favorites.AddToFavorites(idName, favIsItem, favIsFolder);
+            g_Favorites.AddToFavorites(idName, type);
         }
         UI::SameLine();
     }
@@ -203,6 +200,9 @@ class Tab {
                 windowExpanded = true;
                 // DrawTogglePop();
                 DrawInnerWrapID();
+                if (closeWindowOnEscape && UI::IsKeyPressed(UI::Key::Escape) && UI::IsWindowFocused(UI::FocusedFlags::RootAndChildWindows)) {
+                    windowOpen = false;
+                }
             }
             lastWindowPos = UI::GetWindowPos();
             UI::End();

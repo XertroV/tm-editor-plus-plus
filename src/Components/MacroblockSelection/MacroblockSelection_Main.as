@@ -3,7 +3,7 @@ class MacroblockSelectionTab : Tab {
         super(parent, "[DEV] Current MB" + NewIndicator, Icons::FolderOpenO + Icons::Cubes);
         canPopOut = false;
         // todo: macroblock favs
-        // SetupFav(true, false);
+        SetupFav(InvObjectType::Macroblock);
         // child tabs
 #if SIG_DEVELOPER
 #endif

@@ -8,7 +8,7 @@ namespace UX {
             return _default;
         }
 
-        d2 = Clipboard::AddCopyPasteAngles3(label, d2);
+        d2 = cbAngles3.With(d2).DrawClipboard(label).GetVec3();
 
         // check if we actually changed anything
         if (MathX::Vec3Eq(d1, d2)) return angles;
@@ -24,9 +24,9 @@ namespace UX {
             return _default;
         }
 
-        d2 = Clipboard::AddCopyPasteAngles3(label, d2);
+        d2 = cbAngles3.With(d2).DrawClipboard(label).GetVec3();
 
-        return MathX::ToRad(d2);;
+        return MathX::ToRad(d2);
     }
 
     vec3 InputFloat3(const string &in label, vec3 val, vec3 _default = vec3()) {
@@ -36,7 +36,7 @@ namespace UX {
             return _default;
         }
 
-        ret = Clipboard::AddCopyPasteFloat3(label, ret);
+        ret = cbFloat3.With(ret).DrawClipboard(label).GetVec3();
 
         return ret;
     }
@@ -52,7 +52,7 @@ namespace UX {
             return _default;
         }
 
-        ret = Clipboard::AddCopyPasteFloat3(label, ret);
+        ret = cbFloat3.With(ret).DrawClipboard(label).GetVec3();
 
         return ret;
     }
@@ -69,13 +69,13 @@ namespace UX {
     vec3 SliderAngles3(const string &in label, vec3 angles, float min = -180.0, float max = 180.0, const string &in format = "%.1f", vec3 _default = vec3()) {
         auto d1 = MathX::ToDeg(angles);
         auto d2 = UI::SliderFloat3(label, d1, min, max, format);
-        
+
         UI::SameLine();
         if (UI::Button("Reset##"+label)) {
             return _default;
         }
 
-        d2 = Clipboard::AddCopyPasteAngles3(label, d2);
+        d2 = cbAngles3.With(d2).DrawClipboard(label).GetVec3();
 
         return MathX::ToRad(d2);
     }
@@ -102,7 +102,7 @@ namespace UX {
         auto z = UI::InputInt("(Z) " + label, val.z);
         auto ret = nat3(x, y, z);
 
-        ret = Clipboard::AddCopyPasteNat3(label, ret);
+        ret = cbNat3.With(ret).DrawClipboard(label).GetNat3();
 
         return ret;
     }
@@ -110,7 +110,7 @@ namespace UX {
     nat3 InputNat3(const string &in label, nat3 val) {
         auto ret = Vec3ToNat3(UI::InputFloat3(label, Nat3ToVec3(val)));
 
-        ret = Clipboard::AddCopyPasteNat3(label, ret);
+        ret = cbNat3.With(ret).DrawClipboard(label).GetNat3();
 
         return ret;
     }
@@ -137,7 +137,7 @@ namespace UX {
             return _default;
         }
 
-        ret = Clipboard::AddCopyPasteQuat(label, ret);
+        ret = cbQuat.With(ret).DrawClipboard(label).GetQuat();
 
         return ret;
     }

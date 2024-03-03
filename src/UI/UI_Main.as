@@ -202,9 +202,12 @@ namespace MenuBar {
 
             auto mapCache = Editor::GetMapCache();
             bool hasDupes = mapCache !is null && mapCache.NbDuplicateFreeBlocks > 0;
+            string cachesMenuLabel = !hasDupes
+                ? "Caches###Caches-menu"
+                : "Caches ("+WARNING_TRIANGLE_START+ mapCache.NbDuplicateFreeBlocks +"\\$z)###Caches-menu";
 
             // (hasDupes ? WARNING_TRIANGLE_START : "") +
-            if (UI::BeginMenu("Caches")) {
+            if (UI::BeginMenu(cachesMenuLabel)) {
                 if (UI::MenuItem("Refresh Map Block/Item Cache")) {
                     mapCache.RefreshCacheSoon();
                 }
@@ -213,19 +216,15 @@ namespace MenuBar {
                     UI::TextDisabled("Duplicate Free Blocks: " + mapCache.NbDuplicateFreeBlocks);
                 } else {
                     UI::Text(WARNING_TRIANGLE_START + "Duplicate Free Blocks: " + mapCache.NbDuplicateFreeBlocks);
-                    if (!mapCache.isRefreshing && UI::MenuItem("Log Duplicate Free Blocks + Copy to Clipboard")) {
-                        string msg = "";
-                        for (uint i = 0; i < mapCache.DuplicateBlockIxs.Length; i++) {
-                            msg += mapCache.DuplicateBlockIxs[i] + ", ";
-                        }
-                        print("Duplicate block indexes:");
-                        print(msg);
-                        IO::SetClipboard(msg);
+                    if (!mapCache.isRefreshing && UI::MenuItem("View Duplicates")) {
+                        g_DuplicateFreeBlocks_SubTab.SetSelectedTab();
+                        g_BlocksItemsTab.SetSelectedTab();
                     }
                     // if (!mapCache.isRefreshing && UI::MenuItem("Remove Duplicate Free Blocks (MAKE A BACKUP FIRST!)")) {
                     //     // startnew(Editor::FixDuplicateBlocks);
                     // }
                 }
+                UI::Separator();
                 if (UI::MenuItem("Refresh Inventory Cache")) {
                     Editor::GetInventoryCache().RefreshCacheSoon();
                 }
@@ -378,6 +377,8 @@ TabGroup@ CreateItemEditorRT() {
 PickedBlockTab@ g_PickedBlockTab;
 PickedItemTab@ g_PickedItemTab;
 MapEditPropsTab@ g_MapPropsTab;
+BI_MainTab@ g_BlocksItemsTab;
+InventorySearchTab@ g_InvSearchTab;
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
@@ -387,14 +388,16 @@ TabGroup@ CreateRootTabGroup() {
     MapExtractItems(root);
 #endif
     LightmapTab(root);
-    BI_MainTab(root);
+    @g_BlocksItemsTab = BI_MainTab(root);
     TodoTab(root, "Pinned B&I", Icons::MapO + Icons::MapMarker, "lists of pinned blocks and items");
     CursorTab(root);
+    CustomCursorTab(root);
     @g_PickedBlockTab = PickedBlockTab(root);
     @g_PickedItemTab = PickedItemTab(root);
     // TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
     InventoryMainTab(root);
     InventoryMainV2Tab(root);
+    @g_InvSearchTab = InventorySearchTab(root);
     @g_Favorites = FavoritesTab(root);
     ItemEmbedTab(root);
     BlockSelectionTab(root);

@@ -2,7 +2,7 @@ class BlockSelectionTab : Tab {
     BlockSelectionTab(TabGroup@ parent) {
         super(parent, "Current Block", Icons::FolderOpenO + Icons::Cube);
         canPopOut = false;
-        SetupFav(false, false);
+        SetupFav(InvObjectType::Block);
         // child tabs
         SetGhostVariantTab(Children);
         // BlockPlacementTagTab(Children);

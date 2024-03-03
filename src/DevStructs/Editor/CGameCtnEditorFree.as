@@ -17,8 +17,10 @@ class DGameCtnEditorFree : RawBufferElem {
 		return cast<CGameCtnEditorFree>(Dev_GetNodFromPointer(ptr));
 	}
 
-	bool get_IsCalculatingShadows() { return (this.GetBool(0x1264)); }
-	CGameSaveLaunchedCheckpoints@ get_LaunchedCheckpoints() { return cast<CGameSaveLaunchedCheckpoints>(this.GetNod(0x1268)); }
+	// 0x1264 = 0x125C + 0x8
+	bool get_IsCalculatingShadows() { return (this.GetBool(O_EDITORFREE_Offset + 0x8)); }
+	// 0x1268 = 0x125C + 0xC
+	CGameSaveLaunchedCheckpoints@ get_LaunchedCheckpoints() { return cast<CGameSaveLaunchedCheckpoints>(this.GetNod(O_EDITORFREE_Offset + 0xC)); }
 }
 
 

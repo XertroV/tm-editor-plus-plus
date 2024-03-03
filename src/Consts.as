@@ -10,6 +10,7 @@ const double NegPI = PI * -1.0;
 const int TWO_BILLION = 2000000000;
 
 const string NewIndicator = "\\$af3 New!";
+const string BetaIndicator = "\\$f80 BETA!";
 void SameLineNewIndicator() {
     UI::SameLine();
     UI::Text(NewIndicator);
