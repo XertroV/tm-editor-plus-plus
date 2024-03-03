@@ -43,6 +43,7 @@ namespace FarlandsHelper {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) continue;
             auto cursor = editor.Cursor;
+            if (cursor is null || editor.ItemCursor is null) continue;
             auto itemCursor = DGameCursorItem(editor.ItemCursor);
             // do some checks first
             bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor);
