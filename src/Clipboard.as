@@ -1,8 +1,8 @@
 namespace Clipboard {
 
     const float hueRed = 0.0;
-    const float hueGreen = 0.3;
-    const float hueBlue = 0.6;
+    const float hueGreen = 0.33;
+    const float hueBlue = 0.67;
 
 	vec3 clipboardFloat3;
 	vec3 clipboardAngles3;
@@ -11,7 +11,7 @@ namespace Clipboard {
 
     void SetFloat3(vec3 pos) {
     	clipboardFloat3 = pos;
-        print(pos);
+        // print(pos);
     }
 
     vec3 GetFloat3() {
@@ -20,7 +20,7 @@ namespace Clipboard {
 
     void SetAngles3(vec3 degrees) {
     	clipboardAngles3 = degrees;
-        print(degrees);
+        // print(degrees);
     }
 
     vec3 GetAngles3() {
@@ -29,7 +29,7 @@ namespace Clipboard {
 
     void SetNat3(nat3 pos) {
     	clipboardNat3 = pos;
-        print(pos);
+        // print(pos);
     }
 
     nat3 GetNat3() {
@@ -38,7 +38,7 @@ namespace Clipboard {
 
     void SetQuat(quat rot) {
     	clipboardQuat = rot;
-        print(rot);
+        // print(rot);
     }
 
     quat GetQuat() {
@@ -77,7 +77,7 @@ namespace Clipboard {
 
         UI::PushID(label);
         UI::PushID("Angles3");
-    	
+
         UI::SameLine();
         if (UI::Button("Copy")) {
             Clipboard::SetAngles3(degrees);

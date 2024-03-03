@@ -26,7 +26,7 @@ namespace UX {
 
         d2 = Clipboard::AddCopyPasteAngles3(label, d2);
 
-        return MathX::ToRad(d2);;
+        return MathX::ToRad(d2);
     }
 
     vec3 InputFloat3(const string &in label, vec3 val, vec3 _default = vec3()) {
@@ -69,7 +69,7 @@ namespace UX {
     vec3 SliderAngles3(const string &in label, vec3 angles, float min = -180.0, float max = 180.0, const string &in format = "%.1f", vec3 _default = vec3()) {
         auto d1 = MathX::ToDeg(angles);
         auto d2 = UI::SliderFloat3(label, d1, min, max, format);
-        
+
         UI::SameLine();
         if (UI::Button("Reset##"+label)) {
             return _default;
