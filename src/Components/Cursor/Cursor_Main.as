@@ -1,13 +1,13 @@
 class CursorTab : Tab {
     CursorPropsTab@ cursorProps;
-    CursorFavTab@ cursorFavs;
+    CursorAdvFeaturesTab@ cursorAdvFeatures;
 
     CursorTab(TabGroup@ parent) {
         super(parent, "Cursor Coords", Icons::HandPointerO);
         canPopOut = false;
         // child tabs
         @cursorProps = CursorPropsTab(Children, this);
-        @cursorFavs = CursorFavTab(Children, this);
+        @cursorAdvFeatures = CursorAdvFeaturesTab(Children, this);
     }
 
     void DrawInner() override {
@@ -211,6 +211,46 @@ class CursorFavTab : Tab {
 }
 
 
+class CursorAdvFeaturesTab : Tab {
+    CursorTab@ cursorTab;
+
+    CursorAdvFeaturesTab(TabGroup@ parent, CursorTab@ ct) {
+        super(parent, "Cursor Advanced Features", "");
+        @cursorTab = ct;
+    }
+
+    void DrawInner() override {
+        CustomCursorRotations::ItemStappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled" + NewIndicator, CustomCursorRotations::ItemStappingEnabled);
+        AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly)");
+        bool wasActive = CustomCursorRotations::Active;
+        auto nextActive = UI::Checkbox("Enable Custom Cursor Rotation Amounts", wasActive);
+        if (wasActive != nextActive) CustomCursorRotations::Active = nextActive;
+        AddSimpleTooltip("Only works for Pitch and Roll");
+
+        wasActive = CustomCursorRotations::CustomYawActive;
+        nextActive = UI::Checkbox("Enable Custom Yaw \\$f80BETA!" + NewIndicator, wasActive);
+        if (wasActive != nextActive) CustomCursorRotations::CustomYawActive = nextActive;
+        AddSimpleTooltip("Note: this currently does not work correctly with item-to-block snapping.");
+
+        CustomCursorRotations::DrawSettings();
+
+        // S_AutoActivateCustomRotations is checked in OnEditor for cursor window
+        S_AutoActivateCustomRotations = UI::Checkbox("Auto-activate custom cursor rotations (Pitch, Roll)", S_AutoActivateCustomRotations);
+        AddSimpleTooltip("Activates when entering the editor");
+        S_AutoActivateCustomYaw = UI::Checkbox("Auto-activate custom cursor rotations (Yaw)", S_AutoActivateCustomYaw);
+        AddSimpleTooltip("Activates when entering the editor");
+
+        DrawInfinitePrecisionSetting();
+
+        wasActive = S_EnablePromiscuousItemSnapping;
+        S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping" + NewIndicator, S_EnablePromiscuousItemSnapping);
+        AddSimpleTooltip("Items that snap to blocks will be less picky about which blocks they snap to. Example: trees will now snap to all terrain.\n\nNOTE: If you toggle this, it will only take effect for newly placed blocks, or when you reload the map.");
+        if (wasActive != S_EnablePromiscuousItemSnapping) {
+            CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
+        }
+    }
+}
+
 class CursorPropsTab : Tab {
     CursorTab@ cursorTab;
 
@@ -272,37 +312,6 @@ class CursorPropsTab : Tab {
         }
         S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls", S_CursorWindowRotControls);
         S_CursorWindowShowDetailed = UI::Checkbox("Show Details: exact position and snapping" + NewIndicator, S_CursorWindowShowDetailed);
-
-        UI::Separator();
-
-        CustomCursorRotations::ItemStappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled" + NewIndicator, CustomCursorRotations::ItemStappingEnabled);
-        AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly)");
-        bool wasActive = CustomCursorRotations::Active;
-        auto nextActive = UI::Checkbox("Enable Custom Cursor Rotation Amounts", wasActive);
-        if (wasActive != nextActive) CustomCursorRotations::Active = nextActive;
-        AddSimpleTooltip("Only works for Pitch and Roll");
-
-        wasActive = CustomCursorRotations::CustomYawActive;
-        nextActive = UI::Checkbox("Enable Custom Yaw \\$f80BETA!" + NewIndicator, wasActive);
-        if (wasActive != nextActive) CustomCursorRotations::CustomYawActive = nextActive;
-        AddSimpleTooltip("Note: this currently does not work correctly with item-to-block snapping.");
-
-        CustomCursorRotations::DrawSettings();
-
-        // S_AutoActivateCustomRotations is checked in OnEditor for cursor window
-        S_AutoActivateCustomRotations = UI::Checkbox("Auto-activate custom cursor rotations (Pitch, Roll)", S_AutoActivateCustomRotations);
-        AddSimpleTooltip("Activates when entering the editor");
-        S_AutoActivateCustomYaw = UI::Checkbox("Auto-activate custom cursor rotations (Yaw)", S_AutoActivateCustomYaw);
-        AddSimpleTooltip("Activates when entering the editor");
-
-        DrawInfinitePrecisionSetting();
-
-        wasActive = S_EnablePromiscuousItemSnapping;
-        S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping" + NewIndicator, S_EnablePromiscuousItemSnapping);
-        AddSimpleTooltip("Items that snap to blocks will be less picky about which blocks they snap to. Example: trees will now snap to all terrain.\n\nNOTE: If you toggle this, it will only take effect for newly placed blocks, or when you reload the map.");
-        if (wasActive != S_EnablePromiscuousItemSnapping) {
-            CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
-        }
     }
 }
 
