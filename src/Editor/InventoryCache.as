@@ -25,12 +25,19 @@ namespace Editor {
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
             cachedInvItemNames.RemoveRange(0, cachedInvItemNames.Length);
             cachedInvBlockNames.RemoveRange(0, cachedInvBlockNames.Length);
+            cachedInvMacroblockNames.RemoveRange(0, cachedInvMacroblockNames.Length);
             cachedInvBlockArticleNodes.RemoveRange(0, cachedInvBlockArticleNodes.Length);
             cachedInvItemArticleNodes.RemoveRange(0, cachedInvItemArticleNodes.Length);
+            cachedInvMacroblockArticleNodes.RemoveRange(0, cachedInvMacroblockArticleNodes.Length);
             cachedInvBlockIndexes.DeleteAll();
             cachedInvItemIndexes.DeleteAll();
+            cachedInvMacroblockIndexes.DeleteAll();
             cachedInvBlockFolders.RemoveRange(0, cachedInvBlockFolders.Length);
             cachedInvItemFolders.RemoveRange(0, cachedInvItemFolders.Length);
+            cachedInvMacroblockFolders.RemoveRange(0, cachedInvMacroblockFolders.Length);
+            cachedInvBlockFolderLookup.DeleteAll();
+            cachedInvItemFolderLookup.DeleteAll();
+            cachedInvMacroblockFolderLookup.DeleteAll();
             yield();
             if (myNonce != cacheRefreshNonce) return;
             auto editor = GetEditor(GetApp());
@@ -44,9 +51,11 @@ namespace Editor {
 
             CGameCtnArticleNodeDirectory@ blockRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[1]);
             CGameCtnArticleNodeDirectory@ itemRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[3]);
+            CGameCtnArticleNodeDirectory@ mbRN = cast<CGameCtnArticleNodeDirectory>(Editor::GetInventoryRootNode(InventoryRootNode::Macroblocks));
 
             trace('Caching inventory blocks...');
             _IsScanningItems = false;
+            _IsScanningMacroblocks = false;
             CacheInvNode(blockRN, myNonce);
             yield();
             if (myNonce != cacheRefreshNonce) return;
@@ -54,6 +63,10 @@ namespace Editor {
             _IsScanningItems = true;
             hasClubItems = itemRN.ChildNodes.Length >= 3;
             CacheInvNode(itemRN, myNonce);
+            trace('Caching inventory macroblocks...');
+            _IsScanningItems = false;
+            _IsScanningMacroblocks = true;
+            CacheInvNode(mbRN, myNonce);
             trace('Caching inventory complete.');
             if (myNonce == cacheRefreshNonce) {
                 // trigger update in other things
@@ -94,26 +107,47 @@ namespace Editor {
         const array<string>@ get_ItemFolders() { return cachedInvItemFolders; }
 
         protected bool _IsScanningItems = false;
+        protected bool _IsScanningMacroblocks = false;
         protected string itemsFolderPrefix;
         protected string[] cachedInvItemPaths;
         protected string[] cachedInvItemNames;
         protected string[] cachedInvBlockNames;
+        protected string[] cachedInvMacroblockNames;
         protected string[] cachedInvBlockFolders;
+        protected string[] cachedInvMacroblockFolders;
         protected string[] cachedInvItemFolders;
         protected dictionary cachedInvBlockFolderLookup;
         protected dictionary cachedInvItemFolderLookup;
+        protected dictionary cachedInvMacroblockFolderLookup;
 
         // protected string[] cachedInvBlockPaths;
         protected CGameCtnArticleNodeArticle@[] cachedInvBlockArticleNodes;
         protected CGameCtnArticleNodeArticle@[] cachedInvItemArticleNodes;
+        protected CGameCtnArticleNodeArticle@[] cachedInvMacroblockArticleNodes;
         protected dictionary cachedInvBlockIndexes;
         protected dictionary cachedInvItemIndexes;
+        protected dictionary cachedInvMacroblockIndexes;
 
         CGameCtnArticleNodeArticle@ GetByName(const string &in name, bool isItem) {
             if (isItem) {
                 return GetItemByPath(name);
             }
             return GetBlockByName(name);
+        }
+
+        // more expensive, but checks items, then blocks, then macroblocks
+        CGameCtnArticleNodeArticle@ GetAnyByName(const string &in name) {
+            auto item = GetItemByPath(name);
+            if (item !is null) return item;
+            auto block = GetBlockByName(name);
+            if (block !is null) return block;
+            return GetMacroblockByName(name);
+        }
+
+        CGameCtnArticleNodeArticle@ GetMacroblockByName(const string &in name) {
+            if (!cachedInvMacroblockIndexes.Exists(name)) return null;
+            uint ix = uint(cachedInvMacroblockIndexes[name]);
+            return cachedInvMacroblockArticleNodes[ix];
         }
 
         CGameCtnArticleNodeArticle@ GetBlockByName(const string &in name) {
@@ -129,24 +163,33 @@ namespace Editor {
         }
 
         CGameCtnArticleNodeDirectory@ GetBlockDirectory(const string &in dir) {
-            trace('get block dir: ' + dir);
+            // dev_trace('get block dir: ' + dir);
             if (!cachedInvBlockFolderLookup.Exists(dir)) return null;
-            trace(' >> exists');
+            // dev_trace(' >> exists');
             auto ret = cast<CGameCtnArticleNodeDirectory>(cachedInvBlockFolderLookup[dir]);
-            // trace(' >> null? ' + (ret is null));
+            // dev_trace(' >> null? ' + (ret is null));
             return ret;
         }
 
         CGameCtnArticleNodeDirectory@ GetItemDirectory(const string &in dir) {
-            trace('get item dir: ' + dir);
+            // dev_trace('get item dir: ' + dir);
             if (!cachedInvItemFolderLookup.Exists(dir)) return null;
-            trace('>> exists');
+            // dev_trace('>> exists');
             return cast<CGameCtnArticleNodeDirectory>(cachedInvItemFolderLookup[dir]);
         }
 
+        CGameCtnArticleNodeDirectory@ GetMacroblockDirectory(const string &in dir) {
+            // dev_trace('get macroblock dir: ' + dir);
+            if (!cachedInvMacroblockFolderLookup.Exists(dir)) return null;
+            // dev_trace('>> exists');
+            return cast<CGameCtnArticleNodeDirectory>(cachedInvMacroblockFolderLookup[dir]);
+        }
+
         CGameCtnArticleNodeDirectory@ GetDirectory(const string &in dir, bool isItem) {
-            trace('get dir: ' + dir + ', is item: ' + isItem);
+            // dev_trace('get dir: ' + dir + ', is item: ' + isItem);
             if (isItem) return GetItemDirectory(dir);
+            auto mbDir = GetMacroblockDirectory(dir);
+            if (mbDir !is null) return mbDir;
             return GetBlockDirectory(dir);
         }
 
@@ -173,6 +216,9 @@ namespace Editor {
             if (_IsScanningItems) {
                 cachedInvItemFolders.InsertLast(name);
                 @cachedInvItemFolderLookup[name] = node;
+            } else if (_IsScanningMacroblocks) {
+                cachedInvMacroblockFolders.InsertLast(name);
+                @cachedInvMacroblockFolderLookup[name] = node;
             } else {
                 cachedInvBlockFolders.InsertLast(name);
                 @cachedInvBlockFolderLookup[name] = node;
@@ -196,6 +242,10 @@ namespace Editor {
                 cachedInvItemPaths.InsertLast(string(node.NodeName));
                 cachedInvItemNames.InsertLast(string(node.Article.NameOrDisplayName));
                 cachedInvItemArticleNodes.InsertLast(node);
+            } else if (_IsScanningMacroblocks) {
+                cachedInvMacroblockIndexes[string(node.NodeName)] = cachedInvMacroblockNames.Length;
+                cachedInvMacroblockNames.InsertLast(string(node.NodeName));
+                cachedInvMacroblockArticleNodes.InsertLast(node);
             } else {
                 cachedInvBlockIndexes[string(node.NodeName)] = cachedInvBlockNames.Length;
                 // cachedInvBlockPaths.InsertLast(string(node.NodeName))

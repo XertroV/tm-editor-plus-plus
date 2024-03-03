@@ -4,7 +4,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
     FocusedItemTab(TabGroup@ parent, const string &in name) {
         super(parent, name, Icons::Crosshairs + Icons::Cube);
         removable = true;
-        SetupFav(true, false);
+        SetupFav(InvObjectType::Item);
     }
 
     bool get_favEnabled() override property {

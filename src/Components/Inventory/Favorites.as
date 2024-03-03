@@ -336,16 +336,16 @@ class FavoritesTab : Tab {
         auto items = favorites['items'].GetKeys();
         auto itemFolders = favorites['itemFolders'].GetKeys();
         for (uint i = 0; i < blocks.Length; i++) {
-            blockFavs.InsertLast(FavObj(blocks[i], false, false));
+            blockFavs.InsertLast(FavObj(blocks[i], InvObjectType::Block));
         }
         for (uint i = 0; i < blockFolders.Length; i++) {
-            blockFavs.InsertLast(FavObj(blockFolders[i], false, true));
+            blockFavs.InsertLast(FavObj(blockFolders[i], InvObjectType::BlockFolder));
         }
         for (uint i = 0; i < items.Length; i++) {
-            itemFavs.InsertLast(FavObj(items[i], true, false));
+            itemFavs.InsertLast(FavObj(items[i], InvObjectType::Item));
         }
         for (uint i = 0; i < itemFolders.Length; i++) {
-            itemFavs.InsertLast(FavObj(itemFolders[i], true, true));
+            itemFavs.InsertLast(FavObj(itemFolders[i], InvObjectType::ItemFolder));
         }
     }
 
@@ -353,29 +353,29 @@ class FavoritesTab : Tab {
         Json::ToFile(FAV_JSON_PATH, favorites);
     }
 
-    void AddToFavorites(const string &in idName, bool isItem, bool isFolder) {
-        Json::Value@ store = GetStore(isItem, isFolder);
+    void AddToFavorites(const string &in idName, InvObjectType objType) {
+        Json::Value@ store = GetStore(objType);
         bool exists = store.HasKey(idName);
         if (!exists) {
             store[idName] = 1;
-            AddNewFavObj(idName, isItem, isFolder);
+            AddNewFavObj(idName, objType);
             SaveFavorites();
         }
     }
 
-    void AddNewFavObj(const string &in nodeName, bool isItem, bool isFolder) {
-        GetFavs(isItem, isFolder).InsertLast(FavObj(nodeName, isItem, isFolder));
+    void AddNewFavObj(const string &in nodeName, InvObjectType objType) {
+        GetFavs(objType).InsertLast(FavObj(nodeName, objType));
     }
 
-    Json::Value@ GetStore(bool isItem, bool isFolder) {
-        if (isFolder) {
-            if (isItem) {
+    Json::Value@ GetStore(InvObjectType objType) {
+        if (objType & InvObjectType::Folder != 0) {
+            if (objType & InvObjectType::Item != 0) {
                 return FavItemFolders;
             } else {
                 return FavBlockFolders;
             }
         } else {
-            if (isItem) {
+            if (objType & InvObjectType::Item != 0) {
                 return FavItems;
             } else {
                 return FavBlocks;
@@ -383,15 +383,15 @@ class FavoritesTab : Tab {
         }
     }
 
-    FavObj@[]@ GetFavs(bool isItem, bool isFolder) {
-        if (isFolder) {
-            if (isItem) {
+    FavObj@[]@ GetFavs(InvObjectType objType) {
+        if (objType & InvObjectType::Folder != 0) {
+            if (objType & InvObjectType::Item != 0) {
                 return itemFolderFavs;
             } else {
                 return blockFolderFavs;
             }
         } else {
-            if (isItem) {
+            if (objType & InvObjectType::Item != 0) {
                 return itemFavs;
             } else {
                 return blockFavs;
@@ -399,9 +399,9 @@ class FavoritesTab : Tab {
         }
     }
 
-    void RemoteFromFavorites(const string &in idName, bool isItem, bool isFolder) {
-        RemoveKeyFromJsonObj(GetStore(isItem, isFolder), idName);
-        auto favs = GetFavs(isItem, isFolder);
+    void RemoteFromFavorites(const string &in idName, InvObjectType objType) {
+        RemoveKeyFromJsonObj(GetStore(objType), idName);
+        auto favs = GetFavs(objType);
         for (uint i = 0; i < favs.Length; i++) {
             if (favs[i].nodeName == idName) {
                 favs.RemoveAt(i);
@@ -412,8 +412,8 @@ class FavoritesTab : Tab {
         NotifyWarning("Couldn't find favorite to remove: " + idName);
     }
 
-    bool IsFavorited(const string &in name, bool isItem, bool isFolder) {
-        return GetStore(isItem, isFolder).HasKey(name);
+    bool IsFavorited(const string &in name, InvObjectType objType) {
+        return GetStore(objType).HasKey(name);
     }
 
     Json::Value@ get_FavItems() { return favorites['items']; }
@@ -448,10 +448,10 @@ class FavoritesTab : Tab {
             SaveFavorites();
         }
 
-        if (UI::CollapsingHeader("Block Folders")) { UI::Text("Bugged atm, sorry. Sorta works until you restart the game."); DrawFavEntries(false, true); }
-        if (UI::CollapsingHeader("Item Folders")) { UI::Text("Bugged atm, sorry. Sorta works until you restart the game."); DrawFavEntries(true, true); }
-        if (UI::CollapsingHeader("Blocks")) { DrawFavEntries(false, false); }
-        if (UI::CollapsingHeader("Items")) { DrawFavEntries(true, false); }
+        if (UI::CollapsingHeader("Block Folders")) { UI::Text("Bugged atm, sorry. Sorta works until you restart the game."); DrawFavEntries(InvObjectType::BlockFolder); }
+        if (UI::CollapsingHeader("Item Folders")) { UI::Text("Bugged atm, sorry. Sorta works until you restart the game."); DrawFavEntries(InvObjectType::ItemFolder); }
+        if (UI::CollapsingHeader("Blocks")) { DrawFavEntries(InvObjectType::Block); }
+        if (UI::CollapsingHeader("Items")) { DrawFavEntries(InvObjectType::Item); }
         // uint totalCount = FavItems.Length + FavBlocks.Length + FavItemFolders.Length + FavBlockFolders.Length;
         // UI::ListClipper clip(totalCount);
         // while (clip.Step()) {
@@ -474,10 +474,10 @@ class FavoritesTab : Tab {
         // }
     }
 
-    void DrawFavEntries(bool isItem, bool isFolder) {
+    void DrawFavEntries(InvObjectType objType) {
         auto inv = Editor::GetInventoryCache();
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto favs = GetFavs(isItem, isFolder);
+        auto favs = GetFavs(objType);
         auto available = Math::Min(UI::GetWindowContentRegionWidth(), UI::GetContentRegionAvail().x);
         auto lineNb = Math::Max(int(Math::Floor((available - InvDrawVals::scrollBarSize + 30.) / Math::Max(1.0, InvDrawVals::colWidth + InvDrawVals::colGap + InvDrawVals::initItemSpacing.x + InvDrawVals::framePadding.x * 2))), 1);
         auto len = int(favs.Length) <= lineNb ? 1 : int(favs.Length) / lineNb + 1;
@@ -500,16 +500,16 @@ class FavoritesTab : Tab {
         }
     }
 
-    void SelectInvNode(CGameCtnEditorFree@ editor, const string &in idName, bool isItem, bool isFolder) {
+    void SelectInvNode(CGameCtnEditorFree@ editor, const string &in idName, InvObjectType objType) {
         auto inv = Editor::GetInventoryCache();
-        if (!isFolder) {
-            if (isItem) {
+        if (objType & InvObjectType::Folder == 0) {
+            if (objType & InvObjectType::Item != 0) {
                 Editor::SetSelectedInventoryNode(editor, inv.GetItemByPath(idName), true);
             } else {
                 Editor::SetSelectedInventoryNode(editor, inv.GetBlockByName(idName), false);
             }
         } else {
-            if (isItem) {
+            if (objType & InvObjectType::Item != 0) {
                 Editor::SetSelectedInventoryFolder(editor, inv.GetItemDirectory(idName), true);
             } else {
                 Editor::SetSelectedInventoryFolder(editor, inv.GetBlockDirectory(idName), false);
@@ -518,28 +518,64 @@ class FavoritesTab : Tab {
     }
 }
 
+enum InvObjectType {
+    Folder = 1,
+    Block = 2,
+    BlockFolder = 3,
+    Item = 4,
+    ItemFolder = 5,
+    Macroblock = 8,
+    MacroblockFolder = 9,
+}
+
 class FavObj {
     string nodeName;
     string shortName;
-    bool isItem;
-    bool isFolder;
+    InvObjectType objType;
     bool isSpecialFolder = false;
     int specialIx = -1;
+    // triggered when a directory is clicked or opened
     CoroutineFunc@ dirCallback = null;
+    float ambientAlpha = 0.0;
 
-    FavObj(const string &in nodeName, bool isItem, bool isFolder, CoroutineFunc@ dirCallback = null) {
+    FavObj(const string &in nodeName, InvObjectType objTy, CoroutineFunc@ dirCallback = null) {
+        this.objType = objTy;
         this.nodeName = nodeName;
         shortName = nodeName.Contains("\\") ? GetLastStr(nodeName.Split("\\")) : nodeName;
         string lower = shortName.ToLower();
         if (lower.EndsWith('.item.gbx')) shortName = shortName.SubStr(0, shortName.Length - 9);
         if (lower.EndsWith('.block.gbx_customblock')) shortName = shortName.SubStr(0, shortName.Length - 22);
-        this.isFolder = isFolder;
-        this.isItem = isItem;
         @this.dirCallback = dirCallback;
         SetSpecialNodes();
     }
 
+    FavObj@ WithAmbAlpha(float alpha) {
+        ambientAlpha = alpha;
+        return this;
+    }
+
     protected string[] specialNames = {"Blocks", "Items Official", "Items Club", "Items Custom", "Macroblocks"};
+
+    bool isFolder {
+        get {
+            return objType & InvObjectType::Folder != 0;
+        }
+    }
+    bool isItem {
+        get {
+            return objType & InvObjectType::Item != 0;
+        }
+    }
+    bool isBlock {
+        get {
+            return objType & InvObjectType::Block != 0;
+        }
+    }
+    bool isMacroblock {
+        get {
+            return objType & InvObjectType::Macroblock != 0;
+        }
+    }
 
     void SetSpecialNodes() {
         if (!isFolder) return;
@@ -620,7 +656,7 @@ class FavObj {
                         startnew(CoroutineFunc(this.SelectInvFolderMb));
                     }
                 }
-                bool isFav = g_Favorites.IsFavorited(nodeName, isItem, isFolder);
+                bool isFav = g_Favorites.IsFavorited(nodeName, objType);
                 if (UI::MenuItem(isFav ? "Remove From Favs" : "Add To Favorites")) {
                     if (isFav) startnew(CoroutineFunc(RemoveSelf));
                     else startnew(CoroutineFunc(AddSelf));
@@ -643,7 +679,7 @@ class FavObj {
             if (isDragging) {
                 DrawClickedState(bgIcon);
             }
-            if (isFolder || hoverDuration > 0) {
+            if (isFolder || hoverDuration > 0 || ambientAlpha > 0.0) {
                 DrawTextLabelMbHovered();
             }
         } else {
@@ -683,6 +719,7 @@ class FavObj {
 
     void DrawTextLabelMbHovered() {
         hoverAlpha = Math::Clamp(hoverDuration / hoverAlphFadeDur, 0.0, 1.0);
+        hoverAlpha = Math::Lerp(ambientAlpha, 1.0, hoverAlpha);
         if (isSpecialFolder) hoverAlpha = 0.0;
         else if (isFolder) hoverAlpha = Math::Lerp(0.75, 1.0, hoverAlpha);
         if (hoverAlpha == 0) return;
@@ -721,11 +758,11 @@ class FavObj {
     }
 
     void RemoveSelf() {
-        g_Favorites.RemoteFromFavorites(nodeName, isItem, isFolder);
+        g_Favorites.RemoteFromFavorites(nodeName, objType);
     }
 
     void AddSelf() {
-        g_Favorites.AddToFavorites(nodeName, isItem, isFolder);
+        g_Favorites.AddToFavorites(nodeName, objType);
     }
 
     void DragSomewhere() {

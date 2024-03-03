@@ -378,6 +378,7 @@ PickedBlockTab@ g_PickedBlockTab;
 PickedItemTab@ g_PickedItemTab;
 MapEditPropsTab@ g_MapPropsTab;
 BI_MainTab@ g_BlocksItemsTab;
+InventorySearchTab@ g_InvSearchTab;
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
@@ -395,6 +396,7 @@ TabGroup@ CreateRootTabGroup() {
     // TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
     InventoryMainTab(root);
     InventoryMainV2Tab(root);
+    @g_InvSearchTab = InventorySearchTab(root);
     @g_Favorites = FavoritesTab(root);
     ItemEmbedTab(root);
     BlockSelectionTab(root);

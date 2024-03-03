@@ -2,7 +2,7 @@ class ItemSelectionTab : Tab {
     ItemSelectionTab(TabGroup@ parent) {
         super(parent, "Current Item", Icons::FolderOpenO + Icons::Tree);
         canPopOut = false;
-        SetupFav(true, false);
+        SetupFav(InvObjectType::Item);
         // child tabs
         ItemPlacementTab(Children);
         ItemLayoutTab(Children);

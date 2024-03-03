@@ -87,22 +87,50 @@ string selectedInvDir;
 
 class InvNode {
     FavObj@ ui;
-    bool isItem, isDirectory;
+    // InvObjectType
+    int type;
     InvColumn@ parent;
     string fullName;
     FavObj@ firstLeaf;
 
-    InvNode(CGameCtnArticleNode@ node, bool isItem, InvColumn@ parent) {
-        this.isItem = isItem;
+    InvNode(CGameCtnArticleNode@ node, InvObjectType type, InvColumn@ parent) {
+        this.type = type;
         @this.parent = parent;
         this.isDirectory = node.IsDirectory && cast<CGameCtnArticleNodeDirectory>(node) !is null;
         fullName = node.IsDirectory ? parent.PathAppend(node.NodeName) : string(node.NodeName);
-        @ui = FavObj(fullName, isItem, isDirectory, isDirectory ? CoroutineFunc(this.DirCallback) : null);
+        @ui = FavObj(fullName, type, isDirectory ? CoroutineFunc(this.DirCallback) : null);
         if (isDirectory) SetFirstLeaf(cast<CGameCtnArticleNodeDirectory>(node));
     }
     // for subclasses that want to set things up
     InvNode(InvColumn@ parent) {
         @this.parent = parent;
+    }
+
+    InvObjectType GetType() {
+        return InvObjectType(type);
+    }
+
+    bool isDirectory {
+        get {
+            return type & InvObjectType::Folder != 0;
+        }
+        set {
+            if (value) {
+                type |= InvObjectType::Folder;
+            } else {
+                type &= ~InvObjectType::Folder;
+            }
+        }
+    }
+
+    bool isItem {
+        get {
+            return type & InvObjectType::Item != 0;
+        }
+    }
+
+    InvObjectType get_typeSansFolder() {
+        return InvObjectType(type & ~InvObjectType::Folder);
     }
 
     void SetFirstLeaf(CGameCtnArticleNodeDirectory@ node) {
@@ -111,7 +139,7 @@ class InvNode {
             @lastNode = node;
             @node = cast<CGameCtnArticleNodeDirectory>(node.ChildNodes[0]);
         }
-        @firstLeaf = FavObj(cast<CGameCtnArticleNodeArticle>(lastNode.ChildNodes[0]).NodeName, isItem, false);
+        @firstLeaf = FavObj(cast<CGameCtnArticleNodeArticle>(lastNode.ChildNodes[0]).NodeName, typeSansFolder);
     }
 
     // cb for selection
@@ -136,62 +164,57 @@ class InvNode {
 class InvNodeBlocks : InvNode {
     InvNodeBlocks(InvColumn@ parent) {
         super(parent);
-        isItem = false;
-        isDirectory = true;
-        @ui = FavObj("Blocks", isItem, isDirectory, CoroutineFunc(this.DirCallback));
+        type = InvObjectType::BlockFolder;
+        @ui = FavObj("Blocks", InvObjectType::BlockFolder, CoroutineFunc(this.DirCallback));
     }
 }
 class InvNodeItemsOfficial : InvNode {
     InvNodeItemsOfficial(InvColumn@ parent) {
         super(parent);
-        isItem = true;
-        isDirectory = true;
-        @ui = FavObj("Items Official", isItem, isDirectory, CoroutineFunc(this.DirCallback));
+        type = InvObjectType::ItemFolder;
+        @ui = FavObj("Items Official", InvObjectType::ItemFolder, CoroutineFunc(this.DirCallback));
     }
 }
 class InvNodeItemsClub : InvNode {
     InvNodeItemsClub(InvColumn@ parent) {
         super(parent);
-        isItem = true;
-        isDirectory = true;
-        @ui = FavObj("Items Club", isItem, isDirectory, CoroutineFunc(this.DirCallback));
+        type = InvObjectType::ItemFolder;
+        @ui = FavObj("Items Club", GetType(), CoroutineFunc(this.DirCallback));
     }
 }
 class InvNodeItemsCustom : InvNode {
     InvNodeItemsCustom(InvColumn@ parent) {
         super(parent);
-        isItem = true;
-        isDirectory = true;
-        @ui = FavObj("Items Custom", isItem, isDirectory, CoroutineFunc(this.DirCallback));
+        type = InvObjectType::ItemFolder;
+        @ui = FavObj("Items Custom", GetType(), CoroutineFunc(this.DirCallback));
     }
 }
 class InvNodeMacroblocks : InvNode {
     InvNodeMacroblocks(InvColumn@ parent) {
         super(parent);
-        isItem = false;
-        isDirectory = true;
-        @ui = FavObj("Macroblocks", isItem, isDirectory, CoroutineFunc(this.DirCallback));
+        type = InvObjectType::MacroblockFolder;
+        @ui = FavObj("Macroblocks", GetType(), CoroutineFunc(this.DirCallback));
     }
 }
 
 class InvColumn {
     int selectedChild = -1;
     InvNode@[] children;
-    bool isItem;
+    InvObjectType type;
     string nodeName;
     InvColumn@ parent;
     string fullPath;
     string childId;
     InvColumn@ openChild;
 
-    InvColumn(InvColumn@ parent, const string &in nodeName, MwFastBuffer<CGameCtnArticleNode@> &in children, bool isItem) {
-        this.isItem = isItem;
+    InvColumn(InvColumn@ parent, const string &in nodeName, MwFastBuffer<CGameCtnArticleNode@> &in children, InvObjectType type) {
+        this.type = type;
         @this.parent = parent;
         fullPath = nodeName;
         childId = "inv-node-" + fullPath;
         this.nodeName = nodeName;
         for (uint i = 0; i < children.Length; i++) {
-            this.children.InsertLast(InvNode(children[i], isItem, this));
+            this.children.InsertLast(InvNode(children[i], type, this));
         }
     }
     InvColumn(bool manualSetup) {}
@@ -208,7 +231,7 @@ class InvColumn {
         }
         auto inv = Editor::GetInventoryCache();
         auto invNode = cast<CGameCtnArticleNodeDirectory>(node.ui.GetInvArticle(inv));
-        @openChild = InvColumn(this, node.ui.nodeName, invNode.ChildNodes, node.isItem);
+        @openChild = InvColumn(this, node.ui.nodeName, invNode.ChildNodes, node.GetType());
     }
 
     void Draw(CGameCtnEditorFree@ editor, Editor::InventoryCache@ inv) {

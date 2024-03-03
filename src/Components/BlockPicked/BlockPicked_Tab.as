@@ -4,7 +4,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
     FocusedBlockTab(TabGroup@ parent) {
         super(parent, "Picked Block", Icons::Crosshairs + Icons::Cube);
         removable = true;
-        SetupFav(false, false);
+        SetupFav(InvObjectType::Block);
     }
 
     ReferencedNod@ get_FocusedBlock() {
