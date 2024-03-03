@@ -536,6 +536,7 @@ class FavObj {
     int specialIx = -1;
     // triggered when a directory is clicked or opened
     CoroutineFunc@ dirCallback = null;
+    CoroutineFunc@ onSelectedCb = null;
     float ambientAlpha = 0.0;
 
     FavObj(const string &in nodeName, InvObjectType objTy, CoroutineFunc@ dirCallback = null) {
@@ -551,6 +552,11 @@ class FavObj {
 
     FavObj@ WithAmbAlpha(float alpha) {
         ambientAlpha = alpha;
+        return this;
+    }
+
+    FavObj@ WithSelectedCb(CoroutineFunc@ cb) {
+        @onSelectedCb = cb;
         return this;
     }
 
@@ -664,6 +670,7 @@ class FavObj {
 
                 UI::BeginDisabled();
                 UI::MenuItem(nodeName);
+                UI::MenuItem(tostring(objType));
                 UI::EndDisabled();
                 UI::EndPopup();
             }
@@ -927,6 +934,10 @@ class FavObj {
             Editor::SetSelectedInventoryNode(editor, cast<CGameCtnArticleNodeArticle>(GetInvArticle(inv)), isItem);
         } else {
             Editor::SetSelectedInventoryFolder(editor, cast<CGameCtnArticleNodeDirectory>(GetInvArticle(inv)), isItem);
+        }
+
+        if (onSelectedCb !is null) {
+            onSelectedCb();
         }
     }
 

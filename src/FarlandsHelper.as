@@ -4,8 +4,8 @@
  */
 
 void DrawInfinitePrecisionSetting() {
-    S_EnableInfinitePrecisionFreeBlocks = UI::Checkbox("Enable infinite precision for free blocks / items / macroblocks", S_EnableInfinitePrecisionFreeBlocks);
-    AddSimpleTooltip("Overwrite the cursor position so you can preview and place blocks outside the stadium. You should also unlock the editor camera (under Editor Misc). Can be used to prevent item snapping.");
+    S_EnableInfinitePrecisionFreeBlocks = UI::Checkbox("Enable infinite precision for free blocks / items / macroblocks" + BetaIndicator + Icons::ExclamationTriangle, S_EnableInfinitePrecisionFreeBlocks);
+    AddSimpleTooltip("Overwrite the cursor position so you can preview and place blocks outside the stadium. You should also unlock the editor camera (under Editor Misc). Can be used to prevent item snapping.\n\\$f80Warning! If you have trouble placing things, disable this!");
 }
 
 namespace FarlandsHelper {

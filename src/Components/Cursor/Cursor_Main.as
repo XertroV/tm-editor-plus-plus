@@ -1,13 +1,13 @@
 class CursorTab : Tab {
     CursorPropsTab@ cursorProps;
-    CursorAdvFeaturesTab@ cursorAdvFeatures;
+    CustomCursorTab@ cursorAdvFeatures;
 
     CursorTab(TabGroup@ parent) {
         super(parent, "Cursor Coords", Icons::HandPointerO);
         canPopOut = false;
         // child tabs
         @cursorProps = CursorPropsTab(Children, this);
-        @cursorAdvFeatures = CursorAdvFeaturesTab(Children, this);
+        // @cursorAdvFeatures = CustomCursorTab(Children, this);
     }
 
     void DrawInner() override {
@@ -211,24 +211,29 @@ class CursorFavTab : Tab {
 }
 
 
-class CursorAdvFeaturesTab : Tab {
-    CursorTab@ cursorTab;
+class CustomCursorTab : EffectTab {
 
-    CursorAdvFeaturesTab(TabGroup@ parent, CursorTab@ ct) {
-        super(parent, "Cursor Advanced Features", "");
-        @cursorTab = ct;
+    CustomCursorTab(TabGroup@ parent) {
+        super(parent, "Custom Cursor", Icons::HandPointerO + Icons::ExclamationTriangle);
+    }
+
+    bool get__IsActive() override property {
+        return CustomCursorRotations::Active
+            || CustomCursorRotations::ItemSnappingEnabled
+            || CustomCursorRotations::CustomYawActive
+            || CustomCursorRotations::IsPromiscuousItemSnappingEnabled;
     }
 
     void DrawInner() override {
-        CustomCursorRotations::ItemStappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled" + NewIndicator, CustomCursorRotations::ItemStappingEnabled);
-        AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly)");
+        CustomCursorRotations::ItemSnappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled (Default: On)" + NewIndicator, CustomCursorRotations::ItemSnappingEnabled);
+        AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly). Normal game behavior is when this is *true*.");
         bool wasActive = CustomCursorRotations::Active;
         auto nextActive = UI::Checkbox("Enable Custom Cursor Rotation Amounts", wasActive);
         if (wasActive != nextActive) CustomCursorRotations::Active = nextActive;
         AddSimpleTooltip("Only works for Pitch and Roll");
 
         wasActive = CustomCursorRotations::CustomYawActive;
-        nextActive = UI::Checkbox("Enable Custom Yaw \\$f80BETA!" + NewIndicator, wasActive);
+        nextActive = UI::Checkbox("Enable Custom Yaw" + BetaIndicator + NewIndicator, wasActive);
         if (wasActive != nextActive) CustomCursorRotations::CustomYawActive = nextActive;
         AddSimpleTooltip("Note: this currently does not work correctly with item-to-block snapping.");
 
@@ -382,12 +387,18 @@ namespace CustomCursorRotations {
         }
     }
 
-    bool ItemStappingEnabled {
+    bool ItemSnappingEnabled {
         get {
             return !DisableItemSnapping.IsApplied;
         }
         set {
             DisableItemSnapping.IsApplied = !value;
+        }
+    }
+
+    bool IsPromiscuousItemSnappingEnabled {
+        get {
+            return PromiscuousItemToBlockSnapping.IsApplied;
         }
     }
 

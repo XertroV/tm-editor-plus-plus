@@ -98,7 +98,7 @@ class InvNode {
         @this.parent = parent;
         this.isDirectory = node.IsDirectory && cast<CGameCtnArticleNodeDirectory>(node) !is null;
         fullName = node.IsDirectory ? parent.PathAppend(node.NodeName) : string(node.NodeName);
-        @ui = FavObj(fullName, type, isDirectory ? CoroutineFunc(this.DirCallback) : null);
+        @ui = FavObj(fullName, InvObjectType(this.type), isDirectory ? CoroutineFunc(this.DirCallback) : null);
         if (isDirectory) SetFirstLeaf(cast<CGameCtnArticleNodeDirectory>(node));
     }
     // for subclasses that want to set things up
@@ -116,9 +116,9 @@ class InvNode {
         }
         set {
             if (value) {
-                type |= InvObjectType::Folder;
+                this.type |= InvObjectType::Folder;
             } else {
-                type &= ~InvObjectType::Folder;
+                this.type &= ~InvObjectType::Folder;
             }
         }
     }

@@ -48,9 +48,9 @@ class InventorySearchTab : Tab {
         promptCursorPos = UI::GetCursorPos();
         AddMarkdownTooltip("### Search the inventory for items, blocks, and macroblocks.\n"
             "Use \\<space\\> or '*' to indicate wildcards.<br>"
-            "Unless the search term is prefixed with '=', a wildcard is automatically inserted before the search term.<br>"
             "Backslash to quicksearch.\n"
-            "Escape to close the window.\n"
+            "Escape to close the window.<br>"
+            "Unless the search term is prefixed with '=', a wildcard is automatically inserted before the search term.<br>"
             // todo: filter on types (blocks, items, macroblocks, folders)
             );
         UI::SameLine();
@@ -62,6 +62,7 @@ class InventorySearchTab : Tab {
         if (setKbFocusOnSearchbar) {
             UI::SetKeyboardFocusHere();
             setKbFocusOnSearchbar = false;
+            searcher.m_filterPrompt = "";
         }
         searcher.DrawPrompt();
         UI::SameLine();
@@ -148,20 +149,29 @@ class InventorySearchTab : Tab {
             auto blockFolder = inv.GetBlockDirectory(name);
             auto mbFolder = inv.GetMacroblockDirectory(name);
             if (item !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::Item).WithAmbAlpha(resAmbAlpha));
+                results.InsertLast(FavObj(name, InvObjectType::Item));
             } else if (block !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::Block).WithAmbAlpha(resAmbAlpha));
+                results.InsertLast(FavObj(name, InvObjectType::Block));
             } else if (mb !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::Macroblock).WithAmbAlpha(resAmbAlpha));
+                results.InsertLast(FavObj(name, InvObjectType::Macroblock));
             } else if (itemFolder !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::ItemFolder).WithAmbAlpha(resAmbAlpha));
+                results.InsertLast(FavObj(name, InvObjectType::ItemFolder));
             } else if (blockFolder !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::BlockFolder).WithAmbAlpha(resAmbAlpha));
+                results.InsertLast(FavObj(name, InvObjectType::BlockFolder));
             } else if (mbFolder !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::MacroblockFolder).WithAmbAlpha(resAmbAlpha));
+                results.InsertLast(FavObj(name, InvObjectType::MacroblockFolder));
             } else {
                 NotifyWarning("Inventory item not found: " + name);
+                continue;
             }
+            results[results.Length - 1].WithAmbAlpha(resAmbAlpha).WithSelectedCb(CoroutineFunc(this.OnSelectedObject));
+        }
+    }
+
+    void OnSelectedObject() {
+        if (windowOpen) {
+            windowOpen = false;
+            setKbFocusOnSearchbar = false;
         }
     }
 }

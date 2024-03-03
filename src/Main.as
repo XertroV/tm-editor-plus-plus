@@ -222,7 +222,7 @@ int2 g_LastMouseButtonPos = int2();
 UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     bool lmbDown = down && button == 0;
     bool block = false;
-    block = (FarlandsHelper::FH_CheckPlacing()) || block;
+    block = (lmbDown && FarlandsHelper::FH_CheckPlacing()) || block;
     block = (lmbDown && CheckPlaceMacroblockAirMode()) || block;
     block = (lmbDown && CheckPlacingItemFreeMode()) || block;
 

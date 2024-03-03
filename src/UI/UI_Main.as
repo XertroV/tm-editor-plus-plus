@@ -391,6 +391,7 @@ TabGroup@ CreateRootTabGroup() {
     @g_BlocksItemsTab = BI_MainTab(root);
     TodoTab(root, "Pinned B&I", Icons::MapO + Icons::MapMarker, "lists of pinned blocks and items");
     CursorTab(root);
+    CustomCursorTab(root);
     @g_PickedBlockTab = PickedBlockTab(root);
     @g_PickedItemTab = PickedItemTab(root);
     // TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
