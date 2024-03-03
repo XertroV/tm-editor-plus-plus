@@ -212,6 +212,11 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             vec3 relPos = (mat4::Inverse(m) * m_Calc_AbsPosition).xyz;
             CopiableLabeledValue("Relative Position", relPos.ToString());
 
+            UI::SameLine();
+            if (UI::Button("Copy###copy-rel-position")) {
+                Clipboard::SetFloat3(relPos);
+            }
+
             UI::Separator();
             UI::Text("Relative to Absolute");
 
@@ -222,6 +227,11 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             }
             vec3 absPos = (m * m_Calc_RelPosition).xyz;
             CopiableLabeledValue("Absolute Position", absPos.ToString());
+
+            UI::SameLine();
+            if (UI::Button("Copy###copy-abs-position")) {
+                Clipboard::SetFloat3(absPos);
+            }
 
             UI::Unindent();
         }
