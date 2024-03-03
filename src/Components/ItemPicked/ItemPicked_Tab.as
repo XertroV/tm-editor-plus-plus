@@ -142,6 +142,8 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
         UI::Separator();
 
+        UI::PushItemWidth(G_GetSmallerInputWidth());
+
         if (ShowHelpers) {
             nvgCircleWorldPos(item.AbsolutePositionInMap);
             nvg::StrokeColor(vec4(0, 1, 1, 1));
@@ -159,7 +161,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         UI::AlignTextToFramePadding();
         UI::Text("Edit Picked Item Properties (Helper dot shows position)");
 
-        item.AbsolutePositionInMap = UI::InputFloat3("Pos.##picked-item-pos", item.AbsolutePositionInMap);
+        item.AbsolutePositionInMap = UX::InputFloat3("Pos.##picked-item-pos", item.AbsolutePositionInMap);
         item.BlockUnitCoord = UX::InputNat3("Block Coord.##picked-item-coord", item.BlockUnitCoord);
 
         vec3 outRot = UX::InputAngles3("Rot (Deg)##picked-item-rot", initRot);
@@ -225,6 +227,8 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
             UI::Unindent();
         }
+
+        UI::PopItemWidth();
     }
 
     void DrawEditVariants(CGameCtnAnchoredObject@ item) {

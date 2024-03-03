@@ -111,3 +111,8 @@ shared bool CopiableLabeledValueTooltip(const string &in label, const string &in
     }
     return clicked;
 }
+
+
+float G_GetSmallerInputWidth() {
+    return Math::Max(400.0, UI::GetWindowContentRegionWidth() * 0.5);
+}

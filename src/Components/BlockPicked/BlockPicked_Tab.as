@@ -150,6 +150,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
         UI::Separator();
 
+        UI::PushItemWidth(G_GetSmallerInputWidth());
+
         UI::Text("Set Block Props:");
 
         bool safeToRefresh = true;
@@ -243,6 +245,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             // startnew(CoroutineFunc(RefreshSoonAsync));
             Editor::MarkRefreshUnsafe();
         }
+
+        UI::PopItemWidth();
     }
 
     BlockDesc@ tmpDesc;
