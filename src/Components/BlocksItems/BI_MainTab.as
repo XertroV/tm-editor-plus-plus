@@ -1,3 +1,5 @@
+ViewDuplicateFreeBlocksTab@ g_DuplicateFreeBlocks_SubTab;
+
 class BI_MainTab : Tab {
     BI_MainTab(TabGroup@ p) {
         super(p, "Blocks & Items", Icons::Cubes + Icons::Tree);
@@ -9,6 +11,7 @@ class BI_MainTab : Tab {
         ViewSkinnedItemsTab(Children);
         ViewClassicBlocksTab(Children);
         ViewGhostBlocksTab(Children);
+        @g_DuplicateFreeBlocks_SubTab = ViewDuplicateFreeBlocksTab(Children);
         // ViewKinematicsTab(Children);
     }
 
@@ -119,6 +122,12 @@ class ViewAllBlocksTab : BlockItemListTab {
 
         UI::TableNextColumn();
         UI::Text(block.DescId.GetName());
+        auto rowHovered = UI::IsItemHovered();
+        if (rowHovered) {
+            auto m = Editor::GetBlockMatrix(block);
+            nvgDrawBlockBox(m, Editor::GetBlockSize(block), cOrange);
+            nvgDrawBlockBox(m, vec3(32, 8, 32), cOrange);
+        }
 
         UI::TableNextColumn();
         UI::Text(FormatX::Vec3(Editor::GetBlockLocation(block)));
@@ -284,5 +293,24 @@ class ViewSkinnedItemsTab : ViewAllItemsTab {
     CGameCtnAnchoredObject@ GetItem(CGameCtnChallenge@ map, uint i) override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return Editor::GetMapCache().SkinnedItems[i].FindMe(editor.PluginMapType);
+    }
+}
+
+class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
+    ViewDuplicateFreeBlocksTab(TabGroup@ p) {
+        super(p, "Dup. Free Blks", Icons::Cubes, BIListTabType::Blocks);
+        nbCols = 9;
+    }
+
+    uint GetNbObjects(CGameCtnChallenge@ map) override {
+        return (Editor::GetMapCache()).DuplicateBlockIxs.Length;
+    }
+
+    CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) override {
+        auto mapCache = Editor::GetMapCache();
+        auto ix = mapCache.DuplicateBlockIxs[i];
+        auto cacheBlock = mapCache.Blocks[ix];
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return cacheBlock.FindMe(editor.PluginMapType);
     }
 }

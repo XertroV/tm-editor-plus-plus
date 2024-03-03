@@ -227,6 +227,7 @@ namespace Editor {
             ItemTypesLower.RemoveRange(0, ItemTypesLower.Length);
             BlockTypesLower.RemoveRange(0, BlockTypesLower.Length);
             DuplicateBlockKeys.RemoveRange(0, DuplicateBlockKeys.Length);
+            DuplicateBlockIxs.RemoveRange(0, DuplicateBlockIxs.Length);
             NbDuplicateFreeBlocks = 0;
             yield();
             if (myNonce != lastRefreshNonce) return;
@@ -313,8 +314,8 @@ namespace Editor {
                 NbDuplicateFreeBlocks++;
                 if (dupes.Length == 2) {
                     DuplicateBlockKeys.InsertLast(b.hashStr);
-                    // count the first block as a duplicate too
-                    NbDuplicateFreeBlocks++;
+                    // don't ~~count the first block as a duplicate too~~
+                    // NbDuplicateFreeBlocks++;
                 }
             } else {
                 array<BlockInMap@>@ arr = {b};
