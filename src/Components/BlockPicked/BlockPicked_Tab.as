@@ -155,7 +155,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         bool safeToRefresh = true;
 
         if (Editor::IsBlockFree(block)) {
-            Editor::SetBlockLocation(block, UI::InputFloat3("Pos.##pos" + idNonce, Editor::GetBlockLocation(block)));
+            Editor::SetBlockLocation(block, UX::InputFloat3("Pos.##pos" + idNonce, Editor::GetBlockLocation(block)));
             Editor::SetBlockRotation(block, UX::InputAngles3("Rot (Deg)##rot" + idNonce, Editor::GetBlockRotation(block)));
         } else {
             // if (!block.IsGhostBlock()) {

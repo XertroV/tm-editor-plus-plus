@@ -283,11 +283,16 @@ UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
     if (editor is null) return UI::InputBlocking::DoNothing;
     bool block = false;
-    block = block || (S_BlockEscape && down && key == VirtualKey::Escape && app.CurrentPlayground is null);
+    block = block || ShouldBlockEscapePress(down, key, app, editor);
     // trace('key down: ' + tostring(key));
     if (down && hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
         block = CheckHotkey(key) == UI::InputBlocking::Block || block;
     }
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
+}
+
+bool ShouldBlockEscapePress(bool down, VirtualKey key, CGameCtnApp@ app, CGameCtnEditorFree@ editor) {
+    return S_BlockEscape && down && key == VirtualKey::Escape && app.CurrentPlayground is null
+        && !Editor::IsInTestPlacementMode(editor);
 }

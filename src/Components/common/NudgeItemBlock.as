@@ -1,7 +1,3 @@
-const float hueRed = 0.0;
-const float hueGreen = 0.3;
-const float hueBlue = 0.6;
-
 mixin class NudgeItemBlock {
     float m_PosStepSize = 0.1;
     float m_RotStepSize = .01745;
