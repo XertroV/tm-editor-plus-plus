@@ -25,7 +25,7 @@ class InventorySearchTab : Tab {
     }
 
     bool DrawWindow() override {
-        if (windowOpen) UI::SetNextWindowSize(400, 400, UI::Cond::Appearing);
+        if (windowOpen) UI::SetNextWindowSize(500, 400, UI::Cond::Appearing);
         return Tab::DrawWindow();
     }
 

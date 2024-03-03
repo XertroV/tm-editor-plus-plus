@@ -229,7 +229,7 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     g_LastMouseBDown = down;
     g_LastMouseButton = button;
     g_LastMouseButtonPos = int2(x, y);
-    dev_trace('LastMouseButton: ' + down + ", " + button + ", " + g_LastMouseButtonPos.ToString());
+    // dev_trace('LastMouseButton: ' + down + ", " + button + ", " + g_LastMouseButtonPos.ToString());
 
     block = block || g_IsDragging || g_WasDragging;
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
@@ -287,7 +287,7 @@ UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
     // if (app.BasicDialogs.)
     bool block = false;
     block = block || ShouldBlockEscapePress(down, key, app, editor);
-    trace('key down: ' + tostring(key));
+    // trace('key down: ' + tostring(key));
     if (down && hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
         block = CheckHotkey(key) == UI::InputBlocking::Block || block;
