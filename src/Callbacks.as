@@ -97,68 +97,68 @@ void RegisterOnLeavingPlaygroundCallback(CoroutineFunc@ f, const string &in name
 
 namespace Event {
     void RunOnEditorLoadCbs() {
-        trace("Running OnEditorLoad callbacks");
+        Log::Trace("Running OnEditorLoad callbacks");
         for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
             onEditorLoadCbs[i]();
         }
-        trace("Finished OnEditorLoad callbacks");
+        Log::Trace("Finished OnEditorLoad callbacks");
     }
     void RunOnItemEditorLoadCbs() {
-        trace("Running OnItemEditorLoad callbacks");
+        Log::Trace("Running OnItemEditorLoad callbacks");
         for (uint i = 0; i < onItemEditorLoadCbs.Length; i++) {
             onItemEditorLoadCbs[i]();
         }
-        trace("Finished OnItemEditorLoad callbacks");
+        Log::Trace("Finished OnItemEditorLoad callbacks");
     }
     void RunOnMTEditorLoadCbs() {
-        trace("Running OnMTEditorLoad callbacks");
+        Log::Trace("Running OnMTEditorLoad callbacks");
         for (uint i = 0; i < onMTEditorLoadCbs.Length; i++) {
             onMTEditorLoadCbs[i]();
         }
-        trace("Finished OnMTEditorLoad callbacks");
+        Log::Trace("Finished OnMTEditorLoad callbacks");
     }
     void RunOnEditorUnloadCbs() {
-        trace("Running OnEditorUnload callbacks");
+        Log::Trace("Running OnEditorUnload callbacks");
         for (uint i = 0; i < onEditorUnloadCbs.Length; i++) {
             onEditorUnloadCbs[i]();
         }
-        trace("Finished OnEditorUnload callbacks");
+        Log::Trace("Finished OnEditorUnload callbacks");
     }
     bool OnNewBlock(CGameCtnBlock@ block) {
         bool updated = false;
         bool lastUpdated = false;
         for (uint i = 0; i < blockCallbacks.Length; i++) {
             updated = blockCallbacks[i](block) || updated;
-            if (updated && !lastUpdated) trace("NewBlock Callback triggered update: " + blockCallbackNames[i]);
+            if (updated && !lastUpdated) Log::Trace("NewBlock Callback triggered update: " + blockCallbackNames[i]);
             lastUpdated = updated;
         }
         return updated;
     }
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
-        trace("Running OnNewItem");
+        Log::Trace("Running OnNewItem");
         bool updated = false;
         bool lastUpdated = false;
         for (uint i = 0; i < itemCallbacks.Length; i++) {
             updated = itemCallbacks[i](item) || updated;
-            if (updated && !lastUpdated) trace("NewItem Callback triggered update: " + itemCallbackNames[i]);
+            if (updated && !lastUpdated) Log::Trace("NewItem Callback triggered update: " + itemCallbackNames[i]);
             lastUpdated = updated;
         }
-        trace("Finished OnNewItem");
+        Log::Trace("Finished OnNewItem");
         return updated;
     }
     void OnSelectedItemChanged(CGameItemModel@ itemModel) {
-        trace("Running OnSelectedItemChanged");
+        Log::Trace("Running OnSelectedItemChanged");
         for (uint i = 0; i < selectedItemChangedCbs.Length; i++) {
             selectedItemChangedCbs[i](itemModel);
         }
-        trace("Finished OnSelectedItemChanged");
+        Log::Trace("Finished OnSelectedItemChanged");
     }
     void RunOnLeavingPlaygroundCbs() {
-        trace("Running OnLeavingPlayground callbacks");
+        Log::Trace("Running OnLeavingPlayground callbacks");
         for (uint i = 0; i < onLeavingPlaygroundCbs.Length; i++) {
             onLeavingPlaygroundCbs[i]();
         }
-        trace("Finished OnEditorLoad callbacks");
+        Log::Trace("Finished OnEditorLoad callbacks");
     }
 }
 

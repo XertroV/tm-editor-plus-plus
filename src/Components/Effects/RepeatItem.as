@@ -331,16 +331,16 @@ class RepeatMethod : Tab {
     mat4[] matricies;
 
     void RunItemCreation(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem) {
-            for (uint i = 0; i < matricies.Length; i++) {
-                auto rotV = PitchYawRollFromRotationMatrix(matricies[i]);
-                auto newItem = Editor::DuplicateAndAddItem(editor, origItem, false);
-                newItem.AbsolutePositionInMap = (matricies[i] * vec3()).xyz;
-                newItem.Pitch = rotV.x;
-                newItem.Yaw = rotV.y;
-                newItem.Roll = rotV.z;
-            }
-            Editor::UpdateNewlyAddedItems(editor);
-            editor.PluginMapType.AutoSave();
+        for (uint i = 0; i < matricies.Length; i++) {
+            auto rotV = PitchYawRollFromRotationMatrix(matricies[i]);
+            auto newItem = Editor::DuplicateAndAddItem(editor, origItem, false);
+            newItem.AbsolutePositionInMap = (matricies[i] * vec3()).xyz;
+            newItem.Pitch = rotV.x;
+            newItem.Yaw = rotV.y;
+            newItem.Roll = rotV.z;
+        }
+        Editor::UpdateNewlyAddedItems(editor);
+        editor.PluginMapType.AutoSave();
     }
 
     void DrawControls(CGameCtnEditorFree@ editor) {

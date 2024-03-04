@@ -100,7 +100,7 @@ namespace Editor {
     /* After items are added to .AnchoredObjects, call this to get the editor to recognize them.
        May not work for >10 items, but seems fine.
     */
-    void UpdateNewlyAddedItems(CGameCtnEditorFree@ editor, bool withRefresh = false) {
+    void UpdateNewlyAddedItems(CGameCtnEditorFree@ editor) {
         auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
 
         auto macroblock = pmt.GetMacroblockModelFromFilePath("Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx");
@@ -111,10 +111,10 @@ namespace Editor {
         trace('UpdateNewlyAddedItems removed: ' + removed);
     }
 
-    const uint ItemItemModelOffset = GetOffset("CGameCtnAnchoredObject", "ItemModel");
-    const uint ItemUniqueNodIDOffset = ItemItemModelOffset + 0xC;
-    const uint ItemUniqueUnknownIDOffset = ItemItemModelOffset + 0x10;
-    const uint ItemUniqueBlockIDOffset = ItemItemModelOffset + 0x14;
+    const uint16 O_ANCHOREDOBJ_ITEMMODEL = GetOffset("CGameCtnAnchoredObject", "ItemModel");
+    const uint16 ItemUniqueNodIDOffset = O_ANCHOREDOBJ_ITEMMODEL + 0xC;
+    const uint16 ItemUniqueUnknownIDOffset = O_ANCHOREDOBJ_ITEMMODEL + 0x10;
+    const uint16 ItemUniqueBlockIDOffset = O_ANCHOREDOBJ_ITEMMODEL + 0x14;
     //
     uint GetItemUniqueNodID(CGameCtnAnchoredObject@ item) {
         return Dev::GetOffsetUint32(item, ItemUniqueNodIDOffset);
@@ -137,12 +137,25 @@ namespace Editor {
     void SetAO_ItemModelMwId(CGameCtnAnchoredObject@ ao, uint mwIdValue = 0) {
         if (mwIdValue == 0) mwIdValue = ao.ItemModel.Id.Value;
         Dev::SetOffset(ao, 0x18, mwIdValue);
+        // collection id
         Dev::SetOffset(ao, 0x1c, uint(0x1a));
     }
     // if mwIdValue is 0, then the value is taken from the item model
     void SetAO_ItemModelAuthorMwId(CGameCtnAnchoredObject@ ao, uint mwIdValue = 0) {
         if (mwIdValue == 0) mwIdValue = ao.ItemModel.Author.Value;
         Dev::SetOffset(ao, 0x20, mwIdValue);
+    }
+
+    void SetAO_ItemModel(CGameCtnAnchoredObject@ ao, CGameItemModel@ itemModel) {
+        if (itemModel is null) throw("Refusing to set null item model.");
+        bool hasModel = ao.ItemModel !is null;
+        if (hasModel) {
+            ao.ItemModel.MwRelease();
+        }
+        Dev::SetOffset(ao, O_ANCHOREDOBJ_ITEMMODEL, itemModel);
+        ao.ItemModel.MwAddRef();
+        SetAO_ItemModelMwId(ao, 0);
+        SetAO_ItemModelAuthorMwId(ao, 0);
     }
 
     // when there are duplicate blockIds this is may not save and occasionally results in crash-on-saves (but not autosaves)
@@ -153,7 +166,7 @@ namespace Editor {
         auto ni_ID = Dev::GetOffsetUint32(item, ItemUniqueNodIDOffset);
 
         // copy most of the bytes from the prior item -- excludes last 0x10 bytes: [nod id, some other id, block id]
-        Dev_SetOffsetBytes(item, 0x0, Dev_GetOffsetBytes(origItem, 0x0, ItemItemModelOffset + 0x8));
+        Dev_SetOffsetBytes(item, 0x0, Dev_GetOffsetBytes(origItem, 0x0, O_ANCHOREDOBJ_ITEMMODEL + 0x8));
         // this is required to be set for picking to work correctly -- typically they're in the range of like 7k, but setting this to the new items ID doesn't seem to be a problem -- this is probs the block id, b/c we don't get any duplicate complaints when setting this value.
         Dev::SetOffset(item, ItemUniqueBlockIDOffset, ni_ID);
 
@@ -164,6 +177,9 @@ namespace Editor {
 
         // this is some other ID, but gets set when you click 'save' and IDK what it does or matters for
         // Dev::SetOffset(item, 0x168, Dev::GetOffsetUint32(lastItem, 0x168) + diff);
+
+        // With the new item hooks, these items are not picked up. So we call the event manually.
+        Event::OnNewItem(item);
 
         if (updateItemsAfter) {
             UpdateNewlyAddedItems(editor);

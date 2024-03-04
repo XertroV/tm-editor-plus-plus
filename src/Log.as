@@ -1,6 +1,20 @@
+enum LogLevel {
+    TRACE,
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR,
+    FATAL
+}
+
+[Setting hidden]
+LogLevel S_LogLevel = LogLevel::INFO;
+
 namespace Log {
     void Trace(const string &in msg) {
-        trace(msg);
+        if (S_LogLevel <= LogLevel::TRACE) {
+            trace(msg);
+        }
     }
 }
 
