@@ -1,46 +1,35 @@
-- add extract items from map tab
-- add kinematics controls to pause animations
-- update changing deco to support Screen155 bases
-- add fg skins to picked item
-- allow setting build version of the map for new/old wood
-- fix drawing larger lightmaps (rescales to 1024x1024 atm)
-- add Skinned Blocks and Skinned Items sub-tabs to Blocks & Items tab
-- add more next placed options, particularly useful for pasting in air mode and MB placement
-- add select random block/item buttons to randomizer tab
-- persist show magnets in cursor setting
-- add colors to nudge buttons corresponding to helper
-- fix some offsets for offzone / MT stuff in maps
-- fix not setting player/vehicle model things correctly
-- add 'open folder' button for map
-- improve editor controls UI
-- add florenzius's tutorial
-- enable farlands helper / infinite precision free placement
-- allow column headers in ItemSpectators import
-- add block/item/both selector when filtering effects
-- add some things to item browser
-- fix bug: interaction between item editor rename feature and automation
-- add limit max draw distance in editor (like tweaker)
-- add copiable camera target pos
-- zero fids when applying shape from local file
-- fix some buttons in manipulate meshes not working
-- when camera unlocked, reduce MinDistance from 10 to 0.1
-- warn on duplicate free blocks under Caches menu
-- fix filtering UI on blocks/items with UI scale /= 1
-- add MT cursor and trigger placement tab in MT UI
-- fix some mesh duplication material modifer exceptions
-- add loading a source from file in manipulate meshes
-- add open item folder button
-- allow bigger lightmap uploads
-- add lightmap click to view object
-- fix blocking escape in item editor and MT
-- add rip ghost positions from MT
-- Kamikalash tutorial
-- fix translating a map with negative coords
-- fix showing previews in effect tabs when using coord ranges
-- add MT gps helper for camera targets
-- fix showing editor plugin warning when calculating shadows
-- turn off shape generation for static objects when attaching a shape
-- add lightmap overlay toggle + reopen last analyzed
-- NPlugTrigger_SWaypoint editable props
-- add checkerboard trigger pattern for MT editor
-- update safe game versions
+- TAB / FEAT: Inventory search. Hotkey: \ (backslash)
+- TAB: Custom Cursor -- all the advanced cursor/snapping stuff moved here
+- TAB: MT: randomize color for MT ghosts button (randomizes color on all keys)
+- FEAT: Cursor: promiscuous snapping: trees and things can snap to terrain of any type (Custom Cursor)
+- FEAT: Cursor: custom yaw
+- FEAT: Customize Lightmap: resolution, and some properties
+- FEAT: Recalculate lightmap: works best in mediatracker, might not work properly in the main editor
+- FEAT: Support local lightmap calculation via E++ server (see openplanet files)
+- FEAT: Macroblock opts: show some ghost/free blocks that wouldn't be shown otherwise
+- FEAT: Checkpoints tab: test from circle CPs
+- FEAT: add support for items/macroblocks to infinite precision / farlands helper
+- FEAT: add an E++ only clipboard for many UI inputs (thanks Sera Eris)
+- FEAT: Duplicate free block warning sign (Caches menu item) + Duplicate free block list under Blocks & Items
+- Refactor infinite precision so it's more all-or-nothing. **Disable infinite precision if you have issues placing items/blocks** (it's under Custom Cursor and Next Placed tabs)
+- Add support for CarRally to map vehicles
+- Refactor map properties Time of Day and enable raw access
+- Massively improve on new block/item hooks (much better performance/experience -- it now updates blocks/items before they are first rendered, so no refresh is necessary)
+- Add skin to picked block tab
+- Refactored how angles are handled for some cursor things
+- Add detailed view for cursor window
+- Persist BleacherSpectatorsFillRatio and BleacherSpectatorsCount
+- Add setting a random phase in apply phase offset
+- FIX: some fixes regarding custom cursor and macroblocks
+- FIX: a number of small bugs (divide by zero, edge cases)
+- FIX: index out of range with no club items
+- FIX: MT orbital cam and cursor/trigger stuff
+
+- EXPORTS:
+  - `CGameCtnAnchoredObject@ DuplicateAndAddItem(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem, bool updateItemsAfter = false)`
+    - Use this to add an item to the map. When the item is returned, it will not yet have been loaded into the map unless `updateItemsAfter` was true. Suggestion: unless you are adding 1 item only, keep `updateItemsAfter` as false.
+  - `SetAO_ItemModel(CGameCtnAnchoredObject@ ao, CGameItemModel@ itemModel)`
+    - Use this to set the item model of an anchored object. May crash the game if the item is not loaded and used arbitrarily. Intended to be paired with `DuplicateAndAddItem` so you can change the item model. This is a **beta** feature and might change in future.
+  - `void UpdateNewlyAddedItems(CGameCtnEditorFree@ editor)`
+    - Calling this will load items that have been added via `DuplicateAndAddItem`. This *SHOULD ALWAYS* be called after adding items (ideally you batch them). The game might crash at some point in the future otherwise.
+    - This also adds an undo/redo autosave point (it does not autosave the map, just lets the mapper press 'undo').

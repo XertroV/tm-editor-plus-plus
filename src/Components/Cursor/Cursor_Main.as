@@ -214,7 +214,7 @@ class CursorFavTab : Tab {
 class CustomCursorTab : EffectTab {
 
     CustomCursorTab(TabGroup@ parent) {
-        super(parent, "Custom Cursor", Icons::HandPointerO + Icons::ExclamationTriangle);
+        super(parent, "Custom Cursor" + NewIndicator, Icons::HandPointerO + Icons::ExclamationTriangle);
     }
 
     bool get__IsActive() override property {
