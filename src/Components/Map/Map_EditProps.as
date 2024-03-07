@@ -133,6 +133,10 @@ class MapEditPropsTab : Tab {
         if (UX::SmallButton(Icons::FolderOpenO+"##map-folder")) {
             OpenExplorerPath(IO::FromUserGameFolder("Maps/" + map.MapInfo.Path));
         }
+        UI::SameLine();
+        if (UX::SmallButton(Icons::FloppyO+"##save-map")) {
+            Editor::SaveMapSameName(editor);
+        }
         UI::EndDisabled();
         UI::SameLine();
         UI::Text("Filename: " + map.MapInfo.FileName);
@@ -262,6 +266,22 @@ class MapEditPropsTab : Tab {
 
         UI::Separator();
 
+        S_ShowVehicleTestWindow = UI::Checkbox("Show choice of vehicle when testing?", S_ShowVehicleTestWindow);
+        AddSimpleTooltip("When testing the map, show a window that allows you to choose between different vehicles. (excludes validating mode)");
+
+        if (UI::CollapsingHeader("Map Vehicle Properties")) {
+            UI::Indent();
+            DrawMapVehicleChoices();
+            UI::Unindent();
+        }
+
+        UI::Separator();
+
+        UI::Text("Map Mod:");
+        DrawMapModPackChoices();
+
+        UI::Separator();
+
         DrawMediaTrackerSettings();
 
         UI::Separator();
@@ -287,15 +307,6 @@ class MapEditPropsTab : Tab {
         }
 
         DrawOffzoneSettings();
-
-        UI::Separator();
-
-        S_ShowVehicleTestWindow = UI::Checkbox("Show choice of vehicle when testing?", S_ShowVehicleTestWindow);
-        AddSimpleTooltip("When testing the map, show a window that allows you to choose between different vehicles. (excludes validating mode)");
-
-        if (UI::CollapsingHeader("Map Vehicle Properties")) {
-            DrawMapVehicleChoices();
-        }
     }
 
     void DrawChangeGameBuildOptions() {
@@ -333,6 +344,151 @@ class MapEditPropsTab : Tab {
         }
 #endif
     }
+
+    CSystemPackDesc@ copiedModPack;
+    string m_modUrl;
+
+    void DrawMapModPackChoices() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto map = editor.Challenge;
+        auto modPackDesc = map.ModPackDesc;
+
+        UI::Indent();
+
+        if (modPackDesc !is null) {
+            UI::Text("Current Map Mod:");
+            UI::Indent();
+            CopiableLabeledValue("Mod Pack", modPackDesc.Name);
+            CopiableLabeledValue("URL", modPackDesc.Url);
+            if (modPackDesc.Fid is null) {
+                UI::TextWrapped("This mod pack has no FID.");
+            } else {
+                CopiableLabeledValue("File Path", modPackDesc.Fid.FullFileName);
+            }
+            UI::Unindent();
+
+            if (UI::Button("Copy Mod Pack")) {
+                SetCopiedModPack(modPackDesc);
+            }
+        } else {
+            UI::Text("Map has no mod.");
+        }
+
+        if (UI::CollapsingHeader("Set mod from URL")) {
+            UI::Indent();
+            UI::TextWrapped("This will set the mod pack from a URL. It will also automatically save and reload the map.");
+            m_modUrl = UI::InputText("URL##modpack-url", m_modUrl);
+            if (UI::Button("Set Mod Pack")) {
+                startnew(CoroutineFunc(SetModPackFromUrl));
+            }
+            UI::Unindent();
+        }
+
+        if (UI::CollapsingHeader("How to copy/paste a map's mod pack")) {
+            UI::TextWrapped("Replacing the Mod Pack:");
+            UI::Indent();
+            UI::TextWrapped("1. Load a *source* map with the mod you want to use. We are going to copy it from this map to the destination map.");
+            UI::TextWrapped("2. Click 'Copy Mod Pack'");
+            UI::TextWrapped("3. Load the *destination* map. We are going to paste the mod pack from the source map to this map.");
+            UI::TextWrapped("4. Click 'Paste Mod Pack'");
+            UI::TextWrapped("5. Save and reload the map.");
+            UI::Unindent();
+        }
+
+        if (copiedModPack is null) {
+            UI::TextWrapped("No mod pack has been copied yet.");
+        } else {
+            UI::TextWrapped("Current Copied Mod Pack:");
+            UI::Indent();
+            CopiableLabeledValue("Mod Pack", copiedModPack.Name);
+            CopiableLabeledValue("URL", copiedModPack.Url);
+            if (copiedModPack.Fid is null) {
+                UI::TextWrapped("This mod pack has no FID.");
+            } else {
+                CopiableLabeledValue("File Path", copiedModPack.Fid.FullFileName);
+            }
+            UI::Unindent();
+#if SIG_DEVELOPER
+            if (UI::Button("Explore Copied Mod Pack")) {
+                ExploreNod("Copied Mod Pack", copiedModPack);
+            }
+#endif
+            if (UI::Button("Paste Mod Pack (Warning! This will save and reload the map)")) {
+                Editor::SetModPackDesc(map, copiedModPack);
+                startnew(Editor::SaveAndReloadMap);
+            }
+            if (UI::Button("Clear Copied Mod Pack")) {
+                copiedModPack.MwRelease();
+                @copiedModPack = null;
+            }
+        }
+        UI::Unindent();
+    }
+
+    void SetCopiedModPack(CSystemPackDesc@ desc) {
+        if (copiedModPack !is null) {
+            copiedModPack.MwRelease();
+        }
+        @copiedModPack = desc;
+        copiedModPack.MwAddRef();
+    }
+
+    void SetModPackFromUrl() {
+        auto url = m_modUrl;
+        if (url.Length == 0) return;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto map = editor.Challenge;
+        auto pmt = editor.PluginMapType;
+        auto inv = Editor::GetInventoryCache();
+        auto invBI = inv.GetBlockByName("TechnicsScreen1x1Straight");
+        if (invBI is null) {
+            NotifyWarning("Could not find TechnicsScreen1x1Straight block in inventory cache.");
+            return;
+        }
+        auto blockInfo = cast<CGameCtnBlockInfo>(invBI.GetCollectorNod());
+        if (blockInfo is null) {
+            NotifyWarning("Could not find TechnicsScreen1x1Straight block.");
+            return;
+        }
+        auto placeY = map.Size.y - 4;
+        uint placeX = 0, placeZ = 0;
+        bool placed = false;
+        for (placeX = 4; placeX < map.Size.x-4; placeX++) {
+            for (placeZ = 4; placeZ < map.Size.z-4; placeZ++) {
+                if (placed = pmt.PlaceBlock(blockInfo, int3(placeX, placeY, placeZ), CGameEditorPluginMap::ECardinalDirections::North)) {
+                    trace('placed screen block');
+                    break;
+                }
+            }
+            if (placed) break;
+        }
+        auto block = pmt.GetBlock(int3(placeX, placeY, placeZ));
+        if (block is null) {
+            NotifyWarning("Could not get placed screen block!!\nYou will need to remove it manually. Coords: " + int3(placeX, placeY, placeZ).ToString());
+            return;
+        }
+        // note: skin might not be null when mapper has already been placing skinned blocks
+
+        pmt.SetBlockSkin(block, url);
+        if (block.Skin is null) {
+            NotifyWarning("Could not set skin on screen block.");
+            return;
+        }
+        if (block.Skin.PackDesc is null) {
+            NotifyWarning("Skin has no pack desc.");
+            return;
+        }
+
+        // SetCopiedModPack(block.Skin.PackDesc);
+        Editor::SetModPackDesc(map, block.Skin.PackDesc);
+
+        if (!pmt.RemoveBlock(int3(placeX, placeY, placeZ))) {
+            NotifyWarning("Could not remove screen block.");
+        }
+
+        startnew(Editor::SaveAndReloadMap);
+    }
+
 
     void DrawMapVehicleChoices() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);

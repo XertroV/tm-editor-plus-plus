@@ -1,0 +1,5 @@
+[DSystemPackDesc : SZ_PACKDESC]
+NativeClass = CSystemPackDesc
+Name = string, 0x20, GS
+Url = string, 0x30, GS
+Fid = CSystemFidFile, 0x60, GS

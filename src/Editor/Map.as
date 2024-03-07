@@ -58,13 +58,25 @@ namespace Editor {
 
     bool SaveMapSameName(CGameCtnEditorFree@ editor) {
         string fileName = editor.Challenge.MapInfo.FileName;
+        _restoreMapName = editor.Challenge.MapName;
         if (fileName.Length == 0) {
             NotifyWarning("Map must be saved, first.");
             return false;
         }
         editor.PluginMapType.SaveMap(fileName);
+        startnew(_RestoreMapName);
         Log::Trace('saved map');
         return true;
+    }
+
+    string _restoreMapName;
+    // set after calling SaveMapSameName
+    void _RestoreMapName() {
+        yield();
+        if (_restoreMapName.Length == 0) return;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        editor.Challenge.MapName = _restoreMapName;
+        Log::Trace('restored map name: ' + _restoreMapName);
     }
 
     void NoSaveAndReloadMap() {
@@ -84,7 +96,7 @@ namespace Editor {
         app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
         AwaitEditor();
         SetCamAnimationGoTo(currCam);
-
+        @editor = cast<CGameCtnEditorFree>(GetApp().Editor);
     }
 
     void SaveAndReloadMap() {
@@ -92,7 +104,7 @@ namespace Editor {
         auto app = cast<CTrackMania>(GetApp());
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         if (!SaveMapSameName(editor)) {
-            NotifyWarning("Map must be saved, first.");
+            NotifyWarning("Map must be saved, first. Please save and reload manually!");
             return;
         }
         auto currCam = GetCurrentCamState(editor);
@@ -103,9 +115,11 @@ namespace Editor {
         AwaitReturnToMenu();
         app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
         AwaitEditor();
+        startnew(_RestoreMapName);
         SetCamAnimationGoTo(currCam);
     }
 
+    /// unused and unmaintained
     void SaveAndReloadMapWithRefreshMap(const string &in refreshMapName) {
         Log::Trace('save and reload map');
         auto app = cast<CTrackMania>(GetApp());
@@ -195,6 +209,16 @@ namespace Editor {
             return Dev::GetOffsetString(fakeNod, 0x0);
         }
         return "";
+    }
+
+    // save and reload map to make this safe
+    void SetModPackDesc(CGameCtnChallenge@ map, CSystemPackDesc@ newDesc) {
+        auto priorModPack = map.ModPackDesc;
+        newDesc.MwAddRef();
+        Dev::SetOffset(map, O_MAP_MODPACK_DESC_OFFSET, newDesc);
+        if (priorModPack !is null) {
+            priorModPack.MwRelease();
+        }
     }
 }
 

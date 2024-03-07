@@ -67,8 +67,8 @@ class DevMiscTab : Tab {
             startnew(CoroutineFunc(Remove50PctItemsTest));
         }
         UI::Separator();
+        auto pmm = Editor::GetPluginMapManager(editor);
         if (UI::Button("Explore PluginMapManager")) {
-            auto pmm = Editor::GetPluginMapManager(editor);
             if (pmm is null) NotifyError("PluginMapManager was null!");
             else ExploreNod("PluginMapManager", pmm);
         }
@@ -78,6 +78,40 @@ class DevMiscTab : Tab {
         }
         if (UI::Button("enable thumb update")) {
             Editor::EnableMapThumbnailUpdate();
+        }
+        UI::Separator();
+        if (UI::CollapsingHeader("Latest Macroblock Instance")) {
+            auto mbInst = editor.PluginMapType.GetLatestMacroblockInstance();
+            if (mbInst !is null) {
+                CopiableLabeledValue("mb inst ptr", Text::FormatPointer(Dev_GetPointerForNod(mbInst)));
+                CopiableLabeledValue("mb inst name", mbInst.Id.GetName());
+                CopiableLabeledValue("mb inst order", tostring(mbInst.Order));
+                CopiableLabeledValue("mb inst ref count", tostring(Reflection::GetRefCount(mbInst)));
+                if (UI::Button("Explore MacroblockInstance")) {
+                    ExploreNod("MacroblockInstance", mbInst);
+                }
+            } else {
+                UI::Text("No MacroblockInstance returned.");
+            }
+
+            if (UI::Button("Try creating mb inst")) {
+                auto mbStr = "Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx";
+                auto model = editor.PluginMapType.GetMacroblockModelFromFilePath(mbStr);
+                if (model is null) {
+                    print("Failed to get MacroblockModel from file path.");
+                } else {
+                    auto mbInst = editor.PluginMapType.CreateMacroblockInstance(model, nat3(10, 10, 10), CGameEditorPluginMap::ECardinalDirections::North, CGameEditorPluginMap::EMapElemColor::Default, false);
+                    if (mbInst !is null) {
+                        print("inst not null");
+                        print("inst ptr: " + Text::FormatPointer(Dev_GetPointerForNod(mbInst)));
+                        print("inst name: " + mbInst.Id.GetName());
+                        print("inst order: " + mbInst.Order);
+                        print("inst ref count: " + Reflection::GetRefCount(mbInst));
+                    } else {
+                        print("Failed to create MacroblockInstance.");
+                    }
+                }
+            }
         }
     }
 

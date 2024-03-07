@@ -8,7 +8,11 @@ enum LogLevel {
 }
 
 [Setting hidden]
+#if DEV
+LogLevel S_LogLevel = LogLevel::TRACE;
+#else
 LogLevel S_LogLevel = LogLevel::INFO;
+#endif
 
 namespace Log {
     void Trace(const string &in msg) {

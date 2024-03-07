@@ -32,9 +32,13 @@ BlockInfo = CGameCtnBlockInfoClassic, 0x50, GS
 NativeClass = CGameCtnMacroBlockInfo
 # offset: 0x150
 Buffer: Blocks = DGameCtnMacroBlockInfo_Blocks, O_MACROBLOCK_BLOCKSBUF, SZ_MACROBLOCK_BLOCKSBUFEL, true
-# Buffer: Skins = DGameCtnMacroBlockInfo_Skins, 0x160, 0x18, true
+Buffer: Skins = DGameCtnMacroBlockInfo_Skins, O_MACROBLOCK_SKINSBUF, SZ_MACROBLOCK_SKINSBUFEL, true
 #
 Buffer: Items = DGameCtnMacroBlockInfo_Items, O_MACROBLOCK_ITEMSBUF, SZ_MACROBLOCK_ITEMSBUFEL, true
+
+[DGameCtnMacroBlockInfo_Skin: SZ_MACROBLOCK_SKINSBUFEL]
+Skin = CGameCtnBlockSkin, 0x0, GS
+BlockIx = uint, 0x14, GS
 
 [DGameCtnMacroBlockInfo_Item: SZ_MACROBLOCK_ITEMSBUFEL]
 name = string, 0, GS, MwIdValue

@@ -82,6 +82,7 @@ class MacroblockSelectionTab : Tab {
 
 void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
     auto blocksBuf = RawBuffer(mbi, O_MACROBLOCK_BLOCKSBUF, SZ_MACROBLOCK_BLOCKSBUFEL, true);
+    auto skinsBuf = RawBuffer(mbi, O_MACROBLOCK_SKINSBUF, SZ_MACROBLOCK_SKINSBUFEL, true);
     auto itemsBuf = RawBuffer(mbi, O_MACROBLOCK_ITEMSBUF, SZ_MACROBLOCK_ITEMSBUFEL, true);
     auto len = blocksBuf.Length;
     if (UI::TreeNode("Blocks: " + len + "###mbBlocksBuf")) {
@@ -122,6 +123,22 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
 // #if DEV
 //                 item.DrawResearchView();
 // #endif
+                UI::PopID();
+            }
+        }
+        UI::TreePop();
+    }
+
+    len = skinsBuf.Length;
+    if (UI::TreeNode("Skins: " + len + "###mbSkinsBuf")) {
+        UI::ListClipper clip(len);
+        while (clip.Step()) {
+            for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
+                auto item = DGameCtnMacroBlockInfo_Skin(skinsBuf[i]);
+                UI::PushID(i);
+#if DEV
+                item.DrawResearchView();
+#endif
                 UI::PopID();
             }
         }

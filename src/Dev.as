@@ -313,11 +313,12 @@ class ReferencedNod {
 
 
 //  dP"Yb  888888 888888 .dP"Y8 888888 888888 .dP"Y8      d888         .dP"Y8 88 8888P 888888
-// dP   Yb 88__   88__   `Ybo." 88__     88   `Ybo."     dP_______     `Ybo." 88   dP  88__
-// Yb   dP 88""   88""   o.`Y8b 88""     88   o.`Y8b     Yb"""88""     o.`Y8b 88  dP   88""
-//  YbodP  88     88     8bodP' 888888   88   8bodP'     `Ybo 88       8bodP' 88 d8888 888888
+// dP   Yb 88__   88__    Ybo." 88__     88    Ybo."     dP_______      Ybo." 88   dP  88__
+// Yb   dP 88""   88""   o. Y8b 88""     88   o. Y8b     Yb"'"88""     o. Y8b 88  dP   88""
+//  YbodP  88     88     8bodP' 888888   88   8bodP'      Ybo 88       8bodP' 88 d8888 888888
 
 
+const uint16 SZ_PACKDESC = 0xB0;
 
 const uint16 SZ_CTNCHALLENGE = 0x870;
 // map.TitleId
@@ -331,6 +332,8 @@ const uint16 O_MAP_PLAYERMODEL_COLLECTION_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 
 const uint16 O_MAP_PLAYERMODEL_AUTHOR_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x64); // 0x64 - 0x74;
 //
 const uint16 O_MAP_BUILDINFO_STR = O_MAP_TITLEID + 0x4;
+
+const uint16 O_MAP_MODPACK_DESC_OFFSET = GetOffset("CGameCtnChallenge", "ModPackDesc");
 
 const uint16 O_MAP_CUSTMUSICPACKDESC = GetOffset("CGameCtnChallenge", "CustomMusicPackDesc");
 // seconds / 86400 * 65535, range 0x0000 to 0xFFFF
@@ -428,8 +431,12 @@ const uint16 O_SOLID2MODEL_CUSTMAT_BUF = 0x1F8;
 
 const uint16 O_SOLID2MODEL_ITEM_FID = 0x338;
 
-
+// more block offsets in Editor/Blocks.as
+// 0x6C
+const uint16 O_CTNBLOCK_DIR = GetOffset("CGameCtnBlock", "Dir");
 const uint16 O_CTNBLOCK_SKIN = GetOffset("CGameCtnBlock", "Skin");
+// originally 0xA8 -- is FFFFFFFF when not in a macroblock
+const uint16 O_CTNBLOCK_MACROBLOCK_INST_NB = O_CTNBLOCK_DIR + 0x3C;
 
 
 // no more than 0x170 bytes
@@ -522,7 +529,7 @@ uint16 SZ_MEDIABLOCKENTITY_KEY = 0x1C;
 /// Yb    dP 888888    db    88""Yb 88     888888 .dP"Y8
 ///  Yb  dP    88     dPYb   88__dP 88     88__   `Ybo."
 ///   YbdP     88    dP__Yb  88""Yb 88  .o 88""   o.`Y8b
-///    YP      88   dP""""Yb 88oodP 88ood8 888888 8bodP'
+///    YP      88   dP"'""Yb 88oodP 88ood8 888888 8bodP'
 
 namespace VTables {
     uint64 GetVTableFor(CMwNod@ nod) {
@@ -553,7 +560,7 @@ namespace VTables {
 // 88""Yb    db    Yb        dP     88""Yb 88   88 888888 888888 888888 88""Yb
 // 88__dP   dPYb    Yb  db  dP      88__dP 88   88 88__   88__   88__   88__dP
 // 88"Yb   dP__Yb    YbdPYbdP       88""Yb Y8   8P 88""   88""   88""   88"Yb
-// 88  Yb dP""""Yb    YP  YP        88oodP `YbodP' 88     88     888888 88  Yb
+// 88  Yb dP"'""Yb    YP  YP        88oodP `YbodP' 88     88     888888 88  Yb
 
 
 // A class to safely access raw buffers
@@ -992,7 +999,7 @@ RV_ValueRenderTypes g_RV_RenderAs = RV_ValueRenderTypes::Float;
 
 // 88  88  dP"Yb   dP"Yb  88  dP 88  88 888888 88     88""Yb 888888 88""Yb
 // 88  88 dP   Yb dP   Yb 88odP  88  88 88__   88     88__dP 88__   88__dP
-// 888888 Yb   dP Yb   dP 88"Yb  888888 88""   88  .o 88"""  88""   88"Yb
+// 888888 Yb   dP Yb   dP 88"Yb  888888 88""   88  .o 88"'"  88""   88"Yb
 // 88  88  YbodP   YbodP  88  Yb 88  88 888888 88ood8 88     888888 88  Yb
 
 

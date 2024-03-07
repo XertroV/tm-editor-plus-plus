@@ -76,7 +76,7 @@ class DGameCtnMacroBlockInfo : RawBufferElem {
 
 	// offset: 0x150
 	DGameCtnMacroBlockInfo_Blocks@ get_Blocks() { return DGameCtnMacroBlockInfo_Blocks(this.GetBuffer(O_MACROBLOCK_BLOCKSBUF, SZ_MACROBLOCK_BLOCKSBUFEL, true)); }
-	// Buffer: Skins = DGameCtnMacroBlockInfo_Skins, 0x160, 0x18, true
+	DGameCtnMacroBlockInfo_Skins@ get_Skins() { return DGameCtnMacroBlockInfo_Skins(this.GetBuffer(O_MACROBLOCK_SKINSBUF, SZ_MACROBLOCK_SKINSBUFEL, true)); }
 	// 
 	DGameCtnMacroBlockInfo_Items@ get_Items() { return DGameCtnMacroBlockInfo_Items(this.GetBuffer(O_MACROBLOCK_ITEMSBUF, SZ_MACROBLOCK_ITEMSBUFEL, true)); }
 }
@@ -91,6 +91,16 @@ class DGameCtnMacroBlockInfo_Blocks : RawBuffer {
 }
 
 
+class DGameCtnMacroBlockInfo_Skins : RawBuffer {
+	DGameCtnMacroBlockInfo_Skins(RawBuffer@ buf) {
+		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
+	}
+	DGameCtnMacroBlockInfo_Skin@ GetSkin(uint i) {
+		return DGameCtnMacroBlockInfo_Skin(this[i]);
+	}
+}
+
+
 class DGameCtnMacroBlockInfo_Items : RawBuffer {
 	DGameCtnMacroBlockInfo_Items(RawBuffer@ buf) {
 		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
@@ -99,6 +109,22 @@ class DGameCtnMacroBlockInfo_Items : RawBuffer {
 		return DGameCtnMacroBlockInfo_Item(this[i]);
 	}
 }
+
+class DGameCtnMacroBlockInfo_Skin : RawBufferElem {
+	DGameCtnMacroBlockInfo_Skin(RawBufferElem@ el) {
+		if (el.ElSize != SZ_MACROBLOCK_SKINSBUFEL) throw("invalid size for DGameCtnMacroBlockInfo_Skin");
+		super(el.Ptr, el.ElSize);
+	}
+	DGameCtnMacroBlockInfo_Skin(uint64 ptr) {
+		super(ptr, SZ_MACROBLOCK_SKINSBUFEL);
+	}
+
+	CGameCtnBlockSkin@ get_Skin() { return cast<CGameCtnBlockSkin>(this.GetNod(0x0)); }
+	void set_Skin(CGameCtnBlockSkin@ value) { this.SetNod(0x0, value); }
+	uint get_BlockIx() { return (this.GetUint32(0x14)); }
+	void set_BlockIx(uint value) { this.SetUint32(0x14, value); }
+}
+
 
 class DGameCtnMacroBlockInfo_Item : RawBufferElem {
 	DGameCtnMacroBlockInfo_Item(RawBufferElem@ el) {
