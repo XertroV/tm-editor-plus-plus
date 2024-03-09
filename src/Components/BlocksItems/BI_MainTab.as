@@ -12,6 +12,7 @@ class BI_MainTab : Tab {
         ViewClassicBlocksTab(Children);
         ViewGhostBlocksTab(Children);
         @g_DuplicateFreeBlocks_SubTab = ViewDuplicateFreeBlocksTab(Children);
+        WaypointsBITab(Children);
         // ViewKinematicsTab(Children);
     }
 
@@ -114,7 +115,6 @@ class ViewAllBlocksTab : BlockItemListTab {
             return;
         }
 
-        bool isCP = block.WaypointSpecialProperty !is null;
         auto blockId = Editor::GetBlockUniqueID(block);
 
         UI::TableNextColumn();
@@ -145,7 +145,7 @@ class ViewAllBlocksTab : BlockItemListTab {
         UI::Text(tostring(block.MapElemLmQuality));
 
         UI::TableNextColumn();
-        UI::Text(isCP ? cpYesMark : cpNoMark);
+        UI::Text(GetCpMark(block.BlockInfo.WaypointType));
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
@@ -220,7 +220,6 @@ class ViewAllItemsTab : BlockItemListTab {
         }
 
         auto blockId = Editor::GetItemUniqueBlockID(item);
-        bool isCP = item.WaypointSpecialProperty !is null;
 
 
         UI::TableNextColumn();
@@ -242,7 +241,7 @@ class ViewAllItemsTab : BlockItemListTab {
         UI::Text(tostring(item.MapElemLmQuality));
 
         UI::TableNextColumn();
-        UI::Text(isCP ? cpYesMark : cpNoMark);
+        UI::Text(GetCpMark(item.ItemModel.WaypointType));
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
@@ -298,7 +297,7 @@ class ViewSkinnedItemsTab : ViewAllItemsTab {
 
 class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
     ViewDuplicateFreeBlocksTab(TabGroup@ p) {
-        super(p, "Dup. Free Blks", Icons::Cubes, BIListTabType::Blocks);
+        super(p, "Dup. Blks", Icons::Cubes, BIListTabType::Blocks);
         nbCols = 9;
     }
 
@@ -311,5 +310,53 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
         auto cacheBlock = mapCache.DuplicateBlocks[i];
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return cacheBlock.FindMe(editor.PluginMapType);
+    }
+}
+
+class WaypointsBITab : Tab {
+    WaypointsBITab(TabGroup@ p) {
+        super(p, "Waypoints", Icons::FlagCheckered);
+        WaypointBlocksTab(Children);
+        WaypointItemsTab(Children);
+    }
+
+    void DrawInner() override {
+        UI::Text("To refresh: Caches > Refresh Map Block/Item Cache");
+        Children.DrawTabs();
+    }
+}
+
+class WaypointBlocksTab : ViewAllBlocksTab {
+    WaypointBlocksTab(TabGroup@ p) {
+        super(p, "Wp Blocks", Icons::Cubes + Icons::FlagCheckered, BIListTabType::Blocks);
+        nbCols = 9;
+    }
+
+    uint GetNbObjects(CGameCtnChallenge@ map) override {
+        return (Editor::GetMapCache()).WaypointBlocks.Length;
+    }
+
+    CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) override {
+        auto mapCache = Editor::GetMapCache();
+        auto cacheBlock = mapCache.WaypointBlocks[i];
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return cacheBlock.FindMe(editor.PluginMapType);
+    }
+}
+
+class WaypointItemsTab : ViewAllItemsTab {
+    WaypointItemsTab(TabGroup@ p) {
+        super(p, "Wp Items", Icons::Tree + Icons::FlagCheckered, BIListTabType::Items);
+    }
+
+    uint GetNbObjects(CGameCtnChallenge@ map) override {
+        return (Editor::GetMapCache()).WaypointItems.Length;
+    }
+
+    CGameCtnAnchoredObject@ GetItem(CGameCtnChallenge@ map, uint i) override {
+        auto mapCache = Editor::GetMapCache();
+        auto cacheItem = mapCache.WaypointItems[i];
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return cacheItem.FindMe(editor.PluginMapType);
     }
 }

@@ -2,8 +2,20 @@ enum BIListTabType {
     Blocks, BakedBlocks, Items
 }
 
-const string cpYesMark = "\\$8f0" + Icons::Check;
-const string cpNoMark = "\\$c84" + Icons::Times;
+const string cpYesMark = "\\$88f" + Icons::Check + " CP";
+const string cpNoMark = "\\$b86" + Icons::Times;
+const string cpStartMark = "\\$8f0Start";
+const string cpFinMark = "\\$f40Finish";
+const string cpMultilapMark = "\\$ff0Multilap";
+
+const string GetCpMark(int wpType) {
+    if (wpType == 0) return cpStartMark;
+    if (wpType == 1) return cpFinMark;
+    if (wpType == 2) return cpYesMark;
+    if (wpType == 3) return cpNoMark;
+    if (wpType == 4) return cpMultilapMark;
+    return "\\$ccf??";
+}
 
 class BlockItemListTab : Tab {
     bool useBakedBlocks = false;

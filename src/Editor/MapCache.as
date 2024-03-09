@@ -1,4 +1,14 @@
+enum WaypointType {
+    Start = 0,
+    Finish,
+    Checkpoint,
+    None,
+    StartFinish,
+    Dispenser,
+}
+
 namespace Editor {
+
     MapCache@ _MapCache = MapCache();
     MapCache@ GetMapCache() {
         return _MapCache;
@@ -11,6 +21,7 @@ namespace Editor {
         int color;
         bool Exists = true;
         bool _hasSkin;
+        WaypointType WaypointTy = WaypointType::None;
         uint Id;
         string IdName;
         mat4 mat;
@@ -28,6 +39,9 @@ namespace Editor {
         bool get_HasSkin() {
             return _hasSkin;
         }
+        bool get_IsWaypoint() {
+            return WaypointTy != WaypointType::None;
+        }
     }
 
     class ItemInMap : ObjInMap {
@@ -44,6 +58,7 @@ namespace Editor {
             IdName = item.ItemModel.IdName;
             mat = mat4::Translate(pos) * EulerToMat(rot);
             _hasSkin = Editor::GetItemBGSkin(item) !is null || Editor::GetItemFGSkin(item) !is null;
+            WaypointTy = WaypointType(item.ItemModel.WaypointType);
         }
 
         bool IsStale(CGameEditorPluginMap@ pmt) override {
@@ -117,6 +132,7 @@ namespace Editor {
             size = Editor::GetBlockSize(block);
             mat = mat4::Translate(pos) * EulerToMat(rot);
             _hasSkin = block.Skin !is null;
+            WaypointTy = WaypointType(block.BlockInfo.WaypointType);
         }
 
         string ToString() {
@@ -216,6 +232,10 @@ namespace Editor {
         const ItemInMap@[] get_Items() { return _Items; }
         protected ItemInMap@[] _SkinnedItems;
         const ItemInMap@[] get_SkinnedItems() { return _SkinnedItems; }
+        protected BlockInMap@[] _WaypointBlocks;
+        const BlockInMap@[] get_WaypointBlocks() { return _WaypointBlocks; }
+        protected ItemInMap@[] _WaypointItems;
+        const ItemInMap@[] get_WaypointItems() { return _WaypointItems; }
 
         uint lastRefreshNonce = 0;
         void RefreshCache() {
@@ -229,6 +249,8 @@ namespace Editor {
             _Blocks.RemoveRange(0, _Blocks.Length);
             _SkinnedItems.RemoveRange(0, _SkinnedItems.Length);
             _SkinnedBlocks.RemoveRange(0, _SkinnedBlocks.Length);
+            _WaypointBlocks.RemoveRange(0, _WaypointBlocks.Length);
+            _WaypointItems.RemoveRange(0, _WaypointItems.Length);
             ItemTypes.RemoveRange(0, ItemTypes.Length);
             BlockTypes.RemoveRange(0, BlockTypes.Length);
             ItemTypesLower.RemoveRange(0, ItemTypesLower.Length);
@@ -307,6 +329,7 @@ namespace Editor {
         protected void AddBlock(BlockInMap@ b) {
             loadProgress++;
             _Blocks.InsertLast(b);
+            if (b.IsWaypoint) _WaypointBlocks.InsertLast(b);
             if (b.HasSkin) _SkinnedBlocks.InsertLast(b);
             if (!_BlockIdNameMap.Exists(b.IdName)) {
                 @_BlockIdNameMap[b.IdName] = array<BlockInMap@>();
@@ -342,6 +365,7 @@ namespace Editor {
         protected void AddItem(ItemInMap@ b) {
             loadProgress++;
             _Items.InsertLast(b);
+            if (b.IsWaypoint) _WaypointItems.InsertLast(b);
             if (b.HasSkin) _SkinnedItems.InsertLast(b);
             if (!_ItemIdNameMap.Exists(b.IdName)) {
                 @_ItemIdNameMap[b.IdName] = array<ItemInMap@>();
@@ -377,79 +401,79 @@ namespace Editor {
     }
 
     // todo: does not work
-    void FixDuplicateBlocks() {
-        return;
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) {
-            NotifyWarning("Cannot fix duplicate blocks when editor is null.");
-            return;
-        }
-        auto mapCache = GetMapCache();
-        auto @dupKeys = mapCache.DuplicateBlockKeys;
-        uint[] moveIxs = {};
-        for (uint i = 0; i < dupKeys.Length; i++) {
-            auto dupBlocks = mapCache.GetBlocksByHash(dupKeys[i]);
-            for (uint j = 1; j < dupBlocks.Length; j++) {
-                moveIxs.InsertLast(dupBlocks[j].ix);
-                if (j < 5)
-                    print(dupBlocks[j].IdName + ", " + dupBlocks[j].pos.ToString() + ", " + dupBlocks[j].rot.ToString());
-            }
-            yield();
-        }
-        auto map = editor.Challenge;
-        int nbBlocks = map.Blocks.Length;
-        int nbToDel = moveIxs.Length;
+    // void FixDuplicateBlocks() {
+    //     return;
+    //     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    //     if (editor is null) {
+    //         NotifyWarning("Cannot fix duplicate blocks when editor is null.");
+    //         return;
+    //     }
+    //     auto mapCache = GetMapCache();
+    //     auto @dupKeys = mapCache.DuplicateBlockKeys;
+    //     uint[] moveIxs = {};
+    //     for (uint i = 0; i < dupKeys.Length; i++) {
+    //         auto dupBlocks = mapCache.GetBlocksByHash(dupKeys[i]);
+    //         for (uint j = 1; j < dupBlocks.Length; j++) {
+    //             moveIxs.InsertLast(dupBlocks[j].ix);
+    //             if (j < 5)
+    //                 print(dupBlocks[j].IdName + ", " + dupBlocks[j].pos.ToString() + ", " + dupBlocks[j].rot.ToString());
+    //         }
+    //         yield();
+    //     }
+    //     auto map = editor.Challenge;
+    //     int nbBlocks = map.Blocks.Length;
+    //     int nbToDel = moveIxs.Length;
 
-        int[] fakeBlocks = {};
-        for (uint i = 0; i < nbBlocks; i++) {
-            fakeBlocks.InsertLast(i);
-        }
+    //     int[] fakeBlocks = {};
+    //     for (uint i = 0; i < nbBlocks; i++) {
+    //         fakeBlocks.InsertLast(i);
+    //     }
 
-        NotifyWarning("About to delete " + nbToDel + " blocks");
-        moveIxs.SortAsc();
+    //     NotifyWarning("About to delete " + nbToDel + " blocks");
+    //     moveIxs.SortAsc();
 
-        auto o_map_blocks = GetOffset(map, "Blocks");
-        auto mapBlocksBufFakeNod = Dev::GetOffsetNod(map, o_map_blocks);
-        uint32 mapBlocksBufLen = Dev::GetOffsetUint32(map, o_map_blocks + 0x8);
-        if (mapBlocksBufLen != nbBlocks) throw("map blocks buf length != .Blocks.Length");
+    //     auto o_map_blocks = GetOffset(map, "Blocks");
+    //     auto mapBlocksBufFakeNod = Dev::GetOffsetNod(map, o_map_blocks);
+    //     uint32 mapBlocksBufLen = Dev::GetOffsetUint32(map, o_map_blocks + 0x8);
+    //     if (mapBlocksBufLen != nbBlocks) throw("map blocks buf length != .Blocks.Length");
 
-        for (int i = nbBlocks - 1; nbToDel > 0; i--) {
-            nbToDel--;
-            auto badIx = moveIxs[nbToDel];
-            auto goodBlock = map.Blocks[i];
-            auto badBlock = map.Blocks[badIx];
-            // auto goodBlock = fakeBlocks[i];
-            // auto badBlock = fakeBlocks[badIx];
+    //     for (int i = nbBlocks - 1; nbToDel > 0; i--) {
+    //         nbToDel--;
+    //         auto badIx = moveIxs[nbToDel];
+    //         auto goodBlock = map.Blocks[i];
+    //         auto badBlock = map.Blocks[badIx];
+    //         // auto goodBlock = fakeBlocks[i];
+    //         // auto badBlock = fakeBlocks[badIx];
 
-            // swap
-            Dev::SetOffset(mapBlocksBufFakeNod, 0x8 * i, badBlock);
-            Dev::SetOffset(mapBlocksBufFakeNod, 0x8 * badIx, goodBlock);
+    //         // swap
+    //         Dev::SetOffset(mapBlocksBufFakeNod, 0x8 * i, badBlock);
+    //         Dev::SetOffset(mapBlocksBufFakeNod, 0x8 * badIx, goodBlock);
 
-            // fakeBlocks[i] = badBlock;
-            // fakeBlocks[badIx] = goodBlock;
+    //         // fakeBlocks[i] = badBlock;
+    //         // fakeBlocks[badIx] = goodBlock;
 
-        }
+    //     }
 
-        Dev::SetOffset(map, o_map_blocks + 0x8, uint(nbBlocks - nbToDel));
+    //     Dev::SetOffset(map, o_map_blocks + 0x8, uint(nbBlocks - nbToDel));
 
-        SaveAndReloadMap();
+    //     SaveAndReloadMap();
 
-        // string[] newOrder = {};
-        // for (uint i = 0; i < fakeBlocks.Length; i++) {
-        //     newOrder.InsertLast(tostring(fakeBlocks[i]));
-        // }
-        // yield();
-        // string msg = "";
-        // print("new block order: ");
-        // for (uint i = 0; i < newOrder.Length; i++) {
-        //     if (i % 100 == 99) {
-        //         print(msg);
-        //         msg = "";
-        //         yield();
-        //     }
-        //     msg += newOrder[i] + ", ";
-        // }
-        // print(msg);
-    }
+    //     // string[] newOrder = {};
+    //     // for (uint i = 0; i < fakeBlocks.Length; i++) {
+    //     //     newOrder.InsertLast(tostring(fakeBlocks[i]));
+    //     // }
+    //     // yield();
+    //     // string msg = "";
+    //     // print("new block order: ");
+    //     // for (uint i = 0; i < newOrder.Length; i++) {
+    //     //     if (i % 100 == 99) {
+    //     //         print(msg);
+    //     //         msg = "";
+    //     //         yield();
+    //     //     }
+    //     //     msg += newOrder[i] + ", ";
+    //     // }
+    //     // print(msg);
+    // }
 
 }
