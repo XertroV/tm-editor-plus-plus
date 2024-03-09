@@ -109,7 +109,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
         UI::NextColumn();
 
-        LabeledValue("Is Ghost", block.IsGhostBlock());
+        UI::Text(Editor::IsBlockFree(block) ? "Free" : block.IsGhostBlock() ? "Ghost" : "Normal");
         LabeledValue("Is Ground", block.IsGround);
         LabeledValue("Variant", block.BlockInfoVariantIndex);
         LabeledValue("Mobil Variant", block.MobilVariantIndex);

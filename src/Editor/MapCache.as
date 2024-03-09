@@ -93,6 +93,7 @@ namespace Editor {
 
     class BlockInMap : ObjInMap {
         bool IsClassicElseGhost;
+        bool IsFree;
         vec3 size;
         int dir;
         uint64 hash;
@@ -105,20 +106,26 @@ namespace Editor {
             rot = Editor::GetBlockRotation(block);
             // for duplicate detection, we need to hash pos + rot + info.Id / info.IdName
             // that would be 4*3*2+4 bytes = 28 bytes
+            IsFree = Editor::IsBlockFree(block);
+            IsClassicElseGhost = !block.IsGhostBlock();
+            //
             hashStr = GetBlockHash(pos, rot, block.BlockInfo.Name, block.BlockInfoVariantIndex, block.MobilVariantIndex);
             // dev_trace("Block hash: " + hashStr);
             color = int(block.MapElemColor);
             Id = block.BlockInfo.Id.Value;
             IdName = block.BlockInfo.IdName;
-            IsClassicElseGhost = !block.IsGhostBlock();
             size = Editor::GetBlockSize(block);
             mat = mat4::Translate(pos) * EulerToMat(rot);
             _hasSkin = block.Skin !is null;
         }
 
+        string ToString() {
+            return IdName + " " + pos.ToString() + " " + rot.ToString() + " ("+(IsFree ? "Free" : IsClassicElseGhost ? "Normal" : "Ghost")+")";
+        }
+
         // if any of these differ, it's a different block
         string GetBlockHash(vec3 &in pos, vec3 &in rot, const string &in id, uint varIx, uint mobIx) {
-            return Crypto::MD5(pos.ToString() + rot.ToString() + id + varIx + mobIx);
+            return Crypto::MD5(pos.ToString() + rot.ToString() + id + varIx + mobIx);// + IsFree + IsClassicElseGhost);
             // if (SwapMem100 == 0) SwapMem100 = RequestMemory(100);
             // Dev::Write(SwapMem100, pos);
             // Dev::Write(SwapMem100 + 0xC, rot);
@@ -227,7 +234,7 @@ namespace Editor {
             ItemTypesLower.RemoveRange(0, ItemTypesLower.Length);
             BlockTypesLower.RemoveRange(0, BlockTypesLower.Length);
             DuplicateBlockKeys.RemoveRange(0, DuplicateBlockKeys.Length);
-            DuplicateBlockIxs.RemoveRange(0, DuplicateBlockIxs.Length);
+            DuplicateBlocks.RemoveRange(0, DuplicateBlocks.Length);
             NbDuplicateFreeBlocks = 0;
             yield();
             if (myNonce != lastRefreshNonce) return;
@@ -294,7 +301,7 @@ namespace Editor {
         string[] BlockTypesLower;
         string[] ItemTypesLower;
         string[] DuplicateBlockKeys;
-        int[] DuplicateBlockIxs;
+        BlockInMap@[] DuplicateBlocks;
         uint NbDuplicateFreeBlocks = 0;
 
         protected void AddBlock(BlockInMap@ b) {
@@ -310,7 +317,7 @@ namespace Editor {
             if (_BlocksByHash.Exists(b.hashStr)) {
                 auto dupes = cast<BlockInMap@[]>(_BlocksByHash[b.hashStr]);
                 dupes.InsertLast(b);
-                DuplicateBlockIxs.InsertLast(b.ix);
+                DuplicateBlocks.InsertLast(b);
                 NbDuplicateFreeBlocks++;
                 if (dupes.Length == 2) {
                     DuplicateBlockKeys.InsertLast(b.hashStr);
@@ -371,6 +378,7 @@ namespace Editor {
 
     // todo: does not work
     void FixDuplicateBlocks() {
+        return;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) {
             NotifyWarning("Cannot fix duplicate blocks when editor is null.");

@@ -201,6 +201,7 @@ namespace MenuBar {
             }
 
             auto mapCache = Editor::GetMapCache();
+            auto inv = Editor::GetInventoryCache();
             bool hasDupes = mapCache !is null && mapCache.NbDuplicateFreeBlocks > 0;
             string cachesMenuLabel = !hasDupes
                 ? "Caches###Caches-menu"
@@ -219,6 +220,31 @@ namespace MenuBar {
                     if (!mapCache.isRefreshing && UI::MenuItem("View Duplicates")) {
                         g_DuplicateFreeBlocks_SubTab.SetSelectedTab();
                         g_BlocksItemsTab.SetSelectedTab();
+                    }
+                    if (UI::BeginMenu("Duplicate Keys:")) {
+                        auto nbDupKeys = mapCache.DuplicateBlockKeys.Length;
+                        for (uint i = 0; i < nbDupKeys; i++) {
+                            auto key = mapCache.DuplicateBlockKeys[i];
+                            auto blocks = mapCache.GetBlocksByHash(key);
+                            if (UI::BeginMenu(key + Text::Format(" (%d)", blocks.Length) + "###"+key)) {
+                                for (uint j = 0; j < blocks.Length; j++) {
+                                    auto block = blocks[j];
+                                    if (UI::MenuItem(block.ToString())) {
+                                        auto gameBlock = block.FindMe(cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType);
+                                        if (gameBlock !is null) {
+                                            g_PickedBlockTab.SetSelectedTab();
+                                            @lastPickedBlock = ReferencedNod(gameBlock);
+                                            UpdatePickedBlockCachedValues();
+                                            Editor::SetCamAnimationGoTo(vec2(TAU / 8., TAU / 8.), Editor::GetCtnBlockMidpoint(gameBlock), 120.);
+                                        } else {
+                                            NotifyWarning("Block not found, try refreshing map cache.");
+                                        }
+                                    }
+                                }
+                                UI::EndMenu();
+                            }
+                        }
+                        UI::EndMenu();
                     }
                     // if (!mapCache.isRefreshing && UI::MenuItem("Remove Duplicate Free Blocks (MAKE A BACKUP FIRST!)")) {
                     //     // startnew(Editor::FixDuplicateBlocks);
@@ -279,19 +305,19 @@ namespace MenuBar {
                 UI::EndMenu();
             }
 
-            bool isLoading = Editor::GetMapCache().isRefreshing
-                || Editor::GetInventoryCache().isRefreshing
+            bool isLoading = mapCache.isRefreshing
+                || inv.isRefreshing
                 ;
             if (isLoading && UI::BeginMenu("Loading...")) {
                 UI::BeginDisabled();
-                if (Editor::GetMapCache().isRefreshing) {
-                    UI::MenuItem("Map Objs Cache: " + Editor::GetMapCache().LoadingStatus());
+                if (mapCache.isRefreshing) {
+                    UI::MenuItem("Map Objs Cache: " + mapCache.LoadingStatus());
                 }
                 // todo: alerts for duplicate free blocks
                 UI::AlignTextToFramePadding();
-                UI::TextDisabled("Duplicate Free Blocks: " + Editor::GetMapCache().NbDuplicateFreeBlocks);
-                if (Editor::GetInventoryCache().isRefreshing) {
-                    UI::MenuItem("Inventory Cache: " + Editor::GetInventoryCache().LoadingStatus());
+                UI::TextDisabled("Duplicate Free Blocks: " + mapCache.NbDuplicateFreeBlocks);
+                if (inv.isRefreshing) {
+                    UI::MenuItem("Inventory Cache: " + inv.LoadingStatus());
                 }
                 UI::EndDisabled();
                 UI::EndMenu();

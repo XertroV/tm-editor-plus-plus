@@ -154,8 +154,8 @@ class ViewAllBlocksTab : BlockItemListTab {
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             Notify("Setting block ("+blockId+") as picked item.");
-            @lastPickedBlock = ReferencedNod(block);
             g_PickedBlockTab.SetSelectedTab();
+            @lastPickedBlock = ReferencedNod(block);
             UpdatePickedBlockCachedValues();
         }
         if (!Editor::IsBlockFree(block)) {
@@ -303,13 +303,12 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
     }
 
     uint GetNbObjects(CGameCtnChallenge@ map) override {
-        return (Editor::GetMapCache()).DuplicateBlockIxs.Length;
+        return (Editor::GetMapCache()).DuplicateBlocks.Length;
     }
 
     CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) override {
         auto mapCache = Editor::GetMapCache();
-        auto ix = mapCache.DuplicateBlockIxs[i];
-        auto cacheBlock = mapCache.Blocks[ix];
+        auto cacheBlock = mapCache.DuplicateBlocks[i];
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return cacheBlock.FindMe(editor.PluginMapType);
     }

@@ -133,7 +133,6 @@ class InventorySearchTab : Tab {
 
     void SearchUpdateEnd() {
         yield();
-        Notify('SearchUpdateEnd');
         auto inv = Editor::GetInventoryCache();
         totalSearchRes = searcher.filtered.Length;
         nbResults = Math::Min(totalSearchRes, pageSize);

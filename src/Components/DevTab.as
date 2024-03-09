@@ -81,12 +81,17 @@ class DevMiscTab : Tab {
         }
         UI::Separator();
         if (UI::CollapsingHeader("Latest Macroblock Instance")) {
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             auto mbInst = editor.PluginMapType.GetLatestMacroblockInstance();
             if (mbInst !is null) {
                 CopiableLabeledValue("mb inst ptr", Text::FormatPointer(Dev_GetPointerForNod(mbInst)));
                 CopiableLabeledValue("mb inst name", mbInst.Id.GetName());
                 CopiableLabeledValue("mb inst order", tostring(mbInst.Order));
                 CopiableLabeledValue("mb inst ref count", tostring(Reflection::GetRefCount(mbInst)));
+                UI::Text("mb inst ptr" + Text::FormatPointer(Dev_GetPointerForNod(mbInst)));
+                UI::Text("mb inst name" + mbInst.Id.GetName());
+                UI::Text("mb inst order" + tostring(mbInst.Order));
+                UI::Text("mb inst ref count" + tostring(Reflection::GetRefCount(mbInst)));
                 if (UI::Button("Explore MacroblockInstance")) {
                     ExploreNod("MacroblockInstance", mbInst);
                 }
@@ -100,6 +105,9 @@ class DevMiscTab : Tab {
                 if (model is null) {
                     print("Failed to get MacroblockModel from file path.");
                 } else {
+                    if (!editor.PluginMapType.PlaceMacroblock(model, int3(10, 10, 10), CGameEditorPluginMap::ECardinalDirections::North)) {
+                        NotifyWarning("Failed to place Macroblock.");
+                    }
                     auto mbInst = editor.PluginMapType.CreateMacroblockInstance(model, nat3(10, 10, 10), CGameEditorPluginMap::ECardinalDirections::North, CGameEditorPluginMap::EMapElemColor::Default, false);
                     if (mbInst !is null) {
                         print("inst not null");
@@ -107,6 +115,15 @@ class DevMiscTab : Tab {
                         print("inst name: " + mbInst.Id.GetName());
                         print("inst order: " + mbInst.Order);
                         print("inst ref count: " + Reflection::GetRefCount(mbInst));
+                        editor.PluginMapType.ComputeItemsForMacroblockInstance(mbInst);
+                        print("nb items: " + editor.PluginMapType.MacroblockInstanceItemsResults.Length);
+                        if (editor.PluginMapType.MacroblockInstanceItemsResults.Length > 0) {
+                            print("items[0] ptr: " + Text::FormatPointer(Dev_GetPointerForNod(editor.PluginMapType.MacroblockInstanceItemsResults[0])));
+                            // print("items[0][0] vec3: " + Dev::GetOffsetVec3(editor.PluginMapType.MacroblockInstanceItemsResults[0], 0).ToString());
+                            // print("items[0].IdName: " + editor.PluginMapType.MacroblockInstanceItemsResults[0].IdName);
+                            // print("items[0].Position: " + editor.PluginMapType.MacroblockInstanceItemsResults[0].Position.ToString());
+                            // print("items[0].ItemModel exists: " + (editor.PluginMapType.MacroblockInstanceItemsResults[0].ItemModel !is null));
+                        }
                     } else {
                         print("Failed to create MacroblockInstance.");
                     }
