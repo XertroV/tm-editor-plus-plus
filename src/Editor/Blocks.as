@@ -205,6 +205,14 @@ namespace Editor {
         Dev::SetOffset(block, FreeBlockPosOffset, pos);
         Dev::SetOffset(block, FreeBlockRotOffset, rot);
     }
+
+    int GetBlockMbInstId(CGameCtnBlock@ block) {
+        return Dev::GetOffsetInt32(block, O_CTNBLOCK_MACROBLOCK_INST_NB);
+    }
+
+    void SetBlockMbInstId(CGameCtnBlock@ block, int id) {
+        Dev::SetOffset(block, O_CTNBLOCK_MACROBLOCK_INST_NB, id);
+    }
 }
 
 

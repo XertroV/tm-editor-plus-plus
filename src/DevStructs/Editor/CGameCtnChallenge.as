@@ -9,7 +9,43 @@ class DGameCtnChallenge : RawBufferElem {
 	DGameCtnChallenge(uint64 ptr) {
 		super(ptr, SZ_CTNCHALLENGE);
 	}
+	DGameCtnChallenge(CGameCtnChallenge@ nod) {
+		if (nod is null) throw("not a CGameCtnChallenge");
+		super(Dev_GetPointerForNod(nod), SZ_CTNCHALLENGE);
+	}
+	CGameCtnChallenge@ get_Nod() {
+		return cast<CGameCtnChallenge>(Dev_GetNodFromPointer(ptr));
+	}
 
+	DGameCtnChallenge_Macroblocks@ get_MacroblockInstances() { return DGameCtnChallenge_Macroblocks(this.GetBuffer(O_MAP_MACROBLOCK_INFOS, 0x8, false)); }
+}
+
+class DGameCtnChallenge_Macroblocks : RawBuffer {
+	DGameCtnChallenge_Macroblocks(RawBuffer@ buf) {
+		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
+	}
+	DGameCtnChallenge_Macroblock@ GetMacroblock(uint i) {
+		return DGameCtnChallenge_Macroblock(this[i]);
+	}
+}
+
+// unk = uint64, 0x4d0
+// unk = uint64, 0x368
+class DGameCtnChallenge_Macroblock : RawBufferElem {
+	DGameCtnChallenge_Macroblock(RawBufferElem@ el) {
+		if (el.ElSize != 0x8) throw("invalid size for DGameCtnChallenge_Macroblock");
+		super(el.Ptr, el.ElSize);
+	}
+	DGameCtnChallenge_Macroblock(uint64 ptr) {
+		super(ptr, 0x8);
+	}
+
+	int get_InstId() { return (this.GetInt32(0x0)); }
+	void set_InstId(int value) { this.SetInt32(0x0, value); }
+	string get_MbName() { return (this.GetMwIdValue(0x4)); }
+	void set_MbName(const string &in value) { this.SetMwIdValue(0x4, value); }
+	uint get_MbMwId() { return (this.GetUint32(0x4)); }
+	void set_MbMwId(uint value) { this.SetUint32(0x4, value); }
 }
 
 

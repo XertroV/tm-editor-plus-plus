@@ -81,6 +81,7 @@ bool CheckPlaceMacroblockAirMode() {
     // dev_trace('CheckPlaceMacroblockAirMode');
     if (!g_PlaceMacroblockAirModeActive) return false;
     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    if (editor is null) return false;
     auto pmt = editor.PluginMapType;
     if (pmt.PlaceMode == CGameEditorPluginMap::EPlaceMode::Macroblock && pmt.CursorMacroblockModel !is null) {
         pmt.PlaceMacroblock_AirMode(pmt.CursorMacroblockModel, Nat3ToInt3(pmt.CursorCoord), pmt.CursorDir);

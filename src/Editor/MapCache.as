@@ -25,6 +25,9 @@ namespace Editor {
         uint Id;
         string IdName;
         mat4 mat;
+        int mbInstId = -1;
+        string mbInstIdStr = "-1";
+
         ObjInMap(uint index) {
             ix = index;
         }
@@ -59,6 +62,8 @@ namespace Editor {
             mat = mat4::Translate(pos) * EulerToMat(rot);
             _hasSkin = Editor::GetItemBGSkin(item) !is null || Editor::GetItemFGSkin(item) !is null;
             WaypointTy = WaypointType(item.ItemModel.WaypointType);
+            mbInstId = Editor::GetItemMbInstId(item);
+            mbInstIdStr = tostring(mbInstId);
         }
 
         bool IsStale(CGameEditorPluginMap@ pmt) override {
@@ -133,6 +138,8 @@ namespace Editor {
             mat = mat4::Translate(pos) * EulerToMat(rot);
             _hasSkin = block.Skin !is null;
             WaypointTy = WaypointType(block.BlockInfo.WaypointType);
+            mbInstId = Editor::GetBlockMbInstId(block);
+            mbInstIdStr = tostring(mbInstId);
         }
 
         string ToString() {
@@ -225,17 +232,19 @@ namespace Editor {
         // todo: BlockInMapI, ItemInMapI, dict for IdName => array<ObjInMapI>
 
         protected BlockInMap@[] _Blocks;
-        const BlockInMap@[] get_Blocks() { return _Blocks; }
+        const BlockInMap@[]@ get_Blocks() { return _Blocks; }
         protected BlockInMap@[] _SkinnedBlocks;
-        const BlockInMap@[] get_SkinnedBlocks() { return _SkinnedBlocks; }
+        const BlockInMap@[]@ get_SkinnedBlocks() { return _SkinnedBlocks; }
         protected ItemInMap@[] _Items;
-        const ItemInMap@[] get_Items() { return _Items; }
+        const ItemInMap@[]@ get_Items() { return _Items; }
         protected ItemInMap@[] _SkinnedItems;
-        const ItemInMap@[] get_SkinnedItems() { return _SkinnedItems; }
+        const ItemInMap@[]@ get_SkinnedItems() { return _SkinnedItems; }
         protected BlockInMap@[] _WaypointBlocks;
-        const BlockInMap@[] get_WaypointBlocks() { return _WaypointBlocks; }
+        const BlockInMap@[]@ get_WaypointBlocks() { return _WaypointBlocks; }
         protected ItemInMap@[] _WaypointItems;
-        const ItemInMap@[] get_WaypointItems() { return _WaypointItems; }
+        const ItemInMap@[]@ get_WaypointItems() { return _WaypointItems; }
+
+        dictionary Macroblocks;
 
         uint lastRefreshNonce = 0;
         void RefreshCache() {
@@ -245,6 +254,7 @@ namespace Editor {
             _ItemIdNameMap.DeleteAll();
             _BlockIdNameMap.DeleteAll();
             _BlocksByHash.DeleteAll();
+            Macroblocks.DeleteAll();
             _Items.RemoveRange(0, _Items.Length);
             _Blocks.RemoveRange(0, _Blocks.Length);
             _SkinnedItems.RemoveRange(0, _SkinnedItems.Length);
@@ -329,6 +339,7 @@ namespace Editor {
         protected void AddBlock(BlockInMap@ b) {
             loadProgress++;
             _Blocks.InsertLast(b);
+            AddToMacroblock(b);
             if (b.IsWaypoint) _WaypointBlocks.InsertLast(b);
             if (b.HasSkin) _SkinnedBlocks.InsertLast(b);
             if (!_BlockIdNameMap.Exists(b.IdName)) {
@@ -365,6 +376,7 @@ namespace Editor {
         protected void AddItem(ItemInMap@ b) {
             loadProgress++;
             _Items.InsertLast(b);
+            AddToMacroblock(b);
             if (b.IsWaypoint) _WaypointItems.InsertLast(b);
             if (b.HasSkin) _SkinnedItems.InsertLast(b);
             if (!_ItemIdNameMap.Exists(b.IdName)) {
@@ -373,6 +385,15 @@ namespace Editor {
                 ItemTypesLower.InsertLast(b.IdName.ToLower());
             }
             GetItemsByType(b.IdName).InsertLast(b);
+        }
+
+        protected void AddToMacroblock(ObjInMap@ b) {
+            if (b.mbInstId < 0) return;
+            if (!Macroblocks.Exists(b.mbInstIdStr)) {
+                @Macroblocks[b.mbInstIdStr] = array<ObjInMap@>();
+            }
+            auto @objs = cast<array<ObjInMap@>>(Macroblocks[b.mbInstIdStr]);
+            objs.InsertLast(b);
         }
 
         BlockInMap@[]@ GetBlocksByType(const string &in type) {

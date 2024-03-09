@@ -13,6 +13,7 @@ class BI_MainTab : Tab {
         ViewGhostBlocksTab(Children);
         @g_DuplicateFreeBlocks_SubTab = ViewDuplicateFreeBlocksTab(Children);
         WaypointsBITab(Children);
+        MacroblocksBITab(Children);
         // ViewKinematicsTab(Children);
     }
 
@@ -358,5 +359,63 @@ class WaypointItemsTab : ViewAllItemsTab {
         auto cacheItem = mapCache.WaypointItems[i];
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return cacheItem.FindMe(editor.PluginMapType);
+    }
+}
+
+class MacroblocksBITab : Tab {
+    MacroblocksBITab(TabGroup@ p) {
+        super(p, "Macroblocks", Icons::Cubes + Icons::Tree);
+    }
+
+    void DrawInner() override {
+        auto map = GetApp().RootMap;
+        if (map is null) return;
+        UI::Text("To refresh: Caches > Refresh Map Block/Item Cache");
+        auto mbs = Editor::GetMapMacroblocks(map);
+        if (mbs.Length == 0) {
+            UI::Text("No macroblocks found.");
+            return;
+        }
+        auto mapCache = Editor::GetMapCache();
+        auto @mbCache = mapCache.Macroblocks;
+        Editor::ObjInMap@ obj;
+        array<Editor::ObjInMap@>@ objs;
+        for (uint i = 0; i < mbs.Length; i++) {
+            auto mb = mbs.GetMacroblock(i);
+            if (mbCache.Exists(tostring(mb.InstId))) {
+                @objs = cast<array<Editor::ObjInMap@>>(mbCache[tostring(mb.InstId)]);
+                if (objs !is null) {
+                    if (objs.Length > 0) {
+                        if (UX::SmallButton(Icons::Eye + "##" + mb.InstId)) {
+                            Editor::SetCamAnimationGoTo(vec2(TAU / 8., TAU / 8.), objs[0].pos, 120.);
+                        }
+                        UI::SameLine();
+                    }
+                    if (UI::TreeNode(tostring(mb.InstId) + ". " + mb.MbName + " ("+objs.Length+")")) {
+                        for (uint j = 0; j < objs.Length; j++) {
+                            @obj = objs[j];
+                            auto item = cast<Editor::ItemInMap>(objs[j]);
+                            auto block = cast<Editor::BlockInMap>(objs[j]);
+                            if (item !is null) {
+                                UI::Text("Item: " + item.IdName);
+                            } else if (block !is null) {
+                                UI::Text("Block: " + block.IdName);
+                            } else {
+                                UI::Text("Unknown object");
+                            }
+                        }
+                        UI::TreePop();
+                    }
+                } else {
+                    UI::Text("Objs in cache is null!!");
+                }
+            } else {
+                UI::Text("MB objects not found in cache.");
+                UI::SameLine();
+                if (UX::SmallButton(Icons::Refresh + "##refresh-cache-mb-" + mb.InstId)) {
+                    Editor::GetMapCache().RefreshCacheSoon();
+                }
+            }
+        }
     }
 }

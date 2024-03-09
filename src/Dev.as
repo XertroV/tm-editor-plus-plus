@@ -450,7 +450,8 @@ const uint16 O_GAMESKIN_PATH3 = 0x120;
 const uint16 O_ANCHOREDOBJ_SKIN_SCALE = GetOffset("CGameCtnAnchoredObject", "Scale");
 const uint16 O_ANCHOREDOBJ_BGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x18;
 const uint16 O_ANCHOREDOBJ_FGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x20;
-
+const uint16 O_ANCHOREDOBJ_WAYPOINTPROP = GetOffset("CGameCtnAnchoredObject", "WaypointSpecialProperty");
+const uint16 O_ANCHOREDOBJ_MACROBLOCKINSTID = O_ANCHOREDOBJ_WAYPOINTPROP - 0x4;
 
 // CGameCtnBlock offsets in src/Editor/Blocks.as
 
@@ -706,6 +707,10 @@ class RawBufferElem {
     int32 GetInt32(uint o) {
         CheckOffset(o, 4);
         return Dev::ReadInt32(ptr + o);
+    }
+    void SetInt32(uint o, int value) {
+        CheckOffset(o, 4);
+        Dev::Write(ptr + o, value);
     }
     nat3 GetNat3(uint o) {
         CheckOffset(o, 12);

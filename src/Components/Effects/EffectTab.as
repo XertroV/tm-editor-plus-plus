@@ -3,6 +3,7 @@ class EffectTab : Tab {
         super(p, name, icon);
     }
 
+    // this can be ignored if you override the getters and setters for _IsActive
     protected bool __IsActive = false;
 
     bool get__IsActive() {

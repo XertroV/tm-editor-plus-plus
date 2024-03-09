@@ -352,6 +352,7 @@ namespace MenuBar {
 }
 
 FavoritesTab@ g_Favorites;
+CoordPathDrawingTab@ g_CoordPathDrawingTool;
 
 TabGroup@ CreateToolsTabGroup() {
     auto tools = RootTabGroupCls();
@@ -359,6 +360,7 @@ TabGroup@ CreateToolsTabGroup() {
     QuaternionCalcTab(tools);
     MaterialsListTab(tools);
     @g_CursorPositionWindow = CursorPosition(tools);
+    @g_CoordPathDrawingTool = CoordPathDrawingTab(tools);
     return tools;
 }
 

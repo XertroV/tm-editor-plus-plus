@@ -87,12 +87,12 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         UI::SameLine();
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(item)));
 #endif
-        if (UI::Button("Edit This Item")) {
+        if (UX::SmallButton("Edit This Item")) {
             Editor::OpenItemEditor(editor, item);
         }
 
         auto modelFid = GetFidFromNod(item.ItemModel);
-        if (UI::Button("Open Item Folder")) {
+        if (UX::SmallButton("Open Item Folder")) {
             try {
                 if (modelFid is null) NotifyWarning("Failed to get FID for this item.");
                 else if (modelFid.FullFileName.Contains("<virtual>")) NotifyWarning("Cannot open folder for a vanilla item.");
@@ -102,13 +102,21 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             }
         }
         LabeledValue("Size (KB)", modelFid !is null ? tostring(modelFid.ByteSizeEd) : "?");
+        auto mbInstId = Editor::GetItemMbInstId(item);
+        LabeledValue("MB Inst ID", mbInstId);
+        if (mbInstId >= 0) {
+            UI::SameLine();
+            if (UX::SmallButton("Clear")) {
+                Editor::SetItemMbInstId(item, -1);
+            }
+        }
 
         UI::Columns(1);
 
         // full width
         auto assocBlock = Editor::GetItemsBlockAssociation(item);
         if (assocBlock is null) {
-            UI::SameLine();
+            // UI::SameLine();
             if (UX::SmallButton("Set BlockUnitCoord from Pos")) {
                 item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
             }

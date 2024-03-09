@@ -113,6 +113,14 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         LabeledValue("Is Ground", block.IsGround);
         LabeledValue("Variant", block.BlockInfoVariantIndex);
         LabeledValue("Mobil Variant", block.MobilVariantIndex);
+        auto mbInstId = Editor::GetBlockMbInstId(block);
+        LabeledValue("MB Inst ID", mbInstId);
+        if (mbInstId >= 0) {
+            UI::SameLine();
+            if (UX::SmallButton("Clear")) {
+                Editor::SetBlockMbInstId(block, -1);
+            }
+        }
 
 #if SIG_DEVELOPER
         if (UI::Button(Icons::Cube + " BlockInfo")) {

@@ -14,4 +14,10 @@ namespace UX {
         return ret;
     }
 
+    bool ButtonMbDisabled(const string &in label, bool disabled = false) {
+        UI::BeginDisabled(disabled);
+        bool ret = UI::Button(label);
+        UI::EndDisabled();
+        return ret;
+    }
 }

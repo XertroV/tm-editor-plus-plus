@@ -1,3 +1,10 @@
 [DGameCtnChallenge: SZ_CTNCHALLENGE]
+NativeClass = CGameCtnChallenge
+Buffer: MacroblockInstances = DGameCtnChallenge_Macroblocks, O_MAP_MACROBLOCK_INFOS, 0x8, false
 # unk = uint64, 0x4d0
 # unk = uint64, 0x368
+
+[DGameCtnChallenge_Macroblock: 0x8]
+InstId = int, 0x0, GS
+MbName = string, 0x4, GS, MwIdValue
+MbMwId = uint, 0x4, GS

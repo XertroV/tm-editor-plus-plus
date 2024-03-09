@@ -220,6 +220,14 @@ namespace Editor {
             priorModPack.MwRelease();
         }
     }
+
+    uint GetNbMacroblocks(CGameCtnChallenge@ map) {
+        return Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0x8);
+    }
+
+    DGameCtnChallenge_Macroblocks@ GetMapMacroblocks(CGameCtnChallenge@ map) {
+        return DGameCtnChallenge(map).MacroblockInstances;
+    }
 }
 
 /*

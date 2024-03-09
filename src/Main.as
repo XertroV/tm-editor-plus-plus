@@ -220,11 +220,16 @@ int g_LastMouseButton = 0;
 int2 g_LastMouseButtonPos = int2();
 
 UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
+    if (!IsInEditor) return UI::InputBlocking::DoNothing;
     bool lmbDown = down && button == 0;
     bool block = false;
-    block = (lmbDown && FarlandsHelper::FH_CheckPlacing()) || block;
-    block = (lmbDown && CheckPlaceMacroblockAirMode()) || block;
-    block = (lmbDown && CheckPlacingItemFreeMode()) || block;
+    if (lmbDown && g_CoordPathDrawingTool.ShouldBlockLMB()) {
+        block = true;
+    } else {
+        block = (lmbDown && FarlandsHelper::FH_CheckPlacing()) || block;
+        block = (lmbDown && CheckPlaceMacroblockAirMode()) || block;
+        block = (lmbDown && CheckPlacingItemFreeMode()) || block;
+    }
 
     g_LastMouseBDown = down;
     g_LastMouseButton = button;

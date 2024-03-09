@@ -27,6 +27,16 @@ namespace Editor {
         return itemCursor.CurrentPos;
     }
 
+    vec3 GetCursorPos(CGameCtnEditorFree@ editor) {
+        if (Editor::IsInAnyItemPlacementMode(editor)) {
+            return GetItemCursorPos(editor.ItemCursor);
+        } else if (Editor::IsInAnyFreePlacementMode(editor)) {
+            return editor.Cursor.FreePosInMap;
+        } else {
+            return Picker::GetMouseToWorldAtHeight(editor.OrbitalCameraControl.m_TargetedPosition.y);
+        }
+    }
+
     mat4 GetItemCursorMat(CGameCursorItem@ itemCursor) {
         // bit of a placeholder. vectors Left, Up, Dir immediately before current pos in memory.
         auto posOffset = GetOffset(itemCursor, "CurrentPos");

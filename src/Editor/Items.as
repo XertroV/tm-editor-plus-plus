@@ -231,6 +231,14 @@ namespace Editor {
         return cast<CSystemPackDesc>(Dev::GetOffsetNod(item, O_ANCHOREDOBJ_FGSKIN_PACKDESC));
     }
 
+    int GetItemMbInstId(CGameCtnAnchoredObject@ item) {
+        return Dev::GetOffsetInt32(item, O_ANCHOREDOBJ_MACROBLOCKINSTID);
+    }
+
+    void SetItemMbInstId(CGameCtnAnchoredObject@ item, int id) {
+        Dev::SetOffset(item, O_ANCHOREDOBJ_MACROBLOCKINSTID, id);
+    }
+
     // // test; Stadium\\Blah
     // void LoadItemInInventoryFromPath(CGameCtnEditorFree@ editor, const string &in path) {
     //     auto pmt = editor.PluginMapType;

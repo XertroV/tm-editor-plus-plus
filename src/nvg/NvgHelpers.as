@@ -57,6 +57,7 @@ void nvgDrawHorizGridHelper(vec3 worldPos, vec4 col, float strokeWidth, float gr
 
 bool nvgWorldPosLastVisible = false;
 vec3 nvgLastWorldPos = vec3();
+vec3 nvgLastUv = vec3();
 
 void nvgWorldPosReset() {
     nvgWorldPosLastVisible = false;
@@ -64,31 +65,31 @@ void nvgWorldPosReset() {
 
 void nvgToWorldPos(vec3 &in pos, vec4 &in col = vec4(1)) {
     nvgLastWorldPos = pos;
-    auto uv = Camera::ToScreen(pos);
-    if (uv.z > 0) {
+    nvgLastUv = Camera::ToScreen(pos);
+    if (nvgLastUv.z > 0) {
         nvgWorldPosLastVisible = false;
         return;
     }
     if (nvgWorldPosLastVisible)
-        nvg::LineTo(uv.xy);
+        nvg::LineTo(nvgLastUv.xy);
     else
-        nvg::MoveTo(uv.xy);
+        nvg::MoveTo(nvgLastUv.xy);
     nvgWorldPosLastVisible = true;
     nvg::StrokeColor(col);
     nvg::Stroke();
     nvg::ClosePath();
     nvg::BeginPath();
-    nvg::MoveTo(uv.xy);
+    nvg::MoveTo(nvgLastUv.xy);
 }
 
 void nvgMoveToWorldPos(vec3 pos) {
     nvgLastWorldPos = pos;
-    auto uv = Camera::ToScreen(pos);
-    if (uv.z > 0) {
+    nvgLastUv = Camera::ToScreen(pos);
+    if (nvgLastUv.z > 0) {
         nvgWorldPosLastVisible = false;
         return;
     }
-    nvg::MoveTo(uv.xy);
+    nvg::MoveTo(nvgLastUv.xy);
     nvgWorldPosLastVisible = true;
 }
 
@@ -138,7 +139,28 @@ void nvgDrawBlockBox(const mat4 &in m, const vec3 &in size, const vec4 &in color
     nvgMoveToWorldPos(prePos);
 }
 
+void nvgDrawPath(const array<vec3> &in path, const vec4 &in color = cWhite) {
+    nvg::Reset();
+    nvg::StrokeColor(color);
+    nvg::StrokeWidth(2.0);
+    vec3 prePos = nvgLastWorldPos;
+    for (uint i = 0; i < path.Length; i++) {
+        nvgToWorldPos(path[i], color);
+    }
+    nvgMoveToWorldPos(prePos);
+}
 
+void nvgDrawPointCircle(const vec3 &in pos, float radius, const vec4 &in color = cWhite) {
+    nvgMoveToWorldPos(pos);
+    if (!nvgWorldPosLastVisible)
+        return;
+    nvg::Reset();
+    nvg::StrokeColor(color);
+    nvg::StrokeWidth(2.0);
+    nvg::Circle(nvgLastUv.xy, radius);
+    nvg::Stroke();
+    nvg::ClosePath();
+}
 
 // this does not seem to be expensive
 const float nTextStrokeCopies = 32;
