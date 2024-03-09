@@ -12,7 +12,7 @@ namespace Picker {
     vec3 normExtendedToScreen;
 
     void RenderEarly() {
-        screen = GetScreenVec2();
+        screen = g_screen;
         if (screen.x == 0 || screen.y == 0) return;
         uv = lastMousePos / (screen - 1.) * 2. - 1.;
 

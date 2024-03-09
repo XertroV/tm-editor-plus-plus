@@ -4,6 +4,24 @@ class CoordPathDrawingTab : EffectTab {
 
     CoordPathDrawingTab(TabGroup@ p) {
         super(p, "Draw Coords / Paths", Icons::Pencil + Icons::SquareO);
+        startnew(CoroutineFunc(Load));
+    }
+
+    void Save() {
+        Json::Value@ arr = Json::Array();
+        for (uint i = 0; i < paths.Length; i++) {
+            arr.Add(paths[i].ToJson());
+        }
+        Json::ToFile(IO::FromStorageFolder("coord_paths.json"), arr);
+    }
+
+    void Load() {
+        if (IO::FileExists(IO::FromStorageFolder("coord_paths.json"))) {
+            Json::Value@ arr = Json::FromFile(IO::FromStorageFolder("coord_paths.json"));
+            for (uint i = 0; i < arr.Length; i++) {
+                paths.InsertLast(CoordPath(arr[i]));
+            }
+        }
     }
 
     void NewPath() {
@@ -13,7 +31,15 @@ class CoordPathDrawingTab : EffectTab {
 
     bool isRecording;
     void RecordingLoop() {
-        /// deprecated
+        if (isRecording) return;
+        isRecording = true;
+        while (isRecording) {
+            yield();
+            if (!windowOpen || !UI::IsOverlayShown()) {
+                break;
+            }
+        }
+        isRecording = false;
     }
 
     bool ShouldBlockLMB() {
@@ -35,7 +61,7 @@ class CoordPathDrawingTab : EffectTab {
     }
 
     void StartRecording() {
-        isRecording = true;
+        startnew(CoroutineFunc(this.RecordingLoop));
     }
 
     void StopRecording() {
@@ -46,18 +72,34 @@ class CoordPathDrawingTab : EffectTab {
         return isRecording;
     }
 
+    bool m_drawAll = false;
+
     void DrawInner() override {
         if (UI::Button("New Path")) {
             NewPath();
         }
         UI::SameLine();
-        if (UX::ButtonMbDisabled("Start Recording", isRecording)) {
+        if (UX::ButtonMbDisabled("Start Rec.", isRecording || currentPath is null)) {
             StartRecording();
         }
         UI::SameLine();
-        if (UX::ButtonMbDisabled("Stop Recording", !isRecording)) {
+        if (UX::ButtonMbDisabled("Stop Rec.", !isRecording)) {
             StopRecording();
         }
+        UI::SameLine();
+        if (UX::ButtonMbDisabled("Save", false)) {
+            Save();
+        }
+        UI::SameLine();
+        if (UX::ButtonMbDisabled("Reset All", paths.Length == 0)) {
+            paths.RemoveRange(0, paths.Length);
+        }
+        UI::SameLine();
+        m_drawAll = UI::Checkbox("Draw All", m_drawAll);
+        UI::SameLine();
+        UI::AlignTextToFramePadding();
+        UI::Text("\\$999Help");
+        AddSimpleTooltip("Start recording with an active path.\nLeft click in any placement mode to add a point to the active path.\nStop recording or close the window to re-enable normal placement.");
 
         UI::Indent();
         DrawActivePath();
@@ -66,6 +108,9 @@ class CoordPathDrawingTab : EffectTab {
         DrawAllPaths();
 
         DrawCurrentPathNvg();
+        if (isRecording) {
+            DrawTextWithStroke( "Recording...", vec2(10, 10), 20, vec4(1, 1, 1, 1), vec4(0, 0, 0, 1));
+        }
     }
 
     void DrawActivePath() {
@@ -108,13 +153,23 @@ class CoordPathDrawingTab : EffectTab {
     }
 
     void DrawCurrentPathNvg() {
-        if (currentPath is null || currentPath.points.Length == 0) return;
-        auto color = currentPath.color;
-        if (currentPath.points.Length < 2) {
-            nvgDrawPointCircle(currentPath.points[0], 5, color);
+        if (m_drawAll) {
+            for (uint i = 0; i < paths.Length; i++) {
+                DrawPathNvg(paths[i]);
+            }
+        } else {
+            DrawPathNvg(currentPath);
+        }
+    }
+
+    void DrawPathNvg(CoordPath@ path) {
+        if (path is null || path.points.Length == 0) return;
+        auto color = path.color;
+        if (path.points.Length < 2) {
+            nvgDrawPointCircle(path.points[0], 5, color);
             return;
         }
-        nvgDrawPath(currentPath.points, color);
+        nvgDrawPath(path.points, color);
     }
 
     void DrawAllPaths() {
@@ -153,7 +208,52 @@ class CoordPath {
         this.name = name;
     }
 
+    CoordPath(Json::Value@ json) {
+        name = json["name"];
+        color = JsonReadVec4(json["color"]);
+        for (uint i = 0; i < json["points"].Length; i++) {
+            points.InsertLast(JsonReadVec3(json["points"][i]));
+        }
+    }
+
+    Json::Value@ ToJson() {
+        Json::Value@ j = Json::Object();
+        j["name"] = name;
+        j["color"] = JsonWriteVec4(color);
+        Json::Value@ parr = Json::Array();
+        for (uint i = 0; i < points.Length; i++) {
+            parr.Add(JsonWriteVec3(points[i]));
+        }
+        j["points"] = parr;
+        return j;
+    }
+
     void AddPoint(vec3 point) {
         points.InsertLast(point);
     }
+}
+
+vec4 JsonReadVec4(Json::Value@ json) {
+    return vec4(json[0], json[1], json[2], json[3]);
+}
+
+vec3 JsonReadVec3(Json::Value@ json) {
+    return vec3(json[0], json[1], json[2]);
+}
+
+Json::Value@ JsonWriteVec4(const vec4 &in v) {
+    Json::Value@ j = Json::Array();
+    j.Add(v.x);
+    j.Add(v.y);
+    j.Add(v.z);
+    j.Add(v.w);
+    return j;
+}
+
+Json::Value@ JsonWriteVec3(const vec3 &in v) {
+    Json::Value@ j = Json::Array();
+    j.Add(v.x);
+    j.Add(v.y);
+    j.Add(v.z);
+    return j;
 }

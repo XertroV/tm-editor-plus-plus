@@ -76,16 +76,18 @@ bool dismissedPluginEnableRequest = false;
 bool dismissedCamReturnToStadium = false;
 uint g_PriorRenderEarlyTime;
 uint g_ThisRenderEarlyTime;
+vec2 g_screen;
 
 void RenderEarly() {
-#if DEV
-    Picker::RenderEarly();
-#endif
     g_PriorRenderEarlyTime = g_ThisRenderEarlyTime;
     g_ThisRenderEarlyTime = Time::Now;
 
     if (!UserHasPermissions) return;
     if (!GameVersionSafe) return;
+
+    g_screen = vec2(Draw::GetWidth(), Draw::GetHeight());
+    Picker::RenderEarly();
+
     auto anyEditor = GetApp().Editor;
     auto editor = cast<CGameCtnEditorFree>(anyEditor);
     auto itemEditor = cast<CGameEditorItem>(anyEditor);

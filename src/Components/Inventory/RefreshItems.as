@@ -305,8 +305,7 @@ class ItemEmbedTab : Tab {
 
     bool DrawWindow() override {
         if (ShowReloadingWindow) {
-            auto screen = vec2(Draw::GetWidth(), Draw::GetHeight());
-            auto midPos = screen * vec2(0.5, 0.25);
+            auto midPos = g_screen * vec2(0.5, 0.25);
             auto msg = Reloading_IsSaving ? "[ Adding to Inventory: " : "Loading Items: ";
             msg += tostring(Reloading_Done) + " / " + Reloading_Total
                 + Text::Format(" ( %2.1f%% ) ]", float(Reloading_Done) * 100. / Reloading_Total);
