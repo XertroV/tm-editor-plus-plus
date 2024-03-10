@@ -111,6 +111,9 @@ class MTClipGroupTrigger {
         AssertGoodPtr();
         return Dev::ReadNat3(ptr + o_n3_MaxCoords);
     }
+    vec3 get_boudingBoxCenter() {
+        return Nat3ToVec3(minBoundingBoxCoords + maxBoundingBoxCoords) / 2;
+    }
 
     uint get_Length() {
         AssertGoodPtr();

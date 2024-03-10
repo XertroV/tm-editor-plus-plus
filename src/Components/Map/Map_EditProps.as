@@ -534,7 +534,7 @@ class MapEditPropsTab : Tab {
         auto map = editor.Challenge;
         nat3 mtPerBlock = Dev::GetOffsetNat3(map, O_MAP_MTSIZE_OFFSET);
         nat3 origMtPerBlock = mtPerBlock;
-        if (UI::CollapsingHeader("Mediatracker Trigger:")) {
+        if (UI::CollapsingHeader("Mediatracker Trigger Size:")) {
             UI::Indent();
                 UI::TextWrapped("This measures how many trigger cubes you have per block (32x8x32). 2,1,2 will mean 4 trigger cubes completely cover 1 block.\n\\$f80Note: \\$zUnequal X-Z dimensions, or Y > 1, will confuse the Mediatracker editor a bit (still works though).");
                 // UI::BeginChild("mt-trigger-child", vec2(UI::GetContentRegionAvail().x * 0.5, 80), false, UI::WindowFlags::AlwaysAutoResize);
@@ -552,7 +552,15 @@ class MapEditPropsTab : Tab {
                 // UI::EndChild();
             UI::Unindent();
         }
+        if (UI::CollapsingHeader("View Mediatracker Triggers")) {
+            UI::Indent();
+            m_DrawMtTriggerBoxes = UI::Checkbox("Draw Mediatracker Triggers", m_DrawMtTriggerBoxes);
+            DrawMTTriggerBoxes(map, m_DrawMtTriggerBoxes);
+            UI::Unindent();
+        }
     }
+
+    bool m_DrawMtTriggerBoxes = false;
 
     void DrawOffzoneSettings() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -589,6 +597,36 @@ class MapEditPropsTab : Tab {
             auto startPos = MTCoordToPos(start);
             auto endPos = MTCoordToPos(end) - vec3(0.1);
             nvgDrawBlockBox(mat4::Translate(startPos), endPos - startPos);
+        }
+    }
+
+    vec4[] clipColors;
+
+    void DrawMTTriggerBoxes(CGameCtnChallenge@ map, bool drawNvg) {
+        if (map.ClipGroupInGame is null) return;
+        auto cg = map.ClipGroupInGame;
+        auto clipGroup = MTClipGroup(cg);
+        auto mtTriggerSize = vec3(32, 8, 32) / Nat3ToVec3(Dev::GetOffsetNat3(map, O_MAP_MTSIZE_OFFSET));
+        for (uint i = 0; i < clipGroup.TriggersLength; i++) {
+            auto trigger = clipGroup[i];
+            auto clip = cg.Clips[i];
+            UI::Text(clip.Name);
+            UI::SameLine();
+            if (UX::SmallButton(Icons::Eye+"##mt-clip-"+i)) {
+                Editor::SetCamAnimationGoTo(vec2(.9, .9), MTCoordToPos(trigger.boudingBoxCenter, mtTriggerSize), 120);
+            }
+            while (clipColors.Length <= i) {
+                clipColors.InsertLast(vec4(Math::Rand(0.0, 1.0), Math::Rand(0.0, 1.0), Math::Rand(0.0, 1.0), 0.9));
+            }
+            UI::SameLine();
+            clipColors[i] = UI::InputColor4("##mt-clip-color-"+i, clipColors[i]);
+            if (drawNvg) {
+                for (uint j = 0; j < trigger.Length; j++) {
+                    auto coord = Nat3ToInt3(trigger[j]);
+                    auto pos = MTCoordToPos(trigger[j], mtTriggerSize);
+                    nvgDrawBlockBox(mat4::Translate(pos), mtTriggerSize, clipColors[i]);
+                }
+            }
         }
     }
 
