@@ -57,7 +57,7 @@ class CoordPathDrawingTab : EffectTab {
     }
 
     void _BeforeBeginWindow() override {
-        UI::SetNextWindowSize(500, 350, UI::Cond::Appearing);
+        UI::SetNextWindowSize(550, 350, UI::Cond::Appearing);
     }
 
     void StartRecording() {
@@ -89,7 +89,13 @@ class CoordPathDrawingTab : EffectTab {
         UI::SameLine();
         if (UX::ButtonMbDisabled("Save", false)) {
             Save();
+            Notify("Saved paths to coord_paths.json");
         }
+        UI::SameLine();
+        if (UI::Button(Icons::FolderOpenO + "##open-path-file")) {
+            OpenExplorerPath(IO::FromStorageFolder(""));
+        }
+        AddSimpleTooltip("File: coord_paths.json");
         UI::SameLine();
         if (UX::ButtonMbDisabled("Reset All", paths.Length == 0)) {
             paths.RemoveRange(0, paths.Length);
@@ -98,7 +104,7 @@ class CoordPathDrawingTab : EffectTab {
         m_drawAll = UI::Checkbox("Draw All", m_drawAll);
         UI::SameLine();
         UI::AlignTextToFramePadding();
-        UI::Text("\\$999Help");
+        UI::Text("\\$99fHelp");
         AddSimpleTooltip("Start recording with an active path.\nLeft click in any placement mode to add a point to the active path.\nStop recording or close the window to re-enable normal placement.");
 
         UI::Indent();
@@ -109,7 +115,9 @@ class CoordPathDrawingTab : EffectTab {
 
         DrawCurrentPathNvg();
         if (isRecording) {
-            DrawTextWithStroke( "Recording...", vec2(10, 10), 20, vec4(1, 1, 1, 1), vec4(0, 0, 0, 1));
+            nvg::TextAlign(nvg::Align::Center | nvg::Align::Middle);
+            nvg::FontSize(g_screen.y * 0.04);
+            DrawTextWithStroke(g_screen * vec2(0.5, 0.15), "Recording Path...", vec4(1), 2.0, vec4(0, 0, 0, 1));
         }
     }
 
@@ -165,6 +173,7 @@ class CoordPathDrawingTab : EffectTab {
     void DrawPathNvg(CoordPath@ path) {
         if (path is null || path.points.Length == 0) return;
         auto color = path.color;
+        nvgMoveToWorldPos(path.points[0]);
         if (path.points.Length < 2) {
             nvgDrawPointCircle(path.points[0], 5, color);
             return;
@@ -181,6 +190,7 @@ class CoordPathDrawingTab : EffectTab {
         UI::Indent();
         for (uint i = 0; i < paths.Length; i++) {
             UI::SetNextItemOpen(true, UI::Cond::Appearing);
+            UI::PushID(tostring(i));
             if (UI::CollapsingHeader(paths[i].name)) {
                 UI::Indent();
                 if (UI::Button("Set Active")) {
@@ -193,6 +203,7 @@ class CoordPathDrawingTab : EffectTab {
                 }
                 UI::Unindent();
             }
+            UI::PopID();
         }
         UI::Unindent();
     }
