@@ -70,6 +70,10 @@ namespace ToML {
         SendMessage("ResyncPlease", {});
     }
 
+    void TellMetadataCleared() {
+        SendMessage("MetadataCleared", {});
+    }
+
     const string TIMENOW_DELIM = "/*TIMENOW*/";
     const string EVENTS_DELIM = "/*EVENTS*/";
     const string PageAttachId = "E++ Supporting Plugin";

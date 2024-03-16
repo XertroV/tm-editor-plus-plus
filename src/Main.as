@@ -294,7 +294,7 @@ UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
     if (editor is null) return UI::InputBlocking::DoNothing;
     if (app.CurrentPlayground !is null) return UI::InputBlocking::DoNothing;
     if (DGameCtnEditorFree(editor).IsCalculatingShadows) return UI::InputBlocking::DoNothing;
-    // if (app.BasicDialogs.)
+    if (app.BasicDialogs.Dialogs.CurrentFrame !is null) return UI::InputBlocking::DoNothing;
     bool block = false;
     block = block || ShouldBlockEscapePress(down, key, app, editor);
     // trace('key down: ' + tostring(key));

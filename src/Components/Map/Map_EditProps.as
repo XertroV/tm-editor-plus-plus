@@ -174,7 +174,9 @@ class MapEditPropsTab : Tab {
         UI::BeginDisabled(!f_UnlockStripMetadata);
         if (UX::SmallButton("Clear Metadata")) {
             f_UnlockStripMetadata = false;
+            // send MetadataCleared
             editor.PluginMapType.ClearMapMetadata();
+            ToML::TellMetadataCleared();
             ToML::ResyncPlease();
         }
         UI::EndDisabled();

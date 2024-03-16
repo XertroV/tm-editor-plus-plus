@@ -72,14 +72,16 @@ Void SendAllInfo() {
 	declare metadata Integer EPP_MappingTime_Validating for Map = 0;
 	declare metadata Integer EPP_MappingTime_Mapping for Map = 0;
 	declare metadata Boolean EPP_ThumbnailLocked for Map = False;
+	declare metadata Boolean EPP_MetadataDisabled for Map = False;
 	SendEvent("PluginLoads", [""^EPP_EditorPluginLoads]);
 	SendEvent("PGSwitches", [""^EPP_PlaygroundSwitches]);
 	SendEvent("MappingTime", [""^EPP_MappingTime, ""^EPP_MappingTime_Mapping, ""^EPP_MappingTime_Testing, ""^EPP_MappingTime_Validating]);
 	SendEvent("LockedThumbnail", [""^EPP_ThumbnailLocked]);
+	SendEvent("MetadataDisabled", [""^EPP_MetadataDisabled]);
 }
 
-declare Boolean ShouldBreakLoop = False;
-declare Boolean DisableMetadata = False;
+declare Boolean ShouldBreakLoop;
+declare Boolean DisableMetadata;
 
 Void ProcessIncomingMessages() {
 	declare Text[][] EPP_MsgQueue for ManialinkPage = [];
@@ -93,6 +95,10 @@ Void ProcessIncomingMessages() {
 			SendAllInfo();
 		} else if (MsgType == "MetadataCleared") {
 			ShouldBreakLoop = True;
+			if (DisableMetadata) {
+				declare metadata Boolean EPP_MetadataDisabled for Map = False;
+				EPP_MetadataDisabled = True;
+			}
 		} else if (MsgType == "SetMetadataEnabled") {
 			ShouldBreakLoop = True;
 			DisableMetadata = InMsg.count > 1 && InMsg[1] == "false";
@@ -104,13 +110,23 @@ Void ProcessIncomingMessages() {
 	EPP_MsgQueue.clear();
 }
 
+Boolean EPP_GetMetadataDisabled() {
+	declare metadata Boolean EPP_MetadataDisabled for Map = False;
+	return EPP_MetadataDisabled;
+}
+
 main() {
+	ShouldBreakLoop = False;
+
+	DisableMetadata = EPP_GetMetadataDisabled();
+
 	LayersDefaultManialinkVersion = 3;
 	ManialinkText = CreateManialink();
 
 	// outer loop: used to re-init metadata after clear
 	while (True) {
 		yield;
+		declare Text[][] EPP_MsgQueue for ManialinkPage = [];
 		ShouldBreakLoop = False;
 		if (DisableMetadata) {
 			log("E++ EditorPlugin: metadata disabled");
@@ -127,7 +143,6 @@ main() {
 			}
 			continue;
 		}
-		declare Text[][] EPP_MsgQueue for ManialinkPage = [];
 		// log(""^This);
 		declare Boolean IsInPlayground = False;
 		declare Integer LastRegularValuesUpdate = Now;
@@ -154,6 +169,7 @@ main() {
 		SendAllInfo();
 
 		declare Integer ValidationStart = 0;
+		declare Integer LastCustomSelectionSize = 0;
 
 		while(True)
 		{
@@ -169,7 +185,9 @@ main() {
 			// signal from angelscript: clear CustomSelectionCoords
 			if (CustomSelectionCoords.count == 1 && CustomSelectionCoords[0].X == -1) {
 				CustomSelectionCoords.clear();
-			} else if (CustomSelectionCoords.count > 0) {
+				LastCustomSelectionSize = 0;
+			} else if (CustomSelectionCoords.count != LastCustomSelectionSize) {
+				LastCustomSelectionSize = CustomSelectionCoords.count;
 				declare Int3[] Tmp = [];
 				foreach (Coord in CustomSelectionCoords) { Tmp.add(Coord); }
 				CustomSelectionCoords.clear();
