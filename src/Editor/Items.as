@@ -178,6 +178,7 @@ namespace Editor {
 
         editor.Challenge.AnchoredObjects.Add(item);
 
+        // With the new item hooks, these items are not picked up. So we call the event manually.
         Event::OnNewItem(item);
 
         // this is some other ID, but gets set when you click 'save' and IDK what it does or matters for

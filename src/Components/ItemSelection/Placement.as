@@ -66,7 +66,7 @@ class ItemPlacementTab : Tab {
         AddSimpleTooltip("Unknown or untested.\n Defaults?: -1.0, 0.0 (some items may differ)");
         pp_content.FlyStep = UI::InputFloat("FlyStep", pp_content.FlyStep, 0.01);
         AddSimpleTooltip("In item mode: When <= 0, the item will lock to the ground. When > 0, it's how far each scroll up/down input moves you up/down.");
-        pp_content.FlyOffset = UI::InputFloat("FlyOffset", pp_content.FlyStep, 0.01);
+        pp_content.FlyOffset = UI::InputFloat("FlyOffset", pp_content.FlyOffset, 0.01);
         AddSimpleTooltip("Unknown");
         pp_content.AutoRotation = UI::Checkbox("AutoRotation", pp_content.AutoRotation);
         AddSimpleTooltip("Auto-rotate items to match the surface");

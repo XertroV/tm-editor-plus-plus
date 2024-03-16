@@ -1,3 +1,13 @@
+
+0.8.9999990
+
+- FIX: Jitter not applied to repeated items
+- FIX: Item refresh + Jitter could place ~10 light cubes (per refresh) at 0,24,0 which were not able to be deleted (Sorry if this affects you)
+- FIX: null pointer exception when viewing some mediatracker trigger things
+
+
+0.8.999999
+
 - TAB / FEAT: Inventory search. Hotkey: \ (backslash)
 - TAB: Custom Cursor -- all the advanced cursor/snapping stuff moved here
 - TAB: MT: randomize color for MT ghosts button (randomizes color on all keys)
