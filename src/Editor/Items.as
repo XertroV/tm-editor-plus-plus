@@ -105,10 +105,12 @@ namespace Editor {
 
         auto macroblock = pmt.GetMacroblockModelFromFilePath("Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx");
         trace('UpdateNewlyAddedItems macroblock is null: ' + (macroblock is null));
+        Event::DisableOnItemCB();
         auto placed = pmt.PlaceMacroblock_NoDestruction(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
         trace('UpdateNewlyAddedItems placed: ' + placed);
         bool removed = pmt.RemoveMacroblock(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
         trace('UpdateNewlyAddedItems removed: ' + removed);
+        Event::EnableOnItemCB();
     }
 
     const uint16 O_ANCHOREDOBJ_ITEMMODEL = GetOffset("CGameCtnAnchoredObject", "ItemModel");
@@ -174,10 +176,9 @@ namespace Editor {
         item.IsFlying = true;
         item.ItemModel.MwAddRef();
 
-        // With the new item hooks, these items are not picked up. So we call the event manually.
-        Event::OnNewItem(item);
-
         editor.Challenge.AnchoredObjects.Add(item);
+
+        Event::OnNewItem(item);
 
         // this is some other ID, but gets set when you click 'save' and IDK what it does or matters for
         // Dev::SetOffset(item, 0x168, Dev::GetOffsetUint32(lastItem, 0x168) + diff);

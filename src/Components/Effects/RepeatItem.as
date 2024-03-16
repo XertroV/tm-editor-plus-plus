@@ -122,6 +122,9 @@ namespace Repeat {
             mat4 back2 = back1 * internalTInv;
             mat4 back3 = back2 * itemOffsetInv;
 
+            auto origPos = origItem.AbsolutePositionInMap;
+            auto origRot = Editor::GetItemRotation(origItem);
+
             for (int i = 0; i < nbRepetitions; i++) {
                 base = base * worldIteration;
                 baseRot = baseRot * wi_RotMat;
@@ -130,17 +133,21 @@ namespace Repeat {
                 vec3 pos3 = (m * vec3()).xyz;
 
                 auto rotV = PitchYawRollFromRotationMatrix(baseRot * itemToIterBaseInv * internalTInv);
+                origItem.AbsolutePositionInMap = pos3;
+                origItem.Pitch = rotV.x;
+                origItem.Yaw = rotV.y;
+                origItem.Roll = rotV.z;
                 auto newItem = Editor::DuplicateAndAddItem(editor, origItem, false);
-                newItem.AbsolutePositionInMap = pos3;
-                newItem.Pitch = rotV.x;
-                newItem.Yaw = rotV.y;
-                newItem.Roll = rotV.z;
 
                 // // doenst work for more than like 10-12 items
                 // if (i % 10 == 0) {
                 //     UpdateNewlyAddedItems(editor);
                 // }
             }
+
+            origItem.AbsolutePositionInMap = origPos;
+            Editor::SetItemRotation(origItem, origRot);
+
             Editor::UpdateNewlyAddedItems(editor);
             editor.PluginMapType.AutoSave();
         }
@@ -331,14 +338,23 @@ class RepeatMethod : Tab {
     mat4[] matricies;
 
     void RunItemCreation(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem) {
+        auto origPos = origItem.AbsolutePositionInMap;
+        auto origRot = Editor::GetItemRotation(origItem);
+
         for (uint i = 0; i < matricies.Length; i++) {
             auto rotV = PitchYawRollFromRotationMatrix(matricies[i]);
+            origItem.AbsolutePositionInMap = (matricies[i] * vec3()).xyz;
+            origItem.Pitch = rotV.x;
+            origItem.Yaw = rotV.y;
+            origItem.Roll = rotV.z;
             auto newItem = Editor::DuplicateAndAddItem(editor, origItem, false);
-            newItem.AbsolutePositionInMap = (matricies[i] * vec3()).xyz;
-            newItem.Pitch = rotV.x;
-            newItem.Yaw = rotV.y;
-            newItem.Roll = rotV.z;
+            // would need to manually call this if we didn't set these on the orig item
+            // Event::OnNewItem(newItem);
         }
+
+        origItem.AbsolutePositionInMap = origPos;
+        Editor::SetItemRotation(origItem, origRot);
+
         Editor::UpdateNewlyAddedItems(editor);
         editor.PluginMapType.AutoSave();
     }

@@ -96,6 +96,13 @@ void RegisterOnLeavingPlaygroundCallback(CoroutineFunc@ f, const string &in name
 // }
 
 namespace Event {
+    bool TMP_DISABLE_ONITEM_CB = false;
+    void DisableOnItemCB() {
+        TMP_DISABLE_ONITEM_CB = true;
+    }
+    void EnableOnItemCB() {
+        TMP_DISABLE_ONITEM_CB = false;
+    }
     void RunOnEditorLoadCbs() {
         Log::Trace("Running OnEditorLoad callbacks");
         for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
@@ -135,6 +142,7 @@ namespace Event {
         return updated;
     }
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
+        if (TMP_DISABLE_ONITEM_CB) return false;
         Log::Trace("Running OnNewItem");
         bool updated = false;
         bool lastUpdated = false;
