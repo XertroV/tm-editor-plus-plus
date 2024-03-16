@@ -114,6 +114,12 @@ class CustomSelectionMgr {
             try {
                 dev_trace('running callback');
                 if (doneCB !is null) doneCB(editor, pmt);
+                if (!IsInEditor) {
+                    active = false;
+                    @doneCB = null;
+                    _cancel = false;
+                    return;
+                }
             } catch {
                 warn('catch in custom selection done callback: ' + getExceptionInfo());
             }
@@ -228,12 +234,21 @@ class CustomSelectionMgr {
                 pmt.PlaceGhostBlock(block, coord, pmt.CursorDir);
             } else if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Item) {
                 NotifyWarning("Item fill mode not implemented yet");
+                return;
             } else if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Macroblock) {
                 NotifyWarning("Macroblock fill mode not implemented yet");
+                return;
             } else {
                 NotifyWarning("Unsupported for fill mode: " + tostring(origPlacementMode));
+                return;
             }
             CheckPause();
+            if (UI::IsKeyPressed(UI::Key::Escape)) {
+                trace("Exiting fill loop as escape was pressed");
+                break;
+            }
+            // if we exit the editor, this loop would crash the game
+            if (!IsInEditor) return;
         }
         pmt.AutoSave();
         // pmt.Selection

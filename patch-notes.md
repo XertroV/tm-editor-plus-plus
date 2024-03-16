@@ -6,6 +6,8 @@
 - FIX: null pointer exception when viewing some mediatracker trigger things
 - FIX: FlyOffset in current item > placement.
 - Add auto-clear sources and filter to Find/Replace tab.
+- Optimize custom selection manager.
+- FIX: exiting editor while filling blocks would crash the game.
 
 0.8.999999
 
