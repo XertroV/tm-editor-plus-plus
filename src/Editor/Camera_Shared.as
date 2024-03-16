@@ -1,5 +1,5 @@
 namespace Editor {
-    shared class CamState {
+    class CamState {
         float HAngle = 0;
         float VAngle = 0;
         float TargetDist = 0;
@@ -31,6 +31,31 @@ namespace Editor {
                 && this.TargetDist == other.TargetDist
                 && MathX::Vec3Eq(this.Pos, other.Pos)
             ;
+        }
+
+        CamState@ withAdditionalHAngle(float angle) {
+            this.HAngle += angle;
+            return this;
+        }
+
+        CamState@ withPos(vec3 pos) {
+            this.Pos = pos;
+            return this;
+        }
+
+        CamState@ withTargetDist(float dist) {
+            this.TargetDist = dist;
+            return this;
+        }
+
+        CamState@ withVAngle(float angle) {
+            this.VAngle = angle;
+            return this;
+        }
+
+        CamState@ withHAngle(float angle) {
+            this.HAngle = angle;
+            return this;
         }
     }
 }

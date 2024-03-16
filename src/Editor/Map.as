@@ -119,6 +119,19 @@ namespace Editor {
         SetCamAnimationGoTo(currCam);
     }
 
+    void SaveAndExitMap() {
+        auto app = cast<CTrackMania>(GetApp());
+        auto editor = cast<CGameCtnEditorFree>(app.Editor);
+        if (!SaveMapSameName(editor)) {
+            NotifyWarning("Map must be saved, first. Please save and reload manually!");
+            return;
+        }
+        while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
+        app.BackToMainMenu();
+        Log::Trace('back to menu');
+        AwaitReturnToMenu();
+    }
+
     /// unused and unmaintained
     void SaveAndReloadMapWithRefreshMap(const string &in refreshMapName) {
         Log::Trace('save and reload map');

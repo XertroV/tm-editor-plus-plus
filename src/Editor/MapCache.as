@@ -285,12 +285,16 @@ namespace Editor {
                 // if (myNonce != lastRefreshNonce) return;
                 AddBlock(BlockInMap(i, pmt.ClassicBlocks[i]));
                 CheckPause();
+                if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
+                    || editor.PluginMapType is null) break;
             }
             yield();
             yield();
             trace('Caching map GhostBlocks...');
             for (uint i = 0; i < pmt.GhostBlocks.Length; i++) {
                 CheckPause();
+                if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
+                    || editor.PluginMapType is null) break;
                 if (myNonce != lastRefreshNonce) return;
                 if (GetApp().Editor is null) return;
                 if (myNonce != lastRefreshNonce) return;
@@ -301,6 +305,8 @@ namespace Editor {
             trace('Caching map items...');
             for (uint i = 0; i < pmt.Map.AnchoredObjects.Length; i++) {
                 CheckPause();
+                if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
+                    || editor.PluginMapType is null) break;
                 if (myNonce != lastRefreshNonce) return;
                 if (GetApp().Editor is null) return;
                 if (myNonce != lastRefreshNonce) return;

@@ -164,6 +164,9 @@ void Render() {
     // if (IsInEditor) FarlandsHelper::Render();
     RenderItemEditorButtons();
     if (g_MapPropsTab !is null) g_MapPropsTab.DrawTestPlacementWindows();
+    // if (!IsInEditor && g_MapBaseSizeChanger !is null && g_MapBaseSizeChanger.windowOpen) {
+    //     g_MapBaseSizeChanger.DrawWindow();
+    // }
 }
 
 void RenderInterface() {

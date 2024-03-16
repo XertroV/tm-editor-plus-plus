@@ -192,9 +192,13 @@ class MapEditPropsTab : Tab {
         if (UI::Button("Update Map Height")) {
             Editor::SetNewMapHeight(map, newSizeY);
         }
-        AddSimpleTooltip("You may need to save and reload the map to avoid camera bugs.");
-        UI::SameLine();
-        UI::TextDisabled("Use gbxexplorer.net to change X/Z -- may not work for validated maps");
+        AddSimpleTooltip("You may need to save and reload the map to avoid camera/placement bugs.");
+        // UI::SameLine();
+        // UI::TextDisabled("Use gbxexplorer.net to change X/Z -- may not work for validated maps");
+
+        // if (UI::Button("Change Map Base Size " + BetaIndicator)) {
+        //     OpenMapBaseSizeChanger();
+        // }
 
         // sorta works but often crashes the game
         // newSizeX = Math::Clamp(UI::InputInt("Size.X", newSizeX), 8, 255);
@@ -613,13 +617,20 @@ class MapEditPropsTab : Tab {
             UI::Text(clip.Name);
             UI::SameLine();
             if (UX::SmallButton(Icons::Eye+"##mt-clip-"+i)) {
-                Editor::SetCamAnimationGoTo(vec2(.9, .9), MTCoordToPos(trigger.boudingBoxCenter, mtTriggerSize), 120);
+                auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+                Editor::SetCamAnimationGoTo(Editor::GetCurrentCamState(editor).withAdditionalHAngle(1.5).withPos(MTCoordToPos(trigger.boundingBoxCenter, mtTriggerSize)).withTargetDist(MTCoordToPos(trigger.boundingBoxSize).Length()));
             }
             while (clipColors.Length <= i) {
                 clipColors.InsertLast(vec4(Math::Rand(0.0, 1.0), Math::Rand(0.0, 1.0), Math::Rand(0.0, 1.0), 0.9));
             }
             UI::SameLine();
+            UI::SetNextItemWidth(200.);
             clipColors[i] = UI::InputColor4("##mt-clip-color-"+i, clipColors[i]);
+            UI::SameLine();
+            UI::AlignTextToFramePadding();
+            UI::Text("Center: " + trigger.boundingBoxCenter.ToString());
+            UI::SameLine();
+            UI::Text("Size: " + trigger.boundingBoxSize.ToString());
             if (drawNvg) {
                 for (uint j = 0; j < trigger.Length; j++) {
                     auto coord = Nat3ToInt3(trigger[j]);

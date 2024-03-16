@@ -33,3 +33,12 @@
   - `void UpdateNewlyAddedItems(CGameCtnEditorFree@ editor)`
     - Calling this will load items that have been added via `DuplicateAndAddItem`. This *SHOULD ALWAYS* be called after adding items (ideally you batch them). The game might crash at some point in the future otherwise.
     - This also adds an undo/redo autosave point (it does not autosave the map, just lets the mapper press 'undo').
+
+
+
+- TOOL: Add tracing paths tool (record a path in free-item placement mode for best results)
+- TAB: Blocks & Items: Waypoints & Macroblocks
+- FEAT: Map Props: Add drawing MT trigger coords in the editor (and click to view)
+- FIX: infinite precision mode didn't work because something was behind DEV compile flags
+- FIX: duplicate block list and improve the menu and B&I tab
+- FIX: restore map name after using save-map APIs

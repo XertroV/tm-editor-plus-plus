@@ -38,12 +38,15 @@ class MTClipGroup {
     }
 
     uint get_TriggersLength() {
+        if (cg is null) return 0;
         return Dev::GetOffsetUint32(cg, o_buf_Triggers + 0x8);
     }
     uint get_TriggersCapacity() {
+        if (cg is null) return 0;
         return Dev::GetOffsetUint32(cg, o_buf_Triggers + 0xC);
     }
     uint64 get_TriggersBufferPtr() {
+        if (cg is null) throw("No pointer for null nod");
         return Dev::GetOffsetUint64(cg, o_buf_Triggers);
     }
 
@@ -111,8 +114,11 @@ class MTClipGroupTrigger {
         AssertGoodPtr();
         return Dev::ReadNat3(ptr + o_n3_MaxCoords);
     }
-    vec3 get_boudingBoxCenter() {
+    vec3 get_boundingBoxCenter() {
         return Nat3ToVec3(minBoundingBoxCoords + maxBoundingBoxCoords) / 2;
+    }
+    vec3 get_boundingBoxSize() {
+        return Nat3ToVec3(maxBoundingBoxCoords - minBoundingBoxCoords);
     }
 
     uint get_Length() {

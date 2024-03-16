@@ -73,8 +73,8 @@ bool _EditMap5(CMwStack &in stack, CMwNod@ nod) {
         _pluginArgs.Add(s);
         pluginArgsTxt += (i > 0 ? ", " : "") + s;
     }
-    pluginScripts.Add(wstring("EditorPlusPlus.Script.txt"));
-    pluginArgs.Add(wstring(""));
+    // pluginScripts.Add(wstring("EditorPlusPlus.Script.txt"));
+    // pluginArgs.Add(wstring(""));
 
     dev_trace("map: " + map);
     dev_trace("decoration: " + decoration);
@@ -85,11 +85,13 @@ bool _EditMap5(CMwStack &in stack, CMwNod@ nod) {
     dev_trace("upgradeAdv: " + upgradeAdv);
     dev_trace("onlyForced: " + onlyForced);
 
-    EDIT_MAP_PASSTHROUGH = true;
-    titleApi.EditMap5(map, decoration, modNameOrUrl, playerModel, pluginScripts, pluginArgs, upgradeAdv, onlyForced);
-    EDIT_MAP_PASSTHROUGH = false;
+    return true;
 
-    return false;
+    // EDIT_MAP_PASSTHROUGH = true;
+    // titleApi.EditMap5(map, decoration, modNameOrUrl, playerModel, pluginScripts, pluginArgs, upgradeAdv, onlyForced);
+    // EDIT_MAP_PASSTHROUGH = false;
+
+    // return false;
 }
 bool _EditNewMap1(CMwStack &in stack) {
     if (EDIT_MAP_PASSTHROUGH) return true;

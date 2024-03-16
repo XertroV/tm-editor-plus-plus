@@ -78,6 +78,9 @@ Void SendAllInfo() {
 	SendEvent("LockedThumbnail", [""^EPP_ThumbnailLocked]);
 }
 
+declare Boolean ShouldBreakLoop = False;
+declare Boolean DisableMetadata = False;
+
 Void ProcessIncomingMessages() {
 	declare Text[][] EPP_MsgQueue for ManialinkPage = [];
 	foreach (InMsg in EPP_MsgQueue) {
@@ -88,6 +91,14 @@ Void ProcessIncomingMessages() {
 			LockThumbnail(InMsg[1] == "true");
 		} else if (MsgType == "ResyncPlease") {
 			SendAllInfo();
+		} else if (MsgType == "MetadataCleared") {
+			ShouldBreakLoop = True;
+		} else if (MsgType == "SetMetadataEnabled") {
+			ShouldBreakLoop = True;
+			DisableMetadata = InMsg.count > 1 && InMsg[1] == "false";
+		} else if (MsgType == "AddValidationTime" && InMsg.count >= 2) {
+			declare metadata Integer EPP_MappingTime_Validating for Map = 0;
+			EPP_MappingTime_Validating += TL::ToInteger(InMsg[1]);
 		}
 	}
 	EPP_MsgQueue.clear();
@@ -97,73 +108,103 @@ main() {
 	LayersDefaultManialinkVersion = 3;
 	ManialinkText = CreateManialink();
 
-	// log(""^This);
-	declare Boolean IsInPlayground = False;
-	declare Integer LastRegularValuesUpdate = Now;
-	// ! make sure to update SendAllInfo, too
-	declare metadata Integer EPP_EditorPluginLoads for Map = 0;
-	declare metadata Integer EPP_PlaygroundSwitches for Map = 0;
-	declare metadata Integer EPP_MappingTime for Map = 0;
-	declare metadata Integer EPP_MappingTime_Testing for Map = 0;
-	declare metadata Integer EPP_MappingTime_Validating for Map = 0;
-	declare metadata Integer EPP_MappingTime_Mapping for Map = 0;
-	declare metadata Boolean EPP_ThumbnailLocked for Map = False;
-	declare Text[][] EPP_MsgQueue for ManialinkPage = [];
-	EPP_EditorPluginLoads += 1;
-
-	LoadCameraState();
-
-	log("E++: Setting AttachID on UI layer");
-	UILayers[0].AttachId = "E++ Supporting Plugin";
-	declare CUILayer MainLayer <=> UILayers[0];
-	SendAllInfo();
-
-	declare Integer ValidationStart = 0;
-
-	while(True)
-	{
-		if (EPP_MsgQueue.count > 0) {
-			ProcessIncomingMessages();
-		}
-
-		// signal from angelscript: clear CustomSelectionCoords
-		if (CustomSelectionCoords.count == 1 && CustomSelectionCoords[0].X == -1) {
-			CustomSelectionCoords.clear();
-		} else if (CustomSelectionCoords.count > 0) {
-			declare Int3[] Tmp = [];
-			foreach (Coord in CustomSelectionCoords) { Tmp.add(Coord); }
-			CustomSelectionCoords.clear();
-			foreach (Coord in Tmp) { CustomSelectionCoords.add(Coord); }
-		}
-
-		// track playground in-out
-		if ((IsTesting || IsValidating) != IsInPlayground) {
-			IsInPlayground = IsTesting || IsValidating;
-			if (IsInPlayground) {
-				EPP_PlaygroundSwitches += 1;
-				SendEvent("PGSwitches", [""^EPP_PlaygroundSwitches]);
-			}
-		}
-
-		if (Now - LastRegularValuesUpdate > 100) {
-			// save the camera state
-			SaveCameraState();
-			// update mapping time for map
-			declare Delta = (Now - LastRegularValuesUpdate);
-			EPP_MappingTime += Delta;
-			if (IsTesting) {
-				EPP_MappingTime_Testing += Delta;
-			} else if (IsValidating) {
-				// validation not trackable from editor plugins
-				EPP_MappingTime_Validating += Delta;
-			} else {
-				EPP_MappingTime_Mapping += Delta;
-			}
-			SendEvent("MappingTime", [""^EPP_MappingTime, ""^EPP_MappingTime_Mapping, ""^EPP_MappingTime_Testing, ""^EPP_MappingTime_Validating]);
-			LastRegularValuesUpdate = Now;
-		}
-
+	// outer loop: used to re-init metadata after clear
+	while (True) {
 		yield;
+		ShouldBreakLoop = False;
+		if (DisableMetadata) {
+			log("E++ EditorPlugin: metadata disabled");
+			declare metadata Boolean EPP_MetadataDisabled for Map = False;
+			EPP_MetadataDisabled = True;
+			while (True) {
+				if (EPP_MsgQueue.count > 0) {
+					ProcessIncomingMessages();
+				}
+				if (ShouldBreakLoop) {
+					break;
+				}
+				yield;
+			}
+			continue;
+		}
+		declare Text[][] EPP_MsgQueue for ManialinkPage = [];
+		// log(""^This);
+		declare Boolean IsInPlayground = False;
+		declare Integer LastRegularValuesUpdate = Now;
+		declare metadata Boolean EPP_MetadataDisabled for Map = False;
+		// ! make sure to update SendAllInfo, too
+		declare metadata Integer EPP_EditorPluginLoads for Map = 0;
+		declare metadata Integer EPP_PlaygroundSwitches for Map = 0;
+		declare metadata Integer EPP_MappingTime for Map = 0;
+		declare metadata Integer EPP_MappingTime_Testing for Map = 0;
+		declare metadata Integer EPP_MappingTime_Validating for Map = 0;
+		declare metadata Integer EPP_MappingTime_Mapping for Map = 0;
+		declare metadata Boolean EPP_ThumbnailLocked for Map = False;
+		EPP_EditorPluginLoads += 1;
+		declare metadata Integer[] Race_AuthorRaceWaypointTimes for Map;
+		declare Integer[] Race_Share_AuthorRaceWaypointTimes for Map;
+		declare Integer Race_Share_AuthorTime for Map = -1;
+		declare Ident Race_Share_AuthorGhostId for Map;
+
+		LoadCameraState();
+
+		log("E++: Setting AttachID on UI layer");
+		UILayers[0].AttachId = "E++ Supporting Plugin";
+		declare CUILayer MainLayer <=> UILayers[0];
+		SendAllInfo();
+
+		declare Integer ValidationStart = 0;
+
+		while(True)
+		{
+			if (EPP_MsgQueue.count > 0) {
+				ProcessIncomingMessages();
+			}
+
+			if (ShouldBreakLoop) {
+				// ShouldBreakLoop is set in ProcessIncomingMessages
+				break;
+			}
+
+			// signal from angelscript: clear CustomSelectionCoords
+			if (CustomSelectionCoords.count == 1 && CustomSelectionCoords[0].X == -1) {
+				CustomSelectionCoords.clear();
+			} else if (CustomSelectionCoords.count > 0) {
+				declare Int3[] Tmp = [];
+				foreach (Coord in CustomSelectionCoords) { Tmp.add(Coord); }
+				CustomSelectionCoords.clear();
+				foreach (Coord in Tmp) { CustomSelectionCoords.add(Coord); }
+			}
+
+			// track playground in-out
+			if ((IsTesting || IsValidating) != IsInPlayground) {
+				IsInPlayground = IsTesting || IsValidating;
+				if (IsInPlayground) {
+					EPP_PlaygroundSwitches += 1;
+					SendEvent("PGSwitches", [""^EPP_PlaygroundSwitches]);
+				}
+			}
+
+			if (Now - LastRegularValuesUpdate > 100) {
+				// save the camera state
+				SaveCameraState();
+				// update mapping time for map
+				declare Delta = (Now - LastRegularValuesUpdate);
+				EPP_MappingTime += Delta;
+				if (IsTesting) {
+					EPP_MappingTime_Testing += Delta;
+				} else if (IsValidating) {
+					// validation not trackable from editor plugins
+					EPP_MappingTime_Validating += Delta;
+				} else {
+					EPP_MappingTime_Mapping += Delta;
+				}
+				SendEvent("MappingTime", [""^EPP_MappingTime, ""^EPP_MappingTime_Mapping, ""^EPP_MappingTime_Testing, ""^EPP_MappingTime_Validating]);
+				LastRegularValuesUpdate = Now;
+			}
+
+			yield;
+		}
 	}
 }
 """.Replace('_"_"_"_', '"""');

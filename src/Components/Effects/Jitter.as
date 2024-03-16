@@ -51,8 +51,8 @@ class JitterEffectTab : EffectTab {
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         UI::Text("Jitter applies a random offset to newly placed items' position and/or rotation.");
-        // UI::TextWrapped("\\$f80Note!\\$z Refreshing items will not work for the most recently placed item! You must place an extra item, delete it, and then it will work as expected. You can also save and reload the map instead of using the refresh items button -- same restrictions apply.");
-        UI::TextWrapped("\\$f80Note!\\$z Too much ctrl+z can undo the jitter (and a re-do is then required if jitter isn't active at the time of the undo).");
+
+        // UI::TextWrapped("\\$f80Note!\\$z Too much ctrl+z can undo the jitter (and a re-do is then required if jitter isn't active at the time of the undo).");
         if (UI::Button(_IsActive ? "Deactivate##jitter" : "Activate##jitter")) {
             ToggleJitter();
         }

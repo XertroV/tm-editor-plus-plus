@@ -173,13 +173,14 @@ namespace Editor {
         // mark flying and add a reference, then add to list of items
         item.IsFlying = true;
         item.ItemModel.MwAddRef();
+
+        // With the new item hooks, these items are not picked up. So we call the event manually.
+        Event::OnNewItem(item);
+
         editor.Challenge.AnchoredObjects.Add(item);
 
         // this is some other ID, but gets set when you click 'save' and IDK what it does or matters for
         // Dev::SetOffset(item, 0x168, Dev::GetOffsetUint32(lastItem, 0x168) + diff);
-
-        // With the new item hooks, these items are not picked up. So we call the event manually.
-        Event::OnNewItem(item);
 
         if (updateItemsAfter) {
             UpdateNewlyAddedItems(editor);

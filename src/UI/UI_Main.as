@@ -361,6 +361,7 @@ TabGroup@ CreateToolsTabGroup() {
     MaterialsListTab(tools);
     @g_CursorPositionWindow = CursorPosition(tools);
     @g_CoordPathDrawingTool = CoordPathDrawingTab(tools);
+    // @g_MapBaseSizeChanger = MapBaseSizeChangerTab(tools);
     return tools;
 }
 
