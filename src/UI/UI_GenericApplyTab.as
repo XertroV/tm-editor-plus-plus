@@ -188,6 +188,7 @@ class GenericApplyTab : EffectTab {
         auto @items = ApplyingToCalcItems(pmt);
         cachedTargetsB.RemoveRange(0, cachedTargetsB.Length);
         cachedTargetsI.RemoveRange(0, cachedTargetsI.Length);
+        trace('UpdateApplicationTargets: blocks: ' + blocks.Length + ', items: ' + items.Length);
         for (uint i = 0; i < blocks.Length; i++) {
             cachedTargetsB.InsertLast(Editor::BlockInMap(i, blocks[i]));
             if (runApplication == 1) ApplyTo(blocks[i]);
@@ -208,6 +209,12 @@ class GenericApplyTab : EffectTab {
     // overload this to stop auto-refresh
     void OnApplyDone() {
         Editor::RefreshBlocksAndItems(cast<CGameCtnEditorFree>(GetApp().Editor));
+        AfterApply();
+    }
+
+    // overload to do anything after apply
+    void AfterApply() {
+        // nothing
     }
 
     CGameCtnBlock@[] ApplyingToCalcBlocks(CGameEditorPluginMap@ pmt) {
@@ -310,11 +317,11 @@ class GenericApplyTab : EffectTab {
 
     void NameFilterCallback(UI::InputTextCallbackData@ data) {
         if (data.EventFlag != UI::InputTextFlags::CallbackAlways) {
-            trace('data.EventFlag: ' + tostring(data.EventFlag));
+            dev_trace('data.EventFlag: ' + tostring(data.EventFlag));
         }
 
         if (int(data.EventKey) > 0)
-            trace('key: ' + tostring(data.EventKey));
+            dev_trace('key: ' + tostring(data.EventKey));
         bool isPgUpDown = data.EventKey == UI::Key::PageUp || data.EventKey == UI::Key::PageDown;
 
         if (isPgUpDown || data.EventFlag == UI::InputTextFlags::CallbackHistory) {

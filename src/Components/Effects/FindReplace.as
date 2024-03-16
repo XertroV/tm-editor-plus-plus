@@ -67,11 +67,22 @@ class FindReplaceTab : GenericApplyTab {
         RunReplace(item);
     }
 
+    void AfterApply() override {
+        if (ClearAfterRun) {
+            @sourceItemModel = null;
+            @sourceBlockModel = null;
+            filteredObjectNames.RemoveRange(0, filteredObjectNames.Length);
+        }
+    }
+
+    bool ClearAfterRun = true;
+
     void DrawInner() override {
         UI::TextWrapped("Find all instances of an item or block and replace it with a source item/block.");
         UI::TextWrapped("\\$f80Warning:\\$z Replacing some blocks (e.g., checkpoints) may result in a crash. Please save your work before using this tool.");
 
         _IsActive = UI::Checkbox("Apply to new? (as per filter)", _IsActive);
+        ClearAfterRun = UI::Checkbox("Auto-clear sources and filter after apply", ClearAfterRun);
 
         UI::AlignTextToFramePadding();
         if (sourceItemModel is null) {
