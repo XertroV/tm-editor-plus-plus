@@ -52,8 +52,8 @@ class DGameCtnMacroBlockInfo_Block : RawBufferElem {
 	void set_isFree(bool value) { flags = value ? flags | 4 : flags & (0xFF ^ 4); }
 	CGameWaypointSpecialProperty@ get_Waypoint() { return cast<CGameWaypointSpecialProperty>(this.GetNod(0x48)); }
 	void set_Waypoint(CGameWaypointSpecialProperty@ value) { this.SetNod(0x48, value); }
-	CGameCtnBlockInfoClassic@ get_BlockInfo() { return cast<CGameCtnBlockInfoClassic>(this.GetNod(0x50)); }
-	void set_BlockInfo(CGameCtnBlockInfoClassic@ value) { this.SetNod(0x50, value); }
+	CGameCtnBlockInfo@ get_BlockInfo() { return cast<CGameCtnBlockInfo>(this.GetNod(0x50)); }
+	void set_BlockInfo(CGameCtnBlockInfo@ value) { this.SetNod(0x50, value); }
 }
 
 
@@ -163,6 +163,7 @@ class DGameCtnMacroBlockInfo_Item : RawBufferElem {
 	CGameCtnAnchoredObject::EPhaseOffset get_phase() { return CGameCtnAnchoredObject::EPhaseOffset(this.GetUint8(0x36)); }
 	void set_phase(CGameCtnAnchoredObject::EPhaseOffset value) { this.SetUint8(0x36, value); }
 	mat3 get_visualRot() { return (this.GetMat3(0x54)); }
+	void set_visualRot(mat3 value) { this.SetMat3(0x54, value); }
 	vec3 get_pivotPos() { return (this.GetVec3(0x78)); }
 	void set_pivotPos(vec3 value) { this.SetVec3(0x78, value); }
 	bool get_isFlying() { return this.GetUint8(0x84) & 1 == 1; }

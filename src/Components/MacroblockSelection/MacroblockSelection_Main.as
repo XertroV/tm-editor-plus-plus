@@ -19,6 +19,8 @@ class MacroblockSelectionTab : Tab {
         return editor.CurrentItemModel.IdName;
     }
 
+    Editor::MacroblockSpec@ mbSpec;
+
     void DrawInner() override {
         // Children.DrawTabs();
         if (selectedMacroBlockInfo is null) {
@@ -59,6 +61,54 @@ class MacroblockSelectionTab : Tab {
         UI::SameLine();
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(mbi)));
 #endif
+
+        if (mbSpec is null) {
+            if (UI::Button("Create MB Spec")) {
+                @mbSpec = Editor::MacroblockSpec(mbi);
+            }
+        } else {
+            if (UI::Button("Nullify MB Spec")) {
+                @mbSpec = null;
+            } else {
+                if (UI::CollapsingHeader("MB Spec Debug")) {
+                    mbSpec.DrawDebug();
+                }
+                if (UX::SmallButton("Try placement test")) {
+                    mbSpec._TempWriteToMacroblock(mbi);
+                    trace('wrote mb spec to mb: ' + mbi.IdName);
+                    auto dmb = DGameCtnMacroBlockInfo(mbi);
+                    trace('nb blocks: ' + dmb.Blocks.Length);
+                    trace('nb items: ' + dmb.Items.Length);
+                    trace('nb skins: ' + dmb.Skins.Length);
+
+                    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+                    auto pmt = editor.PluginMapType;
+                    auto placed = pmt.PlaceMacroblock_AirMode(mbi, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
+                    trace('placed mb: ' + placed);
+                    pmt.AutoSave();
+
+                    mbSpec._RestoreMacroblock();
+
+                    // todo: test remove
+                    // pmt.RemoveMacroblock(mbi, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
+                }
+                if (mbSpec.tmpWriteBuf is null) {
+                    if (UX::SmallButton("Alloc MB Spec tmpWriteBuf")) {
+                        mbSpec._AllocAndWriteMemory();
+                    }
+                } else {
+                    if (UX::SmallButton("Debug trace MB Spec tmpWriteBuf")) {
+                        trace("Macroblock memory main ptr: " + Text::FormatPointer(mbSpec.tmpWriteBuf.ptr));
+                        auto bytes = mbSpec.tmpWriteBuf.DebugRead();
+                        trace("Macroblock memory bytes before cursor: " + bytes[0]);
+                        trace("Macroblock memory bytes after cursor: " + bytes[1]);
+                    }
+                    if (UX::SmallButton("Clear MB Spec tmpWriteBuf")) {
+                        mbSpec._UnallocMemory();
+                    }
+                }
+            }
+        }
 
         UI::Columns(1);
 

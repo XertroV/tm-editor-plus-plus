@@ -200,11 +200,7 @@ uint32 GetMwId(const string &in name) {
 }
 
 string GetMwIdName(uint id) {
-    if (tmp_ItemModelForMwIdSetting is null) {
-        @tmp_ItemModelForMwIdSetting = CGameItemModel();
-    }
-    tmp_ItemModelForMwIdSetting.Id.Value = id;
-    return tmp_ItemModelForMwIdSetting.IdName;
+    return MwId(id).GetName();
 }
 
 

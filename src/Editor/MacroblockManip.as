@@ -6,6 +6,7 @@ namespace Editor {
 
         NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) {
             throw("Not implemented -- override me");
+            return null;
         }
 
         // calc size for network buffer, unused atm
@@ -14,7 +15,7 @@ namespace Editor {
             return 0;
         }
 
-        void WriteLPStringToBuffer(MemoryBuffer@ buf, string str) {
+        void WriteLPStringToBuffer(MemoryBuffer@ buf, const string &in str) {
             if (str.Length > 0xFFFF) {
                 throw("String too long");
             }
@@ -81,7 +82,29 @@ namespace Editor {
 
         MacroblockSpec(CGameCtnMacroBlockInfo@ mb) {
             auto dmb = DGameCtnMacroBlockInfo(mb);
+            auto mbBlocks = dmb.Blocks;
+            for (uint i = 0; i < mbBlocks.Length; i++) {
+                blocks.InsertLast(BlockSpec(mbBlocks[i]));
+            }
+            auto mbItems = dmb.Items;
+            for (uint i = 0; i < mbItems.Length; i++) {
+                items.InsertLast(ItemSpec(mbItems[i]));
+            }
+        }
 
+        void DrawDebug() {
+            UI::Text("Blocks: " + blocks.Length);
+            UI::Indent();
+            for (uint i = 0; i < blocks.Length; i++) {
+                UI::Text("Block " + i + ": " + blocks[i].name);
+            }
+            UI::Unindent();
+            UI::Text("Items: " + items.Length);
+            UI::Indent();
+            for (uint i = 0; i < items.Length; i++) {
+                UI::Text("Item " + i + ": " + items[i].name);
+            }
+            UI::Unindent();
         }
 
         uint CalcSize() override {
@@ -140,7 +163,7 @@ namespace Editor {
         protected uint64 tmpMacroblockSkinsBufLenCap = 0;
         bool releaseTmpMacroblock = false;
 
-        protected void TempWriteToMacroblock(CGameCtnMacroBlockInfo@ macroblock) {
+        void _TempWriteToMacroblock(CGameCtnMacroBlockInfo@ macroblock) {
             @tmpMacroblock = DGameCtnMacroBlockInfo(macroblock);
             releaseTmpMacroblock = Reflection::GetRefCount(macroblock) > 1;
             if (releaseTmpMacroblock) {
@@ -157,12 +180,13 @@ namespace Editor {
             tmpMacroblockSkinsBuf = Dev::ReadUInt64(mbSkins.Ptr);
             tmpMacroblockSkinsBufLenCap = Dev::ReadUInt64(mbSkins.Ptr + 0x8);
 
-            AllocAndWriteMemory();
+            _AllocAndWriteMemory(true);
+
         }
 
         CustomBuffer@ tmpWriteBuf;
 
-        protected void AllocAndWriteMemory() {
+        void _AllocAndWriteMemory(bool writeToMb = false) {
             @tmpWriteBuf = CustomBuffer(CalcRequiredMbBufSize());
             auto blocksPtrs = tmpWriteBuf.GetPtrVAlloc(0x8 * blocks.Length);
             for (uint i = 0; i < blocks.Length; i++) {
@@ -182,6 +206,15 @@ namespace Editor {
                 itemsPtrs.Write(itemEl.ptr);
                 items[i].WriteToMemory(itemEl);
             }
+
+            if (writeToMb) {
+                Dev::Write(tmpMacroblock.Blocks.Ptr, blocksPtrs.ptr);
+                Dev::Write(tmpMacroblock.Blocks.Ptr + 0x8, nat2(blocks.Length));
+                Dev::Write(tmpMacroblock.Items.Ptr, itemsPtrs.ptr);
+                Dev::Write(tmpMacroblock.Items.Ptr + 0x8, nat2(items.Length));
+                Dev::Write(tmpMacroblock.Skins.Ptr, skinsPtrs.ptr);
+                Dev::Write(tmpMacroblock.Skins.Ptr + 0x8, nat2(skins.Length));
+            }
         }
 
         protected uint CalcRequiredMbBufSize() {
@@ -198,15 +231,19 @@ namespace Editor {
             return size;
         }
 
-        protected void RestoreMacroblock() {
+        void _UnallocMemory() {
+            @tmpWriteBuf = null;
+        }
+
+        void _RestoreMacroblock() {
+            _UnallocMemory();
+
             Dev::Write(tmpMacroblock.Blocks.Ptr, tmpMacroblockBlocksBuf);
             Dev::Write(tmpMacroblock.Blocks.Ptr + 0x8, tmpMacroblockBlocksBufLenCap);
             Dev::Write(tmpMacroblock.Items.Ptr, tmpMacroblockItemsBuf);
             Dev::Write(tmpMacroblock.Items.Ptr + 0x8, tmpMacroblockItemsBufLenCap);
             Dev::Write(tmpMacroblock.Skins.Ptr, tmpMacroblockSkinsBuf);
             Dev::Write(tmpMacroblock.Skins.Ptr + 0x8, tmpMacroblockSkinsBufLenCap);
-
-            @tmpWriteBuf = null;
 
             if (tmpMacroblock !is null && releaseTmpMacroblock) {
                 tmpMacroblock.Nod.MwRelease();
@@ -278,8 +315,8 @@ namespace Editor {
             // collection = blah
             author = block.BlockInfo.Author.GetName();
             coord = block.Coord;
-            dir = block.Dir;
-            dir2 = block.Dir;
+            dir = block.Direction;
+            dir2 = block.Direction;
             pos = Editor::GetBlockLocation(block);
             pyr = Editor::GetBlockRotation(block);
             color = block.MapElemColor;
@@ -481,7 +518,7 @@ namespace Editor {
         uint collection = 26;
         string author;
         nat3 coord;
-        CGameCtnBlock::ECardinalDirections dir;
+        CGameCtnAnchoredObject::ECardinalDirections dir;
         vec3 pos;
         vec3 pyr;
         float scale;
@@ -505,7 +542,7 @@ namespace Editor {
             // collection = blah
             author = item.ItemModel.Author.GetName();
             coord = item.BlockUnitCoord;
-            dir = -1;
+            dir = CGameCtnAnchoredObject::ECardinalDirections(-1);
             pos = Editor::GetItemLocation(item);
             pyr = Editor::GetItemRotation(item);
             scale = item.Scale;
@@ -538,7 +575,7 @@ namespace Editor {
             phase = item.phase;
             visualRot = item.visualRot;
             pivotPos = item.pivotPos;
-            isFlying = item.isFlying;
+            isFlying = item.isFlying ? 1 : 0;
             variantIx = item.variantIx;
             associatedBlockIx = 0xFFFFFFFF; // item.associatedBlockIx;
             itemGroupOnBlock = 0xFFFFFFFF; // item.itemGroupOnBlock;
@@ -563,7 +600,7 @@ namespace Editor {
             item.phase = phase;
             item.visualRot = visualRot;
             item.pivotPos = pivotPos;
-            item.isFlying = isFlying;
+            item.isFlying = isFlying > 0;
             item.variantIx = variantIx;
             item.associatedBlockIx = 0xFFFFFFFF;
             item.itemGroupOnBlock = 0xFFFFFFFF;
@@ -632,7 +669,7 @@ class CustomBuffer {
     }
 
     CustomBuffer(uint32 size) {
-        ptr = Dev::Allocate(size, false);
+        ptr = Dev_Allocate(size, false);
         if (ptr == 0) throw("Failed to allocate D:");
         allocSize = size;
         cursor = 0;
@@ -641,8 +678,18 @@ class CustomBuffer {
 
     ~CustomBuffer() {
         if (ptr > 0 && freeOnDestroy) {
-            Dev::Free(ptr);
+            FreeAllocated(ptr);
         }
+    }
+
+    string[]@ DebugRead() {
+        if (cursor > allocSize) {
+            throw("Cursor out of bounds");
+        }
+        return {
+            Dev::Read(ptr, cursor),
+            Dev::Read(ptr + cursor, allocSize - cursor)
+        };
     }
 
     CustomBuffer@ GetPtrVAlloc(uint32 size) {
@@ -658,7 +705,7 @@ class CustomBuffer {
         }
     }
 
-    void CheckAdvSize(uint32 size) {
+    uint64 CheckAdvSize(uint32 size) {
         CheckSize(size);
         auto ret = ptr + cursor;
         cursor += size;

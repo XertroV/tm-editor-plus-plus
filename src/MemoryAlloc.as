@@ -17,6 +17,14 @@ void FreeAllAllocated() {
     memoryAllocations.RemoveRange(0, memoryAllocations.Length);
 }
 
+void FreeAllocated(uint64 ptr) {
+    auto ix = memoryAllocations.Find(ptr);
+    if (ix < 0) return;
+    Dev::Free(ptr);
+    memoryAllocations.RemoveAt(ix);
+    trace("Freed memory (one-off) at " + Text::FormatPointer(ptr));
+}
+
 
 class AllocGroup {
     uint64[] allocations;
