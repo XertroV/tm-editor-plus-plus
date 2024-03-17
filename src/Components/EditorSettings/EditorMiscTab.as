@@ -2,8 +2,10 @@
 bool S_AutoUnlockCamera = false;
 [Setting hidden]
 float S_BleacherSpectatorsFillRatio = -0.010;
+[Setting hidden]
 uint S_BleacherSpectatorsCount = 0;
-
+[Setting hidden]
+bool S_FixFreeLookAltTab = true;
 class EditorMiscTab : Tab {
     bool lastBlockTypeWasGhost = false;
 
@@ -20,6 +22,18 @@ class EditorMiscTab : Tab {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             CheckSetHideBlockHelpers(editor);
             CheckSetInvDirectories(editor);
+            CheckFixFreeCamAltTab(editor);
+        }
+    }
+
+    void CheckFixFreeCamAltTab(CGameCtnEditorFree@ editor) {
+        if (!S_FixFreeLookAltTab) return;
+        if (editor is null) return;
+        auto app = GetApp();
+        if (!app.InputPort.IsFocused) {
+            if (editor.PluginMapType.EditMode == CGameEditorPluginMap::EditMode::FreeLook) {
+                editor.ButtonFreelookModeOnClick();
+            }
         }
     }
 
@@ -159,6 +173,8 @@ class EditorMiscTab : Tab {
         CopiableLabeledValue("Target Position", targetPos.ToString());
         CopiableLabeledValue("Camera Position", editor.OrbitalCameraControl.Pos.ToString());
         // editor.OrbitalCameraControl.m_TargetedPosition = pmt.CameraTargetPosition;
+
+        S_FixFreeLookAltTab = UI::Checkbox("Exit FreeLook when you Alt-Tab", S_FixFreeLookAltTab);
 
         UI::Separator();
 

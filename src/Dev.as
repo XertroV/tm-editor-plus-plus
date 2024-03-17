@@ -189,15 +189,22 @@ string UintToBytes(uint x) {
     return Dev::Read(NodPtrs::g_TmpPtrSpace, 4);
 }
 
+CGameItemModel@ tmp_ItemModelForMwIdSetting;
 
 uint32 GetMwId(const string &in name) {
-    auto x = MwId();
-    x.SetName(name);
-    return x.Value;
+    if (tmp_ItemModelForMwIdSetting is null) {
+        @tmp_ItemModelForMwIdSetting = CGameItemModel();
+    }
+    tmp_ItemModelForMwIdSetting.IdName = name;
+    return tmp_ItemModelForMwIdSetting.Id.Value;
 }
+
 string GetMwIdName(uint id) {
-    auto x = MwId(id);
-    return x.GetName();
+    if (tmp_ItemModelForMwIdSetting is null) {
+        @tmp_ItemModelForMwIdSetting = CGameItemModel();
+    }
+    tmp_ItemModelForMwIdSetting.Id.Value = id;
+    return tmp_ItemModelForMwIdSetting.IdName;
 }
 
 
@@ -399,20 +406,25 @@ some editor mode things (+BE8); tests like this:
 const uint16 O_LM_PIMP_Buf2 = 0xA8;
 const uint16 SZ_LM_SPIMP_Buf2_EL = 0x58;
 
-// is a unit
+// is a uint
 const uint16 O_EDITOR_CURR_PIVOT_OFFSET = GetOffset("CGameCtnEditorFree", "UndergroundBox") + (0xBC4 - 0xAC0);
 const uint16 O_EDITOR_LAUNCHEDCPS = GetOffset("CGameCtnEditorFree", "Radius") + 0x10;
 const uint16 O_EDITORFREE_Offset = GetOffset("CGameCtnEditorFree", "Offset");
 
 // 0xAC0 originally
 const uint16 O_EDITOR_UndergroundBox = GetOffset("CGameCtnEditorFree", "UndergroundBox");
+const uint16 O_EDITOR_GridColor = GetOffset("CGameCtnEditorFree", "GridColor");
+const uint16 O_EDITOR_CopyPasteMacroBlockInfo = GetOffset("CGameCtnEditorFree", "CopyPasteMacroBlockInfo");
+
+// can be used to
+const uint16 O_EDITOR_SPACEHELD = O_EDITOR_CopyPasteMacroBlockInfo + 0x54; // 0x574 - 0x520
 
 const uint16 O_EDITOR_LAST_LMB_PRESSED = O_EDITOR_UndergroundBox + 0xF0; // 0xBB0 - 0xAC0;
 const uint16 O_EDITOR_LAST_RMB_PRESSED = O_EDITOR_LAST_LMB_PRESSED + 0x4; // 0xBB4
 const uint16 O_EDITOR_LMB_PRESSED1 = O_EDITOR_LAST_RMB_PRESSED + 0x4; // 0xBB8
 const uint16 O_EDITOR_RMB_PRESSED1 = O_EDITOR_LMB_PRESSED1 + 0x4; // 0xBBC
 const uint16 O_EDITOR_LMB_PRESSED2 = O_EDITOR_RMB_PRESSED1 + 0x4; // 0xBC0
-
+const uint16 O_EDITOR_FREELOOK_ENABLED = O_EDITOR_GridColor - (0xC08 - 0xBF0); // 0xBF0
 
 const uint16 SZ_CGAMECURSORITEM = 0xE8;
 
@@ -566,6 +578,7 @@ namespace VTables {
 
 // A class to safely access raw buffers
 class RawBuffer {
+    // location in memory of the buffer struct (ptr, len, cap)
     protected uint64 ptr;
     protected uint size;
     protected bool structBehindPtr = false;

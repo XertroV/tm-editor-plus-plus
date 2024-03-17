@@ -38,6 +38,7 @@ Buffer: Items = DGameCtnMacroBlockInfo_Items, O_MACROBLOCK_ITEMSBUF, SZ_MACROBLO
 
 [DGameCtnMacroBlockInfo_Skin: SZ_MACROBLOCK_SKINSBUFEL]
 Skin = CGameCtnBlockSkin, 0x0, GS
+# 0x8 to 0x14 appears unused (changes each time you press save MB when copy pasting)
 BlockIx = uint, 0x14, GS
 
 [DGameCtnMacroBlockInfo_Item: SZ_MACROBLOCK_ITEMSBUFEL]
@@ -54,15 +55,19 @@ scale = float, 0x34, GS
 color = CGameCtnAnchoredObject::EMapElemColor(1), 0x34, GS
 lmQual = CGameCtnAnchoredObject::EMapElemLightmapQuality(1), 0x35, GS
 phase = CGameCtnAnchoredObject::EPhaseOffset(1), 0x36, GS
-visualRot = mat3, 0x54, G
+visualRot = mat3, 0x54, GS
 pivotPos = vec3, 0x78, GS
 Inline: bool get_isFlying() { return this.GetUint8(0x84) & 1 == 1; }
 Inline: void set_isFlying(bool value) { this.SetUint8(0x84, (variantIx << 1) + (value ? 1 : 0)); }
 Inline: uint16 get_variantIx() { return this.GetUint16(0x84) >> 1; }
 Inline: void set_variantIx(uint16 value) { this.SetUint8(0x84, (value << 1) + (isFlying ? 1 : 0)); }
-associatedBlockIx = uint, 0x90, GS
-itemGroupOnBlock = uint, 0x98, GS
 Waypoint = CGameWaypointSpecialProperty, 0x88, GS
+associatedBlockIx = uint, 0x90, GS
+# FFFFFFFF
+unk94 = uint, 0x94, GS
+itemGroupOnBlock = uint, 0x98, GS
+# FFFFFFFF
+unk9C = uint, 0x9C, GS
 BGSkin = CSystemPackDesc, 0xA0, GS
 FGSkin = CSystemPackDesc, 0xA8, GS
 Model = CGameItemModel, 0xB0, GS

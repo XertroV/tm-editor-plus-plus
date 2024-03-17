@@ -121,6 +121,7 @@ class DGameCtnMacroBlockInfo_Skin : RawBufferElem {
 
 	CGameCtnBlockSkin@ get_Skin() { return cast<CGameCtnBlockSkin>(this.GetNod(0x0)); }
 	void set_Skin(CGameCtnBlockSkin@ value) { this.SetNod(0x0, value); }
+	// 0x8 to 0x14 appears unused (changes each time you press save MB when copy pasting)
 	uint get_BlockIx() { return (this.GetUint32(0x14)); }
 	void set_BlockIx(uint value) { this.SetUint32(0x14, value); }
 }
@@ -168,12 +169,18 @@ class DGameCtnMacroBlockInfo_Item : RawBufferElem {
 	void set_isFlying(bool value) { this.SetUint8(0x84, (variantIx << 1) + (value ? 1 : 0)); }
 	uint16 get_variantIx() { return this.GetUint16(0x84) >> 1; }
 	void set_variantIx(uint16 value) { this.SetUint8(0x84, (value << 1) + (isFlying ? 1 : 0)); }
-	uint get_associatedBlockIx() { return (this.GetUint32(0x90)); }
-	void set_associatedBlockIx(uint value) { this.SetUint32(0x90, value); }
-	uint get_itemGroupOnBlock() { return (this.GetUint32(0x98)); }
-	void set_itemGroupOnBlock(uint value) { this.SetUint32(0x98, value); }
 	CGameWaypointSpecialProperty@ get_Waypoint() { return cast<CGameWaypointSpecialProperty>(this.GetNod(0x88)); }
 	void set_Waypoint(CGameWaypointSpecialProperty@ value) { this.SetNod(0x88, value); }
+	uint get_associatedBlockIx() { return (this.GetUint32(0x90)); }
+	void set_associatedBlockIx(uint value) { this.SetUint32(0x90, value); }
+	// FFFFFFFF
+	uint get_unk94() { return (this.GetUint32(0x94)); }
+	void set_unk94(uint value) { this.SetUint32(0x94, value); }
+	uint get_itemGroupOnBlock() { return (this.GetUint32(0x98)); }
+	void set_itemGroupOnBlock(uint value) { this.SetUint32(0x98, value); }
+	// FFFFFFFF
+	uint get_unk9C() { return (this.GetUint32(0x9C)); }
+	void set_unk9C(uint value) { this.SetUint32(0x9C, value); }
 	CSystemPackDesc@ get_BGSkin() { return cast<CSystemPackDesc>(this.GetNod(0xA0)); }
 	void set_BGSkin(CSystemPackDesc@ value) { this.SetNod(0xA0, value); }
 	CSystemPackDesc@ get_FGSkin() { return cast<CSystemPackDesc>(this.GetNod(0xA8)); }

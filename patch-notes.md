@@ -5,9 +5,9 @@
 - FIX: Item refresh + Jitter could place ~10 light cubes (per refresh) at 0,24,0 which were not able to be deleted (Sorry if this affects you)
 - FIX: null pointer exception when viewing some mediatracker trigger things
 - FIX: FlyOffset in current item > placement.
+- FIX: exiting editor while filling blocks would crash the game.
 - Add auto-clear sources and filter to Find/Replace tab.
 - Optimize custom selection manager.
-- FIX: exiting editor while filling blocks would crash the game.
 
 0.8.999999
 

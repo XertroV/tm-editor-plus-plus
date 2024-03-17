@@ -16,3 +16,30 @@ void FreeAllAllocated() {
     }
     memoryAllocations.RemoveRange(0, memoryAllocations.Length);
 }
+
+
+class AllocGroup {
+    uint64[] allocations;
+    AllocGroup() {}
+    ~AllocGroup() {
+        FreeAll();
+    }
+    uint64 Allocate(uint size, bool exec = false) {
+        auto ptr = Dev::Allocate(size, exec);
+        allocations.InsertLast(ptr);
+        return ptr;
+    }
+    void FreeAll() {
+        for (uint i = 0; i < allocations.Length; i++) {
+            Dev::Free(allocations[i]);
+        }
+        allocations.RemoveRange(0, allocations.Length);
+    }
+    uint64[]@ MassAllocate(uint count, uint size, bool exec = false) {
+        uint64[]@ ptrs = array<uint64>(count);
+        for (uint i = 0; i < count; i++) {
+            ptrs[i] = Allocate(size, exec);
+        }
+        return ptrs;
+    }
+}

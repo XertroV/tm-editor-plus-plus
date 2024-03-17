@@ -136,6 +136,8 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                 auto item = DGameCtnMacroBlockInfo_Skin(skinsBuf[i]);
                 UI::PushID(i);
+                UI::Text("Block Ix: " + item.BlockIx);
+                ItemModelTreeElement(null, -1, item.Skin, "Skin Nod##"+Text::FormatPointer(item.Ptr), true).Draw();
 #if DEV
                 item.DrawResearchView();
 #endif
