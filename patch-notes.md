@@ -1,3 +1,8 @@
+0.8.9999991
+
+- add block/item deleted CBs, set skin CBs
+- add export methods for macroblock manip and map together
+- fix mb pyr order, swap color/phase and fix offsets.
 
 0.8.9999990
 

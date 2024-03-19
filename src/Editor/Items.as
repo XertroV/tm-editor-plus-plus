@@ -105,12 +105,12 @@ namespace Editor {
 
         auto macroblock = pmt.GetMacroblockModelFromFilePath("Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx");
         trace('UpdateNewlyAddedItems macroblock is null: ' + (macroblock is null));
-        Event::DisableOnItemCB();
+        Event::DisableOnBlockItemCB();
         auto placed = pmt.PlaceMacroblock_NoDestruction(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
         trace('UpdateNewlyAddedItems placed: ' + placed);
         bool removed = pmt.RemoveMacroblock(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
         trace('UpdateNewlyAddedItems removed: ' + removed);
-        Event::EnableOnItemCB();
+        Event::EnableOnBlockItemCB();
     }
 
     const uint16 O_ANCHOREDOBJ_ITEMMODEL = GetOffset("CGameCtnAnchoredObject", "ItemModel");

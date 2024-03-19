@@ -455,8 +455,9 @@ const uint16 O_GAMESKIN_FILENAME_BUF = 0x68;
 const uint16 O_GAMESKIN_FID_CLASSID_BUF = 0x78;
 const uint16 O_GAMESKIN_PATH3 = 0x120;
 
+// scale at 0x80 (2024_02_26)
 const uint16 O_ANCHOREDOBJ_SKIN_SCALE = GetOffset("CGameCtnAnchoredObject", "Scale");
-const uint16 O_ANCHOREDOBJ_BGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x18;
+const uint16 O_ANCHOREDOBJ_BGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x18; // 0x98
 const uint16 O_ANCHOREDOBJ_FGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x20;
 const uint16 O_ANCHOREDOBJ_WAYPOINTPROP = GetOffset("CGameCtnAnchoredObject", "WaypointSpecialProperty");
 const uint16 O_ANCHOREDOBJ_MACROBLOCKINSTID = O_ANCHOREDOBJ_WAYPOINTPROP - 0x4;
@@ -558,9 +559,11 @@ namespace VTables {
     }
 
     uint64 CGameCtnBlock = 0;
+    uint64 CGameCtnAnchoredObject = 0;
 
     void InitVTableAddrs() {
         CGameCtnBlock = GetVTableFor(::CGameCtnBlock());
+        CGameCtnAnchoredObject = GetVTableFor(::CGameCtnAnchoredObject());
     }
 }
 
@@ -1021,10 +1024,13 @@ RV_ValueRenderTypes g_RV_RenderAs = RV_ValueRenderTypes::Float;
 // tracks the last time a warning was issued
 dictionary warnTracker;
 void warn_every_60_s(const string &in msg) {
-    if (warnTracker is null) return;
+    if (warnTracker is null) {
+        warn(msg);
+        return;
+    }
     if (warnTracker.Exists(msg)) {
         uint lastWarn = uint(warnTracker[msg]);
-        if (Time::Now - lastWarn < 60000) return;
+        if (int(Time::Now) - int(lastWarn) < 60000) return;
     } else {
         NotifyWarning(msg);
     }
@@ -1043,13 +1049,15 @@ class HookHelper {
     protected uint offset;
     protected uint padding;
     protected string functionName;
+    protected Dev::PushRegisters pushReg;
 
     // const string &in name,
-    HookHelper(const string &in pattern, uint offset, uint padding, const string &in functionName) {
+    HookHelper(const string &in pattern, uint offset, uint padding, const string &in functionName, Dev::PushRegisters pushRegs = Dev::PushRegisters::SSE) {
         this.pattern = pattern;
         this.offset = offset;
         this.padding = padding;
         this.functionName = functionName;
+        this.pushReg = pushRegs;
         startnew(CoroutineFunc(_RegisterUnhookCall));
     }
 
@@ -1065,10 +1073,15 @@ class HookHelper {
         if (hookInfo !is null) return false;
         if (patternPtr == 0) patternPtr = Dev::FindPattern(pattern);
         if (patternPtr == 0) {
-            warn_every_60_s("Failed to apply hook for " + functionName);
+            warn_every_60_s("Failed to apply hook for " + functionName + " (pattern ptr == 0)");
             return false;
         }
-        @hookInfo = Dev::Hook(patternPtr + offset, padding, functionName, Dev::PushRegisters::SSE);
+        @hookInfo = Dev::Hook(patternPtr + offset, padding, functionName, pushReg);
+        if (hookInfo is null) {
+            warn_every_60_s("Failed to apply hook for " + functionName + " (hookInfo == null)");
+            return false;
+        }
+        trace("Hook applied for " + functionName + " at " + Text::FormatPointer(patternPtr + offset));
         return true;
     }
 
@@ -1103,14 +1116,14 @@ class FunctionHookHelper : HookHelper {
     protected int32 origCallRelOffset;
     protected uint64 cavePtr;
 
-    FunctionHookHelper(const string &in pattern, uint offset, uint padding, const string &in functionName) {
-        super(pattern, offset, padding, functionName);
+    FunctionHookHelper(const string &in pattern, uint offset, uint padding, const string &in functionName, Dev::PushRegisters pushRegs = Dev::PushRegisters::SSE) {
+        super(pattern, offset, padding, functionName, pushRegs);
     }
 
     bool Apply() override {
         if (IsApplied()) return true;
         if (!HookHelper::Apply()) return false;
-        dev_trace("FunctionHookHelper::Apply for " + functionName);
+        trace("FunctionHookHelper::Apply for " + functionName);
         // read offset assuming jmp [offset]; 5 bytes
         auto caveRelOffset = Dev::ReadInt32(patternPtr + offset + 1);
         dev_trace("caveRelOffset: " + caveRelOffset);

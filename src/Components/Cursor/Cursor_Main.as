@@ -554,8 +554,8 @@ namespace CustomCursorRotations {
         auto nextDir = Dev::ReadInt32(rdi + 0x7C);
         auto lastAddDir = Dev::ReadInt32(rdi + 0x80);
         auto nextAddDir = Dev::ReadInt32(rdi + 0x84);
-        dev_trace("lastDir: " + lastDir + ", nextDir: " + nextDir);
-        dev_trace("lastAddDir: " + lastAddDir + ", nextAddDir: " + nextAddDir);
+        // dev_trace("lastDir: " + lastDir + ", nextDir: " + nextDir);
+        // dev_trace("lastAddDir: " + lastAddDir + ", nextAddDir: " + nextAddDir);
         auto dirChanged = lastDir != nextDir;
         auto addDirChanged = lastAddDir != nextAddDir;
         // rmb with nonzero addDir: reset addDir

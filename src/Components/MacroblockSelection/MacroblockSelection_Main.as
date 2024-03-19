@@ -19,7 +19,7 @@ class MacroblockSelectionTab : Tab {
         return editor.CurrentItemModel.IdName;
     }
 
-    Editor::MacroblockSpec@ mbSpec;
+    Editor::MacroblockSpecPriv@ mbSpec;
 
     void DrawInner() override {
         // Children.DrawTabs();
@@ -64,7 +64,35 @@ class MacroblockSelectionTab : Tab {
 
         if (mbSpec is null) {
             if (UI::Button("Create MB Spec")) {
-                @mbSpec = Editor::MacroblockSpec(mbi);
+                @mbSpec = Editor::MacroblockSpecPriv(mbi);
+            }
+            if (UI::Button("Try Item Delete Test")) {
+                CGameCtnAnchoredObject@[] items;
+                CGameCtnChallenge@ map = editor.Challenge;
+                for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
+                    items.InsertLast(map.AnchoredObjects[i]);
+                    Editor::SetItemMbInstId(map.AnchoredObjects[i], -1);
+                }
+                @mbSpec = Editor::MacroblockSpecPriv({}, items);
+                trace('created mb spec with ' + items.Length + ' items');
+                mbSpec._TempWriteToMacroblock(mbi);
+                trace('wrote mb spec to mb: ' + mbi.IdName);
+                auto dmb = DGameCtnMacroBlockInfo(mbi);
+                trace('nb blocks: ' + dmb.Blocks.Length);
+                trace('nb items: ' + dmb.Items.Length);
+                trace('nb skins: ' + dmb.Skins.Length);
+
+                auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+                auto pmt = editor.PluginMapType;
+                // auto placed = pmt.PlaceMacroblock_AirMode(mbi, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
+                // trace('placed mb: ' + placed);
+                // pmt.AutoSave();
+
+                auto removed = pmt.RemoveMacroblock(mbi, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
+                trace('removed mb (no placement beforehand): ' + removed);
+                pmt.AutoSave();
+
+                mbSpec._RestoreMacroblock();
             }
         } else {
             if (UI::Button("Nullify MB Spec")) {
@@ -87,10 +115,10 @@ class MacroblockSelectionTab : Tab {
                     trace('placed mb: ' + placed);
                     pmt.AutoSave();
 
-                    mbSpec._RestoreMacroblock();
+                    auto removed = pmt.RemoveMacroblock(mbi, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
+                    trace('removed mb (before restore): ' + removed);
 
-                    // todo: test remove
-                    // pmt.RemoveMacroblock(mbi, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
+                    mbSpec._RestoreMacroblock();
                 }
                 if (mbSpec.tmpWriteBuf is null) {
                     if (UX::SmallButton("Alloc MB Spec tmpWriteBuf")) {
@@ -155,6 +183,7 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
                 } else {
                     CopiableLabeledValue("Pos", item.pos.ToString());
                     CopiableLabeledValue("PYR", item.pyr.ToString());
+                    CopiableLabeledValue("PYR (Deg)", MathX::ToDeg(item.pyr).ToString());
                 }
                 CopiableLabeledValue("Color", tostring(item.color));
                 CopiableLabeledValue("lmQual", tostring(item.lmQual));
@@ -216,6 +245,7 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
                 CopiableLabeledValue("Dir", tostring(CGameCtnBlock::ECardinalDirections(item.dir)));
                 CopiableLabeledValue("Pos", item.pos.ToString());
                 CopiableLabeledValue("PYR", item.pyr.ToString());
+                CopiableLabeledValue("PYR (Deg)", MathX::ToDeg(item.pyr).ToString());
                 CopiableLabeledValue("Color", tostring(item.color));
                 CopiableLabeledValue("lmQual", tostring(item.lmQual));
                 CopiableLabeledValue("phase", tostring(item.phase));

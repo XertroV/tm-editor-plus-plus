@@ -6,10 +6,28 @@ namespace PlacementHooks {
         5, 1, "PlacementHooks::OnItemPlaced_RbxRdx"
     );
 
+    // call to delete item from map. rdx is the item pointer
+    // 4a0 offset = editor.Challenge
+    // 2nd call: decrements map.AnchoredObjects len
+    // test, je, mov eax 1, stack ptr, stack ptr, pop, ret
+    FunctionHookHelper@ OnItemDeletedHook = FunctionHookHelper(
+          "E8 ?? ?? ?? ?? 48 8B 8B A0 04 00 00 E8 ?? ?? ?? ?? 85 C0 74 10 B8 01 00 00 00 48 8B 5C 24 ?? 48 83 C4 ?? 5F C3",
+        // E8 51 02 A2 FF 48 8B 8B A0 04 00 00 E8 E5 B4 A1 FF 85 C0 74 10 B8 01 00 00 00 48 8B 5C 24 40 48 83 C4 30 5F C3,
+        0, 0, "PlacementHooks::OnItemDeleted_Rdx", Dev::PushRegisters(0)
+    );
+
     HookHelper@ OnBlockPlacedHook = HookHelper(
         "E8 ?? ?? ?? ?? 48 8B 9C 24 ?? ?? 00 00 C7 85 ?? ?? 00 00 01 00 00 00 48 85 DB",
         // E8 02 11 64 FF 48 8B 9C 24 28 01 00 00 C7 85 00 06 00 00 01 00 00 00 48 85 DB
         5, 3, "PlacementHooks::OnAddBlockHook_RdxRdi"
+    );
+
+    HookHelper@ OnBlockDeletedHook = HookHelper(
+        // mov to stack, mov cx bx, call delete block, jmp, mov from stack, to stack x2, mov cx bx,      call,
+        "89 4C 24 ?? 48 8B CB E8 ?? ?? ?? ?? EB 17 8B 84 24 ?? 00 00 00 89 44 24 ?? 89 4C 24",
+        // "89 4C 24 ?? 48 8B CB E8 ?? ?? ?? ?? EB 17 8B 84 24 ?? 00 00 00 89 44 24 ?? 89 4C 24 ?? 48 8B CB E8 ?? ?? ?? ?? 48 8B 5C 24",
+        //"89 4C 24 28 48 8B CB E8 43 03 00 00 EB 17 8B 84 24 98 00 00 00 89 44 24 38 89 4C 24 28 48 8B CB E8 0A 08 00 00 48 8B 5C 24 60 48 8B 6C 24 68 48 8B 74 24 70 48 83 C4 50 5F C3",
+        0, 2, "PlacementHooks::OnBlockDeleted_Rdx", Dev::PushRegisters(0)
     );
 
     // Hooks over a call to QuaternionFromEuler, note: we don't use this atm
@@ -20,16 +38,153 @@ namespace PlacementHooks {
         0, 0, "CustomCursorRotations::OnGetCursorRotation_Rbp70"
     );
 
+    FunctionHookHelper@ OnSetBlockSkin = FunctionHookHelper(
+        // some docs below near EOF
+        "E8 ?? ?? ?? ?? 49 8B 8D A0 04 00 00 49 8B D6 E8 ?? ?? ?? ?? 48 8D 4C 24",
+        0, 0, "PlacementHooks::OnSetBlockSkin_r14", Dev::PushRegisters(0)
+    );
+
+    HookHelper@ OnSetItemBgSkin = HookHelper(
+        "48 89 BB 98 00 00 00 48 8B 7E 08 48 8B 8B A0 00 00 00",
+        0, 2, "PlacementHooks::OnSetItemBgSkin_rbx", Dev::PushRegisters(0)
+    );
+
+    HookHelper@ OnSetItemFgSkin = HookHelper(
+        "48 89 BB A0 00 00 00 48 8B 06 48 85 C0 74 0A C7 80 98 00 00 00",
+        0, 2, "PlacementHooks::OnSetItemFgSkin_rbx", Dev::PushRegisters(0)
+    );
+
     void SetupHooks() {
+        trace("PlacementHooks::SetupHooks");
+        // dev_trace("PlacementHooks::SetupHooks");
         OnItemPlacedHook.Apply();
+        OnItemDeletedHook.Apply();
         OnBlockPlacedHook.Apply();
+        OnBlockDeletedHook.Apply();
+        OnSetBlockSkin.Apply();
+        OnSetItemBgSkin.Apply();
+        OnSetItemFgSkin.Apply();
+        // dev_trace("PlacementHooks::SetupHooks Done");
+        trace("PlacementHooks::SetupHooks Done");
         // OnGetCursorRotation.Apply();
     }
 
     void UnloadHooks() {
         OnItemPlacedHook.Unapply();
         OnBlockPlacedHook.Unapply();
+        OnItemDeletedHook.Unapply();
+        OnBlockDeletedHook.Unapply();
+        OnSetBlockSkin.Unapply();
+        OnSetItemBgSkin.Unapply();
+        OnSetItemFgSkin.Unapply();
         // OnGetCursorRotation.Unapply();
+    }
+
+    void OnSetItemFgSkin_rbx(uint64 rbx) {
+        if (!IsInEditor) {
+            warn_every_60_s("OnSetItemFgSkin_rbx: called outside editor! (this is a bug)");
+            return;
+        }
+        // item at rbx
+        dev_trace("OnSetItemFgSkin_rbx: " + Text::FormatPointer(rbx));
+        auto nod = Dev_GetNodFromPointer(rbx);
+        if (nod is null) {
+            dev_trace("OnSetItemFgSkin: null item");
+            return;
+        }
+        auto item = cast<CGameCtnAnchoredObject>(nod);
+        if (item is null) {
+            dev_trace("OnSetItemFgSkin: item null, checking type...");
+            dev_trace("OnSetItemFgSkin: item type: " + Reflection::TypeOf(nod).Name);
+            return;
+        }
+        Event::OnSetItemFgSkin(item);
+    }
+
+    void OnSetItemBgSkin_rbx(uint64 rbx) {
+        if (!IsInEditor) {
+            warn_every_60_s("OnSetItemBgSkin_rbx: called outside editor! (this is a bug)");
+            return;
+        }
+        // item at rbx
+        dev_trace("OnSetItemBgSkin_rbx: " + Text::FormatPointer(rbx));
+        auto nod = Dev_GetNodFromPointer(rbx);
+        if (nod is null) {
+            dev_trace("OnSetItemBgSkin: null item");
+            return;
+        }
+        auto item = cast<CGameCtnAnchoredObject>(nod);
+        if (item is null) {
+            dev_trace("OnSetItemBgSkin: item null, checking type...");
+            dev_trace("OnSetItemBgSkin: item type: " + Reflection::TypeOf(nod).Name);
+            return;
+        }
+        Event::OnSetItemBgSkin(item);
+    }
+
+    void OnSetBlockSkin_r14(uint64 r14) {
+        if (!IsInEditor) {
+            warn_every_60_s("OnSetBlockSkin_r14: called outside editor! (this is a bug)");
+            return;
+        }
+        // block at r14
+        dev_trace("OnSetBlockSkin_r14: " + Text::FormatPointer(r14));
+        auto nod = Dev_GetNodFromPointer(r14);
+        if (nod is null) {
+            dev_trace("OnSetBlockSkin: null block");
+            return;
+        }
+        auto block = cast<CGameCtnBlock>(nod);
+        if (block is null) {
+            dev_trace("OnSetBlockSkin: block null, checking type...");
+            dev_trace("OnSetBlockSkin: block type: " + Reflection::TypeOf(nod).Name);
+            return;
+        }
+        Event::OnSetBlockSkin(block);
+    }
+
+    void OnBlockDeleted_Rdx(uint64 rdx) {
+        if (!IsInEditor) {
+            warn_every_60_s("OnBlockDeleted_Rdx: called outside editor! (this is a bug)");
+            return;
+        }
+        dev_trace("OnBlockDeleted! rdx: " + Text::FormatPointer(rdx));
+        auto nod = Dev_GetNodFromPointer(rdx);
+        if (nod is null) {
+            dev_trace("OnBlockDeleted_Rdx rdx nod null");
+            warn_every_60_s("OnBlockDeleted_Rdx rdx nod null");
+            return;
+        }
+        auto block = cast<CGameCtnBlock>(nod);
+        if (block is null) {
+            dev_trace("rdx block null, checking type...");
+            dev_trace("rdx block type: " + Reflection::TypeOf(nod).Name);
+            warn_every_60_s("rdx block type: " + Reflection::TypeOf(nod).Name);
+            return;
+        }
+        Event::OnBlockDeleted(block);
+    }
+
+    void OnItemDeleted_Rdx(uint64 rdx) {
+        if (!IsInEditor) {
+            warn_every_60_s("OnItemDeleted_Rdx: called outside editor! (this is a bug)");
+            return;
+        }
+        dev_trace("OnItemDeleted! rdx: " + Text::FormatPointer(rdx));
+        auto nod = Dev_GetNodFromPointer(rdx);
+        if (nod is null) {
+            dev_trace("OnItemDeleted_Rdx rdx nod null");
+            warn_every_60_s("OnItemDeleted_Rdx rdx nod null");
+            return;
+        }
+        auto item = cast<CGameCtnAnchoredObject>(nod);
+        if (item is null) {
+            dev_trace("rdx item null, checking type...");
+            dev_trace("rdx item type: " + Reflection::TypeOf(nod).Name);
+            warn_every_60_s("rdx item type: " + Reflection::TypeOf(nod).Name);
+            return;
+        }
+        Event::OnItemDeleted(item);
     }
 
     void OnItemPlaced_RbxRdx(uint64 rbx) {
@@ -92,3 +247,93 @@ namespace PlacementHooks {
         Event::OnNewBlock(block);
     }
 }
+
+
+
+
+/*
+
+    set skin hook (blocks)
+
+    E8 7A F2 6A FF 49 8B 8D A0 04 00 00 49 8B D6 E8 4B 4D B9 FF 48 8D 4C 24 60 E8 61 1A 18 FF 4C 8B BC 24 B8 00 00 00 48 8B BC 24 B0 00 00 00 48 8B B4 24 A8 00 00 00 48 81 C4 80 00 00 00 41 5E 41 5D 5B C3
+    E8 ?? ?? ?? ?? 49 8B 8D A0 04 00 00 49 8B D6 E8 ?? ?? ?? ?? 48 8D 4C 24 // ?? // E8 61 1A 18 FF 4C 8B BC 24 B8 00 00 00 48 8B BC 24 B0 00 00 00 48 8B B4 24 A8 00 00 00 48 81 C4 80 00 00 00 41 5E 41 5D 5B C3
+
+    ! call to set skin
+    Trackmania.exe.text+F8C431 - E8 7AF26AFF           - call Trackmania.exe.text+63B6B0 { call to set skin? for block
+    }
+    ! block is at r14
+    Trackmania.exe.text+F8C436 - 49 8B 8D A0040000     - mov rcx,[r13+000004A0]
+    Trackmania.exe.text+F8C43D - 49 8B D6              - mov rdx,r14
+    Trackmania.exe.text+F8C440 - E8 4B4DB9FF           - call Trackmania.exe.text+B21190
+    Trackmania.exe.text+F8C445 - 48 8D 4C 24 60        - lea rcx,[rsp+60]
+    Trackmania.exe.text+F8C44A - E8 611A18FF           - call Trackmania.exe.text+10DEB0
+    Trackmania.exe.text+F8C44F - 4C 8B BC 24 B8000000  - mov r15,[rsp+000000B8]
+    Trackmania.exe.text+F8C457 - 48 8B BC 24 B0000000  - mov rdi,[rsp+000000B0]
+    Trackmania.exe.text+F8C45F - 48 8B B4 24 A8000000  - mov rsi,[rsp+000000A8]
+    Trackmania.exe.text+F8C467 - 48 81 C4 80000000     - add rsp,00000080 { 128 }
+    Trackmania.exe.text+F8C46E - 41 5E                 - pop r14
+    Trackmania.exe.text+F8C470 - 41 5D                 - pop r13
+    Trackmania.exe.text+F8C472 - 5B                    - pop rbx
+    Trackmania.exe.text+F8C473 - C3                    - ret
+
+
+    set skin hook (items)
+
+    74 0B 83 41 10 FF 75 05 E8 CD 43 2F FF 48 89 BB 98 00 00 00 48 8B 7E 08 48 8B 8B A0 00 00 00 48 3B F9 74 26 48 85 FF 74 0A FF 47 10 48 8B 8B A0 00 00 00 48 85 C9 74 0B 83 41 10 FF 75 05 E8 97 43 2F FF 48 89 BB A0 00 00 00 48 8B 06 48 85 C0 74 0A C7 80 98 00 00 00 04 00 00 00 48 8B 46 08 48 85 C0 74 0A C7 80 98 00 00 00 04 00 00 00 85 ED
+
+    pre: 74 0B 83 41 10 FF 75 05 E8 CD 43 2F FF
+
+    bg:
+    48 89 BB 98 00 00 00 48 8B 7E 08 48 8B 8B A0 00 00 00 (unique)
+    ! note that the offsets here are for CGameCtnAnchoredObj so we don't need to use ?? for them
+    ! it is not unique if we use ??. we need another 19 bytes if we use ??
+    48 89 BB 98 00 00 00 48 8B 7E 08 48 8B 8B A0 00 00 00 48 3B F9 74 26 48 85 FF 74
+
+    extra: 0A FF 47 10 48 8B 8B A0 00 00 00 48 85 C9 74 0B 83 41 10 FF 75 05 E8 97 43 2F FF
+
+
+
+    fg:
+    48 89 BB A0 00 00 00 48 8B 06 48 85 C0 74 0A C7 80 98 00 00 00 (unique)
+    ! note that the offsets here are for CGameCtnAnchoredObj so we don't need to use ?? for them (however, it's still unique if we do)
+
+    48 89 BB A0 00 00 00 48 8B 06 48 85 C0 74 0A C7 80 98 00 00 00
+        rest: 04 00 00 00 48 8B 46 08 48 85 C0 74 0A C7 80 98 00 00 00 04 00 00 00 85 ED
+
+    Trackmania.exe.text+F8B3E6 - 74 0B                 - je Trackmania.exe.text+F8B3F3
+    Trackmania.exe.text+F8B3E8 - 83 41 10 FF           - add dword ptr [rcx+10],-01 { 255 }
+    Trackmania.exe.text+F8B3EC - 75 05                 - jne Trackmania.exe.text+F8B3F3
+    ! prepare the skin
+    Trackmania.exe.text+F8B3EE - E8 CD432FFF           - call Trackmania.exe.text+27F7C0 { prepare set skin
+    }
+    ! write bg skin to item
+    Trackmania.exe.text+F8B3F3 - 48 89 BB 98000000     - mov [rbx+00000098],rdi { set bg skin
+    }
+    Trackmania.exe.text+F8B3FA - 48 8B 7E 08           - mov rdi,[rsi+08]
+    Trackmania.exe.text+F8B3FE - 48 8B 8B A0000000     - mov rcx,[rbx+000000A0]
+    Trackmania.exe.text+F8B405 - 48 3B F9              - cmp rdi,rcx
+    Trackmania.exe.text+F8B408 - 74 26                 - je Trackmania.exe.text+F8B430
+    Trackmania.exe.text+F8B40A - 48 85 FF              - test rdi,rdi
+    Trackmania.exe.text+F8B40D - 74 0A                 - je Trackmania.exe.text+F8B419
+    Trackmania.exe.text+F8B40F - FF 47 10              - inc [rdi+10]
+    Trackmania.exe.text+F8B412 - 48 8B 8B A0000000     - mov rcx,[rbx+000000A0]
+    Trackmania.exe.text+F8B419 - 48 85 C9              - test rcx,rcx
+    Trackmania.exe.text+F8B41C - 74 0B                 - je Trackmania.exe.text+F8B429
+    Trackmania.exe.text+F8B41E - 83 41 10 FF           - add dword ptr [rcx+10],-01 { 255 }
+    Trackmania.exe.text+F8B422 - 75 05                 - jne Trackmania.exe.text+F8B429
+    ! prepare the skin (same func as above)
+    Trackmania.exe.text+F8B424 - E8 97432FFF           - call Trackmania.exe.text+27F7C0 { prepare set skin
+    }
+    ! write fg skin to item
+    Trackmania.exe.text+F8B429 - 48 89 BB A0000000     - mov [rbx+000000A0],rdi
+    Trackmania.exe.text+F8B430 - 48 8B 06              - mov rax,[rsi]
+    Trackmania.exe.text+F8B433 - 48 85 C0              - test rax,rax
+    Trackmania.exe.text+F8B436 - 74 0A                 - je Trackmania.exe.text+F8B442
+    Trackmania.exe.text+F8B438 - C7 80 98000000 04000000 - mov [rax+00000098],00000004 { 4 }
+    Trackmania.exe.text+F8B442 - 48 8B 46 08           - mov rax,[rsi+08]
+    Trackmania.exe.text+F8B446 - 48 85 C0              - test rax,rax
+    Trackmania.exe.text+F8B449 - 74 0A                 - je Trackmania.exe.text+F8B455
+    Trackmania.exe.text+F8B44B - C7 80 98000000 04000000 - mov [rax+00000098],00000004 { 4 }
+    Trackmania.exe.text+F8B455 - 85 ED                 - test ebp,ebp
+
+*/

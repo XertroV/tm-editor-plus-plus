@@ -11,6 +11,7 @@ class DevMainTab : Tab {
         DevItemsTab(Children);
         DevCallbacksTab(Children);
         DevMiscTab(Children);
+        MapChangesFrameTab(Children);
     }
 
     void DrawInner() override {
@@ -261,6 +262,22 @@ class DevBlockTab : BlockItemListTab {
         if (UX::SmallButton(Icons::Cube + "##" + blockId)) {
             ExploreNod("Block " + blockId + ".", block);
         }
+    }
+}
+
+
+
+class MapChangesFrameTab : Tab {
+    MapChangesFrameTab(TabGroup@ p) {
+        super(p, "Map Changes", "");
+    }
+
+    void DrawInner() override {
+        UI::Text("B Placed: " + Editor::GetThisFrameBlocksPlaced().Length);
+        UI::Text("B Deleted: " + Editor::GetThisFrameBlocksDeleted().Length);
+        UI::Text("I Placed: " + Editor::GetThisFrameItemsPlaced().Length);
+        UI::Text("I Deleted: " + Editor::GetThisFrameItemsDeleted().Length);
+        UI::Text("Skins Set: " + Editor::GetThisFrameSkinsSet().Length);
     }
 }
 

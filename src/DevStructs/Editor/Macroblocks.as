@@ -28,8 +28,10 @@ class DGameCtnMacroBlockInfo_Block : RawBufferElem {
 	void set_dir(CGameCtnBlock::ECardinalDirections value) { this.SetUint32(0x58, value); }
 	vec3 get_pos() { return (this.GetVec3(0x1C)); }
 	void set_pos(vec3 value) { this.SetVec3(0x1C, value); }
-	vec3 get_pyr() { return (this.GetVec3(0x28)); }
-	void set_pyr(vec3 value) { this.SetVec3(0x28, value); }
+	vec3 get_ypr() { return (this.GetVec3(0x28)); }
+	void set_ypr(vec3 value) { this.SetVec3(0x28, value); }
+	vec3 get_pyr() { return vec3(ypr.y, ypr.x, ypr.z); }
+	void set_pyr(vec3 v) { ypr = vec3(v.y, v.x, v.z); }
 	CGameCtnBlock::EMapElemColor get_color() { return CGameCtnBlock::EMapElemColor(this.GetUint8(0x34)); }
 	void set_color(CGameCtnBlock::EMapElemColor value) { this.SetUint8(0x34, value); }
 	CGameCtnBlock::EMapElemLightmapQuality get_lmQual() { return CGameCtnBlock::EMapElemLightmapQuality(this.GetUint8(0x35)); }
@@ -152,16 +154,22 @@ class DGameCtnMacroBlockInfo_Item : RawBufferElem {
 	void set_dir(CGameCtnAnchoredObject::ECardinalDirections value) { this.SetUint32(0x18, value); }
 	vec3 get_pos() { return (this.GetVec3(0x1C)); }
 	void set_pos(vec3 value) { this.SetVec3(0x1C, value); }
-	vec3 get_pyr() { return (this.GetVec3(0x28)); }
-	void set_pyr(vec3 value) { this.SetVec3(0x28, value); }
+	vec3 get_ypr() { return (this.GetVec3(0x28)); }
+	void set_ypr(vec3 value) { this.SetVec3(0x28, value); }
+	vec3 get_pyr() { return vec3(ypr.y, ypr.x, ypr.z); }
+	void set_pyr(vec3 v) { ypr = vec3(v.y, v.x, v.z); }
 	float get_scale() { return (this.GetFloat(0x34)); }
 	void set_scale(float value) { this.SetFloat(0x34, value); }
-	CGameCtnAnchoredObject::EMapElemColor get_color() { return CGameCtnAnchoredObject::EMapElemColor(this.GetUint8(0x34)); }
-	void set_color(CGameCtnAnchoredObject::EMapElemColor value) { this.SetUint8(0x34, value); }
-	CGameCtnAnchoredObject::EMapElemLightmapQuality get_lmQual() { return CGameCtnAnchoredObject::EMapElemLightmapQuality(this.GetUint8(0x35)); }
-	void set_lmQual(CGameCtnAnchoredObject::EMapElemLightmapQuality value) { this.SetUint8(0x35, value); }
-	CGameCtnAnchoredObject::EPhaseOffset get_phase() { return CGameCtnAnchoredObject::EPhaseOffset(this.GetUint8(0x36)); }
-	void set_phase(CGameCtnAnchoredObject::EPhaseOffset value) { this.SetUint8(0x36, value); }
+	CGameCtnAnchoredObject::EMapElemColor get_color() { return CGameCtnAnchoredObject::EMapElemColor(this.GetUint8(0x38)); }
+	void set_color(CGameCtnAnchoredObject::EMapElemColor value) { this.SetUint8(0x38, value); }
+	CGameCtnAnchoredObject::EPhaseOffset get_phase() { return CGameCtnAnchoredObject::EPhaseOffset(this.GetUint8(0x39)); }
+	void set_phase(CGameCtnAnchoredObject::EPhaseOffset value) { this.SetUint8(0x39, value); }
+	CGameCtnAnchoredObject::EMapElemLightmapQuality get_lmQual() { return CGameCtnAnchoredObject::EMapElemLightmapQuality(this.GetUint8(0x3A)); }
+	void set_lmQual(CGameCtnAnchoredObject::EMapElemLightmapQuality value) { this.SetUint8(0x3A, value); }
+	// 0x3B: c3?
+	// 0x3C: FFFFFFFF
+	// 0x40 0, 0, 0, 0 [NOT READ, no effect?]
+	// 0x50: FFFFFFFF
 	mat3 get_visualRot() { return (this.GetMat3(0x54)); }
 	void set_visualRot(mat3 value) { this.SetMat3(0x54, value); }
 	vec3 get_pivotPos() { return (this.GetVec3(0x78)); }

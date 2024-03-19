@@ -60,7 +60,7 @@ for pluginSrc in ${pluginSources[@]}; do
   case $_build_mode in
     dev)
       # we will replicate this in the info.toml file later
-      export PLUGIN_PRETTY_NAME="${PLUGIN_PRETTY_NAME:-} (Dev)"
+      # export PLUGIN_PRETTY_NAME="${PLUGIN_PRETTY_NAME:-} (Dev)"
       ;;
     prerelease)
       export PLUGIN_PRETTY_NAME="${PLUGIN_PRETTY_NAME:-} (Prerelease)"
@@ -77,7 +77,7 @@ for pluginSrc in ${pluginSources[@]}; do
 
   # remove parens, replace spaces with dashes, and uppercase characters with lowercase ones
   # => `Never Give Up (Dev)` becomes `never-give-up-dev`
-  PLUGIN_NAME=$(echo "$PLUGIN_PRETTY_NAME" | tr -d '(),:;'\''"' | tr 'A-Z ' 'a-z-')
+  PLUGIN_NAME=$(echo "$PLUGIN_PRETTY_NAME" | tr -d '+(),:;'\''"' | tr 'A-Z ' 'a-z-')
   # echo $PLUGIN_NAME
   _colortext16 green "✅ Output file/folder name: ${PLUGIN_NAME}"
 

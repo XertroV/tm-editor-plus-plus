@@ -12,8 +12,12 @@ CoroutineFunc@[] onEditorUnloadCbs;
 string[] onEditorUnloadCbNames;
 ProcessItem@[] itemCallbacks;
 string[] itemCallbackNames;
+ProcessItem@[] itemDelCallbacks;
+string[] itemDelCallbackNames;
 ProcessBlock@[] blockCallbacks;
 string[] blockCallbackNames;
+ProcessBlock@[] blockDelCallbacks;
+string[] blockDelCallbackNames;
 ProcessNewSelectedItem@[] selectedItemChangedCbs;
 string[] selectedItemChangedCbNames;
 CoroutineFunc@[] onLeavingPlaygroundCbs;
@@ -28,6 +32,7 @@ void RegisterOnEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
         onEditorLoadCbs.InsertLast(f);
         onEditorLoadCbNames.InsertLast(name);
     }
+    trace("Registered OnEditorLoad callback: " + name);
 }
 void RegisterOnItemEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
@@ -62,6 +67,19 @@ void RegisterNewItemCallback(ProcessItem@ f, const string &in name) {
     }
 }
 
+void RegisterItemDeletedCallback_Private(ProcessItem@ f, const string &in name, uint index) {
+    if (f is null) throw("null callback passed to RegisterItemDeletedCallback_Private");
+    itemDelCallbacks.InsertAt(index, f);
+    itemDelCallbackNames.InsertAt(index, name);
+}
+
+void RegisterItemDeletedCallback(ProcessItem@ f, const string &in name) {
+    if (f !is null) {
+        itemDelCallbacks.InsertLast(f);
+        itemDelCallbackNames.InsertLast(name);
+    }
+}
+
 void RegisterNewBlockCallback_Private(ProcessBlock@ f, const string &in name, uint index) {
     if (f is null) throw("null callback passed to RegisterNewBlockCallback_Private");
     blockCallbacks.InsertAt(index, f);
@@ -72,6 +90,19 @@ void RegisterNewBlockCallback(ProcessBlock@ f, const string &in name) {
     if (f !is null) {
         blockCallbacks.InsertLast(f);
         blockCallbackNames.InsertLast(name);
+    }
+}
+
+void RegisterBlockDeletedCallback_Private(ProcessBlock@ f, const string &in name, uint index) {
+    if (f is null) throw("null callback passed to RegisterBlockDeletedCallback_Private");
+    blockDelCallbacks.InsertAt(index, f);
+    blockDelCallbackNames.InsertAt(index, name);
+}
+
+void RegisterBlockDeletedCallback(ProcessBlock@ f, const string &in name) {
+    if (f !is null) {
+        blockDelCallbacks.InsertLast(f);
+        blockDelCallbackNames.InsertLast(name);
     }
 }
 
@@ -96,12 +127,12 @@ void RegisterOnLeavingPlaygroundCallback(CoroutineFunc@ f, const string &in name
 // }
 
 namespace Event {
-    bool TMP_DISABLE_ONITEM_CB = false;
-    void DisableOnItemCB() {
-        TMP_DISABLE_ONITEM_CB = true;
+    bool TMP_DISABLE_ONBlockItem_CB = false;
+    void DisableOnBlockItemCB() {
+        TMP_DISABLE_ONBlockItem_CB = true;
     }
-    void EnableOnItemCB() {
-        TMP_DISABLE_ONITEM_CB = false;
+    void EnableOnBlockItemCB() {
+        TMP_DISABLE_ONBlockItem_CB = false;
     }
     void RunOnEditorLoadCbs() {
         Log::Trace("Running OnEditorLoad callbacks");
@@ -132,6 +163,7 @@ namespace Event {
         Log::Trace("Finished OnEditorUnload callbacks");
     }
     bool OnNewBlock(CGameCtnBlock@ block) {
+        if (TMP_DISABLE_ONBlockItem_CB) return false;
         bool updated = false;
         bool lastUpdated = false;
         for (uint i = 0; i < blockCallbacks.Length; i++) {
@@ -139,10 +171,23 @@ namespace Event {
             if (updated && !lastUpdated) Log::Trace("NewBlock Callback triggered update: " + blockCallbackNames[i]);
             lastUpdated = updated;
         }
+        Editor::TrackMap_OnAddBlock(block);
+        return updated;
+    }
+    bool OnBlockDeleted(CGameCtnBlock@ block) {
+        if (TMP_DISABLE_ONBlockItem_CB) return false;
+        bool updated = false;
+        bool lastUpdated = false;
+        for (uint i = 0; i < blockDelCallbacks.Length; i++) {
+            updated = blockDelCallbacks[i](block) || updated;
+            if (updated && !lastUpdated) Log::Trace("DelBlock Callback triggered update: " + blockCallbackNames[i]);
+            lastUpdated = updated;
+        }
+        Editor::TrackMap_OnRemoveBlock(block);
         return updated;
     }
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
-        if (TMP_DISABLE_ONITEM_CB) return false;
+        if (TMP_DISABLE_ONBlockItem_CB) return false;
         Log::Trace("Running OnNewItem");
         bool updated = false;
         bool lastUpdated = false;
@@ -152,7 +197,42 @@ namespace Event {
             lastUpdated = updated;
         }
         Log::Trace("Finished OnNewItem");
+        Editor::TrackMap_OnAddItem(item);
         return updated;
+    }
+    bool OnItemDeleted(CGameCtnAnchoredObject@ item) {
+        if (TMP_DISABLE_ONBlockItem_CB) return false;
+        Log::Trace("Running OnItemDeleted");
+        bool updated = false;
+        bool lastUpdated = false;
+        for (uint i = 0; i < itemDelCallbacks.Length; i++) {
+            updated = itemDelCallbacks[i](item) || updated;
+            if (updated && !lastUpdated) Log::Trace("DelItem Callback triggered update: " + itemCallbackNames[i]);
+            lastUpdated = updated;
+        }
+        Editor::TrackMap_OnRemoveItem(item);
+        return updated;
+    }
+    bool OnSetItemBgSkin(CGameCtnAnchoredObject@ item) {
+        if (TMP_DISABLE_ONBlockItem_CB) return false;
+        Log::Trace("Running OnSetItemBgSkin");
+        // todo
+        Editor::TrackMap_OnSetSkin("", GetSkinPath(Editor::GetItemBGSkin(item)), null, item);
+        return false;
+    }
+    bool OnSetItemFgSkin(CGameCtnAnchoredObject@ item) {
+        if (TMP_DISABLE_ONBlockItem_CB) return false;
+        Log::Trace("Running OnSetItemFgSkin");
+        // todo
+        Editor::TrackMap_OnSetSkin(GetSkinPath(Editor::GetItemFGSkin(item)), "", null, item);
+        return false;
+    }
+    bool OnSetBlockSkin(CGameCtnBlock@ block) {
+        if (TMP_DISABLE_ONBlockItem_CB) return false;
+        Log::Trace("Running OnSetBlockSkin");
+        // todo
+        Editor::TrackMap_OnSetSkin(GetSkinPath(block.Skin.ForegroundPackDesc), GetSkinPath(block.Skin.PackDesc), block, null);
+        return false;
     }
     void OnSelectedItemChanged(CGameItemModel@ itemModel) {
         Log::Trace("Running OnSelectedItemChanged");

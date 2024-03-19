@@ -8,7 +8,9 @@ coord = nat3, 0xC, GS
 dir2 = CGameCtnBlock::ECardinalDirections(4), 0x18, GS
 dir = CGameCtnBlock::ECardinalDirections(4), 0x58, GS
 pos = vec3, 0x1C, GS
-pyr = vec3, 0x28, GS
+ypr = vec3, 0x28, GS
+Inline: vec3 get_pyr() { return vec3(ypr.y, ypr.x, ypr.z); }
+Inline: void set_pyr(vec3 v) { ypr = vec3(v.y, v.x, v.z); }
 color = CGameCtnBlock::EMapElemColor(1), 0x34, GS
 lmQual = CGameCtnBlock::EMapElemLightmapQuality(1), 0x35, GS
 mobilIndex = uint, 0x38, GS
@@ -50,11 +52,17 @@ authorId = uint, 8, GS
 coord = nat3, 0xC, GS
 dir = CGameCtnAnchoredObject::ECardinalDirections(4), 0x18, GS
 pos = vec3, 0x1C, GS
-pyr = vec3, 0x28, GS
+ypr = vec3, 0x28, GS
+Inline: vec3 get_pyr() { return vec3(ypr.y, ypr.x, ypr.z); }
+Inline: void set_pyr(vec3 v) { ypr = vec3(v.y, v.x, v.z); }
 scale = float, 0x34, GS
-color = CGameCtnAnchoredObject::EMapElemColor(1), 0x34, GS
-lmQual = CGameCtnAnchoredObject::EMapElemLightmapQuality(1), 0x35, GS
-phase = CGameCtnAnchoredObject::EPhaseOffset(1), 0x36, GS
+color = CGameCtnAnchoredObject::EMapElemColor(1), 0x38, GS
+phase = CGameCtnAnchoredObject::EPhaseOffset(1), 0x39, GS
+lmQual = CGameCtnAnchoredObject::EMapElemLightmapQuality(1), 0x3A, GS
+# 0x3B: c3?
+# 0x3C: FFFFFFFF
+# 0x40 0, 0, 0, 0 [NOT READ, no effect?]
+# 0x50: FFFFFFFF
 visualRot = mat3, 0x54, GS
 pivotPos = vec3, 0x78, GS
 Inline: bool get_isFlying() { return this.GetUint8(0x84) & 1 == 1; }

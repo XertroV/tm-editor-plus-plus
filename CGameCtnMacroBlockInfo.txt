@@ -40,7 +40,7 @@
     0x18 nan FFFF..., x, y, z (within block)
     0x28 p, y, r (rads)
     0x34 float scale
-    0x38 u8, u8, u8, (color, lm quality, phase), junk8, ffffffff
+    0x38 u8, u8, u8, (color, phase, lm quality), junk8, ffffffff
     0x40 0, 0, 0, 0 [NOT READ, no effect?]
     0x50 ffffffff, 1.0, 0, 0 [only 1.0 value read; corresponds to offset 0x50 in item]
     0x60 0, 1.0, 0, 0 [ corresponds to some matrix? stretches/shears items when non1.0 and collision not affected.]
