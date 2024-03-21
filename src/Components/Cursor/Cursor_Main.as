@@ -377,12 +377,11 @@ namespace CustomCursorRotations {
 
     bool CustomYawActive {
         get {
-            return AfterCursorUpdateHook.IsApplied()
-                && AfterSetCursorRotationHook.IsApplied()
+            return AfterSetCursorRotationHook.IsApplied()
                 ;
         }
         set {
-            AfterCursorUpdateHook.SetApplied(value);
+
             AfterSetCursorRotationHook.SetApplied(value);
         }
     }
@@ -414,10 +413,11 @@ namespace CustomCursorRotations {
     );
 
     // idea is to use this to overwrite cursor stuff right after it's been set
-    HookHelper@ AfterCursorUpdateHook = HookHelper(
-     // "FF 90 28 02 00 00 83 7D F4 00 74 23 48 8B 4F 68 BA 41 00 00 00 4C 8B 01 41 FF 90 08 01 00 00 85 C0",
-        "FF 90 ?? ?? 00 00 83 7D F4 00 74 ?? 48 8B 4F ?? BA ?? 00 00 00 4C 8B 01 41 FF 90 ?? ?? 00 00 85 C0",
-        0, 1, "CustomCursorRotations::AfterCursorUpdate"
+    MultiHookHelper@ BeforeAfterCursorUpdateHook = MultiHookHelper(
+     // after only: "FF 90 28 02 00 00 83 7D F4 00 74 23 48 8B 4F 68 BA 41 00 00 00 4C 8B 01 41 FF 90 08 01 00 00 85 C0",
+     // "48 8D 55 00 48 8B CF FF 90 28 02 00 00 83 7D F4 00 74 23 48 8B 4F 68 BA 41 00 00 00 4C 8B 01 41 FF 90 08 01 00 00 85 C0",
+        "48 8D 55 00 48 8B CF FF 90 ?? ?? 00 00 83 7D F4 00 74 ?? 48 8B 4F ?? BA ?? 00 00 00 4C 8B 01 41 FF 90 ?? ?? 00 00 85 C0",
+        {0, 7}, {2, 1}, {"CustomCursorRotations::BeforeCursorUpdate", "CustomCursorRotations::AfterCursorUpdate"}
     );
 
     // this gives access to the stack values that update the cursor rotations
@@ -452,12 +452,23 @@ namespace CustomCursorRotations {
         cursorCustomPYR.z = UpdateInferCustomRot(rbx, 0x94);
     }
 
-    // overwrite cursor properties here if we want, after the whole cursor has been updated (I think...)
+    void BeforeCursorUpdate() {
+        Event::OnBeforeCursorUpdate();
+    }
+
+    // overwrite cursor properties here if we want, after the whole cursor has been updated
     void AfterCursorUpdate() {
+        Event::OnAfterCursorUpdate();
+    }
+
+    void CustomYaw_AfterCursorUpdate() {
+        if (!CustomYawActive) return;
+
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
         auto cursor = editor.Cursor;
         if (cursor is null) return;
+
         // make sure we're in a good mode, any item takes precedence over any free mode
         if (Editor::IsInAnyItemPlacementMode(editor)) {
             auto @itemCursor = DGameCursorItem(editor.ItemCursor);

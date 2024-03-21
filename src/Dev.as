@@ -412,7 +412,8 @@ const uint16 O_EDITOR_UndergroundBox = GetOffset("CGameCtnEditorFree", "Undergro
 const uint16 O_EDITOR_GridColor = GetOffset("CGameCtnEditorFree", "GridColor");
 const uint16 O_EDITOR_CopyPasteMacroBlockInfo = GetOffset("CGameCtnEditorFree", "CopyPasteMacroBlockInfo");
 
-// can be used to
+// 0x558, can place?
+// can be used to place items by setting to 0 or 1 on alternatine frames
 const uint16 O_EDITOR_SPACEHELD = O_EDITOR_CopyPasteMacroBlockInfo + 0x54; // 0x574 - 0x520
 
 const uint16 O_EDITOR_LAST_LMB_PRESSED = O_EDITOR_UndergroundBox + 0xF0; // 0xBB0 - 0xAC0;
@@ -1039,6 +1040,43 @@ void warn_every_60_s(const string &in msg) {
 }
 
 
+class MultiHookHelper {
+    protected HookHelper@[] hooks;
+
+    MultiHookHelper(const string &in pattern, uint[] offsets, uint[] paddings, string[] functions) {
+        if (offsets.Length == 0) throw("MultiHookHelper: no offsets");
+        if (offsets.Length != paddings.Length || offsets.Length != functions.Length) {
+            throw("MultiHookHelper: mismatched lengths");
+        }
+        for (uint i = 0; i < offsets.Length; i++) {
+            hooks.InsertLast(HookHelper(pattern, offsets[i], paddings[i], functions[i], Dev::PushRegisters(0), true));
+        }
+    }
+
+    bool IsApplied() {
+        return hooks[0].IsApplied();
+    }
+
+    void SetApplied(bool v) {
+        for (uint i = 0; i < hooks.Length; i++) {
+            hooks[i].SetApplied(v);
+        }
+    }
+
+    void Apply() {
+        for (uint i = 0; i < hooks.Length; i++) {
+            hooks[i].Apply();
+        }
+    }
+
+    void Unapply() {
+        for (uint i = 0; i < hooks.Length; i++) {
+            hooks[i].Unapply();
+        }
+    }
+}
+
+
 // Wrapper around Dev::Hook for safety and easy usage
 class HookHelper {
     protected Dev::HookInfo@ hookInfo;
@@ -1052,13 +1090,14 @@ class HookHelper {
     protected Dev::PushRegisters pushReg;
 
     // const string &in name,
-    HookHelper(const string &in pattern, uint offset, uint padding, const string &in functionName, Dev::PushRegisters pushRegs = Dev::PushRegisters::SSE) {
+    HookHelper(const string &in pattern, uint offset, uint padding, const string &in functionName, Dev::PushRegisters pushRegs = Dev::PushRegisters::SSE, bool findPtrEarly = false) {
         this.pattern = pattern;
         this.offset = offset;
         this.padding = padding;
         this.functionName = functionName;
         this.pushReg = pushRegs;
         startnew(CoroutineFunc(_RegisterUnhookCall));
+        if (findPtrEarly) startnew(CoroutineFunc(FindPatternPtr));
     }
 
     ~HookHelper() {
@@ -1067,6 +1106,10 @@ class HookHelper {
 
     void _RegisterUnhookCall() {
         RegisterUnhookFunction(UnapplyHookFn(this.Unapply));
+    }
+
+    void FindPatternPtr() {
+        if (patternPtr == 0) patternPtr = Dev::FindPattern(pattern);
     }
 
     bool Apply() {

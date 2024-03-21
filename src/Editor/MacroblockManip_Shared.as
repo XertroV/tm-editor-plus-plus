@@ -109,7 +109,7 @@ namespace Editor {
             UI::Text("Blocks: " + blocks.Length);
             UI::Indent();
             for (uint i = 0; i < blocks.Length; i++) {
-                UI::Text("Block " + i + ": " + blocks[i].name);
+                UI::Text("Block " + i + ": " + blocks[i].name + " (" + blocks[i].coord.ToString() + ")");
             }
             UI::Unindent();
             UI::Text("Items: " + items.Length);
@@ -282,9 +282,6 @@ namespace Editor {
         // block model not refcounted in this case
         // block model -- get from name
 
-        // set to true in subclasses
-        bool canConstruct = false;
-
         BlockSpec() {}
 
         BlockSpec(MemoryBuffer@ buf) {
@@ -292,6 +289,20 @@ namespace Editor {
             if (collection != 26) {
                 throw("Warning: block collection is not stadium");
             }
+        }
+
+        bool MatchesBlock(CGameCtnBlock@ block) const {
+            throw("overridden elsewehre");
+            return false;
+        }
+
+        bool opEquals(const BlockSpec@ other) const {
+            throw("overridden elsewehre");
+            return false;
+        }
+
+        bool get_isFree() {
+            return flags & uint8(BlockFlags::Free) != 0;
         }
 
         uint CalcSize() override {
@@ -412,13 +423,13 @@ namespace Editor {
         ItemSpec@ item;
 
         SetSkinSpec(BlockSpec@ block, const string &in fgSkin, const string &in bgSkin) {
-            this.block = block;
+            @this.block = block;
             this.fgSkin = fgSkin;
             this.bgSkin = bgSkin;
         }
 
         SetSkinSpec(ItemSpec@ item, const string &in skin, bool isForegroundElseBackground) {
-            this.item = item;
+            @this.item = item;
             if (isForegroundElseBackground) {
                 this.fgSkin = skin;
             } else {
@@ -475,13 +486,7 @@ namespace Editor {
         // fg skin
         // model
 
-        bool canConstruct = false;
-
-        ItemSpec(CGameCtnAnchoredObject@ item) {
-            if (!canConstruct) {
-                throw("Cannot construct ItemSpec directly");
-            }
-        }
+        ItemSpec() {}
 
         ItemSpec(MemoryBuffer@ buf) {
             ReadFromNetworkBuffer(buf);

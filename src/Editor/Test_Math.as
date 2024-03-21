@@ -1,8 +1,6 @@
 #if DEV
 
 
-
-
 Import::Library@ kernel32 = Import::GetLibrary("Kernel32.dll");
 Import::Function@ K32_GetSystemTimeAsFileTime = kernel32.GetFunction("GetSystemTimeAsFileTime");
 

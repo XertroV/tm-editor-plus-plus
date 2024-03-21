@@ -1,0 +1,24 @@
+[DGameMgrMap_SMgr: 0x370]
+# mwnod pool at 0x140
+Struct: ObjStruct = DMgrMap_SMgr_ObjStruct, 0x90, G
+
+
+[DMgrMap_SMgr_ObjStruct: 0x50]
+# size of this struct unknown
+u01_zero = uint64, 0x0, G
+Challenge = CGameCtnChallenge, 0x8, G
+cumulativeAddedOrRemoved = uint32, 0x10, G
+# zero at 0x14
+# 1, 1
+Buffer: MapObjects = DMgrMap_MapObjects, 0x40, 0x278, true
+
+[DMgrMap_MapObject: 0x278]
+ix = uint32, 0x0, G
+# FFFFFFFF
+u1 = uint32, 0x4, G
+ix2 = uint32, 0x8, G
+# 0
+u2 = uint32, 0xC, G
+BlockInfo = CGameCtnBlockInfo, 0x10, G
+BlockInfoVariant = CGameCtnBlockInfoVariant, 0x18, G
+Block = CGameCtnBlock, 0x20, G

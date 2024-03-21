@@ -37,8 +37,16 @@ class DevCallbacksTab : Tab {
         DrawCBs("On Editor Load", onEditorLoadCbNames);
         DrawCBs("On Editor Unload", onEditorUnloadCbNames);
         DrawCBs("On New Item", itemCallbackNames);
+        DrawCBs("Item Del", itemDelCallbackNames);
         DrawCBs("Block Callback", blockCallbackNames);
+        DrawCBs("Block Del", blockDelCallbackNames);
         DrawCBs("Selected Item Changed", selectedItemChangedCbNames);
+        DrawCBs("Item E Load", onItemEditorLoadCbNames);
+        DrawCBs("MT E Load", onMTEditorLoadCbNames);
+        DrawCBs("before cursor update", onBeforeCursorUpdateCbNames);
+        DrawCBs("after cursor update", onAfterCursorUpdateCbNames);
+        DrawCBs("map type update", onMapTypeUpdateCbNames);
+        DrawCBs("leaving playground", onLeavingPlaygroundCbNames);
     }
 
     void DrawCBs(const string &in type, string[]@ names) {

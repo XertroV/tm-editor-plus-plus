@@ -38,21 +38,30 @@ namespace FarlandsHelper {
             //     skipNextFrame = false;
             //     continue;
             // }
+            if (!S_EnableInfinitePrecisionFreeBlocks) continue;
             if (!IsInEditor) continue;
             // get the cursor
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) continue;
+            auto pmt = editor.PluginMapType;
             auto cursor = editor.Cursor;
             if (cursor is null || editor.ItemCursor is null) continue;
             auto itemCursor = DGameCursorItem(editor.ItemCursor);
-            // do some checks first
-            bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor);
             bool isSnapping = itemCursor.snappedGlobalIx != -1;
+            if (isSnapping) continue;
+            // do some checks first
+            // if (!Editor::IsInPlacementMode(editor)) continue;
+            if (pmt.EditMode != CGameEditorPluginMap::EditMode::Place) continue;
+            // bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor, false);
+            // if (!Editor::IsInAnyFreePlacementMode(editor)) continue;
+            auto placeMode = pmt.PlaceMode;
+            bool isPlacingAnythingFree = placeMode == CGameEditorPluginMap::EPlaceMode::FreeBlock || placeMode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock
+                || (placeMode == CGameEditorPluginMap::EPlaceMode::Item && Editor::GetItemPlacementMode() == Editor::ItemMode::Free);
+            bool isPlacingItem = placeMode == CGameEditorPluginMap::EPlaceMode::Item;
+            if (!isPlacingAnythingFree) continue;
             if (!Editor::IsAnythingBeingDrawn(cursor)) continue;
-            if (!Editor::IsInAnyFreePlacementMode(editor)) continue;
             if (!cursor.UseFreePos && !isPlacingItem) continue;
             if (!S_EnableInfinitePrecisionFreeBlocks) continue;
-            if (isSnapping) continue;
             // waiting for game to place stuff
             // skip if we're setting the cursor pos atm
             if (updateBlockPosFHHelper) continue;

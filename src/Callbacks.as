@@ -22,6 +22,12 @@ ProcessNewSelectedItem@[] selectedItemChangedCbs;
 string[] selectedItemChangedCbNames;
 CoroutineFunc@[] onLeavingPlaygroundCbs;
 string[] onLeavingPlaygroundCbNames;
+CoroutineFunc@[] onMapTypeUpdateCbs;
+string[] onMapTypeUpdateCbNames;
+CoroutineFunc@[] onAfterCursorUpdateCbs;
+string[] onAfterCursorUpdateCbNames;
+CoroutineFunc@[] onBeforeCursorUpdateCbs;
+string[] onBeforeCursorUpdateCbNames;
 // CoroutineFunc@[] selectedBlockChangedCbs;
 
 // set this shortly after loading the plugin
@@ -117,6 +123,27 @@ void RegisterOnLeavingPlaygroundCallback(CoroutineFunc@ f, const string &in name
     if (f !is null) {
         onLeavingPlaygroundCbs.InsertLast(f);
         onLeavingPlaygroundCbNames.InsertLast(name);
+    }
+}
+
+void RegisterOnMapTypeUpdateCallback(CoroutineFunc@ f, const string &in name) {
+    if (f !is null) {
+        onMapTypeUpdateCbs.InsertLast(f);
+        onMapTypeUpdateCbNames.InsertLast(name);
+    }
+}
+
+void RegisterNewAfterCursorUpdateCallback(CoroutineFunc@ f, const string &in name) {
+    if (f !is null) {
+        onAfterCursorUpdateCbs.InsertLast(f);
+        onAfterCursorUpdateCbNames.InsertLast(name);
+    }
+}
+
+void RegisterNewBeforeCursorUpdateCallback(CoroutineFunc@ f, const string &in name) {
+    if (f !is null) {
+        onBeforeCursorUpdateCbs.InsertLast(f);
+        onBeforeCursorUpdateCbNames.InsertLast(name);
     }
 }
 
@@ -247,6 +274,24 @@ namespace Event {
             onLeavingPlaygroundCbs[i]();
         }
         Log::Trace("Finished OnEditorLoad callbacks");
+    }
+    void OnMapTypeUpdate() {
+        // don't log these, 2 every frame :/
+        // Log::Trace("Running OnMapTypeUpdate");
+        for (uint i = 0; i < onMapTypeUpdateCbs.Length; i++) {
+            onMapTypeUpdateCbs[i]();
+        }
+        // Log::Trace("Finished OnMapTypeUpdate");
+    }
+    void OnAfterCursorUpdate() {
+        for (uint i = 0; i < onAfterCursorUpdateCbs.Length; i++) {
+            onAfterCursorUpdateCbs[i]();
+        }
+    }
+    void OnBeforeCursorUpdate() {
+        for (uint i = 0; i < onBeforeCursorUpdateCbs.Length; i++) {
+            onBeforeCursorUpdateCbs[i]();
+        }
     }
 }
 

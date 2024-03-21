@@ -30,6 +30,11 @@ namespace PlacementHooks {
         0, 2, "PlacementHooks::OnBlockDeleted_Rdx", Dev::PushRegisters(0)
     );
 
+    FunctionHookHelper@ After_CGameCtnEditorPluginMap_Update_PreScript_Hook = FunctionHookHelper(
+        "E8 ?? ?? ?? ?? 48 8B 93 ?? 08 00 00 48 8D 8B ?? 08 00 00",
+        0, 0, "PlacementHooks::After_CGameCtnEditorPluginMap_Update_PreScript_EmitEvent", Dev::PushRegisters(0)
+    );
+
     // Hooks over a call to QuaternionFromEuler, note: we don't use this atm
     FunctionHookHelper@ OnGetCursorRotation = FunctionHookHelper(
         //                       vv this byte is the offset for Rbp, so keep it here so we know if it changes
@@ -64,6 +69,7 @@ namespace PlacementHooks {
         OnSetBlockSkin.Apply();
         OnSetItemBgSkin.Apply();
         OnSetItemFgSkin.Apply();
+        After_CGameCtnEditorPluginMap_Update_PreScript_Hook.Apply();
         // dev_trace("PlacementHooks::SetupHooks Done");
         trace("PlacementHooks::SetupHooks Done");
         // OnGetCursorRotation.Apply();
@@ -77,7 +83,16 @@ namespace PlacementHooks {
         OnSetBlockSkin.Unapply();
         OnSetItemBgSkin.Unapply();
         OnSetItemFgSkin.Unapply();
+        After_CGameCtnEditorPluginMap_Update_PreScript_Hook.Unapply();
         // OnGetCursorRotation.Unapply();
+    }
+
+    void After_CGameCtnEditorPluginMap_Update_PreScript_EmitEvent() {
+        if (!IsInEditor) {
+            warn_every_60_s("After_CGameCtnEditorPluginMap_Update_PreScript: called outside editor! (this is a bug)");
+            return;
+        }
+        Event::OnMapTypeUpdate();
     }
 
     void OnSetItemFgSkin_rbx(uint64 rbx) {
@@ -248,6 +263,29 @@ namespace PlacementHooks {
     }
 }
 
+
+
+/* MapTypeUpdate -- access ML only things in PluginMapType
+
+orig: E8 F2 5C E6 FF 48 8B 93 80 08 00 00 48 8D 8B 88 08 00 00 48 81 C2 80 13 00 00 48 83 C4 20 5B E9 F3 C5 F3 FE CC
+
+call to hook:
+    E8 ?? ?? ?? ?? 48 8B 93 80 08 00 00 48 8D 8B 88 08 00 00 48 81 C2 80 13 00 00 48 83 C4 20 5B E9 ?? ?? ?? ?? CC
+
+unique: E8 ?? ?? ?? ?? 48 8B 93 ?? 08 00 00 48 8D 8B ?? 08 00 00
+
+Trackmania.exe.text+12D2619 - E8 F25CE6FF           - call Trackmania.exe.text+1138310 { call CGameEditorPluginMap::Update_PreScript_Outer
+ }
+Trackmania.exe.text+12D261E - 48 8B 93 80080000     - mov rdx,[rbx+00000880]
+Trackmania.exe.text+12D2625 - 48 8D 8B 88080000     - lea rcx,[rbx+00000888]
+Trackmania.exe.text+12D262C - 48 81 C2 80130000     - add rdx,00001380 { 4992 }
+Trackmania.exe.text+12D2633 - 48 83 C4 20           - add rsp,20 { 32 }
+Trackmania.exe.text+12D2637 - 5B                    - pop rbx
+Trackmania.exe.text+12D2638 - E9 F3C5F3FE           - jmp Trackmania.exe.text+20EC30
+Trackmania.exe.text+12D263D - CC                    - int 3
+
+
+*/
 
 
 

@@ -66,35 +66,60 @@ class MacroblockSelectionTab : Tab {
             if (UI::Button("Create MB Spec")) {
                 @mbSpec = Editor::MacroblockSpecPriv(mbi);
             }
+            // if (UI::Button("Try current macroblock place delete")) {
+            //     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            //     auto pmt = editor.PluginMapType;
+            //     auto placed = pmt.PlaceMacroblock_AirMode(mbi, int3(13, 13, 13), CGameEditorPluginMap::ECardinalDirections::North);
+            //     trace('placed mb: ' + placed);
+            //     pmt.AutoSave();
+
+            //     auto removed = pmt.RemoveMacroblock(mbi, int3(13, 13, 13), CGameEditorPluginMap::ECardinalDirections::North);
+            //     trace('removed mb (placement beforehand): ' + removed);
+            //     pmt.AutoSave();
+            // }
             if (UI::Button("Try Item Delete Test")) {
                 CGameCtnAnchoredObject@[] items;
+                CGameCtnBlock@[] blocks;
                 CGameCtnChallenge@ map = editor.Challenge;
                 for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
                     items.InsertLast(map.AnchoredObjects[i]);
                     Editor::SetItemMbInstId(map.AnchoredObjects[i], -1);
                 }
-                @mbSpec = Editor::MacroblockSpecPriv({}, items);
-                trace('created mb spec with ' + items.Length + ' items');
-                mbSpec._TempWriteToMacroblock(mbi);
-                trace('wrote mb spec to mb: ' + mbi.IdName);
-                auto dmb = DGameCtnMacroBlockInfo(mbi);
-                trace('nb blocks: ' + dmb.Blocks.Length);
-                trace('nb items: ' + dmb.Items.Length);
-                trace('nb skins: ' + dmb.Skins.Length);
+                for (uint i = 0; i < map.Blocks.Length; i++) {
+                    if (map.Blocks[i].DescId.GetName() == "Grass") continue;
+                    blocks.InsertLast(map.Blocks[i]);
+                    Editor::SetBlockMbInstId(map.Blocks[i], -1);
+                }
+                @mbSpec = Editor::MacroblockSpecPriv(blocks, items);
+                dev_trace('created mb spec with ' + items.Length + ' items');
+                dev_trace('created mb spec with ' + blocks.Length + ' blocks');
+                Editor::DeleteMacroblock(mbSpec);
+                @mbSpec = null;
+                // mbSpec._TempWriteToMacroblock(mbi);
+                // trace('wrote mb spec to mb: ' + mbi.IdName);
+                // auto dmb = DGameCtnMacroBlockInfo(mbi);
+                // trace('nb blocks: ' + dmb.Blocks.Length);
+                // trace('nb items: ' + dmb.Items.Length);
+                // trace('nb skins: ' + dmb.Skins.Length);
 
-                auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-                auto pmt = editor.PluginMapType;
-                // auto placed = pmt.PlaceMacroblock_AirMode(mbi, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
-                // trace('placed mb: ' + placed);
+                // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+                // auto pmt = editor.PluginMapType;
+                // // auto placed = pmt.PlaceMacroblock_AirMode(mbi, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
+                // // trace('placed mb: ' + placed);
+                // // pmt.AutoSave();
+
+                // auto removed = pmt.RemoveMacroblock(mbi, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
+                // trace('removed mb (no placement beforehand): ' + removed);
                 // pmt.AutoSave();
 
-                auto removed = pmt.RemoveMacroblock(mbi, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
-                trace('removed mb (no placement beforehand): ' + removed);
-                pmt.AutoSave();
+                // Editor::QueueFreeBlockDeletionFromMB(mbSpec);
 
-                mbSpec._RestoreMacroblock();
+                // mbSpec._RestoreMacroblock();
             }
         } else {
+            if (UX::ButtonMbDisabled("Restore Macroblock", mbSpec is null || mbSpec.tmpWriteBuf is null)) {
+                mbSpec._RestoreMacroblock();
+            }
             if (UI::Button("Nullify MB Spec")) {
                 @mbSpec = null;
             } else {
@@ -175,15 +200,15 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
                 CopiableLabeledValue("Name", item.name);
                 CopiableLabeledValue("Collection", '' + item.collection);
                 CopiableLabeledValue("Author", item.author);
+                CopiableLabeledValue("Coord", item.coord.ToString());
+                CopiableLabeledValue("Dir", tostring(CGameCtnBlock::ECardinalDirections(item.dir)));
+                UI::SameLine();
+                CopiableLabeledValue("Dir2", tostring(CGameCtnBlock::ECardinalDirections(item.dir2)));
+                CopiableLabeledValue("Pos", item.pos.ToString());
+                CopiableLabeledValue("PYR", item.pyr.ToString());
+                CopiableLabeledValue("PYR (Deg)", MathX::ToDeg(item.pyr).ToString());
                 if (!item.isFree) {
-                    CopiableLabeledValue("Coord", item.coord.ToString());
-                    CopiableLabeledValue("Dir", tostring(CGameCtnBlock::ECardinalDirections(item.dir)));
-                    UI::SameLine();
-                    CopiableLabeledValue("Dir2", tostring(CGameCtnBlock::ECardinalDirections(item.dir2)));
                 } else {
-                    CopiableLabeledValue("Pos", item.pos.ToString());
-                    CopiableLabeledValue("PYR", item.pyr.ToString());
-                    CopiableLabeledValue("PYR (Deg)", MathX::ToDeg(item.pyr).ToString());
                 }
                 CopiableLabeledValue("Color", tostring(item.color));
                 CopiableLabeledValue("lmQual", tostring(item.lmQual));

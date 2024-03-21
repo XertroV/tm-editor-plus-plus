@@ -273,6 +273,8 @@ namespace MenuBar {
                         ExploreNod(editor.PluginMapType);
                     if (UI::MenuItem(Icons::Cube + " Editor.Challenge"))
                         ExploreNod(editor.Challenge);
+                    if (UI::MenuItem(Icons::FloppyO + " PMT.Autosave()"))
+                        editor.PluginMapType.AutoSave();
                 }
                 UI::EndMenu();
             }

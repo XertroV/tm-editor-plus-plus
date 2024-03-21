@@ -194,6 +194,16 @@ namespace Editor {
             super(blocks, items);
         }
 
+        MacroblockSpecPriv(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items) {
+            super({}, {});
+            for (uint i = 0; i < blocks.Length; i++) {
+                this.blocks.InsertLast(blocks[i]);
+            }
+            for (uint i = 0; i < items.Length; i++) {
+                this.items.InsertLast(items[i]);
+            }
+        }
+
         MacroblockSpecPriv(CGameCtnMacroBlockInfo@ mb) {
             super({}, {});
             auto dmb = DGameCtnMacroBlockInfo(mb);
@@ -212,11 +222,11 @@ namespace Editor {
         }
 
         void AddSkin(CGameCtnBlockSkin@ skin, uint ix) override {
-            skins.InsertLast(SkinSpec(skin, ix));
+            skins.InsertLast(SkinSpecPriv(skin, ix));
         }
 
         void AddItem(CGameCtnAnchoredObject@ item) override {
-            items.InsertLast(ItemSpec(item));
+            items.InsertLast(ItemSpecPriv(item));
         }
 
         protected DGameCtnMacroBlockInfo@ tmpMacroblock = null;
@@ -301,6 +311,10 @@ namespace Editor {
         }
 
         void _RestoreMacroblock() {
+            if (tmpWriteBuf is null) {
+                warn("_RestoreMacroblock called without _TempWriteToMacroblock");
+                return;
+            }
             _UnallocMemory();
 
             Dev::Write(tmpMacroblock.Blocks.Ptr, tmpMacroblockBlocksBuf);
@@ -433,15 +447,23 @@ namespace Editor {
     // }
 
     class BlockSpecPriv : BlockSpec {
+        CGameCtnBlockInfo@ BlockInfo;
+
+        ~BlockSpecPriv() {
+            if (BlockInfo !is null) {
+                BlockInfo.MwRelease();
+                @BlockInfo = null;
+            }
+        }
+
         BlockSpecPriv(CGameCtnBlock@ block) {
-            this.canConstruct = true;
             super();
             name = block.BlockInfo.IdName;
             // collection = blah
             author = block.BlockInfo.Author.GetName();
             coord = block.Coord;
             // correct for mb offset at min location 0,1,0
-            if (coord.y < 0xFFFF) {
+            if (coord.y > 0) {
                 coord.y -= 1;
             }
             dir = block.Direction;
@@ -460,10 +482,11 @@ namespace Editor {
             if (block.WaypointSpecialProperty !is null) {
                 @waypoint = WaypointSpec(block.WaypointSpecialProperty);
             }
+            @BlockInfo = block.BlockInfo;
+            BlockInfo.MwAddRef();
         }
 
         BlockSpecPriv(DGameCtnMacroBlockInfo_Block@ block) {
-            canConstruct = true;
             super();
             name = block.name;
             // collection = blah
@@ -482,6 +505,8 @@ namespace Editor {
             if (block.Waypoint !is null) {
                 @waypoint = WaypointSpec(block.Waypoint);
             }
+            @BlockInfo = block.BlockInfo;
+            BlockInfo.MwAddRef();
         }
 
         void WriteToMemory(CustomBuffer@ mem) {
@@ -508,20 +533,40 @@ namespace Editor {
                 block.Waypoint.Tag = waypoint.tag;
             }
             // get model
-            @block.BlockInfo = null;
-            auto inv = Editor::GetInventoryCache();
-            auto art = inv.GetBlockByName(name);
-            if (art !is null) {
-                auto modelNod = art.GetCollectorNod();
-                auto model = cast<CGameCtnBlockInfo>(modelNod);
-                if (model !is null) {
-                    @block.BlockInfo = model;
+            @block.BlockInfo = BlockInfo;
+            if (block.BlockInfo is null) {
+                auto inv = Editor::GetInventoryCache();
+                auto art = inv.GetBlockByName(name);
+                if (art !is null) {
+                    auto modelNod = art.GetCollectorNod();
+                    auto model = cast<CGameCtnBlockInfo>(modelNod);
+                    if (model !is null) {
+                        @block.BlockInfo = model;
+                    } else {
+                        NotifyWarning("Failed to load block model for " + name + ".\nArticle: " + art.Name);
+                    }
                 } else {
-                    NotifyWarning("Failed to load block model for " + name + ".\nArticle: " + art.Name);
+                    NotifyWarning("Failed to load block article for " + name);
                 }
-            } else {
-                NotifyWarning("Failed to load block article for " + name);
             }
+        }
+
+        bool MatchesBlock(CGameCtnBlock@ block) const override {
+            return name == block.BlockInfo.IdName && collection == 26 && author == block.BlockInfo.Author.GetName() &&
+                MathX::Nat3Eq(coord, block.Coord) && dir == block.Direction && dir2 == block.Direction &&
+                MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)) &&
+                MathX::Vec3Eq(pyr, Editor::GetBlockRotation(block)) &&
+                color == block.MapElemColor && lmQual == block.MapElemLmQuality && mobilIx == block.MobilIndex &&
+                mobilVariant == block.MobilVariantIndex && variant == block.BlockInfoVariantIndex &&
+                flags == (block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None);
+        }
+
+        bool opEquals(const BlockSpec@ other) const override {
+            return name == other.name && collection == other.collection && author == other.author &&
+                MathX::Nat3Eq(coord, other.coord) && dir == other.dir && dir2 == other.dir2 &&
+                MathX::Vec3Eq(pos, other.pos) && MathX::Vec3Eq(pyr, other.pyr) &&
+                color == other.color && lmQual == other.lmQual && mobilIx == other.mobilIx && mobilVariant == other.mobilVariant &&
+                variant == other.variant && flags == other.flags;
         }
     }
 
@@ -635,9 +680,17 @@ namespace Editor {
     // }
 
     class ItemSpecPriv : ItemSpec {
+        CGameItemModel@ Model;
+
+        ~ItemSpecPriv() {
+            if (Model !is null) {
+                Model.MwRelease();
+            }
+            @Model = null;
+        }
+
         ItemSpecPriv(CGameCtnAnchoredObject@ item) {
-            canConstruct = true;
-            super(item);
+            super();
             name = item.ItemModel.IdName;
             // collection = blah
             // need to offset coords by 0,1,0 and make height relative to that
@@ -660,12 +713,12 @@ namespace Editor {
                 @waypoint = WaypointSpec(item.WaypointSpecialProperty);
             }
             // ignore skins for the moment
+            @Model = item.ItemModel;
+            Model.MwAddRef();
         }
 
         ItemSpecPriv(DGameCtnMacroBlockInfo_Item@ item) {
-            canConstruct = true;
-            CGameCtnAnchoredObject@ dummy = null;
-            super(dummy);
+            super();
             name = item.name;
             // collection = blah
             author = item.author;
@@ -687,6 +740,8 @@ namespace Editor {
                 @waypoint = WaypointSpec(item.Waypoint);
             }
             // ignore skins for the moment
+            @Model = item.Model;
+            Model.MwAddRef();
         }
 
         void WriteToMemory(CustomBuffer@ mem) {
@@ -719,20 +774,22 @@ namespace Editor {
             }
             @item.BGSkin = null;
             @item.FGSkin = null;
-            @item.Model = null;
+            @item.Model = Model;
             // get model
-            auto inv = Editor::GetInventoryCache();
-            auto art = inv.GetItemByPath(name);
-            if (art !is null) {
-                auto modelNod = art.GetCollectorNod();
-                auto model = cast<CGameItemModel>(modelNod);
-                if (model !is null) {
-                    @item.Model = model;
+            if (item.Model is null) {
+                auto inv = Editor::GetInventoryCache();
+                auto art = inv.GetItemByPath(name);
+                if (art !is null) {
+                    auto modelNod = art.GetCollectorNod();
+                    auto model = cast<CGameItemModel>(modelNod);
+                    if (model !is null) {
+                        @item.Model = model;
+                    } else {
+                        NotifyWarning("Failed to load item model for " + name + ".\nArticle: " + art.Name);
+                    }
                 } else {
-                    NotifyWarning("Failed to load item model for " + name + ".\nArticle: " + art.Name);
+                    NotifyWarning("Failed to load item article for " + name);
                 }
-            } else {
-                NotifyWarning("Failed to load item article for " + name);
             }
         }
     }
@@ -752,7 +809,7 @@ class CustomBuffer {
     }
 
     CustomBuffer(uint32 size) {
-        ptr = Dev_Allocate(size, false);
+        ptr = Dev_Allocate(Math::Max(int(8), size), false);
         if (ptr == 0) throw("Failed to allocate D:");
         allocSize = size;
         cursor = 0;

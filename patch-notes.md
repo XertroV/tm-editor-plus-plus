@@ -1,8 +1,24 @@
+TODO: set skins
+TODO: item stuff with cbs
+
 0.8.9999991
 
 - add block/item deleted CBs, set skin CBs
 - add export methods for macroblock manip and map together
 - fix mb pyr order, swap color/phase and fix offsets.
+- add a bit of MapManger RE
+- add map type update cb for item interaction
+- add before and after cursor update hooks and CBs
+- macroblock manip test code
+- add MultiHookHelper
+- SetEditMode and SetEditorPickedBlock editor methods
+- add 'delete freeblocks' function
+- implement place and delete macroblock exported functions
+- optimize some things
+- add track placed this
+
+
+
 
 0.8.9999990
 

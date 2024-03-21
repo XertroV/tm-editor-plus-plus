@@ -111,6 +111,8 @@ namespace Editor {
     ItemMode GetItemPlacementMode() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (!IsInAnyItemPlacementMode(editor, true)) return ItemMode::None;
+        return GetItemPlacementMode_Raw(editor);
+        // this is very slow
         try {
             auto root = editor.EditorInterface.InterfaceRoot;
             auto main = cast<CControlFrame>(root.Childs[0]);
@@ -182,6 +184,10 @@ namespace Editor {
 
     CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) {
         return editor.PluginMapType.EditMode;
+    }
+
+    void SetEditMode(CGameCtnEditorFree@ editor, CGameEditorPluginMap::EditMode mode) {
+        editor.PluginMapType.EditMode = mode;
     }
 
     // checks edit mode == Place
@@ -454,6 +460,13 @@ namespace Editor {
         Editor::OpenItemEditor(editor, newBlock);
     }
 
+    void SetEditorPickedBlock(CGameCtnEditorFree@ editor, CGameCtnBlock@ block) {
+        block.MwAddRef();
+        if (editor.PickedBlock !is null) {
+            editor.PickedBlock.MwRelease();
+        }
+        Dev::SetOffset(editor, GetOffset(editor, "PickedBlock"), block);
+    }
 
     void SetEditorPickedNod(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ nodToEdit) {
         nodToEdit.MwAddRef();
@@ -477,7 +490,8 @@ namespace Editor {
 
     // Editor (Maniascript) Plugins
 
-    const uint16 O_EDITOR_PLUGIN_MAP_MGR = GetOffset("CGameCtnEditorFree", "ForcedPluginsSettings") + 0x18;
+    //
+    const uint16 O_EDITOR_PLUGIN_MAP_MGR = GetOffset("CGameCtnEditorFree", "ForcedPluginsSettings") + 0x18; // 0xf68 + 0x18 = 0xf80
     CGameEditorPluginMapManager@ GetPluginMapManager(CGameCtnEditorFree@ editor) {
         return cast<CGameEditorPluginMapManager>(Dev::GetOffsetNod(editor, O_EDITOR_PLUGIN_MAP_MGR));
     }

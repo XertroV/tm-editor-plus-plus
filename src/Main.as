@@ -38,10 +38,14 @@ void Main() {
     ExtraUndoFix::OnLoad();
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
+    CustomCursorRotations::BeforeAfterCursorUpdateHook.Apply();
+    Editor::Setup_DeleteFreeblockCallbacks();
+    RegisterNewAfterCursorUpdateCallback(CustomCursorRotations::CustomYaw_AfterCursorUpdate, "CustomCursorRotaitons::CustomYaw");
     // startnew(Editor::OffzonePatch::Apply);
-    startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
 
+    startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
+    startnew(Editor::ResetTrackMapChanges_Loop).WithRunContext(Meta::RunContext::BeforeScripts);
 
     startnew(RegisterEditorLeaveUndoStandingRespawnCheck);
 
@@ -54,11 +58,17 @@ void Main() {
 #endif
 }
 
+void OnEnabled() {
+    CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
+    ExtraUndoFix::OnLoad();
+    Editor::OnPluginLoadSetUpMapThumbnailHook();
+    SetUpEditMapIntercepts();
+    CustomCursorRotations::BeforeAfterCursorUpdateHook.Apply();
+}
 
-
-void OnDestroyed() { Unload(); }
-void OnDisabled() { Unload(); }
-void Unload() {
+void OnDestroyed() { Unload(true); }
+void OnDisabled() { Unload(false); }
+void Unload(bool freeMem = true) {
     // hmm not sure this is a great idea b/c some of it might be used by the game.
     // still, openplanet frees it anyway, so i guess nbd.
     FreeAllAllocated();
@@ -66,6 +76,7 @@ void Unload() {
     Editor::OffzonePatch::Unapply();
     CheckUnhookAllRegisteredHooks();
     CustomCursorRotations::PromiscuousItemToBlockSnapping.Unapply();
+    CustomCursorRotations::BeforeAfterCursorUpdateHook.Unapply();
     LightMapCustomRes::Unpatch();
 }
 
