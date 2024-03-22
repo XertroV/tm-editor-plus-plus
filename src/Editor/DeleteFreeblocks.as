@@ -69,10 +69,12 @@ namespace Editor {
     bool waitingToDeleteFreeBlocks = false;
 
     void QueueFreeBlockDeletionFromMB(MacroblockSpec@ mb) {
+        NotifyWarning("Freeblock deletion disabled atm b/c game crashes");
         if (mb is null) return;
         for (uint i = 0; i < mb.Blocks.Length; i++) {
-            QueueFreeBlockDeletion(mb.Blocks[i]);
+            // QueueFreeBlockDeletion(mb.Blocks[i]);
         }
+        // RunDeleteFreeBlockDetection();
     }
 
     void QueueFreeBlockDeletion(BlockSpec@ block) {
@@ -81,14 +83,29 @@ namespace Editor {
         pendingFreeBlocksToDelete.InsertLast(block);
         if (!waitingToDeleteFreeBlocks) {
             waitingToDeleteFreeBlocks = true;
-            startnew(WaitToDeleteFreeBlocks);
+            startnew(WaitToDeleteFreeBlocks).WithRunContext(Meta::RunContext::AfterMainLoop);
             NotifyWarning('started wait to delete free blocks coro');
         }
-        Notify('added block to delete queue: ' + block.name);
+        // Notify('added block to delete queue: ' + block.name);
+    }
+
+    void RunDeleteFreeBlockDetection() {
+        if (pendingFreeBlocksToDelete.Length == 0) return;
+        canDeleteFreeBlocks = true;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        _delFreeOrigPlacement = Editor::GetPlacementMode(editor);
+        // changing the placement mode triggers a cursor update
+        if (_delFreeOrigPlacement != CGameEditorPluginMap::EPlaceMode::FreeBlock) {
+            Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
+        } else {
+            Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::GhostBlock);
+        }
     }
 
     bool canDeleteFreeBlocks = false;
     void WaitToDeleteFreeBlocks() {
+        RunDeleteFreeBlockDetection();
+        return;
         canDeleteFreeBlocks = false;
         int lastDelPress = -1;
         uint count = 0;
@@ -99,7 +116,7 @@ namespace Editor {
                 lastDelPress = count;
                 continue;
             }
-            if (lastDelPress + 1 > count) continue;
+            if (lastDelPress + 2 > count) continue;
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor.PickedBlock !is null || editor.PickedObject !is null) continue;
             if (Editor::IsSpaceBarDown(editor)) continue;
@@ -125,7 +142,10 @@ namespace Editor {
 
     void BeforeCursorUpdate_DeleteFreeblocks() {
         if (!canDeleteFreeBlocks) return;
-        if (!waitingToDeleteFreeBlocks) return;
+        if (!waitingToDeleteFreeBlocks) {
+            NotifyWarning("Unexpected: canDeleteFreeBlocks but not waitingToDeleteFreeBlocks");
+            return;
+        }
         warn('checking if safe to del free blocks');
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor.PickedBlock !is null || editor.PickedObject !is null) return;
@@ -154,6 +174,9 @@ namespace Editor {
             waitingToDeleteFreeBlocks = false;
             return;
         }
+        dev_trace("Autosaving");
+        editor.PluginMapType.AutoSave();
+        dev_trace("Autosaved");
 
         // now we need to set the cursor things
         Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeMacroblock);

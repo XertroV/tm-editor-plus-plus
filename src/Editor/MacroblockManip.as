@@ -484,16 +484,23 @@ namespace Editor {
     class BlockSpecPriv : BlockSpec {
         uint64 ObjPtr;
         CGameCtnBlockInfo@ BlockInfo;
+        CGameCtnBlock@ GameBlock;
 
         ~BlockSpecPriv() {
             if (BlockInfo !is null) {
                 BlockInfo.MwRelease();
                 @BlockInfo = null;
             }
+            if (GameBlock !is null) {
+                GameBlock.MwRelease();
+                @GameBlock = null;
+            }
         }
 
         BlockSpecPriv(CGameCtnBlock@ block) {
             ObjPtr = Dev_GetPointerForNod(block);
+            // @GameBlock = block;
+            // block.MwAddRef();
             super();
             name = block.BlockInfo.IdName;
             // collection = blah
@@ -758,16 +765,23 @@ namespace Editor {
     class ItemSpecPriv : ItemSpec {
         uint64 ObjPtr;
         CGameItemModel@ Model;
+        CGameCtnAnchoredObject@ GameItem;
 
         ~ItemSpecPriv() {
             if (Model !is null) {
                 Model.MwRelease();
+                @Model = null;
             }
-            @Model = null;
+            if (GameItem !is null) {
+                GameItem.MwRelease();
+                @GameItem = null;
+            }
         }
 
         ItemSpecPriv(CGameCtnAnchoredObject@ item) {
             ObjPtr = Dev_GetPointerForNod(item);
+            // @GameItem = item;
+            // item.MwAddRef();
             super();
             name = item.ItemModel.IdName;
             // collection = blah
