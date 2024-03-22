@@ -65,7 +65,10 @@ namespace Editor {
         }
 
         vec3 ReadVec3FromBuffer(MemoryBuffer@ buf) {
-            return vec3(buf.ReadFloat(), buf.ReadFloat(), buf.ReadFloat());
+            auto x = buf.ReadFloat();
+            auto y = buf.ReadFloat();
+            auto z = buf.ReadFloat();
+            return vec3(x, y, z);
         }
 
         void WriteNat3ToBuffer(MemoryBuffer@ buf, nat3 v) {
@@ -75,7 +78,10 @@ namespace Editor {
         }
 
         nat3 ReadNat3FromBuffer(MemoryBuffer@ buf) {
-            return nat3(buf.ReadUInt32(), buf.ReadUInt32(), buf.ReadUInt32());
+            auto x = buf.ReadUInt32();
+            auto y = buf.ReadUInt32();
+            auto z = buf.ReadUInt32();
+            return nat3(x, y, z);
         }
     }
 
@@ -193,33 +199,8 @@ namespace Editor {
         }
 
         NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
-            uint32 magic = buf.ReadUInt32();
-            if (magic != MAGIC_BLOCKS) {
-                throw("Invalid magic for blocks");
-            }
-            uint16 blockCount = buf.ReadUInt16();
-            for (uint i = 0; i < blockCount; i++) {
-                blocks.InsertLast(BlockSpec(buf));
-            }
-
-            magic = buf.ReadUInt32();
-            if (magic != MAGIC_SKINS) {
-                throw("Invalid magic for skins");
-            }
-            uint16 skinCount = buf.ReadUInt16();
-            for (uint i = 0; i < skinCount; i++) {
-                skins.InsertLast(SkinSpec(buf));
-            }
-
-            magic = buf.ReadUInt32();
-            if (magic != MAGIC_ITEMS) {
-                throw("Invalid magic for items");
-            }
-            uint16 itemCount = buf.ReadUInt16();
-            for (uint i = 0; i < itemCount; i++) {
-                items.InsertLast(ItemSpec(buf));
-            }
-            return this;
+            throw("implemented elsewhere");
+            return null;
         }
     }
 
@@ -304,6 +285,15 @@ namespace Editor {
         bool get_isFree() {
             return flags & uint8(BlockFlags::Free) != 0;
         }
+        bool get_isGround() {
+            return flags & uint8(BlockFlags::Ground) != 0;
+        }
+        bool get_isGhost() {
+            return flags & uint8(BlockFlags::Ghost) != 0;
+        }
+        bool get_isNormal() {
+            return flags & 7 == 0;
+        }
 
         uint CalcSize() override {
             uint size = 0;
@@ -335,8 +325,8 @@ namespace Editor {
             buf.Write(collection);
             WriteLPStringToBuffer(buf, author);
             WriteNat3ToBuffer(buf, coord);
-            buf.Write(uint8(dir));
-            buf.Write(uint8(dir2));
+            buf.Write(int8(dir));
+            buf.Write(int8(dir2));
             WriteVec3ToBuffer(buf, pos);
             WriteVec3ToBuffer(buf, pyr);
             buf.Write(uint8(color));
@@ -353,8 +343,8 @@ namespace Editor {
             collection = buf.ReadUInt32();
             author = ReadLPStringFromBuffer(buf);
             coord = ReadNat3FromBuffer(buf);
-            dir = CGameCtnBlock::ECardinalDirections(buf.ReadUInt8());
-            dir2 = CGameCtnBlock::ECardinalDirections(buf.ReadUInt8());
+            dir = CGameCtnBlock::ECardinalDirections(buf.ReadInt8());
+            dir2 = CGameCtnBlock::ECardinalDirections(buf.ReadInt8());
             pos = ReadVec3FromBuffer(buf);
             pyr = ReadVec3FromBuffer(buf);
             color = CGameCtnBlock::EMapElemColor(buf.ReadUInt8());
@@ -474,7 +464,7 @@ namespace Editor {
         CGameCtnAnchoredObject::EMapElemColor color;
         CGameCtnAnchoredObject::EMapElemLightmapQuality lmQual;
         CGameCtnAnchoredObject::EPhaseOffset phase;
-        mat3 visualRot;
+        mat3 visualRot = mat3::Identity();
         vec3 pivotPos;
         uint8 isFlying;
         uint16 variantIx;
@@ -483,7 +473,9 @@ namespace Editor {
         // ? refcounted
         WaypointSpec@ waypoint;
         // bg skin
+        SetSkinSpec@ bgSkin;
         // fg skin
+        SetSkinSpec@ fgSkin;
         // model
 
         ItemSpec() {}
@@ -508,6 +500,9 @@ namespace Editor {
             buf.Write(uint8(lmQual));
             buf.Write(uint8(phase));
             // skip visualRot b/c it's always identity
+            WriteVec3ToBuffer(buf, vec3(1, 0, 0));
+            WriteVec3ToBuffer(buf, vec3(0, 1, 0));
+            WriteVec3ToBuffer(buf, vec3(0, 0, 1));
             WriteVec3ToBuffer(buf, pivotPos);
             buf.Write(isFlying);
             buf.Write(variantIx);
@@ -515,5 +510,116 @@ namespace Editor {
             buf.Write(itemGroupOnBlock);
             WriteNullableStructToBuffer(buf, waypoint);
         }
+
+        NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
+            name = ReadLPStringFromBuffer(buf);
+            collection = buf.ReadUInt32();
+            author = ReadLPStringFromBuffer(buf);
+            coord = ReadNat3FromBuffer(buf);
+            dir = CGameCtnAnchoredObject::ECardinalDirections(buf.ReadUInt8());
+            pos = ReadVec3FromBuffer(buf);
+            pyr = ReadVec3FromBuffer(buf);
+            scale = buf.ReadFloat();
+            color = CGameCtnAnchoredObject::EMapElemColor(buf.ReadUInt8());
+            lmQual = CGameCtnAnchoredObject::EMapElemLightmapQuality(buf.ReadUInt8());
+            phase = CGameCtnAnchoredObject::EPhaseOffset(buf.ReadUInt8());
+            // skip visualRot b/c it's always identity
+            ReadVec3FromBuffer(buf);
+            ReadVec3FromBuffer(buf);
+            ReadVec3FromBuffer(buf);
+            pivotPos = ReadVec3FromBuffer(buf);
+            isFlying = buf.ReadUInt8();
+            variantIx = buf.ReadUInt16();
+            associatedBlockIx = buf.ReadUInt32();
+            itemGroupOnBlock = buf.ReadUInt32();
+            // nullable struct
+            if (buf.ReadUInt8() == 1) {
+                @waypoint = WaypointSpec(buf);
+            }
+            return this;
+        }
     }
 }
+
+void WriteVec3ToBuffer(MemoryBuffer@ buf, vec3 v) {
+    buf.Write(v.x);
+    buf.Write(v.y);
+    buf.Write(v.z);
+}
+
+vec3 ReadVec3FromBuffer(MemoryBuffer@ buf) {
+    auto x = buf.ReadFloat();
+    auto y = buf.ReadFloat();
+    auto z = buf.ReadFloat();
+    return vec3(x, y, z);
+}
+
+void WriteNat3ToBuffer(MemoryBuffer@ buf, nat3 v) {
+    buf.Write(v.x);
+    buf.Write(v.y);
+    buf.Write(v.z);
+}
+
+nat3 ReadNat3FromBuffer(MemoryBuffer@ buf) {
+    auto x = buf.ReadUInt32();
+    auto y = buf.ReadUInt32();
+    auto z = buf.ReadUInt32();
+    return nat3(x, y, z);
+    // return nat3(buf.ReadUInt32(), buf.ReadUInt32(), buf.ReadUInt32());
+}
+
+#if DEV
+
+Tester@ Test_RWBuf = Tester("ReadWriteBuffer", genRWBufTests());
+
+TestCase@[]@ genRWBufTests() {
+    TestCase@[]@ ret = {};
+    ret.InsertLast(TestCase("buf vec3 wr", test_vec3_buf_wr));
+    ret.InsertLast(TestCase("buf nat3 wr", test_nat3_buf_rw));
+    return ret;
+}
+
+void test_vec3_buf_wr() {
+    auto buf = MemoryBuffer(100, 0);
+    auto i = vec3(1, 2, 3);
+    WriteVec3ToBuffer(buf, i);
+    buf.Seek(0);
+    auto v = ReadVec3FromBuffer(buf);
+    print("V: " + v.ToString());
+    assert_eq(v.x, i.x, "x");
+    assert_eq(v.y, i.y, "y");
+    assert_eq(v.z, i.z, "z");
+
+    Editor::NetworkSerializable@ netSz = Editor::NetworkSerializable();
+    buf.Seek(0);
+    netSz.WriteVec3ToBuffer(buf, i);
+    buf.Seek(0);
+    v = netSz.ReadVec3FromBuffer(buf);
+    print("V: " + v.ToString());
+    assert_eq(v.x, i.x, "x");
+    assert_eq(v.y, i.y, "y");
+    assert_eq(v.z, i.z, "z");
+}
+
+void test_nat3_buf_rw() {
+    auto buf = MemoryBuffer(100, 0);
+    auto i = nat3(1, 2, 3);
+    WriteNat3ToBuffer(buf, i);
+    buf.Seek(0);
+    auto v = ReadNat3FromBuffer(buf);
+    print("V: " + v.ToString());
+    assert_eq(v.x, i.x, "x");
+    assert_eq(v.y, i.y, "y");
+    assert_eq(v.z, i.z, "z");
+
+    Editor::NetworkSerializable@ netSz = Editor::NetworkSerializable();
+    buf.Seek(0);
+    netSz.WriteNat3ToBuffer(buf, i);
+    buf.Seek(0);
+    v = netSz.ReadNat3FromBuffer(buf);
+    print("V: " + v.ToString());
+    assert_eq(v.x, i.x, "x");
+    assert_eq(v.y, i.y, "y");
+    assert_eq(v.z, i.z, "z");
+}
+#endif

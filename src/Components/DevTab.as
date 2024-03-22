@@ -281,11 +281,11 @@ class MapChangesFrameTab : Tab {
     }
 
     void DrawInner() override {
-        UI::Text("B Placed: " + Editor::GetThisFrameBlocksPlaced().Length);
-        UI::Text("B Deleted: " + Editor::GetThisFrameBlocksDeleted().Length);
-        UI::Text("I Placed: " + Editor::GetThisFrameItemsPlaced().Length);
-        UI::Text("I Deleted: " + Editor::GetThisFrameItemsDeleted().Length);
-        UI::Text("Skins Set: " + Editor::GetThisFrameSkinsSet().Length);
+        UI::Text("B Placed: " + Editor::ThisFrameBlocksPlaced().Length);
+        UI::Text("B Deleted: " + Editor::ThisFrameBlocksDeleted().Length);
+        UI::Text("I Placed: " + Editor::ThisFrameItemsPlaced().Length);
+        UI::Text("I Deleted: " + Editor::ThisFrameItemsDeleted().Length);
+        UI::Text("Skins Set: " + Editor::ThisFrameSkinsSet().Length);
     }
 }
 

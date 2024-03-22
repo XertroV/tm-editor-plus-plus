@@ -27,3 +27,9 @@ void dev_trace(const string &in msg) {
     trace(msg);
 #endif
 }
+
+void dev_warn(const string &in msg) {
+#if DEV
+    warn(msg);
+#endif
+}

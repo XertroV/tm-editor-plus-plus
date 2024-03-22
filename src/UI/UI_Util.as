@@ -52,6 +52,9 @@ shared bool ClickableLabel(const string &in label, const string &in value) {
 }
 shared bool ClickableLabel(const string &in label, const string &in value, const string &in between) {
     UI::Text(label.Length > 0 ? label + between + value : value);
+    if (UI::IsItemHovered(UI::HoveredFlags::None)) {
+        UI::SetMouseCursor(UI::MouseCursor::Hand);
+    }
     return UI::IsItemClicked();
 }
 

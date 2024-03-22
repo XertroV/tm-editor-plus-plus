@@ -159,11 +159,10 @@ namespace Editor {
         Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeMacroblock);
         Editor::SetEditorPickedBlock(editor, blocks[0]);
         Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Erase);
-        // TempPatch
+        // Temp Patch to delete what's under the cursor,
         Editor_DeleteUnderCursor.Apply();
-        NotifyWarning("ATTEMPTING TO DELETE BLOCKS: " + blocks.Length);
-
         runFreeBlockAfterCursorUpdate = true;
+        // NotifyWarning("ATTEMPTING TO DELETE BLOCKS: " + blocks.Length);
     }
 
     bool runFreeBlockAfterCursorUpdate = false;
@@ -171,20 +170,15 @@ namespace Editor {
     void AfterCursorUpdate_DeleteFreeblocks() {
         if (!runFreeBlockAfterCursorUpdate) return;
         runFreeBlockAfterCursorUpdate = false;
-        WaitForFreeBlockDelAndRestore();
-    }
-
-    CGameEditorPluginMap::EPlaceMode _delFreeOrigPlacement = CGameEditorPluginMap::EPlaceMode::FreeMacroblock;
-
-    void WaitForFreeBlockDelAndRestore() {
         Editor_DeleteUnderCursor.Unapply();
         waitingToDeleteFreeBlocks = false;
         @lastPickedBlock = null;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
         Editor::SetPlacementMode(editor, _delFreeOrigPlacement);
-        // editor.PluginMapType
     }
+
+    CGameEditorPluginMap::EPlaceMode _delFreeOrigPlacement = CGameEditorPluginMap::EPlaceMode::FreeMacroblock;
 }
 
 void FindFreeBlockPMTAndSetMbId(CGameEditorPluginMapMapType@ pmt, Editor::BlockSpec@ bs, CGameCtnBlock@[]@ blocks, uint mbInstId) {

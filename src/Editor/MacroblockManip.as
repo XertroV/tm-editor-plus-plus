@@ -217,6 +217,41 @@ namespace Editor {
             }
         }
 
+        MacroblockSpecPriv(MemoryBuffer@ buf) {
+            super({}, {});
+            ReadFromNetworkBuffer(buf);
+        }
+
+        NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
+            uint32 magic = buf.ReadUInt32();
+            if (magic != MAGIC_BLOCKS) {
+                throw("Invalid magic for blocks");
+            }
+            uint16 blockCount = buf.ReadUInt16();
+            for (uint i = 0; i < blockCount; i++) {
+                blocks.InsertLast(BlockSpecPriv(buf));
+            }
+
+            magic = buf.ReadUInt32();
+            if (magic != MAGIC_SKINS) {
+                throw("Invalid magic for skins");
+            }
+            uint16 skinCount = buf.ReadUInt16();
+            for (uint i = 0; i < skinCount; i++) {
+                skins.InsertLast(SkinSpecPriv(buf));
+            }
+
+            magic = buf.ReadUInt32();
+            if (magic != MAGIC_ITEMS) {
+                throw("Invalid magic for items");
+            }
+            uint16 itemCount = buf.ReadUInt16();
+            for (uint i = 0; i < itemCount; i++) {
+                items.InsertLast(ItemSpecPriv(buf));
+            }
+            return this;
+        }
+
         void AddBlock(CGameCtnBlock@ block) override {
             blocks.InsertLast(BlockSpecPriv(block));
         }
@@ -447,6 +482,7 @@ namespace Editor {
     // }
 
     class BlockSpecPriv : BlockSpec {
+        uint64 ObjPtr;
         CGameCtnBlockInfo@ BlockInfo;
 
         ~BlockSpecPriv() {
@@ -457,6 +493,7 @@ namespace Editor {
         }
 
         BlockSpecPriv(CGameCtnBlock@ block) {
+            ObjPtr = Dev_GetPointerForNod(block);
             super();
             name = block.BlockInfo.IdName;
             // collection = blah
@@ -475,6 +512,11 @@ namespace Editor {
             lmQual = block.MapElemLmQuality;
             mobilIx = block.MobilIndex;
             mobilVariant = block.MobilVariantIndex;
+            warn("Block " + name + " has variant " + mobilVariant);
+            if (mobilVariant == 63) {
+                warn("Block " + name + " has variant 63");
+                // ExploreNod(block);
+            }
             variant = block.BlockInfoVariantIndex;
             flags = (block.IsGround ? BlockFlags::Ground : BlockFlags::None) |
                     (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) |
@@ -500,6 +542,10 @@ namespace Editor {
             lmQual = block.lmQual;
             mobilIx = block.mobilIndex;
             mobilVariant = block.mobilVariant;
+            if (mobilVariant == 63) {
+                warn("DGameCtnMacroblockinfo Block " + name + " has variant 63");
+                // ExploreNod(block);
+            }
             variant = block.variant;
             flags = block.flags;
             if (block.Waypoint !is null) {
@@ -507,6 +553,11 @@ namespace Editor {
             }
             @BlockInfo = block.BlockInfo;
             BlockInfo.MwAddRef();
+        }
+
+        BlockSpecPriv(MemoryBuffer@ buf) {
+            super();
+            ReadFromNetworkBuffer(buf);
         }
 
         void WriteToMemory(CustomBuffer@ mem) {
@@ -534,6 +585,13 @@ namespace Editor {
             }
             // get model
             @block.BlockInfo = BlockInfo;
+            if (BlockInfo is null) {
+                auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+                @block.BlockInfo = editor.PluginMapType.GetBlockModelFromName(name);
+                if (block.BlockInfo is null) {
+                    @block.BlockInfo = TryLoadingModelFromFid();
+                }
+            }
             if (block.BlockInfo is null) {
                 auto inv = Editor::GetInventoryCache();
                 auto art = inv.GetBlockByName(name);
@@ -549,6 +607,17 @@ namespace Editor {
                     NotifyWarning("Failed to load block article for " + name);
                 }
             }
+        }
+
+        CGameCtnBlockInfo@ TryLoadingModelFromFid() {
+            auto fid = Fids::GetGame("GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoPillar\\" + name + ".EDClassic.Gbx");
+            if (fid !is null && fid.Nod !is null) {
+                auto model = cast<CGameCtnBlockInfo>(fid.Nod);
+                if (model !is null) {
+                    return model;
+                }
+            }
+            return null;
         }
 
         bool MatchesBlock(CGameCtnBlock@ block) const override {
@@ -616,6 +685,13 @@ namespace Editor {
             super(skin, blockIx);
         }
 
+        SkinSpecPriv(MemoryBuffer@ buf) {
+            super(null, 0);
+            ReadFromNetworkBuffer(buf);
+        }
+
+
+
         void WriteToMemory(CustomBuffer@ mem) {
             mem.Write(null); // skin ptr
             mem.SeekRelative(12); // skip unused 0x8 -> 0x14
@@ -680,6 +756,7 @@ namespace Editor {
     // }
 
     class ItemSpecPriv : ItemSpec {
+        uint64 ObjPtr;
         CGameItemModel@ Model;
 
         ~ItemSpecPriv() {
@@ -690,12 +767,14 @@ namespace Editor {
         }
 
         ItemSpecPriv(CGameCtnAnchoredObject@ item) {
+            ObjPtr = Dev_GetPointerForNod(item);
             super();
             name = item.ItemModel.IdName;
             // collection = blah
             // need to offset coords by 0,1,0 and make height relative to that
             author = item.ItemModel.Author.GetName();
             coord = item.BlockUnitCoord - nat3(0, 1, 0);
+            SetCoordFromAssociatedBlock(Editor::GetItemsBlockAssociation(item));
             dir = CGameCtnAnchoredObject::ECardinalDirections(-1);
             pos = Editor::GetItemLocation(item) + vec3(0, 56, 0);
             pyr = Editor::GetItemRotation(item);
@@ -707,8 +786,8 @@ namespace Editor {
             pivotPos = Editor::GetItemPivot(item);
             isFlying = item.IsFlying ? 1 : 0;
             variantIx = item.IVariant;
-            associatedBlockIx = -1;
-            itemGroupOnBlock = -1;
+            associatedBlockIx = uint(-1);
+            itemGroupOnBlock = uint(-1);
             if (item.WaypointSpecialProperty !is null) {
                 @waypoint = WaypointSpec(item.WaypointSpecialProperty);
             }
@@ -742,6 +821,16 @@ namespace Editor {
             // ignore skins for the moment
             @Model = item.Model;
             Model.MwAddRef();
+        }
+
+        void SetCoordFromAssociatedBlock(CGameCtnBlock@ b) {
+            if (b is null) return;
+            coord = b.Coord;
+        }
+
+        ItemSpecPriv(MemoryBuffer@ buf) {
+            super();
+            ReadFromNetworkBuffer(buf);
         }
 
         void WriteToMemory(CustomBuffer@ mem) {

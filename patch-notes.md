@@ -1,5 +1,7 @@
 TODO: set skins
 TODO: item stuff with cbs
+TODO: optimize refreshing to use MB stuff
+TODO: changing props of blocks/items will cache the new values as deleted, not the old ones
 
 0.8.9999991
 
@@ -15,10 +17,11 @@ TODO: item stuff with cbs
 - add 'delete freeblocks' function
 - implement place and delete macroblock exported functions
 - optimize some things
-- add track placed this
-
-
-
+- add objs placed this frame clear loop (and placed last frame)
+- (nolog) fixes for macroblock placement stuff and read vec3 nat3 ordering
+- some warnings about variants (but seems to resolve itself when an invalid variant (63) is provided)
+- support pillars
+- optimize adding/removing stuff on same frame
 
 0.8.9999990
 

@@ -127,23 +127,24 @@ class MacroblockSelectionTab : Tab {
                     mbSpec.DrawDebug();
                 }
                 if (UX::SmallButton("Try placement test")) {
-                    mbSpec._TempWriteToMacroblock(mbi);
-                    trace('wrote mb spec to mb: ' + mbi.IdName);
-                    auto dmb = DGameCtnMacroBlockInfo(mbi);
-                    trace('nb blocks: ' + dmb.Blocks.Length);
-                    trace('nb items: ' + dmb.Items.Length);
-                    trace('nb skins: ' + dmb.Skins.Length);
+                    auto placed = Editor::PlaceMacroblock(mbSpec);
+                    // mbSpec._TempWriteToMacroblock(mbi);
+                    // trace('wrote mb spec to mb: ' + mbi.IdName);
+                    // auto dmb = DGameCtnMacroBlockInfo(mbi);
+                    // trace('nb blocks: ' + dmb.Blocks.Length);
+                    // trace('nb items: ' + dmb.Items.Length);
+                    // trace('nb skins: ' + dmb.Skins.Length);
 
-                    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-                    auto pmt = editor.PluginMapType;
-                    auto placed = pmt.PlaceMacroblock_AirMode(mbi, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
+                    // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+                    // auto pmt = editor.PluginMapType;
+                    // auto placed = pmt.PlaceMacroblock_AirMode(mbi, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
                     trace('placed mb: ' + placed);
-                    pmt.AutoSave();
+                    // pmt.AutoSave();
 
-                    auto removed = pmt.RemoveMacroblock(mbi, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
-                    trace('removed mb (before restore): ' + removed);
+                    // auto removed = pmt.RemoveMacroblock(mbi, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
+                    // trace('removed mb (before restore): ' + removed);
 
-                    mbSpec._RestoreMacroblock();
+                    // mbSpec._RestoreMacroblock();
                 }
                 if (mbSpec.tmpWriteBuf is null) {
                     if (UX::SmallButton("Alloc MB Spec tmpWriteBuf")) {
@@ -192,33 +193,30 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
         UI::ListClipper clip(len);
         while (clip.Step()) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
-                auto item = DGameCtnMacroBlockInfo_Block(blocksBuf[i]);
+                auto blk = DGameCtnMacroBlockInfo_Block(blocksBuf[i]);
                 UI::PushID(i);
 #if DEV
-                CopiableLabeledPtr(item.Ptr);
+                CopiableLabeledPtr(blk.Ptr);
 #endif
-                CopiableLabeledValue("Name", item.name);
-                CopiableLabeledValue("Collection", '' + item.collection);
-                CopiableLabeledValue("Author", item.author);
-                CopiableLabeledValue("Coord", item.coord.ToString());
-                CopiableLabeledValue("Dir", tostring(CGameCtnBlock::ECardinalDirections(item.dir)));
+                CopiableLabeledValue("Name", blk.name);
+                CopiableLabeledValue("Collection", '' + blk.collection);
+                CopiableLabeledValue("Author", blk.author);
+                CopiableLabeledValue("Coord", blk.coord.ToString());
+                CopiableLabeledValue("Dir", tostring(CGameCtnBlock::ECardinalDirections(blk.dir)));
                 UI::SameLine();
-                CopiableLabeledValue("Dir2", tostring(CGameCtnBlock::ECardinalDirections(item.dir2)));
-                CopiableLabeledValue("Pos", item.pos.ToString());
-                CopiableLabeledValue("PYR", item.pyr.ToString());
-                CopiableLabeledValue("PYR (Deg)", MathX::ToDeg(item.pyr).ToString());
-                if (!item.isFree) {
-                } else {
-                }
-                CopiableLabeledValue("Color", tostring(item.color));
-                CopiableLabeledValue("lmQual", tostring(item.lmQual));
-                CopiableLabeledValue("mobilIndex", tostring(item.mobilIndex));
-                CopiableLabeledValue("mobilVariant", tostring(item.mobilVariant));
-                CopiableLabeledValue("variant", tostring(item.variant));
-                UI::Text("Gr: " + BoolIcon(item.isGround) + " N: " + BoolIcon(item.isNorm) + " Gh: " + BoolIcon(item.isGhost) + " F: " + BoolIcon(item.isFree));
+                CopiableLabeledValue("Dir2", tostring(CGameCtnBlock::ECardinalDirections(blk.dir2)));
+                CopiableLabeledValue("Pos", blk.pos.ToString());
+                CopiableLabeledValue("PYR", blk.pyr.ToString());
+                CopiableLabeledValue("PYR (Deg)", MathX::ToDeg(blk.pyr).ToString());
+                CopiableLabeledValue("Color", tostring(blk.color));
+                CopiableLabeledValue("lmQual", tostring(blk.lmQual));
+                CopiableLabeledValue("mobilIndex", tostring(blk.mobilIndex));
+                CopiableLabeledValue("mobilVariant", tostring(blk.mobilVariant));
+                CopiableLabeledValue("variant", tostring(blk.variant));
+                UI::Text("Gr: " + BoolIcon(blk.isGround) + " N: " + BoolIcon(blk.isNorm) + " Gh: " + BoolIcon(blk.isGhost) + " F: " + BoolIcon(blk.isFree));
                 AddSimpleTooltip("Gr = Ground, N = Normal, Gh = Ghost, F = Free");
-                auto waypoint = item.Waypoint;
-                auto blockInfo = item.BlockInfo;
+                auto waypoint = blk.Waypoint;
+                auto blockInfo = blk.BlockInfo;
                 CopiableLabeledValue("Has Waypoint", '' + (waypoint !is null));
                 CopiableLabeledValue("BlockInfo", blockInfo.IdName);
                 UI::Separator();

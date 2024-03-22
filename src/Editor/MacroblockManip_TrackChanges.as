@@ -1,54 +1,55 @@
 namespace Editor {
-    array<const BlockSpec@>@ blocksAddedThisFrame = {};
-    array<const BlockSpec@>@ blocksAddedLastFrame = {};
-    array<const BlockSpec@>@ blocksRemovedThisFrame = {};
-    array<const BlockSpec@>@ blocksRemovedLastFrame = {};
-    array<const ItemSpec@>@ itemsAddedThisFrame = {};
-    array<const ItemSpec@>@ itemsAddedLastFrame = {};
-    array<const ItemSpec@>@ itemsRemovedThisFrame = {};
-    array<const ItemSpec@>@ itemsRemovedLastFrame = {};
-    array<const SetSkinSpec@>@ skinsSetThisFrame = {};
-    array<const SetSkinSpec@>@ skinsSetLastFrame = {};
+    array<BlockSpec@>@ blocksAddedThisFrame = {};
+    array<BlockSpec@>@ blocksAddedLastFrame = {};
+    array<BlockSpec@>@ blocksRemovedThisFrame = {};
+    array<BlockSpec@>@ blocksRemovedLastFrame = {};
+    array<ItemSpec@>@ itemsAddedThisFrame = {};
+    array<ItemSpec@>@ itemsAddedLastFrame = {};
+    array<ItemSpec@>@ itemsRemovedThisFrame = {};
+    array<ItemSpec@>@ itemsRemovedLastFrame = {};
+    array<SetSkinSpec@>@ skinsSetThisFrame = {};
+    array<SetSkinSpec@>@ skinsSetLastFrame = {};
 
-    const array<const BlockSpec@>@ GetThisFrameBlocksDeleted() {
+    const array<BlockSpec@>@ ThisFrameBlocksDeleted() {
         return blocksRemovedThisFrame;
     }
-    const array<const ItemSpec@>@ GetThisFrameItemsDeleted() {
+    const array<ItemSpec@>@ ThisFrameItemsDeleted() {
         return itemsRemovedThisFrame;
     }
-    const array<const BlockSpec@>@ GetThisFrameBlocksPlaced() {
+    const array<BlockSpec@>@ ThisFrameBlocksPlaced() {
         return blocksAddedThisFrame;
     }
-    const array<const ItemSpec@>@ GetThisFrameItemsPlaced() {
+    const array<ItemSpec@>@ ThisFrameItemsPlaced() {
         return itemsAddedThisFrame;
     }
-    const array<const SetSkinSpec@>@ GetThisFrameSkinsSet() {
+    const array<SetSkinSpec@>@ ThisFrameSkinsSet() {
         return skinsSetThisFrame;
     }
-    const array<const BlockSpec@>@ GetLastFrameBlocksDeleted() {
+    const array<BlockSpec@>@ LastFrameBlocksDeleted() {
         return blocksRemovedLastFrame;
     }
-    const array<const ItemSpec@>@ GetLastFrameItemsDeleted() {
+    const array<ItemSpec@>@ LastFrameItemsDeleted() {
         return itemsRemovedLastFrame;
     }
-    const array<const BlockSpec@>@ GetLastFrameBlocksPlaced() {
+    const array<BlockSpec@>@ LastFrameBlocksPlaced() {
         return blocksAddedLastFrame;
     }
-    const array<const ItemSpec@>@ GetLastFrameItemsPlaced() {
+    const array<ItemSpec@>@ LastFrameItemsPlaced() {
         return itemsAddedLastFrame;
     }
-    const array<const SetSkinSpec@>@ GetLastFrameSkinsSet() {
+    const array<SetSkinSpec@>@ LastFrameSkinsSet() {
         return skinsSetLastFrame;
     }
 
 
     MacroblockWithSetSkins@ GetMapAsMacroblock() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return null;
         auto map = editor.Challenge;
         auto pmt = editor.PluginMapType;
-        CGameCtnBlock@[]@ blocks;
-        CGameCtnAnchoredObject@[]@ items;
-        SetSkinSpec@[] skins;
+        CGameCtnBlock@[]@ blocks = {};
+        CGameCtnAnchoredObject@[]@ items = {};
+        SetSkinSpec@[]@ skins = {};
         CGameCtnBlock@ b;
         CGameCtnAnchoredObject@ item;
         for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
@@ -85,6 +86,13 @@ namespace Editor {
     }
 
     void TrackMap_OnRemoveBlock(CGameCtnBlock@ block) {
+        auto ptr = Dev_GetPointerForNod(block);
+        for (uint i = 0; i < blocksAddedThisFrame.Length; i++) {
+            if (ptr == cast<BlockSpecPriv>(blocksAddedThisFrame[i]).ObjPtr) {
+                blocksAddedThisFrame.RemoveAt(i);
+                return;
+            }
+        }
         blocksRemovedThisFrame.InsertLast(BlockSpecPriv(block));
     }
 
@@ -93,6 +101,13 @@ namespace Editor {
     }
 
     void TrackMap_OnRemoveItem(CGameCtnAnchoredObject@ item) {
+        auto ptr = Dev_GetPointerForNod(item);
+        for (uint i = 0; i < itemsAddedThisFrame.Length; i++) {
+            if (ptr == cast<ItemSpecPriv>(itemsAddedThisFrame[i]).ObjPtr) {
+                itemsAddedThisFrame.RemoveAt(i);
+                return;
+            }
+        }
         itemsRemovedThisFrame.InsertLast(ItemSpecPriv(item));
     }
 
@@ -131,37 +146,61 @@ namespace Editor {
         @itemsAddedThisFrame = {};
         @itemsRemovedThisFrame = {};
         @skinsSetThisFrame = {};
-        // blocksAddedThisFrame.RemoveRange(0, blocksAddedThisFrame.Length);
-        // blocksRemovedThisFrame.RemoveRange(0, blocksRemovedThisFrame.Length);
-        // itemsAddedThisFrame.RemoveRange(0, itemsAddedThisFrame.Length);
-        // itemsRemovedThisFrame.RemoveRange(0, itemsRemovedThisFrame.Length);
-        // skinsSetThisFrame.RemoveRange(0, skinsSetThisFrame.Length);
+    }
+
+    MacroblockSpec@ MacroblockSpecFromBuf(MemoryBuffer@ buf) {
+        return MacroblockSpecPriv(buf);
     }
 
     MacroblockSpec@ MakeMacroblockSpec(CGameCtnBlock@[]@ blocks, CGameCtnAnchoredObject@[]@ items) {
         return MacroblockSpecPriv(blocks, items);
     }
+    MacroblockSpec@ MakeMacroblockSpec(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items) {
+        return MacroblockSpecPriv(blocks, items);
+    }
 
-    bool PlaceBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items) {
-        return PlaceMacroblock(MacroblockSpecPriv(blocks, items));
+    bool PlaceBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items, bool addUndoRedoPoint = false) {
+        return PlaceMacroblock(MacroblockSpecPriv(blocks, items), addUndoRedoPoint);
     }
-    bool DeleteBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items) {
-        return DeleteMacroblock(MacroblockSpecPriv(blocks, items));
+    bool DeleteBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items, bool addUndoRedoPoint = false) {
+        return DeleteMacroblock(MacroblockSpecPriv(blocks, items), addUndoRedoPoint);
     }
-    bool PlaceMacroblock(MacroblockSpec@ macroblock) {
+    bool PlaceMacroblock(MacroblockSpec@ macroblock, bool addUndoRedoPoint = false) {
         auto mbSpec = cast<MacroblockSpecPriv>(macroblock);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (mbSpec is null || editor is null || editor.PluginMapType is null) return false;
+        if (mbSpec is null || editor is null || editor.PluginMapType is null) {
+            dev_warn("PlaceMacroblock: invalid macroblock or editor null");
+            return false;
+        }
         auto pmt = editor.PluginMapType;
-        if (pmt.MacroblockModels.Length == 0) return false;
-        auto mb = pmt.MacroblockModels[0];
+        if (pmt.MacroblockModels.Length == 0) {
+            dev_warn("PlaceMacroblock: no macroblock models");
+            return false;
+        }
+        auto mb = pmt.GetMacroblockModelFromFilePath("Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx");
+        if (mb is null) {
+            dev_warn("PlaceMacroblock: failed to get macroblock model");
+            return false;
+        }
         mbSpec._TempWriteToMacroblock(mb);
+
+        trace('wrote mb spec to mb: ' + mb.IdName);
+        auto dmb = DGameCtnMacroBlockInfo(mb);
+        trace('nb blocks: ' + dmb.Blocks.Length);
+        trace('nb items: ' + dmb.Items.Length);
+        trace('nb skins: ' + dmb.Skins.Length);
+        trace('wrote mb spec to mb: ' + mb.IdName);
         auto placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
-        if (placed) pmt.AutoSave();
+        // auto placed = pmt.PlaceMacroblock_AirMode(mb, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
+        if (placed && addUndoRedoPoint) {
+            dev_trace("Placed MB -> AutoSaving");
+            pmt.AutoSave();
+        }
         mbSpec._RestoreMacroblock();
+        dev_trace("PlaceMacroblock returning: " + placed);
         return placed;
     }
-    bool DeleteMacroblock(MacroblockSpec@ macroblock) {
+    bool DeleteMacroblock(MacroblockSpec@ macroblock, bool addUndoRedoPoint = false) {
         auto mbSpec = cast<MacroblockSpecPriv>(macroblock);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (mbSpec is null || editor is null || editor.PluginMapType is null) return false;
@@ -171,7 +210,7 @@ namespace Editor {
         Editor::QueueFreeBlockDeletionFromMB(mbSpec);
         mbSpec._TempWriteToMacroblock(mb);
         auto removed = pmt.RemoveMacroblock(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
-        if (removed) pmt.AutoSave();
+        if (removed && addUndoRedoPoint) pmt.AutoSave();
         mbSpec._RestoreMacroblock();
         return removed;
     }
