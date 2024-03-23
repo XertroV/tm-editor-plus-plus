@@ -32,6 +32,7 @@ namespace Editor {
             }
             buf.Write(uint16(str.Length));
             buf.Write(str);
+
         }
 
         string ReadLPStringFromBuffer(MemoryBuffer@ buf) {
@@ -412,6 +413,8 @@ namespace Editor {
         BlockSpec@ block;
         ItemSpec@ item;
 
+        SetSkinSpec() {}
+
         SetSkinSpec(BlockSpec@ block, const string &in fgSkin, const string &in bgSkin) {
             @this.block = block;
             this.fgSkin = fgSkin;
@@ -443,10 +446,11 @@ namespace Editor {
         }
 
         NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
+            throw("implemented elsewhere");
             fgSkin = ReadLPStringFromBuffer(buf);
             bgSkin = ReadLPStringFromBuffer(buf);
-            @block = cast<BlockSpec>(ReadNullableStructFromBuffer(buf, block));
-            @item = cast<ItemSpec>(ReadNullableStructFromBuffer(buf, item));
+            @block = cast<BlockSpec>(ReadNullableStructFromBuffer(buf, BlockSpec()));
+            @item = cast<ItemSpec>(ReadNullableStructFromBuffer(buf, ItemSpec()));
             return this;
         }
     }
@@ -485,6 +489,16 @@ namespace Editor {
             if (collection != 26) {
                 throw("Warning: item collection is not stadium");
             }
+        }
+
+        bool MatchesItem(CGameCtnAnchoredObject@ item) {
+            throw("overridden elsewhere");
+            return false;
+        }
+
+        bool MatchesItem(CGameCtnEditorScriptAnchoredObject@ item) {
+            throw("overridden elsewhere");
+            return false;
         }
 
         void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
@@ -540,86 +554,3 @@ namespace Editor {
         }
     }
 }
-
-void WriteVec3ToBuffer(MemoryBuffer@ buf, vec3 v) {
-    buf.Write(v.x);
-    buf.Write(v.y);
-    buf.Write(v.z);
-}
-
-vec3 ReadVec3FromBuffer(MemoryBuffer@ buf) {
-    auto x = buf.ReadFloat();
-    auto y = buf.ReadFloat();
-    auto z = buf.ReadFloat();
-    return vec3(x, y, z);
-}
-
-void WriteNat3ToBuffer(MemoryBuffer@ buf, nat3 v) {
-    buf.Write(v.x);
-    buf.Write(v.y);
-    buf.Write(v.z);
-}
-
-nat3 ReadNat3FromBuffer(MemoryBuffer@ buf) {
-    auto x = buf.ReadUInt32();
-    auto y = buf.ReadUInt32();
-    auto z = buf.ReadUInt32();
-    return nat3(x, y, z);
-    // return nat3(buf.ReadUInt32(), buf.ReadUInt32(), buf.ReadUInt32());
-}
-
-#if DEV
-
-Tester@ Test_RWBuf = Tester("ReadWriteBuffer", genRWBufTests());
-
-TestCase@[]@ genRWBufTests() {
-    TestCase@[]@ ret = {};
-    ret.InsertLast(TestCase("buf vec3 wr", test_vec3_buf_wr));
-    ret.InsertLast(TestCase("buf nat3 wr", test_nat3_buf_rw));
-    return ret;
-}
-
-void test_vec3_buf_wr() {
-    auto buf = MemoryBuffer(100, 0);
-    auto i = vec3(1, 2, 3);
-    WriteVec3ToBuffer(buf, i);
-    buf.Seek(0);
-    auto v = ReadVec3FromBuffer(buf);
-    print("V: " + v.ToString());
-    assert_eq(v.x, i.x, "x");
-    assert_eq(v.y, i.y, "y");
-    assert_eq(v.z, i.z, "z");
-
-    Editor::NetworkSerializable@ netSz = Editor::NetworkSerializable();
-    buf.Seek(0);
-    netSz.WriteVec3ToBuffer(buf, i);
-    buf.Seek(0);
-    v = netSz.ReadVec3FromBuffer(buf);
-    print("V: " + v.ToString());
-    assert_eq(v.x, i.x, "x");
-    assert_eq(v.y, i.y, "y");
-    assert_eq(v.z, i.z, "z");
-}
-
-void test_nat3_buf_rw() {
-    auto buf = MemoryBuffer(100, 0);
-    auto i = nat3(1, 2, 3);
-    WriteNat3ToBuffer(buf, i);
-    buf.Seek(0);
-    auto v = ReadNat3FromBuffer(buf);
-    print("V: " + v.ToString());
-    assert_eq(v.x, i.x, "x");
-    assert_eq(v.y, i.y, "y");
-    assert_eq(v.z, i.z, "z");
-
-    Editor::NetworkSerializable@ netSz = Editor::NetworkSerializable();
-    buf.Seek(0);
-    netSz.WriteNat3ToBuffer(buf, i);
-    buf.Seek(0);
-    v = netSz.ReadNat3FromBuffer(buf);
-    print("V: " + v.ToString());
-    assert_eq(v.x, i.x, "x");
-    assert_eq(v.y, i.y, "y");
-    assert_eq(v.z, i.z, "z");
-}
-#endif

@@ -42,6 +42,7 @@ void Main() {
     Editor::Setup_DeleteFreeblockCallbacks();
     RegisterNewAfterCursorUpdateCallback(CustomCursorRotations::CustomYaw_AfterCursorUpdate, "CustomCursorRotaitons::CustomYaw");
     // startnew(Editor::OffzonePatch::Apply);
+    Editor::SetupApplySkinsCBs();
 
     startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);

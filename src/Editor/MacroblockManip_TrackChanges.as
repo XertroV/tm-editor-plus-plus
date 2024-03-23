@@ -56,14 +56,14 @@ namespace Editor {
             @b = pmt.ClassicBlocks[i];
             blocks.InsertLast(b);
             if (b.Skin !is null) {
-                skins.InsertLast(SetSkinSpec(BlockSpecPriv(b), GetSkinPath(b.Skin.ForegroundPackDesc), GetSkinPath(b.Skin.PackDesc)));
+                skins.InsertLast(SetSkinSpecPriv(BlockSpecPriv(b), GetSkinPath(b.Skin.ForegroundPackDesc), GetSkinPath(b.Skin.PackDesc)));
             }
         }
         for (uint i = 0; i < pmt.GhostBlocks.Length; i++) {
             @b = pmt.GhostBlocks[i];
             blocks.InsertLast(b);
             if (b.Skin !is null) {
-                skins.InsertLast(SetSkinSpec(BlockSpecPriv(b), GetSkinPath(b.Skin.ForegroundPackDesc), GetSkinPath(b.Skin.PackDesc)));
+                skins.InsertLast(SetSkinSpecPriv(BlockSpecPriv(b), GetSkinPath(b.Skin.ForegroundPackDesc), GetSkinPath(b.Skin.PackDesc)));
             }
         }
         for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
@@ -72,10 +72,10 @@ namespace Editor {
             auto fgSkin = Editor::GetItemFGSkin(item);
             auto bgSkin = Editor::GetItemBGSkin(item);
             if (bgSkin !is null) {
-                skins.InsertLast(SetSkinSpec(ItemSpecPriv(item), GetSkinPath(bgSkin), false));
+                skins.InsertLast(SetSkinSpecPriv(ItemSpecPriv(item), GetSkinPath(bgSkin), false));
             }
             if (fgSkin !is null) {
-                skins.InsertLast(SetSkinSpec(ItemSpecPriv(item), GetSkinPath(fgSkin), true));
+                skins.InsertLast(SetSkinSpecPriv(ItemSpecPriv(item), GetSkinPath(fgSkin), true));
             }
         }
         return MacroblockWithSetSkins(MacroblockSpecPriv(blocks, items), skins);
@@ -119,11 +119,11 @@ namespace Editor {
             throw("TrackMap_OnSetSkin: provide at least 1 skin");
         }
         if (block !is null) {
-            skinsSetThisFrame.InsertLast(SetSkinSpec(BlockSpecPriv(block), fgSkin, bgSkin));
+            skinsSetThisFrame.InsertLast(SetSkinSpecPriv(BlockSpecPriv(block), fgSkin, bgSkin));
         } else if (fgSkin.Length > 0) {
-            skinsSetThisFrame.InsertLast(SetSkinSpec(ItemSpecPriv(item), fgSkin, true));
+            skinsSetThisFrame.InsertLast(SetSkinSpecPriv(ItemSpecPriv(item), fgSkin, true));
         } else {
-            skinsSetThisFrame.InsertLast(SetSkinSpec(ItemSpecPriv(item), bgSkin, false));
+            skinsSetThisFrame.InsertLast(SetSkinSpecPriv(ItemSpecPriv(item), bgSkin, false));
         }
     }
 
@@ -150,6 +150,9 @@ namespace Editor {
 
     MacroblockSpec@ MacroblockSpecFromBuf(MemoryBuffer@ buf) {
         return MacroblockSpecPriv(buf);
+    }
+    SetSkinSpec@ SetSkinSpecFromBuf(MemoryBuffer@ buf) {
+        return SetSkinSpecPriv(buf);
     }
 
     MacroblockSpec@ MakeMacroblockSpec(CGameCtnBlock@[]@ blocks, CGameCtnAnchoredObject@[]@ items) {
@@ -215,11 +218,81 @@ namespace Editor {
         return removed;
     }
     bool SetSkins(SetSkinSpec@[]@ skins) {
-        NotifyWarning("todo: set skins");
-        return false;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null || editor.PluginMapType is null) return false;
+        for (uint i = 0; i < skins.Length; i++) {
+            QueueSkinApplication(skins[i]);
+        }
+        return true;
     }
 
+    SetSkinSpec@[] queuedSkins;
+
+    void QueueSkinApplication(SetSkinSpec@ skin) {
+        queuedSkins.InsertLast(skin);
+    }
+
+    void ApplySkinApplicationCB() {
+        if (queuedSkins.Length == 0) return;
+        auto app = GetApp();
+        auto editor = cast<CGameCtnEditorFree>(app.Editor);
+        if (editor is null || editor.PluginMapType is null) return;
+        if (app.Editor is null) OnLeaveEditorApplySkinsCB();
+        if (queuedSkins.Length == 0) return;
+        auto pmt = editor.PluginMapType;
+        for (uint i = 0; i < queuedSkins.Length; i++) {
+            auto s = queuedSkins[i];
+            if (s.item !is null) ApplySkinToItem(pmt, s);
+            else ApplySkinToBlock(pmt, s);
+        }
+    }
+
+    void ApplySkinToItem(CGameEditorPluginMapMapType@ pmt, SetSkinSpec@ s) {
+        CGameCtnEditorScriptAnchoredObject@ item;
+        int nbItems = pmt.Items.Length;
+        for (int i = nbItems - 1; i >= 0; i--) {
+            @item = pmt.Items[i];
+            if (item is null) continue;
+            if (!s.item.MatchesItem(item)) continue;
+            if (s.fgSkin.Length > 0) {
+                pmt.SetItemSkins(item, s.bgSkin, s.fgSkin);
+            } else {
+                pmt.SetItemSkin(item, s.bgSkin);
+            }
+            return;
+        }
+    }
+
+    void ApplySkinToBlock(CGameEditorPluginMapMapType@ pmt, SetSkinSpec@ s) {
+        CGameCtnBlock@ block;
+        auto map = pmt.Map;
+        int nbBlocks = map.Blocks.Length;
+        for (int i = nbBlocks - 1; i >= 0; i--) {
+            if (s.block.MatchesBlock(map.Blocks[i])) {
+                @block = map.Blocks[i];
+                break;
+            }
+            return;
+        }
+        if (block is null) return;
+        if (s.fgSkin.Length > 0) {
+            pmt.SetBlockSkins(block, s.bgSkin, s.fgSkin);
+        } else {
+            pmt.SetBlockSkin(block, s.bgSkin);
+        }
+    }
+
+    void OnLeaveEditorApplySkinsCB() {
+        queuedSkins.RemoveRange(0, queuedSkins.Length);
+    }
+
+    void SetupApplySkinsCBs() {
+        RegisterOnMapTypeUpdateCallback(ApplySkinApplicationCB, "ApplySkinApplicationCB");
+    }
 }
+
+
+
 
 
 string GetSkinPath(CSystemPackDesc@ pack) {

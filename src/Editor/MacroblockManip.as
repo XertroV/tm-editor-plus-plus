@@ -225,7 +225,7 @@ namespace Editor {
         NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
             uint32 magic = buf.ReadUInt32();
             if (magic != MAGIC_BLOCKS) {
-                throw("Invalid magic for blocks");
+                throw("Invalid magic for blocks: " + Text::Format("0x%08x", magic));
             }
             uint16 blockCount = buf.ReadUInt16();
             for (uint i = 0; i < blockCount; i++) {
@@ -234,7 +234,7 @@ namespace Editor {
 
             magic = buf.ReadUInt32();
             if (magic != MAGIC_SKINS) {
-                throw("Invalid magic for skins");
+                throw("Invalid magic for skins: " + Text::Format("0x%08x", magic));
             }
             uint16 skinCount = buf.ReadUInt16();
             for (uint i = 0; i < skinCount; i++) {
@@ -243,7 +243,7 @@ namespace Editor {
 
             magic = buf.ReadUInt32();
             if (magic != MAGIC_ITEMS) {
-                throw("Invalid magic for items");
+                throw("Invalid magic for items: " + Text::Format("0x%08x", magic));
             }
             uint16 itemCount = buf.ReadUInt16();
             for (uint i = 0; i < itemCount; i++) {
@@ -486,6 +486,10 @@ namespace Editor {
         CGameCtnBlockInfo@ BlockInfo;
         CGameCtnBlock@ GameBlock;
 
+        BlockSpecPriv() {
+            super();
+        }
+
         ~BlockSpecPriv() {
             if (BlockInfo !is null) {
                 BlockInfo.MwRelease();
@@ -519,11 +523,11 @@ namespace Editor {
             lmQual = block.MapElemLmQuality;
             mobilIx = block.MobilIndex;
             mobilVariant = block.MobilVariantIndex;
-            warn("Block " + name + " has variant " + mobilVariant);
-            if (mobilVariant == 63) {
-                warn("Block " + name + " has variant 63");
-                // ExploreNod(block);
-            }
+            // warn("Block " + name + " has variant " + mobilVariant);
+            // if (mobilVariant == 63) {
+            //     warn("Block " + name + " has variant 63");
+            //     // ExploreNod(block);
+            // }
             variant = block.BlockInfoVariantIndex;
             flags = (block.IsGround ? BlockFlags::Ground : BlockFlags::None) |
                     (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) |
@@ -549,10 +553,10 @@ namespace Editor {
             lmQual = block.lmQual;
             mobilIx = block.mobilIndex;
             mobilVariant = block.mobilVariant;
-            if (mobilVariant == 63) {
-                warn("DGameCtnMacroblockinfo Block " + name + " has variant 63");
-                // ExploreNod(block);
-            }
+            // if (mobilVariant == 63) {
+            //     warn("DGameCtnMacroblockinfo Block " + name + " has variant 63");
+            //     // ExploreNod(block);
+            // }
             variant = block.variant;
             flags = block.flags;
             if (block.Waypoint !is null) {
@@ -624,6 +628,13 @@ namespace Editor {
                     return model;
                 }
             }
+            // @fid = Fids::GetUser("Blocks\\Stadium\\" + name + ".EDClassic.Gbx");
+            // if (fid !is null && fid.Nod !is null) {
+            //     auto model = cast<CGameCtnBlockInfo>(fid.Nod);
+            //     if (model !is null) {
+            //         return model;
+            //     }
+            // }
             return null;
         }
 
@@ -696,8 +707,6 @@ namespace Editor {
             super(null, 0);
             ReadFromNetworkBuffer(buf);
         }
-
-
 
         void WriteToMemory(CustomBuffer@ mem) {
             mem.Write(null); // skin ptr
@@ -778,6 +787,10 @@ namespace Editor {
             }
         }
 
+        ItemSpecPriv() {
+            super();
+        }
+
         ItemSpecPriv(CGameCtnAnchoredObject@ item) {
             ObjPtr = Dev_GetPointerForNod(item);
             // @GameItem = item;
@@ -847,6 +860,20 @@ namespace Editor {
             ReadFromNetworkBuffer(buf);
         }
 
+        bool MatchesItem(CGameCtnAnchoredObject@ item) override {
+            return name == item.ItemModel.IdName && collection == 26 && author == item.ItemModel.Author.GetName() &&
+                MathX::Nat3Eq(coord, item.BlockUnitCoord - nat3(0, 1, 0)) && dir == CGameCtnAnchoredObject::ECardinalDirections(-1) &&
+                MathX::Vec3Eq(pos, Editor::GetItemLocation(item) + vec3(0, 56, 0)) &&
+                MathX::Vec3Eq(pyr, Editor::GetItemRotation(item)) && scale == item.Scale &&
+                color == item.MapElemColor && lmQual == item.MapElemLmQuality && phase == item.AnimPhaseOffset &&
+                MathX::Vec3Eq(pivotPos, Editor::GetItemPivot(item)) &&
+                isFlying == (item.IsFlying ? 1 : 0) && variantIx == item.IVariant;
+        }
+
+        bool MatchesItem(CGameCtnEditorScriptAnchoredObject@ item) override {
+            return name == item.ItemModel.IdName && MathX::Vec3Eq(pos, item.Position + vec3(0, 56, 0));
+        }
+
         void WriteToMemory(CustomBuffer@ mem) {
             auto item = DGameCtnMacroBlockInfo_Item(mem.ptr);
             item.name = name;
@@ -877,6 +904,9 @@ namespace Editor {
             }
             @item.BGSkin = null;
             @item.FGSkin = null;
+            if (Model is null) {
+                @Model = TryLoadingModelFromFid();
+            }
             @item.Model = Model;
             // get model
             if (item.Model is null) {
@@ -894,6 +924,39 @@ namespace Editor {
                     NotifyWarning("Failed to load item article for " + name);
                 }
             }
+        }
+
+        CGameItemModel@ TryLoadingModelFromFid() {
+            auto fid = Fids::GetUser("Items\\" + name);
+            if (fid !is null && fid.Nod !is null) {
+                auto model = cast<CGameItemModel>(fid.Nod);
+                if (model !is null) {
+                    return model;
+                }
+            }
+            return null;
+        }
+    }
+
+    class SetSkinSpecPriv : SetSkinSpec {
+        SetSkinSpecPriv(BlockSpec@ block, const string &in fgSkin, const string &in bgSkin) {
+            super(block, fgSkin, bgSkin);
+        }
+
+        SetSkinSpecPriv(ItemSpec@ item, const string &in skin, bool isForegroundElseBackground) {
+            super(item, skin, isForegroundElseBackground);
+        }
+        SetSkinSpecPriv(MemoryBuffer@ buf) {
+            super();
+            ReadFromNetworkBuffer(buf);
+        }
+
+        NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
+            fgSkin = ReadLPStringFromBuffer(buf);
+            bgSkin = ReadLPStringFromBuffer(buf);
+            @block = cast<BlockSpecPriv>(ReadNullableStructFromBuffer(buf, BlockSpecPriv()));
+            @item = cast<ItemSpecPriv>(ReadNullableStructFromBuffer(buf, ItemSpecPriv()));
+            return this;
         }
     }
 }
@@ -990,4 +1053,93 @@ class CustomBuffer {
     void Write(CMwNod@ nod) {
         Dev::Write(CheckAdvSize(8), Dev_GetPointerForNod(nod));
     }
+}
+
+
+
+namespace TestNetworkBufMacroblockStuff {
+
+    void WriteVec3ToBuffer(MemoryBuffer@ buf, vec3 v) {
+        buf.Write(v.x);
+        buf.Write(v.y);
+        buf.Write(v.z);
+    }
+
+    vec3 ReadVec3FromBuffer(MemoryBuffer@ buf) {
+        auto x = buf.ReadFloat();
+        auto y = buf.ReadFloat();
+        auto z = buf.ReadFloat();
+        return vec3(x, y, z);
+    }
+
+    void WriteNat3ToBuffer(MemoryBuffer@ buf, nat3 v) {
+        buf.Write(v.x);
+        buf.Write(v.y);
+        buf.Write(v.z);
+    }
+
+    nat3 ReadNat3FromBuffer(MemoryBuffer@ buf) {
+        auto x = buf.ReadUInt32();
+        auto y = buf.ReadUInt32();
+        auto z = buf.ReadUInt32();
+        return nat3(x, y, z);
+        // return nat3(buf.ReadUInt32(), buf.ReadUInt32(), buf.ReadUInt32());
+    }
+
+#if DEV
+
+    Tester@ Test_RWBuf = Tester("ReadWriteBuffer", genRWBufTests());
+
+    TestCase@[]@ genRWBufTests() {
+        TestCase@[]@ ret = {};
+        ret.InsertLast(TestCase("buf vec3 wr", test_vec3_buf_wr));
+        ret.InsertLast(TestCase("buf nat3 wr", test_nat3_buf_rw));
+        return ret;
+    }
+
+    void test_vec3_buf_wr() {
+        auto buf = MemoryBuffer(100, 0);
+        auto i = vec3(1, 2, 3);
+        WriteVec3ToBuffer(buf, i);
+        buf.Seek(0);
+        auto v = ReadVec3FromBuffer(buf);
+        print("V: " + v.ToString());
+        assert_eq(v.x, i.x, "x");
+        assert_eq(v.y, i.y, "y");
+        assert_eq(v.z, i.z, "z");
+
+        Editor::NetworkSerializable@ netSz = Editor::NetworkSerializable();
+        buf.Seek(0);
+        netSz.WriteVec3ToBuffer(buf, i);
+        buf.Seek(0);
+        v = netSz.ReadVec3FromBuffer(buf);
+        print("V: " + v.ToString());
+        assert_eq(v.x, i.x, "x");
+        assert_eq(v.y, i.y, "y");
+        assert_eq(v.z, i.z, "z");
+    }
+
+    void test_nat3_buf_rw() {
+        auto buf = MemoryBuffer(100, 0);
+        auto i = nat3(1, 2, 3);
+        WriteNat3ToBuffer(buf, i);
+        buf.Seek(0);
+        auto v = ReadNat3FromBuffer(buf);
+        print("V: " + v.ToString());
+        assert_eq(v.x, i.x, "x");
+        assert_eq(v.y, i.y, "y");
+        assert_eq(v.z, i.z, "z");
+
+        Editor::NetworkSerializable@ netSz = Editor::NetworkSerializable();
+        buf.Seek(0);
+        netSz.WriteNat3ToBuffer(buf, i);
+        buf.Seek(0);
+        v = netSz.ReadNat3FromBuffer(buf);
+        print("V: " + v.ToString());
+        assert_eq(v.x, i.x, "x");
+        assert_eq(v.y, i.y, "y");
+        assert_eq(v.z, i.z, "z");
+    }
+#endif
+
 }
