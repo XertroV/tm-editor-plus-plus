@@ -911,6 +911,7 @@ namespace Editor {
             // get model
             if (item.Model is null) {
                 auto inv = Editor::GetInventoryCache();
+                while (inv.isRefreshing) yield();
                 auto art = inv.GetItemByPath(name);
                 if (art !is null) {
                     auto modelNod = art.GetCollectorNod();
