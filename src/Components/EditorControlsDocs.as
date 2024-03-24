@@ -43,6 +43,7 @@ string[][]@ GenEditorControlsArray() {
     r.InsertLast({"Reset Cursor or Rotate 90deg", "Numpad /"});
     r.InsertLast({"Folder/Article Selection", "Numbers 0-9"});
     r.InsertLast({"Close Folder", "` (backtick/tilde)"});
+    r.InsertLast({"Hide Directories Above (Inventory Folder)", "Right Click"});
     r.InsertLast({"Camera Up/Down", "Page Up/Down"});
     r.InsertLast({"Cursor Pitch/Roll", "Arrow Keys"});
     r.InsertLast({"Cursor Yaw", "Home/End"});
@@ -57,6 +58,13 @@ string[][]@ GenEditorControlsArray() {
     r.InsertLast({"Disable all editor plugins", "Ctrl + P"});
     r.InsertLast({"Cycle Item Variants (e.g., trees)", "Middle Click"});
     r.InsertLast({"Clear all blocks/items/objects", "Backspace"});
+    r.InsertLast({"Calculate Very Fast Shadows", "F"});
+    r.InsertLast({"Calculate Fast Shadows", "Shift + F"});
+    r.InsertLast({"Calculate Shadows", "Ctrl + F"});
+    r.InsertLast({"Toggle Ball at Target in Cam Mode", "Alt + M"});
+
+
+    //r.InsertLast({"Dev Tools on Debug Builds?", "Y"});
     return r;
 }
 
