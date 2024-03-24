@@ -1,10 +1,12 @@
 namespace Editor {
     import const array<BlockSpec@>@ ThisFrameBlocksDeleted() from "Editor";
+    import const array<BlockSpec@>@ ThisFrameBlocksDeletedByAPI() from "Editor";
     import const array<ItemSpec@>@ ThisFrameItemsDeleted() from "Editor";
     import const array<BlockSpec@>@ ThisFrameBlocksPlaced() from "Editor";
     import const array<ItemSpec@>@ ThisFrameItemsPlaced() from "Editor";
     import const array<SetSkinSpec@>@ ThisFrameSkinsSet() from "Editor";
     import const array<BlockSpec@>@ LastFrameBlocksDeleted() from "Editor";
+    import const array<BlockSpec@>@ LastFrameBlocksDeletedByAPI() from "Editor";
     import const array<ItemSpec@>@ LastFrameItemsDeleted() from "Editor";
     import const array<BlockSpec@>@ LastFrameBlocksPlaced() from "Editor";
     import const array<ItemSpec@>@ LastFrameItemsPlaced() from "Editor";
@@ -25,5 +27,4 @@ namespace Editor {
     import bool HasPendingFreeBlocksToDelete() from "Editor";
     import CGameEditorPluginMap::EPlaceMode GetPlacementMode(CGameCtnEditorFree@ editor) from "Editor";
     import CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) from "Editor";
-
 }

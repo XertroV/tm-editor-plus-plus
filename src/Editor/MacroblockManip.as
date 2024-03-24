@@ -638,6 +638,8 @@ namespace Editor {
             return null;
         }
 
+        CGameCtnBlockInfo@ TryLoadBlockFromFid(const string &in )
+
         bool MatchesBlock(CGameCtnBlock@ block) const override {
             return name == block.BlockInfo.IdName && collection == 26 && author == block.BlockInfo.Author.GetName() &&
                 MathX::Nat3Eq(coord, block.Coord) && dir == block.Direction && dir2 == block.Direction &&

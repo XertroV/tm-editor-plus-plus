@@ -16,11 +16,12 @@ class EditorMiscTab : Tab {
     }
 
     void WatchForVarResets() {
+        auto app = GetApp();
         while (true) {
             yield();
             if (!IsInEditor) continue;
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            CheckSetHideBlockHelpers(editor);
+            auto editor = cast<CGameCtnEditorFree>(app.Editor);
+            CheckSetHideBlockHelpers(app, editor);
             CheckSetInvDirectories(editor);
             CheckFixFreeCamAltTab(editor);
         }
@@ -37,9 +38,10 @@ class EditorMiscTab : Tab {
         }
     }
 
-    void CheckSetHideBlockHelpers(CGameCtnEditorFree@ editor) {
+    void CheckSetHideBlockHelpers(CGameCtnApp@ app, CGameCtnEditorFree@ editor) {
         if (S_ControlBlockHelpers && S_HideBlockHelpers != editor.HideBlockHelpers) {
-            editor.HideBlockHelpers = S_HideBlockHelpers;
+            // don't set true if we're in a playground (they will show up)
+            editor.HideBlockHelpers = S_HideBlockHelpers || app.CurrentPlayground !is null;
         }
     }
 
@@ -47,8 +49,8 @@ class EditorMiscTab : Tab {
         if (S_SyncBlockInvSelections && Editor::IsInPlacementMode(editor)) {
             auto isBlock = Editor::IsInNormBlockPlacementMode(editor);
             auto isGhostFree = Editor::IsInGhostOrFreeBlockPlacementMode(editor);
-            if (lastBlockTypeWasGhost == isGhostFree) return;
             if (!isBlock && !isGhostFree) return;
+            if (lastBlockTypeWasGhost == isGhostFree) return;
             lastBlockTypeWasGhost = isGhostFree;
             // a change from ghost/free to normal or vice versa
             auto inv = editor.PluginMapType.Inventory;
@@ -123,7 +125,8 @@ class EditorMiscTab : Tab {
     }
 
     void DrawInner() override {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto app = GetApp();
+        auto editor = cast<CGameCtnEditorFree>(app.Editor);
         auto mapSize = editor.Challenge.Size;
         auto maxXZ = 32. * Math::Max(float(mapSize.x), mapSize.z);
 
@@ -198,7 +201,7 @@ class EditorMiscTab : Tab {
 
         S_DefaultToAirMode = UI::Checkbox("Default to Air mode for blocks", S_DefaultToAirMode);
 
-        CheckSetHideBlockHelpers(editor);
+        CheckSetHideBlockHelpers(app, editor);
         editor.HideBlockHelpers = UI::Checkbox("Hide Block Helpers", editor.HideBlockHelpers);
 
         S_ControlBlockHelpers = UI::Checkbox("Save and persist Hide Block Helpers", S_ControlBlockHelpers);

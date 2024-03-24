@@ -3,6 +3,8 @@ namespace Editor {
     array<BlockSpec@>@ blocksAddedLastFrame = {};
     array<BlockSpec@>@ blocksRemovedThisFrame = {};
     array<BlockSpec@>@ blocksRemovedLastFrame = {};
+    array<BlockSpec@>@ blocksRemovedByAPIThisFrame = {};
+    array<BlockSpec@>@ blocksRemovedByAPILastFrame = {};
     array<ItemSpec@>@ itemsAddedThisFrame = {};
     array<ItemSpec@>@ itemsAddedLastFrame = {};
     array<ItemSpec@>@ itemsRemovedThisFrame = {};
@@ -12,6 +14,9 @@ namespace Editor {
 
     const array<BlockSpec@>@ ThisFrameBlocksDeleted() {
         return blocksRemovedThisFrame;
+    }
+    const array<BlockSpec@>@ ThisFrameBlocksDeletedByAPI() {
+        return blocksRemovedByAPIThisFrame;
     }
     const array<ItemSpec@>@ ThisFrameItemsDeleted() {
         return itemsRemovedThisFrame;
@@ -27,6 +32,9 @@ namespace Editor {
     }
     const array<BlockSpec@>@ LastFrameBlocksDeleted() {
         return blocksRemovedLastFrame;
+    }
+    const array<BlockSpec@>@ LastFrameBlocksDeletedByAPI() {
+        return blocksRemovedByAPILastFrame;
     }
     const array<ItemSpec@>@ LastFrameItemsDeleted() {
         return itemsRemovedLastFrame;
@@ -85,8 +93,20 @@ namespace Editor {
         blocksAddedThisFrame.InsertLast(BlockSpecPriv(block));
     }
 
+    bool _TrackMap_RemoveBlock_IsByAPI = false;
+    void TrackMap_OnRemoveBlock_BeginAPI() {
+        _TrackMap_RemoveBlock_IsByAPI = true;
+    }
+    void TrackMap_OnRemoveBlock_EndAPI() {
+        _TrackMap_RemoveBlock_IsByAPI = false;
+    }
+
     void TrackMap_OnRemoveBlock(CGameCtnBlock@ block) {
         auto ptr = Dev_GetPointerForNod(block);
+        if (_TrackMap_RemoveBlock_IsByAPI) {
+            blocksRemovedByAPIThisFrame.InsertLast(BlockSpecPriv(block));
+            return;
+        }
         for (uint i = 0; i < blocksAddedThisFrame.Length; i++) {
             if (ptr == cast<BlockSpecPriv>(blocksAddedThisFrame[i]).ObjPtr) {
                 blocksAddedThisFrame.RemoveAt(i);
@@ -138,11 +158,13 @@ namespace Editor {
     void ResetTrackMapChanges() {
         @blocksAddedLastFrame = blocksAddedThisFrame;
         @blocksRemovedLastFrame = blocksRemovedThisFrame;
+        @blocksRemovedByAPILastFrame = blocksRemovedByAPIThisFrame;
         @itemsAddedLastFrame = itemsAddedThisFrame;
         @itemsRemovedLastFrame = itemsRemovedThisFrame;
         @skinsSetLastFrame = skinsSetThisFrame;
         @blocksAddedThisFrame = {};
         @blocksRemovedThisFrame = {};
+        @blocksRemovedByAPIThisFrame = {};
         @itemsAddedThisFrame = {};
         @itemsRemovedThisFrame = {};
         @skinsSetThisFrame = {};
