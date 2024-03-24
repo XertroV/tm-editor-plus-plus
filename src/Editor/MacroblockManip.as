@@ -621,13 +621,18 @@ namespace Editor {
         }
 
         CGameCtnBlockInfo@ TryLoadingModelFromFid() {
-            auto fid = Fids::GetGame("GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoPillar\\" + name + ".EDClassic.Gbx");
-            if (fid !is null && fid.Nod !is null) {
-                auto model = cast<CGameCtnBlockInfo>(fid.Nod);
-                if (model !is null) {
-                    return model;
-                }
-            }
+            CGameCtnBlockInfo@ block;
+            @block = TryLoadBlockFromFidPath("GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoPillar\\", name);
+            if (block !is null) return block;
+            @block = TryLoadBlockFromFidPath("GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoPillar\\Theme\\", name);
+            if (block !is null) return block;
+            @block = TryLoadBlockFromFidPath("GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\", name);
+            if (block !is null) return block;
+            @block = TryLoadBlockFromFidPath("GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\Deprecated\\", name);
+            if (block !is null) return block;
+            @block = TryLoadBlockFromFidPath("GameData\\Stadium\\GameCtnBlockInfo\\GameCtnBlockInfoClassic\\Theme\\", name);
+            if (block !is null) return block;
+
             // @fid = Fids::GetUser("Blocks\\Stadium\\" + name + ".EDClassic.Gbx");
             // if (fid !is null && fid.Nod !is null) {
             //     auto model = cast<CGameCtnBlockInfo>(fid.Nod);
@@ -635,10 +640,20 @@ namespace Editor {
             //         return model;
             //     }
             // }
+
             return null;
         }
 
-        CGameCtnBlockInfo@ TryLoadBlockFromFid(const string &in )
+        CGameCtnBlockInfo@ TryLoadBlockFromFidPath(const string &in path, const string &in name, const string &in ext = ".EDClassic.Gbx") {
+            auto fid = Fids::GetGame(path + name + ext);
+            if (fid !is null && fid.Nod !is null) {
+                auto model = cast<CGameCtnBlockInfo>(Fids::Preload(fid));
+                if (model !is null) {
+                    return model;
+                }
+            }
+            return null;
+        }
 
         bool MatchesBlock(CGameCtnBlock@ block) const override {
             return name == block.BlockInfo.IdName && collection == 26 && author == block.BlockInfo.Author.GetName() &&
