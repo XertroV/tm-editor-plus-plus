@@ -150,7 +150,8 @@ class ViewAllBlocksTab : BlockItemListTab {
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
-            Editor::SetCamAnimationGoTo(vec2(TAU / 8., TAU / 8.), Editor::GetCtnBlockMidpoint(block), 120.);
+            auto pos = Editor::GetCtnBlockMidpoint(block);
+            Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(pos), pos, 120.);
         }
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
@@ -246,7 +247,7 @@ class ViewAllItemsTab : BlockItemListTab {
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
-            Editor::SetCamAnimationGoTo(vec2(TAU / 8., TAU / 8.), item.AbsolutePositionInMap, 120.);
+            Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(item.AbsolutePositionInMap), item.AbsolutePositionInMap, 120.);
         }
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
@@ -387,7 +388,7 @@ class MacroblocksBITab : Tab {
                 if (objs !is null) {
                     if (objs.Length > 0) {
                         if (UX::SmallButton(Icons::Eye + "##" + mb.InstId)) {
-                            Editor::SetCamAnimationGoTo(vec2(TAU / 8., TAU / 8.), objs[0].pos, 120.);
+                            Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(objs[0].pos), objs[0].pos, 120.);
                         }
                         UI::SameLine();
                     }

@@ -406,6 +406,7 @@ const uint16 SZ_LM_SPIMP_Buf2_EL = 0x58;
 const uint16 O_EDITOR_CURR_PIVOT_OFFSET = GetOffset("CGameCtnEditorFree", "UndergroundBox") + (0xBC4 - 0xAC0);
 const uint16 O_EDITOR_LAUNCHEDCPS = GetOffset("CGameCtnEditorFree", "Radius") + 0x10;
 const uint16 O_EDITORFREE_Offset = GetOffset("CGameCtnEditorFree", "Offset");
+const uint16 O_EDITOR_SELECTION_COORDS = O_EDITOR_UndergroundBox + (0xB30 - 0xAC0);
 
 // 0xAC0 originally
 const uint16 O_EDITOR_UndergroundBox = GetOffset("CGameCtnEditorFree", "UndergroundBox");

@@ -380,6 +380,10 @@ namespace Editor {
             buf.Write(order);
         }
 
+        uint CalcSize() override {
+            return 2 + tag.Length + 4;
+        }
+
         NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
             tag = ReadLPStringFromBuffer(buf);
             order = buf.ReadUInt32();
@@ -501,6 +505,41 @@ namespace Editor {
             return false;
         }
 
+        uint CalcSize() override {
+            uint size = 0;
+            size += 2; // name length
+            size += name.Length;
+            size += 4; // collection
+            size += 2; // author length
+            size += author.Length;
+            size += 12; // coord
+            size += 1; // dir
+            size += 12; // pos
+            size += 12; // pyr
+            size += 4; // scale
+            size += 1; // color
+            size += 1; // lmQual
+            size += 1; // phase
+            size += 36; // visualRot
+            size += 12; // pivotPos
+            size += 1; // isFlying
+            size += 2; // variantIx
+            size += 4; // associatedBlockIx
+            size += 4; // itemGroupOnBlock
+            size += 1; // waypoint present
+            if (waypoint !is null) {
+                size += waypoint.CalcSize();
+            }
+            // always null atm
+            // if (bgSkin !is null) {
+            //     size += bgSkin.CalcSize();
+            // }
+            // if (fgSkin !is null) {
+            //     size += fgSkin.CalcSize();
+            // }
+            return size;
+        }
+
         void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
             WriteLPStringToBuffer(buf, name);
             buf.Write(collection);
@@ -523,6 +562,7 @@ namespace Editor {
             buf.Write(associatedBlockIx);
             buf.Write(itemGroupOnBlock);
             WriteNullableStructToBuffer(buf, waypoint);
+            // leave skins null
         }
 
         NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
@@ -550,6 +590,7 @@ namespace Editor {
             if (buf.ReadUInt8() == 1) {
                 @waypoint = WaypointSpec(buf);
             }
+            // ignore skins don't write them
             return this;
         }
     }

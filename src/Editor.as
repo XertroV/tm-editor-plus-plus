@@ -76,13 +76,13 @@ namespace Editor {
         // pmt.Undo();
     }
 
-    const uint16 O_AIR_MODE_BOOL = GetOffset("CGameCtnEditorFree", "GridColor") - 0x34; // 0xBD4 - 0xC08 (GridColor)
+    const uint16 O_EDITOR_AIR_MODE_BOOL = GetOffset("CGameCtnEditorFree", "GridColor") - 0x34; // 0xBD4 - 0xC08 (GridColor)
 
     bool GetIsBlockAirModeActive(CGameCtnEditorFree@ editor) {
-        return Dev::GetOffsetUint8(editor, O_AIR_MODE_BOOL) > 0;
+        return Dev::GetOffsetUint8(editor, O_EDITOR_AIR_MODE_BOOL) > 0;
     }
     void SetIsBlockAirModeActive(CGameCtnEditorFree@ editor, bool active) {
-        Dev::SetOffset(editor, O_AIR_MODE_BOOL, active ? uint8(1) : uint8(0));
+        Dev::SetOffset(editor, O_EDITOR_AIR_MODE_BOOL, active ? uint8(1) : uint8(0));
         auto mainFrame = editor.EditorInterface.InterfaceRoot.Childs[0];
         auto airBtn = GetFrameChildFromChain(cast<CControlContainer>(mainFrame), {15, 3, 4, 3});
         if (airBtn is null || airBtn.IdName != "ButtonSubModeAirBlock") {

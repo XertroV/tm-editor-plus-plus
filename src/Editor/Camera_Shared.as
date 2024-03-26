@@ -4,6 +4,7 @@ namespace Editor {
         float VAngle = 0;
         float TargetDist = 0;
         vec3 Pos = vec3();
+        vec3 CamPos = vec3();
 
         vec2 get_LookUV() {
             return vec2(HAngle, VAngle);
@@ -23,6 +24,7 @@ namespace Editor {
             this.VAngle = cam.m_CurrentVAngle;
             this.TargetDist = cam.m_CameraToTargetDistance;
             this.Pos = cam.m_TargetedPosition;
+            CamPos = cam.Pos;
         }
 
         bool opEq(const CamState@ other) const {

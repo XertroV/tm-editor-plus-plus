@@ -62,10 +62,11 @@ namespace MathX {
     }
 
 
-    shared float AngleLerp(float start, float stop, float t) {
+    float AngleLerp(float start, float stop, float t) {
         float diff = stop - start;
-        while (diff > Math::PI) { diff -= TAU; }
-        while (diff < -Math::PI) { diff += TAU; }
+        if (diff > Math::PI) { diff = (diff + Math::PI) % TAU - Math::PI; }
+        if (diff < -Math::PI) { diff = ((diff - Math::PI) % TAU + Math::PI); }
+        if (Math::IsNaN(diff)) { diff = 1; }
         return start + diff * t;
     }
 

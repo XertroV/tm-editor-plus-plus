@@ -1,4 +1,5 @@
 void SetUpEditMapIntercepts() {
+#if DEV
     // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap", _EditMap);
     // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap2", _EditMap2);
     // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap3", _EditMap3);
@@ -11,8 +12,11 @@ void SetUpEditMapIntercepts() {
     // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap", _EditNewMapFromBaseMap);
     // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap2", _EditNewMapFromBaseMap2);
     // Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap3", _EditNewMapFromBaseMap3);
+#endif
     Dev::InterceptProc("CGameEditorPluginMap", "LayerCustomEvent", _CGameEditorPluginMap_LayerCustomEvent);
 }
+
+/*
 
 bool EDIT_MAP_PASSTHROUGH = false;
 
@@ -101,6 +105,25 @@ bool _EditNewMap1(CMwStack &in stack) {
 bool _EditNewMap2(CMwStack &in stack) {
     if (EDIT_MAP_PASSTHROUGH) return true;
     dev_trace("_EditNewMap2");
+
+    // -M  void EditNewMap2(string Environment, string Decoration, wstring ModNameOrUrl, wstring PlayerModel, wstring MapType, bool UseSimpleEditor, wstring EditorPluginScript, string EditorPluginArgument)
+    auto pluginArg = stack.CurrentString(0);
+    auto pluginScript = stack.CurrentWString(1);
+    auto useSimple = stack.CurrentBool(2);
+    auto mapType = stack.CurrentWString(3);
+    auto playerModel = stack.CurrentWString(4);
+    auto modNameOrUrl = stack.CurrentWString(5);
+    auto decoration = stack.CurrentString(6);
+    auto environment = stack.CurrentString(7);
+    dev_trace("environment: " + environment);
+    dev_trace("decoration: " + decoration);
+    dev_trace("modNameOrUrl: " + modNameOrUrl);
+    dev_trace("playerModel: " + playerModel);
+    dev_trace("mapType: " + mapType);
+    dev_trace("useSimple: " + useSimple);
+    dev_trace("pluginScript: " + pluginScript);
+    dev_trace("pluginArg: " + pluginArg);
+
     return true;
 }
 bool _EditNewMap3(CMwStack &in stack) {
@@ -175,6 +198,8 @@ bool _EditNewMapFromBaseMap3(CMwStack &in stack) {
     dev_trace("_EditNewMapFromBaseMap3");
     return true;
 }
+
+*/
 
 bool _CGameEditorPluginMap_LayerCustomEvent(CMwStack &in stack, CMwNod@ nod) {
     string type = stack.CurrentWString(1);
