@@ -286,7 +286,8 @@ class CursorPropsTab : Tab {
             cursor.AdditionalDir = DrawComboCursorEAdditionalDirEnum("AdditionalDir", cursor.AdditionalDir);
         }
         UI::AlignTextToFramePadding();
-        CopiableLabeledValue("Pos", cursor.FreePosInMap.ToString());
+        cursor.FreePosInMap = UX::InputFloat3("Free Pos", cursor.FreePosInMap, vec3(784, 84, 784));
+        // CopiableLabeledValue("Pos", cursor.FreePosInMap.ToString());
 
         UI::NextColumn();
         UI::Text("Snapped:");

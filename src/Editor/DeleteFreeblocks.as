@@ -101,6 +101,7 @@ namespace Editor {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         _delFreeOrigPlacement = Editor::GetPlacementMode(editor);
         _delFreeOrigEdit = Editor::GetEditMode(editor);
+        _delFreeOrigItem = Editor::IsInAnyItemPlacementMode(editor) ? Editor::GetItemPlacementMode() : ItemMode::None;
 
         TrackMap_OnRemoveBlock_BeginAPI();
         // changing the placement mode triggers a cursor update
@@ -114,8 +115,9 @@ namespace Editor {
         }
         TrackMap_OnRemoveBlock_EndAPI();
 
-        Editor::SetPlacementMode(editor, _delFreeOrigPlacement);
         Editor::SetEditMode(editor, _delFreeOrigEdit);
+        Editor::SetPlacementMode(editor, _delFreeOrigPlacement);
+        Editor::SetItemPlacementMode(_delFreeOrigItem);
     }
 
     bool canDeleteFreeBlocks = false;
@@ -221,6 +223,7 @@ namespace Editor {
 
     CGameEditorPluginMap::EPlaceMode _delFreeOrigPlacement = CGameEditorPluginMap::EPlaceMode::FreeMacroblock;
     CGameEditorPluginMap::EditMode _delFreeOrigEdit = CGameEditorPluginMap::EditMode::Erase;
+    Editor::ItemMode _delFreeOrigItem = Editor::ItemMode::Normal;
 }
 
 void FindFreeBlockPMTAndSetMbId(CGameEditorPluginMapMapType@ pmt, Editor::BlockSpec@ bs, CGameCtnBlock@[]@ blocks, uint mbInstId) {

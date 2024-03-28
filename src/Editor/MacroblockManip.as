@@ -484,7 +484,7 @@ namespace Editor {
     class BlockSpecPriv : BlockSpec {
         uint64 ObjPtr;
         CGameCtnBlockInfo@ BlockInfo;
-        CGameCtnBlock@ GameBlock;
+        // CGameCtnBlock@ GameBlock;
 
         BlockSpecPriv() {
             super();
@@ -495,10 +495,10 @@ namespace Editor {
                 BlockInfo.MwRelease();
                 @BlockInfo = null;
             }
-            if (GameBlock !is null) {
-                GameBlock.MwRelease();
-                @GameBlock = null;
-            }
+            // if (GameBlock !is null) {
+            //     GameBlock.MwRelease();
+            //     @GameBlock = null;
+            // }
         }
 
         BlockSpecPriv(CGameCtnBlock@ block) {

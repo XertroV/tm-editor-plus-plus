@@ -111,8 +111,8 @@ namespace Editor {
     ItemMode GetItemPlacementMode() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (!IsInAnyItemPlacementMode(editor, true)) return ItemMode::None;
-        return GetItemPlacementMode_Raw(editor);
-        // this is very slow
+        // return GetItemPlacementMode_Raw(editor);
+        // this is very slow?
         try {
             auto root = editor.EditorInterface.InterfaceRoot;
             auto main = cast<CControlFrame>(root.Childs[0]);
@@ -132,9 +132,10 @@ namespace Editor {
     }
 
     void SetItemPlacementMode(ItemMode mode) {
+        if (mode == ItemMode::None) return;
         try {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
+            // editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
             if (mode == ItemMode::Normal)
                 editor.ButtonNormalItemModeOnClick();
             if (mode == ItemMode::FreeGround)
