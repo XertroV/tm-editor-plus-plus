@@ -219,9 +219,26 @@ namespace Editor {
     class MapCache {
         MapCache() {
             RefreshCacheSoon();
-            RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon), "MapCache");
+            RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon), "MapCache refresh");
+            RegisterNewBlockCallback(ProcessBlock(this.OnNewBlock), "MapCache add block");
+            RegisterBlockDeletedCallback(ProcessBlock(this.OnDelBlock), "MapCache del block");
+            RegisterNewItemCallback(ProcessItem(this.OnNewItem), "MapCache add item");
+            RegisterItemDeletedCallback(ProcessItem(this.OnDelItem), "MapCache del item");
         }
         bool isRefreshing = false;
+
+        bool OnNewBlock(CGameCtnBlock@ block) {
+            return false;
+        }
+        bool OnDelBlock(CGameCtnBlock@ block) {
+            return false;
+        }
+        bool OnNewItem(CGameCtnAnchoredObject@ item) {
+            return false;
+        }
+        bool OnDelItem(CGameCtnAnchoredObject@ item) {
+            return false;
+        }
 
         uint loadProgress = 0;
         uint loadTotal = 0;
