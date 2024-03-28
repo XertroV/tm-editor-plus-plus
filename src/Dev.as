@@ -127,9 +127,9 @@ void Dev_CopyArrayStruct(uint64 sBufPtr, int sIx, uint64 dBufPtr, int dIx, uint1
 
 
 bool Dev_PointerLooksBad(uint64 ptr) {
-    // todo: disabling this should fix linux
-    // if (ptr < 0x10000000000) return true;
-    if (ptr < 0x4fff08D0) return true;
+    if (ptr < 0x10000000000) return true;
+    // todo: something like this should fix linux (also in Dev_GetNodFromPointer)
+    // if (ptr < 0x4fff08D0) return true;
     if (ptr % 8 != 0) return true;
     if (ptr > Dev::BaseAddressEnd()) return true;
     return false;
@@ -178,6 +178,12 @@ uint64 Dev_GetPointerForNod(CMwNod@ nod) {
 }
 
 CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
+    // if linux
+    // if (ptr < 0xFFFFFFF || ptr % 8 != 0) {
+    //     return null;
+    // }
+    // return Dev_GetArbitraryNodAt(ptr);
+
     if (ptr < 0xFFFFFFFF || ptr % 8 != 0 || ptr >> 48 > 0) {
         return null;
     }
