@@ -127,7 +127,9 @@ void Dev_CopyArrayStruct(uint64 sBufPtr, int sIx, uint64 dBufPtr, int dIx, uint1
 
 
 bool Dev_PointerLooksBad(uint64 ptr) {
-    if (ptr < 0x10000000000) return true;
+    // todo: disabling this should fix linux
+    // if (ptr < 0x10000000000) return true;
+    if (ptr < 0x4fff08D0) return true;
     if (ptr % 8 != 0) return true;
     if (ptr > Dev::BaseAddressEnd()) return true;
     return false;
