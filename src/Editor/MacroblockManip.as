@@ -483,7 +483,6 @@ namespace Editor {
 
     class BlockSpecPriv : BlockSpec {
         uint64 ObjPtr;
-        CGameCtnBlockInfo@ BlockInfo;
         // CGameCtnBlock@ GameBlock;
 
         BlockSpecPriv() {
@@ -535,8 +534,17 @@ namespace Editor {
             if (block.WaypointSpecialProperty !is null) {
                 @waypoint = WaypointSpec(block.WaypointSpecialProperty);
             }
-            @BlockInfo = block.BlockInfo;
-            BlockInfo.MwAddRef();
+            SetBlockInfo(block.BlockInfo);
+        }
+
+        void SetBlockInfo(CGameCtnBlockInfo@ _blockInfo) {
+            if (BlockInfo !is null) {
+                BlockInfo.MwRelease();
+            }
+            @BlockInfo = _blockInfo;
+            if (BlockInfo !is null) {
+                BlockInfo.MwAddRef();
+            }
         }
 
         BlockSpecPriv(DGameCtnMacroBlockInfo_Block@ block) {
@@ -562,8 +570,7 @@ namespace Editor {
             if (block.Waypoint !is null) {
                 @waypoint = WaypointSpec(block.Waypoint);
             }
-            @BlockInfo = block.BlockInfo;
-            BlockInfo.MwAddRef();
+            SetBlockInfo(block.BlockInfo);
         }
 
         BlockSpecPriv(MemoryBuffer@ buf) {
@@ -595,14 +602,14 @@ namespace Editor {
                 block.Waypoint.Tag = waypoint.tag;
             }
             // get model
-            @block.BlockInfo = BlockInfo;
             if (BlockInfo is null) {
                 auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-                @block.BlockInfo = editor.PluginMapType.GetBlockModelFromName(name);
-                if (block.BlockInfo is null) {
-                    @block.BlockInfo = TryLoadingModelFromFid();
+                SetBlockInfo(editor.PluginMapType.GetBlockModelFromName(name));
+                if (BlockInfo is null) {
+                    SetBlockInfo(TryLoadingModelFromFid());
                 }
             }
+            @block.BlockInfo = BlockInfo;
             if (block.BlockInfo is null) {
                 auto inv = Editor::GetInventoryCache();
                 auto art = inv.GetBlockByName(name);
@@ -611,6 +618,7 @@ namespace Editor {
                     auto model = cast<CGameCtnBlockInfo>(modelNod);
                     if (model !is null) {
                         @block.BlockInfo = model;
+                        SetBlockInfo(model);
                     } else {
                         NotifyWarning("Failed to load block model for " + name + ".\nArticle: " + art.Name);
                     }
@@ -790,7 +798,6 @@ namespace Editor {
 
     class ItemSpecPriv : ItemSpec {
         uint64 ObjPtr;
-        CGameItemModel@ Model;
         CGameCtnAnchoredObject@ GameItem;
 
         ~ItemSpecPriv() {
@@ -836,8 +843,7 @@ namespace Editor {
                 @waypoint = WaypointSpec(item.WaypointSpecialProperty);
             }
             // ignore skins for the moment
-            @Model = item.ItemModel;
-            Model.MwAddRef();
+            SetModel(item.ItemModel);
         }
 
         ItemSpecPriv(DGameCtnMacroBlockInfo_Item@ item) {
@@ -863,8 +869,7 @@ namespace Editor {
                 @waypoint = WaypointSpec(item.Waypoint);
             }
             // ignore skins for the moment
-            @Model = item.Model;
-            Model.MwAddRef();
+            SetModel(item.Model);
         }
 
         void SetCoordFromAssociatedBlock(CGameCtnBlock@ b) {
@@ -922,7 +927,7 @@ namespace Editor {
             @item.BGSkin = null;
             @item.FGSkin = null;
             if (Model is null) {
-                @Model = TryLoadingModelFromFid();
+                SetModel(TryLoadingModelFromFid());
             }
             @item.Model = Model;
             // get model
@@ -935,12 +940,23 @@ namespace Editor {
                     auto model = cast<CGameItemModel>(modelNod);
                     if (model !is null) {
                         @item.Model = model;
+                        SetModel(model);
                     } else {
                         NotifyWarning("Failed to load item model for " + name + ".\nArticle: " + art.Name);
                     }
                 } else {
                     NotifyWarning("Failed to load item article for " + name);
                 }
+            }
+        }
+
+        void SetModel(CGameItemModel@ _model) {
+            if (Model !is null) {
+                Model.MwRelease();
+            }
+            @Model = _model;
+            if (Model !is null) {
+                Model.MwAddRef();
             }
         }
 

@@ -262,7 +262,8 @@ namespace Editor {
         // refcounted
         WaypointSpec@ waypoint;
         // block model not refcounted in this case
-        // block model -- get from name
+        // block model -- get from name -- note: this is done in BlockSpecPriv
+        CGameCtnBlockInfo@ BlockInfo;
 
         BlockSpec() {}
 
@@ -484,7 +485,8 @@ namespace Editor {
         SetSkinSpec@ bgSkin;
         // fg skin
         SetSkinSpec@ fgSkin;
-        // model
+        // model -- set in ItemSpecPriv
+        CGameItemModel@ Model;
 
         ItemSpec() {}
 

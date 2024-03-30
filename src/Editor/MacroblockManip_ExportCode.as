@@ -30,6 +30,7 @@ namespace Editor {
     // Some camera things
     import bool SetCamAnimationGoTo(vec2 lookAngleHV, vec3 position, float targetDist) from "Editor";
     import vec2 DirToLookUvFromCamera(vec3 target) from "Editor";
+    import vec2 DirToLookUv(vec3 dir) from "Editor";
 
     // import bool IsCtrlDown() from "Editor";
     // import bool IsAltDown() from "Editor";
@@ -44,7 +45,6 @@ import bool IsShiftDown() from "Editor";
 
 import vec3 PitchYawRollFromRotationMatrix(mat4 m) from "Editor";
 import mat4 EulerToMat(vec3 euler) from "Editor";
-import vec2 DirToLookUv(vec3 dir) from "Editor";
 
 import vec3 CoordDistToPos(int3 coord) from "Editor";
 import vec3 CoordDistToPos(vec3 coord) from "Editor";

@@ -63,6 +63,19 @@ namespace Editor {
         return DirToLookUv((target - pos).Normalized());
     }
 
+    vec2 DirToLookUv(vec3 &in dir) {
+        auto xz = (dir * vec3(1, 0, 1)).Normalized();
+        auto pitch = -Math::Asin(Math::Dot(dir, vec3(0, 1, 0)));
+        auto yaw = Math::Asin(Math::Dot(xz, vec3(1, 0, 0)));
+        if (Math::Dot(xz, vec3(0, 0, -1)) > 0) {
+            yaw = - yaw - Math::PI;
+            // trace('alt case');
+        }
+        auto lookUv = vec2(yaw, pitch) / Math::PI * 2.;
+        return lookUv;
+    }
+
+
     void FinalizeAnimationNow() {
         if (CameraAnimMgr is null) return;
         CameraAnimMgr.SetAt(1.0);
@@ -101,18 +114,6 @@ namespace Editor {
     }
 }
 
-
-vec2 DirToLookUv(vec3 &in dir) {
-    auto xz = (dir * vec3(1, 0, 1)).Normalized();
-    auto pitch = -Math::Asin(Math::Dot(dir, vec3(0, 1, 0)));
-    auto yaw = Math::Asin(Math::Dot(xz, vec3(1, 0, 0)));
-    if (Math::Dot(xz, vec3(0, 0, -1)) > 0) {
-        yaw = - yaw - Math::PI;
-        // trace('alt case');
-    }
-    auto lookUv = vec2(yaw, pitch) / Math::PI * 2.;
-    return lookUv;
-}
 
 
 AnimMgr@ CameraAnimMgr = AnimMgr(true);
