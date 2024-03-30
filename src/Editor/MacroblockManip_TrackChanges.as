@@ -10,7 +10,9 @@ namespace Editor {
     array<ItemSpec@>@ itemsRemovedThisFrame = {};
     array<ItemSpec@>@ itemsRemovedLastFrame = {};
     array<SetSkinSpec@>@ skinsSetThisFrame = {};
+    array<SetSkinSpec@>@ skinsSetByAPIThisFrame = {};
     array<SetSkinSpec@>@ skinsSetLastFrame = {};
+    array<SetSkinSpec@>@ skinsSetByAPILastFrame = {};
 
     const array<BlockSpec@>@ ThisFrameBlocksDeleted() {
         return blocksRemovedThisFrame;
@@ -30,6 +32,9 @@ namespace Editor {
     const array<SetSkinSpec@>@ ThisFrameSkinsSet() {
         return skinsSetThisFrame;
     }
+    const array<SetSkinSpec@>@ ThisFrameSkinsSetByAPI() {
+        return skinsSetByAPIThisFrame;
+    }
     const array<BlockSpec@>@ LastFrameBlocksDeleted() {
         return blocksRemovedLastFrame;
     }
@@ -47,6 +52,9 @@ namespace Editor {
     }
     const array<SetSkinSpec@>@ LastFrameSkinsSet() {
         return skinsSetLastFrame;
+    }
+    const array<SetSkinSpec@>@ LastFrameSkinsSetByAPI() {
+        return skinsSetByAPILastFrame;
     }
 
 
@@ -131,19 +139,30 @@ namespace Editor {
         itemsRemovedThisFrame.InsertLast(ItemSpecPriv(item));
     }
 
+    bool _TrackMap_SetSkin_IsByAPI = false;
+    void TrackMap_OnSetSkin_BeginAPI() {
+        _TrackMap_SetSkin_IsByAPI = true;
+    }
+    void TrackMap_OnSetSkin_EndAPI() {
+        _TrackMap_SetSkin_IsByAPI = false;
+    }
+
     void TrackMap_OnSetSkin(const string &in fgSkin = "", const string &in bgSkin = "", CGameCtnBlock@ block = null, CGameCtnAnchoredObject@ item = null) {
         if (!((block is null) ^^ (item is null))) {
-            throw("TrackMap_OnSetSkin: provide exactly 1 block or item");
+            warn("TrackMap_OnSetSkin: provide exactly 1 block or item");
+            return;
         }
         if (fgSkin.Length == 0 && bgSkin.Length == 0) {
-            throw("TrackMap_OnSetSkin: provide at least 1 skin");
+            warn("TrackMap_OnSetSkin: provide at least 1 skin");
+            return;
         }
+        auto @arr = _TrackMap_SetSkin_IsByAPI ? skinsSetByAPIThisFrame : skinsSetThisFrame;
         if (block !is null) {
-            skinsSetThisFrame.InsertLast(SetSkinSpecPriv(BlockSpecPriv(block), fgSkin, bgSkin));
+            arr.InsertLast(SetSkinSpecPriv(BlockSpecPriv(block), fgSkin, bgSkin));
         } else if (fgSkin.Length > 0) {
-            skinsSetThisFrame.InsertLast(SetSkinSpecPriv(ItemSpecPriv(item), fgSkin, true));
+            arr.InsertLast(SetSkinSpecPriv(ItemSpecPriv(item), fgSkin, true));
         } else {
-            skinsSetThisFrame.InsertLast(SetSkinSpecPriv(ItemSpecPriv(item), bgSkin, false));
+            arr.InsertLast(SetSkinSpecPriv(ItemSpecPriv(item), bgSkin, false));
         }
     }
 
@@ -162,12 +181,14 @@ namespace Editor {
         @itemsAddedLastFrame = itemsAddedThisFrame;
         @itemsRemovedLastFrame = itemsRemovedThisFrame;
         @skinsSetLastFrame = skinsSetThisFrame;
+        @skinsSetByAPILastFrame = skinsSetByAPIThisFrame;
         @blocksAddedThisFrame = {};
         @blocksRemovedThisFrame = {};
         @blocksRemovedByAPIThisFrame = {};
         @itemsAddedThisFrame = {};
         @itemsRemovedThisFrame = {};
         @skinsSetThisFrame = {};
+        @skinsSetByAPIThisFrame = {};
     }
 
     MacroblockSpec@ MacroblockSpecFromBuf(MemoryBuffer@ buf) {
@@ -182,6 +203,13 @@ namespace Editor {
     }
     MacroblockSpec@ MakeMacroblockSpec(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items) {
         return MacroblockSpecPriv(blocks, items);
+    }
+
+    BlockSpec@ MakeBlockSpec(CGameCtnBlock@ block) {
+        return BlockSpecPriv(block);
+    }
+    ItemSpec@ MakeItemSpec(CGameCtnAnchoredObject@ item) {
+        return ItemSpecPriv(item);
     }
 
     bool PlaceBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items, bool addUndoRedoPoint = false) {
@@ -261,12 +289,15 @@ namespace Editor {
         if (editor is null || editor.PluginMapType is null) return;
         if (app.Editor is null) OnLeaveEditorApplySkinsCB();
         if (queuedSkins.Length == 0) return;
+
+        TrackMap_OnSetSkin_BeginAPI();
         auto pmt = editor.PluginMapType;
         for (uint i = 0; i < queuedSkins.Length; i++) {
             auto s = queuedSkins[i];
             if (s.item !is null) ApplySkinToItem(pmt, s);
             else ApplySkinToBlock(pmt, s);
         }
+        TrackMap_OnSetSkin_EndAPI();
     }
 
     void ApplySkinToItem(CGameEditorPluginMapMapType@ pmt, SetSkinSpec@ s) {

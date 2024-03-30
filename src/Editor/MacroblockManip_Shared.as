@@ -1,4 +1,5 @@
 namespace Editor {
+    // support class
     shared class NetworkSerializable {
         MemoryBuffer@ cached;
 
@@ -243,6 +244,7 @@ namespace Editor {
         Free = 4,
     }
 
+    // use Editor::MakeBlockSpec isntead
     shared class BlockSpec : NetworkSerializable {
         string name;
         // 26=stadium; 25=stadium256
@@ -451,7 +453,7 @@ namespace Editor {
         }
 
         NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
-            throw("implemented elsewhere");
+            // throw("implemented elsewhere"); // atm it is the same in the Priv class
             fgSkin = ReadLPStringFromBuffer(buf);
             bgSkin = ReadLPStringFromBuffer(buf);
             @block = cast<BlockSpec>(ReadNullableStructFromBuffer(buf, BlockSpec()));
@@ -460,6 +462,7 @@ namespace Editor {
         }
     }
 
+    // use Editor::MakeItemSpec instead
     shared class ItemSpec : NetworkSerializable {
         string name;
         // 26=stadium; 25=stadium256
