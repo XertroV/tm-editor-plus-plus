@@ -114,6 +114,7 @@ namespace Editor {
     class BlockInMap : ObjInMap {
         bool IsClassicElseGhost;
         bool IsFree;
+        BlockPlacementType PlacementTy;
         vec3 size;
         int dir;
         uint64 hash;
@@ -128,6 +129,7 @@ namespace Editor {
             // that would be 4*3*2+4 bytes = 28 bytes
             IsFree = Editor::IsBlockFree(block);
             IsClassicElseGhost = !block.IsGhostBlock();
+            PlacementTy = !IsClassicElseGhost ? BlockPlacementType::Ghost : IsFree ? BlockPlacementType::Free : BlockPlacementType::Normal;
             //
             hashStr = GetBlockHash(pos, rot, block.BlockInfo.Name, block.BlockInfoVariantIndex, block.MobilVariantIndex);
             // dev_trace("Block hash: " + hashStr);
@@ -226,17 +228,26 @@ namespace Editor {
             RegisterItemDeletedCallback(ProcessItem(this.OnDelItem), "MapCache del item");
         }
         bool isRefreshing = false;
+        bool IsStale = false;
 
         bool OnNewBlock(CGameCtnBlock@ block) {
+            // todo: update cache instead of marking stale
+            this.IsStale = true;
             return false;
         }
         bool OnDelBlock(CGameCtnBlock@ block) {
+            // todo: update cache instead of marking stale
+            this.IsStale = true;
             return false;
         }
         bool OnNewItem(CGameCtnAnchoredObject@ item) {
+            // todo: update cache instead of marking stale
+            this.IsStale = true;
             return false;
         }
         bool OnDelItem(CGameCtnAnchoredObject@ item) {
+            // todo: update cache instead of marking stale
+            this.IsStale = true;
             return false;
         }
 
@@ -267,6 +278,7 @@ namespace Editor {
         void RefreshCache() {
             // if (isRefreshing) return;
             auto myNonce = ++lastRefreshNonce;
+            IsStale = false;
             isRefreshing = true;
             _ItemIdNameMap.DeleteAll();
             _BlockIdNameMap.DeleteAll();
@@ -343,9 +355,10 @@ namespace Editor {
             ItemTypesLower.SortAsc();
             yield();
             if (myNonce != lastRefreshNonce) return;
-            isRefreshing = false;
-            lastRefreshNonce++;
             BlockTypesLower.SortAsc();
+            lastRefreshNonce++;
+            isRefreshing = false;
+            IsStale = false;
         }
 
         dictionary _ItemIdNameMap;

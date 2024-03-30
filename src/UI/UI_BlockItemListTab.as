@@ -2,6 +2,10 @@ enum BIListTabType {
     Blocks, BakedBlocks, Items
 }
 
+enum BlockPlacementType {
+    Normal, Ghost, Free
+}
+
 const string cpYesMark = "\\$88f" + Icons::Check + " CP";
 const string cpNoMark = "\\$b86" + Icons::Times;
 const string cpStartMark = "\\$8f0Start";
@@ -99,7 +103,8 @@ class BlockItemListTab : Tab {
             UI::SameLine();
             if (recheckSkip) {
                 recheckSkip = false;
-                skipXZStarting = GetBlock(map, 0).DescId.GetName() == "Grass";
+                auto block = map !is null ? GetBlock(map, 0) : null;
+                skipXZStarting = block !is null && block.DescId.GetName() == "Grass";
             }
             skipXZStarting = UI::Checkbox("Skip first " + sizeXZ + " blocks", skipXZStarting);
             if (!skipXZStarting) {

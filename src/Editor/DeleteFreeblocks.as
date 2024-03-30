@@ -95,6 +95,7 @@ namespace Editor {
         return pendingFreeBlocksToDelete.Length > 0 && waitingToDeleteFreeBlocks;
     }
 
+    // Run this in MainLoop or GameLoop
     void RunDeleteFreeBlockDetection() {
         if (pendingFreeBlocksToDelete.Length == 0) return;
         canDeleteFreeBlocks = true;

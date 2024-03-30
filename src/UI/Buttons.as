@@ -14,6 +14,16 @@ namespace UX {
         return ret;
     }
 
+    bool SmallButtonMbDisabled(const string &in label, const string &in tooltip = "", bool disabled = false) {
+        UI::BeginDisabled(disabled);
+        UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(2, 0));
+        bool ret = UI::Button(label);
+        UI::PopStyleVar();
+        UI::EndDisabled();
+        if (tooltip.Length > 0) AddSimpleTooltip(tooltip);
+        return ret;
+    }
+
     bool ButtonMbDisabled(const string &in label, bool disabled = false) {
         UI::BeginDisabled(disabled);
         bool ret = UI::Button(label);

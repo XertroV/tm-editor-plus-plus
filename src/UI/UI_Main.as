@@ -209,7 +209,7 @@ namespace MenuBar {
 
             // (hasDupes ? WARNING_TRIANGLE_START : "") +
             if (UI::BeginMenu(cachesMenuLabel)) {
-                if (UI::MenuItem("Refresh Map Block/Item Cache")) {
+                if (UI::MenuItem("Refresh Map Block/Item Cache", mapCache.IsStale ? "(Stale)" : "")) {
                     mapCache.RefreshCacheSoon();
                 }
                 UI::AlignTextToFramePadding();
@@ -221,6 +221,7 @@ namespace MenuBar {
                         g_DuplicateFreeBlocks_SubTab.SetSelectedTab();
                         g_BlocksItemsTab.SetSelectedTab();
                     }
+                    g_DuplicateFreeBlocks_SubTab.DrawAutoremoveDuplicatesMenu();
                     if (UI::BeginMenu("Duplicate Keys:")) {
                         auto nbDupKeys = mapCache.DuplicateBlockKeys.Length;
                         for (uint i = 0; i < nbDupKeys; i++) {

@@ -313,6 +313,125 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return cacheBlock.FindMe(editor.PluginMapType);
     }
+
+    BlockPlacementType[] m_Priorities = {BlockPlacementType::Normal, BlockPlacementType::Ghost, BlockPlacementType::Free};
+    bool m_RefreshCacheFirst = true;
+
+    void DrawInnerEarly() override {
+        if (UI::Button("Refresh Cache##refresh-cache-dup-blks")) {
+            Editor::GetMapCache().RefreshCacheSoon();
+        }
+        UI::Separator();
+        UI::AlignTextToFramePadding();
+        UI::Text("Autoremove duplicates:");
+        DrawPriorityForm();
+    }
+
+    void DrawPriorityForm() {
+        UI::Indent();
+        UI::Text("Priority: (Keep first matching highest)");
+        UI::Indent();
+        for (uint i = 0; i < m_Priorities.Length; i++) {
+            UI::Text(tostring(i + 1) + ". " + tostring(m_Priorities[i]));
+            UI::SameLine();
+            if (UX::SmallButtonMbDisabled(Icons::ArrowUp + "##up-" + i, "Higher Priority", i == 0)) {
+                auto tmp = m_Priorities[i];
+                m_Priorities[i] = m_Priorities[i - 1];
+                m_Priorities[i - 1] = tmp;
+            }
+            UI::SameLine();
+            if (UX::SmallButtonMbDisabled(Icons::ArrowDown + "##down-" + i, "Lower Priority", i == m_Priorities.Length - 1)) {
+                auto tmp = m_Priorities[i];
+                m_Priorities[i] = m_Priorities[i + 1];
+                m_Priorities[i + 1] = tmp;
+            }
+        }
+        UI::Unindent();
+        if (UI::Button("Run Autodeletion")) {
+            startnew(CoroutineFunc(this.RunAutodeletion));
+        }
+        // m_RefreshCacheFirst = UI::Checkbox("Refresh Cache First", m_RefreshCacheFirst);
+        UI::Unindent();
+    }
+
+    void DrawAutoremoveDuplicatesMenu() {
+        auto mapCache = Editor::GetMapCache();
+        auto nbDupes = mapCache.DuplicateBlocks.Length;
+        UI::BeginDisabled(nbDupes == 0);
+        if (UI::BeginMenu("Autoremove Duplicates ("+nbDupes+")##autoremove-dup-blks-menu")) {
+            DrawPriorityForm();
+            UI::EndMenu();
+        }
+        UI::EndDisabled();
+    }
+
+    void RunAutodeletion() {
+        auto mapCache = Editor::GetMapCache();
+        if (mapCache.IsStale) {
+            Notify("[Autodel Dups] 0. Map cache stale, refreshing.");
+            mapCache.RefreshCache();
+            // Notify("[Autodel Dups] 0. Map cache refreshed.");
+        }
+        auto nbDupes = mapCache.DuplicateBlocks.Length;
+        if (nbDupes == 0) {
+            Notify("Autodel Dups] 1. No duplicates found.");
+            return;
+        }
+        Notify("[Autodel Dups] 1. Starting autodeletion of " + nbDupes + " duplicates.");
+
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto pmt = editor.PluginMapType;
+
+        Editor::BlockSpec@[]@ mbBlocks = {};
+        auto mbSpec = Editor::MakeMacroblockSpec(mbBlocks, {});
+
+        // loop through lists in mapCache.DuplicateBlockKeys
+        for (uint i = 0; i < mapCache.DuplicateBlockKeys.Length; i++) {
+            auto k = mapCache.DuplicateBlockKeys[i];
+            auto @blocks = mapCache.GetBlocksByHash(k);
+            if (blocks.Length < 2) {
+                NotifyWarning("[Autodel Dups] 2. Unexpected: key " + k + " has length " + blocks.Length);
+                continue;
+            }
+            mbSpec.AddBlocks(GetDuplicateBlocksLowestPriority(pmt, blocks));
+        }
+
+        Notify("[Autodel Dups] 3. Deleting " + mbSpec.Blocks.Length + " blocks.");
+        Editor::DeleteMacroblock(mbSpec, true);
+        startnew(Editor::RunDeleteFreeBlockDetection).WithRunContext(Meta::RunContext::MainLoop);
+        yield();
+        Notify("[Autodel Dups] 3. Deleted " + mbSpec.Blocks.Length + " blocks. Refreshing cache.");
+        Editor::GetMapCache().RefreshCacheSoon();
+    }
+
+    CGameCtnBlock@[]@ GetDuplicateBlocksLowestPriority(CGameEditorPluginMapMapType@ pmt, Editor::BlockInMap@[]@ blocks) {
+        CGameCtnBlock@[]@ ret = {};
+        CGameCtnBlock@ keep = null;
+        int keepIx = -1;
+        BlockPlacementType bestTyFound = BlockPlacementType::Normal;
+        int bestTyIx = -1;
+        for (uint i = 0; i < blocks.Length; i++) {
+            auto b = blocks[i];
+            if (keep is null || bestTyIx == -1 || m_Priorities.Find(b.PlacementTy) < bestTyIx) {
+                @keep = b.FindMe(pmt);
+                keepIx = i;
+                bestTyFound = b.PlacementTy;
+                bestTyIx = m_Priorities.Find(b.PlacementTy);
+                // did we find a block with the highest priority?
+                if (bestTyIx == 0) break;
+            }
+            if (bestTyIx < 0) throw("Should never be -1 after 1st loop (bestTyIx)");
+            if (keepIx < 0) throw("Should never be -1 after 1st loop (keepIx)");
+        }
+        for (uint i = 0; i < blocks.Length; i++) {
+            if (i == keepIx) continue;
+            auto b = blocks[i];
+            auto block = b.FindMe(pmt);
+            if (block is null) continue;
+            ret.InsertLast(block);
+        }
+        return ret;
+    }
 }
 
 class WaypointsBITab : Tab {
