@@ -218,18 +218,18 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             m_BlockChanged = true;
         }
 
-        if (m_BlockChanged) {
 #if DEV
-            dev_trace('block changed');
-            dev_trace('poss: ' + preDesc.Pos.ToString() + " -> " + desc.Pos.ToString());
-            dev_trace('pos changed: ' + !MathX::Vec3Eq(preDesc.Pos, desc.Pos));
-            dev_trace('rots: ' + preDesc.Rot.ToString() + " -> " + desc.Rot.ToString());
-            dev_trace('rot changed: ' + !MathX::Vec3Eq(preDesc.Rot, desc.Rot));
-            dev_trace('rot delta len sq: ' + (preDesc.Rot - desc.Rot).LengthSquared());
-            dev_trace('rot delta len sq: ' + ((preDesc.Rot - desc.Rot).LengthSquared() < 1e10));
-            dev_trace('color changed: ' + (preDesc.Color != block.MapElemColor));
-#endif
+        if (m_BlockChanged) {
+            // dev_trace('block changed');
+            // dev_trace('poss: ' + preDesc.Pos.ToString() + " -> " + desc.Pos.ToString());
+            // dev_trace('pos changed: ' + !MathX::Vec3Eq(preDesc.Pos, desc.Pos));
+            // dev_trace('rots: ' + preDesc.Rot.ToString() + " -> " + desc.Rot.ToString());
+            // dev_trace('rot changed: ' + !MathX::Vec3Eq(preDesc.Rot, desc.Rot));
+            // dev_trace('rot delta len sq: ' + (preDesc.Rot - desc.Rot).LengthSquared());
+            // dev_trace('rot delta len sq: ' + ((preDesc.Rot - desc.Rot).LengthSquared() < 1e10));
+            // dev_trace('color changed: ' + (preDesc.Color != block.MapElemColor));
         }
+#endif
 
         if (m_BlockChanged && safeToRefresh) {
             trace('Updating picked/pinned block');

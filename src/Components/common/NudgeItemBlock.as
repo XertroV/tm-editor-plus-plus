@@ -69,6 +69,19 @@ mixin class NudgeItemBlock {
 
         if (itemPosMod.LengthSquared() > 0 || itemRotMod.LengthSquared() > 0) {
             if (item !is null) {
+                // auto newItemSpec = Editor::ItemSpecPriv(item);
+                // newItemSpec.pos += itemPosMod;
+                // newItemSpec.pyr += itemRotMod;
+                // if (!Editor::DeleteBlocksAndItems({}, {Editor::ItemSpecPriv(item)})) {
+                //     warn("Failed to delete item for nudge");
+                // }
+                // if (!Editor::PlaceBlocksAndItems({}, {newItemSpec}, true)) {
+                //     warn("Failed to place item for nudge");
+                // } else {
+                //     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+                //     editor.PluginMapType.AutoSave();
+                // }
+                // return false;
                 item.AbsolutePositionInMap += itemPosMod;
                 item.Pitch += itemRotMod.x;
                 item.Yaw += itemRotMod.y;
