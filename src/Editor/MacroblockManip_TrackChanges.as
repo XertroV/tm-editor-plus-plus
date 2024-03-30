@@ -297,6 +297,7 @@ namespace Editor {
             if (s.item !is null) ApplySkinToItem(pmt, s);
             else ApplySkinToBlock(pmt, s);
         }
+        queuedSkins.RemoveRange(0, queuedSkins.Length);
         TrackMap_OnSetSkin_EndAPI();
     }
 
