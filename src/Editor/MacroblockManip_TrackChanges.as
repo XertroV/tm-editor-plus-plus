@@ -270,6 +270,7 @@ namespace Editor {
     bool SetSkins(SetSkinSpec@[]@ skins) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null || editor.PluginMapType is null) return false;
+        trace("Queuing skins to apply: " + skins.Length);
         for (uint i = 0; i < skins.Length; i++) {
             QueueSkinApplication(skins[i]);
         }
@@ -288,16 +289,18 @@ namespace Editor {
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         if (editor is null || editor.PluginMapType is null) return;
         if (app.Editor is null) OnLeaveEditorApplySkinsCB();
-        if (queuedSkins.Length == 0) return;
 
         TrackMap_OnSetSkin_BeginAPI();
         auto pmt = editor.PluginMapType;
         for (uint i = 0; i < queuedSkins.Length; i++) {
             auto s = queuedSkins[i];
+            dev_trace("Got skin to apply to: " + (s.item !is null ? "item" : "block") + " | fg: " + s.fgSkin + " | bg: " + s.bgSkin );
             if (s.item !is null) ApplySkinToItem(pmt, s);
             else ApplySkinToBlock(pmt, s);
         }
         queuedSkins.RemoveRange(0, queuedSkins.Length);
+        pmt.AutoSave();
+        dev_trace('set skins saved autosave');
         TrackMap_OnSetSkin_EndAPI();
     }
 
@@ -324,16 +327,15 @@ namespace Editor {
         for (int i = nbBlocks - 1; i >= 0; i--) {
             if (s.block.MatchesBlock(map.Blocks[i])) {
                 @block = map.Blocks[i];
+                print("Found block: " + block.IdName + " | " + block.Coord.ToString());
                 break;
             }
+        }
+        if (block is null) {
+            warn("ApplySkinToBlock: block not found");
             return;
         }
-        if (block is null) return;
-        if (s.fgSkin.Length > 0) {
-            pmt.SetBlockSkins(block, s.bgSkin, s.fgSkin);
-        } else {
-            pmt.SetBlockSkin(block, s.bgSkin);
-        }
+        pmt.SetBlockSkins(block, s.bgSkin, s.fgSkin);
     }
 
     void OnLeaveEditorApplySkinsCB() {

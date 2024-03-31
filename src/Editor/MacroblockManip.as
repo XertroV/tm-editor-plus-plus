@@ -664,8 +664,25 @@ namespace Editor {
         }
 
         bool MatchesBlock(CGameCtnBlock@ block) const override {
-            return name == block.BlockInfo.IdName && collection == 26 && author == block.BlockInfo.Author.GetName() &&
-                MathX::Nat3Eq(coord, block.Coord) && dir == block.Direction && dir2 == block.Direction &&
+            // if (block.DescId.GetName() == "Grass") return false;
+            // debug failed match
+            // trace('name match: ' + (name == block.BlockInfo.IdName));
+            // trace('collection match: ' + (collection == 26));
+            // trace('author match: ' + (author == block.BlockInfo.Author.GetName()));
+            // trace('coord match: ' + MathX::Nat3Eq(coord, block.Coord));
+            // trace('dir match: ' + (dir == block.Direction));
+            // trace('dir2 match: ' + (dir2 == block.Direction));
+            // trace('pos match: ' + MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)));
+            // trace('pyr match: ' + MathX::Vec3Eq(pyr, Editor::GetBlockRotation(block)));
+            // trace('color match: ' + (color == block.MapElemColor));
+            // trace('lmQual match: ' + (lmQual == block.MapElemLmQuality));
+            // trace('mobilIx match: ' + (mobilIx == block.MobilIndex));
+            // trace('mobilVariant match: ' + (mobilVariant == block.MobilVariantIndex));
+            // trace('variant match: ' + (variant == block.BlockInfoVariantIndex));
+            // trace('flags match: ' + (flags == (block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None)));
+
+            return name == block.DescId.GetName() && collection == 26 && author == block.BlockInfo.Author.GetName() &&
+                MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0)) && dir == block.Direction && dir2 == block.Direction &&
                 MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)) &&
                 MathX::Vec3Eq(pyr, Editor::GetBlockRotation(block)) &&
                 color == block.MapElemColor && lmQual == block.MapElemLmQuality && mobilIx == block.MobilIndex &&
