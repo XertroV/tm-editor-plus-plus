@@ -682,7 +682,8 @@ namespace Editor {
             // trace('flags match: ' + (flags == (block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None)));
 
             return name == block.DescId.GetName() && collection == 26 && author == block.BlockInfo.Author.GetName() &&
-                MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0)) && dir == block.Direction && dir2 == block.Direction &&
+                (Editor::IsBlockFree(block) || MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0))) &&
+                dir == block.Direction && dir2 == block.Direction &&
                 MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)) &&
                 MathX::Vec3Eq(pyr, Editor::GetBlockRotation(block)) &&
                 color == block.MapElemColor && lmQual == block.MapElemLmQuality && mobilIx == block.MobilIndex &&

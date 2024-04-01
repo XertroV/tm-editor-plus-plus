@@ -125,6 +125,12 @@ void assert_eq(float a, float b, const string &in msg = "") {
         throw("assertion failed: " + a + " != " + b + (msg != "" ? ", " + msg : ""));
     }
 }
+void assert(bool a, const string &in msg = "") {
+    if (!a) {
+        throw("assertion failed: " + (msg != "" ? msg : ""));
+    }
+}
+
 
 
 
