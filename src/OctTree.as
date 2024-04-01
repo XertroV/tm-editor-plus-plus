@@ -76,6 +76,7 @@ class OctTreeRegion {
     }
 }
 
+
 class OctTreeNode : OctTreeRegion {
     OctTreeNode@ parent;
     int depth;
@@ -178,6 +179,7 @@ class OctTreeNode : OctTreeRegion {
     }
 
     void Subdivide() {
+        // duplicate blocks or points would make this recurse forever
         if (depth >= 10) {
             return;
         }
@@ -280,6 +282,45 @@ class OctTreeNode : OctTreeRegion {
             }
         }
         return ret;
+    }
+
+    OctTreeRegion@ PointToFirstRegion(const vec3 &in point) {
+        for (uint i = 0; i < regions.Length; i++) {
+            if (regions[i].PointInside(point)) {
+                return regions[i];
+            }
+        }
+        if (children.Length > 0) {
+            return children[PointToIx(point)].PointToFirstRegion(point);
+        }
+        return null;
+    }
+
+    OctTreeRegion@ PointToDeepestRegion(const vec3 &in point) {
+        OctTreeRegion@ r;
+        if (children.Length > 0) {
+            @r = children[PointToIx(point)].PointToDeepestRegion(point);
+        }
+        if (r is null) {
+            for (uint i = 0; i < regions.Length; i++) {
+                if (regions[i].PointInside(point)) {
+                    return regions[i];
+                }
+            }
+        }
+        return r;
+    }
+
+    bool PointHitsRegion(const vec3 &in point) {
+        for (uint i = 0; i < regions.Length; i++) {
+            if (regions[i].PointInside(point)) {
+                return true;
+            }
+        }
+        if (children.Length > 0) {
+            return children[PointToIx(point)].PointHitsRegion(point);
+        }
+        return false;
     }
 
     uint CalculateNbPoints() {
