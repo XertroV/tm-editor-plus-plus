@@ -296,11 +296,39 @@ class MapEditPropsTab : Tab {
 
         if (offzoneLen > 0) {
             if (UI::TreeNode("Offzones ("+offzoneLen+")###map-offzones", UI::TreeNodeFlags::None)) {
+                m_EditOffzones = UI::Checkbox("Edit Offzones", m_EditOffzones);
                 auto offzoneBuf = Dev::GetOffsetNod(map, O_MAP_OFFZONE_BUF_OFFSET);
                 for (uint i = 0; i < offzoneLen; i++) {
+                    UI::PushID("ofz"+i);
                     int3 start = Dev::GetOffsetInt3(offzoneBuf, i * 0x18);
                     int3 end = Dev::GetOffsetInt3(offzoneBuf, i * 0x18 + 0xC);
-                    UI::Text(start.ToString() + " -> " + end.ToString());
+                    if (!m_EditOffzones) {
+                        UI::Text(start.ToString() + " -> " + end.ToString());
+                    } else {
+                        UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(1, 0));
+                        UI::PushItemWidth(75);
+                        start.x = UI::InputInt("##offzone-start-x", start.x);
+                        UI::SameLine();
+                        start.y = UI::InputInt("##offzone-start-y", start.y);
+                        UI::SameLine();
+                        start.z = UI::InputInt("##offzone-start-z", start.z);
+                        UI::SameLine();
+                        UI::Text("->");
+                        UI::SameLine();
+                        end.x = UI::InputInt("##offzone-end-x", end.x);
+                        UI::SameLine();
+                        end.y = UI::InputInt("##offzone-end-y", end.y);
+                        UI::SameLine();
+                        end.z = UI::InputInt("##offzone-end-z", end.z);
+                        UI::PopItemWidth();
+                        UI::PopStyleVar();
+                        Dev::SetOffset(offzoneBuf, i * 0x18, start);
+                        Dev::SetOffset(offzoneBuf, i * 0x18 + 0xC, end);
+                    }
+                    UI::PopID();
+                }
+                if (UX::SmallButton("Drop Last")) {
+                    Dev::SetOffset(map, O_MAP_OFFZONE_BUF_OFFSET + 0x8, uint(offzoneLen - 1));
                 }
                 UI::TreePop();
             }
@@ -314,6 +342,8 @@ class MapEditPropsTab : Tab {
 
         DrawOffzoneSettings();
     }
+
+    bool m_EditOffzones;
 
     void DrawChangeGameBuildOptions() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -571,7 +601,8 @@ class MapEditPropsTab : Tab {
     void DrawOffzoneSettings() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
-        nat3 ozPerBlock = Dev::GetOffsetNat3(map, O_MAP_OFFZONE_SIZE_OFFSET);
+        nat3 ozPerBlock = Editor::GetOffzoneTriggerSize(map);
+        auto ozBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
         nat3 origOzPerBlock = ozPerBlock;
         if (UI::CollapsingHeader("Offzone Trigger:")) {
             UI::Indent();
@@ -586,7 +617,6 @@ class MapEditPropsTab : Tab {
                 if (ozPerBlock != origOzPerBlock) {
                     Dev::SetOffset(map, O_MAP_OFFZONE_SIZE_OFFSET, ozPerBlock);
                 }
-                auto ozBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
                 UI::Text("Offzone Trigger Size: " + ozBlockSize.ToString());
                 // UI::EndChild();
             UI::Unindent();
@@ -594,14 +624,18 @@ class MapEditPropsTab : Tab {
     }
 
     void DrawOffzoneBoxes(CGameCtnChallenge@ map) {
+        nat3 ozPerBlock = Editor::GetOffzoneTriggerSize(map);
+        auto ozBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
         auto offzoneLen = Dev::GetOffsetUint32(map, O_MAP_OFFZONE_BUF_OFFSET + 0x8);
         if (offzoneLen == 0) return;
         auto offzoneBuf = Dev::GetOffsetNod(map, O_MAP_OFFZONE_BUF_OFFSET);
+        auto offzoneBufPtr = Dev::GetOffsetUint64(map, O_MAP_OFFZONE_BUF_OFFSET);
+        CopiableLabeledPtr(offzoneBufPtr);
         for (uint i = 0; i < offzoneLen; i++) {
             int3 start = Dev::GetOffsetInt3(offzoneBuf, i * 0x18);
             int3 end = Dev::GetOffsetInt3(offzoneBuf, i * 0x18 + 0xC) + int3(1, 1, 1);
-            auto startPos = MTCoordToPos(start);
-            auto endPos = MTCoordToPos(end) - vec3(0.1);
+            auto startPos = MTCoordToPos(start, ozBlockSize);
+            auto endPos = MTCoordToPos(end, ozBlockSize) - vec3(0.1);
             nvgDrawBlockBox(mat4::Translate(startPos), endPos - startPos);
         }
     }

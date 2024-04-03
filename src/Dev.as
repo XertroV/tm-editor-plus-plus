@@ -356,6 +356,7 @@ const uint16 O_MAP_DYNAMIC_TIMEOFDAY = O_MAP_TIMEOFDAY_PACKED_U16 + 0x8;
 const uint16 O_MAP_CLIPAMBIANCE = GetOffset("CGameCtnChallenge", "ClipAmbiance");
 const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8;
 const uint16 O_MAP_LAUNCHEDCPS = O_MAP_CLIPAMBIANCE + 0x28; // 0x200 - 0x1D8;
+//
 const uint16 O_MAP_SIZE = GetOffset("CGameCtnChallenge", "Size");
 
 // ptr at 0x0 of this struct: CHmsLightMapCache
@@ -366,6 +367,8 @@ const uint16 O_LIGHTMAPSTRUCT_IMAGE_2 = 0x18;
 const uint16 O_LIGHTMAPSTRUCT_IMAGE_3 = 0x20;
 // this points to IMAGE_1
 const uint16 O_LIGHTMAPSTRUCT_IMAGES = 0x30;
+
+// 0x488 -- possible flag for lightmap invalidation
 
 // 0x298
 const uint16 O_MAP_ANCHOREDOBJS = GetOffset("CGameCtnChallenge", "AnchoredObjects");
