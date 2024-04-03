@@ -48,8 +48,11 @@ namespace Editor {
     }
 
     class ItemInMap : ObjInMap {
+        ItemSpec@ spec;
+
         ItemInMap(uint i, CGameCtnAnchoredObject@ item) {
             super(i);
+            @spec = MakeItemSpec(item);
             pos = item.AbsolutePositionInMap;
             rot = Editor::GetItemRotation(item);
             color = int(item.MapElemColor);
@@ -119,10 +122,12 @@ namespace Editor {
         int dir;
         uint64 hash;
         string hashStr;
+        BlockSpec@ spec;
 
         BlockInMap(uint i, CGameCtnBlock@ block) {
             // dev_trace("Adding block: " + block.BlockInfo.Name);
             super(i);
+            @spec = MakeBlockSpec(block);
             pos = Editor::GetBlockLocation(block);
             rot = Editor::GetBlockRotation(block);
             // for duplicate detection, we need to hash pos + rot + info.Id / info.IdName
@@ -219,6 +224,8 @@ namespace Editor {
     }
 
     class MapCache {
+        OctTreeNode@ objsRoot;
+
         MapCache() {
             RefreshCacheSoon();
             RegisterOnEditorLoadCallback(CoroutineFunc(RefreshCacheSoon), "MapCache refresh");
@@ -231,23 +238,37 @@ namespace Editor {
         bool IsStale = false;
 
         bool OnNewBlock(CGameCtnBlock@ block) {
-            // todo: update cache instead of marking stale
             this.IsStale = true;
+            if (isRefreshing) return false;
+            // todo: update cache instead of marking stale
+            objsRoot.Insert(MakeBlockSpec(block));
+            // AddBlock(BlockInMap(_Blocks.Length, block));
             return false;
         }
         bool OnDelBlock(CGameCtnBlock@ block) {
-            // todo: update cache instead of marking stale
             this.IsStale = true;
+            if (isRefreshing) return false;
+            // todo: update cache instead of marking stale
+            if (!objsRoot.Remove(MakeBlockSpec(block))) {
+                warn("Failed to remove block from oct tree!");
+            }
             return false;
         }
         bool OnNewItem(CGameCtnAnchoredObject@ item) {
-            // todo: update cache instead of marking stale
             this.IsStale = true;
+            if (isRefreshing) return false;
+            // todo: update cache instead of marking stale
+            objsRoot.Insert(MakeItemSpec(item));
+            // AddItem(ItemInMap(_Items.Length, item));
             return false;
         }
         bool OnDelItem(CGameCtnAnchoredObject@ item) {
-            // todo: update cache instead of marking stale
             this.IsStale = true;
+            if (isRefreshing) return false;
+            // todo: update cache instead of marking stale
+            if (!objsRoot.Remove(MakeItemSpec(item))) {
+                warn("Failed to remove item from oct tree!");
+            }
             return false;
         }
 
@@ -277,6 +298,11 @@ namespace Editor {
         uint lastRefreshNonce = 0;
         void RefreshCache() {
             // if (isRefreshing) return;
+            auto app = GetApp();
+            if (app is null) return;
+            auto map = app.RootMap;
+            if (map is null) return;
+            @objsRoot = OctTreeNode(map.Size);
             auto myNonce = ++lastRefreshNonce;
             IsStale = false;
             isRefreshing = true;
@@ -372,10 +398,11 @@ namespace Editor {
         BlockInMap@[] DuplicateBlocks;
         uint NbDuplicateFreeBlocks = 0;
 
-        protected void AddBlock(BlockInMap@ b) {
+        void AddBlock(BlockInMap@ b) {
             loadProgress++;
             _Blocks.InsertLast(b);
             AddToMacroblock(b);
+            AddToOctTree(b);
             if (b.IsWaypoint) _WaypointBlocks.InsertLast(b);
             if (b.HasSkin) _SkinnedBlocks.InsertLast(b);
             if (!_BlockIdNameMap.Exists(b.IdName)) {
@@ -402,6 +429,54 @@ namespace Editor {
             GetBlocksByType(b.IdName).InsertLast(b);
         }
 
+        void RemoveBlock(BlockInMap@ b) {
+            RemoveBlockFromArray(b, _Blocks);
+            if (b.HasSkin) RemoveBlockFromArray(b, _SkinnedBlocks);
+            if (b.IsWaypoint) RemoveBlockFromArray(b, _WaypointBlocks);
+            auto @blocks = cast<array<BlockInMap@>>(_BlockIdNameMap[b.IdName]);
+            RemoveBlockFromArray(b, blocks);
+            if (blocks.Length == 0) {
+                auto idIx = BlockTypes.Find(b.IdName);
+                if (idIx != -1) BlockTypes.RemoveAt(idIx);
+                idIx = BlockTypesLower.Find(b.IdName.ToLower());
+                if (idIx != -1) BlockTypesLower.RemoveAt(idIx);
+                _BlockIdNameMap.Delete(b.IdName);
+            }
+            if (_BlocksByHash.Exists(b.hashStr)) {
+                auto dupes = cast<BlockInMap@[]>(_BlocksByHash[b.hashStr]);
+                auto ix = dupes.FindByRef(b);
+                if (ix != -1) {
+                    dupes.RemoveAt(ix);
+                    if (dupes.Length == 1) {
+                        auto ix2 = DuplicateBlocks.FindByRef(dupes[0]);
+                        if (ix2 != -1) {
+                            DuplicateBlocks.RemoveAt(ix2);
+                            DuplicateBlockKeys.RemoveAt(ix2);
+                            NbDuplicateFreeBlocks--;
+                        }
+                    }
+                }
+            }
+        }
+
+        void RemoveBlockFromArray(BlockInMap@ b, array<BlockInMap@>@ arr) {
+            auto ix = arr.FindByRef(b);
+            if (ix == -1) {
+                warn("Could not find block to remove");
+                return;
+            }
+            arr.RemoveAt(ix);
+        }
+
+        void AddToOctTree(BlockInMap@ b) {
+            // don't add grass
+            if (b.IdName == "Grass") return;
+            objsRoot.Insert(b.spec);
+        }
+        void AddToOctTree(ItemInMap@ b) {
+            objsRoot.Insert(b.spec);
+        }
+
         BlockInMap@[]@ GetBlocksByHash(const string &in blockHash) {
             if (_BlocksByHash.Exists(blockHash)) {
                 return cast<BlockInMap@[]>(_BlocksByHash[blockHash]);
@@ -409,10 +484,11 @@ namespace Editor {
             return {};
         }
 
-        protected void AddItem(ItemInMap@ b) {
+        void AddItem(ItemInMap@ b) {
             loadProgress++;
             _Items.InsertLast(b);
             AddToMacroblock(b);
+            AddToOctTree(b);
             if (b.IsWaypoint) _WaypointItems.InsertLast(b);
             if (b.HasSkin) _SkinnedItems.InsertLast(b);
             if (!_ItemIdNameMap.Exists(b.IdName)) {
@@ -421,6 +497,30 @@ namespace Editor {
                 ItemTypesLower.InsertLast(b.IdName.ToLower());
             }
             GetItemsByType(b.IdName).InsertLast(b);
+        }
+
+        void RemoveItem(ItemInMap@ b) {
+            RemoveItemFromArray(b, _Items);
+            if (b.HasSkin) RemoveItemFromArray(b, _SkinnedItems);
+            if (b.IsWaypoint) RemoveItemFromArray(b, _WaypointItems);
+            auto @items = cast<array<ItemInMap@>>(_ItemIdNameMap[b.IdName]);
+            RemoveItemFromArray(b, items);
+            if (items.Length == 0) {
+                auto idIx = ItemTypes.Find(b.IdName);
+                if (idIx != -1) ItemTypes.RemoveAt(idIx);
+                idIx = ItemTypesLower.Find(b.IdName.ToLower());
+                if (idIx != -1) ItemTypesLower.RemoveAt(idIx);
+                _ItemIdNameMap.Delete(b.IdName);
+            }
+        }
+
+        void RemoveItemFromArray(ItemInMap@ b, array<ItemInMap@>@ arr) {
+            auto ix = arr.FindByRef(b);
+            if (ix == -1) {
+                warn("Could not find item to remove");
+                return;
+            }
+            arr.RemoveAt(ix);
         }
 
         protected void AddToMacroblock(ObjInMap@ b) {

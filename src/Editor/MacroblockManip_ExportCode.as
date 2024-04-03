@@ -14,6 +14,7 @@ namespace Editor {
     import const array<SetSkinSpec@>@ LastFrameSkinsSet() from "Editor";
     import const array<SetSkinSpec@>@ LastFrameSkinsSetByAPI() from "Editor";
     import MacroblockWithSetSkins@ GetMapAsMacroblock() from "Editor";
+    import MacroblockSpec@ MakeMacroblockSpec() from "Editor";
     import MacroblockSpec@ MakeMacroblockSpec(CGameCtnBlock@[]@ blocks, CGameCtnAnchoredObject@[]@ items) from "Editor";
     import MacroblockSpec@ MakeMacroblockSpec(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items) from "Editor";
     import MacroblockSpec@ MacroblockSpecFromBuf(MemoryBuffer@ buf) from "Editor";
@@ -35,6 +36,18 @@ namespace Editor {
     import bool SetCamAnimationGoTo(vec2 lookAngleHV, vec3 position, float targetDist) from "Editor";
     import vec2 DirToLookUvFromCamera(vec3 target) from "Editor";
     import vec2 DirToLookUv(vec3 dir) from "Editor";
+
+    // returns a const version of the cached octree for all blocks/items in the map
+    import const OctTreeNode@ GetCachedMapOctTree() from "Editor";
+    // returns all blocks and items in mainMacroblock that are not in removeSource
+    import MacroblockSpec@ SubtractMacroblocks(MacroblockSpec@ mainMacroblock, MacroblockSpec@ removeSource) from "Editor";
+    // returns all blocks/items in map that are not in removeSource
+    import MacroblockSpec@ SubtractMacroblockFromMap(MacroblockSpec@ removeSource) from "Editor";
+    // returns all blocks/items in map that are not in removeSource
+    import MacroblockSpec@ SubtractMacroblockFromMapCache(MacroblockSpec@ removeSource) from "Editor";
+    // returns all blocks/items in map that are not in removeSource
+    import MacroblockSpec@ SubtractTreeFromMapCache(OctTreeNode@ removeSource) from "Editor";
+
 
     // import bool IsCtrlDown() from "Editor";
     // import bool IsAltDown() from "Editor";

@@ -86,7 +86,7 @@ layer_pops: [6.5, 12.8, 19.1, 25.4, 31.7, 38.01, 44.2, 50.5, 56.86, 63.14]
         auto farShape = GetStaticObjFromSource(farAwayShapeSource);
         auto cloud = GetStaticObjFromSource(cloudDistIdSource.Replace("{ID}", tostring(ix)));
         auto existingPrefab = cast<CPlugPrefab>(vl.Variants[ix].EntityModel);
-        if (existingPrefab is null || existingPrefab.Ents.Length < totalElems) {
+        if (existingPrefab is null || existingPrefab.Ents.Length < uint(totalElems)) {
             auto srcModel = SetVarListVariantModel(vl, ix, dynaSourcesId.Replace("{ID}", tostring(ix)));
         }
 
@@ -132,7 +132,7 @@ layer_pops: [6.5, 12.8, 19.1, 25.4, 31.7, 38.01, 44.2, 50.5, 56.86, 63.14]
             KinematicConstraint(kinCon)
                 .Rot(NPlugDyna::EAxis::y).AnglesMM(0, 360)
                 .Trans(NPlugDyna::EAxis::z).PosMM(0, 0)
-                .SimpleLoop(true, (ringDist * 200. * ringSpeedRand) / speed, false);
+                .SimpleLoop(true, uint((ringDist * 200. * ringSpeedRand) / speed), false);
 
             kcIx++;
         }

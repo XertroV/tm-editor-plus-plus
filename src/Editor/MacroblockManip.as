@@ -1,195 +1,10 @@
 namespace Editor {
-    // shared class NetworkSerializable {
-    //     MemoryBuffer@ cached;
-
-    //     void WriteToNetworkBuffer(MemoryBuffer@ buf) {
-    //         if (cached is null) {
-    //             @cached = MemoryBuffer();
-    //             WriteToNetworkBufferInternal(cached);
-    //         }
-    //         cached.Seek(0);
-    //         buf.WriteFromBuffer(cached, cached.GetSize());
-    //     }
-
-    //     void WriteToNetworkBufferInternal(MemoryBuffer@ buf) {
-    //         throw("Not implemented -- override me");
-    //     }
-
-    //     NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) {
-    //         throw("Not implemented -- override me");
-    //         return null;
-    //     }
-
-    //     // calc size for network buffer, unused atm
-    //     uint CalcSize() {
-    //         throw("unimplemented");
-    //         return 0;
-    //     }
-
-    //     void WriteLPStringToBuffer(MemoryBuffer@ buf, const string &in str) {
-    //         if (str.Length > 0xFFFF) {
-    //             throw("String too long");
-    //         }
-    //         buf.Write(uint16(str.Length));
-    //         buf.Write(str);
-    //     }
-
-    //     string ReadLPStringFromBuffer(MemoryBuffer@ buf) {
-    //         uint16 len = buf.ReadUInt16();
-    //         return buf.ReadString(len);
-    //     }
-
-    //     void WriteNullableStructToBuffer(MemoryBuffer@ buf, NetworkSerializable@ obj) {
-    //         if (obj is null) {
-    //             buf.Write(uint8(0));
-    //         } else {
-    //             buf.Write(uint8(1));
-    //             obj.WriteToNetworkBufferInternal(buf);
-    //         }
-    //     }
-
-    //     NetworkSerializable@ ReadNullableStructFromBuffer(MemoryBuffer@ buf, NetworkSerializable@ obj) {
-    //         uint8 hasValue = buf.ReadUInt8();
-    //         if (hasValue == 0) {
-    //             return null;
-    //         } else {
-    //             obj.ReadFromNetworkBuffer(buf);
-    //             return obj;
-    //         }
-    //     }
-
-    //     void WriteVec3ToBuffer(MemoryBuffer@ buf, vec3 v) {
-    //         buf.Write(v.x);
-    //         buf.Write(v.y);
-    //         buf.Write(v.z);
-    //     }
-
-    //     vec3 ReadVec3FromBuffer(MemoryBuffer@ buf) {
-    //         return vec3(buf.ReadFloat(), buf.ReadFloat(), buf.ReadFloat());
-    //     }
-
-    //     void WriteNat3ToBuffer(MemoryBuffer@ buf, nat3 v) {
-    //         buf.Write(v.x);
-    //         buf.Write(v.y);
-    //         buf.Write(v.z);
-    //     }
-
-    //     nat3 ReadNat3FromBuffer(MemoryBuffer@ buf) {
-    //         return nat3(buf.ReadUInt32(), buf.ReadUInt32(), buf.ReadUInt32());
-    //     }
-    // }
-
-    // shared class MacroblockSpec : NetworkSerializable {
-    //     BlockSpec@[] blocks;
-    //     SkinSpec@[] skins;
-    //     ItemSpec@[] items;
-
-    //     BlockSpec@[]@ get_Blocks() {
-    //         return blocks;
-    //     }
-    //     SkinSpec@[]@ get_Skins() {
-    //         return skins;
-    //     }
-    //     ItemSpec@[]@ get_Items() {
-    //         return items;
-    //     }
-
-    //     MacroblockSpec(CGameCtnBlock@[]@ blocks, CGameCtnAnchoredObject@[]@ items) {
-    //         AddBlocks(blocks);
-    //         // ignore skins atm
-    //         // AddSkins(blocks);
-    //         AddItems(items);
-    //     }
-
-    //     void DrawDebug() {
-    //         UI::Text("Blocks: " + blocks.Length);
-    //         UI::Indent();
-    //         for (uint i = 0; i < blocks.Length; i++) {
-    //             UI::Text("Block " + i + ": " + blocks[i].name);
-    //         }
-    //         UI::Unindent();
-    //         UI::Text("Items: " + items.Length);
-    //         UI::Indent();
-    //         for (uint i = 0; i < items.Length; i++) {
-    //             UI::Text("Item " + i + ": " + items[i].name);
-    //         }
-    //         UI::Unindent();
-    //     }
-
-    //     uint CalcSize() override {
-    //         uint size = 0;
-    //         size += 4; // magic
-    //         size += 2; // block count
-    //         for (uint i = 0; i < blocks.Length; i++) {
-    //             size += blocks[i].CalcSize();
-    //         }
-    //         size += 4; // magic
-    //         size += 2; // skin count
-    //         for (uint i = 0; i < skins.Length; i++) {
-    //             size += skins[i].CalcSize();
-    //         }
-    //         size += 4; // magic
-    //         size += 2; // item count
-    //         for (uint i = 0; i < items.Length; i++) {
-    //             size += items[i].CalcSize();
-    //         }
-    //         return size;
-    //     }
-
-    //     void AddBlocks(CGameCtnBlock@[]@ blocks) {
-    //         for (uint i = 0; i < blocks.Length; i++) {
-    //             AddBlock(blocks[i]);
-    //         }
-    //     }
-    //     void AddBlock(CGameCtnBlock@ block) {
-    //         blocks.InsertLast(BlockSpec(block));
-    //     }
-    //     void AddSkins(CGameCtnBlock@[]@ blocks) {
-    //         for (uint i = 0; i < blocks.Length; i++) {
-    //             if (blocks[i].Skin != null) {
-    //                 AddSkin(blocks[i].Skin, i);
-    //             }
-    //         }
-    //     }
-    //     void AddSkin(CGameCtnBlockSkin@ skin, uint ix) {
-    //         skins.InsertLast(SkinSpec(skin, ix));
-    //     }
-    //     void AddItems(CGameCtnAnchoredObject@[]@ items) {
-    //         for (uint i = 0; i < items.Length; i++) {
-    //             AddItem(items[i]);
-    //         }
-    //     }
-    //     void AddItem(CGameCtnAnchoredObject@ item) {
-    //         items.InsertLast(ItemSpec(item));
-    //     }
-
-    //     void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
-    //         // 0x734b4c42 = "BLKs"
-    //         buf.Write(MAGIC_BLOCKS);
-    //         buf.Write(uint16(blocks.Length));
-    //         for (uint i = 0; i < blocks.Length; i++) {
-    //             blocks[i].WriteToNetworkBuffer(buf);
-    //         }
-
-    //         // 0x734e4b53 = "SKNs"
-    //         buf.Write(MAGIC_SKINS);
-    //         // todo: leave skins for later, can replicate with API anyway
-    //         buf.Write(uint16(0));
-    //         // buf.Write(uint16(skins.Length));
-    //         // for (uint i = 0; i < skins.Length; i++) {
-    //         //     skins[i].WriteToNetworkBuffer(buf);
-    //         // }
-
-    //         // 0x734d5449 = "ITMs"
-    //         buf.Write(MAGIC_ITEMS);
-    //         buf.Write(uint16(items.Length));
-    //         for (uint i = 0; i < items.Length; i++) {
-    //             items[i].WriteToNetworkBuffer(buf);
-    //         }
-    //     }
-    // }
 
     class MacroblockSpecPriv : MacroblockSpec {
+        MacroblockSpecPriv() {
+            super({}, {});
+        }
+
         MacroblockSpecPriv(CGameCtnBlock@[]@ blocks, CGameCtnAnchoredObject@[]@ items) {
             super(blocks, items);
         }
@@ -370,116 +185,6 @@ namespace Editor {
     const uint32 MAGIC_BLOCKS = 0x734b4c42;
     const uint32 MAGIC_SKINS = 0x734e4b53;
     const uint32 MAGIC_ITEMS = 0x734d5449;
-
-    // shared enum BlockFlags {
-    //     None = 0,
-    //     Ground = 1,
-    //     Ghost = 2,
-    //     Free = 4,
-    // }
-
-    // shared class BlockSpec : NetworkSerializable {
-    //     string name;
-    //     // 26=stadium; 25=stadium256
-    //     uint collection = 26;
-    //     string author;
-    //     nat3 coord;
-    //     CGameCtnBlock::ECardinalDirections dir;
-    //     CGameCtnBlock::ECardinalDirections dir2;
-    //     vec3 pos;
-    //     vec3 pyr;
-    //     CGameCtnBlock::EMapElemColor color;
-    //     CGameCtnBlock::EMapElemLightmapQuality lmQual;
-    //     uint mobilIx;
-    //     uint mobilVariant;
-    //     uint variant;
-    //     uint8 flags;
-    //     // refcounted
-    //     WaypointSpec@ waypoint;
-    //     // block model not refcounted in this case
-    //     // block model -- get from name
-
-    //     // set to true in subclasses
-    //     bool canConstruct = false;
-
-    //     BlockSpec(CGameCtnBlock@ block) {
-    //         if (!canConstruct) {
-    //             throw("Cannot construct BlockSpec directly");
-    //         }
-    //     }
-
-    //     BlockSpec(MemoryBuffer@ buf) {
-    //         ReadFromNetworkBuffer(buf);
-    //         if (collection != 26) {
-    //             throw("Warning: block collection is not stadium");
-    //         }
-    //     }
-
-    //     uint CalcSize() override {
-    //         uint size = 0;
-    //         size += 2; // name length
-    //         size += name.Length;
-    //         size += 4; // collection
-    //         size += 2; // author length
-    //         size += author.Length;
-    //         size += 12; // coord
-    //         size += 1; // dir
-    //         size += 1; // dir2
-    //         size += 12; // pos
-    //         size += 12; // pyr
-    //         size += 1; // color
-    //         size += 1; // lmQual
-    //         size += 4; // mobilIx
-    //         size += 4; // mobilVariant
-    //         size += 4; // variant
-    //         size += 1; // flags
-    //         size += 1; // waypoint present
-    //         if (waypoint !is null) {
-    //             size += waypoint.CalcSize();
-    //         }
-    //         return size;
-    //     }
-
-    //     void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
-    //         WriteLPStringToBuffer(buf, name);
-    //         buf.Write(collection);
-    //         WriteLPStringToBuffer(buf, author);
-    //         WriteNat3ToBuffer(buf, coord);
-    //         buf.Write(uint8(dir));
-    //         buf.Write(uint8(dir2));
-    //         WriteVec3ToBuffer(buf, pos);
-    //         WriteVec3ToBuffer(buf, pyr);
-    //         buf.Write(uint8(color));
-    //         buf.Write(uint8(lmQual));
-    //         buf.Write(mobilIx);
-    //         buf.Write(mobilVariant);
-    //         buf.Write(variant);
-    //         buf.Write(flags);
-    //         WriteNullableStructToBuffer(buf, waypoint);
-    //     }
-
-    //     NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
-    //         name = ReadLPStringFromBuffer(buf);
-    //         collection = buf.ReadUInt32();
-    //         author = ReadLPStringFromBuffer(buf);
-    //         coord = ReadNat3FromBuffer(buf);
-    //         dir = CGameCtnBlock::ECardinalDirections(buf.ReadUInt8());
-    //         dir2 = CGameCtnBlock::ECardinalDirections(buf.ReadUInt8());
-    //         pos = ReadVec3FromBuffer(buf);
-    //         pyr = ReadVec3FromBuffer(buf);
-    //         color = CGameCtnBlock::EMapElemColor(buf.ReadUInt8());
-    //         lmQual = CGameCtnBlock::EMapElemLightmapQuality(buf.ReadUInt8());
-    //         mobilIx = buf.ReadUInt32();
-    //         mobilVariant = buf.ReadUInt32();
-    //         variant = buf.ReadUInt32();
-    //         flags = buf.ReadUInt8();
-    //         // nullable struct
-    //         if (buf.ReadUInt8() == 1) {
-    //             @waypoint = WaypointSpec(buf);
-    //         }
-    //         return this;
-    //     }
-    // }
 
     class BlockSpecPriv : BlockSpec {
         uint64 ObjPtr;
@@ -688,58 +393,41 @@ namespace Editor {
                 MathX::Vec3Eq(pyr, Editor::GetBlockRotation(block)) &&
                 color == block.MapElemColor && lmQual == block.MapElemLmQuality && mobilIx == block.MobilIndex &&
                 mobilVariant == block.MobilVariantIndex && variant == block.BlockInfoVariantIndex &&
-                flags == (block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None);
+                flags == uint8((block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None));
         }
 
         bool opEquals(const BlockSpec@ other) const override {
+            if (other is null) return false;
+            // debug failed match
+            // trace("opEquals for: " + name + " and " + other.name);
+            // trace('name match: ' + (name == other.name));
+            // trace('collection match: ' + (collection == other.collection));
+            // trace('author match: ' + (author == other.author));
+            // trace('coord match: ' + MathX::Nat3Eq(coord, other.coord));
+            // trace('dir match: ' + (dir == other.dir));
+            // trace('dir2 match: ' + (dir2 == other.dir2));
+            // trace('pos match: ' + MathX::Vec3Eq(pos, other.pos));
+            // trace('pyr match: ' + MathX::Vec3Eq(pyr, other.pyr));
+            // trace('color match: ' + (color == other.color));
+            // trace('lmQual match: ' + (lmQual == other.lmQual));
+            // trace('mobilIx match: ' + (mobilIx == other.mobilIx));
+            // trace('mobilVariant match: ' + (mobilVariant == other.mobilVariant));
+            // trace('variant match: ' + (variant == other.variant));
+            // trace('flags match: ' + (flags == other.flags));
+
+            auto o2 = cast <BlockSpecPriv>(other);
+            if (ObjPtr > 0 && o2 !is null && o2.ObjPtr == ObjPtr && name == other.name) return true;
+
             return name == other.name && collection == other.collection && author == other.author &&
                 MathX::Nat3Eq(coord, other.coord) && dir == other.dir && dir2 == other.dir2 &&
                 MathX::Vec3Eq(pos, other.pos) && MathX::Vec3Eq(pyr, other.pyr) &&
-                color == other.color && lmQual == other.lmQual && mobilIx == other.mobilIx && mobilVariant == other.mobilVariant &&
+                color == other.color && lmQual == other.lmQual && mobilIx == other.mobilIx &&
+                // mobilVariant not set when block is being placed
+                (mobilVariant == other.mobilVariant || mobilVariant == 63 || other.mobilVariant == 63) &&
                 variant == other.variant && flags == other.flags;
         }
     }
 
-    // shared class WaypointSpec : NetworkSerializable {
-    //     string tag;
-    //     uint order;
-
-    //     WaypointSpec(CGameWaypointSpecialProperty@ waypoint) {
-    //         tag = waypoint.Tag;
-    //         order = waypoint.Order;
-    //     }
-
-    //     WaypointSpec(MemoryBuffer@ buf) {
-    //         ReadFromNetworkBuffer(buf);
-    //     }
-
-    //     void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
-    //         WriteLPStringToBuffer(buf, tag);
-    //         buf.Write(order);
-    //     }
-
-    //     NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
-    //         tag = ReadLPStringFromBuffer(buf);
-    //         order = buf.ReadUInt32();
-    //         return this;
-    //     }
-    // }
-
-    // shared class SkinSpec : NetworkSerializable {
-    //     CGameCtnBlockSkin@ rawSkin;
-    //     uint blockIx;
-
-    //     SkinSpec(CGameCtnBlockSkin@ skin, uint blockIx) {
-    //         throw("skin spec not really implemented");
-    //         @rawSkin = skin;
-    //         this.blockIx = blockIx;
-    //     }
-
-    //     void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
-    //         buf.Write(blockIx);
-    //         // buf.Write(rawSkin);
-    //     }
-    // }
 
     class SkinSpecPriv : SkinSpec {
         SkinSpecPriv(CGameCtnBlockSkin@ skin, uint blockIx) {
@@ -759,60 +447,6 @@ namespace Editor {
         }
     }
 
-    // shared class ItemSpec : NetworkSerializable {
-    //     string name;
-    //     // 26=stadium; 25=stadium256
-    //     uint collection = 26;
-    //     string author;
-    //     nat3 coord;
-    //     CGameCtnAnchoredObject::ECardinalDirections dir;
-    //     vec3 pos;
-    //     vec3 pyr;
-    //     float scale;
-    //     CGameCtnAnchoredObject::EMapElemColor color;
-    //     CGameCtnAnchoredObject::EMapElemLightmapQuality lmQual;
-    //     CGameCtnAnchoredObject::EPhaseOffset phase;
-    //     mat3 visualRot;
-    //     vec3 pivotPos;
-    //     uint8 isFlying;
-    //     uint16 variantIx;
-    //     uint associatedBlockIx;
-    //     uint itemGroupOnBlock;
-    //     // ? refcounted
-    //     WaypointSpec@ waypoint;
-    //     // bg skin
-    //     // fg skin
-    //     // model
-
-    //     bool canConstruct = false;
-
-    //     ItemSpec(CGameCtnAnchoredObject@ item) {
-    //         if (!canConstruct) {
-    //             throw("Cannot construct ItemSpec directly");
-    //         }
-    //     }
-
-    //     void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
-    //         WriteLPStringToBuffer(buf, name);
-    //         buf.Write(collection);
-    //         WriteLPStringToBuffer(buf, author);
-    //         WriteNat3ToBuffer(buf, coord);
-    //         buf.Write(uint8(dir));
-    //         WriteVec3ToBuffer(buf, pos);
-    //         WriteVec3ToBuffer(buf, pyr);
-    //         buf.Write(scale);
-    //         buf.Write(uint8(color));
-    //         buf.Write(uint8(lmQual));
-    //         buf.Write(uint8(phase));
-    //         // skip visualRot b/c it's always identity
-    //         WriteVec3ToBuffer(buf, pivotPos);
-    //         buf.Write(isFlying);
-    //         buf.Write(variantIx);
-    //         buf.Write(associatedBlockIx);
-    //         buf.Write(itemGroupOnBlock);
-    //         WriteNullableStructToBuffer(buf, waypoint);
-    //     }
-    // }
 
     class ItemSpecPriv : ItemSpec {
         uint64 ObjPtr;
@@ -907,11 +541,21 @@ namespace Editor {
                 MathX::Vec3Eq(pyr, Editor::GetItemRotation(item)) && scale == item.Scale &&
                 color == item.MapElemColor && lmQual == item.MapElemLmQuality && phase == item.AnimPhaseOffset &&
                 MathX::Vec3Eq(pivotPos, Editor::GetItemPivot(item)) &&
-                isFlying == (item.IsFlying ? 1 : 0) && variantIx == item.IVariant;
+                isFlying == uint8(item.IsFlying ? 1 : 0) && variantIx == item.IVariant;
         }
 
         bool MatchesItem(CGameCtnEditorScriptAnchoredObject@ item) override {
             return name == item.ItemModel.IdName && MathX::Vec3Eq(pos, item.Position + vec3(0, 56, 0));
+        }
+
+        bool opEquals(const ItemSpec@ other) const override {
+            if (other is null) return false;
+            return other !is null && name == other.name && collection == other.collection && author == other.author &&
+                MathX::Nat3Eq(coord, other.coord) && dir == other.dir &&
+                MathX::Vec3Eq(pos, other.pos) && MathX::Vec3Eq(pyr, other.pyr) &&
+                scale == other.scale && color == other.color && lmQual == other.lmQual &&
+                phase == other.phase && MathX::Vec3Eq(pivotPos, other.pivotPos) &&
+                isFlying == other.isFlying && variantIx == other.variantIx;
         }
 
         void WriteToMemory(CustomBuffer@ mem) {

@@ -14,7 +14,9 @@ class BI_MainTab : Tab {
         @g_DuplicateFreeBlocks_SubTab = ViewDuplicateFreeBlocksTab(Children);
         WaypointsBITab(Children);
         MacroblocksBITab(Children);
-        // ViewKinematicsTab(Children);
+#if DEV
+        OctTreeDebugTab(Children);
+#endif
     }
 
     void DrawInner() override {
@@ -537,5 +539,58 @@ class MacroblocksBITab : Tab {
                 }
             }
         }
+    }
+}
+
+
+class OctTreeDebugTab : Tab {
+    OctTreeDebugTab(TabGroup@ p) {
+        super(p, "OctTree Debug", Icons::Cubes + Icons::Tree);
+    }
+
+    void DrawInner() override {
+        auto cache = Editor::GetMapCache();
+        auto tree = cache.objsRoot;
+        if (tree is null) {
+            UI::Text("No tree found.");
+            return;
+        }
+        UI_Debug_OctTreeNode(tree, "/");
+    }
+}
+
+
+
+void UI_Debug_OctTreeNode(OctTreeNode@ node, const string &in path) {
+    if (node is null) return;
+    if (UI::TreeNode(path + " [ "+node.RegionsInside+" / "+node.PointsInside+" ]###otn"+path)) {
+
+        if (node.children.Length > 0) {
+            for (uint i = 0; i < node.children.Length; i++) {
+                UI_Debug_OctTreeNode(node.children[i], path + i + "/");
+            }
+        }
+
+        UI::AlignTextToFramePadding();
+        UI::Text("Regions: ("+node.regions.Length+" / ("+node.RegionsInside+")");
+        if (node.regions.Length > 0) {
+            UI::Indent();
+            for (uint i = 0; i < node.regions.Length; i++) {
+                UI::Text(node.regions[i].ToString());
+            }
+            UI::Unindent();
+        }
+
+        UI::AlignTextToFramePadding();
+        UI::Text("Points: ("+node.points.Length+") / ("+node.PointsInside+")");
+        if (node.points.Length > 0) {
+            UI::Indent();
+            for (uint i = 0; i < node.points.Length; i++) {
+                UI::Text(node.points[i].ToString());
+            }
+            UI::Unindent();
+        }
+
+        UI::TreePop();
     }
 }

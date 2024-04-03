@@ -81,7 +81,8 @@ namespace Editor {
 
     void QueueFreeBlockDeletion(BlockSpec@ block) {
         if (block is null || !block.isFree) return;
-        if (pendingFreeBlocksToDelete.Find(block) != -1) return;
+        // don't ignore duplicates, and don't delete all matching freeblocks
+        // if (pendingFreeBlocksToDelete.Find(block) != -1) return;
         pendingFreeBlocksToDelete.InsertLast(block);
         if (!waitingToDeleteFreeBlocks) {
             waitingToDeleteFreeBlocks = true;
@@ -232,6 +233,7 @@ void FindFreeBlockPMTAndSetMbId(CGameEditorPluginMapMapType@ pmt, Editor::BlockS
     for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
         @b = pmt.ClassicBlocks[i];
         if (!Editor::IsBlockFree(b)) continue;
+        if (Editor::GetBlockMbInstId(b) == mbInstId) continue;
         if (bs.MatchesBlock(b)) {
             blocks.InsertLast(b);
             Editor::SetBlockMbInstId(b, mbInstId);

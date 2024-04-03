@@ -38,12 +38,12 @@ namespace CreateObj {
         startKCix += CreateFireVariant(vl, varIx + 4, 0, size, FireVarType::Static, 2);
         startKCix += CreateFireVariant(vl, varIx + 5, 0, size, FireVarType::Static, 2, true);
         varIx += 6;
-        for (uint j = 0; j < nbComplexVarsPerSize; j++) {
+        for (uint j = 0; j < uint(nbComplexVarsPerSize); j++) {
             startKCix += CreateFireVariant(vl, varIx, 0, size, FireVarType::Complex, j*0 + 1);
             varIx++;
         }
         // continue; // debug
-        for (uint j = 0; j < nbComplexVarsPerSize; j++) {
+        for (uint j = 0; j < uint(nbComplexVarsPerSize); j++) {
             startKCix += CreateFireVariant(vl, varIx, 0, size, FireVarType::Complex, j*0 + 1, true);
             varIx++;
         }

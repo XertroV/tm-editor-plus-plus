@@ -345,7 +345,7 @@ namespace CustomCursorRotations {
 
     void DrawSettings() {
         if (customRot <= 0.0005) customRot = 0.0005;
-        int origParts = Math::Round(TAU / 4. / customRot);
+        int origParts = int(Math::Round(TAU / 4. / customRot));
         int newParts = Math::Clamp(UI::InputInt("Taps per 90 degrees", origParts), 2, 360);
         if (origParts != newParts) customRot = TAU / 4. / float(newParts);
         float crDeg = Math::ToDeg(customRot);
@@ -477,7 +477,7 @@ namespace CustomCursorRotations {
             auto pyr = cursorCustomPYR;
             pyr.y = cursorRot.YawWithCustomExtra(pyr.y);
             auto newRot = EulerToMat(pyr);
-            bool isSnapping = itemCursor.snappedGlobalIx != -1;
+            bool isSnapping = itemCursor.snappedGlobalIx != uint(-1);
             bool autoRotating = !isSnapping && itemCursor.isAutoRotate;
             if (!autoRotating) {
                 auto pos = itemCursor.pos;
@@ -697,7 +697,7 @@ namespace CustomCursorRotations {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cursor = editor.Cursor;
         auto itemCursor = DGameCursorItem(editor.ItemCursor);
-        bool autoRotating = itemCursor.snappedGlobalIx == -1 && itemCursor.isAutoRotate;
+        bool autoRotating = itemCursor.snappedGlobalIx == uint(-1) && itemCursor.isAutoRotate;
         if (CustomYawActive) {
             if (!autoRotating && Editor::IsInAnyItemPlacementMode(editor)) {
                 item.Yaw += cursorCustomPYR.y - AdditionalDirToYaw(cursor.AdditionalDir);

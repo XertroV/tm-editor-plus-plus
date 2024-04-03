@@ -198,6 +198,9 @@ namespace Editor {
         return SetSkinSpecPriv(buf);
     }
 
+    MacroblockSpec@ MakeMacroblockSpec() {
+        return MacroblockSpecPriv();
+    }
     MacroblockSpec@ MakeMacroblockSpec(CGameCtnBlock@[]@ blocks, CGameCtnAnchoredObject@[]@ items) {
         return MacroblockSpecPriv(blocks, items);
     }
@@ -344,6 +347,129 @@ namespace Editor {
 
     void SetupApplySkinsCBs() {
         RegisterOnMapTypeUpdateCallback(ApplySkinApplicationCB, "ApplySkinApplicationCB");
+    }
+
+    const OctTreeNode@ GetCachedMapOctTree() {
+        return GetMapCache().objsRoot;
+    }
+
+    // returns all blocks/items in mainMacroblock that are not in removeSource
+    MacroblockSpec@ SubtractMacroblocks(MacroblockSpec@ mainMacroblock, MacroblockSpec@ removeSource) {
+        auto tree = OctTreeNode(nat3(255, 255, 255));
+        // prep tree
+        for (uint i = 0; i < removeSource.blocks.Length; i++) {
+            tree.Insert(removeSource.blocks[i]);
+        }
+        for (uint i = 0; i < removeSource.items.Length; i++) {
+            tree.Insert(removeSource.items[i]);
+        }
+        // subtract
+        auto ret = MacroblockSpecPriv();
+        for (uint i = 0; i < mainMacroblock.blocks.Length; i++) {
+            if (tree.Contains(mainMacroblock.blocks[i])) {
+                // we need to avoid double subtracting duplicates
+                if (!tree.Remove(mainMacroblock.blocks[i])) {
+                    warn("Failed to remove block from tree");
+                }
+            } else {
+                ret.AddBlock(mainMacroblock.blocks[i]);
+            }
+        }
+        for (uint i = 0; i < mainMacroblock.items.Length; i++) {
+            if (tree.Contains(mainMacroblock.items[i])) {
+                // we need to avoid double subtracting duplicates
+                if (!tree.Remove(mainMacroblock.items[i])) {
+                    warn("Failed to remove item from tree");
+                }
+            } else {
+                ret.AddItem(mainMacroblock.items[i]);
+            }
+        }
+        return ret;
+    }
+
+    // returns all blocks/items in map cache that are not in removeSource
+    MacroblockSpec@ SubtractTreeFromMapCache(OctTreeNode@ removeSource) {
+        auto cache = GetMapCache();
+        auto mapTree = cache.objsRoot.Clone();
+        if (mapTree.Length != cache.objsRoot.Length) {
+            warn("SubtractTreeFromMapCache: mapTree length mismatch: " + mapTree.Length + " | " + cache.objsRoot.Length);
+        }
+        for (uint i = 0; i < removeSource.Length; i++) {
+            mapTree.Remove(removeSource[i]);
+        }
+        if (mapTree.Length > 0) {
+            auto mb = mapTree.PopulateMacroblock(MakeMacroblockSpec());
+            if (mb.Length == 0) {
+                warn("SubtractTreeFromMapCache: macroblock from tree has zero length but should have some blocks/items; mapTree: " + mapTree.Length);
+                for (uint i = 0; i < mapTree.Length; i++) {
+                    warn("SubtractTreeFromMapCache: mapTree[" + i + "]: " + mapTree[i].ToString());
+                }
+                return null;
+            }
+            return mb;
+        }
+        return null;
+    }
+
+    // returns all blocks/items in map that are not in removeSource
+    MacroblockSpec@ SubtractMacroblockFromMapCache(MacroblockSpec@ removeSource) {
+        auto cache = GetMapCache();
+        auto mapTree = cache.objsRoot.Clone();
+        for (uint i = 0; i < removeSource.blocks.Length; i++) {
+            mapTree.Remove(removeSource.blocks[i]);
+        }
+        for (uint i = 0; i < removeSource.items.Length; i++) {
+            mapTree.Remove(removeSource.items[i]);
+        }
+        return mapTree.PopulateMacroblock(MakeMacroblockSpec());
+    }
+
+    // returns all blocks/items in map that are not in removeSource
+    MacroblockSpec@ SubtractMacroblockFromMap(MacroblockSpec@ removeSource) {
+        auto grassMwIdValue = GetMwId("Grass");
+        auto tree = OctTreeNode(nat3(255, 255, 255));
+        // prep tree
+        for (uint i = 0; i < removeSource.blocks.Length; i++) {
+            tree.Insert(removeSource.blocks[i]);
+        }
+        for (uint i = 0; i < removeSource.items.Length; i++) {
+            tree.Insert(removeSource.items[i]);
+        }
+        // subtract
+        auto mb = MakeMacroblockSpec();
+        auto map = GetApp().RootMap;
+        if (map is null) {
+            throw("No map loaded");
+        }
+        BlockSpec@ blockSpec;
+        ItemSpec@ itemSpec;
+        for (uint i = 0; i < map.Blocks.Length; i++) {
+            if (map.Blocks[i].DescId.Value == grassMwIdValue) {
+                continue;
+            }
+            @blockSpec = MakeBlockSpec(map.Blocks[i]);
+            if (tree.Contains(blockSpec)) {
+                // we need to avoid double subtracting duplicates
+                if (!tree.Remove(blockSpec)) {
+                    warn("Failed to remove block from tree");
+                }
+            } else {
+                mb.AddBlock(blockSpec);
+            }
+        }
+        for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
+            @itemSpec = MakeItemSpec(map.AnchoredObjects[i]);
+            if (tree.Contains(itemSpec)) {
+                // we need to avoid double subtracting duplicates
+                if (!tree.Remove(itemSpec)) {
+                    warn("Failed to remove item from tree");
+                }
+            } else {
+                mb.AddItem(itemSpec);
+            }
+        }
+        return mb;
     }
 }
 

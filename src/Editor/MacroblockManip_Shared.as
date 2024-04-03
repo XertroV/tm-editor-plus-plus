@@ -102,6 +102,10 @@ namespace Editor {
             return items;
         }
 
+        uint get_Length() {
+            return blocks.Length + items.Length;
+        }
+
         MacroblockSpec(CGameCtnBlock@[]@ blocks, CGameCtnAnchoredObject@[]@ items) {
             AddBlocks(blocks);
             // ignore skins atm
@@ -156,6 +160,9 @@ namespace Editor {
         void AddBlock(CGameCtnBlock@ block) {
             throw('override me');
         }
+        void AddBlock(BlockSpec@ block) {
+            blocks.InsertLast(block);
+        }
         void AddSkins(CGameCtnBlock@[]@ blocks) {
             for (uint i = 0; i < blocks.Length; i++) {
                 if (blocks[i].Skin != null) {
@@ -173,6 +180,9 @@ namespace Editor {
         }
         void AddItem(CGameCtnAnchoredObject@ item) {
             throw('override me');
+        }
+        void AddItem(ItemSpec@ item) {
+            items.InsertLast(item);
         }
 
         void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
@@ -392,6 +402,10 @@ namespace Editor {
             order = buf.ReadUInt32();
             return this;
         }
+
+        bool opEquals(const WaypointSpec@ other) const {
+            return tag == other.tag && order == other.order;
+        }
     }
 
     shared class SkinSpec : NetworkSerializable {
@@ -411,6 +425,11 @@ namespace Editor {
         void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
             buf.Write(blockIx);
             // buf.Write(rawSkin);
+        }
+
+        bool opEquals(const SkinSpec@ other) const {
+            return blockIx == other.blockIx;
+            // todo: compare skins
         }
     }
 
@@ -439,6 +458,19 @@ namespace Editor {
 
         SetSkinSpec(MemoryBuffer@ buf) {
             ReadFromNetworkBuffer(buf);
+        }
+
+        bool opEquals(const SetSkinSpec@ other) const {
+            if (block !is null) {
+                return block.opEquals(other.block)
+                    && fgSkin == other.fgSkin
+                    && bgSkin == other.bgSkin;
+            } else {
+                // item !is null
+                return item.opEquals(other.item)
+                    && fgSkin == other.fgSkin
+                    && bgSkin == other.bgSkin;
+            }
         }
 
         void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
@@ -507,6 +539,11 @@ namespace Editor {
 
         bool MatchesItem(CGameCtnEditorScriptAnchoredObject@ item) {
             throw("overridden elsewhere");
+            return false;
+        }
+
+        bool opEquals(const ItemSpec@ other) const {
+            throw("overridden elsewehre");
             return false;
         }
 

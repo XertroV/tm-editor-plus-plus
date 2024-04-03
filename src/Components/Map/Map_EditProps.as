@@ -556,7 +556,6 @@ class MapEditPropsTab : Tab {
             auto collectionId = useDefault ? origPlayerModelCollection :
                                 int(m_VehicleTestType) <= 3 ? 10003 : vehiclesId;
             auto authorId = useDefault ? origPlayerModelAuthor : nadeoId;
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             Editor::SetMapPlayerModel(editor.Challenge, setVehicleType, authorId, collectionId);
         }
         UI::SameLine();
