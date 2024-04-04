@@ -206,10 +206,14 @@ namespace Editor {
         }
 
         BlockSpecPriv(CGameCtnBlock@ block) {
-            ObjPtr = Dev_GetPointerForNod(block);
             // @GameBlock = block;
             // block.MwAddRef();
             super();
+            SetFrom(block);
+        }
+
+        void SetFrom(CGameCtnBlock@ block) override {
+            ObjPtr = Dev_GetPointerForNod(block);
             name = block.BlockInfo.IdName;
             // collection = blah
             author = block.BlockInfo.Author.GetName();
@@ -374,25 +378,26 @@ namespace Editor {
             // trace('name match: ' + (name == block.BlockInfo.IdName));
             // trace('collection match: ' + (collection == 26));
             // trace('author match: ' + (author == block.BlockInfo.Author.GetName()));
-            // trace('coord match: ' + MathX::Nat3Eq(coord, block.Coord));
+            // trace('coord match: ' + MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0)));
             // trace('dir match: ' + (dir == block.Direction));
             // trace('dir2 match: ' + (dir2 == block.Direction));
             // trace('pos match: ' + MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)));
             // trace('pyr match: ' + MathX::Vec3Eq(pyr, Editor::GetBlockRotation(block)));
             // trace('color match: ' + (color == block.MapElemColor));
             // trace('lmQual match: ' + (lmQual == block.MapElemLmQuality));
-            // trace('mobilIx match: ' + (mobilIx == block.MobilIndex));
-            // trace('mobilVariant match: ' + (mobilVariant == block.MobilVariantIndex));
-            // trace('variant match: ' + (variant == block.BlockInfoVariantIndex));
+            // trace('mobilIx match: ' + (mobilIx == block.MobilIndex) + ' ' + mobilIx + ' / ' + block.MobilIndex);
+            // trace('mobilVariant match: ' + (mobilVariant == block.MobilVariantIndex) + ' ' + mobilVariant + ' / ' + block.MobilVariantIndex);
+            // trace('variant match: ' + (variant == block.BlockInfoVariantIndex) + ' ' + variant + ' / ' + block.BlockInfoVariantIndex);
             // trace('flags match: ' + (flags == (block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None)));
 
             return name == block.DescId.GetName() && collection == 26 && author == block.BlockInfo.Author.GetName() &&
-                (Editor::IsBlockFree(block) || MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0))) &&
+                ((isFree && Editor::IsBlockFree(block)) || MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0))) &&
                 dir == block.Direction && dir2 == block.Direction &&
                 MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)) &&
                 MathX::Vec3Eq(pyr, Editor::GetBlockRotation(block)) &&
                 color == block.MapElemColor && lmQual == block.MapElemLmQuality && mobilIx == block.MobilIndex &&
-                mobilVariant == block.MobilVariantIndex && variant == block.BlockInfoVariantIndex &&
+                (mobilVariant == block.MobilVariantIndex || mobilVariant == 63 || block.MobilVariantIndex == 63) &&
+                // variant == block.BlockInfoVariantIndex &&
                 flags == uint8((block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None));
         }
 
@@ -411,8 +416,8 @@ namespace Editor {
             // trace('color match: ' + (color == other.color));
             // trace('lmQual match: ' + (lmQual == other.lmQual));
             // trace('mobilIx match: ' + (mobilIx == other.mobilIx));
-            // trace('mobilVariant match: ' + (mobilVariant == other.mobilVariant));
-            // trace('variant match: ' + (variant == other.variant));
+            // trace('mobilVariant match: ' + (mobilVariant == other.mobilVariant) + ' ' + mobilVariant + ' / ' + other.mobilVariant);
+            // trace('variant match: ' + (variant == other.variant) + ' ' + variant + ' / ' + other.variant);
             // trace('flags match: ' + (flags == other.flags));
 
             auto o2 = cast <BlockSpecPriv>(other);
@@ -424,7 +429,8 @@ namespace Editor {
                 color == other.color && lmQual == other.lmQual && mobilIx == other.mobilIx &&
                 // mobilVariant not set when block is being placed
                 (mobilVariant == other.mobilVariant || mobilVariant == 63 || other.mobilVariant == 63) &&
-                variant == other.variant && flags == other.flags;
+                // variant == other.variant && // ignore variant, can be wrong?
+                flags == other.flags;
         }
     }
 
@@ -478,9 +484,10 @@ namespace Editor {
             author = item.ItemModel.Author.GetName();
             coord = item.BlockUnitCoord - nat3(0, 1, 0);
             SetCoordFromAssociatedBlock(Editor::GetItemsBlockAssociation(item));
-            dir = CGameCtnAnchoredObject::ECardinalDirections(-1);
+            dir = CGameCtnAnchoredObject::ECardinalDirections(uint8(-1));
             pos = Editor::GetItemLocation(item) + vec3(0, 56, 0);
             pyr = Editor::GetItemRotation(item);
+            //if (pyr.y < NegPI) pyr.y += TAU;
             scale = item.Scale;
             color = item.MapElemColor;
             lmQual = item.MapElemLmQuality;
@@ -534,28 +541,53 @@ namespace Editor {
             ReadFromNetworkBuffer(buf);
         }
 
-        bool MatchesItem(CGameCtnAnchoredObject@ item) override {
-            return name == item.ItemModel.IdName && collection == 26 && author == item.ItemModel.Author.GetName() &&
-                MathX::Nat3Eq(coord, item.BlockUnitCoord - nat3(0, 1, 0)) && dir == CGameCtnAnchoredObject::ECardinalDirections(-1) &&
+        bool MatchesItem(CGameCtnAnchoredObject@ item) const override {
+            bool ret = name == item.ItemModel.IdName && collection == 26 && author == item.ItemModel.Author.GetName() &&
+                MathX::Nat3Eq(coord, item.BlockUnitCoord - nat3(0, 1, 0)) &&
+                // uint8(dir) == uint(-1) &&
                 MathX::Vec3Eq(pos, Editor::GetItemLocation(item) + vec3(0, 56, 0)) &&
-                MathX::Vec3Eq(pyr, Editor::GetItemRotation(item)) && scale == item.Scale &&
+                scale == item.Scale &&
                 color == item.MapElemColor && lmQual == item.MapElemLmQuality && phase == item.AnimPhaseOffset &&
                 MathX::Vec3Eq(pivotPos, Editor::GetItemPivot(item)) &&
-                isFlying == uint8(item.IsFlying ? 1 : 0) && variantIx == item.IVariant;
+                isFlying == uint8(item.IsFlying ? 1 : 0) &&
+                variantIx == item.IVariant;
+            if (!ret) return false;
+            vec3 itemRot = Editor::GetItemRotation(item);
+            return AnglesVeryClose(pyr, itemRot);
         }
 
-        bool MatchesItem(CGameCtnEditorScriptAnchoredObject@ item) override {
+        bool MatchesItem(CGameCtnEditorScriptAnchoredObject@ item) const override {
             return name == item.ItemModel.IdName && MathX::Vec3Eq(pos, item.Position + vec3(0, 56, 0));
         }
 
         bool opEquals(const ItemSpec@ other) const override {
+            // debug failed match
+            // trace("opEquals for: " + name + " and " + other.name);
+            // trace('name match: ' + (name == other.name));
+            // trace('collection match: ' + (collection == other.collection));
+            // trace('author match: ' + (author == other.author));
+            // trace('coord match: ' + MathX::Nat3Eq(coord, other.coord));
+            // trace('dir match: ' + (uint8(dir) == uint8(other.dir)) + ' ' + dir + ' ' + other.dir);
+            // trace('pos match: ' + MathX::Vec3Eq(pos, other.pos));
+            // trace('pyr match: ' + MathX::Vec3Eq(pyr, other.pyr));
+            // trace('scale match: ' + (scale == other.scale));
+            // trace('color match: ' + (color == other.color));
+            // trace('lmQual match: ' + (lmQual == other.lmQual));
+            // trace('phase match: ' + (phase == other.phase));
+            // trace('pivotPos match: ' + MathX::Vec3Eq(pivotPos, other.pivotPos));
+            // trace('isFlying match: ' + (isFlying == other.isFlying));
+            // trace('variantIx match: ' + (variantIx == other.variantIx));
+
             if (other is null) return false;
             return other !is null && name == other.name && collection == other.collection && author == other.author &&
-                MathX::Nat3Eq(coord, other.coord) && dir == other.dir &&
-                MathX::Vec3Eq(pos, other.pos) && MathX::Vec3Eq(pyr, other.pyr) &&
+                MathX::Nat3Eq(coord, other.coord) &&
+                // uint8(dir) == uint8(other.dir) && // maybe ignore dir, can be ff or other
+                MathX::Vec3Eq(pos, other.pos) &&
                 scale == other.scale && color == other.color && lmQual == other.lmQual &&
                 phase == other.phase && MathX::Vec3Eq(pivotPos, other.pivotPos) &&
-                isFlying == other.isFlying && variantIx == other.variantIx;
+                // isFlying == other.isFlying && // ignore isflying
+                variantIx == other.variantIx &&
+                AnglesVeryClose(pyr, other.pyr);
         }
 
         void WriteToMemory(CustomBuffer@ mem) {

@@ -142,7 +142,9 @@ void _WatchAndCleanUp(ref@ r) {
             map.AnchoredObjects[i].BlockUnitCoord.x = uint(-1);
         }
     }
+    Editor::TrackMap_OnRemoveBlock_BeginAPI();
     pmt.RemoveBlockSafe(bm, Nat3ToInt3(coord), pmt.CursorDir);
+    Editor::TrackMap_OnRemoveBlock_EndAPI();
     for (uint i = 0; i < moved.Length; i++) {
         moved[i].BlockUnitCoord.x = coord.x;
     }

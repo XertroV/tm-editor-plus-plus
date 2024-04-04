@@ -16,6 +16,12 @@ float NormalizeAngle(float angle) {
     return angle;
 }
 
+bool AnglesVeryClose(vec3 a, vec3 b) {
+    return Math::Abs(NormalizeAngle(a.x - b.x)) < 0.0001 &&
+           Math::Abs(NormalizeAngle(a.y - b.y)) < 0.0001 &&
+           Math::Abs(NormalizeAngle(a.z - b.z)) < 0.0001;
+}
+
 // shared float CardinalDirectionToYaw(int dir) {
 //     // n:0, e:1, s:2, w:3
 //     return -Math::PI/2. * float(dir) + (dir >= 2 ? TAU : 0);

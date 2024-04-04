@@ -65,8 +65,49 @@ MemPatcher@ Editor_DeleteUnderCursor = MemPatcher(
 
 namespace Editor {
     // unique list of block specs to delete
-    BlockSpec@[] pendingFreeBlocksToDelete;
+    BlockSpec@[]@ pendingFreeBlocksToDelete = {};
+    // we put the pending list here while intercept-gathering
+    BlockSpec@[]@ globalPendingListTmp = null;
     bool waitingToDeleteFreeBlocks = false;
+
+    void BeginInterceptFreeblockQueueAndGather() {
+        if (globalPendingListTmp !is null) {
+            throw("free block interception already active");
+        }
+        @globalPendingListTmp = pendingFreeBlocksToDelete;
+        @pendingFreeBlocksToDelete = {};
+    }
+
+    BlockSpec@[]@ EndInterceptFreeblockQueueAndGather() {
+        if (globalPendingListTmp is null) {
+            throw("free block interception not active");
+        }
+        auto @ret = pendingFreeBlocksToDelete;
+        @pendingFreeBlocksToDelete = globalPendingListTmp;
+        @globalPendingListTmp = null;
+        return ret;
+    }
+
+    uint DeleteFreeblocks(CGameCtnBlock@[]@ blocks) {
+        auto @tmpPending = pendingFreeBlocksToDelete;
+        @pendingFreeBlocksToDelete = {};
+        for (uint i = 0; i < blocks.Length; i++) {
+            pendingFreeBlocksToDelete.InsertLast(MakeBlockSpec(blocks[i]));
+        }
+        RunDeleteFreeBlockDetection();
+        auto ret = lastFreeBlockDeletedNb;
+        @pendingFreeBlocksToDelete = tmpPending;
+        return ret;
+    }
+
+    uint DeleteFreeblocks(BlockSpec@[]@ blocks) {
+        auto @tmpPending = pendingFreeBlocksToDelete;
+        @pendingFreeBlocksToDelete = blocks;
+        RunDeleteFreeBlockDetection();
+        auto ret = lastFreeBlockDeletedNb;
+        @pendingFreeBlocksToDelete = tmpPending;
+        return ret;
+    }
 
     void QueueFreeBlockDeletionFromMB(MacroblockSpec@ mb) {
         if (mb is null) return;
@@ -96,8 +137,11 @@ namespace Editor {
         return pendingFreeBlocksToDelete.Length > 0 && waitingToDeleteFreeBlocks;
     }
 
+    uint lastFreeBlockDeletedNb;
+
     // Run this in MainLoop or GameLoop
     void RunDeleteFreeBlockDetection() {
+        lastFreeBlockDeletedNb = 0;
         if (pendingFreeBlocksToDelete.Length == 0) return;
         canDeleteFreeBlocks = true;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -120,6 +164,10 @@ namespace Editor {
         Editor::SetEditMode(editor, _delFreeOrigEdit);
         Editor::SetPlacementMode(editor, _delFreeOrigPlacement);
         Editor::SetItemPlacementMode(_delFreeOrigItem);
+        if (_delFreeOrigEdit != CGameEditorPluginMap::EditMode::Place) {
+            dev_trace('del free blocks resetting edit mode, was: ' + tostring(editor.PluginMapType.EditMode) + ', new: ' + tostring(_delFreeOrigEdit));
+            Editor::SetEditMode(editor, _delFreeOrigEdit);
+        }
     }
 
     bool canDeleteFreeBlocks = false;
@@ -183,12 +231,18 @@ namespace Editor {
         CGameCtnBlock@[] blocks;
         BlockSpec@ bs;
         auto pmt = editor.PluginMapType;
+
+        auto toDelTree = OctTreeNode(nat3(255));
         for (uint i = 0; i < pendingFreeBlocksToDelete.Length; i++) {
-            @bs = pendingFreeBlocksToDelete[i];
-            FindFreeBlockPMTAndSetMbId(pmt, bs, blocks, mbInstId);
+            toDelTree.Insert(pendingFreeBlocksToDelete[i]);
+            // @bs = pendingFreeBlocksToDelete[i];
+            // FindFreeBlockPMTAndSetMbId(pmt, bs, blocks, mbInstId);
         }
+        FindFreeBlockPMTAndSetMbId(pmt, toDelTree, blocks, mbInstId);
+
         dev_trace('set free block mb ids: ' + mbInstId + ' for ' + blocks.Length + ' blocks');
         pendingFreeBlocksToDelete.RemoveRange(0, pendingFreeBlocksToDelete.Length);
+        lastFreeBlockDeletedNb = blocks.Length;
         if (blocks.Length == 0) {
             dev_trace('no blocks to delete');
             waitingToDeleteFreeBlocks = false;
@@ -229,16 +283,35 @@ namespace Editor {
     Editor::ItemMode _delFreeOrigItem = Editor::ItemMode::Normal;
 }
 
-void FindFreeBlockPMTAndSetMbId(CGameEditorPluginMapMapType@ pmt, Editor::BlockSpec@ bs, CGameCtnBlock@[]@ blocksToDel, uint mbInstId) {
+// void FindFreeBlockPMTAndSetMbId(CGameEditorPluginMapMapType@ pmt, Editor::BlockSpec@ bs, CGameCtnBlock@[]@ blocksToDel, uint mbInstId) {
+//     CGameCtnBlock@ b;
+//     for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
+//         @b = pmt.ClassicBlocks[i];
+//         if (!Editor::IsBlockFree(b)) continue;
+//         if (Editor::GetBlockMbInstId(b) == mbInstId) continue;
+//         if (bs.MatchesBlock(b)) {
+//             Editor::SetBlockMbInstId(b, mbInstId);
+//             blocksToDel.InsertLast(b);
+//             break;
+//         }
+//     }
+// }
+void FindFreeBlockPMTAndSetMbId(CGameEditorPluginMapMapType@ pmt, OctTreeNode@ tree, CGameCtnBlock@[]@ blocksToDel, uint mbInstId) {
     CGameCtnBlock@ b;
+    Editor::BlockSpec@ bs;
     for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
         @b = pmt.ClassicBlocks[i];
         if (!Editor::IsBlockFree(b)) continue;
         if (Editor::GetBlockMbInstId(b) == mbInstId) continue;
-        if (bs.MatchesBlock(b)) {
+        if (bs is null) {
+            @bs = Editor::MakeBlockSpec(b);
+        } else {
+            bs.SetFrom(b);
+        }
+        if (tree.Contains(bs)) {
             Editor::SetBlockMbInstId(b, mbInstId);
             blocksToDel.InsertLast(b);
-            break;
+            tree.Remove(bs);
         }
     }
 }

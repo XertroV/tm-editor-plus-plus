@@ -14,6 +14,16 @@ namespace Editor {
         return _MapCache;
     }
 
+    bool IsMapCacheStale() {
+        return _MapCache.IsStale && !_MapCache.isRefreshing;
+    }
+
+    void RefreshMapCacheSoon() {
+        if (IsMapCacheStale()) {
+            _MapCache.RefreshCacheSoon();
+        }
+    }
+
     class ObjInMap {
         uint ix;
         vec3 pos;

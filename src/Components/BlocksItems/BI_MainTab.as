@@ -181,7 +181,7 @@ class ViewAllBlocksTab : BlockItemListTab {
     void DeleteBlockSoon(ref@ ref) {
         CGameCtnBlock@ block = cast<CGameCtnBlock>(ref);
         if (block is null) return;
-        Editor::DeleteMacroblock(Editor::MakeMacroblockSpec({block}, array<CGameCtnAnchoredObject@> = {}), true);
+        Editor::DeleteBlocks({block}, true);
         if (Editor::HasPendingFreeBlocksToDelete()) {
             startnew(Editor::RunDeleteFreeBlockDetection).WithRunContext(Meta::RunContext::MainLoop);
         }
@@ -277,8 +277,9 @@ class ViewAllItemsTab : BlockItemListTab {
         rowHovered = UI::IsItemHovered() || rowHovered;
         UI::SameLine();
         if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
-            Editor::DeleteItems({item});
+            Editor::DeleteItems({item}, true);
         }
+        rowHovered = UI::IsItemHovered() || rowHovered;
 
         if (rowHovered) {
             nvgDrawCoordHelpers(Editor::GetItemMatrix(item), 10.);
@@ -581,7 +582,7 @@ class OctTreeDebugTab : Tab {
 
 void UI_Debug_OctTreeNode(OctTreeNode@ node, const string &in path) {
     if (node is null) return;
-    if (UI::TreeNode(path + " [ "+node.RegionsInside+" / "+node.PointsInside+" ]###otn"+path)) {
+    if (UI::TreeNode(path + " [ "+node.RegionsInside+" / "+node.PointsInside+" ] from "+node.min.ToString()+" to "+node.max.ToString()+" ###otn"+path)) {
 
         if (node.children.Length > 0) {
             for (uint i = 0; i < node.children.Length; i++) {

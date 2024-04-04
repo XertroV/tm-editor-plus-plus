@@ -193,15 +193,17 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         block.MapElemLmQuality = DrawEnumLmQualityChooser(block.MapElemLmQuality);
         block.MapElemColor = DrawEnumColorChooser(block.MapElemColor);
 
+        bool blockNudged = false;
         UI::Separator();
-        if (Editor::IsBlockFree(block)) {
-            UI::Text("Nudge block:");
-            m_BlockChanged = DrawNudgeFor(block) || m_BlockChanged;
-            if (m_BlockChanged) {
-                dev_trace('Nudge block: changed');
+        UI::Text("Nudge block:");
+        blockNudged = DrawNudgeFor(block);
+        m_BlockChanged = blockNudged || m_BlockChanged;
+        if (m_BlockChanged) {
+            dev_trace('Nudge block: changed');
+            if (Editor::IsBlockFree(block)) {
+                startnew(CoroutineFunc(CheckDeleteFreeblock)).WithRunContext(Meta::RunContext::MainLoop);
             }
-        } else {
-            UI::Text("Cannot nudge non-free blocks.");
+            safeToRefresh = true;
         }
 
         auto @desc = BlockDesc(block);
@@ -241,7 +243,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             // block.MwAddRef();
             trace('cleared focus block, refreshing now');
             // Editor::UpdateBakedBlocksMatching(editor, preDesc, desc);
-            @block = Editor::RefreshSingleBlockAfterModified(editor, desc);
+            @block = blockNudged ? editor.Challenge.Blocks[editor.Challenge.Blocks.Length - 1] : Editor::RefreshSingleBlockAfterModified(editor, desc);
             trace('Return block null? ' + tostring(block is null));
             if (block !is null) {
                 @FocusedBlock = ReferencedNod(block);
@@ -255,6 +257,13 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         }
 
         UI::PopItemWidth();
+    }
+
+
+    void CheckDeleteFreeblock() {
+        if (Editor::HasPendingFreeBlocksToDelete()) {
+            Editor::RunDeleteFreeBlockDetection();
+        }
     }
 
     BlockDesc@ tmpDesc;

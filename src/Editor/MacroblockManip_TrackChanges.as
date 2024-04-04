@@ -175,6 +175,9 @@ namespace Editor {
     }
 
     void ResetTrackMapChanges() {
+        if (blocksAddedThisFrame.Length > 0) {
+            dev_trace('Resetting map changes now.');
+        }
         @blocksAddedLastFrame = blocksAddedThisFrame;
         @blocksRemovedLastFrame = blocksRemovedThisFrame;
         @blocksRemovedByAPILastFrame = blocksRemovedByAPIThisFrame;

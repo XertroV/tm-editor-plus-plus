@@ -29,9 +29,18 @@ namespace Editor {
     import bool DeleteMacroblock(MacroblockSpec@ macroblock, bool addUndoRedoPoint = false) from "Editor";
     import bool SetSkins(SetSkinSpec@[]@ skins) from "Editor";
     // import void SetAirblockMode(bool airBlockEnabled) from "Editor";
-    // Running this in the wrong context can crash the game
+    // Running this in the wrong context can crash the game, use GameLoop or MainLoop
     import void RunDeleteFreeBlockDetection() from "Editor";
     import bool HasPendingFreeBlocksToDelete() from "Editor";
+    // run this in GameLoop or MainLoop
+    import uint DeleteFreeblocks(CGameCtnBlock@[]@ blocks) from "Editor";
+    // run this in GameLoop or MainLoop
+    import uint DeleteFreeblocks(BlockSpec@[]@ blocks) from "Editor";
+    // use this to start an intercept-gather for freeblocks queued for deletion by macroblock deletion functions -- EndInterceptFreeblockQueueAndGather MUST be called later.
+    import void BeginInterceptFreeblockQueueAndGather() from "Editor";
+    // use this to end an intercept-gather for freeblocks queued for deletion by macroblock deletion functions
+    import BlockSpec@[]@ EndInterceptFreeblockQueueAndGather() from "Editor";
+
     import CGameEditorPluginMap::EPlaceMode GetPlacementMode(CGameCtnEditorFree@ editor) from "Editor";
     import CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) from "Editor";
     // Some camera things
@@ -49,6 +58,9 @@ namespace Editor {
     import MacroblockSpec@ SubtractMacroblockFromMapCache(MacroblockSpec@ removeSource) from "Editor";
     // returns all blocks/items in map that are not in removeSource
     import MacroblockSpec@ SubtractTreeFromMapCache(OctTreeNode@ removeSource) from "Editor";
+
+    import bool IsMapCacheStale() from "Editor";
+    import void RefreshMapCacheSoon() from "Editor";
 
 }
 

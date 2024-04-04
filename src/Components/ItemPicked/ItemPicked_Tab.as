@@ -59,8 +59,12 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
         // if this is true the item was removed from the map
         if (Reflection::GetRefCount(item) == 1) {
+            auto refound = Editor::FindReplacementItemAfterUpdate(editor, item);
             @FocusedItem = null;
-            return;
+            if (refound is null)
+                return;
+            @FocusedItem = ReferencedNod(refound);
+            @item = FocusedItem.AsItem();
         }
 
         vec3 initPos = item.AbsolutePositionInMap;
@@ -204,8 +208,10 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
         if (changed) {
             trace('Updating modified item');
-            @FocusedItem = ReferencedNod(Editor::RefreshSingleItemAfterModified(editor, item, !skipForceRefresh));
+            // @FocusedItem = ReferencedNod(Editor::RefreshSingleItemAfterModified(editor, item, !skipForceRefresh));
+            @FocusedItem = ReferencedNod(editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1]);
             @item = FocusedItem.AsItem();
+            if (item is null) return;
         }
 
         UI::Separator();

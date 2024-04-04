@@ -291,6 +291,10 @@ namespace Editor {
             }
         }
 
+        void SetFrom(CGameCtnBlock@ block) {
+            throw("implemented elsewhere");
+        }
+
         bool MatchesBlock(CGameCtnBlock@ block) const {
             throw("overridden elsewehre");
             return false;
@@ -301,16 +305,16 @@ namespace Editor {
             return false;
         }
 
-        bool get_isFree() {
+        bool get_isFree() const {
             return flags & uint8(BlockFlags::Free) != 0;
         }
-        bool get_isGround() {
+        bool get_isGround() const {
             return flags & uint8(BlockFlags::Ground) != 0;
         }
-        bool get_isGhost() {
+        bool get_isGhost() const {
             return flags & uint8(BlockFlags::Ghost) != 0;
         }
-        bool get_isNormal() {
+        bool get_isNormal() const {
             return flags & 7 == 0;
         }
 
@@ -537,12 +541,12 @@ namespace Editor {
             }
         }
 
-        bool MatchesItem(CGameCtnAnchoredObject@ item) {
+        bool MatchesItem(CGameCtnAnchoredObject@ item) const {
             throw("overridden elsewhere");
             return false;
         }
 
-        bool MatchesItem(CGameCtnEditorScriptAnchoredObject@ item) {
+        bool MatchesItem(CGameCtnEditorScriptAnchoredObject@ item) const {
             throw("overridden elsewhere");
             return false;
         }
