@@ -66,7 +66,7 @@ class ViewSkinnedBlocksTab : ViewAllBlocksTab {
 
 
     void DrawInnerEarly() override {
-        UI::Text("To update list: Caches > Refresh Map Block/Item Cache");
+        BI_DrawCacheRefreshMsg();
     }
 
     uint GetNbObjects(CGameCtnChallenge@ map) override {
@@ -294,7 +294,7 @@ class ViewSkinnedItemsTab : ViewAllItemsTab {
     }
 
     void DrawInnerEarly() override {
-        UI::Text("To update list: Caches > Refresh Map Block/Item Cache");
+        BI_DrawCacheRefreshMsg();
     }
 
     uint GetNbObjects(CGameCtnChallenge@ map) override {
@@ -328,9 +328,7 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
     bool m_RefreshCacheFirst = true;
 
     void DrawInnerEarly() override {
-        if (UI::Button("Refresh Cache##refresh-cache-dup-blks")) {
-            Editor::GetMapCache().RefreshCacheSoon();
-        }
+        BI_DrawCacheRefreshMsg();
         UI::Separator();
         UI::AlignTextToFramePadding();
         UI::Text("Autoremove duplicates:");
@@ -444,6 +442,18 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
     }
 }
 
+void BI_DrawCacheRefreshMsg() {
+    auto cache = Editor::GetMapCache();
+    UI::BeginDisabled(!cache.IsStale);
+    if (UX::SmallButton("Refresh Cache##refresh-cache-wp")) {
+        cache.RefreshCacheSoon();
+    }
+    UI::SameLine();
+    UI::Text("or: Caches > Refresh Map Block/Item Cache");
+    UI::EndDisabled();
+}
+
+
 class WaypointsBITab : Tab {
     WaypointsBITab(TabGroup@ p) {
         super(p, "Waypoints", Icons::FlagCheckered);
@@ -452,7 +462,7 @@ class WaypointsBITab : Tab {
     }
 
     void DrawInner() override {
-        UI::Text("To refresh: Caches > Refresh Map Block/Item Cache");
+        BI_DrawCacheRefreshMsg();
         Children.DrawTabs();
     }
 }
@@ -500,7 +510,7 @@ class MacroblocksBITab : Tab {
     void DrawInner() override {
         auto map = GetApp().RootMap;
         if (map is null) return;
-        UI::Text("To refresh: Caches > Refresh Map Block/Item Cache");
+        BI_DrawCacheRefreshMsg();
         auto mbs = Editor::GetMapMacroblocks(map);
         if (mbs.Length == 0) {
             UI::Text("No macroblocks found.");

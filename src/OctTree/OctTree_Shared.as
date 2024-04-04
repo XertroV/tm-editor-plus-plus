@@ -103,7 +103,7 @@ shared class OctTreePoint {
     }
 
     string ToString() const {
-        return "Point " + point.ToString() + (item !is null ? " item" : "") + (block !is null ? " block" : "");
+        return "Point " + point.ToString() + (item !is null ? " item: " + item.name : "") + (block !is null ? " block " + block.name : "");
     }
 
     bool opEquals(const OctTreePoint@ other) const {
