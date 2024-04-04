@@ -54,28 +54,29 @@ namespace Editor {
     // import bool IsShiftDown() from "Editor";
 }
 
+namespace Editor {
+    import bool IsCtrlDown() from "Editor";
+    import bool IsAltDown() from "Editor";
+    import bool IsShiftDown() from "Editor";
 
-import bool IsCtrlDown() from "Editor";
-import bool IsAltDown() from "Editor";
-import bool IsShiftDown() from "Editor";
 
+    import vec3 PitchYawRollFromRotationMatrix(mat4 m) from "Editor";
+    import mat4 EulerToMat(vec3 euler) from "Editor";
 
-import vec3 PitchYawRollFromRotationMatrix(mat4 m) from "Editor";
-import mat4 EulerToMat(vec3 euler) from "Editor";
-
-import vec3 CoordDistToPos(int3 coord) from "Editor";
-import vec3 CoordDistToPos(vec3 coord) from "Editor";
-import vec3 CoordToPos(nat3 coord) from "Editor";
-import vec3 CoordToPos(vec3 coord) from "Editor";
-import vec3 Nat3ToVec3(nat3 coord) from "Editor";
-import nat3 Vec3ToNat3(vec3 v) from "Editor";
-import int3 Nat3ToInt3(nat3 coord) from "Editor";
-import vec3 Int3ToVec3(int3 coord) from "Editor";
-import nat3 Int3ToNat3(int3 coord) from "Editor";
-import vec2 Nat2ToVec2(nat2 coord) from "Editor";
-import nat2 Vec2ToNat2(vec2 v) from "Editor";
-import nat3 PosToCoord(vec3 pos) from "Editor";
-import int3 PosToCoordDist(vec3 pos) from "Editor";
-import vec3 MTCoordToPos(int3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
-import vec3 MTCoordToPos(nat3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
-import vec3 MTCoordToPos(vec3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
+    import vec3 CoordDistToPos(int3 coord) from "Editor";
+    import vec3 CoordDistToPos(vec3 coord) from "Editor";
+    import vec3 CoordToPos(nat3 coord) from "Editor";
+    import vec3 CoordToPos(vec3 coord) from "Editor";
+    import vec3 Nat3ToVec3(nat3 coord) from "Editor";
+    import nat3 Vec3ToNat3(vec3 v) from "Editor";
+    import int3 Nat3ToInt3(nat3 coord) from "Editor";
+    import vec3 Int3ToVec3(int3 coord) from "Editor";
+    import nat3 Int3ToNat3(int3 coord) from "Editor";
+    import vec2 Nat2ToVec2(nat2 coord) from "Editor";
+    import nat2 Vec2ToNat2(vec2 v) from "Editor";
+    import nat3 PosToCoord(vec3 pos) from "Editor";
+    import int3 PosToCoordDist(vec3 pos) from "Editor";
+    import vec3 MTCoordToPos(int3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
+    import vec3 MTCoordToPos(nat3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
+    import vec3 MTCoordToPos(vec3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
+}
