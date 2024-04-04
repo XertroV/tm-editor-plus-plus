@@ -2,7 +2,7 @@
 name     = "Editor++"
 author   = "XertroV"
 category = "Map Editor"
-version  = "0.8.9999994"
+version  = "0.8.9999995"
 siteid   = 377
 blocks   = ["item-placement-toolbox", "item-placement-toolbox-dev"]
 
