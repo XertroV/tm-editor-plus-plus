@@ -646,6 +646,19 @@ shared class OctTreeNode : OctTreeRegion {
         }
     }
 
+    void AddFromMacroblockUnique(Editor::MacroblockSpec@ mb) {
+        for (uint i = 0; i < mb.items.Length; i++) {
+            if (!Contains(mb.items[i])) {
+                Insert(mb.items[i]);
+            }
+        }
+        for (uint i = 0; i < mb.blocks.Length; i++) {
+            if (!Contains(mb.blocks[i])) {
+                Insert(mb.blocks[i]);
+            }
+        }
+    }
+
     void RemoveInMacroblock(Editor::MacroblockSpec@ mb) {
         for (uint i = 0; i < mb.items.Length; i++) {
             Remove(mb.items[i]);
