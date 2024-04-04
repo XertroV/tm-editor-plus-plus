@@ -48,10 +48,6 @@ namespace Editor {
     // returns all blocks/items in map that are not in removeSource
     import MacroblockSpec@ SubtractTreeFromMapCache(OctTreeNode@ removeSource) from "Editor";
 
-
-    // import bool IsCtrlDown() from "Editor";
-    // import bool IsAltDown() from "Editor";
-    // import bool IsShiftDown() from "Editor";
 }
 
 namespace Editor {

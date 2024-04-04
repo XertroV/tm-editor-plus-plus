@@ -277,6 +277,11 @@ namespace Editor {
         // block model -- get from name -- note: this is done in BlockSpecPriv
         CGameCtnBlockInfo@ BlockInfo;
 
+        // protected string _key;
+        // string get_Key() const {
+        //     return _key;
+        // }
+
         BlockSpec() {}
 
         BlockSpec(MemoryBuffer@ buf) {

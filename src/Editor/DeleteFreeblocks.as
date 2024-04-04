@@ -187,7 +187,7 @@ namespace Editor {
             @bs = pendingFreeBlocksToDelete[i];
             FindFreeBlockPMTAndSetMbId(pmt, bs, blocks, mbInstId);
         }
-        dev_trace('set free block mb ids: ' + mbInstId);
+        dev_trace('set free block mb ids: ' + mbInstId + ' for ' + blocks.Length + ' blocks');
         pendingFreeBlocksToDelete.RemoveRange(0, pendingFreeBlocksToDelete.Length);
         if (blocks.Length == 0) {
             dev_trace('no blocks to delete');
@@ -217,10 +217,11 @@ namespace Editor {
         waitingToDeleteFreeBlocks = false;
         canDeleteFreeBlocks = false;
         @lastPickedBlock = null;
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return;
-        Editor::SetPlacementMode(editor, _delFreeOrigPlacement);
-        Editor::SetEditMode(editor, _delFreeOrigEdit);
+        // we restore placement mode stuff layer anyway
+        // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        // if (editor is null) return;
+        // Editor::SetPlacementMode(editor, _delFreeOrigPlacement);
+        // Editor::SetEditMode(editor, _delFreeOrigEdit);
     }
 
     CGameEditorPluginMap::EPlaceMode _delFreeOrigPlacement = CGameEditorPluginMap::EPlaceMode::FreeMacroblock;
@@ -228,15 +229,16 @@ namespace Editor {
     Editor::ItemMode _delFreeOrigItem = Editor::ItemMode::Normal;
 }
 
-void FindFreeBlockPMTAndSetMbId(CGameEditorPluginMapMapType@ pmt, Editor::BlockSpec@ bs, CGameCtnBlock@[]@ blocks, uint mbInstId) {
+void FindFreeBlockPMTAndSetMbId(CGameEditorPluginMapMapType@ pmt, Editor::BlockSpec@ bs, CGameCtnBlock@[]@ blocksToDel, uint mbInstId) {
     CGameCtnBlock@ b;
     for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
         @b = pmt.ClassicBlocks[i];
         if (!Editor::IsBlockFree(b)) continue;
         if (Editor::GetBlockMbInstId(b) == mbInstId) continue;
         if (bs.MatchesBlock(b)) {
-            blocks.InsertLast(b);
             Editor::SetBlockMbInstId(b, mbInstId);
+            blocksToDel.InsertLast(b);
+            break;
         }
     }
 }
