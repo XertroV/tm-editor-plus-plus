@@ -23,6 +23,8 @@ namespace Editor {
     import SetSkinSpec@ SetSkinSpecFromBuf(MemoryBuffer@ buf) from "Editor";
     import bool PlaceBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items, bool addUndoRedoPoint = false) from "Editor";
     import bool DeleteBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items, bool addUndoRedoPoint = false) from "Editor";
+    import bool DeleteBlocks(CGameCtnBlock@[]@ blocks, bool addUndoRedoPoint = false) from "Editor";
+    import bool DeleteItems(CGameCtnAnchoredObject@[]@ items, bool addUndoRedoPoint = false) from "Editor";
     import bool PlaceMacroblock(MacroblockSpec@ macroblock, bool addUndoRedoPoint = false) from "Editor";
     import bool DeleteMacroblock(MacroblockSpec@ macroblock, bool addUndoRedoPoint = false) from "Editor";
     import bool SetSkins(SetSkinSpec@[]@ skins) from "Editor";

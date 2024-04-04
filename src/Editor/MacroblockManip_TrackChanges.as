@@ -221,6 +221,12 @@ namespace Editor {
     bool DeleteBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items, bool addUndoRedoPoint = false) {
         return DeleteMacroblock(MacroblockSpecPriv(blocks, items), addUndoRedoPoint);
     }
+    bool DeleteBlocks(CGameCtnBlock@[]@ blocks, bool addUndoRedoPoint = false) {
+        return DeleteMacroblock(MakeMacroblockSpec(blocks, array<CGameCtnAnchoredObject@> = {}), addUndoRedoPoint);
+    }
+    bool DeleteItems(CGameCtnAnchoredObject@[]@ items, bool addUndoRedoPoint = false) {
+        return DeleteMacroblock(MakeMacroblockSpec(array<CGameCtnBlock@> = {}, items), addUndoRedoPoint);
+    }
     bool PlaceMacroblock(MacroblockSpec@ macroblock, bool addUndoRedoPoint = false) {
         auto mbSpec = cast<MacroblockSpecPriv>(macroblock);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);

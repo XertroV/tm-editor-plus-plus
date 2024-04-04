@@ -126,11 +126,6 @@ class ViewAllBlocksTab : BlockItemListTab {
         UI::TableNextColumn();
         UI::Text(block.DescId.GetName());
         auto rowHovered = UI::IsItemHovered();
-        if (rowHovered) {
-            auto m = Editor::GetBlockMatrix(block);
-            nvgDrawBlockBox(m, Editor::GetBlockSize(block), cOrange);
-            nvgDrawBlockBox(m, vec3(32, 8, 32), cOrange);
-        }
 
         UI::TableNextColumn();
         UI::Text(FormatX::Vec3(Editor::GetBlockLocation(block)));
@@ -153,37 +148,54 @@ class ViewAllBlocksTab : BlockItemListTab {
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
             auto pos = Editor::GetCtnBlockMidpoint(block);
-            Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(pos), pos, 120.);
+            auto uv = Editor::DirToLookUvFromCamera(pos);
+            uv.y = Math::Max(0.7, uv.y);
+            Editor::SetCamAnimationGoTo(uv, pos, 120.);
         }
+        rowHovered = UI::IsItemHovered() || rowHovered;
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             Notify("Setting block ("+blockId+") as picked item.");
-            g_PickedBlockTab.SetSelectedTab();
+            if (!g_PickedBlockTab.windowOpen) {
+                g_PickedBlockTab.SetSelectedTab();
+            }
             @lastPickedBlock = ReferencedNod(block);
             UpdatePickedBlockCachedValues();
         }
-        if (!Editor::IsBlockFree(block)) {
-            UI::SameLine();
-            if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
-                startnew(CoroutineFuncUserdata(DeleteBlockSoon), block);
-            }
+        rowHovered = UI::IsItemHovered() || rowHovered;
+        UI::SameLine();
+        if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
+            startnew(CoroutineFuncUserdata(DeleteBlockSoon), block);
+        }
+        rowHovered = UI::IsItemHovered() || rowHovered;
+
+
+
+        if (rowHovered) {
+            auto m = Editor::GetBlockMatrix(block);
+            nvgDrawBlockBox(m, Editor::GetBlockSize(block), cOrange);
+            nvgDrawBlockBox(m, vec3(32, 8, 32), cOrange);
         }
     }
 
     void DeleteBlockSoon(ref@ ref) {
         CGameCtnBlock@ block = cast<CGameCtnBlock>(ref);
         if (block is null) return;
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        editor.PluginMapType.AutoSave();
-        if (block.IsGhostBlock()) {
-            if (!editor.PluginMapType.RemoveGhostBlock(block.BlockInfo, Nat3ToInt3(block.Coord), block.Dir)) {
-                NotifyWarning("Unable to remove ghost block:\n Coord: " + block.Coord.ToString() + "\n Type: " + block.DescId.GetName() + "\n: Dir: " + tostring(block.Dir));
-            }
-        } else {
-            if (!editor.PluginMapType.RemoveBlock(Nat3ToInt3(block.Coord))) {
-                NotifyWarning("Unable to remove block at " + block.Coord.ToString());
-            }
+        Editor::DeleteMacroblock(Editor::MakeMacroblockSpec({block}, array<CGameCtnAnchoredObject@> = {}), true);
+        if (Editor::HasPendingFreeBlocksToDelete()) {
+            startnew(Editor::RunDeleteFreeBlockDetection).WithRunContext(Meta::RunContext::MainLoop);
         }
+        // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        // editor.PluginMapType.AutoSave();
+        // if (block.IsGhostBlock()) {
+        //     if (!editor.PluginMapType.RemoveGhostBlock(block.BlockInfo, Nat3ToInt3(block.Coord), block.Dir)) {
+        //         NotifyWarning("Unable to remove ghost block:\n Coord: " + block.Coord.ToString() + "\n Type: " + block.DescId.GetName() + "\n: Dir: " + tostring(block.Dir));
+        //     }
+        // } else {
+        //     if (!editor.PluginMapType.RemoveBlock(Nat3ToInt3(block.Coord))) {
+        //         NotifyWarning("Unable to remove block at " + block.Coord.ToString());
+        //     }
+        // }
     }
 }
 
@@ -231,6 +243,7 @@ class ViewAllItemsTab : BlockItemListTab {
 
         UI::TableNextColumn();
         UI::Text(item.ItemModel.IdName);
+        bool rowHovered = UI::IsItemHovered();
 
         UI::TableNextColumn();
         UI::Text(FormatX::Vec3(item.AbsolutePositionInMap));
@@ -251,32 +264,27 @@ class ViewAllItemsTab : BlockItemListTab {
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
             Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(item.AbsolutePositionInMap), item.AbsolutePositionInMap, 120.);
         }
+        rowHovered = UI::IsItemHovered() || rowHovered;
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             Notify("Setting item ("+blockId+") as picked item.");
+            if (!g_PickedItemTab.windowOpen) {
+                g_PickedItemTab.SetSelectedTab();
+            }
             @lastPickedItem = ReferencedNod(item);
-            g_PickedItemTab.SetSelectedTab();
             UpdatePickedItemCachedValues();
         }
-        // // todo: not sure how to do item removal
-        // UI::SameLine();
-        // if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
-        //     startnew(CoroutineFuncUserdata(_RemoveItemLater), map);
-        //     _removeIx = i;
-        //     // map.AnchoredObjects.Remove(i);
-        //     // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        //     // Editor::UpdateNewlyAddedItems(editor);
-        //     // Editor::RefreshBlocksAndItems();
-        // }
-    }
+        rowHovered = UI::IsItemHovered() || rowHovered;
+        UI::SameLine();
+        if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
+            Editor::DeleteItems({item});
+        }
 
-    // uint _removeIx = 0;
-    // void _RemoveItemLater(ref@ _r) {
-    //     auto map = cast<CGameCtnChallenge>(_r);
-    //     auto item = map.AnchoredObjects[_removeIx];
-    //     map.AnchoredObjects.Remove(_removeIx);
-    //     item.MwRelease();
-    // }
+        if (rowHovered) {
+            nvgDrawCoordHelpers(Editor::GetItemMatrix(item), 10.);
+            nvgDrawPointCircle(item.AbsolutePositionInMap, 5., cOrange);
+        }
+    }
 }
 
 
