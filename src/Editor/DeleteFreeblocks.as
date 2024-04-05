@@ -94,6 +94,7 @@ namespace Editor {
         for (uint i = 0; i < blocks.Length; i++) {
             pendingFreeBlocksToDelete.InsertLast(MakeBlockSpec(blocks[i]));
         }
+        waitingToDeleteFreeBlocks = true;
         RunDeleteFreeBlockDetection();
         auto ret = lastFreeBlockDeletedNb;
         @pendingFreeBlocksToDelete = tmpPending;
@@ -103,6 +104,7 @@ namespace Editor {
     uint DeleteFreeblocks(BlockSpec@[]@ blocks) {
         auto @tmpPending = pendingFreeBlocksToDelete;
         @pendingFreeBlocksToDelete = blocks;
+        waitingToDeleteFreeBlocks = true;
         RunDeleteFreeBlockDetection();
         auto ret = lastFreeBlockDeletedNb;
         @pendingFreeBlocksToDelete = tmpPending;
