@@ -268,7 +268,10 @@ namespace Editor {
             this.IsStale = true;
             if (isRefreshing) return false;
             // todo: update cache instead of marking stale
-            objsRoot.Insert(MakeItemSpec(item));
+            // ! item models can be null sometimes? leaving editor after editing custom item no save
+            if (item.ItemModel !is null) {
+                objsRoot.Insert(MakeItemSpec(item));
+            }
             // AddItem(ItemInMap(_Items.Length, item));
             return false;
         }
@@ -375,6 +378,10 @@ namespace Editor {
                 if (myNonce != lastRefreshNonce) return;
                 if (GetApp().Editor is null) return;
                 if (myNonce != lastRefreshNonce) return;
+                if (pmt.Map.AnchoredObjects[i].ItemModel is null) {
+                    warn('MapCache: Item '+i+' model is null!');
+                    continue;
+                }
                 AddItem(ItemInMap(i, pmt.Map.AnchoredObjects[i]));
             }
             trace('Caching map complete. Indexing...');

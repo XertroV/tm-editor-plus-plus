@@ -17,9 +17,23 @@ float NormalizeAngle(float angle) {
 }
 
 bool AnglesVeryClose(vec3 a, vec3 b) {
-    return Math::Abs(NormalizeAngle(a.x - b.x)) < 0.0001 &&
-           Math::Abs(NormalizeAngle(a.y - b.y)) < 0.0001 &&
-           Math::Abs(NormalizeAngle(a.z - b.z)) < 0.0001;
+    auto q1 = quat(a);
+    auto q2 = quat(b);
+    auto dot = Math::Abs(q1.x*q2.x + q1.y*q2.y + q1.z*q2.z + q1.w*q2.w);
+    // technically, the angles are only the same if the quaternions are the same, but sometimes the game will give us the conjugate (e.g., circle cps seem to have this happen)
+    // example: i tell it to place at PYR 0,180,90, but it places 180,0,90
+    // idk, adding < 0.0001 fixes it, though.
+    return dot > 0.9999 || dot < 0.0001;
+
+    // when close, q ~= quat(0,0,0,1)
+    // auto q = quat(a).Inverse() * quat(b);
+    // return q.xyz.LengthSquared() < 0.0001 && (q.z > 0.9999 || q.z < -0.9999);
+
+    // print("close?" + (quat(a).Inverse() * quat(b)).ToString());
+    // return (quat(a).Inverse() * quat(b)).LengthSquared() < 0.0001;
+    // return Math::Abs(NormalizeAngle(a.x - b.x)) < 0.0001 &&
+    //        Math::Abs(NormalizeAngle(a.y - b.y)) < 0.0001 &&
+    //        Math::Abs(NormalizeAngle(a.z - b.z)) < 0.0001;
 }
 
 // shared float CardinalDirectionToYaw(int dir) {

@@ -784,6 +784,16 @@ class ItemModelTreeElement {
                 DrawUserMatIntsAt("nbMaterialUserInsts: " + nbMaterialUserInsts, nod, 0xF8);
             }
             MkAndDrawChildNode(skel, 0x78, "Skel");
+            auto plg = DPlugSolid2Model(s2m).PreLightGenerator;
+            if (plg !is null) {
+                if (isEditable) {
+                    UI::SetNextItemWidth(130.0);
+                    plg.SurfaceAreaScale = UI::InputFloat("SurfaceAreaScale", plg.SurfaceAreaScale);
+                    AddSimpleTooltip("Some value that is proportional to surface area.");
+                } else {
+                    CopiableLabeledValue("SurfaceAreaScale", tostring(plg.SurfaceAreaScale));
+                }
+            }
             EndTreeNode();
         }
     }

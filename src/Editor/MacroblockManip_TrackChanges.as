@@ -401,6 +401,7 @@ namespace Editor {
     MacroblockSpec@ SubtractTreeFromMapCache(OctTreeNode@ removeSource) {
         auto cache = GetMapCache();
         auto mapTree = cache.objsRoot.Clone();
+        if (removeSource is null) return mapTree.PopulateMacroblock(MakeMacroblockSpec());
         if (mapTree.Length != cache.objsRoot.Length) {
             warn("SubtractTreeFromMapCache: mapTree length mismatch: " + mapTree.Length + " | " + cache.objsRoot.Length);
         }

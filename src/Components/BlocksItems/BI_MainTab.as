@@ -93,11 +93,12 @@ class ViewAllBlocksTab : BlockItemListTab {
     }
 
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
-        float bigNumberColWidth = 110;
-        float numberColWidth = 90;
-        float smlNumberColWidth = 70;
+        float idColWidth = UI::GetScale() * 50.0;
+        float bigNumberColWidth = UI::GetScale() * 110.0;
+        float numberColWidth = UI::GetScale() * 90.0;
+        float smlNumberColWidth = UI::GetScale() * 70.0;
         float exploreColWidth = numberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
-        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
+        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, idColWidth);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
         UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
         UI::TableSetupColumn("Coord", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
@@ -212,11 +213,12 @@ class ViewAllItemsTab : BlockItemListTab {
     }
 
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
-        float bigNumberColWidth = 110;
-        float stdNumberColWidth = 90;
-        float smlNumberColWidth = 70;
+        float idColWidth = UI::GetScale() * 50.0;
+        float bigNumberColWidth = UI::GetScale() * 110.0;
+        float stdNumberColWidth = UI::GetScale() * 90.0;
+        float smlNumberColWidth = UI::GetScale() * 70.0;
         float exploreColWidth = stdNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
-        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
+        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, idColWidth);
         UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
         UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
         UI::TableSetupColumn("Rot", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);

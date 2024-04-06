@@ -451,6 +451,7 @@ const uint16 O_SOLID2MODEL_USERMAT_BUF = 0xF8;
 const uint16 O_SOLID2MODEL_CUSTMAT_BUF = 0x1F8;
 
 const uint16 O_SOLID2MODEL_ITEM_FID = 0x338;
+const uint16 SZ_SOLID2MODEL = 0x390; // 912;
 
 // more block offsets in Editor/Blocks.as
 // 0x6C

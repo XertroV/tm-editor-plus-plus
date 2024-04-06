@@ -394,11 +394,12 @@ namespace Editor {
                 ((isFree && Editor::IsBlockFree(block)) || MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0))) &&
                 dir == block.Direction && dir2 == block.Direction &&
                 MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)) &&
-                MathX::Vec3Eq(pyr, Editor::GetBlockRotation(block)) &&
                 color == block.MapElemColor && lmQual == block.MapElemLmQuality && mobilIx == block.MobilIndex &&
-                (mobilVariant == block.MobilVariantIndex || mobilVariant == 63 || block.MobilVariantIndex == 63) &&
+                (mobilVariant == block.MobilVariantIndex || mobilVariant == 63 || block.MobilVariantIndex == 63 || isNormal) &&
                 // variant == block.BlockInfoVariantIndex &&
-                flags == uint8((block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None));
+                flags == uint8((block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None)) &&
+                AnglesVeryClose(pyr, Editor::GetBlockRotation(block))
+                ;
         }
 
         bool opEquals(const BlockSpec@ other) const override {
@@ -425,12 +426,14 @@ namespace Editor {
 
             return name == other.name && collection == other.collection && author == other.author &&
                 MathX::Nat3Eq(coord, other.coord) && dir == other.dir && dir2 == other.dir2 &&
-                MathX::Vec3Eq(pos, other.pos) && MathX::Vec3Eq(pyr, other.pyr) &&
+                MathX::Vec3Eq(pos, other.pos) &&
                 color == other.color && lmQual == other.lmQual && mobilIx == other.mobilIx &&
                 // mobilVariant not set when block is being placed
-                (mobilVariant == other.mobilVariant || mobilVariant == 63 || other.mobilVariant == 63) &&
+                (mobilVariant == other.mobilVariant || mobilVariant == 63 || other.mobilVariant == 63 || isNormal) &&
                 // variant == other.variant && // ignore variant, can be wrong?
-                flags == other.flags;
+                flags == other.flags &&
+                AnglesVeryClose(pyr, other.pyr)
+                ;
         }
     }
 
