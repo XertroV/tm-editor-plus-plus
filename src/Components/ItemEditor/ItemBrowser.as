@@ -788,10 +788,10 @@ class ItemModelTreeElement {
             if (plg !is null) {
                 if (isEditable) {
                     UI::SetNextItemWidth(130.0);
-                    plg.SurfaceAreaScale = UI::InputFloat("SurfaceAreaScale", plg.SurfaceAreaScale);
+                    plg.LMSideLengthMeters = UI::InputFloat("LMSideLengthMeters", plg.LMSideLengthMeters);
                     AddSimpleTooltip("Some value that is proportional to surface area.");
                 } else {
-                    CopiableLabeledValue("SurfaceAreaScale", tostring(plg.SurfaceAreaScale));
+                    CopiableLabeledValue("LMSideLengthMeters", tostring(plg.LMSideLengthMeters));
                 }
             }
             EndTreeNode();

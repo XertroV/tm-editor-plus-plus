@@ -3,7 +3,7 @@ NativeClass = CPlugSolid2Model
 Struct: PreLightGenerator = DPlugSolid2ModelPreLightGenerator, 0x298, G
 
 [DPlugSolid2ModelPreLightGenerator : 0x24]
-SurfaceAreaScale = float, 0x0, GS
+LMSideLengthMeters = float, 0x0, GS
 u03 = float, 0x4, GS
 u04 = float, 0x8, GS
 u05 = float, 0xC, GS

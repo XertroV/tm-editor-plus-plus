@@ -30,8 +30,8 @@ class DPlugSolid2ModelPreLightGenerator : RawBufferElem {
 		super(ptr, 0x24);
 	}
 
-	float get_SurfaceAreaScale() { return (this.GetFloat(0x0)); }
-	void set_SurfaceAreaScale(float value) { this.SetFloat(0x0, value); }
+	float get_LMSideLengthMeters() { return (this.GetFloat(0x0)); }
+	void set_LMSideLengthMeters(float value) { this.SetFloat(0x0, value); }
 	float get_u03() { return (this.GetFloat(0x4)); }
 	void set_u03(float value) { this.SetFloat(0x4, value); }
 	float get_u04() { return (this.GetFloat(0x8)); }
