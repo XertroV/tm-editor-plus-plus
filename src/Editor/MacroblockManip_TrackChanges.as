@@ -99,6 +99,11 @@ namespace Editor {
 
     void TrackMap_OnAddBlock(CGameCtnBlock@ block) {
         blocksAddedThisFrame.InsertLast(BlockSpecPriv(block));
+        if (block.Skin !is null && (block.Skin.PackDesc !is null || block.Skin.ForegroundPackDesc !is null)) {
+            auto fg = block.Skin.ForegroundPackDesc !is null ? GetSkinPath(block.Skin.ForegroundPackDesc) : "";
+            auto bg = block.Skin.PackDesc !is null ? GetSkinPath(block.Skin.PackDesc) : "";
+            skinsSetThisFrame.InsertLast(SetSkinSpecPriv(BlockSpecPriv(block), fg, bg));
+        }
     }
 
     bool _TrackMap_RemoveBlock_IsByAPI = false;
@@ -125,7 +130,16 @@ namespace Editor {
     }
 
     void TrackMap_OnAddItem(CGameCtnAnchoredObject@ item) {
-        itemsAddedThisFrame.InsertLast(ItemSpecPriv(item));
+        auto spec = ItemSpecPriv(item);
+        itemsAddedThisFrame.InsertLast(spec);
+        auto fgSkin = Editor::GetItemFGSkin(item);
+        auto bgSkin = Editor::GetItemBGSkin(item);
+        if (bgSkin !is null) {
+            skinsSetThisFrame.InsertLast(SetSkinSpecPriv(spec, GetSkinPath(bgSkin), false));
+        }
+        if (fgSkin !is null) {
+            skinsSetThisFrame.InsertLast(SetSkinSpecPriv(spec, GetSkinPath(fgSkin), true));
+        }
     }
 
     void TrackMap_OnRemoveItem(CGameCtnAnchoredObject@ item) {

@@ -363,11 +363,9 @@ namespace Editor {
 
         CGameCtnBlockInfo@ TryLoadBlockFromFidPath(const string &in path, const string &in name, const string &in ext = ".EDClassic.Gbx") {
             auto fid = Fids::GetGame(path + name + ext);
-            if (fid !is null && fid.Nod !is null) {
-                auto model = cast<CGameCtnBlockInfo>(Fids::Preload(fid));
-                if (model !is null) {
-                    return model;
-                }
+            CGameCtnBlockInfo@ info;
+            if (fid !is null && (@info = cast<CGameCtnBlockInfo>(Fids::Preload(fid))) !is null) {
+                return info;
             }
             return null;
         }

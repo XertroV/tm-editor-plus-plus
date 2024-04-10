@@ -72,7 +72,94 @@ Tester@ Test_Math = Tester("Math", generateMathTests());
 TestCase@[]@ generateMathTests() {
     TestCase@[]@ ret = {};
     ret.InsertLast(TestCase("angle stuff", math_test_angles));
+    ret.InsertLast(TestCase("mat4 to quat (known)", math_test_mat4_to_quat));
+    ret.InsertLast(TestCase("euler -> quat static", math_test_euler_to_quat_known));
+    ret.InsertLast(TestCase("euler -> rot matrix", math_test_euler_to_rot_matrix));
+    ret.InsertLast(TestCase("euler -> quat", math_test_euler_to_quat));
+    ret.InsertLast(TestCase("euler -> mat -> quat", math_test_euler_to_mat_to_quat));
+    ret.InsertLast(TestCase("quat / mat4", math_test_quat_mat4));
     return ret;
+}
+
+void math_test_mat4_to_quat() {
+    auto m = mat4(vec4(0, -1, 0, 0), vec4(1, 0, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
+    auto q = Mat4ToQuat(m);
+    auto q2 = quat(0., 0., 0.70710678, 0.70710678);
+    assert(AnglesVeryClose(q, q2, false), "m -> q for m -> " + q.ToString() + " (expected) vs " + q2.ToString() + " (actual)");
+    auto m2 = QuatToMat4(q);
+    // assert_nearly_eq(m.xx, m2.xx, 1e-7, "xx");
+    // assert_nearly_eq(m.xy, m2.xy, 1e-7, "xy");
+    // assert_nearly_eq(m.xz, m2.xz, 1e-7, "xz");
+    // assert_nearly_eq(m.xw, m2.xw, 1e-7, "xw");
+    // assert_nearly_eq(m.yx, m2.yx, 1e-7, "yx");
+    // assert_nearly_eq(m.yy, m2.yy, 1e-7, "yy");
+    // assert_nearly_eq(m.yz, m2.yz, 1e-7, "yz");
+    // assert_nearly_eq(m.yw, m2.yw, 1e-7, "yw");
+    // assert_nearly_eq(m.zx, m2.zx, 1e-7, "zx");
+    // assert_nearly_eq(m.zy, m2.zy, 1e-7, "zy");
+    // assert_nearly_eq(m.zz, m2.zz, 1e-7, "zz");
+    // assert_nearly_eq(m.zw, m2.zw, 1e-7, "zw");
+    // assert_nearly_eq(m.tx, m2.tx, 1e-7, "tx");
+    // assert_nearly_eq(m.ty, m2.ty, 1e-7, "ty");
+    // assert_nearly_eq(m.tz, m2.tz, 1e-7, "tz");
+    // assert_nearly_eq(m.tw, m2.tw, 1e-7, "tw");
+    assert_matrix_nearly_eq(m, m2, "m and m2 known good");
+    auto e = vec3(0., 1.57079633, 0.);
+    auto m3 = EulerToMat(e);
+    assert_matrix_nearly_eq(m3, m2, "m3 vs m2 (known good)");
+}
+
+
+
+
+void math_test_euler_to_quat_known() {
+    auto e = vec3(1.57079633, 0.78539816, 0.52359878);
+    auto q = quat(0.70105738, 0.43045933, 0.09229596, 0.56098553);
+    // auto q2 = EulerToQuat(e);
+    auto q2 = quat(e);
+    assert(AnglesVeryClose(q, q2, false), "e -> q for " + e.ToString() + " -> " + q.ToString() + " (expected) vs " + q2.ToString() + " (actual)");
+}
+
+void math_test_euler_to_rot_matrix() {
+    for (uint i = 0; i < 100; i++) {
+        auto e = RandEuler();
+        auto m = EulerToMat(e);
+        auto e2 = PitchYawRollFromRotationMatrix(m);
+        assert(AnglesVeryClose(e, e2, true), "e -> m -> e for " + e.ToString() + " -> m -> " + e2.ToString());
+    }
+}
+
+void math_test_euler_to_quat() {
+    for (uint i = 0; i < 100; i++) {
+        auto e = RandEuler();
+        auto q = EulerToQuat(e);
+        auto e2 = q.Euler();
+        assert(AnglesVeryClose(e, e2, true), "e -> q -> e for " + e.ToString() + " -> q -> " + e2.ToString());
+    }
+}
+
+void math_test_euler_to_mat_to_quat() {
+    for (uint i = 0; i < 100; i++) {
+        auto e = RandEuler();
+        auto m = EulerToMat(e);
+        auto q = Mat4ToQuat(m);
+        auto q2 = EulerToQuat(e);
+        assert(AnglesVeryClose(q, q2, false), "e -> m -> q for " + e.ToString() + " -> m -> " + q.ToString() + " (q.e: "+q.Euler().ToString()+") vs e -> q -> " + q2.ToString());
+    }
+}
+
+void math_test_quat_mat4() {
+    for (uint i = 0; i < 100; i++) {
+        auto q = Vec4ToQuat(RandVec4Norm());
+        auto m = QuatToMat4(q);
+        auto q2 = Mat4ToQuat(m);
+        assert(AnglesVeryClose(q, q2, false), "q -> m -> q for " + q.ToString() + " -> m -> " + q2.ToString());
+        // assert_angle_close(q.x, q2.x, 0.0001, "x");
+        // assert_angle_close(q.y, q2.y, 0.0001, "y");
+        // assert_angle_close(q.z, q2.z, 0.0001, "z");
+        // assert_angle_close(q.w, q2.w, 0.0001, "w");
+    }
+    // throw("implement math_test_quat_mat4");
 }
 
 void math_test_angles() {
@@ -125,6 +212,11 @@ void assert_eq(float a, float b, const string &in msg = "") {
         throw("assertion failed: " + a + " != " + b + (msg != "" ? ", " + msg : ""));
     }
 }
+void assert_nearly_eq(float a, float b, float tolerence, const string &in msg = "") {
+    if (Math::Abs(a - b) > tolerence) {
+        throw("assertion failed: " + a + " !~= " + b + (msg != "" ? ", " + msg : ""));
+    }
+}
 void assert(bool a, const string &in msg = "") {
     if (!a) {
         throw("assertion failed: " + (msg != "" ? msg : ""));
@@ -132,6 +224,24 @@ void assert(bool a, const string &in msg = "") {
 }
 
 
+void assert_matrix_nearly_eq(mat4 &in m, mat4 &in m2, const string &in msg = "") {
+    assert_nearly_eq(m.xx, m2.xx, 1e-5, "xx" + msg);
+    assert_nearly_eq(m.xy, m2.xy, 1e-5, "xy" + msg);
+    assert_nearly_eq(m.xz, m2.xz, 1e-5, "xz" + msg);
+    assert_nearly_eq(m.xw, m2.xw, 1e-5, "xw" + msg);
+    assert_nearly_eq(m.yx, m2.yx, 1e-5, "yx" + msg);
+    assert_nearly_eq(m.yy, m2.yy, 1e-5, "yy" + msg);
+    assert_nearly_eq(m.yz, m2.yz, 1e-5, "yz" + msg);
+    assert_nearly_eq(m.yw, m2.yw, 1e-5, "yw" + msg);
+    assert_nearly_eq(m.zx, m2.zx, 1e-5, "zx" + msg);
+    assert_nearly_eq(m.zy, m2.zy, 1e-5, "zy" + msg);
+    assert_nearly_eq(m.zz, m2.zz, 1e-5, "zz" + msg);
+    assert_nearly_eq(m.zw, m2.zw, 1e-5, "zw" + msg);
+    assert_nearly_eq(m.tx, m2.tx, 1e-5, "tx" + msg);
+    assert_nearly_eq(m.ty, m2.ty, 1e-5, "ty" + msg);
+    assert_nearly_eq(m.tz, m2.tz, 1e-5, "tz" + msg);
+    assert_nearly_eq(m.tw, m2.tw, 1e-5, "tw" + msg);
+}
 
 
 #endif

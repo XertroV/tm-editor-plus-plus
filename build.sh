@@ -92,6 +92,8 @@ for pluginSrc in ${pluginSources[@]}; do
     7z a ./$BUILD_NAME ./$pluginSrc/* ./LICENSE ./README.md
 
     cp -v $BUILD_NAME $RELEASE_NAME
+    cp -v $RELEASE_NAME editor.op
+    cp -v editor.op Editor.op
 
     _colortext16 green "\n✅ Built plugin as ${BUILD_NAME} and copied to ./${RELEASE_NAME}.\n"
   }

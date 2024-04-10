@@ -66,6 +66,18 @@ namespace MathX {
         return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
     }
 
+    bool Mat4Equal(mat4 &in a, mat4 &in b) {
+        return a.xx == b.xx && a.xy == b.xy && a.xz == b.xz && a.xw == b.xw &&
+            a.yx == b.yx && a.yy == b.yy && a.yz == b.yz && a.yw == b.yw &&
+            a.zx == b.zx && a.zy == b.zy && a.zz == b.zz && a.zw == b.zw &&
+            a.tx == b.tx && a.ty == b.ty && a.tz == b.tz && a.tw == b.tw;
+    }
+
+    bool Mat3Equal(mat3 &in a, mat3 &in b) {
+        return a.xx == b.xx && a.xy == b.xy && a.xz == b.xz &&
+            a.yx == b.yx && a.yy == b.yy && a.yz == b.yz &&
+            a.zx == b.zx && a.zy == b.zy && a.zz == b.zz;
+    }
 
     float AngleLerp(float start, float stop, float t) {
         float diff = stop - start;
