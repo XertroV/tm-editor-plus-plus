@@ -201,7 +201,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         if (m_BlockChanged) {
             dev_trace('Nudge block: changed');
             if (Editor::IsBlockFree(block)) {
-                startnew(CoroutineFunc(CheckDeleteFreeblock)).WithRunContext(Meta::RunContext::MainLoop);
+                startnew(CoroutineFunc(CheckDeleteFreeblockAfterNudge)).WithRunContext(Meta::RunContext::MainLoop);
             }
             safeToRefresh = true;
         }
@@ -260,10 +260,13 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
     }
 
 
-    void CheckDeleteFreeblock() {
+    void CheckDeleteFreeblockAfterNudge() {
         if (Editor::HasPendingFreeBlocksToDelete()) {
             Editor::RunDeleteFreeBlockDetection();
         }
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor.Challenge.Blocks.Length > 0)
+            @FocusedBlock = editor.Challenge.Blocks[editor.Challenge.Blocks.Length - 1];
     }
 
     BlockDesc@ tmpDesc;

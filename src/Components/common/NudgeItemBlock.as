@@ -134,7 +134,7 @@ mixin class NudgeItemBlock {
                     blockSpec.coord.z += blockCoordMod.z;
                     blockSpec.dir = CGameCtnBlock::ECardinalDirections(m_dir);
                 }
-                if (!Editor::PlaceBlocksAndItems({blockSpec}, {}, true)) {
+                if (!Editor::PlaceBlocksAndItems({blockSpec}, {}, !blockSpec.isFree)) {
                     warn("Failed to place block for nudge");
                 }
             } else {
