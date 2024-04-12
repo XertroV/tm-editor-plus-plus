@@ -201,7 +201,10 @@ class CoordPathDrawingTab : EffectTab {
                     paths.RemoveAt(i);
                     i--;
                 }
-                // UI::SameLine();
+                UI::SameLine();
+                if (UI::Button("View")) {
+                    Editor::SetCamAnimationGoTo(vec2(.7), paths[i].points[0], 120);
+                }
                 vec3 min = vec3(9999999);
                 vec3 max = vec3(-9999999);
                 for (uint j = 0; j < paths[i].points.Length; j++) {

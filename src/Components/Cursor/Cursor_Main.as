@@ -414,10 +414,12 @@ namespace CustomCursorRotations {
     );
 
     // idea is to use this to overwrite cursor stuff right after it's been set
+    // hooks before and on call to CGameCursorBlock::UpdateCursor (0x228)
     MultiHookHelper@ BeforeAfterCursorUpdateHook = MultiHookHelper(
      // after only: "FF 90 28 02 00 00 83 7D F4 00 74 23 48 8B 4F 68 BA 41 00 00 00 4C 8B 01 41 FF 90 08 01 00 00 85 C0",
      // "48 8D 55 00 48 8B CF FF 90 28 02 00 00 83 7D F4 00 74 23 48 8B 4F 68 BA 41 00 00 00 4C 8B 01 41 FF 90 08 01 00 00 85 C0",
-        "48 8D 55 00 48 8B CF FF 90 ?? ?? 00 00 83 7D F4 00 74 ?? 48 8B 4F ?? BA ?? 00 00 00 4C 8B 01 41 FF 90 ?? ?? 00 00 85 C0",
+     // "48 8D 55 E0 48 8B CF FF 90 28 02 00 00 83 7D D4 00 74 23"
+        "48 8D 55 ?? 48 8B CF FF 90 ?? 02 00 00 83 7D ?? 00 74 23", // 48 8B 4F ?? BA ?? 00 00 00 4C 8B 01 41 FF 90 ?? ?? 00 00 85 C0",
         {0, 7}, {2, 1}, {"CustomCursorRotations::BeforeCursorUpdate", "CustomCursorRotations::AfterCursorUpdate"}
     );
 
@@ -436,10 +438,12 @@ namespace CustomCursorRotations {
 
     // todo: test placement layouts
     // Items are less picky about the blocks they snap to. Needs to be enabled before blocks are placed, or before they are loaded (i.e., before the map is loaded in the editor)
+    // 48 8B 80 30 02 00 00 -- load 0x230 from CGameCtnBlockInfo into rax (MatModifierPlacementTag)
+    // patch to xor rax,rax; dec rax; nop
     MemPatcher@ PromiscuousItemToBlockSnapping = MemPatcher(
         // "48 8b 80 ?? ?? 00 00 0f 28 85 ?? ?? 00 00 48 8d 14 ba f2 0f 11 8d ?? ?? 00 00 0f 28 8d ?? ?? 00 00",
-        "48 8b 80 ?? ?? 00 00 0f 28 85 ?? ?? 00 00 48 8d 14 ba",
-        {0}, {"48 31 C0 48 FF C8 90"}, /* expected */ {"48 8B 80 30 02 00 00"}
+        "48 8b 80 ?? 02 00 00 0f 28 85 ?? ?? 00 00 48 8d 14 ba",
+        {0}, {"48 31 C0 48 FF C8 90"} /* expected , {"48 8B 80 38 02 00 00"} */
     );
 
     // rotation is written to the stack, and then we can overwrite it before it's written to the cursor
