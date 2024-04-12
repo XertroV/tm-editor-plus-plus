@@ -1,7 +1,29 @@
-TODO: set skins
 TODO: item stuff with cbs
-TODO: optimize refreshing to use MB stuff
 TODO: changing props of blocks/items will cache the new values as deleted, not the old ones
+
+
+- FEAT: Add autolink CPs (based on distance; CPs tab + popup when placing CPs)
+- FEAT: Automatically delete duplicate blocks
+- Map Together support
+- Picked Block: Convert block to free; edit block
+- Expose LMSideLengthMeters on item Meshes (controls how big the item is in lightmap, use via item editor)
+- Add auto-clear to find-replace tab
+- Add auto-disable Freelook (camera mode) when you alt tab
+- Add free pos field to cursor tab
+- Add way to manually edit offzone coords
+- Add skin setting API stuff
+- Track all (well, most) changes to map and expose via exports
+- Support free block and item deletion in blocks and items tab
+- Add material modifier to block model browser
+- Refactor vehicles to not require a plugin update when vehicles are added
+- Fix pp_content.FlyOffset in Item Placement
+- Fix and update block & item nudging to work with new macroblock tech
+- Fix custom selection fill (ctrl+f) possible crash
+- Fix crash leaving editor too quickly
+- Fix showing editor helpers in map with certain settings
+- Exports: PlaceBlocks, PlaceItems, ConvertBlockToFree, Delete Freeblock stuff, Place macroblock specs, create macroblock specs, and well there's a lot of exports now.
+
+
 
 0.8.9999991
 
