@@ -51,12 +51,15 @@ shared class OctTreeRegion {
     vec3 max;
     vec3 min;
     vec3 midp;
+    float halfDiagDist;
+    float halfDiagDistSq;
     bool isNode = false;
 
     OctTreeRegion(vec3 &in min, vec3 &in max) {
         this.min = min;
         this.max = max;
         midp = (max + min) / 2.;
+        halfDiagDist = (max - min).Length() / 2.;
     }
 
     bool PointInside(const vec3 &in point) {
@@ -116,6 +119,11 @@ shared class OctTreePoint {
         return point.x >= min.x && point.x <= max.x &&
             point.y >= min.y && point.y <= max.y &&
             point.z >= min.z && point.z <= max.z;
+    }
+
+    bool HasCheckpoint() const {
+        return (item !is null && item.Model.IsCheckpoint)
+            || (block !is null && block.BlockInfo.WayPointType == CGameCtnBlockInfo::EWayPointType::Checkpoint);
     }
 }
 
@@ -215,10 +223,6 @@ shared class OctTreeNode : OctTreeRegion {
 
     bool Contains(const Editor::BlockSpec@ block) const {
         if (block is null) return false;
-        // auto point = block.pos;
-        // if (point.x < min.x || point.x > max.x || point.y < min.y || point.y > max.y || point.z < min.z || point.z > max.z) {
-        //     return false;
-        // }
         if (children.Length == 0) {
             for (uint i = 0; i < points.Length; i++) {
                 if (points[i].block !is null && points[i].block == block) {
@@ -233,10 +237,6 @@ shared class OctTreeNode : OctTreeRegion {
 
     bool Contains(const Editor::ItemSpec@ item) const {
         if (item is null) return false;
-        // auto point = item.pos;
-        // if (point.x < min.x || point.x > max.x || point.y < min.y || point.y > max.y || point.z < min.z || point.z > max.z) {
-        //     return false;
-        // }
         if (children.Length == 0) {
             for (uint i = 0; i < points.Length; i++) {
                 if (points[i].item !is null && points[i].item == item) {
@@ -249,6 +249,29 @@ shared class OctTreeNode : OctTreeRegion {
         }
     }
 
+    OctTreePoint@[]@ FindPointsWithin(const vec3 &in p, float radius) const {
+        float radiusSquared = radius * radius;
+        float rPlusHalfDiag;
+        OctTreePoint@[] ret;
+        if (children.Length == 0) {
+            for (uint i = 0; i < points.Length; i++) {
+                if ((points[i].point - p).LengthSquared() <= radiusSquared) {
+                    ret.InsertLast(points[i]);
+                }
+            }
+        } else {
+            for (uint i = 0; i < children.Length; i++) {
+                rPlusHalfDiag = children[i].halfDiagDist + radius;
+                if ((children[i].midp - p).LengthSquared() <= rPlusHalfDiag*rPlusHalfDiag) {
+                    auto r = children[i].FindPointsWithin(p, radius);
+                    for (uint j = 0; j < r.Length; j++) {
+                        ret.InsertLast(r[j]);
+                    }
+                }
+            }
+        }
+        return ret;
+    }
 
     bool Remove(const vec3 &in point) {
         if (children.Length == 0) {

@@ -8,6 +8,11 @@ namespace FormatX {
             + Text::Format("%.0f, ", v.y)
             + Text::Format("%.0f>", v.z);
     }
+    string Vec3_AsCode(vec3 &in v) {
+        return Text::Format("vec3(%.3f, ", v.x)
+            + Text::Format("%.3f, ", v.y)
+            + Text::Format("%.3f)", v.z);
+    }
     shared string Vec3_NewLines(vec3 &in v, uint dps = 1, const string &in spacing = "  ") {
         auto fmtString = "\n" + spacing + "%."+dps+"f ";
         return Text::Format(fmtString, v.x)

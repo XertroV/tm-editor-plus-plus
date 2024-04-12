@@ -241,8 +241,23 @@ namespace Editor {
     bool DeleteBlocks(CGameCtnBlock@[]@ blocks, bool addUndoRedoPoint = false) {
         return DeleteMacroblock(MakeMacroblockSpec(blocks, array<CGameCtnAnchoredObject@> = {}), addUndoRedoPoint);
     }
+    bool PlaceBlocks(BlockSpec@[]@ blocks, bool addUndoRedoPoint = false) {
+        return PlaceMacroblock(MacroblockSpecPriv(blocks, array<ItemSpec@> = {}), addUndoRedoPoint);
+    }
+    CGameCtnBlock@ ConvertBlockToFree(CGameCtnBlock@ block) {
+        auto spec = MakeBlockSpec(block);
+        DeleteBlocks({block});
+        spec.flags = uint8(Editor::BlockFlags::Free);
+        PlaceBlocks({spec}, true);
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor.Challenge.Blocks.Length == 0) return null;
+        return editor.Challenge.Blocks[editor.Challenge.Blocks.Length - 1];
+    }
     bool DeleteItems(CGameCtnAnchoredObject@[]@ items, bool addUndoRedoPoint = false) {
         return DeleteMacroblock(MakeMacroblockSpec(array<CGameCtnBlock@> = {}, items), addUndoRedoPoint);
+    }
+    bool PlaceItems(ItemSpec@[]@ items, bool addUndoRedoPoint = false) {
+        return PlaceMacroblock(MacroblockSpecPriv(array<BlockSpec@> = {}, items), addUndoRedoPoint);
     }
     bool PlaceMacroblock(MacroblockSpec@ macroblock, bool addUndoRedoPoint = false) {
         auto mbSpec = cast<MacroblockSpecPriv>(macroblock);

@@ -1,6 +1,6 @@
 class SetLinkedCheckpointsTab : EffectTab {
     SetLinkedCheckpointsTab(TabGroup@ parent) {
-        super(parent, "Auto Link Checkpoints", Icons::Link);
+        super(parent, "Auto Set Checkpoint Properties", Icons::Link);
         RegisterNewItemCallback(ProcessItem(this.OnNewItem), this.tabName);
         RegisterNewBlockCallback(ProcessBlock(this.OnNewBlock), this.tabName);
     }

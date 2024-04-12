@@ -460,6 +460,7 @@ const uint16 O_CTNBLOCK_SKIN = GetOffset("CGameCtnBlock", "Skin");
 // originally 0xA8 -- is FFFFFFFF when not in a macroblock
 const uint16 O_CTNBLOCK_MACROBLOCK_INST_NB = O_CTNBLOCK_DIR + 0x3C;
 
+const uint16 O_BLOCKINFO_MATERIALMOD = GetOffset("CGameCtnBlockInfo", "MaterialModifier");
 
 // no more than 0x170 bytes
 const uint16 O_GAMESKIN_PATH1 = 0x18;

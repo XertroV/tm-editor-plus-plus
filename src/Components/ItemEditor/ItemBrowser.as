@@ -413,6 +413,7 @@ class ItemModelTreeElement {
 
     void Draw(CGameCtnBlockInfo@ blockInfo) {
         if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfo", UI::TreeNodeFlags::DefaultOpen)) {
+            MkAndDrawChildNode(blockInfo.MaterialModifier, O_BLOCKINFO_MATERIALMOD, "MaterialModifier");
             auto mmOffset = GetOffset(blockInfo, "MatModifierPlacementTag");
             auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
             CopiableLabeledValue("Name MwID", toHex(blockInfo.Id.Value));

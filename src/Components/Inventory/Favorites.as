@@ -1012,46 +1012,47 @@ class FavObj {
     }
 
     void EditSelfBlockM2() {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto inv = Editor::GetInventoryCache();
-        auto node = inv.GetBlockByName(nodeName);
+        CGameCtnArticleNodeArticle@ node = inv.GetBlockByName(nodeName);
         if (node is null) return;
-        auto cs = Editor::GetCurrentCamState(editor);
+        // auto cs = Editor::GetCurrentCamState(editor);
 
-        // method 2 creates a new block from a compatible one, then force updates the block in the item editor, and save + reload.
-        auto baseNode = inv.GetBlockByName("RoadTechStraight");
-        auto bm = cast<CGameCtnBlockInfo>(baseNode.GetCollectorNod());
-        auto targetBm = cast<CGameCtnBlockInfo>(node.GetCollectorNod());
+        Editor::OpenItemEditorMethod2(cast<CGameCtnBlockInfo>(node.GetCollectorNod()));
 
-        // open editor
-        Editor::OpenItemEditor(editor, bm);
-        yield();
-        yield();
+        // // method 2 creates a new block from a compatible one, then force updates the block in the item editor, and save + reload.
+        // auto baseNode = inv.GetBlockByName("RoadTechStraight");
+        // auto bm = cast<CGameCtnBlockInfo>(baseNode.GetCollectorNod());
+        // auto targetBm = cast<CGameCtnBlockInfo>(node.GetCollectorNod());
 
-        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
-        auto blockItem = cast<CGameBlockItem>(ieditor.ItemModel.EntityModelEdition);
-        auto blockInfo = cast<CGameCtnBlockInfo>(ieditor.ItemModel.EntityModel);
+        // // open editor
+        // Editor::OpenItemEditor(editor, bm);
+        // yield();
+        // yield();
 
-        // update the archetype block info id
-        Dev::SetOffset(blockItem, GetOffset(blockItem, 'ArchetypeBlockInfoId_GameBox'), targetBm.Id.Value);
+        // auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        // auto blockItem = cast<CGameBlockItem>(ieditor.ItemModel.EntityModelEdition);
+        // auto blockInfo = cast<CGameCtnBlockInfo>(ieditor.ItemModel.EntityModel);
 
-        // update catalog info
-        blockInfo.CatalogPosition = targetBm.CatalogPosition + 1;
-        blockInfo.PageName = targetBm.PageName;
-        blockInfo.NameE = targetBm.Name;
-        ieditor.ItemModel.Name = targetBm.Name;
-        ieditor.ItemModel.Name = targetBm.Name;
-        ieditor.ItemModel.CatalogPosition = targetBm.CatalogPosition + 1;
-        ieditor.ItemModel.PageName = targetBm.PageName;
+        // // update the archetype block info id
+        // Dev::SetOffset(blockItem, GetOffset(blockItem, 'ArchetypeBlockInfoId_GameBox'), targetBm.Id.Value);
 
-        auto saveName = "Custom_" + targetBm.IdName + ".Block.Gbx";
-        ItemEditor::SaveItemAs(saveName);
-        // ItemEditor::OpenItem(saveName);
-        // ieditor.Exit();
-        ieditor.AddEmptyMesh();
-        yield();
-        ItemEditor::UpdateThumbnail(2);
-        ItemEditor::SaveItem();
+        // // update catalog info
+        // blockInfo.CatalogPosition = targetBm.CatalogPosition + 1;
+        // blockInfo.PageName = targetBm.PageName;
+        // blockInfo.NameE = targetBm.Name;
+        // ieditor.ItemModel.Name = targetBm.Name;
+        // ieditor.ItemModel.CatalogPosition = targetBm.CatalogPosition + 1;
+        // ieditor.ItemModel.PageName = targetBm.PageName;
+
+        // auto saveName = "Custom_" + targetBm.IdName + ".Block.Gbx";
+        // ItemEditor::SaveItemAs(saveName);
+        // // ItemEditor::OpenItem(saveName);
+        // // ieditor.Exit();
+        // ieditor.AddEmptyMesh();
+        // yield();
+        // ItemEditor::UpdateThumbnail(2);
+        // ItemEditor::SaveItem();
     }
 }
 

@@ -132,7 +132,7 @@ class CoordPathDrawingTab : EffectTab {
         UI::SetNextItemWidth(200);
         currentPath.color = UI::InputColor4("Color", currentPath.color);
         UI::Text("Points: " + currentPath.points.Length);
-        if (UI::BeginChild("ActivePath", vec2(0, 100))) {
+        if (UI::BeginChild("ActivePath", vec2(0, UI::GetContentRegionMax().y * .4))) {
             UI::ListClipper clip(currentPath.points.Length);
             int toRem = -1;
             while (clip.Step()) {
@@ -201,6 +201,15 @@ class CoordPathDrawingTab : EffectTab {
                     paths.RemoveAt(i);
                     i--;
                 }
+                // UI::SameLine();
+                vec3 min = vec3(9999999);
+                vec3 max = vec3(-9999999);
+                for (uint j = 0; j < paths[i].points.Length; j++) {
+                    min = MathX::Min(min, paths[i].points[j]);
+                    max = MathX::Max(max, paths[i].points[j]);
+                }
+                CopiableLabeledValue("BB Min", FormatX::Vec3_AsCode(min));
+                CopiableLabeledValue("BB Max", FormatX::Vec3_AsCode(max));
                 UI::Unindent();
             }
             UI::PopID();

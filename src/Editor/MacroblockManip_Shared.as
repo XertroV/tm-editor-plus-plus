@@ -270,6 +270,7 @@ namespace Editor {
         uint mobilIx;
         uint mobilVariant;
         uint variant;
+        // Set via Editor::BlockFlags enum values
         uint8 flags;
         // refcounted
         WaypointSpec@ waypoint;

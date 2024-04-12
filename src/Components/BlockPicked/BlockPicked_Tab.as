@@ -98,9 +98,14 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         CopiableLabeledValue("Coord", block.Coord.ToString());
         CopiableLabeledValue("Pos", preDesc.Pos.ToString());
         CopiableLabeledValue("Rot", MathX::ToDeg(preDesc.Rot).ToString());
+        UI::BeginDisabled(preDesc.IsFree);
+        if (UX::SmallButton("Convert to Free")) {
+            startnew(CoroutineFunc(ConvertBlockToFree));
+        }
+        UI::EndDisabled();
 
 #if SIG_DEVELOPER
-        if (UI::Button(Icons::Cube + "Explore Block")) {
+        if (UX::SmallButton(Icons::Cube + "Explore Block")) {
             ExploreNod(block.DescId.GetName(), block);
         }
         UI::SameLine();
@@ -120,6 +125,14 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             if (UX::SmallButton("Clear")) {
                 Editor::SetBlockMbInstId(block, -1);
             }
+        }
+
+
+        if (UX::SmallButton("Edit This Block")) {
+            Editor::OpenItemEditor(editor, block.BlockModel);
+        }
+        if (UX::SmallButton("Edit This Block (Method 2)")) {
+            Editor::OpenItemEditorMethod2(block.BlockModel);
         }
 
 #if SIG_DEVELOPER
@@ -259,6 +272,11 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         UI::PopItemWidth();
     }
 
+    void ConvertBlockToFree() {
+        auto block = FocusedBlock.AsBlock();
+        if (block is null) return;
+        @FocusedBlock = ReferencedNod(Editor::ConvertBlockToFree(block));
+    }
 
     void CheckDeleteFreeblockAfterNudge() {
         if (Editor::HasPendingFreeBlocksToDelete()) {
@@ -266,7 +284,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         }
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor.Challenge.Blocks.Length > 0)
-            @FocusedBlock = editor.Challenge.Blocks[editor.Challenge.Blocks.Length - 1];
+            @FocusedBlock = ReferencedNod(editor.Challenge.Blocks[editor.Challenge.Blocks.Length - 1]);
     }
 
     BlockDesc@ tmpDesc;

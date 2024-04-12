@@ -95,6 +95,9 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         if (UX::SmallButton("Edit This Item")) {
             Editor::OpenItemEditor(editor, item);
         }
+        if (UX::SmallButton("Edit This Item Model")) {
+            Editor::OpenItemEditor(editor, item.ItemModel);
+        }
 
         auto modelFid = GetFidFromNod(item.ItemModel);
         if (UX::SmallButton("Open Item Folder")) {
