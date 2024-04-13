@@ -543,7 +543,8 @@ class MapEditPropsTab : Tab {
         for (uint i = 0; i < chapter.Articles.Length; i++) {
             @art = chapter.Articles[i];
             if (!art.Name.StartsWith("Car")) continue;
-            if (art.CollectorFid.FullFileName != "<virtual>") continue;
+            if (art.CollectorFid.FullFileName != "<virtual>"
+                && !art.CollectorFid.FullFileName.EndsWith("GameData\\Vehicles\\Items\\" + art.Name + ".Item.Gbx")) continue;
             vehicleMwIds.InsertLast(art.Id.Value);
             vehicleNames.InsertLast(art.Name);
         }
