@@ -1,0 +1,38 @@
+Pivot Position / Global Editor Params
+- can update these to move item arbitrarily
+
+v some kind of flag or magic bytes or something?
+0A 04 00 80 00 00 00 00 00 00 00 00 00 00 00 00
+v vtable for item placement params
+E0 DB CC 2F F6 7F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+v buf of pivot points (works to update cursor each frame)
+C0 48 2B B2 6D 01 00 00 04 00 00 00 04 00 00 00
+
+
+Trackmania.exe.text+DDE44D - 65 48 8B 04 25 58000000  - mov rax,gs:[00000058] { 88 }
+Trackmania.exe.text+DDE456 - BA 14000000           - mov edx,00000014 { 20 }
+Trackmania.exe.text+DDE45B - 48 89 6C 24 30        - mov [rsp+30],rbp
+Trackmania.exe.text+DDE460 - 48 89 7C 24 38        - mov [rsp+38],rdi
+Trackmania.exe.text+DDE465 - 48 8B 08              - mov rcx,[rax]
+Trackmania.exe.text+DDE468 - 8B 04 0A              - mov eax,[rdx+rcx]
+Trackmania.exe.text+DDE46B - 39 05 5F7D2601        - cmp [Trackmania.exe+20471D0],eax { this is 0x10 bytes in front of the item placement params in global memory
+ }
+Trackmania.exe.text+DDE471 - 0F8F 92000000         - jg Trackmania.exe.text+DDE509
+Trackmania.exe.text+DDE477 - E8 D43931FF           - call Trackmania.exe.text+F1E50
+Trackmania.exe.text+DDE47C - 33 FF                 - xor edi,edi
+Trackmania.exe.text+DDE47E - 8B E8                 - mov ebp,eax
+Trackmania.exe.text+DDE480 - 83 BE 38120000 01     - cmp dword ptr [rsi+00001238],01 { 1 }
+Trackmania.exe.text+DDE487 - 40 0F94 C7            - sete dil
+Trackmania.exe.text+DDE48B - 48 3B 1D 562A2601     - cmp rbx,[Trackmania.exe+2041EE8] { (16D75DE3980) }
+
+
+editor+628 -- check curr item nonnull
+editor+1238 -- check nonzero along with item
+
+access a global thing
+then + 14   (bytes: 0B 04 00 80
+
+location of cmp instruction:    7FF62EEFF46B
+destination of cmp instruction: 7FF6301671D0
+
+0x7FF6301671D0 - (0x7FF62EEFF46B + 6) = 0x1267d65 (  5F7D2601  )
