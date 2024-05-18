@@ -272,6 +272,10 @@ vec2 RandVec2Norm() {
     return vec2(RandM1To1(), RandM1To1()).Normalized();
 }
 
+vec3 RandVec3() {
+    return vec3(RandM1To1(), RandM1To1(), RandM1To1());
+}
+
 vec3 RandVec3Norm() {
     return vec3(RandM1To1(), RandM1To1(), RandM1To1()).Normalized();
 }

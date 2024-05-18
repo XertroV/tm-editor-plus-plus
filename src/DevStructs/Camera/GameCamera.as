@@ -66,8 +66,10 @@ class DGameCamera : RawBufferElem {
 	bool get_IsMouseOverWindow() { return (this.GetBool(0x178)); }
 	vec3 get_CameraPos() { return (this.GetVec3(0x17C)); }
 	vec3 get_CursorPickDirection() { return (this.GetVec3(0x188)); }
+	// counts up when toggling between same camera (e.g., cam 1 and alt; free cam and drivable free cam; resets to 0 on cam 1->2 etc)
+	uint get_NbTogglesWhileSameCamera() { return (this.GetUint32(0x194)); }
 	NGameMgrMap_SMgr@ get_GameMgrMap() { return cast<NGameMgrMap_SMgr>(this.GetNod(0x198)); }
-	// Free = 0x2, Cam1 = 0x12
+	// Free = 0x2, Cam1 = 0x12, 13, 14
 	uint get_ChosenCamera() { return (this.GetUint32(0x1A8)); }
 	void set_ChosenCamera(uint value) { this.SetUint32(0x1A8, value); }
 	// 0x230: ptr to unk - same as 0x2D0 in MT editor
@@ -75,12 +77,14 @@ class DGameCamera : RawBufferElem {
 	iso4 get_CameraMatrix() { return (this.GetIso4(0x260)); }
 	float get_Fov() { return (this.GetFloat(0x294)); }
 	void set_Fov(float value) { this.SetFloat(0x294, value); }
+	vec2 get_NearFarClipPlane() { return (this.GetVec2(0x2A0)); }
 	uint get_UnkVisEntId2B8() { return (this.GetUint32(0x2b8)); }
 	void set_UnkVisEntId2B8(uint value) { this.SetUint32(0x2b8, value); }
 	uint get_VisEntId2BC() { return (this.GetUint32(0x2bC)); }
 	void set_VisEntId2BC(uint value) { this.SetUint32(0x2bC, value); }
 	uint get_UnkVisEntId2C0() { return (this.GetUint32(0x2C0)); }
 	void set_UnkVisEntId2C0(uint value) { this.SetUint32(0x2C0, value); }
+	// points to game camera nod (self) when in map; control camera in editor
 	CGameControlCamera@ get_CurrentCamControl() { return cast<CGameControlCamera>(this.GetNod(0x2D0)); }
 }
 

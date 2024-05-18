@@ -359,6 +359,8 @@ namespace Editor {
             yield();
             yield();
             trace('Caching map GhostBlocks...');
+            if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
+                || editor.PluginMapType is null) return;
             for (uint i = 0; i < pmt.GhostBlocks.Length; i++) {
                 CheckPause();
                 if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
@@ -371,6 +373,8 @@ namespace Editor {
             yield();
             yield();
             trace('Caching map items...');
+            if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
+                || editor.PluginMapType is null) return;
             for (uint i = 0; i < pmt.Map.AnchoredObjects.Length; i++) {
                 CheckPause();
                 if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null

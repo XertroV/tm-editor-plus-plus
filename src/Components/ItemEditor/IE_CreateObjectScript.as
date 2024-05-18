@@ -51,6 +51,11 @@ class IE_CreateObjectMacroTab : Tab {
         if (UI::Button("Create Fire(2)")) {
             startnew(CreateObj::MakeFire, uint(2));
         }
+        UI::Separator();
+
+        if (UI::Button("Create Moving Ngolos")) {
+            startnew(CreateObj::MakeNgolos, uint(2));
+        }
 
         UI::Separator();
 
@@ -317,7 +322,17 @@ namespace CreateObj {
 
     CPlugStaticObjectModel@ GetStaticObjFromSource(const string &in name) {
         trace("Getting source: " + name);
-        return cast<CPlugStaticObjectModel>(cast<CGameCommonItemEntityModel>(GetModelFromSource(name).EntityModel).StaticObject);
+        auto model = GetModelFromSource(name).EntityModel;
+        auto em = cast<CGameCommonItemEntityModel>(model);
+        if (em !is null) {
+            return cast<CPlugStaticObjectModel>(em.StaticObject);
+        }
+        auto vl = cast<NPlugItem_SVariantList>(model);
+        if (vl !is null) {
+            return cast<CPlugStaticObjectModel>(vl.Variants[0].EntityModel);
+        }
+        return null;
+        //
     }
 
 
@@ -789,7 +804,7 @@ namespace CreateObj {
         if (varList is null) {
             @varList = GetRootVL();
         }
-        if (newCapacity == 0 || newCapacity > 20000) throw('new capacity seems out of bounds');
+        if (newCapacity == 0 || newCapacity > 20000) throw('new capacity ('+newCapacity+') seems out of bounds');
         if (varList is null) throw('var list null');
         auto arrayPtr = Dev_GetPointerForNod(varList) + GetOffset(varList, "Variants");
         Dev_UpdateMwSArrayCapacity(arrayPtr, newCapacity, SZ_VARLIST_VARIANT);

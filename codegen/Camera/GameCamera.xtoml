@@ -57,9 +57,11 @@ VehicleMatrix = iso4, 0xF8, G
 IsMouseOverWindow = bool, 0x178, G
 CameraPos = vec3, 0x17C, G
 CursorPickDirection = vec3, 0x188, G
+# counts up when toggling between same camera (e.g., cam 1 and alt; free cam and drivable free cam; resets to 0 on cam 1->2 etc)
+NbTogglesWhileSameCamera = uint, 0x194, G
 GameMgrMap = NGameMgrMap_SMgr, 0x198, G
 
-# Free = 0x2, Cam1 = 0x12
+# Free = 0x2, Cam1 = 0x12, 13, 14
 ChosenCamera = uint, 0x1A8, GS
 # unknown purpose, spec cam or something?
 UnkCameraThing = uint, 0x1AC, 0x15
@@ -70,8 +72,11 @@ CameraMatrix = iso4, 0x260, G
 
 Fov = float, 0x294, GS
 
+NearFarClipPlane = vec2, 0x2A0, G
+
 UnkVisEntId2B8 = uint, 0x2b8, GS
 VisEntId2BC = uint, 0x2bC, GS
 UnkVisEntId2C0 = uint, 0x2C0, GS
 
+# points to game camera nod (self) when in map; control camera in editor
 CurrentCamControl = CGameControlCamera, 0x2D0, G

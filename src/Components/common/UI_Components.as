@@ -348,11 +348,13 @@ UI::Font@ g_MonoFont;
 UI::Font@ g_BoldFont;
 UI::Font@ g_BigFont;
 UI::Font@ g_MidFont;
+UI::Font@ g_NormFont;
 void LoadFonts() {
     @g_BoldFont = UI::LoadFont("DroidSans-Bold.ttf");
     @g_MonoFont = UI::LoadFont("DroidSansMono.ttf");
     @g_BigFont = UI::LoadFont("DroidSans.ttf", 26);
     @g_MidFont = UI::LoadFont("DroidSans.ttf", 20);
+    @g_NormFont = UI::LoadFont("DroidSans.ttf", 16);
 }
 
 
