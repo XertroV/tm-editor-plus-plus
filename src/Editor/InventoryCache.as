@@ -25,6 +25,8 @@ namespace Editor {
         void RefreshCache() {
             while (PAUSE_INVENTORY_CACHING) yield();
             isRefreshing = true;
+            loadProgress = 0;
+            loadTotal = 0;
             auto myNonce = ++cacheRefreshNonce;
             hasClubItems = false;
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);

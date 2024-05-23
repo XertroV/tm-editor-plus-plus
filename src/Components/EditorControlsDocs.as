@@ -62,6 +62,8 @@ string[][]@ GenEditorControlsArray() {
     r.InsertLast({"Calculate Fast Shadows", "Shift + F"});
     r.InsertLast({"Calculate Shadows", "Ctrl + F"});
     r.InsertLast({"Toggle Ball at Target in Cam Mode", "Alt + M"});
+    r.InsertLast({"Rotate around grid corner", "Right Ctrl"});
+    r.InsertLast({"Move camera up/down", "Alt + Mouse: Left+Right buttons + Move"});
 
 
     //r.InsertLast({"Dev Tools on Debug Builds?", "Y"});

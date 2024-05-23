@@ -20,28 +20,61 @@ namespace Editor {
         // using the coord will not give you a consistent corner of the block (i.e., after rotation),
         // pre-adjust the coordinates to account for this based on cardinal dir
         // rclick in editor always rotates around BL (min x/z);
-        auto coord = Nat3ToVec3(block.Coord);
         auto coordSize = GetBlockCoordSize(block);
-        if (int(block.Dir) == 1) {
+        return BlockCoordAndCoordSizeToPos(block.Coord, coordSize, int(block.Dir));
+    }
+
+    vec3 GetBlockLocation(BlockSpec@ block) {
+        if (block.isFree) {
+            return block.pos - vec3(0, 56, 0);
+        }
+        auto coordSize = GetBlockCoordSize(block);
+        return BlockCoordAndCoordSizeToPos(block.coord, coordSize, int(block.dir2)) - vec3(0, 56, 0);
+    }
+
+    vec3 BlockCoordAndCoordSizeToPos(nat3 bCoord, vec3 coordSize, int dir) {
+        auto coord = Nat3ToVec3(bCoord);
+        if (dir == 1) {
             coord.x += coordSize.z - 1;
         }
-        if (int(block.Dir) == 2) {
+        if (dir == 2) {
             coord.x += coordSize.x - 1;
             coord.z += coordSize.z - 1;
         }
-        if (int(block.Dir) == 3) {
+        if (dir == 3) {
             coord.z += coordSize.x - 1;
         }
         auto pos = CoordToPos(coord);
-        auto sqSize = vec3(32, 8, 32);
-        auto rot = GetBlockRotation(block);
-        return (mat4::Translate(pos) * mat4::Translate(sqSize / 2.) * EulerToMat(rot) * (sqSize / -2.)).xyz;
+        return (mat4::Translate(pos) * mat4::Translate(HALF_COORD) * EulerToMat(vec3(0, CardinalDirectionToYaw(dir), 0)) * mat4::Translate(HALF_COORD * -1.) * vec3()).xyz;
     }
+
+    // nat3 BlockPosAndCoordSizeToCoord(vec3 pos, vec3 coordSize, int dir) {
+    //     pos = (mat4::Translate(pos + HALF_COORD) * EulerToMat(vec3(0, -1. * CardinalDirectionToYaw(dir), 0)) * mat4::Translate(HALF_COORD * -1.) * vec3()).xyz;
+    //     auto coord = PosToCoord(pos);
+    //     if (dir == 0) {
+    //         coord.z += coordSize.x - 1;
+    //     }
+    //     if (dir == 1) {
+    //         // coord.y += 1;
+    //     }
+    //     if (dir == 2) {
+    //         // coord.x -= coordSize.x - 1;
+    //     }
+    //     if (dir == 3) {
+    //         // coord.x -= coordSize.z - 1;
+    //         // coord.z += coordSize.x - 1;
+    //     }
+    //     return coord;
+    // }
 
     void SetBlockLocation(CGameCtnBlock@ block, vec3 pos) {
         if (IsBlockFree(block)) {
             Dev::SetOffset(block, FreeBlockPosOffset, pos);
         } else {
+            // auto coord = BlockPosAndCoordSizeToCoord(pos, GetBlockCoordSize(block), int(block.Dir));
+            // block.CoordX = coord.x;
+            // block.CoordY = coord.y;
+            // block.CoordZ = coord.z;
             // not supported
             warn('not yet supported: set block location for non-free block');
         }
@@ -92,10 +125,21 @@ namespace Editor {
         return Nat3ToVec3(biv.Size);
     }
 
+    vec3 GetBlockCoordSize(BlockSpec@ block) {
+        auto @biv = GetBlockSpecVariant(block);
+        return Nat3ToVec3(biv.Size);
+    }
+
     CGameCtnBlockInfoVariant@ GetBlockInfoVariant(CGameCtnBlock@ block) {
         auto bivIx = block.BlockInfoVariantIndex;
         auto bi = block.BlockInfo;
+        if (bi is null) return null;
         CGameCtnBlockInfoVariant@ biv;
+        // trace('bi is null: ' + (bi is null));
+        // trace('bi name: ' + bi.Name);
+        // trace('bivIx: ' + bivIx + ' / ' + block.IsGround + ' / ');
+        // trace('lengths: ' + bi.AdditionalVariantsGround.Length + ' / ');
+        // trace('bi.AdditionalVariantsAir.Length: ' + bi.AdditionalVariantsAir.Length);
         if (bivIx > 0) {
             @biv = block.IsGround ? cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsGround[bivIx - 1]) : cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsAir[bivIx - 1]);
         } else {
@@ -105,6 +149,16 @@ namespace Editor {
             }
         }
         return biv;
+    }
+
+    CGameCtnBlockInfoVariant@ GetBlockSpecVariant(BlockSpec@ block) {
+        auto bivIx = block.variant;
+        auto bi = block.BlockInfo;
+        if (bivIx > 0) {
+            return block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsGround[bivIx - 1]) : cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsAir[bivIx - 1]);
+        } else {
+            return block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
+        }
     }
 
     vec3 GetCtnBlockMidpoint(CGameCtnBlock@ block) {

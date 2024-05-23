@@ -114,11 +114,11 @@ namespace IconTextures {
         // if (article is null)
         auto fid = article.Article.CollectorFid;
         if (fid is null) {
-            NotifyWarning("Cannot load icon for " + StripFormatCodes(article.NodeName) + " since the article has no FID. Is it saved?");
+            NotifyWarning("Cannot load icon for " + Text::StripFormatCodes(article.NodeName) + " since the article has no FID. Is it saved?");
             return;
         }
         if (loadedTextures.Exists(article.NodeName)) {
-            NotifyWarning("Attempted to reload an already loaded icon: " + StripFormatCodes(article.NodeName));
+            NotifyWarning("Attempted to reload an already loaded icon: " + Text::StripFormatCodes(article.NodeName));
             return;
         }
 

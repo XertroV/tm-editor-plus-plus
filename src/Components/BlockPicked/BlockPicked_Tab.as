@@ -112,11 +112,11 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(block)));
 #endif
 
-        UI::NextColumn();
-
         UI::Text(Editor::IsBlockFree(block) ? "Free" : block.IsGhostBlock() ? "Ghost" : "Normal");
-        LabeledValue("Is Ground", block.IsGround);
+        UI::SameLine();
+        UI::Text(block.IsGround ? "/ Ground" : "/ Not Ground");
         LabeledValue("Variant", block.BlockInfoVariantIndex);
+        UI::SameLine();
         LabeledValue("Mobil Variant", block.MobilVariantIndex);
         auto mbInstId = Editor::GetBlockMbInstId(block);
         LabeledValue("MB Inst ID", mbInstId);
@@ -127,12 +127,18 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             }
         }
 
+        UI::NextColumn();
 
         if (UX::SmallButton("Edit This Block")) {
             Editor::OpenItemEditor(editor, block.BlockModel);
         }
         if (UX::SmallButton("Edit This Block (Method 2)")) {
             Editor::OpenItemEditorMethod2(block.BlockModel);
+        }
+
+        if (block.BlockInfo !is null) {
+            ItemModelTreeElement(null, -1, block.BlockInfo.MaterialModifier, "Material Modifier", true, O_BLOCKINFO_MATERIALMOD).Draw();
+            ItemModelTreeElement(null, -1, block.BlockInfo.MaterialModifier2, "Material Modifier 2", true, O_BLOCKINFO_MATERIALMOD2).Draw();
         }
 
 #if SIG_DEVELOPER
@@ -160,6 +166,18 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         if (ShowBlockBox) {
             nvgDrawBlockBox(m, lastPickedBlockSize);
             nvgDrawBlockBox(m, vec3(32, 8, 32));
+            // test code for rotate map
+            // auto m2 = mat4::Translate(CoordToPos(nat3(24, 8, 24))) * EulerToMat(vec3(0, PI/2., 0.)) * mat4::Translate(CoordToPos(vec3(-24, 8, -24))) * m;
+            // nvgDrawBlockBox(m2, lastPickedBlockSize);
+            // nvgDrawBlockBox(m2, vec3(32, 8, 32));
+            // nvgDrawCoordHelpers(m2);
+
+            // auto pos = (m2 * vec3()).xyz;
+            // auto rot = vec3(0, CardinalDirectionToYaw(int(block.Dir) - 1), 0);
+            // auto coord = Editor::BlockPosAndCoordSizeToCoord(pos, Editor::GetBlockCoordSize(block), int(block.Dir) - 1);
+            // auto m3 = mat4::Translate(CoordToPos(coord)) * EulerToMat(rot);
+            // nvgDrawBlockBox(m3, Editor::GetBlockCoordSize(block) * MAP_COORD, cCyan);
+            // nvgDrawBlockBox(m3, MAP_COORD, cCyan);
         }
         if (ShowHelpers) {
             nvg::StrokeWidth(3);

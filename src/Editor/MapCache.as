@@ -315,6 +315,8 @@ namespace Editor {
             if (app is null) return;
             auto map = app.RootMap;
             if (map is null) return;
+            loadProgress = 0;
+            loadTotal = 0;
             @objsRoot = OctTreeNode(map.Size);
             auto myNonce = ++lastRefreshNonce;
             IsStale = false;

@@ -89,6 +89,12 @@ namespace UX {
         return val;
     }
 
+    int2 InputInt2XYZ(const string &in label, int2 val) {
+        auto x = UI::InputInt("(X) " + label, val.x);
+        auto y = UI::InputInt("(Y) " + label, val.y);
+        return int2(x, y);
+    }
+
     int3 InputInt3XYZ(const string &in label, int3 val) {
         auto x = UI::InputInt("(X) " + label, val.x);
         auto y = UI::InputInt("(Y) " + label, val.y);

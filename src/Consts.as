@@ -7,6 +7,13 @@ const double PI = TAU / 2.;
 const double HALF_PI = TAU / 4.;
 const double NegPI = PI * -1.0;
 
+const vec3 UP = vec3(0, 1, 0);
+const vec3 DOWN = vec3(0, -1, 0);
+const vec3 LEFT = vec3(-1, 0, 0);
+const vec3 RIGHT = vec3(1, 0, 0);
+const vec3 FORWARD = vec3(0, 0, 1);
+const vec3 BACKWARD = vec3(0, 0, -1);
+
 const int TWO_BILLION = 2000000000;
 
 const string NewIndicator = "\\$af3 New!";

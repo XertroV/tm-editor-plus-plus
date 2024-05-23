@@ -336,7 +336,7 @@ class LmFile {
         trace('LmFile reading ' + name + ' (length: '+dataLen+')');
         if (dataLen > 150 * 1024 * 1024) throw("data looks too long! " + dataLen + ", " + Text::Format("0x%08x", dataLen));
         @data = buf.ReadBuffer(dataLen);
-        buf.Seek(dataLen, 1);
+        // buf.Seek(dataLen, 1);
     }
 
     void WriteFile() {

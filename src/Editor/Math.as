@@ -44,7 +44,7 @@ bool AnglesVeryClose(const vec3 &in a, const vec3 &in b) {
 // }
 
 float CardinalDirectionToYaw(int dir) {
-    return NormalizeAngle(-1.0 * float(dir) * Math::PI/2.);
+    return NormalizeAngle(-1.0 * float(dir % 4) * Math::PI/2.);
 }
 
 int YawToCardinalDirection(float yaw) {
@@ -95,6 +95,9 @@ quat Vec4ToQuat(vec4 v) {
 vec4 QuatToVec4(quat q) {
     return vec4(q.x, q.y, q.z, q.w);
 }
+
+const vec3 MAP_COORD = vec3(32., 8., 32.);
+const vec3 HALF_COORD = vec3(16., 4., 16.);
 
 vec3 CoordToPos(nat3 coord) {
     return vec3(coord.x * 32, (int(coord.y) - 8) * 8, coord.z * 32);

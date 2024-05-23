@@ -25,18 +25,31 @@ namespace NG {
 
     class Socket {
         string id;
+        string origId;
+        string name;
         SocketType ty;
         DataTypes dataTy;
         SocketDataKind dataKind;
         Noodle@[] edges;
         bool allowMultipleEdges = false;
         Node@ node;
+        // set when drawing
+        vec2 pos;
 
         Socket(SocketType ty, Node@ parent, DataTypes dataTy) {
             @this.node = parent;
             this.ty = ty;
             this.dataTy = dataTy;
             id = "##" + Math::Rand(-1000000000, 1000000000);
+            origId = id;
+            SetName(tostring(dataTy));
+        }
+
+        void SetName(const string &in name) {
+            this.name = name;
+            if (name.Length > 0) {
+                id = name + origId;
+            }
         }
 
         void Destroy() {
@@ -87,8 +100,6 @@ namespace NG {
             return null;
         }
 
-        void DrawUI() {}
-
         void WriteFromSocket(Socket@ socket) {
             switch (dataTy) {
                 case DataTypes::Int: WriteInt(socket.GetInt()); break;
@@ -97,7 +108,17 @@ namespace NG {
                 case DataTypes::String: WriteString(socket.GetString()); break;
                 default: warn("unknown data type: " + tostring(dataTy));
             }
+        }
 
+        string GetValueString() {
+            switch (dataTy) {
+                case DataTypes::Int: return tostring(GetInt());
+                case DataTypes::Bool: return GetBool() ? "true" : "false";
+                case DataTypes::Float: return tostring(GetFloat());
+                case DataTypes::String: return GetString();
+                default: warn("unknown data type: " + tostring(dataTy));
+            }
+            return "?";
         }
 
         int GetInt() { return 0; }
@@ -108,6 +129,30 @@ namespace NG {
         void WriteFloat(float value) {}
         string GetString() { return ""; }
         void WriteString(const string &in value) {}
+
+        vec2 textSize;
+
+        void UIDraw(UI::DrawList@ dl, vec2 startCur, vec2 startPos, vec2 pos) {
+            this.pos = pos;
+            vec2 size = vec2(10.);
+            // pos -= size / 2.;
+            dl.AddCircleFilled(startPos + pos, size.x / 2., cWhite, 12);
+            bool alignRight = IsOutput;
+            string label;
+            if (alignRight) {
+                label = name + " = " + GetValueString();
+            } else {
+                label = name;
+            }
+            textSize = Draw::MeasureString(label, g_NormFont, 16.);
+            auto yOff = size.y / 2. + 3.;
+            if (alignRight) {
+                UI::SetCursorPos(startCur + pos - vec2(textSize.x + 8., yOff));
+            } else {
+                UI::SetCursorPos(startCur + pos + vec2(8., -yOff));
+            }
+            UI::Text(label);
+        }
     }
 
     // class Connection : Input, Output {
@@ -117,33 +162,30 @@ namespace NG {
     class IntSocket : Socket {
         int value;
         int _default;
-        string name;
 
         IntSocket(SocketType ty, Node@ parent, const string &in name = "", int _default = 0) {
             super(ty, parent, DataTypes::Int);
             this._default = _default;
-            this.name = name;
-            if (name.Length > 0) {
-                id = name + id;
-            }
+            SetName(name);
         }
 
         void ResetValue() override {
             WriteInt(_default);
         }
 
-        void DrawUI() override {
-            if (SingularEdge !is null) {
-                UI::AlignTextToFramePadding();
-                string label = name + ": " + value;
-                if (IsOutput) {
-                    UI::Dummy(vec2(UI::GetContentRegionAvail().x - (Draw::MeasureString(label, g_NormFont, 16.) * UI::GetScale()).x - 16., 0.));
-                    UI::SameLine();
-                }
-                UI::Text(label);
-            } else {
-                UI::InputInt(id, value);
-            }
+        void UIDraw(UI::DrawList@ dl, vec2 startCur, vec2 startPos, vec2 pos) override {
+            Socket::UIDraw(dl, startCur, startPos, pos);
+            // if (SingularEdge !is null) {
+            //     UI::AlignTextToFramePadding();
+            //     string label = name + ": " + value;
+            //     if (IsOutput) {
+            //         UI::Dummy(vec2(UI::GetContentRegionAvail().x - (Draw::MeasureString(label, g_NormFont, 16.) * UI::GetScale()).x - 16., 0.));
+            //         UI::SameLine();
+            //     }
+            //     UI::Text(label);
+            // } else {
+            //     UI::InputInt(id, value);
+            // }
         }
 
         int GetInt() override {
@@ -192,11 +234,32 @@ namespace NG {
             @from = null;
             @to = null;
         }
+
+        vec2 get_FromPos() {
+            if (from !is null) return from.pos;
+            return UI::GetMousePos();
+        }
+
+        vec2 get_ToPos() {
+            if (to !is null) return to.pos;
+            return UI::GetMousePos();
+        }
+
+        void UIDraw(UI::DrawList@ dl, vec2 startCur, vec2 startPos) {
+            dl.AddLine(startPos + from.pos, startPos + to.pos, cLimeGreen, 3.f);
+        }
     }
 
     class Node : Operation {
         Socket@[] inputs;
         Socket@[] outputs;
+        string nodeName = "Node";
+        string id;
+
+        Node(const string &in name) {
+            nodeName = name;
+            id = "##n" + Math::Rand(-1000000000, 1000000000);
+        }
 
         void Destroy() {
             for (uint i = 0; i < inputs.Length; i++) {
@@ -260,12 +323,95 @@ namespace NG {
                 outputs[index].SignalUpdated();
             }
         }
+
+        vec2 pos;
+
+        void UIDraw(UI::DrawList@ dl, vec2 startCur, vec2 startPos) {
+            auto size = UIDrawBackground(dl, startCur, startPos, pos);
+            auto offsetY = UIDrawTitleBar(dl, startCur, startPos, pos, size.x);
+            offsetY += UIDrawOutputs(dl, startCur, startPos, pos + vec2(0, offsetY), size.x);
+            offsetY += UIDrawParams(dl, startCur, startPos, pos + vec2(0, offsetY), size.x);
+            offsetY += UIDrawInputs(dl, startCur, startPos, pos + vec2(0, offsetY), size.x);
+            UIDrawInvisButton(dl, startCur, startPos, pos, size);
+        }
+
+        vec2 GetParamsSize() {
+            return vec2(0, 0);
+        }
+
+        vec2 uiDrawSize = vec2();
+        vec2 tbPadding = vec2(8, 4);
+        float ioHeight = 20.;
+        vec2 titleBarSize;
+
+        void RefreshDrawSize() {
+            uiDrawSize = vec2();
+        }
+
+        vec2 UIGetDrawSize() {
+            if (uiDrawSize.LengthSquared() > 100.) return uiDrawSize;
+            titleBarSize = Draw::MeasureString(nodeName, g_NormFont, 16.);
+            titleBarSize.y += tbPadding.y * 2.;
+            vec2 outputsSize = ioHeight * vec2(2., outputs.Length);
+            vec2 inputsSize = ioHeight * vec2(2., inputs.Length);
+            vec2 paramsSize = GetParamsSize();
+            uiDrawSize = vec2(
+                30. + Math::Max(titleBarSize.x, Math::Max(outputsSize.x, Math::Max(inputsSize.x, paramsSize.x))),
+                titleBarSize.y + outputsSize.y + inputsSize.y + paramsSize.y
+            );
+            return uiDrawSize;
+        }
+
+        vec2 UIDrawBackground(UI::DrawList@ dl, vec2 startCur, vec2 startPos, vec2 pos) {
+            vec2 size = UIGetDrawSize();
+            dl.AddRectFilled(vec4(startPos + pos, size), cSkyBlue50, 6.f);
+            // UI::BeginDisabled();
+            // UI::Button(id+"b", size);
+            // UI::EndDisabled();
+            return size;
+        }
+
+        void UIDrawInvisButton(UI::DrawList@ dl, vec2 startCur, vec2 startPos, vec2 pos, vec2 size) {
+            UI::SetCursorPos(startCur + pos);
+            UI::InvisibleButton(id+"b", size, UI::ButtonFlags::MouseButtonRight);
+        }
+
+        float UIDrawTitleBar(UI::DrawList@ dl, vec2 startCur, vec2 startPos, vec2 pos, float width) {
+            dl.AddRectFilled(vec4((startPos + pos), vec2(width, titleBarSize.y)), cGray50, 6.f);
+            // dl.AddText(pos + vec2((width - titleBarSize.x) / 2., tbPadding.y), cWhite, nodeName, g_NormFont, 16.);
+            UI::SetCursorPos(pos + startCur + vec2((width - titleBarSize.x) / 2., tbPadding.y));
+            UI::Text(nodeName);
+            return titleBarSize.y;
+        }
+
+        float UIDrawOutputs(UI::DrawList@ dl, vec2 startCur, vec2 startPos, vec2 pos, float width) {
+            for (uint i = 0; i < outputs.Length; i++) {
+                UI::PushID("out"+i);
+                outputs[i].UIDraw(dl, startCur, startPos, pos + vec2(width, ioHeight * i + ioHeight / 2.));
+                UI::PopID();
+            }
+            return ioHeight * outputs.Length;
+        }
+
+        float UIDrawParams(UI::DrawList@ dl, vec2 startCur, vec2 startPos, vec2 pos, float width) {
+            return 0;
+        }
+
+        float UIDrawInputs(UI::DrawList@ dl, vec2 startCur, vec2 startPos, vec2 pos, float width) {
+            for (uint i = 0; i < inputs.Length; i++) {
+                UI::PushID("in"+i);
+                inputs[i].UIDraw(dl, startCur, startPos, pos + vec2(0, ioHeight * i + ioHeight / 2.));
+                UI::PopID();
+            }
+            return ioHeight * inputs.Length;
+        }
     }
 
     class AddOp : Node {
         AddOp() {
-            inputs = {IntSocket(SocketType::Input, this), IntSocket(SocketType::Input, this)};
-            outputs = {IntSocket(SocketType::Output, this)};
+            super("Add");
+            inputs = {IntSocket(SocketType::Input, this, "a"), IntSocket(SocketType::Input, this, "b")};
+            outputs = {IntSocket(SocketType::Output, this, "a + b")};
         }
 
         void Update() override {
@@ -278,44 +424,27 @@ namespace NG {
         int value;
 
         IntValue() {
-            outputs = {IntSocket(SocketType::Output, this)};
+            super("Int Value");
+            outputs = {IntSocket(SocketType::Output, this, "v")};
         }
 
         void Update() override {
             WriteInt(0, value);
         }
+
+        vec2 GetParamsSize() override {
+            return vec2(80., ioHeight);
+        }
+
+        float UIDrawParams(UI::DrawList@ dl, vec2 startCur, vec2 startPos, vec2 pos, float width) override {
+            UI::PushID(id);
+            UI::SetCursorPos(startCur + pos + vec2(8., 0.));
+            UI::SetNextItemWidth(width - 16.);
+            auto priorVal = value;
+            value = UI::InputInt("##value", value);
+            if (value != priorVal) Update();
+            UI::PopID();
+            return ioHeight;
+        }
     }
-
-    void test() {
-        IntValue@ value1 = IntValue();
-        IntValue@ value2 = IntValue();
-        AddOp@ add = AddOp();
-        auto e1 = Noodle(value1.outputs[0], add.inputs[0]);
-        auto e2 = Noodle(value2.outputs[0], add.inputs[1]);
-        assert_eq(add.outputs[0].GetInt(), 0, "0+0 = 0");
-        value1.WriteInt(0, 5);
-        assert_eq(add.outputs[0].GetInt(), 5, "5+0 = 5");
-        value2.WriteInt(0, 4);
-        assert_eq(add.outputs[0].GetInt(), 9, "5+4 = 9");
-        print("basic graph tests passed. Output: " + add.outputs[0].GetInt() + " (expected 9)");
-        e2.Disconnect();
-        assert_eq(add.outputs[0].GetInt(), 5, "5+0 = 5");
-        print("disconnection test passed. Output: " + add.outputs[0].GetInt() + " (expected 5)");
-
-        add.Destroy();
-        value1.Destroy();
-        value2.Destroy();
-
-        // add.inputs[0].WriteInt(5);
-        // add.inputs[1].WriteInt(3);
-        // add.Update();
-        // print(add.outputs[0].GetInt());
-        // if (add.outputs[0].GetInt() == 8) {
-        //     print("Addition works!");
-        // } else {
-        //     print("Addition failed!");
-        // }
-    }
-
-    Meta::PluginCoroutine@ testcoro = startnew(test);
 }

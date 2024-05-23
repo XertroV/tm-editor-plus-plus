@@ -121,7 +121,7 @@ class MapEditPropsTab : Tab {
         //     SetClipboard(read);
         // }
 
-        UI::Text("Map: " + ColoredString(map.MapName));
+        UI::Text("Map: " + Text::OpenplanetFormatCodes(map.MapName));
         UI::Indent();
         map.MapName = UI::InputText("Name", map.MapName);
         map.Comments = UI::InputTextMultiline("Comment", map.Comments, vec2(0, UI::GetTextLineHeight() * 3.6));

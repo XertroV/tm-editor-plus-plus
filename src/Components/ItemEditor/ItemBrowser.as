@@ -2259,19 +2259,19 @@ class GhostBlockModelBrowserTab : BlockModelBrowserTab {
 
 
 
-void DrawMaterialModifier(CPlugGameSkinAndFolder@ matMod) {
+void DrawMaterialModifier(CPlugGameSkinAndFolder@ matMod, const string &in label = "Material Modifier") {
     if (matMod is null) {
-        UI::Text("No material modifier");
+        UI::Text("No " + label);
         return;
     }
     UI::AlignTextToFramePadding();
-    UI::Text("Material Modifier:");
+    UI::Text(label + ":");
     UI::Text("Skin:");
     UI::Indent();
     DrawMMSkin(matMod);
     UI::Unindent();
     // UI::Separator();
-    UI::Text("RemapFolder: " + matMod.RemapFolder.DirName);
+    UI::Text("RemapFolder: " + (matMod.RemapFolder is null ? "null" : string(matMod.RemapFolder.DirName)));
     UI::Indent();
     DrawMMFids(matMod);
     UI::Unindent();
@@ -2321,6 +2321,7 @@ void DrawMMSkin(CPlugGameSkinAndFolder@ mm) {
 }
 
 void DrawMMFids(CPlugGameSkinAndFolder@ mm) {
+    if (mm.RemapFolder is null) return;
     for (uint i = 0; i < mm.RemapFolder.Leaves.Length; i++) {
         auto fid = mm.RemapFolder.Leaves[i];
         CopiableLabeledValue("Name", fid.FileName);

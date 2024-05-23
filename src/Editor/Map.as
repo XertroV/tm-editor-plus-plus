@@ -207,7 +207,7 @@ namespace Editor {
 
     void SetEditorWritesMapBuildInfo(const string &in newBuildInfo) {
         auto ptr = GetEditorWritesMapBuildInfoPtr();
-        if (ptr > Dev::BaseAddress() && ptr < Dev::BaseAddressEnd()) {
+        if (ptr > Dev::BaseAddress() && ptr < BASE_ADDR_END) {
             auto offset = Dev::ReadInt32(ptr + 10);
             auto fakeNod = Dev_GetNodFromPointer(ptr + 14 + offset);
             Dev::SetOffset(fakeNod, 0x0, newBuildInfo);
@@ -216,7 +216,7 @@ namespace Editor {
 
     string GetEditorWritesMapBuildInfo() {
         auto ptr = GetEditorWritesMapBuildInfoPtr();
-        if (ptr > Dev::BaseAddress() && ptr < Dev::BaseAddressEnd()) {
+        if (ptr > Dev::BaseAddress() && ptr < BASE_ADDR_END) {
             auto offset = Dev::ReadInt32(ptr + 10);
             auto fakeNod = Dev_GetNodFromPointer(ptr + 14 + offset);
             return Dev::GetOffsetString(fakeNod, 0x0);

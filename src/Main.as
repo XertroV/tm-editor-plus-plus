@@ -33,6 +33,8 @@ void Main() {
     RegisterOnEditorLoadCallback(PlacementHooks::SetupHooks, "PlacementHooks::SetupHooks");
     RegisterOnEditorUnloadCallback(PlacementHooks::UnloadHooks, "PlacementHooks::UnloadHooks");
 
+    RegisterOnEditorStartingUpCallback(PillarsChoice::OnEditorStartingUp, "PillarsChoice::OnEditorStartingUp");
+
     // need to start this on load so that it's active when we enter the editor
     CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
     ExtraUndoFix::OnLoad();
@@ -52,6 +54,8 @@ void Main() {
 
     sleep(500);
     CallbacksEnabledPostInit = true;
+
+    // auto fid = Fids::GetGame("GameData/Stadium/GameCtnDecoration/Map/DecoNoStadium48x48.Map.Gbx");
 
 #if DEV
     // runGbxTest();
@@ -73,6 +77,7 @@ void Unload(bool freeMem = true) {
     // hmm not sure this is a great idea b/c some of it might be used by the game.
     // still, openplanet frees it anyway, so i guess nbd.
     FreeAllAllocated();
+    UnloadIntercepts();
     Editor::EnableMapThumbnailUpdate();
     Editor::OffzonePatch::Unapply();
     CheckUnhookAllRegisteredHooks();
@@ -227,7 +232,7 @@ bool g_LmbDown = false;
 bool g_RmbDown = false;
 bool g_MmbDown = false;
 vec2 lastMbClickPos;
-vec2 lastMousePos;
+vec2 g_lastMousePos;
 bool g_IsDragging = false;
 // track drag status for last frame
 bool g_WasDragging = false;
@@ -238,6 +243,7 @@ int2 g_LastMouseButtonPos = int2();
 
 UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     if (!IsInEditor) return UI::InputBlocking::DoNothing;
+    if (IsInCurrentPlayground) return UI::InputBlocking::DoNothing;
     bool lmbDown = down && button == 0;
     bool block = false;
     if (lmbDown && g_CoordPathDrawingTool.ShouldBlockLMB()) {
@@ -259,8 +265,8 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
 
 // only updates when not hovering imgui and input not carried off imgui
 void OnMouseMove(int x, int y) {
-    lastMousePos = vec2(x, y);
-    // trace(lastMousePos.ToString());
+    g_lastMousePos = vec2(x, y);
+    // trace(g_lastMousePos.ToString());
 }
 
 int2 g_ScrollThisFrame = int2();

@@ -411,6 +411,7 @@ PickedItemTab@ g_PickedItemTab;
 MapEditPropsTab@ g_MapPropsTab;
 BI_MainTab@ g_BlocksItemsTab;
 InventorySearchTab@ g_InvSearchTab;
+NG::GraphTab@ g_GraphTab;
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
@@ -447,6 +448,8 @@ TabGroup@ CreateRootTabGroup() {
     //   -- for next, selected, picked
     CheckpointsTab(root);
 
+    // @g_GraphTab = NG::GraphTab(root);
+
     Repeat::MainRepeatTab(root);
     DissociateItemsTab(root);
     JitterEffectTab(root);
@@ -454,6 +457,7 @@ TabGroup@ CreateRootTabGroup() {
     PhaseOffsetApplyTab(root);
     FindReplaceTab(root);
     ApplyTranslationTab(root);
+    // ApplyRotationTab(root);
 
     RandomizerEffectsTab(root);
 

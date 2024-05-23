@@ -124,14 +124,32 @@ void Dev_CopyArrayStruct(uint64 sBufPtr, int sIx, uint64 dBufPtr, int dIx, uint1
     trace("Copied bytes: " + bytes.Length + 0x8);
 }
 
+const uint64 BASE_ADDR_END = Dev::BaseAddressEnd();
 
+const bool HAS_Z_DRIVE_WINE_INDICATOR = IO::FolderExists("Z:\\etc\\");
+
+[Setting category="General" name="Force disable linux-wine check if you have a Z:\\ drive with an etc folder"]
+bool S_ForceDisableLinuxWineCheck = false;
 
 bool Dev_PointerLooksBad(uint64 ptr) {
-    if (ptr < 0x10000000000) return true;
+    // ! testing
+    if (HAS_Z_DRIVE_WINE_INDICATOR && !S_ForceDisableLinuxWineCheck) {
+        dev_trace('Has Z drive / ptr: ' + Text::FormatPointer(ptr) + ' < 0x100000000 = ' + tostring(ptr < 0x100000000));
+        dev_trace('base addr end: ' + Text::FormatPointer(BASE_ADDR_END));
+        if (ptr < 0x1000000) return true;
+    } else {
+        dev_trace('Windows (no Z drive or forced skip) / ptr: ' + Text::FormatPointer(ptr));
+        if (ptr < 0x10000000000) return true;
+    }
     // todo: something like this should fix linux (also in Dev_GetNodFromPointer)
     // if (ptr < 0x4fff08D0) return true;
     if (ptr % 8 != 0) return true;
-    if (ptr > Dev::BaseAddressEnd()) return true;
+    if (ptr == 0) return true;
+
+    // base address is very low under wine (`0x0000000142C3D000`)
+    if (!HAS_Z_DRIVE_WINE_INDICATOR || S_ForceDisableLinuxWineCheck) {
+        if (ptr > BASE_ADDR_END) return true;
+    }
     return false;
 }
 
@@ -183,8 +201,15 @@ CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
     //     return null;
     // }
     // return Dev_GetArbitraryNodAt(ptr);
-
-    if (ptr < 0xFFFFFFFF || ptr % 8 != 0 || ptr >> 48 > 0) {
+    // ! testing
+    if (HAS_Z_DRIVE_WINE_INDICATOR && !S_ForceDisableLinuxWineCheck) {
+        print("get nod from ptr: " + Text::FormatPointer(ptr));
+        if (ptr < 0x1000000 || ptr % 8 != 0 || ptr >> 48 > 0) {
+            print("get nod from ptr failed: " + Text::FormatPointer(ptr));
+            return null;
+        }
+    } else if (ptr < 0xFFFFFFFF || ptr % 8 != 0 || ptr >> 48 > 0) {
+        print("get nod from ptr failed: " + Text::FormatPointer(ptr));
         return null;
     }
     return Dev_GetArbitraryNodAt(ptr);
@@ -461,6 +486,7 @@ const uint16 O_CTNBLOCK_SKIN = GetOffset("CGameCtnBlock", "Skin");
 const uint16 O_CTNBLOCK_MACROBLOCK_INST_NB = O_CTNBLOCK_DIR + 0x3C;
 
 const uint16 O_BLOCKINFO_MATERIALMOD = GetOffset("CGameCtnBlockInfo", "MaterialModifier");
+const uint16 O_BLOCKINFO_MATERIALMOD2 = GetOffset("CGameCtnBlockInfo", "MaterialModifier2");
 
 // no more than 0x170 bytes
 const uint16 O_GAMESKIN_PATH1 = 0x18;

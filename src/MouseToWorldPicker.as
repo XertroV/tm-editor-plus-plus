@@ -14,7 +14,7 @@ namespace Picker {
     void RenderEarly() {
         screen = g_screen;
         if (screen.x == 0 || screen.y == 0) return;
-        uv = lastMousePos / (screen - 1.) * 2. - 1.;
+        uv = g_lastMousePos / (screen - 1.) * 2. - 1.;
 
         auto cam = Camera::GetCurrent();
         if (cam !is null) {
