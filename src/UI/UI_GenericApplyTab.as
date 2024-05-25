@@ -124,6 +124,8 @@ class GenericApplyTab : EffectTab {
 
         UI::Separator();
 
+        UI::Text("Application Targets (Preview)");
+        UI::SameLine();
         if (UI::Button("Refresh Preview##" + idNonce)) {
             startnew(CoroutineFuncUserdataInt64(UpdateApplicationTargets), 0);
         }
@@ -136,8 +138,8 @@ class GenericApplyTab : EffectTab {
         if (showCachedHelpers && total > 0) DrawShowCachedHelpers();
         if (showCachedHelpers && total == 0) UI::TextWrapped("\\$888Helpers disabled because all or zero blocks/items are selected. (Note: remember to update cached targets)");
         UI::Unindent();
-
-        string btnLabel = "Update All##";
+        UI::Separator();
+        string btnLabel = ">> Apply! Update All Blocks/Items <<##";
         switch (currScope) {
             case SourceSelection::Specific_Coords:
                 btnLabel = "Apply to Coords##";
@@ -150,7 +152,7 @@ class GenericApplyTab : EffectTab {
         }
         btnLabel += idNonce;
 
-        if (UI::Button(btnLabel)) {
+        if (UI::ButtonColored(btnLabel, .3, .7, .4)) {
             startnew(CoroutineFuncUserdataInt64(UpdateApplicationTargets), 1);
         }
     }

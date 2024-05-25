@@ -100,6 +100,7 @@ namespace PillarsChoice {
     string[]@ GetStructureObjNames() {
         if (structureObjNames !is null) return structureObjNames;
         @structureObjNames = {};
+        structureObjNames.InsertLast("StructurePillar");
         structureObjNames.InsertLast("StructureDeadend");
         structureObjNames.InsertLast("StructureBase");
         structureObjNames.InsertLast("StructureStraight");

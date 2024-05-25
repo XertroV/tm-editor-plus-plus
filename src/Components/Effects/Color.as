@@ -3,6 +3,8 @@ class ColorApplyTab : GenericApplyTab {
         super(p, "Apply Color", Icons::Magic + Icons::PaintBrush);
     }
 
+    bool showStructurePillarWarning = false;
+
     int m_color = 4;
     void DrawInner() override {
         UI::TextWrapped("Apply \\$cccc\\$4c4o\\$66fl\\$f44o\\$888r\\$z to blocks and items. Optionally filter by name and/or location.");
@@ -11,6 +13,21 @@ class ColorApplyTab : GenericApplyTab {
         UI::Separator();
         m_color = DrawColorBtnChoice("Color to apply", m_color);
         UI::Separator();
+        if (UI::Button("Add all Structure Support block types")) {
+            auto structures = PillarsChoice::GetStructureObjNames();
+            for (uint i = 0; i < structures.Length; i++) {
+                InsertUniqueSorted(filteredObjectNames, structures[i]);
+            }
+            showStructurePillarWarning = true;
+        }
+        UI::Separator();
+        if (showStructurePillarWarning) {
+            UI::TextWrapped("\\$f80Note: you might want to remove StructurePillar from the list, they were colored before the May 2024 update.");
+            UI::Separator();
+            if (filteredObjectNames.Length < 23) {
+                showStructurePillarWarning = false;
+            }
+        }
         GenericApplyTab::DrawInner();
     }
 
