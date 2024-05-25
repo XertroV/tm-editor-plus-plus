@@ -203,11 +203,13 @@ namespace PlacementHooks {
     }
 
     void OnItemPlaced_RbxRdx(uint64 rbx) {
-        if (!IsInEditor) {
-            warn_every_60_s("OnItemPlaced_RbxRdx: called outside editor! (this is a bug)");
-            return;
-        }
+        // if (!IsInEditor) {
+        //     warn_every_60_s("OnItemPlaced_RbxRdx: called outside editor! (this is a bug)");
+        //     return;
+        // }
+#if DEV
         dev_trace("OnItemPlaced! rbx: " + Text::FormatPointer(rbx));
+#endif
         // if (rbx != rdx) {
         //     dev_trace("rbx != rdx: " + Text::FormatPointer(rbx) + " != " + Text::FormatPointer(rdx));
         // }
@@ -229,15 +231,21 @@ namespace PlacementHooks {
     }
 
     void OnAddBlockHook_RdxRdi(uint64 rdx) {
-        if (!IsInEditor) {
-            warn_every_60_s("OnAddBlockHook_RdxRdi: called outside editor! (this is a bug)");
-            return;
-        }
+        // if (!IsInEditor) {
+        //     warn_every_60_s("OnAddBlockHook_RdxRdi: called outside editor! (this is a bug)");
+        //     return;
+        // }
+#if DEV
         dev_trace("OnAddBlockHook! rdx : " + Text::FormatPointer(rdx));
-        if (rdx < 0x10000FFFF || rdx > 0xFFF0000FFFF) {
+#endif
+#if WINDOWS_WINE
+        trace("OnAddBlockHook, wine detected.");
+#else
+        if (rdx < 0x1000FFFF || rdx > 0xFFF0000FFFF) {
             // pointer looks bad
             return;
         }
+#endif
         auto vtablePtr = Dev::ReadUInt64(rdx);
         if (!VTables::CheckVTable(vtablePtr, VTables::CGameCtnBlock)) {
             dev_trace("Got bad vtable ptr: " + Text::FormatPointer(vtablePtr));

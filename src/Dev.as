@@ -134,11 +134,11 @@ bool S_ForceDisableLinuxWineCheck = false;
 bool Dev_PointerLooksBad(uint64 ptr) {
     // ! testing
     if (HAS_Z_DRIVE_WINE_INDICATOR && !S_ForceDisableLinuxWineCheck) {
-        dev_trace('Has Z drive / ptr: ' + Text::FormatPointer(ptr) + ' < 0x100000000 = ' + tostring(ptr < 0x100000000));
-        dev_trace('base addr end: ' + Text::FormatPointer(BASE_ADDR_END));
+        // dev_trace('Has Z drive / ptr: ' + Text::FormatPointer(ptr) + ' < 0x100000000 = ' + tostring(ptr < 0x100000000));
+        // dev_trace('base addr end: ' + Text::FormatPointer(BASE_ADDR_END));
         if (ptr < 0x1000000) return true;
     } else {
-        dev_trace('Windows (no Z drive or forced skip) / ptr: ' + Text::FormatPointer(ptr));
+        // dev_trace('Windows (no Z drive or forced skip) / ptr: ' + Text::FormatPointer(ptr));
         if (ptr < 0x10000000000) return true;
     }
     // todo: something like this should fix linux (also in Dev_GetNodFromPointer)
@@ -195,6 +195,7 @@ uint64 Dev_GetPointerForNod(CMwNod@ nod) {
     return Dev::GetOffsetUint64(NodPtrs::g_TmpSpaceAsNod, 0);
 }
 
+const bool IS_MEMORY_ALWAYS_ALIGNED = true;
 CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
     // if linux
     // if (ptr < 0xFFFFFFF || ptr % 8 != 0) {
@@ -204,11 +205,11 @@ CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
     // ! testing
     if (HAS_Z_DRIVE_WINE_INDICATOR && !S_ForceDisableLinuxWineCheck) {
         print("get nod from ptr: " + Text::FormatPointer(ptr));
-        if (ptr < 0x1000000 || ptr % 8 != 0 || ptr >> 48 > 0) {
+        if (ptr < 0x1000000 || (IS_MEMORY_ALWAYS_ALIGNED && ptr % 8 != 0) || ptr >> 48 > 0) {
             print("get nod from ptr failed: " + Text::FormatPointer(ptr));
             return null;
         }
-    } else if (ptr < 0xFFFFFFFF || ptr % 8 != 0 || ptr >> 48 > 0) {
+    } else if (ptr < 0xFFFFFFFF || (IS_MEMORY_ALWAYS_ALIGNED && ptr % 8 != 0) || ptr >> 48 > 0) {
         print("get nod from ptr failed: " + Text::FormatPointer(ptr));
         return null;
     }
@@ -378,10 +379,12 @@ const uint16 O_MAP_TIMEOFDAY_PACKED_U16 = O_MAP_CUSTMUSICPACKDESC + 0x8;
 const uint16 O_MAP_DAYLENGTH_MS = O_MAP_TIMEOFDAY_PACKED_U16 + 0x4;
 const uint16 O_MAP_DYNAMIC_TIMEOFDAY = O_MAP_TIMEOFDAY_PACKED_U16 + 0x8;
 
+// 0x1d8
 const uint16 O_MAP_CLIPAMBIANCE = GetOffset("CGameCtnChallenge", "ClipAmbiance");
 const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8;
 const uint16 O_MAP_LAUNCHEDCPS = O_MAP_CLIPAMBIANCE + 0x28; // 0x200 - 0x1D8;
-//
+
+// 0x258
 const uint16 O_MAP_SIZE = GetOffset("CGameCtnChallenge", "Size");
 
 // ptr at 0x0 of this struct: CHmsLightMapCache
@@ -398,6 +401,12 @@ const uint16 O_LIGHTMAPSTRUCT_IMAGES = 0x30;
 // 0x298
 const uint16 O_MAP_ANCHOREDOBJS = GetOffset("CGameCtnChallenge", "AnchoredObjects");
 const uint16 O_MAP_MACROBLOCK_INFOS = O_MAP_ANCHOREDOBJS + 0x20;
+
+// 0x2E0
+const uint16 O_MAP_CHALLENGEPARAMS = GetOffset("CGameCtnChallenge", "ChallengeParameters");
+const uint16 O_MAP_FLAGS = O_MAP_CHALLENGEPARAMS + 0x8; // also -0x4 from DecoBaseHeightOffset
+
+
 
 // const uint16 O_MAP_NBITEMS = 0x4c4 or something; // used in a map syncro function called every frame, maybe to check for updates. ` >-> ` in label next to it in asm.
 
@@ -488,13 +497,22 @@ const uint16 O_CTNBLOCK_MACROBLOCK_INST_NB = O_CTNBLOCK_DIR + 0x3C;
 const uint16 O_BLOCKINFO_MATERIALMOD = GetOffset("CGameCtnBlockInfo", "MaterialModifier");
 const uint16 O_BLOCKINFO_MATERIALMOD2 = GetOffset("CGameCtnBlockInfo", "MaterialModifier2");
 
-// no more than 0x170 bytes
+// 0x168 bytes
+const uint SZ_GAMESKIN = 0x168;
 const uint16 O_GAMESKIN_PATH1 = 0x18;
 const uint16 O_GAMESKIN_PATH2 = 0x28;
 const uint16 O_GAMESKIN_FID_BUF = 0x58;
 const uint16 O_GAMESKIN_FILENAME_BUF = 0x68;
 const uint16 O_GAMESKIN_FID_CLASSID_BUF = 0x78;
+const uint16 O_GAMESKIN_UNK_BUF = 0x88;
 const uint16 O_GAMESKIN_PATH3 = 0x120;
+
+
+// 0x30 / CPlugGameAndSkinFolder / MaterialModifier
+const uint16 O_MATMOD_REMAPPING = GetOffset("CPlugGameSkinAndFolder", "Remapping");
+const uint16 O_MATMOD_REMAPPING_NOTRACKWALL = GetOffset("CPlugGameSkinAndFolder", "Remapping_NoTrackWall_Cache");
+const uint16 O_MATMOD_REMAPFOLDER = GetOffset("CPlugGameSkinAndFolder", "RemapFolder");
+
 
 // scale at 0x80 (2024_02_26)
 const uint16 O_ANCHOREDOBJ_SKIN_SCALE = GetOffset("CGameCtnAnchoredObject", "Scale");
@@ -575,6 +593,15 @@ uint16 SZ_CLIPGROUP_TRIGGER_STRUCT = 0x40;
 
 uint16 SZ_MEDIABLOCKENTITY = 392; // 0x188
 uint16 SZ_MEDIABLOCKENTITY_KEY = 0x1C;
+
+
+
+// Misc
+
+
+const uint SZ_FID_FILE = 0xF0;
+
+
 
 
 /// Yb    dP 888888    db    88""Yb 88     888888 .dP"Y8
@@ -1117,7 +1144,7 @@ class MultiHookHelper {
 }
 
 
-// Wrapper around Dev::Hook for safety and easy usage
+// Wrapper around Dev::Hook for safety and easy usage; findPtrEarly = find pointer immediately, e.g., if bytes around that location might be patched later.
 class HookHelper {
     protected Dev::HookInfo@ hookInfo;
     protected uint64 patternPtr;

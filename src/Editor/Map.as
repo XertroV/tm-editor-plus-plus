@@ -185,6 +185,56 @@ namespace Editor {
         return cast<CHmsLightMapCache>(Dev_GetOffsetNodSafe(midNod, 0x0));
     }
 
+    uint GetMapFlags(CGameCtnChallenge@ map) {
+        return Dev::GetOffsetUint32(map, O_MAP_FLAGS);
+    }
+
+    void SetMapFlags(CGameCtnChallenge@ map, uint flags) {
+        Dev::SetOffset(map, O_MAP_FLAGS, flags);
+    }
+
+    bool GetMapFlags_Unk1(CGameCtnChallenge@ map) {
+        return (GetMapFlags(map) & 0x1) != 0;
+    }
+
+    bool GetMapFlags_UseOldWood(CGameCtnChallenge@ map) {
+        return (GetMapFlags(map) & 0x2) != 0;
+    }
+
+    bool GetMapFlags_UseNewPillars(CGameCtnChallenge@ map) {
+        return (GetMapFlags(map) & 0x4) != 0;
+    }
+
+    void SetMapFlags_Unk1(CGameCtnChallenge@ map, bool value) {
+        auto flags = GetMapFlags(map);
+        if (value) {
+            flags |= 0x1;
+        } else {
+            flags &= ~0x1;
+        }
+        SetMapFlags(map, flags);
+    }
+
+    void SetMapFlags_UseOldWood(CGameCtnChallenge@ map, bool value) {
+        auto flags = GetMapFlags(map);
+        if (value) {
+            flags |= 0x2;
+        } else {
+            flags &= ~0x2;
+        }
+        SetMapFlags(map, flags);
+    }
+
+    void SetMapFlags_UseNewPillars(CGameCtnChallenge@ map, bool value) {
+        auto flags = GetMapFlags(map);
+        if (value) {
+            flags |= 0x4;
+        } else {
+            flags &= ~0x4;
+        }
+        SetMapFlags(map, flags);
+    }
+
     string GetMapBuildInfo(CGameCtnChallenge@ map) {
         return Dev::GetOffsetString(map, O_MAP_BUILDINFO_STR);
     }

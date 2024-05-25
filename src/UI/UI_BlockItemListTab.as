@@ -35,6 +35,11 @@ class BlockItemListTab : Tab {
         if (ty == BIListTabType::Items) {
             IsAnyBlocksTab = false;
         }
+        SetupOnLoad();
+    }
+
+    // can be overridden for in map
+    void SetupOnLoad() {
         RegisterOnEditorLoadCallback(CoroutineFunc(OnEditorLoad), this.tabName);
     }
 
@@ -80,13 +85,17 @@ class BlockItemListTab : Tab {
 
     void DrawInnerEarly() {}
 
+    CGameCtnChallenge@ GetMap() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.Challenge;
+    }
+
     bool wholeListShown = false;
     bool autoscroll = false;
     bool skipXZStarting = true;
     protected int nbCols = 9;
     void DrawInner() override {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto map = editor.Challenge;
+        auto map = GetMap();
         auto sizeXZ = map.Size.x * map.Size.z - 4;
         auto nbBlocks = GetNbObjects(map);
         uint nbBlocksToSkip = Math::Min(nbBlocks - 4, sizeXZ);
@@ -112,6 +121,26 @@ class BlockItemListTab : Tab {
             }
         } else {
             nbBlocksToSkip = 0;
+        }
+
+        UI::SameLine();
+        if (UI::Button("Copy CSV (excl grass)")) {
+            string csv = "";
+            CGameCtnBlock@ block;
+            CGameCtnAnchoredObject@ item;
+            for (uint i = 0; i < nbBlocks; i++) {
+                if (IsAnyBlocksTab) {
+                    @block = GetBlock(map, i);
+                    if (block.BlockInfo.Name == "Grass") {
+                        continue;
+                    }
+                    csv += GetBlockCsvLine(block);
+                } else {
+                    @item = GetItem(map, i);
+                    csv += GetItemCsvLine(item);
+                }
+            }
+            SetClipboard(csv);
         }
 
         int nbBlocksToDraw = nbBlocks - nbBlocksToSkip;
@@ -176,4 +205,25 @@ class BlockItemListTab : Tab {
         auto block = GetBlock(map, i);
         auto item = GetItem(map, i);
     }
+}
+
+
+
+string GetBlockCsvLine(CGameCtnBlock@ block) {
+    string csv = "";
+    csv += block.BlockInfo.Name;
+    csv += "," + Editor::GetBlockLocation(block).ToString();
+    csv += "," + Nat3ToInt3(Editor::GetBlockCoord(block)).ToString();
+    csv += "," + tostring(block.Dir);
+    csv += "," + tostring(block.MapElemColor);
+    return csv + "\n";
+}
+
+string GetItemCsvLine(CGameCtnAnchoredObject@ item) {
+    string csv = "";
+    csv += item.ItemModel.Name;
+    csv += "," + item.AbsolutePositionInMap.ToString();
+    csv += "," + Editor::GetItemRotation(item).ToString();
+    csv += "," + tostring(item.MapElemColor);
+    return csv + "\n";
 }

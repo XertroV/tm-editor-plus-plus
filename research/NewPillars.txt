@@ -1,0 +1,608 @@
+plan:
+- CGameCtnApp::InitChallengeData
+  - set map to old pillars mode
+- nop autosave update on pillars skins
+
+also relevant:
+- NGameMgrMap::BlockInstCreate
+
+
+
+
+
+
+
+
+
+8B 87 ?? ?? 00 00 C1 E8 02 F7 D0 83 E0 01 89 05 ?? ?? ?? ?? 48 85 FF 74 06 4C 8B 47 08 EB 03 4C 8B C3 33 D2 48 8D 0D ?? ?? ?? ??
+unique, ends with ptr to flag for new/old pillars
+8B 87 ?? ?? 00 00 C1 E8 02 F7 D0 83 E0 01 89 05 ?? ?? ?? ??
+
+prefix it with:
+-- or dword ptr [rdi+2E8],04
+83 8F E8 02 00 00 04
+// v or
+83 8F ?? ?? 00 00 04
+
+
+
+-- in InitChallengeData
+Trackmania.exe.text+B93311 - 8B 87 E8020000        - mov eax,[rdi+000002E8] { reads flag from map }
+Trackmania.exe.text+B93317 - C1 E8 02              - shr eax,02 { 2 }
+Trackmania.exe.text+B9331A - F7 D0                 - not eax
+Trackmania.exe.text+B9331C - 83 E0 01              - and eax,01 { 1 }
+Trackmania.exe.text+B9331F - 89 05 CB353A01        - mov [Trackmania.exe+1F378F0],eax { 1 = old, 0 = new pillars?  }
+Trackmania.exe.text+B93325 - 48 85 FF              - test rdi,rdi
+
+
+
+
+
+-- in autosave
+
+E8 4A 73 FE FF 48 8B BB 78 04 00 00 48 8D 8F A0 00 00 00 E8 47 3F 33 00 85 C0 74 13 48 8B 8B 20 06 00 00 48 8D 97 A0 00 00 00
+E8 ?? ?? ?? ?? 48 8B BB ?? ?? 00 00 48 8D 8F ?? 00 00 00 E8 ?? ?? ?? ?? 85 C0 74 13 48 8B 8B ?? ?? 00 00 48 8D 97 ?? 00 00 00
+E8 ?? ?? ?? ?? 48 8B BB ?? ?? 00 00 48 8D 8F ?? 00 00 00 E8 ?? ?? ?? ??
+E8 ?? ?? ?? ?? 48 8B BB ?? ?? 00 00 48 8D 8F ?? 00 00 00
+
+
+
+
+Trackmania.exe.text+DDA821 - E8 4A73FEFF           - call Trackmania.exe.text+DC1B70 { UpdateAllPillarBlockSkinRemapFolders }
+Trackmania.exe.text+DDA826 - 48 8B BB 78040000     - mov rdi,[rbx+00000478] { cam mode + 0x8 }
+Trackmania.exe.text+DDA82D - 48 8D 8F A0000000     - lea rcx,[rdi+000000A0]
+Trackmania.exe.text+DDA834 - E8 473F3300           - call Trackmania.exe.text+110E780
+Trackmania.exe.text+DDA839 - 85 C0                 - test eax,eax
+Trackmania.exe.text+DDA83B - 74 13                 - je Trackmania.exe.text+DDA850
+Trackmania.exe.text+DDA83D - 48 8B 8B 20060000     - mov rcx,[rbx+00000620]
+Trackmania.exe.text+DDA844 - 48 8D 97 A0000000     - lea rdx,[rdi+000000A0]
+
+
+
+
+
+
+
+
+
+48 8D AC 24 18 FF FF FF 48 81 EC E8 01 00 00 48 8B D9 0F 29 B4 24 D0 01 00 00 48 8D 8D A0 00 00 00 C7 85 B0 00 00 00 00 00 00 00 48 8D 15 19 F0 E4 00 E8 1C 64 34 FF 83 BB 50 0D 00 00 00 0F 85 E4 06 00 00 4C 8B AB A0 04 00 00 41 8B 85 60 02 00 00 F2 41 0F 10 85 58 02 00 00 89 45 88 49 8B 85 A8 04 00 00 F2 0F 11 45 80 4C 8B B0 48 02 00 00 4C 89 75 C8 4D 85 F6 0F 84 AA 06 00 00 65 48 8B 04 25 58 00 00 00 48 8B 18
+
+
+UpdateAllPillarBlockSkinRemapFolders
+
+Called in EditorCommon::AutoSave
+
+
+
+Trackmania.exe.text+DC1B7D - 48 8D AC 24 18FFFFFF  - lea rbp,[rsp-000000E8]
+Trackmania.exe.text+DC1B85 - 48 81 EC E8010000     - sub rsp,000001E8 { 488 }
+Trackmania.exe.text+DC1B8C - 48 8B D9              - mov rbx,rcx
+Trackmania.exe.text+DC1B8F - 0F29 B4 24 D0010000   - movaps [rsp+000001D0],xmm6
+Trackmania.exe.text+DC1B97 - 48 8D 8D A0000000     - lea rcx,[rbp+000000A0]
+Trackmania.exe.text+DC1B9E - C7 85 B0000000 00000000 - mov [rbp+000000B0],00000000 { 0 }
+Trackmania.exe.text+DC1BA8 - 48 8D 15 19F0E400     - lea rdx,[Trackmania.exe.rdata+301BC8] { ("`anonymous-namespace'::N::UpdateAllPillarBlockSkinRemapFolders") }
+Trackmania.exe.text+DC1BAF - E8 1C6434FF           - call Trackmania.exe.text+107FD0
+Trackmania.exe.text+DC1BB4 - 83 BB 500D0000 00     - cmp dword ptr [rbx+00000D50],00 { 0 }
+Trackmania.exe.text+DC1BBB - 0F85 E4060000         - jne Trackmania.exe.text+DC22A5
+Trackmania.exe.text+DC1BC1 - 4C 8B AB A0040000     - mov r13,[rbx+000004A0]
+Trackmania.exe.text+DC1BC8 - 41 8B 85 60020000     - mov eax,[r13+00000260]
+Trackmania.exe.text+DC1BCF - F2 41 0F10 85 58020000  - movsd xmm0,[r13+00000258]
+Trackmania.exe.text+DC1BD8 - 89 45 88              - mov [rbp-78],eax
+Trackmania.exe.text+DC1BDB - 49 8B 85 A8040000     - mov rax,[r13+000004A8]
+Trackmania.exe.text+DC1BE2 - F2 0F11 45 80         - movsd [rbp-80],xmm0
+Trackmania.exe.text+DC1BE7 - 4C 8B B0 48020000     - mov r14,[rax+00000248]
+Trackmania.exe.text+DC1BEE - 4C 89 75 C8           - mov [rbp-38],r14
+Trackmania.exe.text+DC1BF2 - 4D 85 F6              - test r14,r14
+Trackmania.exe.text+DC1BF5 - 0F84 AA060000         - je Trackmania.exe.text+DC22A5
+Trackmania.exe.text+DC1BFB - 65 48 8B 04 25 58000000  - mov rax,gs:[00000058] { 88 }
+Trackmania.exe.text+DC1C04 - 48 8B 18              - mov rbx,[rax]
+Trackmania.exe.text+DC1C07 - B8 10000000           - mov eax,00000010 { 16 }
+Trackmania.exe.text+DC1C0C - 80 3C 18  00          - cmp byte ptr [rax+rbx],00 { 0 }
+Trackmania.exe.text+DC1C10 - 75 05                 - jne Trackmania.exe.text+DC1C17
+Trackmania.exe.text+DC1C12 - E8 A99C7300           - call Trackmania.exe.text+14FB8C0
+Trackmania.exe.text+DC1C17 - BA 50010000           - mov edx,00000150 { 336 }
+Trackmania.exe.text+DC1C1C - 48 8D 4D 70           - lea rcx,[rbp+70]
+Trackmania.exe.text+DC1C20 - 48 03 D3              - add rdx,rbx
+Trackmania.exe.text+DC1C23 - E8 68C734FF           - call Trackmania.exe.text+10E390
+Trackmania.exe.text+DC1C28 - 44 8B 45 84           - mov r8d,[rbp-7C]
+Trackmania.exe.text+DC1C2C - 48 8D 95 88000000     - lea rdx,[rbp+00000088]
+Trackmania.exe.text+DC1C33 - 48 8D 4D 70           - lea rcx,[rbp+70]
+Trackmania.exe.text+DC1C37 - E8 D46239FF           - call Trackmania.exe.text+157F10
+Trackmania.exe.text+DC1C3C - 0F57 C0               - xorps xmm0,xmm0
+Trackmania.exe.text+DC1C3F - 48 C7 45 E8 00000000  - mov qword ptr [rbp-18],00000000 { 0 }
+Trackmania.exe.text+DC1C47 - 0F57 C9               - xorps xmm1,xmm1
+Trackmania.exe.text+DC1C4A - 48 C7 45 F0 00000000  - mov qword ptr [rbp-10],00000000 { 0 }
+Trackmania.exe.text+DC1C52 - 48 8D 55 A0           - lea rdx,[rbp-60]
+Trackmania.exe.text+DC1C56 - 48 C7 45 18 00000000  - mov qword ptr [rbp+18],00000000 { 0 }
+Trackmania.exe.text+DC1C5E - 48 8D 4D 70           - lea rcx,[rbp+70]
+Trackmania.exe.text+DC1C62 - 0F11 45 F8            - movups [rbp-08],xmm0
+Trackmania.exe.text+DC1C66 - F3 0F7F 4D 08         - movdqu [rbp+08],xmm1
+Trackmania.exe.text+DC1C6B - E8 10C834FF           - call Trackmania.exe.text+10E480
+Trackmania.exe.text+DC1C70 - 48 8D 55 B0           - lea rdx,[rbp-50]
+Trackmania.exe.text+DC1C74 - 48 8D 4D E8           - lea rcx,[rbp-18]
+Trackmania.exe.text+DC1C78 - 0F10 00               - movups xmm0,[rax]
+Trackmania.exe.text+DC1C7B - 0F29 45 B0            - movaps [rbp-50],xmm0
+Trackmania.exe.text+DC1C7F - E8 EC103DFF           - call Trackmania.exe.text+192D70
+Trackmania.exe.text+DC1C84 - 48 8D 4D E8           - lea rcx,[rbp-18]
+Trackmania.exe.text+DC1C88 - E8 931A0200           - call Trackmania.exe.text+DE3720
+Trackmania.exe.text+DC1C8D - 41 8B 85 70020000     - mov eax,[r13+00000270]
+Trackmania.exe.text+DC1C94 - 45 33 FF              - xor r15d,r15d
+Trackmania.exe.text+DC1C97 - 49 8B BD 68020000     - mov rdi,[r13+00000268]
+Trackmania.exe.text+DC1C9E - 48 89 7D D0           - mov [rbp-30],rdi
+Trackmania.exe.text+DC1CA2 - 89 85 30010000        - mov [rbp+00000130],eax
+Trackmania.exe.text+DC1CA8 - 44 89 7C 24 64        - mov [rsp+64],r15d
+Trackmania.exe.text+DC1CAD - 85 C0                 - test eax,eax
+Trackmania.exe.text+DC1CAF - 0F84 AF040000         - je Trackmania.exe.text+DC2164
+Trackmania.exe.text+DC1CB5 - 66 66 66 0F1F 84 00 00000000  - nop word ptr [rax+rax+00000000]
+Trackmania.exe.text+DC1CC0 - 48 8B 3F              - mov rdi,[rdi]
+Trackmania.exe.text+DC1CC3 - F7 87 8C000000 00000030 - test [rdi+0000008C],30000000 { 805306368 }
+Trackmania.exe.text+DC1CCD - 0F85 74040000         - jne Trackmania.exe.text+DC2147
+Trackmania.exe.text+DC1CD3 - 48 8B 47 28           - mov rax,[rdi+28]
+Trackmania.exe.text+DC1CD7 - 4C 8B 88 28020000     - mov r9,[rax+00000228]
+Trackmania.exe.text+DC1CDE - 4D 85 C9              - test r9,r9
+Trackmania.exe.text+DC1CE1 - 0F84 5A040000         - je Trackmania.exe.text+DC2141
+Trackmania.exe.text+DC1CE7 - 48 8B CF              - mov rcx,rdi
+Trackmania.exe.text+DC1CEA - E8 C1B3EEFF           - call Trackmania.exe.text+CAD0B0
+Trackmania.exe.text+DC1CEF - 48 8B F0              - mov rsi,rax
+Trackmania.exe.text+DC1CF2 - 48 89 44 24 78        - mov [rsp+78],rax
+Trackmania.exe.text+DC1CF7 - 83 B8 68010000 00     - cmp dword ptr [rax+00000168],00 { 0 }
+Trackmania.exe.text+DC1CFE - 0F86 3D040000         - jbe Trackmania.exe.text+DC2141
+Trackmania.exe.text+DC1D04 - 83 B8 58010000 00     - cmp dword ptr [rax+00000158],00 { 0 }
+Trackmania.exe.text+DC1D0B - 0F87 30040000         - ja Trackmania.exe.text+DC2141
+Trackmania.exe.text+DC1D11 - 49 8B 49 30           - mov rcx,[r9+30]
+Trackmania.exe.text+DC1D15 - 48 85 C9              - test rcx,rcx
+Trackmania.exe.text+DC1D18 - 0F84 23040000         - je Trackmania.exe.text+DC2141
+Trackmania.exe.text+DC1D1E - 49 83 79 20 00        - cmp qword ptr [r9+20],00 { 0 }
+Trackmania.exe.text+DC1D23 - 0F84 18040000         - je Trackmania.exe.text+DC2141
+Trackmania.exe.text+DC1D29 - 49 8B D6              - mov rdx,r14
+Trackmania.exe.text+DC1D2C - E8 9F61F9FF           - call Trackmania.exe.text+D57ED0
+Trackmania.exe.text+DC1D31 - 44 8B B6 68010000     - mov r14d,[rsi+00000168]
+Trackmania.exe.text+DC1D38 - 45 33 E4              - xor r12d,r12d
+Trackmania.exe.text+DC1D3B - 8B 57 68              - mov edx,[rdi+68]
+Trackmania.exe.text+DC1D3E - 8B D8                 - mov ebx,eax
+Trackmania.exe.text+DC1D40 - 44 8B 47 6C           - mov r8d,[rdi+6C]
+Trackmania.exe.text+DC1D44 - F2 0F10 77 60         - movsd xmm6,[rdi+60]
+Trackmania.exe.text+DC1D49 - 89 45 94              - mov [rbp-6C],eax
+Trackmania.exe.text+DC1D4C - 48 8B 86 60010000     - mov rax,[rsi+00000160]
+Trackmania.exe.text+DC1D53 - 48 89 45 C0           - mov [rbp-40],rax
+Trackmania.exe.text+DC1D57 - 89 95 40010000        - mov [rbp+00000140],edx
+Trackmania.exe.text+DC1D5D - 44 89 85 48010000     - mov [rbp+00000148],r8d
+Trackmania.exe.text+DC1D64 - 44 89 B5 38010000     - mov [rbp+00000138],r14d
+Trackmania.exe.text+DC1D6B - 44 89 64 24 60        - mov [rsp+60],r12d
+Trackmania.exe.text+DC1D70 - 45 85 F6              - test r14d,r14d
+Trackmania.exe.text+DC1D73 - 0F84 C4030000         - je Trackmania.exe.text+DC213D
+Trackmania.exe.text+DC1D79 - 41 8B CE              - mov ecx,r14d
+Trackmania.exe.text+DC1D7C - 0F1F 40 00            - nop dword ptr [rax+00]
+Trackmania.exe.text+DC1D80 - 4C 8B 30              - mov r14,[rax]
+Trackmania.exe.text+DC1D83 - 49 8B 86 28020000     - mov rax,[r14+00000228]
+Trackmania.exe.text+DC1D8A - 48 85 C0              - test rax,rax
+Trackmania.exe.text+DC1D8D - 0F84 88030000         - je Trackmania.exe.text+DC211B
+Trackmania.exe.text+DC1D93 - 48 83 78 20 00        - cmp qword ptr [rax+20],00 { 0 }
+Trackmania.exe.text+DC1D98 - 0F84 7D030000         - je Trackmania.exe.text+DC211B
+Trackmania.exe.text+DC1D9E - 48 8D 45 D8           - lea rax,[rbp-28]
+Trackmania.exe.text+DC1DA2 - 89 55 48              - mov [rbp+48],edx
+Trackmania.exe.text+DC1DA5 - 48 89 44 24 50        - mov [rsp+50],rax
+Trackmania.exe.text+DC1DAA - 4C 8D 4D 40           - lea r9,[rbp+40]
+Trackmania.exe.text+DC1DAE - 48 C7 44 24 48 00000000 - mov qword ptr [rsp+48],00000000 { 0 }
+Trackmania.exe.text+DC1DB7 - 48 8B D6              - mov rdx,rsi
+Trackmania.exe.text+DC1DBA - 48 C7 44 24 40 00000000 - mov qword ptr [rsp+40],00000000 { 0 }
+Trackmania.exe.text+DC1DC3 - 49 8B CD              - mov rcx,r13
+Trackmania.exe.text+DC1DC6 - 48 C7 44 24 38 00000000 - mov qword ptr [rsp+38],00000000 { 0 }
+Trackmania.exe.text+DC1DCF - 48 C7 44 24 30 00000000 - mov qword ptr [rsp+30],00000000 { 0 }
+Trackmania.exe.text+DC1DD8 - 48 C7 44 24 28 00000000 - mov qword ptr [rsp+28],00000000 { 0 }
+Trackmania.exe.text+DC1DE1 - 44 89 44 24 20        - mov [rsp+20],r8d
+Trackmania.exe.text+DC1DE6 - 45 8B C4              - mov r8d,r12d
+Trackmania.exe.text+DC1DE9 - F2 0F11 75 40         - movsd [rbp+40],xmm6
+Trackmania.exe.text+DC1DEE - E8 FDC10F00           - call Trackmania.exe.text+EBDFF0
+Trackmania.exe.text+DC1DF3 - 48 8B 45 D8           - mov rax,[rbp-28]
+Trackmania.exe.text+DC1DF7 - 33 F6                 - xor esi,esi
+Trackmania.exe.text+DC1DF9 - F2 0F10 45 D8         - movsd xmm0,[rbp-28]
+Trackmania.exe.text+DC1DFE - 44 8B 7D E0           - mov r15d,[rbp-20]
+Trackmania.exe.text+DC1E02 - 48 C1 E8 20           - shr rax,20 { 32 }
+Trackmania.exe.text+DC1E06 - F2 0F11 45 80         - movsd [rbp-80],xmm0
+Trackmania.exe.text+DC1E0B - 83 F8 01              - cmp eax,01 { 1 }
+Trackmania.exe.text+DC1E0E - 0F82 EF020000         - jb Trackmania.exe.text+DC2103
+Trackmania.exe.text+DC1E14 - 8B 7D 84              - mov edi,[rbp-7C]
+Trackmania.exe.text+DC1E17 - 66 0F1F 84 00 00000000  - nop word ptr [rax+rax+00000000]
+Trackmania.exe.text+DC1E20 - 48 8D 55 50           - lea rdx,[rbp+50]
+Trackmania.exe.text+DC1E24 - F2 0F11 45 50         - movsd [rbp+50],xmm0
+Trackmania.exe.text+DC1E29 - 49 8B CD              - mov rcx,r13
+Trackmania.exe.text+DC1E2C - 44 89 7D 58           - mov [rbp+58],r15d
+Trackmania.exe.text+DC1E30 - E8 0BE3D5FF           - call Trackmania.exe.text+B20140
+Trackmania.exe.text+DC1E35 - 4C 8B D8              - mov r11,rax
+Trackmania.exe.text+DC1E38 - 48 85 C0              - test rax,rax
+Trackmania.exe.text+DC1E3B - 74 71                 - je Trackmania.exe.text+DC1EAE
+Trackmania.exe.text+DC1E3D - 4C 8B 50 28           - mov r10,[rax+28]
+Trackmania.exe.text+DC1E41 - 41 83 BA 28010000 00  - cmp dword ptr [r10+00000128],00 { 0 }
+Trackmania.exe.text+DC1E49 - 74 05                 - je Trackmania.exe.text+DC1E50
+Trackmania.exe.text+DC1E4B - 4D 3B D6              - cmp r10,r14
+Trackmania.exe.text+DC1E4E - 74 0F                 - je Trackmania.exe.text+DC1E5F
+Trackmania.exe.text+DC1E50 - 49 8B D6              - mov rdx,r14
+Trackmania.exe.text+DC1E53 - 49 8B CB              - mov rcx,r11
+Trackmania.exe.text+DC1E56 - E8 35AEEEFF           - call Trackmania.exe.text+CACC90
+Trackmania.exe.text+DC1E5B - 85 C0                 - test eax,eax
+Trackmania.exe.text+DC1E5D - 74 4F                 - je Trackmania.exe.text+DC1EAE
+Trackmania.exe.text+DC1E5F - 49 8B 82 28020000     - mov rax,[r10+00000228]
+Trackmania.exe.text+DC1E66 - 48 85 C0              - test rax,rax
+Trackmania.exe.text+DC1E69 - 74 43                 - je Trackmania.exe.text+DC1EAE
+Trackmania.exe.text+DC1E6B - 48 83 78 20 00        - cmp qword ptr [rax+20],00 { 0 }
+Trackmania.exe.text+DC1E70 - 74 3C                 - je Trackmania.exe.text+DC1EAE
+Trackmania.exe.text+DC1E72 - 3B B5 98000000        - cmp esi,[rbp+00000098]
+Trackmania.exe.text+DC1E78 - 0F83 BB030000         - jae Trackmania.exe.text+DC2239
+Trackmania.exe.text+DC1E7E - 48 8B 85 88000000     - mov rax,[rbp+00000088]
+Trackmania.exe.text+DC1E85 - FF C6                 - inc esi
+Trackmania.exe.text+DC1E87 - 8D 4E FF              - lea ecx,[rsi-01]
+Trackmania.exe.text+DC1E8A - 4C 89 1C C8           - mov [rax+rcx*8],r11
+Trackmania.exe.text+DC1E8E - 49 8B CB              - mov rcx,r11
+Trackmania.exe.text+DC1E91 - E8 DAADEEFF           - call Trackmania.exe.text+CACC70
+Trackmania.exe.text+DC1E96 - 85 C0                 - test eax,eax
+Trackmania.exe.text+DC1E98 - 75 14                 - jne Trackmania.exe.text+DC1EAE
+Trackmania.exe.text+DC1E9A - FF CF                 - dec edi
+Trackmania.exe.text+DC1E9C - 89 7D 84              - mov [rbp-7C],edi
+Trackmania.exe.text+DC1E9F - 83 FF 01              - cmp edi,01 { 1 }
+Trackmania.exe.text+DC1EA2 - 72 0A                 - jb Trackmania.exe.text+DC1EAE
+Trackmania.exe.text+DC1EA4 - F2 0F10 45 80         - movsd xmm0,[rbp-80]
+Trackmania.exe.text+DC1EA9 - E9 72FFFFFF           - jmp Trackmania.exe.text+DC1E20
+Trackmania.exe.text+DC1EAE - 85 F6                 - test esi,esi
+Trackmania.exe.text+DC1EB0 - 0F84 4D020000         - je Trackmania.exe.text+DC2103
+Trackmania.exe.text+DC1EB6 - 4C 8D 45 90           - lea r8,[rbp-70]
+Trackmania.exe.text+DC1EBA - 8B D3                 - mov edx,ebx
+Trackmania.exe.text+DC1EBC - 48 8D 4D E8           - lea rcx,[rbp-18]
+Trackmania.exe.text+DC1EC0 - E8 7B180200           - call Trackmania.exe.text+DE3740
+Trackmania.exe.text+DC1EC5 - 8B D0                 - mov edx,eax
+Trackmania.exe.text+DC1EC7 - 48 8D 4D E8           - lea rcx,[rbp-18]
+Trackmania.exe.text+DC1ECB - E8 701A0200           - call Trackmania.exe.text+DE3940
+Trackmania.exe.text+DC1ED0 - 83 7D 90 00           - cmp dword ptr [rbp-70],00 { 0 }
+Trackmania.exe.text+DC1ED4 - 4C 8B C8              - mov r9,rax
+Trackmania.exe.text+DC1ED7 - 48 89 45 98           - mov [rbp-68],rax
+Trackmania.exe.text+DC1EDB - 74 23                 - je Trackmania.exe.text+DC1F00
+Trackmania.exe.text+DC1EDD - 48 8D 95 B8000000     - lea rdx,[rbp+000000B8]
+Trackmania.exe.text+DC1EE4 - 48 8D 4D 70           - lea rcx,[rbp+70]
+Trackmania.exe.text+DC1EE8 - E8 93C534FF           - call Trackmania.exe.text+10E480
+Trackmania.exe.text+DC1EED - 48 8D 55 30           - lea rdx,[rbp+30]
+Trackmania.exe.text+DC1EF1 - 49 8B C9              - mov rcx,r9
+Trackmania.exe.text+DC1EF4 - 0F10 00               - movups xmm0,[rax]
+Trackmania.exe.text+DC1EF7 - 0F29 45 30            - movaps [rbp+30],xmm0
+Trackmania.exe.text+DC1EFB - E8 A001ACFF           - call Trackmania.exe.text+8820A0
+Trackmania.exe.text+DC1F00 - 85 F6                 - test esi,esi
+Trackmania.exe.text+DC1F02 - 0F84 FB010000         - je Trackmania.exe.text+DC2103
+Trackmania.exe.text+DC1F08 - 48 8B BD 88000000     - mov rdi,[rbp+00000088]
+Trackmania.exe.text+DC1F0F - 44 8B F6              - mov r14d,esi
+Trackmania.exe.text+DC1F12 - 48 89 7C 24 68        - mov [rsp+68],rdi
+Trackmania.exe.text+DC1F17 - 4C 89 74 24 70        - mov [rsp+70],r14
+Trackmania.exe.text+DC1F1C - 0F1F 40 00            - nop dword ptr [rax+00]
+Trackmania.exe.text+DC1F20 - 4C 8B 3F              - mov r15,[rdi]
+Trackmania.exe.text+DC1F23 - 4C 89 7D 30           - mov [rbp+30],r15
+Trackmania.exe.text+DC1F27 - 49 8B 77 38           - mov rsi,[r15+38]
+Trackmania.exe.text+DC1F2B - 48 85 F6              - test rsi,rsi
+Trackmania.exe.text+DC1F2E - 0F84 DA020000         - je Trackmania.exe.text+DC220E
+Trackmania.exe.text+DC1F34 - 48 83 7E 18 00        - cmp qword ptr [rsi+18],00 { 0 }
+Trackmania.exe.text+DC1F39 - 75 12                 - jne Trackmania.exe.text+DC1F4D
+Trackmania.exe.text+DC1F3B - 48 83 7E 20 00        - cmp qword ptr [rsi+20],00 { 0 }
+Trackmania.exe.text+DC1F40 - 75 0B                 - jne Trackmania.exe.text+DC1F4D
+Trackmania.exe.text+DC1F42 - 48 83 7E 28 00        - cmp qword ptr [rsi+28],00 { 0 }
+Trackmania.exe.text+DC1F47 - 0F84 C1020000         - je Trackmania.exe.text+DC220E
+Trackmania.exe.text+DC1F4D - 39 5E 30              - cmp [rsi+30],ebx
+Trackmania.exe.text+DC1F50 - 0F84 90010000         - je Trackmania.exe.text+DC20E6
+Trackmania.exe.text+DC1F56 - B9 40000000           - mov ecx,00000040 { 64 }
+Trackmania.exe.text+DC1F5B - E8 907E72FF           - call Trackmania.exe.text+4E9DF0
+Trackmania.exe.text+DC1F60 - 48 85 C0              - test rax,rax
+Trackmania.exe.text+DC1F63 - 74 0D                 - je Trackmania.exe.text+DC1F72
+Trackmania.exe.text+DC1F65 - 48 8B C8              - mov rcx,rax
+Trackmania.exe.text+DC1F68 - E8 13BCEEFF           - call Trackmania.exe.text+CADB80
+Trackmania.exe.text+DC1F6D - 48 8B F8              - mov rdi,rax
+Trackmania.exe.text+DC1F70 - EB 02                 - jmp Trackmania.exe.text+DC1F74
+Trackmania.exe.text+DC1F72 - 33 FF                 - xor edi,edi
+Trackmania.exe.text+DC1F74 - 4C 8B 76 18           - mov r14,[rsi+18]
+Trackmania.exe.text+DC1F78 - 48 8B 4F 18           - mov rcx,[rdi+18]
+Trackmania.exe.text+DC1F7C - 4C 3B F1              - cmp r14,rcx
+Trackmania.exe.text+DC1F7F - 74 21                 - je Trackmania.exe.text+DC1FA2
+Trackmania.exe.text+DC1F81 - 4D 85 F6              - test r14,r14
+Trackmania.exe.text+DC1F84 - 74 08                 - je Trackmania.exe.text+DC1F8E
+Trackmania.exe.text+DC1F86 - 41 FF 46 10           - inc [r14+10]
+Trackmania.exe.text+DC1F8A - 48 8B 4F 18           - mov rcx,[rdi+18]
+Trackmania.exe.text+DC1F8E - 48 85 C9              - test rcx,rcx
+Trackmania.exe.text+DC1F91 - 74 0B                 - je Trackmania.exe.text+DC1F9E
+Trackmania.exe.text+DC1F93 - 83 41 10 FF           - add dword ptr [rcx+10],-01 { 255 }
+Trackmania.exe.text+DC1F97 - 75 05                 - jne Trackmania.exe.text+DC1F9E
+Trackmania.exe.text+DC1F99 - E8 02DD4BFF           - call Trackmania.exe.text+27FCA0
+Trackmania.exe.text+DC1F9E - 4C 89 77 18           - mov [rdi+18],r14
+Trackmania.exe.text+DC1FA2 - 4C 8B 76 20           - mov r14,[rsi+20]
+Trackmania.exe.text+DC1FA6 - 48 8B 4F 20           - mov rcx,[rdi+20]
+Trackmania.exe.text+DC1FAA - 4C 3B F1              - cmp r14,rcx
+Trackmania.exe.text+DC1FAD - 74 21                 - je Trackmania.exe.text+DC1FD0
+Trackmania.exe.text+DC1FAF - 4D 85 F6              - test r14,r14
+Trackmania.exe.text+DC1FB2 - 74 08                 - je Trackmania.exe.text+DC1FBC
+Trackmania.exe.text+DC1FB4 - 41 FF 46 10           - inc [r14+10]
+Trackmania.exe.text+DC1FB8 - 48 8B 4F 20           - mov rcx,[rdi+20]
+Trackmania.exe.text+DC1FBC - 48 85 C9              - test rcx,rcx
+Trackmania.exe.text+DC1FBF - 74 0B                 - je Trackmania.exe.text+DC1FCC
+Trackmania.exe.text+DC1FC1 - 83 41 10 FF           - add dword ptr [rcx+10],-01 { 255 }
+Trackmania.exe.text+DC1FC5 - 75 05                 - jne Trackmania.exe.text+DC1FCC
+Trackmania.exe.text+DC1FC7 - E8 D4DC4BFF           - call Trackmania.exe.text+27FCA0
+Trackmania.exe.text+DC1FCC - 4C 89 77 20           - mov [rdi+20],r14
+Trackmania.exe.text+DC1FD0 - 48 8B 76 28           - mov rsi,[rsi+28]
+Trackmania.exe.text+DC1FD4 - 48 8B 4F 28           - mov rcx,[rdi+28]
+Trackmania.exe.text+DC1FD8 - 48 3B F1              - cmp rsi,rcx
+Trackmania.exe.text+DC1FDB - 74 20                 - je Trackmania.exe.text+DC1FFD
+Trackmania.exe.text+DC1FDD - 48 85 F6              - test rsi,rsi
+Trackmania.exe.text+DC1FE0 - 74 07                 - je Trackmania.exe.text+DC1FE9
+Trackmania.exe.text+DC1FE2 - FF 46 10              - inc [rsi+10]
+Trackmania.exe.text+DC1FE5 - 48 8B 4F 28           - mov rcx,[rdi+28]
+Trackmania.exe.text+DC1FE9 - 48 85 C9              - test rcx,rcx
+Trackmania.exe.text+DC1FEC - 74 0B                 - je Trackmania.exe.text+DC1FF9
+Trackmania.exe.text+DC1FEE - 83 41 10 FF           - add dword ptr [rcx+10],-01 { 255 }
+Trackmania.exe.text+DC1FF2 - 75 05                 - jne Trackmania.exe.text+DC1FF9
+Trackmania.exe.text+DC1FF4 - E8 A7DC4BFF           - call Trackmania.exe.text+27FCA0
+Trackmania.exe.text+DC1FF9 - 48 89 77 28           - mov [rdi+28],rsi
+Trackmania.exe.text+DC1FFD - 89 5F 30              - mov [rdi+30],ebx
+Trackmania.exe.text+DC2000 - 49 3B 7F 38           - cmp rdi,[r15+38]
+Trackmania.exe.text+DC2004 - 74 1B                 - je Trackmania.exe.text+DC2021
+Trackmania.exe.text+DC2006 - FF 47 10              - inc [rdi+10]
+Trackmania.exe.text+DC2009 - 49 8B 4F 38           - mov rcx,[r15+38]
+Trackmania.exe.text+DC200D - 48 85 C9              - test rcx,rcx
+Trackmania.exe.text+DC2010 - 74 0B                 - je Trackmania.exe.text+DC201D
+Trackmania.exe.text+DC2012 - 83 41 10 FF           - add dword ptr [rcx+10],-01 { 255 }
+Trackmania.exe.text+DC2016 - 75 05                 - jne Trackmania.exe.text+DC201D
+Trackmania.exe.text+DC2018 - E8 83DC4BFF           - call Trackmania.exe.text+27FCA0
+Trackmania.exe.text+DC201D - 49 89 7F 38           - mov [r15+38],rdi
+Trackmania.exe.text+DC2021 - 4C 8B 74 24 70        - mov r14,[rsp+70]
+Trackmania.exe.text+DC2026 - 48 8B 7C 24 68        - mov rdi,[rsp+68]
+Trackmania.exe.text+DC202B - 49 8B D7              - mov rdx,r15
+Trackmania.exe.text+DC202E - 49 8B CD              - mov rcx,r13
+Trackmania.exe.text+DC2031 - E8 7A0BD6FF           - call Trackmania.exe.text+B22BB0
+Trackmania.exe.text+DC2036 - 45 8B 67 58           - mov r12d,[r15+58]
+Trackmania.exe.text+DC203A - 45 33 FF              - xor r15d,r15d
+Trackmania.exe.text+DC203D - 45 85 E4              - test r12d,r12d
+Trackmania.exe.text+DC2040 - 0F84 9C000000         - je Trackmania.exe.text+DC20E2
+Trackmania.exe.text+DC2046 - 48 8B 5D 30           - mov rbx,[rbp+30]
+Trackmania.exe.text+DC204A - 66 0F1F 44 00 00      - nop word ptr [rax+rax+00]
+Trackmania.exe.text+DC2050 - 41 8B D7              - mov edx,r15d
+Trackmania.exe.text+DC2053 - 48 8B CB              - mov rcx,rbx
+Trackmania.exe.text+DC2056 - E8 15A8EEFF           - call Trackmania.exe.text+CAC870
+Trackmania.exe.text+DC205B - 48 8B C8              - mov rcx,rax
+Trackmania.exe.text+DC205E - 48 8D 55 60           - lea rdx,[rbp+60]
+Trackmania.exe.text+DC2062 - E8 59B8EEFF           - call Trackmania.exe.text+CAD8C0
+Trackmania.exe.text+DC2067 - F2 0F10 45 60         - movsd xmm0,[rbp+60]
+Trackmania.exe.text+DC206C - 33 F6                 - xor esi,esi
+Trackmania.exe.text+DC206E - 8B 45 68              - mov eax,[rbp+68]
+Trackmania.exe.text+DC2071 - F2 0F11 45 A0         - movsd [rbp-60],xmm0
+Trackmania.exe.text+DC2076 - 89 45 A8              - mov [rbp-58],eax
+Trackmania.exe.text+DC2079 - 0F1F 80 00000000      - nop dword ptr [rax+00000000]
+Trackmania.exe.text+DC2080 - 44 8B CE              - mov r9d,esi
+Trackmania.exe.text+DC2083 - 4C 8D 45 A0           - lea r8,[rbp-60]
+Trackmania.exe.text+DC2087 - 48 8D 55 B0           - lea rdx,[rbp-50]
+Trackmania.exe.text+DC208B - 49 8B CD              - mov rcx,r13
+Trackmania.exe.text+DC208E - E8 0D310F00           - call Trackmania.exe.text+EB51A0
+Trackmania.exe.text+DC2093 - 8B 45 B8              - mov eax,[rbp-48]
+Trackmania.exe.text+DC2096 - 85 C0                 - test eax,eax
+Trackmania.exe.text+DC2098 - 74 28                 - je Trackmania.exe.text+DC20C2
+Trackmania.exe.text+DC209A - 48 8B 7D B0           - mov rdi,[rbp-50]
+Trackmania.exe.text+DC209E - 44 8B F0              - mov r14d,eax
+Trackmania.exe.text+DC20A1 - 48 8B 17              - mov rdx,[rdi]
+Trackmania.exe.text+DC20A4 - F7 82 90000000 00200000 - test [rdx+00000090],00002000 { 8192 }
+Trackmania.exe.text+DC20AE - 75 08                 - jne Trackmania.exe.text+DC20B8
+Trackmania.exe.text+DC20B0 - 49 8B CD              - mov rcx,r13
+Trackmania.exe.text+DC20B3 - E8 F80AD6FF           - call Trackmania.exe.text+B22BB0
+Trackmania.exe.text+DC20B8 - 48 83 C7 08           - add rdi,08 { 8 }
+Trackmania.exe.text+DC20BC - 49 83 EE 01           - sub r14,01 { 1 }
+Trackmania.exe.text+DC20C0 - 75 DF                 - jne Trackmania.exe.text+DC20A1
+Trackmania.exe.text+DC20C2 - FF C6                 - inc esi
+Trackmania.exe.text+DC20C4 - 83 FE 06              - cmp esi,06 { 6 }
+Trackmania.exe.text+DC20C7 - 7C B7                 - jl Trackmania.exe.text+DC2080
+Trackmania.exe.text+DC20C9 - 41 FF C7              - inc r15d
+Trackmania.exe.text+DC20CC - 45 3B FC              - cmp r15d,r12d
+Trackmania.exe.text+DC20CF - 0F82 7BFFFFFF         - jb Trackmania.exe.text+DC2050
+Trackmania.exe.text+DC20D5 - 8B 5D 94              - mov ebx,[rbp-6C]
+Trackmania.exe.text+DC20D8 - 48 8B 7C 24 68        - mov rdi,[rsp+68]
+Trackmania.exe.text+DC20DD - 4C 8B 74 24 70        - mov r14,[rsp+70]
+Trackmania.exe.text+DC20E2 - 4C 8B 4D 98           - mov r9,[rbp-68]
+Trackmania.exe.text+DC20E6 - 48 83 C7 08           - add rdi,08 { 8 }
+Trackmania.exe.text+DC20EA - 49 83 EE 01           - sub r14,01 { 1 }
+Trackmania.exe.text+DC20EE - 48 89 7C 24 68        - mov [rsp+68],rdi
+Trackmania.exe.text+DC20F3 - 4C 89 74 24 70        - mov [rsp+70],r14
+Trackmania.exe.text+DC20F8 - 0F85 22FEFFFF         - jne Trackmania.exe.text+DC1F20
+Trackmania.exe.text+DC20FE - 44 8B 64 24 60        - mov r12d,[rsp+60]
+Trackmania.exe.text+DC2103 - 44 8B 85 48010000     - mov r8d,[rbp+00000148]
+Trackmania.exe.text+DC210A - 8B 95 40010000        - mov edx,[rbp+00000140]
+Trackmania.exe.text+DC2110 - 8B 8D 38010000        - mov ecx,[rbp+00000138]
+Trackmania.exe.text+DC2116 - 48 8B 74 24 78        - mov rsi,[rsp+78]
+Trackmania.exe.text+DC211B - 48 8B 45 C0           - mov rax,[rbp-40]
+Trackmania.exe.text+DC211F - 41 FF C4              - inc r12d
+Trackmania.exe.text+DC2122 - 48 83 C0 18           - add rax,18 { 24 }
+Trackmania.exe.text+DC2126 - 44 89 64 24 60        - mov [rsp+60],r12d
+Trackmania.exe.text+DC212B - 48 89 45 C0           - mov [rbp-40],rax
+Trackmania.exe.text+DC212F - 44 3B E1              - cmp r12d,ecx
+Trackmania.exe.text+DC2132 - 0F82 48FCFFFF         - jb Trackmania.exe.text+DC1D80
+Trackmania.exe.text+DC2138 - 44 8B 7C 24 64        - mov r15d,[rsp+64]
+Trackmania.exe.text+DC213D - 4C 8B 75 C8           - mov r14,[rbp-38]
+Trackmania.exe.text+DC2141 - 8B 85 30010000        - mov eax,[rbp+00000130]
+Trackmania.exe.text+DC2147 - 48 8B 7D D0           - mov rdi,[rbp-30]
+Trackmania.exe.text+DC214B - 41 FF C7              - inc r15d
+Trackmania.exe.text+DC214E - 48 83 C7 08           - add rdi,08 { 8 }
+Trackmania.exe.text+DC2152 - 44 89 7C 24 64        - mov [rsp+64],r15d
+Trackmania.exe.text+DC2157 - 48 89 7D D0           - mov [rbp-30],rdi
+Trackmania.exe.text+DC215B - 44 3B F8              - cmp r15d,eax
+Trackmania.exe.text+DC215E - 0F82 5CFBFFFF         - jb Trackmania.exe.text+DC1CC0
+Trackmania.exe.text+DC2164 - 48 8D 55 E8           - lea rdx,[rbp-18]
+Trackmania.exe.text+DC2168 - 48 8D 4D A0           - lea rcx,[rbp-60]
+Trackmania.exe.text+DC216C - E8 FFD045FF           - call Trackmania.exe.text+21F270
+Trackmania.exe.text+DC2171 - 48 8D 55 E8           - lea rdx,[rbp-18]
+Trackmania.exe.text+DC2175 - 48 8D 4D B0           - lea rcx,[rbp-50]
+Trackmania.exe.text+DC2179 - E8 E2D045FF           - call Trackmania.exe.text+21F260
+Trackmania.exe.text+DC217E - 44 8B 75 B8           - mov r14d,[rbp-48]
+Trackmania.exe.text+DC2182 - 4C 8B 7D B0           - mov r15,[rbp-50]
+Trackmania.exe.text+DC2186 - 44 8B 45 A8           - mov r8d,[rbp-58]
+Trackmania.exe.text+DC218A - 45 3B C6              - cmp r8d,r14d
+Trackmania.exe.text+DC218D - 75 0A                 - jne Trackmania.exe.text+DC2199
+Trackmania.exe.text+DC218F - 4C 39 7D A0           - cmp [rbp-60],r15
+Trackmania.exe.text+DC2193 - 0F84 FA000000         - je Trackmania.exe.text+DC2293
+Trackmania.exe.text+DC2199 - 41 8B D0              - mov edx,r8d
+Trackmania.exe.text+DC219C - 48 8D 4D E8           - lea rcx,[rbp-18]
+Trackmania.exe.text+DC21A0 - E8 AB170200           - call Trackmania.exe.text+DE3950
+Trackmania.exe.text+DC21A5 - 41 8B D0              - mov edx,r8d
+Trackmania.exe.text+DC21A8 - 48 8D 4D E8           - lea rcx,[rbp-18]
+Trackmania.exe.text+DC21AC - 8B D8                 - mov ebx,eax
+Trackmania.exe.text+DC21AE - E8 8D170200           - call Trackmania.exe.text+DE3940
+Trackmania.exe.text+DC21B3 - 48 8B F0              - mov rsi,rax
+Trackmania.exe.text+DC21B6 - 83 78 10 00           - cmp dword ptr [rax+10],00 { 0 }
+Trackmania.exe.text+DC21BA - 0F84 C5000000         - je Trackmania.exe.text+DC2285
+Trackmania.exe.text+DC21C0 - 48 8B 10              - mov rdx,[rax]
+Trackmania.exe.text+DC21C3 - 33 FF                 - xor edi,edi
+Trackmania.exe.text+DC21C5 - 48 85 D2              - test rdx,rdx
+Trackmania.exe.text+DC21C8 - 74 28                 - je Trackmania.exe.text+DC21F2
+Trackmania.exe.text+DC21CA - 66 0F1F 44 00 00      - nop word ptr [rax+rax+00]
+Trackmania.exe.text+DC21D0 - 48 8B 0A              - mov rcx,[rdx]
+Trackmania.exe.text+DC21D3 - 4C 8B 41 38           - mov r8,[rcx+38]
+Trackmania.exe.text+DC21D7 - 4D 85 C0              - test r8,r8
+Trackmania.exe.text+DC21DA - 74 08                 - je Trackmania.exe.text+DC21E4
+Trackmania.exe.text+DC21DC - 41 39 58 30           - cmp [r8+30],ebx
+Trackmania.exe.text+DC21E0 - 49 0F44 F8            - cmove rdi,r8
+Trackmania.exe.text+DC21E4 - 48 8B 52 08           - mov rdx,[rdx+08]
+Trackmania.exe.text+DC21E8 - 48 85 D2              - test rdx,rdx
+Trackmania.exe.text+DC21EB - 75 E3                 - jne Trackmania.exe.text+DC21D0
+Trackmania.exe.text+DC21ED - 48 85 FF              - test rdi,rdi
+Trackmania.exe.text+DC21F0 - 75 4E                 - jne Trackmania.exe.text+DC2240
+Trackmania.exe.text+DC21F2 - B9 40000000           - mov ecx,00000040 { 64 }
+Trackmania.exe.text+DC21F7 - E8 F47B72FF           - call Trackmania.exe.text+4E9DF0
+Trackmania.exe.text+DC21FC - 48 85 C0              - test rax,rax
+Trackmania.exe.text+DC21FF - 74 3A                 - je Trackmania.exe.text+DC223B
+Trackmania.exe.text+DC2201 - 48 8B C8              - mov rcx,rax
+Trackmania.exe.text+DC2204 - E8 77B9EEFF           - call Trackmania.exe.text+CADB80
+Trackmania.exe.text+DC2209 - 48 8B F8              - mov rdi,rax
+Trackmania.exe.text+DC220C - EB 2F                 - jmp Trackmania.exe.text+DC223D
+Trackmania.exe.text+DC220E - 48 8D 55 20           - lea rdx,[rbp+20]
+Trackmania.exe.text+DC2212 - 4C 89 7D 20           - mov [rbp+20],r15
+Trackmania.exe.text+DC2216 - 49 8B C9              - mov rcx,r9
+Trackmania.exe.text+DC2219 - E8 82140200           - call Trackmania.exe.text+DE36A0
+Trackmania.exe.text+DC221E - 49 8B 47 38           - mov rax,[r15+38]
+Trackmania.exe.text+DC2222 - 48 85 C0              - test rax,rax
+Trackmania.exe.text+DC2225 - 0F84 00FEFFFF         - je Trackmania.exe.text+DC202B
+Trackmania.exe.text+DC222B - 39 58 30              - cmp [rax+30],ebx
+Trackmania.exe.text+DC222E - 0F84 AEFEFFFF         - je Trackmania.exe.text+DC20E2
+Trackmania.exe.text+DC2234 - E9 F2FDFFFF           - jmp Trackmania.exe.text+DC202B
+Trackmania.exe.text+DC2239 - 0F0B                  - ud2
+Trackmania.exe.text+DC223B - 33 FF                 - xor edi,edi
+Trackmania.exe.text+DC223D - 89 5F 30              - mov [rdi+30],ebx
+Trackmania.exe.text+DC2240 - 48 8B 36              - mov rsi,[rsi]
+Trackmania.exe.text+DC2243 - 48 85 F6              - test rsi,rsi
+Trackmania.exe.text+DC2246 - 74 3D                 - je Trackmania.exe.text+DC2285
+Trackmania.exe.text+DC2248 - 0F1F 84 00 00000000   - nop dword ptr [rax+rax+00000000]
+Trackmania.exe.text+DC2250 - 48 8B 1E              - mov rbx,[rsi]
+Trackmania.exe.text+DC2253 - 48 8B 4B 38           - mov rcx,[rbx+38]
+Trackmania.exe.text+DC2257 - 48 3B F9              - cmp rdi,rcx
+Trackmania.exe.text+DC225A - 74 20                 - je Trackmania.exe.text+DC227C
+Trackmania.exe.text+DC225C - 48 85 FF              - test rdi,rdi
+Trackmania.exe.text+DC225F - 74 07                 - je Trackmania.exe.text+DC2268
+Trackmania.exe.text+DC2261 - FF 47 10              - inc [rdi+10]
+Trackmania.exe.text+DC2264 - 48 8B 4B 38           - mov rcx,[rbx+38]
+Trackmania.exe.text+DC2268 - 48 85 C9              - test rcx,rcx
+Trackmania.exe.text+DC226B - 74 0B                 - je Trackmania.exe.text+DC2278
+Trackmania.exe.text+DC226D - 83 41 10 FF           - add dword ptr [rcx+10],-01 { 255 }
+Trackmania.exe.text+DC2271 - 75 05                 - jne Trackmania.exe.text+DC2278
+Trackmania.exe.text+DC2273 - E8 28DA4BFF           - call Trackmania.exe.text+27FCA0
+Trackmania.exe.text+DC2278 - 48 89 7B 38           - mov [rbx+38],rdi { set skin on block
+ }
+Trackmania.exe.text+DC227C - 48 8B 76 08           - mov rsi,[rsi+08]
+Trackmania.exe.text+DC2280 - 48 85 F6              - test rsi,rsi
+Trackmania.exe.text+DC2283 - 75 CB                 - jne Trackmania.exe.text+DC2250
+Trackmania.exe.text+DC2285 - 48 8D 4D A0           - lea rcx,[rbp-60]
+Trackmania.exe.text+DC2289 - E8 22CB45FF           - call Trackmania.exe.text+21EDB0
+Trackmania.exe.text+DC228E - E9 F3FEFFFF           - jmp Trackmania.exe.text+DC2186
+Trackmania.exe.text+DC2293 - 48 8D 4D E8           - lea rcx,[rbp-18]
+Trackmania.exe.text+DC2297 - E8 440A3DFF           - call Trackmania.exe.text+192CE0
+Trackmania.exe.text+DC229C - 48 8D 4D 70           - lea rcx,[rbp+70]
+Trackmania.exe.text+DC22A0 - E8 0BC134FF           - call Trackmania.exe.text+10E3B0
+Trackmania.exe.text+DC22A5 - 8B 95 B0000000        - mov edx,[rbp+000000B0]
+Trackmania.exe.text+DC22AB - 48 8D 8D A0000000     - lea rcx,[rbp+000000A0]
+Trackmania.exe.text+DC22B2 - E8 295D34FF           - call Trackmania.exe.text+107FE0
+Trackmania.exe.text+DC22B7 - 0F28 B4 24 D0010000   - movaps xmm6,[rsp+000001D0]
+Trackmania.exe.text+DC22BF - 48 81 C4 E8010000     - add rsp,000001E8 { 488 }
+Trackmania.exe.text+DC22C6 - 41 5F                 - pop r15
+Trackmania.exe.text+DC22C8 - 41 5E                 - pop r14
+Trackmania.exe.text+DC22CA - 41 5D                 - pop r13
+Trackmania.exe.text+DC22CC - 41 5C                 - pop r12
+Trackmania.exe.text+DC22CE - 5F                    - pop rdi
+Trackmania.exe.text+DC22CF - 5E                    - pop rsi
+Trackmania.exe.text+DC22D0 - 5B                    - pop rbx
+Trackmania.exe.text+DC22D1 - 5D                    - pop rbp
+Trackmania.exe.text+DC22D2 - C3                    - ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Trackmania.exe.text+D43B90 - 48 83 EC 38           - sub rsp,38 { 56 }
+Trackmania.exe.text+D43B94 - 83 3D 552D1F01 00     - cmp dword ptr [Trackmania.exe+1F378F0],00 { (0),0 }
+Trackmania.exe.text+D43B9B - 75 09                 - jne Trackmania.exe.text+D43BA6 { something for skins, some global loading or something? RCX is CPlugGameSkinAndFolder
+
+
+ }
+Trackmania.exe.text+D43B9D - 48 8B 41 20           - mov rax,[rcx+20]
+Trackmania.exe.text+D43BA1 - 48 83 C4 38           - add rsp,38 { 56 }
+Trackmania.exe.text+D43BA5 - C3                    - ret
+Trackmania.exe.text+D43BA6 - 48 8B 41 28           - mov rax,[rcx+28] { set no cache skin
+ }
+Trackmania.exe.text+D43BAA - 48 89 7C 24 30        - mov [rsp+30],rdi
+Trackmania.exe.text+D43BAF - 48 8D 79 28           - lea rdi,[rcx+28]
+Trackmania.exe.text+D43BB3 - 48 85 C0              - test rax,rax
+Trackmania.exe.text+D43BB6 - 0F85 EC000000         - jne Trackmania.exe.text+D43CA8
+Trackmania.exe.text+D43BBC - 48 39 41 20           - cmp [rcx+20],rax
+Trackmania.exe.text+D43BC0 - 48 89 5C 24 40        - mov [rsp+40],rbx
+Trackmania.exe.text+D43BC5 - 48 8D 59 20           - lea rbx,[rcx+20]
+Trackmania.exe.text+D43BC9 - 75 0F                 - jne Trackmania.exe.text+D43BDA
+
+
+
+
+
+
+
+
+Trackmania.exe.text+B932CB - 48 8B F1              - mov rsi,rcx
+Trackmania.exe.text+B932CE - 48 8D 15 5B640301     - lea rdx,[Trackmania.exe.rdata+2BA730] { ("CGameCtnApp::InitChallengeData") }
+Trackmania.exe.text+B932D5 - 33 DB                 - xor ebx,ebx
+Trackmania.exe.text+B932D7 - 48 8D 4C 24 40        - lea rcx,[rsp+40]
+Trackmania.exe.text+B932DC - 89 5C 24 50           - mov [rsp+50],ebx
+Trackmania.exe.text+B932E0 - 45 8B E9              - mov r13d,r9d
+Trackmania.exe.text+B932E3 - 45 8B F0              - mov r14d,r8d
+Trackmania.exe.text+B932E6 - E8 E54C57FF           - call Trackmania.exe.text+107FD0
+Trackmania.exe.text+B932EB - 44 8B A4 24 E0000000  - mov r12d,[rsp+000000E0]
+Trackmania.exe.text+B932F3 - 44 8B BC 24 E8000000  - mov r15d,[rsp+000000E8]
+Trackmania.exe.text+B932FB - 45 85 E4              - test r12d,r12d
+Trackmania.exe.text+B932FE - 75 41                 - jne Trackmania.exe.text+B93341
+Trackmania.exe.text+B93300 - 45 85 FF              - test r15d,r15d
+Trackmania.exe.text+B93303 - 75 20                 - jne Trackmania.exe.text+B93325
+Trackmania.exe.text+B93305 - 45 85 F6              - test r14d,r14d
+Trackmania.exe.text+B93308 - 75 07                 - jne Trackmania.exe.text+B93311
+Trackmania.exe.text+B9330A - 83 8F E8020000 04     - or dword ptr [rdi+000002E8],04 { 4 }
+Trackmania.exe.text+B93311 - 8B 87 E8020000        - mov eax,[rdi+000002E8] { reads flag from map
+
+
+ }
+Trackmania.exe.text+B93317 - C1 E8 02              - shr eax,02 { 2 }
+Trackmania.exe.text+B9331A - F7 D0                 - not eax
+Trackmania.exe.text+B9331C - 83 E0 01              - and eax,01 { 1 }
+Trackmania.exe.text+B9331F - 89 05 CB353A01        - mov [Trackmania.exe+1F378F0],eax { 1 = old, 0 = new pillars? -- populates NoCache in materialmodifier
+ }

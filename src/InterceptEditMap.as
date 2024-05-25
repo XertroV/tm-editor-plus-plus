@@ -36,7 +36,7 @@ void UnloadIntercepts() {
 bool EDIT_MAP_PASSTHROUGH = false;
 
 bool _EditMap(CMwStack &in stack) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(true);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditMap");
@@ -44,7 +44,7 @@ bool _EditMap(CMwStack &in stack) {
 }
 
 bool _EditMap2(CMwStack &in stack) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(true);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditMap2");
@@ -52,7 +52,7 @@ bool _EditMap2(CMwStack &in stack) {
 }
 
 bool _EditMap3(CMwStack &in stack) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(true);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditMap3");
@@ -60,7 +60,7 @@ bool _EditMap3(CMwStack &in stack) {
 }
 
 bool _EditMap4(CMwStack &in stack) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(true);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditMap4");
@@ -68,7 +68,7 @@ bool _EditMap4(CMwStack &in stack) {
 }
 
 bool _EditMap5(CMwStack &in stack, CMwNod@ nod) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(true);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditMap5");
@@ -123,14 +123,14 @@ bool _EditMap5(CMwStack &in stack, CMwNod@ nod) {
     // return false;
 }
 bool _EditNewMap1(CMwStack &in stack) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditNewMap1");
     // return true;
 }
 bool _EditNewMap2(CMwStack &in stack) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditNewMap2");
@@ -156,7 +156,7 @@ bool _EditNewMap2(CMwStack &in stack) {
     // return true;
 }
 bool _EditNewMap3(CMwStack &in stack) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditNewMap3");
@@ -164,7 +164,7 @@ bool _EditNewMap3(CMwStack &in stack) {
 }
 // used for all UI calls
 bool _EditNewMap4(CMwStack &in stack, CMwNod@ nod) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // CGameManiaTitleControlScriptAPI@ titleApi = cast<CGameManiaTitleControlScriptAPI>(nod);
@@ -217,21 +217,21 @@ bool _EditNewMap4(CMwStack &in stack, CMwNod@ nod) {
     // return false;
 }
 bool _EditNewMapFromBaseMap(CMwStack &in stack) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditNewMapFromBaseMap");
     // return true;
 }
 bool _EditNewMapFromBaseMap2(CMwStack &in stack) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditNewMapFromBaseMap2");
     // return true;
 }
 bool _EditNewMapFromBaseMap3(CMwStack &in stack) {
-    Event::RunOnEditorStartingUpCbs();
+    Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditNewMapFromBaseMap3");

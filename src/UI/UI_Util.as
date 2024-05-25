@@ -42,7 +42,7 @@ shared void AddMarkdownTooltip(const string &in msg) {
 
 shared void SetClipboard(const string &in msg) {
     IO::SetClipboard(msg);
-    Notify("Copied: " + msg);
+    Notify("Copied: " + msg.SubStr(0, 300));
 }
 
 shared funcdef bool LabeledValueF(const string &in l, const string &in v);

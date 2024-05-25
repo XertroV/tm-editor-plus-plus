@@ -166,23 +166,6 @@ namespace Editor {
         // if any of these differ, it's a different block
         string GetBlockHash(vec3 &in pos, vec3 &in rot, const string &in id, uint varIx, uint mobIx) {
             return Crypto::MD5(pos.ToString() + rot.ToString() + id + varIx + mobIx);// + IsFree + IsClassicElseGhost);
-            // if (SwapMem100 == 0) SwapMem100 = RequestMemory(100);
-            // Dev::Write(SwapMem100, pos);
-            // Dev::Write(SwapMem100 + 0xC, rot);
-            // Dev::Write(SwapMem100 + 0x18, id);
-            // Dev::Write(SwapMem100 + 0x1C, varIx);
-            // Dev::Write(SwapMem100 + 0x20, mobIx);
-            // // ensure the rest of the memory region is zeroed
-            // Dev::Write(SwapMem100 + 0x24, uint32(0));
-            // auto bytes = Dev_GetBytes(SwapMem100, 0x24);
-
-            // uint64 somePrime = 6256056576578937913;
-            // uint64 mid = somePrime;
-            // for (uint i = 0; i < bytes.Length; i++) {
-            //     mid = mid + (bytes[i] ^ somePrime);
-            //     mid = (mid << 7) + (mid >> 51);
-            // }
-            // return mid;
         }
 
         bool IsStale(CGameEditorPluginMap@ pmt) override {
@@ -249,7 +232,7 @@ namespace Editor {
 
         bool OnNewBlock(CGameCtnBlock@ block) {
             this.IsStale = true;
-            if (isRefreshing) return false;
+            if (isRefreshing || objsRoot is null) return false;
             // todo: update cache instead of marking stale
             objsRoot.Insert(MakeBlockSpec(block));
             // AddBlock(BlockInMap(_Blocks.Length, block));
@@ -257,7 +240,7 @@ namespace Editor {
         }
         bool OnDelBlock(CGameCtnBlock@ block) {
             this.IsStale = true;
-            if (isRefreshing) return false;
+            if (isRefreshing || objsRoot is null) return false;
             // todo: update cache instead of marking stale
             if (!objsRoot.Remove(MakeBlockSpec(block))) {
                 warn("Failed to remove block from oct tree!");
@@ -266,7 +249,7 @@ namespace Editor {
         }
         bool OnNewItem(CGameCtnAnchoredObject@ item) {
             this.IsStale = true;
-            if (isRefreshing) return false;
+            if (isRefreshing || objsRoot is null) return false;
             // todo: update cache instead of marking stale
             // ! item models can be null sometimes? leaving editor after editing custom item no save
             if (item.ItemModel !is null) {
@@ -277,7 +260,7 @@ namespace Editor {
         }
         bool OnDelItem(CGameCtnAnchoredObject@ item) {
             this.IsStale = true;
-            if (isRefreshing) return false;
+            if (isRefreshing || objsRoot is null) return false;
             // todo: update cache instead of marking stale
             if (!objsRoot.Remove(MakeItemSpec(item))) {
                 warn("Failed to remove item from oct tree!");

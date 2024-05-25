@@ -4,6 +4,9 @@
 bool ShowWindow = true;
 
 [Setting hidden]
+bool S_EnableInMapBrowser = false;
+
+[Setting hidden]
 bool S_CopyPickedItemRotation = false;
 
 [Setting hidden]

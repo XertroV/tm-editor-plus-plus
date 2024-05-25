@@ -1,10 +1,11 @@
 funcdef bool ProcessItem(CGameCtnAnchoredObject@ item);
 funcdef bool ProcessBlock(CGameCtnBlock@ block);
 funcdef bool ProcessNewSelectedItem(CGameItemModel@ itemModel);
+funcdef void OnEditorStartingFunc(bool editingElseNew);
 
 CoroutineFunc@[] onEditorLoadCbs;
 string[] onEditorLoadCbNames;
-CoroutineFunc@[] onEditorStartingUp;
+OnEditorStartingFunc@[] onEditorStartingUp;
 string[] onEditorStartingUpNames;
 CoroutineFunc@[] onItemEditorLoadCbs;
 string[] onItemEditorLoadCbNames;
@@ -42,7 +43,7 @@ void RegisterOnEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
     }
     trace("Registered OnEditorLoad callback: " + name);
 }
-void RegisterOnEditorStartingUpCallback(CoroutineFunc@ f, const string &in name) {
+void RegisterOnEditorStartingUpCallback(OnEditorStartingFunc@ f, const string &in name) {
     if (f !is null) {
         onEditorStartingUp.InsertLast(f);
         onEditorStartingUpNames.InsertLast(name);
@@ -177,10 +178,10 @@ namespace Event {
         }
         Log::Trace("Finished OnEditorLoad callbacks");
     }
-    void RunOnEditorStartingUpCbs() {
+    void RunOnEditorStartingUpCbs(bool editingElseNew) {
         Log::Trace("Running OnEditorStartingUp callbacks");
         for (uint i = 0; i < onEditorStartingUp.Length; i++) {
-            onEditorStartingUp[i]();
+            onEditorStartingUp[i](editingElseNew);
         }
         Log::Trace("Finished OnEditorStartingUp callbacks");
     }

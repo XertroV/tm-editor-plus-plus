@@ -33,7 +33,10 @@ void Main() {
     RegisterOnEditorLoadCallback(PlacementHooks::SetupHooks, "PlacementHooks::SetupHooks");
     RegisterOnEditorUnloadCallback(PlacementHooks::UnloadHooks, "PlacementHooks::UnloadHooks");
 
-    RegisterOnEditorStartingUpCallback(PillarsChoice::OnEditorStartingUp, "PillarsChoice::OnEditorStartingUp");
+    RegisterOnEditorStartingUpCallback(OnEditorStartingFunc(PillarsChoice::OnEditorStartingUp), "PillarsChoice::OnEditorStartingUp");
+    RegisterOnEditorLoadCallback(PillarsChoice::OnEditorLoad, "PillarsChoice::OnEditorLoad");
+    RegisterOnEditorUnloadCallback(PillarsChoice::OnEditorUnload, "PillarsChoice::OnEditorUnload");
+    // RegisterNewBlockCallback_Private(PillarsChoice::OnBlockPlaced, "PillarsChoice::OnBlockPlaced", 0);
 
     // need to start this on load so that it's active when we enter the editor
     CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
@@ -76,7 +79,6 @@ void OnDisabled() { Unload(false); }
 void Unload(bool freeMem = true) {
     // hmm not sure this is a great idea b/c some of it might be used by the game.
     // still, openplanet frees it anyway, so i guess nbd.
-    FreeAllAllocated();
     UnloadIntercepts();
     Editor::EnableMapThumbnailUpdate();
     Editor::OffzonePatch::Unapply();
@@ -84,6 +86,8 @@ void Unload(bool freeMem = true) {
     CustomCursorRotations::PromiscuousItemToBlockSnapping.Unapply();
     CustomCursorRotations::BeforeAfterCursorUpdateHook.Unapply();
     LightMapCustomRes::Unpatch();
+    PillarsChoice::IsActive = false;
+    FreeAllAllocated();
 }
 
 uint lastInItemEditor = 0;
@@ -112,6 +116,7 @@ void RenderEarly() {
     auto mtEditor = cast<CGameEditorMediaTracker>(anyEditor);
     auto currPg = cast<CSmArenaClient>(GetApp().CurrentPlayground);
 
+    IsInAnyEditor = anyEditor !is null;
     WasInPlayground = IsInCurrentPlayground;
     IsInCurrentPlayground = currPg !is null;
 
@@ -194,7 +199,7 @@ void RenderInterface() {
 void AwaitReturnToMenu() {
     auto app = cast<CTrackMania>(GetApp());
     // app.BackToMainMenu();
-    while (app.Switcher.ModuleStack.Length == 0 || cast<CTrackManiaMenus>(app.Switcher.ModuleStack[0]) is null) {
+    while (!IsInMainMenu()) {
         yield();
     }
     while (!app.ManiaTitleControlScriptAPI.IsReady) {

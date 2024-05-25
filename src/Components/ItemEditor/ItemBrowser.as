@@ -2279,6 +2279,10 @@ void DrawMaterialModifier(CPlugGameSkinAndFolder@ matMod, const string &in label
 
 void DrawMMSkin(CPlugGameSkinAndFolder@ mm) {
     auto skin = mm.Remapping;
+    if (skin is null) {
+        UI::Text("No skin");
+        return;
+    }
     string p1 = Dev::GetOffsetString(skin, 0x18);
     string p2 = Dev::GetOffsetString(skin, 0x28);
     auto fidBuf = Dev::GetOffsetNod(skin, 0x58);

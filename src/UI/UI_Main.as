@@ -21,6 +21,7 @@ TabGroup@ RootTabGroup_Editor = CreateRootTabGroup();
 TabGroup@ RootTabGroup_ItemEditor = CreateItemEditorRT();
 TabGroup@ RootTabGroup_MeshEditor = CreateMeshEditorRT();
 TabGroup@ RootTabGroup_MediaTracker = CreateMTEditorRT();
+TabGroup@ RootTabGroup_InMap = CreateInMapRT();
 TabGroup@ ToolsTG = CreateToolsTabGroup();
 
 void UI_Main_Render() {
@@ -42,6 +43,10 @@ void UI_Main_Render() {
         @tabToDraw = RootTabGroup_MeshEditor;
     } else if (IsInMTEditor) {
         @tabToDraw = RootTabGroup_MediaTracker;
+#if DEV
+    } else if (IsInCurrentPlayground && S_EnableInMapBrowser) {
+        @tabToDraw = RootTabGroup_InMap;
+#endif
     } else if (!IsInEditor) {
         return;
     }
@@ -269,6 +274,12 @@ namespace MenuBar {
                         @editor = cast<CGameCtnEditorFree>(s.ModuleStack[0]);
                     }
                 }
+                if (UI::MenuItem("DebugBreak On BlockNoSkin", "", S_DebugBreakOnBlockNoSkin)) {
+                    S_DebugBreakOnBlockNoSkin = !S_DebugBreakOnBlockNoSkin;
+                }
+                if (UI::MenuItem("Old Pillars", "", PillarsChoice::IsActive)) {
+                    PillarsChoice::IsActive = !PillarsChoice::IsActive;
+                }
                 if (editor !is null) {
                     if (UI::MenuItem(Icons::Cube + " PluginMapType"))
                         ExploreNod(editor.PluginMapType);
@@ -356,6 +367,14 @@ namespace MenuBar {
 
 FavoritesTab@ g_Favorites;
 CoordPathDrawingTab@ g_CoordPathDrawingTool;
+
+TabGroup@ CreateInMapRT() {
+    auto root = RootTabGroupCls();
+    InMap_ItemsBrowserTab(root);
+    InMap_BlocksBrowserTab(root);
+    InMap_BakedBlocksBrowserTab(root);
+    return root;
+}
 
 TabGroup@ CreateToolsTabGroup() {
     auto tools = RootTabGroupCls();

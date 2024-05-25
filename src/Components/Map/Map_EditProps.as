@@ -154,7 +154,7 @@ class MapEditPropsTab : Tab {
         auto mapFid = GetFidFromNod(map);
         LabeledValue("Map File Size (KB)", mapFid !is null ? mapFid.ByteSizeEd : 0);
 
-        DrawChangeGameBuildOptions();
+        DrawMapFlags();
 
         // UI::Separator();
         UI::NextColumn();
@@ -346,40 +346,53 @@ class MapEditPropsTab : Tab {
 
     bool m_EditOffzones;
 
-    void DrawChangeGameBuildOptions() {
+    void DrawMapFlags() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
+
+        auto flags = Dev::GetOffsetUint32(map, O_MAP_FLAGS);
+        auto unk1 = flags & 1 > 0;
+        auto oldWood = flags & 2 > 0;
+        auto newPillars = flags & 4 > 0;
+        unk1 = UI::Checkbox("Unk (1)", unk1);
+        UI::SameLine();
+        oldWood = UI::Checkbox("Old Wood (2)", oldWood);
+        UI::SameLine();
+        newPillars = UI::Checkbox("New Pillars (4)", newPillars);
+        flags = flags & ~7 | (unk1 ? 1 : 0) | (oldWood ? 2 : 0) | (newPillars ? 4 : 0);
+        Dev::SetOffset(map, O_MAP_FLAGS, flags);
+
         auto origBuildInfo = Editor::GetMapBuildInfo(map);
-        auto clicked = ClickableLabel("Map Game Build", origBuildInfo.SubStr(5, 16));
-        AddSimpleTooltip(origBuildInfo + "\n\nTo Update:\n1. Save map\n2. Set build date when *overwrite* prompt shown.\n3. Finish saving, exit and reload the map.\n*Saving after this will overwrite the build date.*");
-        if (clicked) SetClipboard(origBuildInfo);
-        UI::SameLine();
-        if (UX::SmallButton("OW", "Set build date for Old Wood")) {
-            Editor::SetMapBuildInfo(map, "date=2023-09-09_09_09 git=126731-1573de4d161 GameVersion=3.3.0");
-        }
-        UI::SameLine();
-        if (UX::SmallButton("NW", "Set build date for New Wood")) {
-            Editor::SetMapBuildInfo(map, "date=2024-01-10_12_53 git=126731-1573de4d161 GameVersion=3.3.0");
-        }
-#if SIG_DEVELOPER
-        try {
-            string editorSetsBuild = Editor::GetEditorWritesMapBuildInfo();
-            string esbDate = editorSetsBuild.Length > 21 ? editorSetsBuild.SubStr(5, 16) : "Not Found";
-            if (editorSetsBuild.Length == 0) editorSetsBuild = esbDate;
-            CopiableLabeledValue("[DEV] Editor Sets", esbDate);
-            AddSimpleTooltip(editorSetsBuild+"\n\nThis is the build that the editor sets. Overwriting it will automatically set the new version on saved maps.");
-            UI::SameLine();
-            if (UX::SmallButton("OW##setEditorSetsBuild", "Set build date for Old Wood (2023-09-09_09_09)")) {
-                Editor::SetEditorWritesMapBuildInfo("date=2023-09-09_09_09 git=126731-1573de4d161 GameVersion=3.3.0");
-            }
-            UI::SameLine();
-            if (UX::SmallButton("NW##setEditorSetsBuild", "Set build date for New Wood (2024-01-10_12_53)")) {
-                Editor::SetEditorWritesMapBuildInfo("date=2024-01-10_12_53 git=126731-1573de4d161 GameVersion=3.3.0");
-            }
-        } catch {
-            UI::TextWrapped("[DEV] Error getting the Editor's build (which is set in the map when saving)");
-        }
-#endif
+        LabeledValue("Map Game Build", origBuildInfo.SubStr(5, 16));
+//         AddSimpleTooltip(origBuildInfo + "\n\nTo Update:\n1. Save map\n2. Set build date when *overwrite* prompt shown.\n3. Finish saving, exit and reload the map.\n*Saving after this will overwrite the build date.*");
+//         if (clicked) SetClipboard(origBuildInfo);
+//         UI::SameLine();
+//         if (UX::SmallButton("OW", "Set build date for Old Wood")) {
+//             Editor::SetMapBuildInfo(map, "date=2023-09-09_09_09 git=126731-1573de4d161 GameVersion=3.3.0");
+//         }
+//         UI::SameLine();
+//         if (UX::SmallButton("NW", "Set build date for New Wood")) {
+//             Editor::SetMapBuildInfo(map, "date=2024-01-10_12_53 git=126731-1573de4d161 GameVersion=3.3.0");
+//         }
+// #if SIG_DEVELOPER
+//         try {
+//             string editorSetsBuild = Editor::GetEditorWritesMapBuildInfo();
+//             string esbDate = editorSetsBuild.Length > 21 ? editorSetsBuild.SubStr(5, 16) : "Not Found";
+//             if (editorSetsBuild.Length == 0) editorSetsBuild = esbDate;
+//             CopiableLabeledValue("[DEV] Editor Sets", esbDate);
+//             AddSimpleTooltip(editorSetsBuild+"\n\nThis is the build that the editor sets. Overwriting it will automatically set the new version on saved maps.");
+//             UI::SameLine();
+//             if (UX::SmallButton("OW##setEditorSetsBuild", "Set build date for Old Wood (2023-09-09_09_09)")) {
+//                 Editor::SetEditorWritesMapBuildInfo("date=2023-09-09_09_09 git=126731-1573de4d161 GameVersion=3.3.0");
+//             }
+//             UI::SameLine();
+//             if (UX::SmallButton("NW##setEditorSetsBuild", "Set build date for New Wood (2024-01-10_12_53)")) {
+//                 Editor::SetEditorWritesMapBuildInfo("date=2024-01-10_12_53 git=126731-1573de4d161 GameVersion=3.3.0");
+//             }
+//         } catch {
+//             UI::TextWrapped("[DEV] Error getting the Editor's build (which is set in the map when saving)");
+//         }
+// #endif
     }
 
     CSystemPackDesc@ copiedModPack;

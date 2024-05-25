@@ -1,0 +1,18 @@
+[DPlugGameSkin: SZ_GAMESKIN]
+NativeClass = CPlugGameSkin
+Path1 = string, O_GAMESKIN_PATH1, GS
+Path2 = string, O_GAMESKIN_PATH2, GS
+Buffer: Fids = DSystemFidFiles, O_GAMESKIN_FID_BUF, SZ_FID_FILE, true
+Buffer: Filenames = DStrings, O_GAMESKIN_FILENAME_BUF, 0x10, false
+Buffer: ClassIds = DUints, O_GAMESKIN_FID_CLASSID_BUF, 0x4, false
+#Buffer: UnkBuf = DUints, O_GAMESKIN_UNK_BUF, 0x4, false
+Path3 = string, O_GAMESKIN_PATH3, GS
+
+
+[DString: 0x10]
+Value = string, 0x0, GS
+Length = uint32, 0xC, G
+Inline: bool get_NotNull() { return this.GetUint8(0xB) != 0; }
+
+[DUint: 0x4]
+Value = uint, 0x0, GS

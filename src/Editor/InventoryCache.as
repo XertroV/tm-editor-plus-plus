@@ -21,13 +21,12 @@ namespace Editor {
             cacheRefreshNonce++;
         }
 
-        uint cacheRefreshNonce = 0;
-        void RefreshCache() {
-            while (PAUSE_INVENTORY_CACHING) yield();
+        uint ResetCache() {
+            trace('InventoryCache::ResetCache');
+            auto myNonce = ++cacheRefreshNonce;
             isRefreshing = true;
             loadProgress = 0;
             loadTotal = 0;
-            auto myNonce = ++cacheRefreshNonce;
             hasClubItems = false;
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
             cachedInvItemNames.RemoveRange(0, cachedInvItemNames.Length);
@@ -45,6 +44,13 @@ namespace Editor {
             cachedInvBlockFolderLookup.DeleteAll();
             cachedInvItemFolderLookup.DeleteAll();
             cachedInvMacroblockFolderLookup.DeleteAll();
+            return myNonce;
+        }
+
+        uint cacheRefreshNonce = 0;
+        void RefreshCache() {
+            while (PAUSE_INVENTORY_CACHING) yield();
+            auto myNonce = ResetCache();
             yield();
             if (myNonce != cacheRefreshNonce) return;
             auto editor = GetEditor(GetApp());
