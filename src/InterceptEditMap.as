@@ -1,4 +1,8 @@
+bool INTERCEPTS_SET_UP = false;
+
 void SetUpEditMapIntercepts() {
+    if (INTERCEPTS_SET_UP) return;
+    INTERCEPTS_SET_UP = true;
 // #if DEV
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap", _EditMap);
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap2", _EditMap2);
@@ -17,6 +21,8 @@ void SetUpEditMapIntercepts() {
 }
 
 void UnloadIntercepts() {
+    if (!INTERCEPTS_SET_UP) return;
+    INTERCEPTS_SET_UP = false;
     Dev::ResetInterceptProc("CGameManiaTitleControlScriptAPI", "EditMap", _EditMap);
     Dev::ResetInterceptProc("CGameManiaTitleControlScriptAPI", "EditMap2", _EditMap2);
     Dev::ResetInterceptProc("CGameManiaTitleControlScriptAPI", "EditMap3", _EditMap3);
