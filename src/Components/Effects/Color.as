@@ -1,6 +1,6 @@
 class ColorApplyTab : GenericApplyTab {
     ColorApplyTab(TabGroup@ p) {
-        super(p, "Apply Color", Icons::Magic + Icons::PaintBrush);
+        super(p, "Apply Color", "\\$<\\$44f" + Icons::Magic + "\\$4f4" + Icons::PaintBrush + "\\$>");
     }
 
     bool showStructurePillarWarning = false;

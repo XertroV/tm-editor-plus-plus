@@ -3,7 +3,7 @@ class InventorySearchTab : Tab {
     bool setKbFocusOnSearchbar = false;
 
     InventorySearchTab(TabGroup@ p) {
-        super(p, "Inv. Search" + NewIndicator, Icons::FolderOpenO + Icons::Search);
+        super(p, "Inv. Search", Icons::FolderOpenO + Icons::Search);
         canPopOut = true;
         @searcher = InvSearcher();
         searcher.SetUpdateCallbacks(CoroutineFunc(this.SearchUpdateStart), CoroutineFunc(this.SearchUpdateEnd));

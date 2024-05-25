@@ -1,6 +1,7 @@
 bool AreFontsLoaded = false;
 UI::Font@ g_Heading = null;
 UI::Font@ g_Mono = null;
+int f_NvgFont = nvg::LoadFont("DroidSans.ttf");
 
 Meta::PluginCoroutine@ fontLoadCoro = startnew(_LoadFonts);
 

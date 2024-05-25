@@ -117,7 +117,8 @@ class CoordPathDrawingTab : EffectTab {
         if (isRecording) {
             nvg::TextAlign(nvg::Align::Center | nvg::Align::Middle);
             nvg::FontSize(g_screen.y * 0.04);
-            DrawTextWithStroke(g_screen * vec2(0.5, 0.15), "Recording Path...", vec4(1), 2.0, vec4(0, 0, 0, 1));
+            nvg::FontFace(f_NvgFont);
+            nvgDrawTextWithStroke(g_screen * vec2(0.5, 0.15), "Recording Path...", vec4(1), 2.0, vec4(0, 0, 0, 1));
         }
     }
 

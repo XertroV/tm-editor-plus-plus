@@ -162,16 +162,49 @@ void nvgDrawPointCircle(const vec3 &in pos, float radius, const vec4 &in color =
     nvg::ClosePath();
 }
 
-// this does not seem to be expensive
-const float nTextStrokeCopies = 32;
 
-void DrawTextWithStroke(const vec2 &in pos, const string &in text, vec4 textColor, float strokeWidth, vec4 strokeColor = vec4(0, 0, 0, 1)) {
-    nvg::FillColor(strokeColor);
-    for (float i = 0; i < nTextStrokeCopies; i++) {
+
+
+// this does not seem to be expensive
+const float nTextStrokeCopies = 12;
+
+vec2 nvgDrawTextWithStroke(const vec2 &in pos, const string &in text, vec4 textColor = vec4(1), float strokeWidth = 2., vec4 strokeColor = cBlack75) {
+    nvg::FontBlur(1.0);
+    if (strokeWidth > 0.1) {
+        nvg::FillColor(strokeColor);
+        for (float i = 0; i < nTextStrokeCopies; i++) {
+            float angle = TAU * float(i) / nTextStrokeCopies;
+            vec2 offs = vec2(Math::Sin(angle), Math::Cos(angle)) * strokeWidth;
+            nvg::Text(pos + offs, text);
+        }
+    }
+    nvg::FontBlur(0.0);
+    nvg::FillColor(textColor);
+    nvg::Text(pos, text);
+    // don't return with +strokeWidth b/c it means we can't turn stroke on/off without causing readjustments in the UI
+    return nvg::TextBounds(text);
+}
+
+vec2 nvgDrawTextWithShadow(const vec2 &in pos, const string &in text, vec4 textColor = vec4(1), float strokeWidth = 2., vec4 strokeColor = vec4(0, 0, 0, 1)) {
+    nvg::FontBlur(1.0);
+    if (strokeWidth > 0.0) {
+        nvg::FillColor(strokeColor);
+        float i = 1;
         float angle = TAU * float(i) / nTextStrokeCopies;
         vec2 offs = vec2(Math::Sin(angle), Math::Cos(angle)) * strokeWidth;
         nvg::Text(pos + offs, text);
     }
+    nvg::FontBlur(0.0);
     nvg::FillColor(textColor);
     nvg::Text(pos, text);
+    // don't return with +strokeWidth b/c it means we can't turn stroke on/off without causing readjustments in the UI
+    return nvg::TextBounds(text);
+}
+
+vec2 nvgDrawText(const vec2 &in pos, const string &in text, vec4 textColor = vec4(1)) {
+    nvg::FontBlur(0.0);
+    nvg::FillColor(textColor);
+    nvg::Text(pos, text);
+    // don't return with +strokeWidth b/c it means we can't turn stroke on/off without causing readjustments in the UI
+    return nvg::TextBounds(text);
 }

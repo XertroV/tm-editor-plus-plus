@@ -189,6 +189,8 @@ void Render() {
     // if (!IsInEditor && g_MapBaseSizeChanger !is null && g_MapBaseSizeChanger.windowOpen) {
     //     g_MapBaseSizeChanger.DrawWindow();
     // }
+
+    PillarsChoice::Render();
 }
 
 void RenderInterface() {

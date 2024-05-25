@@ -4,7 +4,11 @@ bool S_LoadMapsWithOldPillars = false;
 bool S_DebugBreakOnBlockNoSkin = false;
 
 namespace PillarsChoice {
+    bool loadedWithOldPillars = false;
+    bool nullifiedSkinsOnLoad = false;
     void OnEditorStartingUp(bool editingElseNew) {
+        loadedWithOldPillars = S_LoadMapsWithOldPillars;
+        nullifiedSkinsOnLoad = false;
         if (S_LoadMapsWithOldPillars) {
             IsActive = true;
         }
@@ -20,6 +24,7 @@ namespace PillarsChoice {
                 if (b.BlockModel.IsPillar && b.Skin !is null) {
                     warn("Setting skin to null on pillar; " + b.BlockModel.Name);
                     Dev::SetOffset(b, O_CTNBLOCK_SKIN, uint64(0));
+                    nullifiedSkinsOnLoad = true;
                 }
             }
         }
@@ -128,6 +133,37 @@ namespace PillarsChoice {
 
     void SetAllStructureObjectsNoColor() {
 
+    }
+
+
+
+    void Render() {
+        if (!IsInEditor || !loadedWithOldPillars) return;
+        if (Time::Now - lastTimeEnteredEditor < 15000) {
+            nvg::Reset();
+            nvg::BeginPath();
+            nvg::TextAlign(nvg::Align::Left | nvg::Align::Middle);
+            nvg::FontFace(f_NvgFont);
+            nvg::FontSize(g_screen.y * .03);
+            nvgDrawTextWithShadow(g_screen * vec2(.1), "Loaded Map with Old Pillars", cOrange, 3.);
+            nvg::ClosePath();
+        }
+
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (nullifiedSkinsOnLoad && editor !is null) {
+            UI::SetNextWindowSize(300, 120);
+            if (UI::Begin("\\$fb8Skins nullified: Save and reload map", nullifiedSkinsOnLoad)) {
+                UI::Text("\\$f80Skins on pillars were nullified on load.");
+                UI::Text("You should now save and reload the map.");
+                if (editor.Challenge.MapInfo.FileName.Length == 0) {
+                    UI::Text("\\$f80Map not saved! Please save the map.");
+                } else if (UI::ButtonColored("Save and Reload", .1, .5, .5)) {
+                    startnew(Editor::SaveAndReloadMap);
+                    nullifiedSkinsOnLoad = false;
+                }
+            }
+            UI::End();
+        }
     }
 }
 
