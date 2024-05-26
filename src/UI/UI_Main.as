@@ -193,6 +193,13 @@ namespace MenuBar {
                 }
                 UI::EndDisabled();
 
+                UI::Separator();
+
+                if (UI::MenuItem("Patch: NOP update pillar skins", "", PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied)) {
+                    PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied = !PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied;
+                }
+
+
                 // UI::Separator();
 
                 // UI::BeginDisabled();

@@ -101,7 +101,8 @@ namespace Editor {
         blocksAddedThisFrame.InsertLast(BlockSpecPriv(block));
         if (block.Skin !is null && (block.Skin.PackDesc !is null || block.Skin.ForegroundPackDesc !is null)) {
             auto fg = block.Skin.ForegroundPackDesc !is null ? GetSkinPath(block.Skin.ForegroundPackDesc) : "";
-            auto bg = block.Skin.PackDesc !is null ? GetSkinPath(block.Skin.PackDesc) : "";
+            auto bg = block.Skin.PackDesc !is null ? GetSkinPath(block.Skin.PackDesc) :
+                block.Skin.ParentPackDesc !is null ? GetSkinPath(block.Skin.ParentPackDesc) : "";
             skinsSetThisFrame.InsertLast(SetSkinSpecPriv(BlockSpecPriv(block), fg, bg));
         }
     }

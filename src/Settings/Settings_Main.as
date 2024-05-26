@@ -65,3 +65,6 @@ bool S_SetEditorFarZ = false;
 
 [Setting hidden]
 float  S_SetEditorFarZValue = 1500.0;
+
+[Setting hidden]
+bool S_LoadAllVehicles = false;

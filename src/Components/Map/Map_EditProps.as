@@ -65,6 +65,8 @@ class MapEditPropsTab : Tab {
 
     VehicleToPlace m_VehicleTestType = VehicleToPlace::Map_Default;
     uint m_ChosenVehicleMwId = -1;
+    uint m_ChosenVehicleAuthorMwId = -1;
+    uint m_ChosenVehicleCollection = 0x2713;
 
     void DrawTestPlacementWindows() {
         if (!drawTestPlacementWindow) return;
@@ -540,39 +542,61 @@ class MapEditPropsTab : Tab {
         startnew(Editor::SaveAndReloadMap);
     }
 
+    uint[] vehicleCollections;
+    uint[] vehicleAuthorMwIds;
     uint[] vehicleMwIds;
     string[] vehicleNames;
 
-    protected void FindVehicles() {
+    protected void FindVehicles(bool force = false) {
+        if (force) {
+            vehicleCollections.RemoveRange(0, vehicleCollections.Length);
+            vehicleAuthorMwIds.RemoveRange(0, vehicleAuthorMwIds.Length);
+            vehicleMwIds.RemoveRange(0, vehicleMwIds.Length);
+            vehicleNames.RemoveRange(0, vehicleNames.Length);
+        }
         if (vehicleMwIds.Length > 0) return;
         auto app = GetApp();
         CGameCtnChapter@ chapter;
         for (uint i = 0; i < app.GlobalCatalog.Chapters.Length; i++) {
             @chapter = app.GlobalCatalog.Chapters[i];
-            if (chapter.Id.GetName() != "#10003") continue;
-            break;
-        }
-        if (chapter is null) return;
-        CGameCtnArticle@ art;
-        for (uint i = 0; i < chapter.Articles.Length; i++) {
-            @art = chapter.Articles[i];
-            if (!art.Name.StartsWith("Car")) continue;
-            if (art.CollectorFid.FullFileName != "<virtual>"
-                && !art.CollectorFid.FullFileName.Contains("GameData\\Vehicles\\Items\\")) continue;
-            vehicleMwIds.InsertLast(art.Id.Value);
-            vehicleNames.InsertLast(art.Name);
-        }
-        if (vehicleMwIds.Length == 0) {
-            NotifyError("Could not find any vehicles in the Vehicles collection.");
-        } else {
-            vehicleMwIds.InsertAt(0, uint(-1));
-            vehicleNames.InsertAt(0, "Map Default");
+            if (!(chapter.Id.GetName() == "#10003" || (S_LoadAllVehicles && chapter.Id.GetName() == "Vehicles"))) continue;
+            CGameCtnArticle@ art;
+            auto chapterId = chapter.Id.Value;
+            for (uint i = 0; i < chapter.Articles.Length; i++) {
+                @art = chapter.Articles[i];
+                if (!S_LoadAllVehicles) {
+                    if (!art.Name.StartsWith("Car")) continue;
+                    if (art.CollectorFid.FullFileName != "<virtual>"
+                        && !art.CollectorFid.FullFileName.Contains("GameData\\Vehicles\\Items\\")) continue;
+                }
+                vehicleMwIds.InsertLast(art.Id.Value);
+                vehicleNames.InsertLast(art.Name);
+                vehicleCollections.InsertLast(chapterId);
+                vehicleAuthorMwIds.InsertLast(art.IdentAuthor.Value);
+            }
+            if (vehicleMwIds.Length == 0) {
+                NotifyError("Could not find any vehicles in the Vehicles collection.");
+            } else {
+                vehicleMwIds.InsertAt(0, uint(-1));
+                vehicleNames.InsertAt(0, "Map Default");
+                vehicleCollections.InsertAt(0, 0x2713);
+                vehicleAuthorMwIds.InsertAt(0, uint(-1));
+            }
         }
     }
 
     void DrawMapVehicleChoices() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
+
+#if SIG_DEVELOPER
+        S_LoadAllVehicles = UI::Checkbox("Load All Vehicles", S_LoadAllVehicles);
+        UI::SameLine();
+        if (UI::Button("Refresh Vehicles")) {
+            FindVehicles(true);
+        }
+        UI::Separator();
+#endif
 
         auto currVehicleStuff = Editor::GetMapPlayerModel(editor.Challenge);
         LabeledValue("Current Vehicle Name", GetMwIdName(currVehicleStuff.x));
@@ -585,12 +609,18 @@ class MapEditPropsTab : Tab {
         UI::Text("Set Vehicle:");
 
         FindVehicles();
-        for (uint i = 0; i < vehicleMwIds.Length; i++) {
-            UI::PushID(i);
-            if (UI::RadioButton(vehicleNames[i] + "##vehicle-radio", m_ChosenVehicleMwId == vehicleMwIds[i])) {
-                m_ChosenVehicleMwId = vehicleMwIds[i];
+        if (UI::BeginCombo("Vehicle##map-v-c", GetMwIdName(m_ChosenVehicleMwId))) {
+            for (uint i = 0; i < vehicleMwIds.Length; i++) {
+                UI::PushID(i);
+                // if (UI::RadioButton(vehicleNames[i] + "##vehicle-radio", m_ChosenVehicleMwId == vehicleMwIds[i])) {
+                if (UI::Selectable(vehicleNames[i] + "##vehicle-radio", m_ChosenVehicleMwId == vehicleMwIds[i])) {
+                    m_ChosenVehicleMwId = vehicleMwIds[i];
+                    m_ChosenVehicleAuthorMwId = vehicleAuthorMwIds[i];
+                    m_ChosenVehicleCollection = vehicleCollections[i];
+                }
+                UI::PopID();
             }
-            UI::PopID();
+            UI::EndCombo();
         }
 
         if (UI::Button("Update##map-vehicle")) {
@@ -598,8 +628,8 @@ class MapEditPropsTab : Tab {
             auto setVehicleType = m_ChosenVehicleMwId;
             // auto collectionId = useDefault ? origPlayerModelCollection :
             //                     int(m_VehicleTestType) <= 3 ? 10003 : vehiclesId;
-            auto collectionId = useDefault ? origPlayerModelCollection : 10003;
-            auto authorId = useDefault ? origPlayerModelAuthor : nadeoId;
+            auto collectionId = m_ChosenVehicleCollection; // useDefault ? origPlayerModelCollection : 10003;
+            auto authorId = m_ChosenVehicleAuthorMwId; // useDefault ? origPlayerModelAuthor : nadeoId;
             Editor::SetMapPlayerModel(editor.Challenge, setVehicleType, authorId, collectionId);
         }
         UI::SameLine();
