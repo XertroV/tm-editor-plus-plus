@@ -18,7 +18,9 @@ namespace Editor {
         }
 
         void StopRefreshing() {
+            ResetCache();
             cacheRefreshNonce++;
+            trace('stopped refreshing inventory (or should have done)');
         }
 
         uint ResetCache() {
@@ -47,7 +49,7 @@ namespace Editor {
             return myNonce;
         }
 
-        uint cacheRefreshNonce = 0;
+        uint cacheRefreshNonce = 1;
         void RefreshCache() {
             while (PAUSE_INVENTORY_CACHING) yield();
             auto myNonce = ResetCache();

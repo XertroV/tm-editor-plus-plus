@@ -24,6 +24,8 @@ class MapEditPropsTab : Tab {
         newSizeZ = map.Size.z;
         CachePlayerModel();
         startnew(CoroutineFunc(WatchVehiclePlacement));
+        m_AuthorLogin = map.AuthorLogin;
+        m_AuthorName = map.AuthorNickName;
     }
 
     void WatchVehiclePlacement() {
@@ -95,6 +97,9 @@ class MapEditPropsTab : Tab {
     string TimeFormatSecs(int64 t) {
         return Time::Format(t, false, true, true, false);
     }
+
+    string m_AuthorName;
+    string m_AuthorLogin;
 
     void DrawInner() override {
         CGameCtnChallenge@ map = null;
@@ -184,6 +189,23 @@ class MapEditPropsTab : Tab {
         }
         UI::EndDisabled();
 
+#if DEV
+        UI::Text("Author Dev:");
+        if (UI::Button("Sync Author")) {
+            m_AuthorLogin = map.AuthorLogin;
+            m_AuthorName = map.AuthorNickName;
+        }
+        bool map_author_changed;
+        m_AuthorName = UI::InputText("##map-author", m_AuthorName, map_author_changed);
+        if (map_author_changed) {
+            Dev::SetOffset(map, O_MAP_AUTHORNAME_OFFSET, m_AuthorName);
+        }
+        bool map_author_l_changed;
+        m_AuthorLogin = UI::InputText("##map-author-login", m_AuthorLogin, map_author_l_changed);
+        if (map_author_l_changed) {
+            Dev::SetOffset(map, O_MAP_AUTHORLOGIN_OFFSET, m_AuthorLogin);
+        }
+#endif
 
         UI::Columns(1);
 
@@ -714,37 +736,48 @@ class MapEditPropsTab : Tab {
     }
 
     vec4[] clipColors;
+    bool[] drawTriggers;
 
     void DrawMTTriggerBoxes(CGameCtnChallenge@ map, bool drawNvg) {
         if (map.ClipGroupInGame is null) return;
         auto cg = map.ClipGroupInGame;
         auto clipGroup = MTClipGroup(cg);
         auto mtTriggerSize = vec3(32, 8, 32) / Nat3ToVec3(Dev::GetOffsetNat3(map, O_MAP_MTSIZE_OFFSET));
-        for (uint i = 0; i < clipGroup.TriggersLength; i++) {
-            auto trigger = clipGroup[i];
-            auto clip = cg.Clips[i];
-            UI::Text(clip.Name);
-            UI::SameLine();
-            if (UX::SmallButton(Icons::Eye+"##mt-clip-"+i)) {
-                auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-                Editor::SetCamAnimationGoTo(Editor::GetCurrentCamState(editor).withAdditionalHAngle(1.5).withPos(MTCoordToPos(trigger.boundingBoxCenter, mtTriggerSize)).withTargetDist(MTCoordToPos(trigger.boundingBoxSize).Length()));
-            }
-            while (clipColors.Length <= i) {
-                clipColors.InsertLast(vec4(Math::Rand(0.0, 1.0), Math::Rand(0.0, 1.0), Math::Rand(0.0, 1.0), 0.9));
-            }
-            UI::SameLine();
-            UI::SetNextItemWidth(200.);
-            clipColors[i] = UI::InputColor4("##mt-clip-color-"+i, clipColors[i]);
-            UI::SameLine();
-            UI::AlignTextToFramePadding();
-            UI::Text("Center: " + trigger.boundingBoxCenter.ToString());
-            UI::SameLine();
-            UI::Text("Size: " + trigger.boundingBoxSize.ToString());
-            if (drawNvg) {
-                for (uint j = 0; j < trigger.Length; j++) {
-                    auto coord = Nat3ToInt3(trigger[j]);
-                    auto pos = MTCoordToPos(trigger[j], mtTriggerSize);
-                    nvgDrawBlockBox(mat4::Translate(pos), mtTriggerSize, clipColors[i]);
+        while (drawTriggers.Length < clipGroup.TriggersLength) {
+            drawTriggers.InsertLast(false);
+        }
+        UI::ListClipper lclip(clipGroup.TriggersLength);
+        while (lclip.Step()) {
+            for (int i = lclip.DisplayStart; i < lclip.DisplayEnd; i++) {
+                auto trigger = clipGroup[i];
+                auto clip = cg.Clips[i];
+                UI::Text(clip.Name);
+                UI::SameLine();
+                UI::Text(Icons::PencilSquare);
+                UI::SameLine();
+                drawTriggers[i] = UI::Checkbox("##mtc-draw-"+i, drawTriggers[i]);
+                UI::SameLine();
+                if (UX::SmallButton(Icons::Eye+"##mt-clip-"+i)) {
+                    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+                    Editor::SetCamAnimationGoTo(Editor::GetCurrentCamState(editor).withAdditionalHAngle(1.5).withPos(MTCoordToPos(trigger.boundingBoxCenter, mtTriggerSize)).withTargetDist(MTCoordToPos(trigger.boundingBoxSize).Length()));
+                }
+                while (clipColors.Length <= i) {
+                    clipColors.InsertLast(vec4(Math::Rand(0.0, 1.0), Math::Rand(0.0, 1.0), Math::Rand(0.0, 1.0), 0.9));
+                }
+                UI::SameLine();
+                UI::SetNextItemWidth(200.);
+                clipColors[i] = UI::InputColor4("##mt-clip-color-"+i, clipColors[i]);
+                UI::SameLine();
+                UI::AlignTextToFramePadding();
+                UI::Text("Center: " + trigger.boundingBoxCenter.ToString());
+                UI::SameLine();
+                UI::Text("Size: " + trigger.boundingBoxSize.ToString());
+                if (drawNvg || drawTriggers[i]) {
+                    for (uint j = 0; j < trigger.Length; j++) {
+                        auto coord = Nat3ToInt3(trigger[j]);
+                        auto pos = MTCoordToPos(trigger[j], mtTriggerSize);
+                        nvgDrawBlockBox(mat4::Translate(pos), mtTriggerSize, clipColors[i]);
+                    }
                 }
             }
         }

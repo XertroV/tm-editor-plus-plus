@@ -360,13 +360,22 @@ const uint16 SZ_PACKDESC = 0xB0;
 const uint16 SZ_CTNCHALLENGE = 0x870;
 // map.TitleId
 const uint16 O_MAP_TITLEID = GetOffset("CGameCtnChallenge", "TitleId");
+const uint16 O_MAP_UID_MWID = O_MAP_TITLEID - (0x74 - 0x50);
 const uint16 O_MAP_COLLECTION_ID_OFFSET1 = O_MAP_TITLEID - (0x74 - 0x54);
-const uint16 O_MAP_COLLECTION_ID_OFFSET2 = O_MAP_TITLEID - (0x74 - 0x6C);
 const uint16 O_MAP_AUTHORLOGIN_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x58);
-const uint16 O_MAP_PLAYERMODEL_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x5C);
 // e.g., 10003 for TM2020 player/vehicles (mp4 vehicles are possible, have a different collection)
+const uint16 O_MAP_PLAYERMODEL_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x5C);
 const uint16 O_MAP_PLAYERMODEL_COLLECTION_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x60); // 0x60 - 0x74
 const uint16 O_MAP_PLAYERMODEL_AUTHOR_MWID_OFFSET = O_MAP_TITLEID - (0x74 - 0x64); // 0x64 - 0x74;
+const uint16 O_MAP_DECOR_ID = O_MAP_TITLEID - (0x74 - 0x68);
+const uint16 O_MAP_COLLECTION_ID_OFFSET2 = O_MAP_TITLEID - (0x74 - 0x6C);
+// 0x70: nadeo
+// 0x74, title_id: TMStadium
+// 0x78, title_id str: TMStadium
+// 0xDO map name
+// 0xE0 comments
+const uint16 O_MAP_AUTHORLOGIN_OFFSET = GetOffset("CGameCtnChallenge", "AuthorLogin");
+const uint16 O_MAP_AUTHORNAME_OFFSET = GetOffset("CGameCtnChallenge", "AuthorNickName");
 //
 const uint16 O_MAP_BUILDINFO_STR = O_MAP_TITLEID + 0x4;
 
