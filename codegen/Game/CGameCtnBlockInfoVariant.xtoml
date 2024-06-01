@@ -1,0 +1,19 @@
+[DGameCtnBlockInfoVariant: SZ_BLOCKINFOVAR]
+NativeClass = CGameCtnBlockInfoVariant
+Buffer: Pillars = DGameCtnBlockInfos, O_BLOCKINFOVAR_PILLARSArray, SZ_CTNBLOCKINFO, true
+
+[DGameCtnBlockInfo: SZ_CTNBLOCKINFO]
+NativeClass = CGameCtnBlockInfo
+PackedProps = uint32, O_CTNBLOCK_MOBILVARIANT, GS
+Inline: uint8 get_MobilVariant() { return (PackedProps >> 6) & 0x3F; }
+Inline: void set_MobilVariant(uint8 value) { PackedProps = (PackedProps & 0xfffff03f) | (uint(value & 0x3f) << 6); }
+Inline: uint8 get_VariantIndex() { return (PackedProps >> 21) & 0x3F; }
+Inline: void set_VariantIndex(uint8 value) { PackedProps = (PackedProps & 0xf81fffff) | (uint(value & 0x3f) << 21); }
+Inline: uint8 get_MobilIndex() { return PackedProps & 0xF; }
+Inline: void set_MobilIndex(uint8 value) { PackedProps = (PackedProps & 0xfffffff0) | (uint(value & 0xf)); }
+# 0 = Norm, 1 = Ghost, 2 = Free
+Inline: uint8 get_PlaceMode() { return (PackedProps >> 28) & 0x3; }
+# 0 = Norm, 1 = Ghost, 2 = Free
+Inline: void set_PlaceMode(uint8 value) { PackedProps = (PackedProps & 0xcfffffff) | (uint(value & 0x3) << 28); }
+Inline: bool get_IsGround() { return ((PackedProps >> 12) & 1) == 1; }
+Inline: void set_IsGround(bool value) { PackedProps = (PackedProps & 0xfeffffff) | (uint(value ? 1 : 0) << 12); }

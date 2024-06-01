@@ -61,6 +61,7 @@ namespace Editor {
     }
 
     bool DissociateItem(CGameCtnAnchoredObject@ item, bool setBlockUintCoord = true, bool setCoordFromBlockElseItemPos = true) {
+        item.IsFlying = true;
         auto linkedListEntry = Dev::GetOffsetNod(item, LinkedBlockEntryOffset);
         if (linkedListEntry is null) return false;
         Dev::SetOffset(item, LinkedBlockEntryOffset, uint64(0));

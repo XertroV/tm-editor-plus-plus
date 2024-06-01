@@ -118,6 +118,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         LabeledValue("Variant", block.BlockInfoVariantIndex);
         UI::SameLine();
         LabeledValue("Mobil Variant", block.MobilVariantIndex);
+        UI::SameLine();
+        LabeledValue("Mobil Index", block.MobilIndex);
         auto mbInstId = Editor::GetBlockMbInstId(block);
         LabeledValue("MB Inst ID", mbInstId);
         if (mbInstId >= 0) {

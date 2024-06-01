@@ -453,6 +453,7 @@ TabGroup@ CreateRootTabGroup() {
     CustomCursorTab(root);
     @g_PickedBlockTab = PickedBlockTab(root);
     @g_PickedItemTab = PickedItemTab(root);
+    PillarsAutochangerTab(root);
     // TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
     InventoryMainTab(root);
     InventoryMainV2Tab(root);

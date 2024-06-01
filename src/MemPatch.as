@@ -1,5 +1,6 @@
 class MemPatcher {
-    protected string pattern;
+    string patternDisplay;
+    protected string[]@ patterns;
     protected string[]@ newBytes;
     protected string[] origBytes;
     protected string[]@ expected;
@@ -8,22 +9,41 @@ class MemPatcher {
     uint64 ptr;
 
     MemPatcher(const string &in pattern, uint16[]@ offsets, string[]@ newBytes, string[]@ expected = {}) {
-        this.pattern = pattern;
+        Setup({pattern}, offsets, newBytes, expected);
+
+    }
+
+
+    MemPatcher(string[]@ patterns, uint16[]@ offsets, string[]@ newBytes, string[]@ expected = {}) {
+        Setup(patterns, offsets, newBytes, expected);
+    }
+
+    protected void Setup(string[]@ patterns, uint16[]@ offsets, string[]@ newBytes, string[]@ expected = {}) {
+        @this.patterns = patterns;
+        patternDisplay = Json::Write(patterns.ToJson());
         @this.newBytes = newBytes;
         @this.offsets = offsets;
         @this.expected = expected;
         this.origBytes.Resize(newBytes.Length);
-        ptr = Dev::FindPattern(pattern);
+        FindPatternSetPtr();
         applied = false;
         if (ptr == 0) {
-            NotifyError("MemPatcher: Pattern not found: " + pattern);
-        } else {
-            trace('Found: ' + pattern + ' at ' + Text::FormatPointer(ptr));
+            NotifyError("MemPatcher: Pattern(s) not found: " + Json::Write(patterns.ToJson()));
         }
     }
 
     ~MemPatcher() {
         Unapply();
+    }
+
+    protected void FindPatternSetPtr() {
+        for (uint i = 0; i < patterns.Length; i++) {
+            ptr = Dev::FindPattern(patterns[i]);
+            if (ptr != 0) {
+                trace('Found: ' + patterns[i] + ' at ' + Text::FormatPointer(ptr));
+                break;
+            }
+        }
     }
 
     bool get_IsApplied() {
@@ -50,7 +70,7 @@ class MemPatcher {
                 }
             }
             origBytes[i] = Dev::Patch(ptr + offsets[i], newBytes[i]);
-            trace('Patched: ' + pattern + ' at ' + offsets[i] + ' with ' + newBytes[i] + ' (was ' + origBytes[i] + ')');
+            trace('Patched: ' + patternDisplay + ' at ' + offsets[i] + ' with ' + newBytes[i] + ' (was ' + origBytes[i] + ')');
         }
     }
 

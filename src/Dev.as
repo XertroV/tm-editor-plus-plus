@@ -497,14 +497,33 @@ const uint16 O_SOLID2MODEL_ITEM_FID = 0x338;
 const uint16 SZ_SOLID2MODEL = 0x390; // 912;
 
 // more block offsets in Editor/Blocks.as
+// 0x38
+const uint16 O_CTNBLOCK_SKIN = GetOffset("CGameCtnBlock", "Skin");
 // 0x6C
 const uint16 O_CTNBLOCK_DIR = GetOffset("CGameCtnBlock", "Dir");
-const uint16 O_CTNBLOCK_SKIN = GetOffset("CGameCtnBlock", "Skin");
+// shifted by 4bits; 10, 20, 40, etc; seems to skip some
+const uint16 O_CTNBLOCK_MOBILVARIANT = O_CTNBLOCK_DIR + (0x8C - 0x6C);
+// ground when & 0x10 == 0x10
+const uint16 O_CTNBLOCK_GROUND = O_CTNBLOCK_DIR + (0x8D - 0x6C);
+// shifted by 4; can crash game if out of bounds
+const uint16 O_CTNBLOCK_VARIANT = O_CTNBLOCK_DIR + (0x8E - 0x6C);
+// 0x8F -- 01, does something to variant Ix, went out of bounds (unsure of result)
+// 0x8F -- 00 Norm, 10 Ghost, 20 Free
+const uint16 O_CTNBLOCK_PLACEMODE_FLAG = O_CTNBLOCK_DIR + (0x8F - 0x6C);
 // originally 0xA8 -- is FFFFFFFF when not in a macroblock
 const uint16 O_CTNBLOCK_MACROBLOCK_INST_NB = O_CTNBLOCK_DIR + 0x3C;
 
+// CGameCtnBlockInfo
+const uint16 SZ_CTNBLOCKINFO = 0x250;
 const uint16 O_BLOCKINFO_MATERIALMOD = GetOffset("CGameCtnBlockInfo", "MaterialModifier");
 const uint16 O_BLOCKINFO_MATERIALMOD2 = GetOffset("CGameCtnBlockInfo", "MaterialModifier2");
+
+
+// CGameCtnBlockInfoVariant, 0x250
+const uint16 SZ_BLOCKINFOVAR = 0x250;
+const uint16 O_BLOCKINFOVAR_SPAWNMODEL = GetOffset("CGameCtnBlockInfoVariant", "SpawnModel");
+const uint16 O_BLOCKINFOVAR_NOPILLARBELOWIX = GetOffset("CGameCtnBlockInfoVariant", "NoPillarBelowIndex");
+const uint16 O_BLOCKINFOVAR_PILLARSArray = O_BLOCKINFOVAR_NOPILLARBELOWIX + (0x160-0x148);
 
 // 0x168 bytes
 const uint SZ_GAMESKIN = 0x168;

@@ -66,11 +66,15 @@ namespace PillarsChoice {
 
     // CGameCtnApp::InitChallengeData ; the `or` updates the map flags; then flags are read
     MemPatcher@ AlwaysReadOldPillars = MemPatcher(
+        //[XX XX XX XX XX XX XX XX XX XX XX XX XX] <- the bytes we will patch
         // v or dword ptr [rdi+2E8],04
-        //                    v read map + 0x2e8                        v Global address for flag to load NoTrackWall skin
-        "83 8F ?? ?? 00 00 04 8B 87 ?? ?? 00 00 C1 E8 02 F7 D0 83 E0 01 89 05 ?? ?? ?? ?? 48",
+        //                      v read map + 0x2e8                        v Global address for flag to load NoTrackWall skin
+        { "83 8F ?? ?? 00 00 04 8B 87 ?? ?? 00 00 C1 E8 02 F7 D0 83 E0 01 89 05 ?? ?? ?? ?? 48"
+        // (2024-06-01)                           v read map + 0x2E0            v add rcx, 38
+        , "83 8F ?? ?? 00 00 04 8B 87 ?? ?? 00 00 48 8B 8F ?? ?? 00 00 C1 E8 02 48 83 C1 38 F7 D0 83 E0 01 89 05 ?? ?? ?? ?? 8B"},
         //     v NOP update map     v MOV EAX, 1; NOP
-        {0}, {"90 90 90 90 90 90 90 B8 01 00 00 00 90"}, {"83 8F E8 02 00 00 04 8B 87 E8 02 00 00"}
+        {0},
+        { "90 90 90 90 90 90 90 B8 01 00 00 00 90"}, {"83 8F E8 02 00 00 04 8B 87 E8 02 00 00"}
     );
 
     MemPatcher@ SkipUpdateAllPillarBlockSkinRemapFolders = MemPatcher(
@@ -166,6 +170,267 @@ namespace PillarsChoice {
         }
     }
 }
+
+
+
+enum PillarsType {
+    None = 0,
+    Wood = 1,
+    Stone = 2,
+    Concrete = 3,
+    Dirt = 4,
+    XXX_Last
+}
+
+enum BlockPlacementFlags {
+    Normal = 0,
+    Ghost = 0x10,
+    Free = 0x20,
+}
+
+class PillarsAutochangerTab : EffectTab, WithGetPillarsAndReplacements {
+    PillarsAutochangerTab(TabGroup@ p) {
+        super(p, "Autochange Pillars", Icons::University + Icons::Flask);
+        RegisterNewBlockCallback(ProcessBlock(this.OnPlaceBlock), "PillarsAutochanger");
+    }
+
+    PillarsType m_AutoPillars = PillarsType::None;
+
+    bool get__IsActive() override property {
+        return !PillarsChoice::IsActive && m_AutoPillars != PillarsType::None;
+    }
+
+    nat2[] xzBlocks = {};
+    bool isResetFrameQueued = false;
+    void QueueResetFrame() {
+        if (isResetFrameQueued) return;
+        isResetFrameQueued = true;
+        startnew(CoroutineFunc(OnBeforeScripts)).WithRunContext(Meta::RunContext::BeforeScripts);
+    }
+
+    void OnBeforeScripts() {
+        isResetFrameQueued = false;
+        xzBlocks.RemoveRange(0, xzBlocks.Length);
+    }
+
+    nat2 checkXZTmp;
+
+    // check if it's the first block in this XZ spot
+    bool CheckNewBlock(CGameCtnBlock@ block) {
+        if (!block.BlockInfo.IsPillar) return false;
+        checkXZTmp.x = block.CoordX;
+        checkXZTmp.y = block.CoordZ;
+        if (xzBlocks.Find(checkXZTmp) != -1) return false;
+        xzBlocks.InsertLast(checkXZTmp);
+        if (!isResetFrameQueued) QueueResetFrame();
+        return true;
+    }
+
+    bool OnPlaceBlock(CGameCtnBlock@ block) {
+        if (m_AutoPillars == PillarsType::None) return false;
+
+
+        trace("Block: " + block.BlockModel.Name);
+        if (CheckNewBlock(block)) {
+            ConvertPillarTo(block, m_AutoPillars);
+        }
+
+        auto allPlace = Dev::GetOffsetUint32(block, O_CTNBLOCK_MOBILVARIANT);
+        auto b1 = Dev::GetOffsetUint8(block, O_CTNBLOCK_MOBILVARIANT);
+        auto b2 = Dev::GetOffsetUint8(block, O_CTNBLOCK_GROUND);
+        auto b12 = Dev::GetOffsetUint16(block, O_CTNBLOCK_MOBILVARIANT);
+        auto b3 = Dev::GetOffsetUint8(block, O_CTNBLOCK_VARIANT);
+        auto b4 = Dev::GetOffsetUint8(block, O_CTNBLOCK_PLACEMODE_FLAG);
+        auto b34 = Dev::GetOffsetUint16(block, O_CTNBLOCK_VARIANT);
+        auto placeFlag = Dev::GetOffsetUint8(block, O_CTNBLOCK_PLACEMODE_FLAG);
+
+        trace("Block placed with packed MV/G/V/PF: " + Text::Format("%02x", b1) + " " + Text::Format("%02x", b2) + " " + Text::Format("%02x", b3) + " " + Text::Format("%02x", b4));
+        trace("Block placed with place flag: " + placeFlag);
+        trace("placeFlag >> 4: " + (placeFlag >> 4));
+        trace('Block mv / variant ix: ' + block.MobilVariantIndex + " / " + block.BlockInfoVariantIndex);
+        trace("Variant: allPlace >> 21 & 0xF = " + Text::Format("%2x", (allPlace >> 21) & 0xF));
+        trace("Mobile Variant: allPlace >> 6 & 0x3F = " + Text::Format("%02x", (allPlace >> 6) & 0x3F));
+        trace("IsGhost: " + block.IsGhostBlock());
+
+        trace('Block m ix: ' + block.MobilIndex);
+        trace('Block mv ix: ' + block.MobilVariantIndex);
+        trace('setting b1 to +1');
+        Dev::SetOffset(block, O_CTNBLOCK_MOBILVARIANT, uint8(b1 + 1));
+        trace('Block m ix: ' + block.MobilIndex);
+        trace('Block mv ix: ' + block.MobilVariantIndex);
+        trace('setting b1 to orig; b2 + 1');
+        Dev::SetOffset(block, O_CTNBLOCK_MOBILVARIANT, b1);
+        Dev::SetOffset(block, O_CTNBLOCK_GROUND, uint8(b2 + 1));
+        trace('Block m ix: ' + block.MobilIndex);
+        trace('Block mv ix: ' + block.MobilVariantIndex);
+        trace('setting b2 to orig; b3 + 1');
+        Dev::SetOffset(block, O_CTNBLOCK_GROUND, b2);
+        Dev::SetOffset(block, O_CTNBLOCK_VARIANT, uint8(b3 + 1));
+        trace('Block m ix: ' + block.MobilIndex);
+        trace('Block mv ix: ' + block.MobilVariantIndex);
+        trace('setting b3 to orig');
+        Dev::SetOffset(block, O_CTNBLOCK_VARIANT, b3);
+        // if (placeFlag >> 4 & 7 == 0) {
+        //     trace("Converting placed normal block to ghost");
+        //     Dev::SetOffset(block, O_CTNBLOCK_PLACEMODE_FLAG, uint8(0x10));
+        // }
+
+        trace("IsGhost: " + block.IsGhostBlock());
+
+        return false;
+    }
+
+
+
+
+
+
+    void DrawInner() override {
+        if (UI::BeginCombo("Autochange Pillars To", tostring(m_AutoPillars))) {
+            for (uint i = 0; i < int(PillarsType::XXX_Last); i++) {
+                if (UI::Selectable(tostring(PillarsType(i)), m_AutoPillars == PillarsType(i))) {
+                    m_AutoPillars = PillarsType(i);
+                }
+            }
+            UI::EndCombo();
+        }
+
+        UI::Separator();
+
+        if (UX::ButtonMbDisabled("Convert All Existing Pillars & Deco Walls", m_AutoPillars == PillarsType::None)) {
+            startnew(CoroutineFunc(RunConvertAllPillars));
+        }
+    }
+
+    void RunConvertAllPillars() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        auto map = editor.Challenge;
+        if (map is null) return;
+        if (m_AutoPillars == PillarsType::None) return;
+        auto nbBlocks = map.Blocks.Length;
+        auto grassId = GetMwId("Grass");
+        CGameCtnBlock@ b;
+        for (uint i = 0; i < nbBlocks; i++) {
+            @b = map.Blocks[i];
+            if (b.BlockInfo.IsPillar && CheckNewBlock(b)) {
+                ConvertPillarTo(b, m_AutoPillars);
+            }
+        }
+        Editor::RefreshBlocksAndItems(editor);
+    }
+}
+
+
+
+mixin class WithGetPillarsAndReplacements {
+    void RunTest() {
+        InitializePillarNames();
+    }
+
+    uint[] pillarNames;
+    uint[] replacePillarNames;
+
+    private void AddPillarName(uint nameId, uint replacementId) {
+        pillarNames.InsertLast(nameId);
+        replacePillarNames.InsertLast(replacementId);
+    }
+
+    private void AddPillarName(uint nameId, const string &in replacement) {
+        pillarNames.InsertLast(nameId);
+        replacePillarNames.InsertLast(GetMwId(replacement));
+    }
+
+    private void AddPillarName(const string &in name, const string &in replacement) {
+        pillarNames.InsertLast(GetMwId(name));
+        replacePillarNames.InsertLast(GetMwId(replacement));
+    }
+
+    protected void InitializePillarNames() {
+        if (pillarNames.Length > 0) return;
+        CGameCtnBlockInfoClassic@ bi;
+        auto pillars = GetPillarBlockInfos();
+        for (uint i = 0; i < pillars.Length; i++) {
+            @bi = pillars[i];
+            uint replacement = CalcPillarReplacement(bi.Name);
+            AddPillarName(bi.Id.Value, replacement);
+            print("Pillar: " + bi.Name + " | " + GetMwIdName(replacement));
+        }
+    }
+
+    uint CalcPillarReplacement(const string &in name) {
+        if (!name.EndsWith("Pillar")) {
+            warn("Name does not end with 'Pillar': " + name);
+        }
+        string decoWallName = name.SubStr(0, name.Length - 6);
+        auto fid = Fids::GetGame(GAMEDATA_BLOCKINFOCLASSIC + "/" + decoWallName + ".EDClassic.Gbx");
+        if (fid is null) {
+            warn("No replacement found for: " + name);
+            return 0xFFFFFFFF;
+        }
+        return GetMwId(decoWallName);
+    }
+
+    CGameCtnBlockInfoClassic@[]@ GetPillarBlockInfos() {
+        auto folder = Fids::GetGameFolder(GAMEDATA_BLOCKINFOPILLAR);
+        CGameCtnBlockInfoClassic@[] ret;
+        for (uint i = 0; i < folder.Leaves.Length; i++) {
+            auto fid = folder.Leaves[i];
+            ret.InsertLast(cast<CGameCtnBlockInfoClassic>(Fids::Preload(fid)));
+        }
+        return ret;
+    }
+
+    string GetPillarReplacement(uint nameId, PillarsType type) {
+        if (pillarNames.Length == 0) InitializePillarNames();
+        auto ix = pillarNames.Find(nameId);
+        if (ix >= 0) {
+            return GetMwIdName(replacePillarNames[ix]) + PillarTypeSuffix(type);
+        }
+        warn("Unknown pillar replacement for: " + GetMwIdName(nameId));
+        return "";
+    }
+
+    void ConvertPillarTo(CGameCtnBlock@ block, PillarsType type) {
+        if (!block.BlockModel.IsPillar) {
+            warn("Block is not a pillar: " + block.BlockModel.Name);
+            return;
+        }
+        auto replacement = GetPillarReplacement(block.BlockModel.Id.Value, type);
+        if (replacement == "") {
+            warn("No replacement found for: " + block.BlockModel.Name);
+            return;
+        }
+        auto fid = Fids::GetGame(GAMEDATA_BLOCKINFOCLASSIC + "/" + replacement + ".EDClassic.Gbx");
+        if (fid is null) {
+            warn("No replacement FID found for: " + block.BlockModel.Name);
+            return;
+        }
+        auto bi = cast<CGameCtnBlockInfoClassic>(Fids::Preload(fid));
+        if (bi is null) {
+            warn("Failed to preload replacement: " + block.BlockModel.Name);
+            return;
+        }
+        block.BlockModel.MwRelease();
+        Dev::SetOffset(block, GetOffset(block, "BlockInfo"), bi);
+        Dev::SetOffset(block, 0x18, bi.Id.Value);
+        bi.MwAddRef();
+    }
+}
+
+string PillarTypeSuffix(PillarsType type) {
+    switch (type) {
+        case PillarsType::Wood: return "";
+        case PillarsType::Stone: return "Ice";
+        case PillarsType::Concrete: return "Grass";
+        case PillarsType::Dirt: return "Dirt";
+    }
+    return "";
+}
+
+
+const string GAMEDATA_BLOCKINFOCLASSIC = "GameData/Stadium/GameCtnBlockInfo/GameCtnBlockInfoClassic";
+const string GAMEDATA_BLOCKINFOPILLAR = "GameData/Stadium/GameCtnBlockInfo/GameCtnBlockInfoPillar";
 
 
 

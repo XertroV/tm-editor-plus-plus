@@ -1,0 +1,15 @@
+CurChallenge_SetUp
+* there is a call here that reads lots of inventory stuff
+CurChallenge_SetUp (titlecore)
+
+called by: CGameCtnApp::GameState_LocalLoop
+
+
+
+
+CGameCtnEditorCommonInterface_CreateHierarchy
+- creates inventory hierarchy
+
+
+
+Map +0x720: embedded items?

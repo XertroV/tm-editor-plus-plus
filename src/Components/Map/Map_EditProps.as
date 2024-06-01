@@ -137,17 +137,21 @@ class MapEditPropsTab : Tab {
 
         UI::Text("Author: " + map.AuthorNickName);
         // todo: test
-        UI::BeginDisabled(map.MapInfo.FileName == "Unnamed");
-        if (UX::SmallButton(Icons::FolderOpenO+"##map-folder")) {
-            OpenExplorerPath(IO::FromUserGameFolder("Maps/" + map.MapInfo.Path));
+        if (map.MapInfo !is null) {
+            UI::BeginDisabled(map.MapInfo.FileName == "Unnamed");
+            if (UX::SmallButton(Icons::FolderOpenO+"##map-folder")) {
+                OpenExplorerPath(IO::FromUserGameFolder("Maps/" + map.MapInfo.Path));
+            }
+            UI::SameLine();
+            if (UX::SmallButton(Icons::FloppyO+"##save-map")) {
+                Editor::SaveMapSameName(editor);
+            }
+            UI::EndDisabled();
+            UI::SameLine();
+            UI::Text("Filename: " + map.MapInfo.FileName);
+        } else {
+            UI::Text("map.MapInfo is null!?");
         }
-        UI::SameLine();
-        if (UX::SmallButton(Icons::FloppyO+"##save-map")) {
-            Editor::SaveMapSameName(editor);
-        }
-        UI::EndDisabled();
-        UI::SameLine();
-        UI::Text("Filename: " + map.MapInfo.FileName);
         UI::Text("Thumbnail (KB): " + map.Thumbnail_KBytes);
         UI::SameLine();
         UI::Text(FromML::lockedThumbnail ? Icons::Lock : Icons::Unlock);

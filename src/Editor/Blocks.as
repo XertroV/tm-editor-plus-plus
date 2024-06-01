@@ -4,7 +4,7 @@ namespace Editor {
     const uint16 FreeBlockRotOffset = FreeBlockPosOffset + 0xC;
     const uint16 O_CGameCtnBlock_BlockUnitsEOffset = GetOffset("CGameCtnBlock", "BlockUnitsE");
     const uint16 O_CGameCtnBlock_CoordOffset = GetOffset("CGameCtnBlock", "Coord");
-    const uint16 O_CGameCtnBlock_ = GetOffset("CGameCtnBlock", "Coord");
+    // const uint16 O_CGameCtnBlock_ = GetOffset("CGameCtnBlock", "Coord");
 
     const uint16 O_CGameCtnBlock_BlockMapBlocksIndex   = O_CGameCtnBlock_DirOffset + (0x8c - 0x64) ; // (0x8c + 0x8 - 0x6c)
     const uint16 O_CGameCtnBlock_BlockUniqueSaveID     = O_CGameCtnBlock_DirOffset + (0x90 - 0x64) ; // (0x90 + 0x8 - 0x6c)
@@ -122,6 +122,7 @@ namespace Editor {
 
     vec3 GetBlockCoordSize(CGameCtnBlock@ block) {
         auto @biv = GetBlockInfoVariant(block);
+        if (biv is null) return vec3(1);
         return Nat3ToVec3(biv.Size);
     }
 
@@ -141,6 +142,11 @@ namespace Editor {
         // trace('lengths: ' + bi.AdditionalVariantsGround.Length + ' / ');
         // trace('bi.AdditionalVariantsAir.Length: ' + bi.AdditionalVariantsAir.Length);
         if (bivIx > 0) {
+            auto maxIx = block.IsGround ? bi.AdditionalVariantsGround.Length : bi.AdditionalVariantsAir.Length;
+            if (bivIx - 1 >= maxIx) {
+                warn("bivIx out of range: " + bivIx + " / " + bi.AdditionalVariantsGround.Length);
+                return null;
+            }
             @biv = block.IsGround ? cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsGround[bivIx - 1]) : cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsAir[bivIx - 1]);
         } else {
             @biv = block.IsGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
@@ -155,6 +161,11 @@ namespace Editor {
         auto bivIx = block.variant;
         auto bi = block.BlockInfo;
         if (bivIx > 0) {
+            auto maxIx = block.isGround ? bi.AdditionalVariantsGround.Length : bi.AdditionalVariantsAir.Length;
+            if (bivIx - 1 >= maxIx) {
+                warn("bivIx out of range: " + bivIx + " / " + bi.AdditionalVariantsGround.Length);
+                return null;
+            }
             return block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsGround[bivIx - 1]) : cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsAir[bivIx - 1]);
         } else {
             return block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);

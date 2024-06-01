@@ -15,6 +15,7 @@ namespace ItemEditor {
             @frame = GetDialogSaveAs();
         }
         if (frame is null) {
+            // todo: check french or things
             NotifyWarning("SaveAs dialog does not appear to be open.");
             throw("SaveAs dialog does not appear to be open.");
             return;
@@ -22,13 +23,17 @@ namespace ItemEditor {
         SaveAsGoToRoot();
         SaveAsDialogSetPath(path);
         yield();
+        yield();
         trace('saving');
         ClickConfirmOpenOrSave();
+        yield();
         yield();
         trace('check for overwrite');
         CheckForOverwriteDialogAndClose();
         yield();
+        yield();
         CheckForFailureMessage();
+        yield();
         yield();
     }
 
