@@ -234,7 +234,14 @@ class PillarsAutochangerTab : EffectTab, WithGetPillarsAndReplacements {
         if (CheckNewBlock(block)) {
             ConvertPillarTo(block, m_AutoPillars);
         }
+#if FALSE
+        DebugPrintBlock(block);
+#endif
+        return false;
+    }
 
+    void DebugPrintBlock(CGameCtnBlock@ block) {
+#if FALSE
         auto allPlace = Dev::GetOffsetUint32(block, O_CTNBLOCK_MOBILVARIANT);
         auto b1 = Dev::GetOffsetUint8(block, O_CTNBLOCK_MOBILVARIANT);
         auto b2 = Dev::GetOffsetUint8(block, O_CTNBLOCK_GROUND);
@@ -276,11 +283,8 @@ class PillarsAutochangerTab : EffectTab, WithGetPillarsAndReplacements {
         // }
 
         trace("IsGhost: " + block.IsGhostBlock());
-
-        return false;
+#endif
     }
-
-
 
 
 
