@@ -194,21 +194,21 @@ class MapEditPropsTab : Tab {
         UI::EndDisabled();
 
 #if DEV
-        UI::Text("Author Dev:");
-        if (UI::Button("Sync Author")) {
-            m_AuthorLogin = map.AuthorLogin;
-            m_AuthorName = map.AuthorNickName;
-        }
-        bool map_author_changed;
-        m_AuthorName = UI::InputText("##map-author", m_AuthorName, map_author_changed);
-        if (map_author_changed) {
-            Dev::SetOffset(map, O_MAP_AUTHORNAME_OFFSET, m_AuthorName);
-        }
-        bool map_author_l_changed;
-        m_AuthorLogin = UI::InputText("##map-author-login", m_AuthorLogin, map_author_l_changed);
-        if (map_author_l_changed) {
-            Dev::SetOffset(map, O_MAP_AUTHORLOGIN_OFFSET, m_AuthorLogin);
-        }
+        // UI::Text("Author Dev:");
+        // if (UI::Button("Sync Author")) {
+        //     m_AuthorLogin = map.AuthorLogin;
+        //     m_AuthorName = map.AuthorNickName;
+        // }
+        // bool map_author_changed;
+        // m_AuthorName = UI::InputText("##map-author", m_AuthorName, map_author_changed);
+        // if (map_author_changed) {
+        //     Dev::SetOffset(map, O_MAP_AUTHORNAME_OFFSET, m_AuthorName);
+        // }
+        // bool map_author_l_changed;
+        // m_AuthorLogin = UI::InputText("##map-author-login", m_AuthorLogin, map_author_l_changed);
+        // if (map_author_l_changed) {
+        //     Dev::SetOffset(map, O_MAP_AUTHORLOGIN_OFFSET, m_AuthorLogin);
+        // }
 #endif
 
         UI::Columns(1);
