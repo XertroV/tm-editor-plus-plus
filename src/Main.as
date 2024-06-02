@@ -229,7 +229,7 @@ uint g_LastPause = 0;
 void CheckPause() {
     uint workMs = Time::Now < 60000 ? 1 : 4;
     if (g_LastPause + workMs < Time::Now) {
-        yield();
+        sleep(0);
         // trace('paused');
         g_LastPause = Time::Now;
     }

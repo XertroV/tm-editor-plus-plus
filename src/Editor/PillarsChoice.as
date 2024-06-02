@@ -155,18 +155,21 @@ namespace PillarsChoice {
 
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (nullifiedSkinsOnLoad && editor !is null) {
-            UI::SetNextWindowSize(300, 120);
-            if (UI::Begin("\\$fb8Skins nullified: Save and reload map", nullifiedSkinsOnLoad)) {
-                UI::Text("\\$f80Skins on pillars were nullified on load.");
+            UI::SetNextWindowSize(300, 140);
+            UI::SetNextWindowPos(g_screen.x * .5 - 150, g_screen.y * .5 - 60);
+            UI::PushStyleColor(UI::Col::WindowBg, Math::Lerp(Math::Lerp(cRed, cMagenta, Math::Sin(float(Time::Now % 3142) / 1000.) ** 2), cBlack, .5));
+            if (UI::Begin("\\$fdbSkins nullified: Save and reload map", nullifiedSkinsOnLoad)) {
+                UI::Text("\\$fdbSkins on pillars were nullified on load.");
                 UI::Text("You should now save and reload the map.");
                 if (editor.Challenge.MapInfo.FileName.Length == 0) {
-                    UI::Text("\\$f80Map not saved! Please save the map.");
-                } else if (UI::ButtonColored("Save and Reload", .1, .5, .5)) {
+                    UI::Text("\\$fdbMap not saved! Please save the map.");
+                } else if (UI::ButtonColored("Save and Reload", .4, .5, .5)) {
                     startnew(Editor::SaveAndReloadMap);
                     nullifiedSkinsOnLoad = false;
                 }
             }
             UI::End();
+            UI::PopStyleColor();
         }
     }
 }
@@ -190,7 +193,7 @@ enum BlockPlacementFlags {
 
 class PillarsAutochangerTab : EffectTab, WithGetPillarsAndReplacements {
     PillarsAutochangerTab(TabGroup@ p) {
-        super(p, "Autochange Pillars", Icons::University + Icons::Flask);
+        super(p, "Pillars" + NewIndicator, Icons::University + Icons::Flask);
         RegisterNewBlockCallback(ProcessBlock(this.OnPlaceBlock), "PillarsAutochanger");
     }
 
@@ -216,8 +219,9 @@ class PillarsAutochangerTab : EffectTab, WithGetPillarsAndReplacements {
     nat2 checkXZTmp;
 
     // check if it's the first block in this XZ spot
-    bool CheckNewBlock(CGameCtnBlock@ block) {
-        if (!block.BlockInfo.IsPillar) return false;
+    bool CheckNewBlock(CGameCtnBlock@ block, bool onlyPillars = true) {
+        if (onlyPillars && !block.BlockInfo.IsPillar) return false;
+        if (block.BlockModel.IdName.StartsWith("TrackWall")) return false;
         checkXZTmp.x = block.CoordX;
         checkXZTmp.y = block.CoordZ;
         if (xzBlocks.Find(checkXZTmp) != -1) return false;
@@ -228,11 +232,15 @@ class PillarsAutochangerTab : EffectTab, WithGetPillarsAndReplacements {
 
     bool OnPlaceBlock(CGameCtnBlock@ block) {
         if (m_AutoPillars == PillarsType::None) return false;
-
-
         trace("Block: " + block.BlockModel.Name);
         if (CheckNewBlock(block)) {
-            ConvertPillarTo(block, m_AutoPillars);
+            if (m_ConvertDecoWallTypes && IsPillarReplacement(priorBlock, block)) {
+                ConvertDecoWallTo(priorBlock, m_AutoPillars);
+            } else {
+                ConvertPillarTo(block, m_AutoPillars);
+            }
+        } else {
+            @priorBlock = block;
         }
 #if FALSE
         DebugPrintBlock(block);
@@ -287,24 +295,64 @@ class PillarsAutochangerTab : EffectTab, WithGetPillarsAndReplacements {
     }
 
 
-
+    bool m_ConvertDecoWallTypes = true;
 
     void DrawInner() override {
-        if (UI::BeginCombo("Autochange Pillars To", tostring(m_AutoPillars))) {
+        if (UI::CollapsingHeader("About")) {
+            UI::TextWrapped("""This will automatically convert pillars when you place blocks.
+
+When placing a block with pillars, the pillars will be forced by placing a DecoWall of the correct type beneath the block.
+This will force the pillars below it to be of your chosen type.
+\$<\$s**However!**\$> It will also mean the block becomes an air-variant, and you need to manually fill in the gap beneath it and the topmost pillar. \$<\$i\$aaa(I plan to automate this, but it's a big job to figure out the right blocks to fill the gap, if they even exist, and sometimes they need to be rotated but not always, which means checking them all.)\$>
+
+When converting all pillars to a single type, the correct DecoWall will replace the top-most pillar, which will convert the pillars beneath it.
+
+\$fa3Note!\$z If you do not enable 'also convert deco wall blocks' then you will get multiple stacked deco wall blocks (because the top-most pillar is replaced with a deco wall block each time).
+
+The types are:
+* Ice (stone / dark concrete)
+* Grass (light concrete, also used for platform tech)
+* Dirt (dirt)
+            """);
+        }
+
+        UI::Separator();
+
+        m_ConvertDecoWallTypes = UI::Checkbox("Also Convert Deco Wall Blocks (placeable pillars)", m_ConvertDecoWallTypes);
+        UI::Text("\\$fa3This will change deco walls that you place if autochange is active.");
+
+        UI::Separator();
+
+        UI::Text("Autochange Pillars");
+
+        UI::PushItemWidth(200.);
+        if (UI::BeginCombo("Autochange Pillars To", PillarsTypeStrName(m_AutoPillars))) {
             for (uint i = 0; i < int(PillarsType::XXX_Last); i++) {
-                if (UI::Selectable(tostring(PillarsType(i)), m_AutoPillars == PillarsType(i))) {
+                if (UI::Selectable(PillarsTypeStrName(PillarsType(i)), m_AutoPillars == PillarsType(i))) {
                     m_AutoPillars = PillarsType(i);
                 }
             }
             UI::EndCombo();
         }
+        UI::PopItemWidth();
+
+        if (m_AutoPillars == PillarsType::None) {
+            UI::Text("\\$aaaAutochange is not active.");
+        } else {
+            UI::Text("\\$eeeAutochange is active: " + PillarsTypeStrName(m_AutoPillars, true));
+        }
 
         UI::Separator();
+
+        UI::Text("Convert Existing Pillars");
 
         if (UX::ButtonMbDisabled("Convert All Existing Pillars & Deco Walls", m_AutoPillars == PillarsType::None)) {
             startnew(CoroutineFunc(RunConvertAllPillars));
         }
+        UI::Text("\\$aaaConverts to the autochange suggestion: " + PillarsTypeStrName(m_AutoPillars, true));
     }
+
+    CGameCtnBlock@ priorBlock;
 
     void RunConvertAllPillars() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -318,10 +366,29 @@ class PillarsAutochangerTab : EffectTab, WithGetPillarsAndReplacements {
         for (uint i = 0; i < nbBlocks; i++) {
             @b = map.Blocks[i];
             if (b.BlockInfo.IsPillar && CheckNewBlock(b)) {
-                ConvertPillarTo(b, m_AutoPillars);
+                if (IsPillarReplacement(priorBlock, b)) {
+                    if (m_ConvertDecoWallTypes) {
+                        ConvertDecoWallTo(priorBlock, m_AutoPillars);
+                    }
+                } else {
+                    ConvertPillarTo(b, m_AutoPillars);
+                }
+            } else {
+                // blocks are stored in descending y order, so we can check prior block to see the block above this one
+                // todo: multi-column pillars?
+                @priorBlock = b;
             }
         }
         Editor::RefreshBlocksAndItems(editor);
+    }
+
+    bool IsPillarReplacement(CGameCtnBlock@ priorBlock, CGameCtnBlock@ thisBlock) {
+        auto replacement = GetPillarReplacement(thisBlock.BlockModel.Id.Value, PillarsType::None, false);
+        string name = priorBlock.BlockModel.Id.GetName();
+        if (name.StartsWith(replacement)) {
+            return true;
+        }
+        return false;
     }
 }
 
@@ -385,13 +452,13 @@ mixin class WithGetPillarsAndReplacements {
         return ret;
     }
 
-    string GetPillarReplacement(uint nameId, PillarsType type) {
+    string GetPillarReplacement(uint nameId, PillarsType type, bool shouldWarn = true) {
         if (pillarNames.Length == 0) InitializePillarNames();
         auto ix = pillarNames.Find(nameId);
         if (ix >= 0) {
             return GetMwIdName(replacePillarNames[ix]) + PillarTypeSuffix(type);
         }
-        warn("Unknown pillar replacement for: " + GetMwIdName(nameId));
+        if (shouldWarn) warn("Unknown pillar replacement for: " + GetMwIdName(nameId));
         return "";
     }
 
@@ -412,6 +479,26 @@ mixin class WithGetPillarsAndReplacements {
         }
         auto bi = cast<CGameCtnBlockInfoClassic>(Fids::Preload(fid));
         if (bi is null) {
+            warn("Failed to preload replacement: " + block.BlockModel.Name + " (maybe because it has no skinned pillars)");
+            return;
+        }
+        block.BlockModel.MwRelease();
+        Dev::SetOffset(block, GetOffset(block, "BlockInfo"), bi);
+        Dev::SetOffset(block, 0x18, bi.Id.Value);
+        bi.MwAddRef();
+    }
+
+    void ConvertDecoWallTo(CGameCtnBlock@ block, PillarsType type) {
+        auto replacement = block.BlockModel.IdName;
+        replacement = DecoWallNameStripPillarSkin(replacement)
+            + PillarTypeSuffix(type);
+        auto fid = Fids::GetGame(GAMEDATA_BLOCKINFOCLASSIC + "/" + replacement + ".EDClassic.Gbx");
+        if (fid is null) {
+            warn("No replacement FID found for: " + block.BlockModel.Name);
+            return;
+        }
+        auto bi = cast<CGameCtnBlockInfoClassic>(Fids::Preload(fid));
+        if (bi is null) {
             warn("Failed to preload replacement: " + block.BlockModel.Name);
             return;
         }
@@ -420,10 +507,22 @@ mixin class WithGetPillarsAndReplacements {
         Dev::SetOffset(block, 0x18, bi.Id.Value);
         bi.MwAddRef();
     }
+
+    string DecoWallNameStripPillarSkin(const string &in name) {
+        if (name.EndsWith("Ice")) {
+            return name.SubStr(0, name.Length - 3);
+        } else if (name.EndsWith("Grass")) {
+            return name.SubStr(0, name.Length - 5);
+        } else if (name.EndsWith("Dirt")) {
+            return name.SubStr(0, name.Length - 4);
+        }
+        return name;
+    }
 }
 
 string PillarTypeSuffix(PillarsType type) {
     switch (type) {
+        case PillarsType::None: return "";
         case PillarsType::Wood: return "";
         case PillarsType::Stone: return "Ice";
         case PillarsType::Concrete: return "Grass";
@@ -432,6 +531,25 @@ string PillarTypeSuffix(PillarsType type) {
     return "";
 }
 
+string PillarsTypeStrName(PillarsType type, bool withColor = false) {
+    if (withColor) {
+        switch (type) {
+            case PillarsType::None: return "\\$<\\$aaaNone (Not Active)\\$>";
+            case PillarsType::Wood: return "\\$<\\$ec6Wood\\$>";
+            case PillarsType::Stone: return "\\$<\\$16cStone (Ice)\\$>";
+            case PillarsType::Concrete: return "\\$<\\$9caConcrete (Grass)\\$>";
+            case PillarsType::Dirt: return "\\$<\\$e95Dirt (Dirt)\\$>";
+        }
+    }
+    switch (type) {
+        case PillarsType::None: return "None (Not Active)";
+        case PillarsType::Wood: return "Wood";
+        case PillarsType::Stone: return "Stone (Ice)";
+        case PillarsType::Concrete: return "Concrete (Grass)";
+        case PillarsType::Dirt: return "Dirt (Dirt)";
+    }
+    return "";
+}
 
 const string GAMEDATA_BLOCKINFOCLASSIC = "GameData/Stadium/GameCtnBlockInfo/GameCtnBlockInfoClassic";
 const string GAMEDATA_BLOCKINFOPILLAR = "GameData/Stadium/GameCtnBlockInfo/GameCtnBlockInfoPillar";

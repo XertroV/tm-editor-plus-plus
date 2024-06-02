@@ -24,7 +24,7 @@ namespace Log {
 
 void dev_trace(const string &in msg) {
 #if DEV
-    trace(msg);
+    trace('[' + Time::Now + '] ' + msg);
 #endif
 }
 

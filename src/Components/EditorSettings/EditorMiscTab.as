@@ -10,7 +10,7 @@ class EditorMiscTab : Tab {
     bool lastBlockTypeWasGhost = false;
 
     EditorMiscTab(TabGroup@ parent) {
-        super(parent, "Editor Misc", Icons::Cog + Icons::Camera);
+        super(parent, "Editor Misc" + NewIndicator, Icons::Cog + Icons::Camera);
         RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad), this.tabName);
         startnew(CoroutineFunc(this.WatchForVarResets));
     }

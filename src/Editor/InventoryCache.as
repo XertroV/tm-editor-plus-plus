@@ -51,16 +51,16 @@ namespace Editor {
 
         uint cacheRefreshNonce = 1;
         void RefreshCache() {
-            while (PAUSE_INVENTORY_CACHING) yield();
+            while (PAUSE_INVENTORY_CACHING) sleep(0);
             auto myNonce = ResetCache();
-            yield();
+            sleep(0);
             if (myNonce != cacheRefreshNonce) return;
             auto editor = GetEditor(GetApp());
             // this can be called when outside the editor
             if (editor is null) return;
             auto inv = editor.PluginMapType.Inventory;
 
-            while (inv.RootNodes.Length < 4) yield();
+            while (inv.RootNodes.Length < 4) sleep(0);
             if (GetEditor(GetApp()) is null) return;
             if (myNonce != cacheRefreshNonce) return;
 
@@ -72,7 +72,7 @@ namespace Editor {
             _IsScanningItems = false;
             _IsScanningMacroblocks = false;
             CacheInvNode(blockRN, myNonce);
-            yield();
+            sleep(0);
             if (myNonce != cacheRefreshNonce) return;
             if (GetEditor(GetApp()) is null) return;
             trace('Caching inventory items...');
