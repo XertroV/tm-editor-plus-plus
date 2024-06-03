@@ -33,6 +33,8 @@ void Main() {
     RegisterOnEditorLoadCallback(PlacementHooks::SetupHooks, "PlacementHooks::SetupHooks");
     RegisterOnEditorUnloadCallback(PlacementHooks::UnloadHooks, "PlacementHooks::UnloadHooks");
 
+    RegisterOnEditorStartingUpCallback(EditorPatches::OnEditorStartingUp, "EditorPatches::OnEditorStartingUp");
+
     RegisterOnEditorStartingUpCallback(OnEditorStartingFunc(PillarsChoice::OnEditorStartingUp), "PillarsChoice::OnEditorStartingUp");
     RegisterOnEditorLoadCallback(PillarsChoice::OnEditorLoad, "PillarsChoice::OnEditorLoad");
     RegisterOnEditorUnloadCallback(PillarsChoice::OnEditorUnload, "PillarsChoice::OnEditorUnload");
