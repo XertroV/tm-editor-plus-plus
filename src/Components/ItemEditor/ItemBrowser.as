@@ -500,9 +500,26 @@ class ItemModelTreeElement {
             MkAndDrawChildNode(blockInfoMobil.SurfaceFromBlockItem, GetOffset(blockInfoMobil, "SurfaceFromBlockItem"), "SurfaceFromBlockItem");
             // MkAndDrawChildNode(blockInfoMobil.PrefabFid, GetOffset(blockInfoMobil, "PrefabFid"), "PrefabFid");
             // MkAndDrawChildNode(blockInfoMobil.PrefabFid, GetOffset(blockInfoMobil, "PrefabFid"), "PrefabFid");
-            auto PlacementPatchesBuf = Dev::GetOffsetNod(blockInfoMobil, 0x118);
-            auto nbPlacementPatches = Dev::GetOffsetUint32(blockInfoMobil, 0x120);
-            UI::Text("nbPlacementPatches: " + nbPlacementPatches);
+            auto PlacementPatchesBuf = Dev::GetOffsetNod(blockInfoMobil, O_BLOCKINFOMOBIL_PlacementPatches);
+            auto nbPlacementPatches = Dev::GetOffsetUint32(blockInfoMobil, O_BLOCKINFOMOBIL_PlacementPatches + 0x8);
+            auto buf = RawBuffer(blockInfoMobil, O_BLOCKINFOMOBIL_PlacementPatches, SZ_PLACEMENTPATCH, true);
+            if (StartTreeNode("nbPlacementPatches: " + nbPlacementPatches, true)) {
+                for (uint i = 0; i < nbPlacementPatches; i++) {
+                    if (buf[i].Ptr == 0) {
+                        UI::Text("PlacementPatch["+i+"]: <null>");
+                        continue;
+                    }
+                    auto pp = cast<CPlugPlacementPatch>(Dev_GetNodFromPointer(buf[i].Ptr));
+                    UI::Text("PlacementPatch["+i+"]: " + pp.Params.GroupId.GetName() + " / LeftVerts: " + pp.LeftVerts.Length + " / CenterVerts: " + pp.CenterVerts.Length + " / RightVerts: " + pp.RightVerts.Length);
+#if SIG_DEVELOPER
+                    UI::SameLine();
+                    if (UX::SmallButton(Icons::Cube + "##"+i)) {
+                        ExploreNod(pp);
+                    }
+#endif
+                }
+                EndTreeNode();
+            }
             // prefab pointer at 0x130
             EndTreeNode();
         }
@@ -1502,6 +1519,22 @@ class ItemModelTreeElement {
             MkAndDrawChildNode(pimp.CacheSmall, 0x0, "CacheSmall");
             MkAndDrawChildNode(pimp.CachePackDesc, GetOffset("NHmsLightMap_SPImp", "CachePackDesc"), "CachePackDesc");
             MkAndDrawChildNode(pimp.CachePackDescBumpAvg, GetOffset("NHmsLightMap_SPImp", "CachePackDescBumpAvg"), "CachePackDescBumpAvg");
+            // MkAndDrawChildNode(Editor::GetCurrentLightMapParam(lm), 0x150, "LightMapParam");
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CHmsLightMapParam@ lmParam) {
+        if (StartTreeNode(name + " ::\\$f8f CHmsLightMapParam", UI::TreeNodeFlags::DefaultOpen)) {
+            if (!isEditable) {
+                UI::Text("\\$f80Todo!");
+                LabeledValue("LightAmbSampleCount", Dev::GetOffsetUint32(lmParam, 0xA8));
+                LabeledValue("LightDirSampleCount", Dev::GetOffsetUint32(lmParam, 0xAC));
+                LabeledValue("LightPntSampleCount", Dev::GetOffsetUint32(lmParam, 0xB0));
+                LabeledValue("DepthPeelGroupMaxPerAxe", Dev::GetOffsetUint32(lmParam, 0xB4));
+            } else {
+                UI::Text("\\$f80Todo!");
+            }
             EndTreeNode();
         }
     }

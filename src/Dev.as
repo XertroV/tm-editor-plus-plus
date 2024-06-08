@@ -405,6 +405,9 @@ const uint16 O_LIGHTMAPSTRUCT_IMAGE_3 = 0x20;
 // this points to IMAGE_1
 const uint16 O_LIGHTMAPSTRUCT_IMAGES = 0x30;
 
+const uint16 O_LIGHTMAPCACHE_PIMP = GetOffset("CHmsLightMap", "m_PImp");
+
+
 // 0x488 -- possible flag for lightmap invalidation
 
 // 0x298
@@ -519,11 +522,23 @@ const uint16 O_BLOCKINFO_MATERIALMOD = GetOffset("CGameCtnBlockInfo", "MaterialM
 const uint16 O_BLOCKINFO_MATERIALMOD2 = GetOffset("CGameCtnBlockInfo", "MaterialModifier2");
 
 
+
 // CGameCtnBlockInfoVariant, 0x250
 const uint16 SZ_BLOCKINFOVAR = 0x250;
 const uint16 O_BLOCKINFOVAR_SPAWNMODEL = GetOffset("CGameCtnBlockInfoVariant", "SpawnModel");
 const uint16 O_BLOCKINFOVAR_NOPILLARBELOWIX = GetOffset("CGameCtnBlockInfoVariant", "NoPillarBelowIndex");
 const uint16 O_BLOCKINFOVAR_PILLARSArray = O_BLOCKINFOVAR_NOPILLARBELOWIX + (0x160-0x148);
+
+
+// CGameCtnBlockInfoMobil, 0x190
+const uint16 SZ_BLOCKINFOMOBIL = 0x190;
+const uint16 O_BLOCKINFOMOBIL_SolidCache = GetOffset("CGameCtnBlockInfoMobil", "SolidCache");
+const uint16 O_BLOCKINFOMOBIL_PlacementPatches = O_BLOCKINFOMOBIL_SolidCache - 0x20;
+
+
+// CPlugPlacementPatch, 0xE0
+const uint16 SZ_PLACEMENTPATCH = 0xE0;
+
 
 // 0x168 bytes
 const uint SZ_GAMESKIN = 0x168;

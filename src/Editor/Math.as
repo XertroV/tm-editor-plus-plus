@@ -172,7 +172,8 @@ mat4 QuatToMat4(const quat &in q) {
 }
 
 quat EulerToQuat(vec3 e) {
-    throw('broken');
+    // throw('broken');
+    warn('Euler to quat broken');
     // Convert Euler angles from degrees to radians
     float cy = Math::Cos(e.y * 0.5);
     float sy = Math::Sin(e.y * 0.5);
@@ -182,11 +183,12 @@ quat EulerToQuat(vec3 e) {
     float sx = Math::Sin(e.x * 0.5);
 
     // Quaternion conversion respecting the XZY rotation order
+    // note: 2024-06-07 swapped x<->y, z<->w
     return quat(
-        cx * sy * sz - sx * cy * cz,
         cx * cy * cz + sx * sy * sz,
-        cx * cy * sz - sx * sy * cz,
-        sx * cy * sz + cx * sy * cz
+        cx * sy * sz - sx * cy * cz,
+        sx * cy * sz + cx * sy * cz,
+        cx * cy * sz - sx * sy * cz
     );
 }
 
@@ -232,8 +234,8 @@ quat Mat4ToQuat(mat4 &in m) {
 // from threejs Euler.js -- order XZY then *-1 at the end
 vec3 PitchYawRollFromRotationMatrix(mat4 m) {
     float m11 = m.xx, m12 = m.xy, m13 = m.xz,
-          m21 = m.yx, m22 = m.yy, m23 = m.yz,
-          m31 = m.zx, m32 = m.zy, m33 = m.zz
+          /*m21 = m.yx,*/ m22 = m.yy, m23 = m.yz,
+          /*m31 = m.zx,*/ m32 = m.zy, m33 = m.zz
     ;
     vec3 e = vec3();
     e.z = Math::Asin( - Math::Clamp( m12, -1.0, 1.0 ) );

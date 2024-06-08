@@ -56,5 +56,27 @@ edges?
 0xe0 -> buf 1 unk
 0xf0 -> buf 1 struct (0x20 max)
     0x0 -> ptr to layer in mm
-0x100 -> struct with lots of pointers?
-    0x10 -> buffer of structs of length 0x38
+
+
+CPlugCrystal.Layers @ 0xF0
+ptr -> GeometryLayer
+  0x30: bool collidable? geom version?
+  0x38: ptr -> Crystal
+  0x40: buffer: GroupIDs<>
+  0x50: 1, 1 (collidable? geom version? visible?)
+  missing: (crystalenabeld / isenabled / layerid / layername / ver)
+
+GeometryLayer.Crystal
+    ? AnchorInfos
+    ? Edges
+    ? Faces
+    ? Groups
+    ? HasFacedEdges
+    ? IsEmbedddableCrystal
+    ? Positions vec3[]
+    ? u01, 02, 03, 04, 05, 06(str), 07, version
+    ? VisualLevels[]
+
+    0x8: Groups: Part[]
+    ?0x28: Positions: vec3[]
+    ?0x58: Faces: Face[]

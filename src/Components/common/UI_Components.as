@@ -362,6 +362,31 @@ string toHex(uint v) {
     return Text::Format("0x%08x", v);
 }
 
+
+//
+int InputIntFlags(const string &in label, int value, int[]@ allowedValues) {
+    int newValue = UI::InputInt(label, value);
+    if (newValue == value) return value;
+    auto vIx = allowedValues.Find(value);
+    if (newValue < value && vIx >= 0) {
+        if (vIx > 0) return allowedValues[vIx - 1];
+        return allowedValues[0];
+    } else if (newValue > value && vIx >= 0) {
+        if (vIx < allowedValues.Length - 1) return allowedValues[vIx + 1];
+        return allowedValues[allowedValues.Length - 1];
+    }
+    bool retBefore = newValue < value;
+    for (int i = 0; i < allowedValues.Length; i++) {
+        if (retBefore && allowedValues[i] > newValue) {
+            return allowedValues[Math::Max(i - 1, 0)];
+        } else if (!retBefore && allowedValues[i] >= newValue) {
+            return allowedValues[i];
+        }
+    }
+    return value;
+}
+
+
 /*
     CGameEditorPluginMap::EditMode DrawComboEditMode(const string &in label, CGameEditorPluginMap::EditMode val) {
         int v = DrawArbitraryEnum(label, int(val), 7, function(int v) {
@@ -369,4 +394,5 @@ string toHex(uint v) {
         });
         return CGameEditorPluginMap::EditMode(v);
     }
+
 */

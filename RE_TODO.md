@@ -1,5 +1,10 @@
 - shaded_geoms in S2M
 
+free block: show which blocks can connect to which other blocks and in which rotation
+which end works of the free block
+
+
+
 - [x] place macroblock air mode
 - filter inventory
 - [ ] favorites for inventory

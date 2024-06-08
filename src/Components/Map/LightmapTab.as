@@ -625,6 +625,7 @@ namespace LightMapCustomRes {
                 params.AmbSamples = UI::InputInt("AmbSamples", params.AmbSamples);
                 params.DirSamples = UI::InputInt("DirSamples", params.DirSamples);
                 params.PntSamples = UI::InputInt("PntSamples", params.PntSamples);
+                params.DepthPeelGroupMaxPerAxe = InputIntFlags("DepthPeelGroupMaxPerAxe", params.DepthPeelGroupMaxPerAxe, {4,8,16});
             } else {
                 UI::Text("\\$999Params null!");
             }

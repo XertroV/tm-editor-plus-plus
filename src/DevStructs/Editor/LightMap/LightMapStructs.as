@@ -40,6 +40,8 @@ class DHmsLightMapParam : RawBufferElem {
 	void set_DirSamples(uint value) { this.SetUint32(0xAC, value); }
 	uint get_PntSamples() { return (this.GetUint32(0xB0)); }
 	void set_PntSamples(uint value) { this.SetUint32(0xB0, value); }
+	uint get_DepthPeelGroupMaxPerAxe() { return (this.GetUint32(0xB4)); }
+	void set_DepthPeelGroupMaxPerAxe(uint value) { this.SetUint32(0xB4, value); }
 	// values that are 4 by default
 	uint get_unk1_default4() { return (this.GetUint32(0x30)); }
 	void set_unk1_default4(uint value) { this.SetUint32(0x30, value); }

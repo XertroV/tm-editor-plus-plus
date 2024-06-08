@@ -30,6 +30,16 @@ namespace Editor {
         return lm.m_PImp;
     }
 
+    CHmsLightMapParam@ GetCurrentLightMapParam(CGameCtnEditorFree@ editor) {
+        return GetCurrentLightMapParam(GetCurrentLightMap(editor));
+    }
+    CHmsLightMapParam@ GetCurrentLightMapParam(CHmsLightMap@ lm) {
+        if (lm is null) return null;
+        auto pimpPtr = Dev::GetOffsetUint64(lm, O_LIGHTMAPCACHE_PIMP);
+        auto lmParamPtr = pimpPtr + 0x100; // (0x80 /* Cache Size */ + 0x70)
+        return cast<CHmsLightMapParam>(Dev_GetNodFromPointer(lmParamPtr));
+    }
+
     // cacheSmall goes null on place block/item
 
 

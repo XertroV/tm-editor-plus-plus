@@ -11,6 +11,7 @@ NativeClass = CHmsLightMapParam
 AmbSamples = uint, 0xA8, GS
 DirSamples = uint, 0xAC, GS
 PntSamples = uint, 0xB0, GS
+DepthPeelGroupMaxPerAxe = uint, 0xB4, GS
 
 # values that are 4 by default
 unk1_default4 = uint, 0x30, GS

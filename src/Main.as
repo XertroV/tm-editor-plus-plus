@@ -319,7 +319,7 @@ UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
     auto app = GetApp();
     auto editor = cast<CGameCtnEditorFree>(app.Editor);
     if (editor is null) return UI::InputBlocking::DoNothing;
-    if (app.CurrentPlayground !is null) return UI::InputBlocking::DoNothing;
+    if (app.CurrentPlayground !is null) return OnKeyPressInPlayground(app, editor, down, key);
     if (DGameCtnEditorFree(editor).IsCalculatingShadows) return UI::InputBlocking::DoNothing;
     if (app.BasicDialogs.Dialogs.CurrentFrame !is null) return UI::InputBlocking::DoNothing;
     bool block = false;
@@ -335,4 +335,18 @@ UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
 bool ShouldBlockEscapePress(bool down, VirtualKey key, CGameCtnApp@ app, CGameCtnEditorFree@ editor) {
     return S_BlockEscape && down && key == VirtualKey::Escape && app.CurrentPlayground is null
         && !Editor::IsInTestPlacementMode(editor);
+}
+
+[Setting hidden]
+VirtualKey S_SetRespawnPosTestModeHotkey = VirtualKey::Home;
+
+UI::InputBlocking OnKeyPressInPlayground(CGameCtnApp@ app, CGameCtnEditorFree@ editor, bool down, VirtualKey key) {
+    // only test mode
+    if (!Editor::IsInTestMode(editor)) return UI::InputBlocking::DoNothing;
+    bool block = false;
+    if (down && key == S_SetRespawnPosTestModeHotkey) {
+        Editor::SetEditorTestModeRespawnPositionFromCurrentVis();
+    }
+    // block = block || CheckPlaygroundHotkeys(app, editor, down, key);
+    return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
 }
