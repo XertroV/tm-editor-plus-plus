@@ -135,7 +135,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             Editor::OpenItemEditor(editor, block.BlockModel);
         }
         if (UX::SmallButton("Edit This Block (Method 2)")) {
-            Editor::OpenItemEditorMethod2(block.BlockModel);
+            startnew(Editor::OpenItemEditorMethod2Ref, block.BlockModel);
         }
 
         if (block.BlockInfo !is null) {

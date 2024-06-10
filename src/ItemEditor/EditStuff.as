@@ -1,4 +1,7 @@
 namespace Editor {
+    void OpenItemEditorMethod2Ref(ref@ targetBm) {
+        OpenItemEditorMethod2(cast<CGameCtnBlockInfo>(targetBm));
+    }
 
     void OpenItemEditorMethod2(CGameCtnBlockInfo@ targetBm) {
         if (targetBm is null) {
