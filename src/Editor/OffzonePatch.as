@@ -7,6 +7,15 @@ namespace Editor {
         uint64 offzonePatternPtr = 0;
         bool patchActive = false;
 
+        bool get_IsApplied() {
+            return patchActive;
+        }
+
+        void set_IsApplied(bool value) {
+            if (value) Apply();
+            else Unapply();
+        }
+
         void Apply() {
             if (patchActive) return;
             offzonePatternPtr = Dev::FindPattern(OffzoneBtnPattern);

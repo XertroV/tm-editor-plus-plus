@@ -199,6 +199,10 @@ namespace MenuBar {
                     PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied = !PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied;
                 }
 
+                if (UI::MenuItem("Patch: Enable Offzone (backup method)", "", Editor::OffzonePatch::IsApplied)) {
+                    Editor::OffzonePatch::IsApplied = !Editor::OffzonePatch::IsApplied;
+                }
+
 
                 // UI::Separator();
 
