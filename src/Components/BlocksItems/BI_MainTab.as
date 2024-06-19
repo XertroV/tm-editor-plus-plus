@@ -1,4 +1,5 @@
 ViewDuplicateFreeBlocksTab@ g_DuplicateFreeBlocks_SubTab;
+ViewDuplicateItemsTab@ g_DuplicateItems_SubTab;
 
 class BI_MainTab : Tab {
     BI_MainTab(TabGroup@ p) {
@@ -12,6 +13,7 @@ class BI_MainTab : Tab {
         ViewClassicBlocksTab(Children);
         ViewGhostBlocksTab(Children);
         @g_DuplicateFreeBlocks_SubTab = ViewDuplicateFreeBlocksTab(Children);
+        @g_DuplicateItems_SubTab = ViewDuplicateItemsTab(Children);
         WaypointsBITab(Children);
         MacroblocksBITab(Children);
 #if DEV
@@ -105,7 +107,7 @@ class ViewAllBlocksTab : BlockItemListTab {
         UI::TableSetupColumn("Dir", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("LM", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-        UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, numberColWidth);
         UI::TableSetupColumn("Tools", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
@@ -145,6 +147,10 @@ class ViewAllBlocksTab : BlockItemListTab {
 
         UI::TableNextColumn();
         UI::Text(GetCpMark(block.BlockInfo.WaypointType));
+        if (block.WaypointSpecialProperty !is null) {
+            UI::SameLine();
+            UI::Text("("+block.WaypointSpecialProperty.Order+")");
+        }
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
@@ -224,7 +230,7 @@ class ViewAllItemsTab : BlockItemListTab {
         UI::TableSetupColumn("Rot", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
         UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("LM", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-        UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, stdNumberColWidth);
         UI::TableSetupColumn("Tools", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
@@ -261,12 +267,48 @@ class ViewAllItemsTab : BlockItemListTab {
 
         UI::TableNextColumn();
         UI::Text(GetCpMark(item.ItemModel.WaypointType));
+        if (item.WaypointSpecialProperty !is null) {
+            UI::SameLine();
+            UI::Text("("+item.WaypointSpecialProperty.Order+")");
+        }
 
         UI::TableNextColumn();
+        // if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
+        //     Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(item.AbsolutePositionInMap), item.AbsolutePositionInMap, 120.);
+        // }
+        // rowHovered = UI::IsItemHovered() || rowHovered;
+        // UI::SameLine();
+        // if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
+        //     Notify("Setting item ("+blockId+") as picked item.");
+        //     if (!g_PickedItemTab.windowOpen) {
+        //         g_PickedItemTab.SetSelectedTab();
+        //     }
+        //     @lastPickedItem = ReferencedNod(item);
+        //     UpdatePickedItemCachedValues();
+        // }
+        // rowHovered = UI::IsItemHovered() || rowHovered;
+        // UI::SameLine();
+        // if (UX::SmallButton(Icons::TrashO + "##" + blockId)) {
+        //     Editor::DeleteItems({item}, true);
+        // }
+        // rowHovered = UI::IsItemHovered() || rowHovered;
+        rowHovered = DrawCtrlButtons(item) || rowHovered;
+
+        if (rowHovered) {
+            nvgDrawCoordHelpers(Editor::GetItemMatrix(item), 10.);
+            nvgDrawPointCircle(item.AbsolutePositionInMap, 5., cOrange);
+        }
+    }
+
+    bool DrawCtrlButtons(CGameCtnAnchoredObject@ item) {
+        if (item is null) return false;
+
+        auto blockId = Editor::GetItemUniqueBlockID(item);
+
         if (UX::SmallButton(Icons::Eye + "##" + blockId)) {
             Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(item.AbsolutePositionInMap), item.AbsolutePositionInMap, 120.);
         }
-        rowHovered = UI::IsItemHovered() || rowHovered;
+        bool rowHovered = UI::IsItemHovered();
         UI::SameLine();
         if (UX::SmallButton(Icons::MapMarker + "##" + blockId)) {
             Notify("Setting item ("+blockId+") as picked item.");
@@ -282,11 +324,7 @@ class ViewAllItemsTab : BlockItemListTab {
             Editor::DeleteItems({item}, true);
         }
         rowHovered = UI::IsItemHovered() || rowHovered;
-
-        if (rowHovered) {
-            nvgDrawCoordHelpers(Editor::GetItemMatrix(item), 10.);
-            nvgDrawPointCircle(item.AbsolutePositionInMap, 5., cOrange);
-        }
+        return rowHovered;
     }
 }
 
@@ -412,7 +450,7 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
         startnew(Editor::RunDeleteFreeBlockDetection).WithRunContext(Meta::RunContext::MainLoop);
         yield();
         Notify("[Autodel Dups] 3. Deleted " + mbSpec.Blocks.Length + " blocks. Refreshing cache.");
-        Editor::GetMapCache().RefreshCacheSoon();
+        mapCache.RefreshCacheSoon();
     }
 
     CGameCtnBlock@[]@ GetDuplicateBlocksLowestPriority(CGameEditorPluginMapMapType@ pmt, Editor::BlockInMap@[]@ blocks) {
@@ -445,6 +483,128 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
     }
 }
 
+
+class ViewDuplicateItemsTab : ViewAllItemsTab {
+    ViewDuplicateItemsTab(TabGroup@ p) {
+        super(p, "Dup. Items", Icons::Tree, BIListTabType::Items);
+        nbCols = 8;
+    }
+
+    uint GetNbObjects(CGameCtnChallenge@ map) override {
+        return (Editor::GetMapCache()).DuplicateItems.Length;
+    }
+
+    CGameCtnAnchoredObject@ GetItem(CGameCtnChallenge@ map, uint i) override {
+        auto mapCache = Editor::GetMapCache();
+        auto cacheItem = mapCache.DuplicateItems[i];
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return cacheItem.FindMe(editor.PluginMapType);
+    }
+
+    void DrawInnerEarly() override {
+        auto mapCache = Editor::GetMapCache();
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        BI_DrawCacheRefreshMsg();
+
+        UI::BeginDisabled(mapCache.NbDuplicateItems == 0);
+        if (UI::TreeNode("Duplicate Items")) {
+            UI::Text("Nb Keys: " + mapCache.DuplicateItemKeys.Length);
+            for (uint i = 0; i < mapCache.DuplicateItemKeys.Length; i++) {
+                auto k = mapCache.DuplicateItemKeys[i];
+                auto items = mapCache.GetItemsByHash(k);
+                if (UI::TreeNode(k + Text::Format(" (%d) ", items.Length) + items[0].IdName)) {
+                    for (uint j = 0; j < items.Length; j++) {
+                        UI::Text(tostring(j) + ". " + items[j].ToString());
+                        UI::SameLine();
+                        DrawCtrlButtons(items[j].FindMe(editor.PluginMapType));
+                    }
+                    UI::TreePop();
+                }
+            }
+            UI::TreePop();
+        }
+
+#if DEV
+        if (UX::SmallButton("Fix Duplicate Items by Spacing over 2m in X direction")) {
+            startnew(CoroutineFunc(FixDupeItemsWithPositionX));
+        }
+#endif
+        UI::TextDisabled("Fix methods coming soon. Post/request in E++ thread to expedite.");
+
+        UI::EndDisabled();
+    }
+
+    void FixDupeItemsWithPositionX() {
+        auto mapCache = Editor::GetMapCache();
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto pmt = editor.PluginMapType;
+
+        Editor::ItemInMap@ iim;
+        CGameCtnAnchoredObject@ item;
+        uint nbItems = 0;
+        float t = 0.0;
+        float move_mag = 2.0;
+        float move_delta = 0.;
+        for (uint i = 0; i < mapCache.DuplicateItemKeys.Length; i++) {
+            auto k = mapCache.DuplicateItemKeys[i];
+            auto items = mapCache.GetItemsByHash(k);
+            nbItems = items.Length;
+            if (nbItems <= 1) continue;
+            for (uint j = 0; j < nbItems; j++) {
+                @iim = items[j];
+                @item = iim.FindMe(pmt);
+                if (item is null) {
+                    warn("got null finding duplicate item: " + iim.ToString());
+                    continue;
+                }
+                move_delta = move_mag * float(j + 1) / float(nbItems + 1);
+                dev_trace("Setting items["+j+"] pos.x; move_delta=" + move_delta);
+                item.AbsolutePositionInMap.x += move_delta; // Math::Rand(-1.0, 1.0);
+            }
+        }
+        Editor::MarkRefreshUnsafe();
+        NotifyWarning("Items altered en masse. To avoid issues, refresh is not recommended and instead you should save + reload map. (Reload from Adv menu if you want)");
+    }
+
+    // void DrawAutoremoveDuplicatesMenu() {
+    //     auto mapCache = Editor::GetMapCache();
+    //     auto nbDupes = mapCache.DuplicateItems.Length;
+    //     UI::BeginDisabled(nbDupes == 0);
+    //     if (UI::BeginMenu("Autoremove Duplicates ("+nbDupes+")##autoremove-dup-items-menu")) {
+    //         if (UX::SmallButton("Run Autodeletion")) {
+    //             startnew(CoroutineFunc(this.RunAutodeletion));
+    //         }
+    //         UI::EndMenu();
+    //     }
+    //     UI::EndDisabled();
+    // }
+
+    // void RunAutodeletion() {
+    //     auto mapCache = Editor::GetMapCache();
+    //     if (mapCache.IsStale) {
+    //         Notify("[Autodel Dups] 0. Map cache stale, refreshing.");
+    //         mapCache.RefreshCache();
+    //         // Notify("[Autodel Dups] 0. Map cache refreshed.");
+    //     }
+    //     auto nbDupes = mapCache.DuplicateItems.Length;
+    //     if (nbDupes == 0) {
+    //         Notify("Autodel Dups] 1. No duplicates found.");
+    //         return;
+    //     }
+    //     Notify("[Autodel Dups] 1. Starting autodeletion of " + nbDupes + " duplicates.");
+
+    //     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    //     auto pmt = editor.PluginMapType;
+
+    //     Editor::ItemSpec@[]@ mbItems = {};
+    //     auto mbSpec = Editor::MakeMacroblockSpec({}, mbItems);
+
+    //     // loop through lists in mapCache.DuplicateBlockKeys
+    //     // for (
+    // }
+}
+
+
 void BI_DrawCacheRefreshMsg() {
     auto cache = Editor::GetMapCache();
     UI::BeginDisabled(!cache.IsStale);
@@ -454,6 +614,9 @@ void BI_DrawCacheRefreshMsg() {
     UI::SameLine();
     UI::Text("or: Caches > Refresh Map Block/Item Cache");
     UI::EndDisabled();
+    if (cache.isRefreshing) {
+        cache.LoadingStatus();
+    }
 }
 
 
@@ -464,13 +627,65 @@ class WaypointsBITab : Tab {
         WaypointItemsTab(Children);
     }
 
+
+
     void DrawInner() override {
         BI_DrawCacheRefreshMsg();
         Children.DrawTabs();
     }
 }
 
-class WaypointBlocksTab : ViewAllBlocksTab {
+
+mixin class WaypointCommonTab {
+    int[] wpOrders;
+    int[] wpCount;
+
+    void DrawWaypointOrders(CGameCtnChallenge@ map) {
+        if (UI::TreeNode("Waypoint Orders")) {
+            if (UX::SmallButton("Refresh WP Orders")) {
+                RefreshWaypointOrders();
+            }
+            if (UI::BeginTable("wp-orders", 2)) {
+                UI::TableSetupColumn("Order", UI::TableColumnFlags::WidthFixed, 50.0);
+                UI::TableSetupColumn("Count", UI::TableColumnFlags::WidthStretch);
+                UI::TableHeadersRow();
+                for (uint i = 0; i < wpOrders.Length; i++) {
+                    UI::TableNextRow();
+                    UI::TableNextColumn();
+                    UI::Text(tostring(wpOrders[i]));
+                    UI::TableNextColumn();
+                    UI::Text(tostring(wpCount[i]));
+                }
+                UI::EndTable();
+            }
+            UI::TreePop();
+        }
+    }
+
+    void RefreshWaypointOrders() {
+        auto map = GetApp().RootMap;
+        wpOrders.Resize(0);
+        wpCount.Resize(0);
+        auto nbObjs = GetNbObjects(map);
+        int order;
+        int oix;
+        for (uint i = 0; i < nbObjs; i++) {
+            auto obj = GetObj(map, i);
+            if (obj is null) continue;
+            order = GetObjOrder(obj);
+            oix = wpOrders.Find(order);
+            if (oix == -1) {
+                wpOrders.InsertLast(order);
+                wpCount.InsertLast(1);
+            } else {
+                wpCount[oix]++;
+            }
+        }
+    }
+}
+
+
+class WaypointBlocksTab : ViewAllBlocksTab, WaypointCommonTab {
     WaypointBlocksTab(TabGroup@ p) {
         super(p, "Wp Blocks", Icons::Cubes + Icons::FlagCheckered, BIListTabType::Blocks);
         nbCols = 9;
@@ -486,9 +701,23 @@ class WaypointBlocksTab : ViewAllBlocksTab {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return cacheBlock.FindMe(editor.PluginMapType);
     }
+
+    CGameCtnBlock@ GetObj(CGameCtnChallenge@ map, uint i) {
+        return GetBlock(map, i);
+    }
+
+    int GetObjOrder(CGameCtnBlock@ obj) {
+        if (obj.WaypointSpecialProperty is null) return -1;
+        return obj.WaypointSpecialProperty.Order;
+    }
+
+    void DrawInnerEarly() override {
+        ViewAllBlocksTab::DrawInnerEarly();
+        DrawWaypointOrders(GetApp().RootMap);
+    }
 }
 
-class WaypointItemsTab : ViewAllItemsTab {
+class WaypointItemsTab : ViewAllItemsTab, WaypointCommonTab {
     WaypointItemsTab(TabGroup@ p) {
         super(p, "Wp Items", Icons::Tree + Icons::FlagCheckered, BIListTabType::Items);
     }
@@ -502,6 +731,20 @@ class WaypointItemsTab : ViewAllItemsTab {
         auto cacheItem = mapCache.WaypointItems[i];
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return cacheItem.FindMe(editor.PluginMapType);
+    }
+
+    CGameCtnAnchoredObject@ GetObj(CGameCtnChallenge@ map, uint i) {
+        return GetItem(map, i);
+    }
+
+    int GetObjOrder(CGameCtnAnchoredObject@ obj) {
+        if (obj.WaypointSpecialProperty is null) return -1;
+        return obj.WaypointSpecialProperty.Order;
+    }
+
+    void DrawInnerEarly() override {
+        ViewAllItemsTab::DrawInnerEarly();
+        DrawWaypointOrders(GetApp().RootMap);
     }
 }
 

@@ -59,6 +59,7 @@ namespace Editor {
 
     class ItemInMap : ObjInMap {
         ItemSpec@ spec;
+        string hashStr;
 
         ItemInMap(uint i, CGameCtnAnchoredObject@ item) {
             super(i);
@@ -77,6 +78,12 @@ namespace Editor {
             WaypointTy = WaypointType(item.ItemModel.WaypointType);
             mbInstId = Editor::GetItemMbInstId(item);
             mbInstIdStr = tostring(mbInstId);
+            hashStr = GetItemHash(pos, rot, IdName, item.IVariant);
+        }
+
+        // if any of these differ, it's a different item
+        string GetItemHash(vec3 &in pos, vec3 &in rot, const string &in id, uint varIx) {
+            return Crypto::MD5(pos.ToString() + rot.ToString() + id + tostring(varIx));
         }
 
         bool IsStale(CGameEditorPluginMap@ pmt) override {
@@ -119,6 +126,10 @@ namespace Editor {
                 return pmt.Map.AnchoredObjects[ix];
             }
             return null;
+        }
+
+        string ToString() {
+            return IdName + " " + pos.ToString() + " " + rot.ToString();
         }
     }
 
@@ -307,6 +318,7 @@ namespace Editor {
             _ItemIdNameMap.DeleteAll();
             _BlockIdNameMap.DeleteAll();
             _BlocksByHash.DeleteAll();
+            _ItemsByHash.DeleteAll();
             Macroblocks.DeleteAll();
             _Items.RemoveRange(0, _Items.Length);
             _Blocks.RemoveRange(0, _Blocks.Length);
@@ -319,8 +331,11 @@ namespace Editor {
             ItemTypesLower.RemoveRange(0, ItemTypesLower.Length);
             BlockTypesLower.RemoveRange(0, BlockTypesLower.Length);
             DuplicateBlockKeys.RemoveRange(0, DuplicateBlockKeys.Length);
+            DuplicateItemKeys.RemoveRange(0, DuplicateItemKeys.Length);
             DuplicateBlocks.RemoveRange(0, DuplicateBlocks.Length);
+            DuplicateItems.RemoveRange(0, DuplicateItems.Length);
             NbDuplicateFreeBlocks = 0;
+            NbDuplicateItems = 0;
             yield();
             if (myNonce != lastRefreshNonce) return;
             yield();
@@ -393,16 +408,30 @@ namespace Editor {
             IsStale = false;
         }
 
+        bool HasDuplicateBlocks() {
+            return NbDuplicateFreeBlocks > 0;
+        }
+        bool HasDuplicateItems() {
+            return NbDuplicateItems > 0;
+        }
+        bool HasDuplicateBlocksOrItems() {
+            return NbDuplicateFreeBlocks > 0 || NbDuplicateItems > 0;
+        }
+
         dictionary _ItemIdNameMap;
         dictionary _BlockIdNameMap;
         dictionary _BlocksByHash;
+        dictionary _ItemsByHash;
         string[] BlockTypes;
         string[] ItemTypes;
         string[] BlockTypesLower;
         string[] ItemTypesLower;
         string[] DuplicateBlockKeys;
+        string[] DuplicateItemKeys;
         BlockInMap@[] DuplicateBlocks;
+        ItemInMap@[] DuplicateItems;
         uint NbDuplicateFreeBlocks = 0;
+        uint NbDuplicateItems = 0;
 
         void AddBlock(BlockInMap@ b) {
             loadProgress++;
@@ -490,6 +519,13 @@ namespace Editor {
             return {};
         }
 
+        ItemInMap@[]@ GetItemsByHash(const string &in itemHash) {
+            if (_ItemsByHash.Exists(itemHash)) {
+                return cast<ItemInMap@[]>(_ItemsByHash[itemHash]);
+            }
+            return {};
+        }
+
         void AddItem(ItemInMap@ b) {
             loadProgress++;
             _Items.InsertLast(b);
@@ -503,6 +539,19 @@ namespace Editor {
                 ItemTypesLower.InsertLast(b.IdName.ToLower());
             }
             GetItemsByType(b.IdName).InsertLast(b);
+
+            if (_ItemsByHash.Exists(b.hashStr)) {
+                auto dupes = cast<ItemInMap@[]>(_ItemsByHash[b.hashStr]);
+                dupes.InsertLast(b);
+                DuplicateItems.InsertLast(b);
+                NbDuplicateItems++;
+                if (dupes.Length == 2) {
+                    DuplicateItemKeys.InsertLast(b.hashStr);
+                }
+            } else {
+                array<ItemInMap@>@ arr = {b};
+                _ItemsByHash[b.hashStr] = arr;
+            }
         }
 
         void RemoveItem(ItemInMap@ b) {
@@ -518,6 +567,7 @@ namespace Editor {
                 if (idIx != -1) ItemTypesLower.RemoveAt(idIx);
                 _ItemIdNameMap.Delete(b.IdName);
             }
+            // todo: remove from duplicates
         }
 
         void RemoveItemFromArray(ItemInMap@ b, array<ItemInMap@>@ arr) {

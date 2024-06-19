@@ -615,9 +615,9 @@ namespace LightMapCustomRes {
             startnew(SetLMResCoro);
         }
         UI::Separator();
-        auto cache = Editor::GetCurrentLightMapFromMap(GetApp().RootMap);
+        auto lm = Editor::GetCurrentLightMapFromMap(GetApp().RootMap);
         // NHmsLightMap_SPImp offset is 0x18 (very small nod)
-        auto spimpPtr = cache !is null ? Dev::GetOffsetUint64(cache, 0x18) : 0;
+        auto spimpPtr = lm !is null ? Dev::GetOffsetUint64(lm, 0x18) : 0;
         if (spimpPtr != 0) {
             auto spimp = D_NHmsLightMap_SPImp(spimpPtr);
             auto params = spimp.LightMapParams;
