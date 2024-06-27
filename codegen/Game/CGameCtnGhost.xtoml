@@ -1,0 +1,27 @@
+[DGameCtnGhost: 0x330]
+NativeClass = CGameCtnGhost
+Buffer: Checkpoints = DGameCtnGhost_CPs, O_CTN_GHOST_CHECKPOINTS_BUF, 0x8, false
+Buffer: Inputs = DGameCtnGhost_PlayerInputs, O_CTN_GHOST_PLAYER_INPUTS_BUF, 0x18, false
+
+# might be bigger, unsure
+[DGameCtnGhost_PlayerInput: 0x18]
+u01 = uint, 0x0, GS
+startOffset = int, 0x4, GS
+version = int, 0x8, GS
+ticks = int, 0xC, GS
+Struct: InputData = DGameCtnGhost_PlayerInputData, 0x10, G
+
+# could be bigger
+[DGameCtnGhost_PlayerInputData: 0x30]
+Buffer: Bytes = DGameCtnGhost_InputData_Bytes, 0x18, 0x1, false
+BytesPtr = uint64, 0x18, G
+BytesLen = uint, 0x20, G
+BytesLen2 = uint, 0x28, G
+BytesLen3 = uint, 0x2C, G
+
+[DGameCtnGhost_CP: 0x8]
+cpIndex = int, 0x0, G
+cpTime = int, 0x4, G
+
+[DGameCtnGhost_InputData_Byte: 0x1]
+v = uint8, 0x0, G
