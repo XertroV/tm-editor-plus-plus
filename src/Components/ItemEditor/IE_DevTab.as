@@ -14,6 +14,20 @@ class IE_DevTab : Tab {
 
         UI::Separator();
 
+        if (UI::Button("Add VFXNode")) {
+            auto model = ieditor.ItemModel;
+            trace('adding VFX file');
+            auto vfxFile = CPlugVFXFile();
+            vfxFile.MwAddRef();
+            Dev::SetOffset(model, GetOffset(model, "VFX"), vfxFile);
+            // @model.VFX = vfxFile;
+            trace('added');
+            // CPlugVFXNode_Graph();
+            // model.VFX
+        }
+
+        UI::Separator();
+
         if (UI::Button("Test - go to root of saveas dialog")) {
             startnew(ItemEditor::SaveAsGoToRoot);
         }

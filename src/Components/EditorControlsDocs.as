@@ -7,6 +7,9 @@ class EditorControlsDocsTab : Tab {
         UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(1, 0));
         DrawControls(EditorControls);
         UI::Separator();
+        UI::Text("Test Mode");
+        DrawControls(TestModeControls);
+        UI::Separator();
         UI::Text("Mesh Modeler");
         DrawControls(MeshModelerControls);
 
@@ -72,4 +75,10 @@ string[][]@ GenEditorControlsArray() {
 
 const string[][] MeshModelerControls = {
     {"Select faces with same material", "Ctrl + Q"}
+};
+
+const string[][] TestModeControls = {
+    {"Set ghost to current run", "T"},
+    {"Add current run to ghosts", "Y"},
+    {"Add all guns and ammo (SM legacy)", "H"}
 };

@@ -42,8 +42,8 @@ class MemPatcher {
             ptr = Dev::FindPattern(patterns[i]);
             if (ptr != 0) {
                 trace('Found: ' + patterns[i] + ' at ' + Text::FormatPointer(ptr));
-                for (uint i = 0; i < newBytes.Length; i++) {
-                    origBytes[i] = Dev::Read(ptr + offsets[i], (newBytes[i].Trim().Length + 1) / 3);
+                for (uint j = 0; j < newBytes.Length; j++) {
+                    origBytes[j] = Dev::Read(ptr + offsets[j], (newBytes[j].Trim().Length + 1) / 3);
                 }
                 break;
             }

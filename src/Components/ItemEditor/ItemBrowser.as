@@ -4,6 +4,13 @@ const uint16 IM_GameSkinOffset = 0xA0;
 // used for expanding/contracting entity lists
 uint g_NewNbEnts = 10;
 
+#if DEBUG_BROWSER
+const UI::TreeNodeFlags DEFAULT_OPEN = UI::TreeNodeFlags::None;
+#else
+const UI::TreeNodeFlags DEFAULT_OPEN = UI::TreeNodeFlags::DefaultOpen;
+#endif
+
+
 class ItemModel {
     CGameItemModel@ item;
     bool drawProperties;
@@ -25,7 +32,7 @@ class ItemModel {
 
     void DrawTree() {
         // UI::TreeNodeFlags::OpenOnArrow
-        if (UI::TreeNode(item.IdName, UI::TreeNodeFlags::DefaultOpen)) {
+        if (UI::TreeNode(item.IdName, DEFAULT_OPEN)) {
             UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(2, 0));
 #if SIG_DEVELOPER
             if (UX::SmallButton(Icons::Cube + " Explore ItemModel")) {
@@ -345,7 +352,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CGameItemModel@ itemModel) {
-        if (StartTreeNode(name + " ::\\$f8f CGameItemModel", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CGameItemModel", DEFAULT_OPEN)) {
             MkAndDrawChildNode(itemModel.EntityModelEdition, "EntityModelEdition");
             MkAndDrawChildNode(itemModel.EntityModel, "EntityModel");
             EndTreeNode();
@@ -353,7 +360,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CGameCommonItemEntityModelEdition@ commonEME) {
-        if (StartTreeNode(name + " ::\\$f8f CGameCommonItemEntityModelEdition", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CGameCommonItemEntityModelEdition", DEFAULT_OPEN)) {
             // if (isEditable) {
             // } else {
             // }
@@ -369,20 +376,20 @@ class ItemModelTreeElement {
     }
 
     void Draw(CPlugParticleGpuModel@ particleGpuModel) {
-        if (StartTreeNode(name + " :: \\$f8f CPlugParticleGpuModel", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8f CPlugParticleGpuModel", DEFAULT_OPEN)) {
             UI::Text("todo: particleGpuModel");
             EndTreeNode();
         }
     }
     void Draw(CPlugParticleEmitterModel@ particleEmitterModel) {
-        if (StartTreeNode(name + " :: \\$f8f CPlugParticleEmitterModel", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8f CPlugParticleEmitterModel", DEFAULT_OPEN)) {
             // particleEmitterModel.ParticleEmitterSubModels
             UI::Text("todo: particleEmitterModel");
             EndTreeNode();
         }
     }
     void Draw(CPlugFxSystemNode_Parallel@ fxNodeParallel) {
-        if (StartTreeNode(name + " :: \\$f8f CPlugFxSystemNode_Parallel", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8f CPlugFxSystemNode_Parallel", DEFAULT_OPEN)) {
             if (StartTreeNode("Children", true)) {
                 for (uint i = 0; i < fxNodeParallel.Children.Length; i++) {
                     MkAndDrawChildNode(fxNodeParallel.Children[i], 0x8 * i, "Child " + i);
@@ -396,7 +403,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CPlugFxSystemNode_ParticleEmitter@ fxNodeParticle) {
-        if (StartTreeNode(name + " :: \\$f8f CPlugFxSystemNode_ParticleEmitter", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8f CPlugFxSystemNode_ParticleEmitter", DEFAULT_OPEN)) {
             MkAndDrawChildNode(fxNodeParticle.Model, GetOffset(fxNodeParticle, "Model"), "Model");
             // UI::TextDisabled("CPlugFxSystemNode");
             DrawFxNodeInner(cast<CPlugFxSystemNode>(fxNodeParticle));
@@ -412,7 +419,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CGameCtnBlockInfo@ blockInfo) {
-        if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfo", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfo", DEFAULT_OPEN)) {
             MkAndDrawChildNode(blockInfo.MaterialModifier, O_BLOCKINFO_MATERIALMOD, "MaterialModifier");
             auto mmOffset = GetOffset(blockInfo, "MatModifierPlacementTag");
             auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
@@ -526,7 +533,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CSystemFidFile@ fid) {
-        if (StartTreeNode(name + " ::\\$f8f CSystemFidFile \\$8f8" + fid.FileName, UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CSystemFidFile \\$8f8" + fid.FileName, DEFAULT_OPEN)) {
             LabeledValue("Size (KB)", fid.ByteSizeEd);
 #if SIG_DEVELOPER
             LabeledValue("Container", fid.Container.FileName);
@@ -545,7 +552,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CPlugStaticObjectModel@ so) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugStaticObjectModel", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugStaticObjectModel", DEFAULT_OPEN)) {
             if (isEditable) {
                 UX::CheckboxDevUint32("Generate Shape from Mesh", so, O_STATICOBJMODEL_GENSHAPE);
             } else {
@@ -558,7 +565,7 @@ class ItemModelTreeElement {
     }
     void Draw(CPlugPrefab@ prefab) {
         hasElements = true;
-        if (StartTreeNode(name + " :: \\$f8fCPlugPrefab", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugPrefab", DEFAULT_OPEN)) {
             UI::Text("nbEnts: " + prefab.Ents.Length);
             if (isEditable) {
                 UI::SameLine();
@@ -577,7 +584,7 @@ class ItemModelTreeElement {
             UI::SameLine();
             UI::TextDisabled(Text::Format("0x%03x", GetOffset("CPlugPrefab", "Ents")));
 #endif
-            UI::TreeNodeFlags entFlags = prefab.Ents.Length < 50 ? UI::TreeNodeFlags::DefaultOpen : UI::TreeNodeFlags::None;
+            UI::TreeNodeFlags entFlags = prefab.Ents.Length < 50 ? DEFAULT_OPEN : UI::TreeNodeFlags::None;
             auto entsBuf = Dev::GetOffsetNod(prefab, GetOffset(prefab, "Ents"));
             auto elSize = 0x50;
             for (uint i = 0; i < prefab.Ents.Length; i++) {
@@ -612,7 +619,7 @@ class ItemModelTreeElement {
     }
     void Draw(NPlugItem_SVariantList@ varList) {
         hasElements = true;
-        if (StartTreeNode(name + " :: \\$f8fNPlugItem_SVariantList", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fNPlugItem_SVariantList", DEFAULT_OPEN)) {
             UI::Text("nbVariants: " + varList.Variants.Length);
 #if SIG_DEVELOPER
             UI::SameLine();
@@ -634,7 +641,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CPlugFxSystem@ fxSys) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugFxSystem", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugFxSystem", DEFAULT_OPEN)) {
             // fxSys. /*todo -- check variable declaration below.*/;
             auto tmp = fxSys;
             if (drawProperties) {
@@ -650,7 +657,7 @@ class ItemModelTreeElement {
         }
     }
     void Draw(CPlugVegetTreeModel@ vegetTree) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugVegetTreeModel", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugVegetTreeModel", DEFAULT_OPEN)) {
             if (drawProperties) {
                 auto tmp = vegetTree.Data;
                 UI::Text("Impostor_Lod_Dist: " + tostring(tmp.Impostor_Lod_Dist));
@@ -682,7 +689,7 @@ class ItemModelTreeElement {
         }
     }
     void Draw(CPlugDynaObjectModel@ dynaObject) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugDynaObjectModel", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugDynaObjectModel", DEFAULT_OPEN)) {
             MkAndDrawChildNode(dynaObject.Mesh, "Mesh");
             MkAndDrawChildNode(dynaObject.StaticShape, "StaticShape");
             MkAndDrawChildNode(dynaObject.DynaShape, "DynaShape");
@@ -690,7 +697,7 @@ class ItemModelTreeElement {
         }
     }
     void Draw(NPlugDyna_SKinematicConstraint@ kc) {
-        if (StartTreeNode(name + " :: \\$f8fNPlugDyna_SKinematicConstraint", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fNPlugDyna_SKinematicConstraint", DEFAULT_OPEN)) {
             if (drawProperties) {
                 if (isEditable) {
                     DrawKinematicConstraint(kc);
@@ -720,7 +727,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CPlugSpawnModel@ spawnModel) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugSpawnModel", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugSpawnModel", DEFAULT_OPEN)) {
             if (drawProperties) {
                 UI::Text("DefaultGravitySpawn: " + spawnModel.DefaultGravitySpawn.ToString());
                 UI::Text("Loc: " + FormatX::Iso4(spawnModel.Loc));
@@ -731,7 +738,7 @@ class ItemModelTreeElement {
         }
     }
     void Draw(CPlugEditorHelper@ editorHelper) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugEditorHelper", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugEditorHelper", DEFAULT_OPEN)) {
             auto nod = editorHelper.PrefabFid is null ? null : editorHelper.PrefabFid.Nod;
             MkAndDrawChildNode(editorHelper.PrefabFid, 0x18, "PrefabFid");
             auto prefabNod = Dev::GetOffsetNod(editorHelper, 0x20);
@@ -740,7 +747,7 @@ class ItemModelTreeElement {
         }
     }
     void Draw(NPlugTrigger_SWaypoint@ sWaypoint) {
-        if (StartTreeNode(name + " :: \\$f8fNPlugTrigger_SWaypoint", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fNPlugTrigger_SWaypoint", DEFAULT_OPEN)) {
             if (drawProperties) {
                 if (isEditable) {
                     sWaypoint.NoRespawn = UI::Checkbox("NoRespawn", sWaypoint.NoRespawn);
@@ -755,13 +762,13 @@ class ItemModelTreeElement {
         }
     }
     void Draw(NPlugTrigger_SSpecial@ sSpecial) {
-        if (StartTreeNode(name + " :: \\$f8fNPlugTrigger_SSpecial", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fNPlugTrigger_SSpecial", DEFAULT_OPEN)) {
             MkAndDrawChildNode(sSpecial.TriggerShape, "TriggerShape");
             EndTreeNode();
         }
     }
     void Draw(CGameCommonItemEntityModel@ cieModel) {
-        if (StartTreeNode(name + " :: \\$f8fCGameCommonItemEntityModel", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fCGameCommonItemEntityModel", DEFAULT_OPEN)) {
             MkAndDrawChildNode(cieModel.StaticObject, "StaticObject");
             MkAndDrawChildNode(cieModel.TriggerShape, "TriggerShape");
             MkAndDrawChildNode(cieModel.PhyModel, "PhyModel");
@@ -784,25 +791,27 @@ class ItemModelTreeElement {
             EndTreeNode();
         }
     }
+
     void Draw(CPlugSolid2Model@ s2m) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugSolid2Model", UI::TreeNodeFlags::DefaultOpen)) {
-            CPlugSkel@ skel = cast<CPlugSkel>(Dev::GetOffsetNod(s2m, 0x78));
+        if (StartTreeNode(name + " :: \\$f8fCPlugSolid2Model", DEFAULT_OPEN)) {
+            CPlugSkel@ skel = cast<CPlugSkel>(Dev::GetOffsetNod(s2m, O_SOLID2MODEL_SKEL));
             if (drawProperties) {
-                uint nbVisualIndexedTriangles = Dev::GetOffsetUint32(s2m, 0xA8 + 0x8);
-                uint nbMaterials = Dev::GetOffsetUint32(s2m, 0xC8 + 0x8);
-                uint nbMaterialUserInsts = Dev::GetOffsetUint32(s2m, 0xF8 + 0x8);
+                uint nbVisualIndexedTriangles = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_VIS_IDX_TRIS_BUF + 0x8);
+                uint nbMaterials = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_MATERIALS_BUF + 0x8);
+                uint nbMaterialUserInsts = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_USERMAT_BUF + 0x8);
                 uint nbLights = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_LIGHTS_BUF + 0x8);
-                uint nbLightUserModels = Dev::GetOffsetUint32(s2m, 0x178 + 0x8);
-                uint nbCustomMaterials = Dev::GetOffsetUint32(s2m, 0x1F8 + 0x8);
+                uint nbLightUserModels = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_USERLIGHTS_BUF + 0x8);
+                uint nbCustomMaterials = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_CUSTMAT_BUF + 0x8);
                 UI::Text("nbVisualIndexedTriangles: " + nbVisualIndexedTriangles);
                 DrawLightsAt("nbLights: " + nbLights, nod, O_SOLID2MODEL_LIGHTS_BUF);
-                DrawUserLightsAt("nbLightUserModels: " + nbLightUserModels, nod, 0x178);
-                DrawMaterialsAt("nbMaterials: " + nbMaterials, nod, 0xc8);
-                DrawMaterialsAt("nbCustomMaterials: " + nbCustomMaterials, nod, 0x1F8);
-                DrawUserMatIntsAt("nbMaterialUserInsts: " + nbMaterialUserInsts, nod, 0xF8);
+                DrawUserLightsAt("nbLightUserModels: " + nbLightUserModels, nod, O_SOLID2MODEL_USERLIGHTS_BUF);
+                DrawMaterialsAt("nbMaterials: " + nbMaterials, nod, O_SOLID2MODEL_MATERIALS_BUF);
+                DrawMaterialsAt("nbCustomMaterials: " + nbCustomMaterials, nod, O_SOLID2MODEL_CUSTMAT_BUF);
+                DrawUserMatIntsAt("nbMaterialUserInsts: " + nbMaterialUserInsts, nod, O_SOLID2MODEL_USERMAT_BUF);
             }
-            MkAndDrawChildNode(skel, 0x78, "Skel");
-            auto plg = DPlugSolid2Model(s2m).PreLightGenerator;
+            MkAndDrawChildNode(skel, O_SOLID2MODEL_SKEL, "Skel");
+            auto ds2m = DPlugSolid2Model(s2m);
+            DPlugSolid2ModelPreLightGenerator@ plg = ds2m.PreLightGenerator; // ds2m.PreLightGeneratorPtr > 0 ? ds2m.PreLightGenerator : null;
             if (plg !is null) {
                 if (isEditable) {
                     UI::SetNextItemWidth(130.0);
@@ -811,6 +820,8 @@ class ItemModelTreeElement {
                 } else {
                     CopiableLabeledValue("LMSideLengthMeters", tostring(plg.LMSideLengthMeters));
                 }
+            } else {
+                UI::Text("PreLightGenerator is null");
             }
             EndTreeNode();
         }
@@ -1271,7 +1282,7 @@ class ItemModelTreeElement {
             for (uint i = 0; i < len; i++) {
                 EPlugSurfaceMaterialId PhysicId = EPlugSurfaceMaterialId(Dev::GetOffsetUint8(buf, objSize * i));
                 EPlugSurfaceGameplayId GameplayId = EPlugSurfaceGameplayId(Dev::GetOffsetUint8(buf, objSize * i + 0x1));
-                if (StartTreeNode("Material " + i + ".", true, UI::TreeNodeFlags::DefaultOpen)) {
+                if (StartTreeNode("Material " + i + ".", true, DEFAULT_OPEN)) {
                     if (isEditable) {
                         auto newPhysicId = DrawComboEPlugSurfaceMaterialId("PhysicId", PhysicId);
                         auto newGameplayId = DrawComboEPlugSurfaceGameplayId("GameplayId", GameplayId);
@@ -1293,7 +1304,7 @@ class ItemModelTreeElement {
 
 
     void Draw(CPlugSurface@ surf) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugSurface", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugSurface", DEFAULT_OPEN)) {
             if (drawProperties) {
                 DrawMaterialsAt("nbMaterials: " + surf.Materials.Length, surf, GetOffset(surf, "Materials"));
                 DrawMaterialIdsAt("nbMaterialIds: " + surf.MaterialIds.Length, surf, GetOffset(surf, "MaterialIds"));
@@ -1311,7 +1322,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(const string &in _name, GmSurf@ gmSurf) {
-        if (StartTreeNode(_name + " :: \\$f8fGmSurf", true, UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(_name + " :: \\$f8fGmSurf", true, DEFAULT_OPEN)) {
             if (isEditable) {
                 gmSurf.GmSurfType = DrawComboEGmSurfType("GmSurfType", gmSurf.GmSurfType);
                 AddSimpleTooltip("MUST match the type of this surface -- do not touch if you don't know what you're doing. Game will crash for incorrect values.");
@@ -1416,7 +1427,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CGameBlockItem@ blockItem) {
-        if (StartTreeNode(name + " ::\\$f8f CGameBlockItem", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CGameBlockItem", DEFAULT_OPEN)) {
 
             CopiableLabeledValue("ArchetypeBlockInfoId", blockItem.ArchetypeBlockInfoId.GetName());
 
@@ -1436,7 +1447,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CPlugCrystal@ crystal) {
-        if (StartTreeNode(name + " ::\\$f8f CPlugCrystal", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CPlugCrystal", DEFAULT_OPEN)) {
             auto nbMats = Dev::GetOffsetUint32(crystal, 0x50);
             DrawMaterialsAt("Materials ("+nbMats+")##" + Dev_GetPointerForNod(crystal), crystal, 0x48, 0x20, 0x18);
             DrawUserMatIntsAt("UserMatInts ("+nbMats+")##" + Dev_GetPointerForNod(crystal), crystal, 0x48, 0x20, 0x0);
@@ -1506,7 +1517,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CHmsLightMap@ lm) {
-        if (StartTreeNode(name + " ::\\$f8f CHmsLightMap", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CHmsLightMap", DEFAULT_OPEN)) {
             auto pimp = lm.m_PImp;
             auto pimpPtr = Dev::GetOffsetUint64(lm, GetOffset(lm, "m_PImp"));
             LabeledValue("Objects in LM", (pimp.cBlock));
@@ -1525,7 +1536,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CHmsLightMapParam@ lmParam) {
-        if (StartTreeNode(name + " ::\\$f8f CHmsLightMapParam", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CHmsLightMapParam", DEFAULT_OPEN)) {
             if (!isEditable) {
                 UI::Text("\\$f80Todo!");
                 LabeledValue("LightAmbSampleCount", Dev::GetOffsetUint32(lmParam, 0xA8));
@@ -1571,7 +1582,7 @@ class ItemModelTreeElement {
 
 
     void Draw(CPlugTurret@ turret) {
-        if (StartTreeNode(name + " ::\\$f8f CPlugTurret", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CPlugTurret", DEFAULT_OPEN)) {
 
             // turret. /*todo -- check variable declaration below.*/;
             auto tmp = turret;
@@ -1632,12 +1643,12 @@ class ItemModelTreeElement {
     }
 
     void Draw(CGameSaveLaunchedCheckpoints@ gslcps) {
-        if (StartTreeNode(name + " ::\\$f8f CGameSaveLaunchedCheckpoints", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CGameSaveLaunchedCheckpoints", DEFAULT_OPEN)) {
             auto cps = _GameSaveLaunchedCheckpoints(gslcps);
             auto ptr = Dev_GetPointerForNod(gslcps);
             auto cpsIndex = cps.GetCPsIndex();
             auto launchStates = cps.GetLaunchStates();
-            if (StartTreeNode("Nb CPs: " + cpsIndex.Length + "###lcps-index-" + ptr, true, UI::TreeNodeFlags::DefaultOpen)) {
+            if (StartTreeNode("Nb CPs: " + cpsIndex.Length + "###lcps-index-" + ptr, true, DEFAULT_OPEN)) {
                 DrawLaunchedCPsIndex(cpsIndex);
                 EndTreeNode();
             }
@@ -1681,17 +1692,17 @@ class ItemModelTreeElement {
 
 
     void Draw(CTrackMania@ asdf) {
-        if (StartTreeNode(name + " ::\\$f8f CTrackMania", UI::TreeNodeFlags::DefaultOpen)) {
+        if (StartTreeNode(name + " ::\\$f8f CTrackMania", DEFAULT_OPEN)) {
             UI::Text("\\$f80todo");
             EndTreeNode();
         }
     }
 
-    bool StartTreeNode(const string &in title, UI::TreeNodeFlags flags = UI::TreeNodeFlags::DefaultOpen) {
+    bool StartTreeNode(const string &in title, UI::TreeNodeFlags flags = DEFAULT_OPEN) {
         return StartTreeNode(title, false, flags);
     }
 
-    bool StartTreeNode(const string &in title, bool suppressDev, UI::TreeNodeFlags flags = UI::TreeNodeFlags::DefaultOpen) {
+    bool StartTreeNode(const string &in title, bool suppressDev, UI::TreeNodeFlags flags = DEFAULT_OPEN) {
         bool open = UI::TreeNode(title, flags);
         if (open) {
             UI::PushID(title);

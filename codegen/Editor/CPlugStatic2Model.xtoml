@@ -1,6 +1,7 @@
 [DPlugSolid2Model : SZ_SOLID2MODEL]
 NativeClass = CPlugSolid2Model
-Struct: PreLightGenerator = DPlugSolid2ModelPreLightGenerator, 0x298, G
+PreLightGeneratorPtr = uint64, 0x298, G
+Struct: PreLightGenerator = DPlugSolid2ModelPreLightGenerator, O_SOLID2MODEL_PRELIGHT_GEN, G
 
 [DPlugSolid2ModelPreLightGenerator : 0x24]
 LMSideLengthMeters = float, 0x0, GS

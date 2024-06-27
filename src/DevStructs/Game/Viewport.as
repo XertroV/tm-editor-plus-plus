@@ -18,12 +18,12 @@ class DDx11Viewport : RawBufferElem {
 	}
 
 	// DisplayNames + 0x10
-	DxRenderStuff@ get_mDxRenderStuff() { return DxRenderStuff(this.GetUint64(0x6E0)); }
+	DxRenderStuff@ get_mDxRenderStuff() { auto _ptr = this.GetUint64(0x6E0); if (_ptr == 0) return null; return DxRenderStuff(_ptr); }
 	// depth buffer: HyperZ texture
 	CVisionResourceFile@ get_VisionResourceFile() { return cast<CVisionResourceFile>(this.GetNod(0x1170)); }
 	// ----------- 0x1b60 - 0x1b80
 	// Some Dx11 related struct
-	Dx11Stuff@ get_mDx11Stuff() { return Dx11Stuff(this.GetUint64(0x1b60)); }
+	Dx11Stuff@ get_mDx11Stuff() { auto _ptr = this.GetUint64(0x1b60); if (_ptr == 0) return null; return Dx11Stuff(_ptr); }
 	CHmsCamera@ get_camera() { return cast<CHmsCamera>(this.GetNod(0x1b68)); }
 	CHmsZone@ get_zone() { return cast<CHmsZone>(this.GetNod(0x1b70)); }
 	DepthBufferStructs@ get_mDepthBufferStructs() { return DepthBufferStructs(this.GetBuffer(0x840, 0x20, false)); }
@@ -63,10 +63,10 @@ class DxRenderStuff : RawBufferElem {
 		super(ptr, 0x158);
 	}
 
-	D3D11Device@ get_mDevice() { return D3D11Device(this.GetUint64(0xF0)); }
-	D3D11DeviceContext@ get_mDeviceCtx() { return D3D11DeviceContext(this.GetUint64(0xF8)); }
-	D3D11DeviceContext@ get_mDeviceCtx2() { return D3D11DeviceContext(this.GetUint64(0x100)); }
-	D3D11SwapChain@ get_mSwapChain() { return D3D11SwapChain(this.GetUint64(0x110)); }
+	D3D11Device@ get_mDevice() { auto _ptr = this.GetUint64(0xF0); if (_ptr == 0) return null; return D3D11Device(_ptr); }
+	D3D11DeviceContext@ get_mDeviceCtx() { auto _ptr = this.GetUint64(0xF8); if (_ptr == 0) return null; return D3D11DeviceContext(_ptr); }
+	D3D11DeviceContext@ get_mDeviceCtx2() { auto _ptr = this.GetUint64(0x100); if (_ptr == 0) return null; return D3D11DeviceContext(_ptr); }
+	D3D11SwapChain@ get_mSwapChain() { auto _ptr = this.GetUint64(0x110); if (_ptr == 0) return null; return D3D11SwapChain(_ptr); }
 }
 
 
@@ -81,7 +81,7 @@ class DepthBufferStruct : RawBufferElem {
 
 	// todo: check offsets
 	DPlugBitmap@ get_Bitmap() { return cast<DPlugBitmap>(this.GetNod(0x0)); }
-	DRenderInfo@ get_RenderInfo() { return DRenderInfo(this.GetUint64(0x08)); }
+	DRenderInfo@ get_RenderInfo() { auto _ptr = this.GetUint64(0x08); if (_ptr == 0) return null; return DRenderInfo(_ptr); }
 	uint get_u1() { return (this.GetUint32(0x10)); }
 	uint get_width() { return (this.GetUint32(0x14)); }
 	uint get_height() { return (this.GetUint32(0x18)); }
@@ -166,9 +166,9 @@ class DRenderInfo : RawBufferElem {
 	}
 
 	// 0x130? -> 0xD0 to texture also
-	DPlugBitmap@ get_Bitmap() { return DPlugBitmap(this.GetUint64(0x200)); }
+	DPlugBitmap@ get_Bitmap() { auto _ptr = this.GetUint64(0x200); if (_ptr == 0) return null; return DPlugBitmap(_ptr); }
 	uint64 get_PtrTo_0x248() { return (this.GetUint64(0x250)); }
-	D3D11Texture@ get_Texture() { return D3D11Texture(this.GetUint64(0x258)); }
+	D3D11Texture@ get_Texture() { auto _ptr = this.GetUint64(0x258); if (_ptr == 0) return null; return D3D11Texture(_ptr); }
 }
 
 

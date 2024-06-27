@@ -1,7 +1,4 @@
-// 8888b.  888888 Yb    dP     888888 88   88 88b 88  dP""b8 888888 88  dP"Yb  88b 88 .dP"Y8
-//  8I  Yb 88__    Yb  dP      88__   88   88 88Yb88 dP   `"   88   88 dP   Yb 88Yb88 `Ybo."
-//  8I  dY 88""     YbdP       88""   Y8   8P 88 Y88 Yb        88   88 Yb   dP 88 Y88 o.`Y8b
-// 8888Y"  888888    YP        88     `YbodP' 88  Y8  YboodP   88   88  YbodP  88  Y8 8bodP'
+// MARK: Dev Functions
 
 // get an offset from class name & member name
 uint16 GetOffset(const string &in className, const string &in memberName) {
@@ -243,6 +240,7 @@ string GetMwIdName(uint id) {
 // 88"Yb  88""   88""   88""   88"Yb  88""   88 Y88 Yb      88""    8I  dY     88 Y88 Yb   dP  8I  dY
 // 88  Yb 888888 88     888888 88  Yb 888888 88  Y8  YboodP 888888 8888Y"      88  Y8  YbodP  8888Y"
 
+// MARK: Referenced Nod
 
 // A nod that requires reference counting (automatically added and released)
 class ReferencedNod {
@@ -354,6 +352,7 @@ class ReferencedNod {
 // Yb   dP 88""   88""   o. Y8b 88""     88   o. Y8b     Yb"'"88""     o. Y8b 88  dP   88""
 //  YbodP  88     88     8bodP' 888888   88   8bodP'      Ybo 88       8bodP' 88 d8888 888888
 
+// MARK: Offsets & size
 
 const uint16 SZ_PACKDESC = 0xB0;
 
@@ -487,6 +486,13 @@ const uint16 O_ITEM_MODEL_SKIN = 0xA0;
 
 const uint16 O_STATICOBJMODEL_GENSHAPE = 0x38;
 
+const uint16 O_SOLID2MODEL_SKEL = 0x78;
+
+const uint16 O_SOLID2MODEL_VIS_IDX_TRIS_BUF = 0xA8;
+const uint16 O_SOLID2MODEL_MATERIALS_BUF = 0xC8;
+
+// 0x158: buf of indexes or something?
+
 const uint16 O_SOLID2MODEL_LIGHTS_BUF = 0x168;
 const uint16 O_SOLID2MODEL_LIGHTS_BUF_STRUCT_SIZE = 0x60;
 const uint16 O_SOLID2MODEL_LIGHTS_BUF_STRUCT_LIGHT = 0x58;
@@ -495,6 +501,8 @@ const uint16 O_SOLID2MODEL_USERLIGHTS_BUF = 0x178;
 
 const uint16 O_SOLID2MODEL_USERMAT_BUF = 0xF8;
 const uint16 O_SOLID2MODEL_CUSTMAT_BUF = 0x1F8;
+
+const uint16 O_SOLID2MODEL_PRELIGHT_GEN = 0x298;
 
 const uint16 O_SOLID2MODEL_ITEM_FID = 0x338;
 const uint16 SZ_SOLID2MODEL = 0x390; // 912;
@@ -626,7 +634,7 @@ const uint16 SZ_CPlugVisualIndexedTriangles = 0x190;
 
 
 
-// MEDIA TRACKER STUFF
+// MARK: MEDIA TRACKER STUFF
 
 
 uint16 O_MT_CLIPGROUP_TRIGGER_BUF = 0x28;
@@ -637,10 +645,12 @@ uint16 SZ_CLIPGROUP_TRIGGER_STRUCT = 0x40;
 uint16 SZ_MEDIABLOCKENTITY = 392; // 0x188
 uint16 SZ_MEDIABLOCKENTITY_KEY = 0x1C;
 
+// MARK: Ghosts
 
+const uint16 O_CTN_GHOST_CHECKPOINTS_BUF = GetOffset("CGameCtnGhost", "NbRespawns") + 0x8;
+const uint16 O_CTN_GHOST_PLAYER_INPUTS_BUF = GetOffset("CGameCtnGhost", "Validate_GameModeCustomData") + (0x1A0 - 0x188);
 
-// Misc
-
+// MARK: Misc
 
 const uint SZ_FID_FILE = 0xF0;
 
@@ -685,6 +695,7 @@ namespace VTables {
 // 88"Yb   dP__Yb    YbdPYbdP       88""Yb Y8   8P 88""   88""   88""   88"Yb
 // 88  Yb dP"'""Yb    YP  YP        88oodP `YbodP' 88     88     888888 88  Yb
 
+// MARK: Raw Buffer
 
 // A class to safely access raw buffers
 class RawBuffer {
@@ -720,7 +731,9 @@ class RawBuffer {
 
     RawBufferElem@ opIndex(uint i) {
         if (i >= Length) throw("RawBufferElem out of range!");
+        if (ptr == 0) return null;
         uint64 ptr2 = Dev::ReadUInt64(ptr);
+        if (ptr2 == 0) return null;
         uint elStartOffset = i * size;
         if (structBehindPtr) {
             ptr2 = ptr2 + i * 0x8;
@@ -736,6 +749,7 @@ class RawBufferElem {
     protected uint64 ptr;
     protected uint size;
     RawBufferElem(uint64 ptr, uint size) {
+        if (ptr == 0) throw("Null pointer passed to RawBufferElem");
         this.ptr = ptr;
         this.size = size;
     }

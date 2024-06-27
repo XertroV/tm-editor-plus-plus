@@ -17,7 +17,8 @@ class DPlugSolid2Model : RawBufferElem {
 		return cast<CPlugSolid2Model>(Dev_GetNodFromPointer(ptr));
 	}
 
-	DPlugSolid2ModelPreLightGenerator@ get_PreLightGenerator() { return DPlugSolid2ModelPreLightGenerator(this.GetUint64(0x298)); }
+	uint64 get_PreLightGeneratorPtr() { return (this.GetUint64(0x298)); }
+	DPlugSolid2ModelPreLightGenerator@ get_PreLightGenerator() { auto _ptr = this.GetUint64(O_SOLID2MODEL_PRELIGHT_GEN); if (_ptr == 0) return null; return DPlugSolid2ModelPreLightGenerator(_ptr); }
 }
 
 

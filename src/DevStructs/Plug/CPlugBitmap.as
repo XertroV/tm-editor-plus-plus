@@ -17,7 +17,7 @@ class DPlugBitmap : RawBufferElem {
 		return cast<CPlugBitmap>(Dev_GetNodFromPointer(ptr));
 	}
 
-	DRenderInfo@ get_RenderInfo() { return DRenderInfo(this.GetUint64(0xA8)); }
+	DRenderInfo@ get_RenderInfo() { auto _ptr = this.GetUint64(0xA8); if (_ptr == 0) return null; return DRenderInfo(_ptr); }
 }
 
 

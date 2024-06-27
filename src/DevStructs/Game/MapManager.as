@@ -11,7 +11,7 @@ class DGameMgrMap_SMgr : RawBufferElem {
 	}
 
 	// mwnod pool at 0x140
-	DMgrMap_SMgr_ObjStruct@ get_ObjStruct() { return DMgrMap_SMgr_ObjStruct(this.GetUint64(0x90)); }
+	DMgrMap_SMgr_ObjStruct@ get_ObjStruct() { auto _ptr = this.GetUint64(0x90); if (_ptr == 0) return null; return DMgrMap_SMgr_ObjStruct(_ptr); }
 }
 
 
