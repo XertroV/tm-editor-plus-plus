@@ -48,6 +48,13 @@ class ItemModel {
             } else {
                 item.CollectionId_Text = UI::InputText("CollectionId_Text", item.CollectionId_Text);
             }
+            if (TmGameVersion >= "2024-06-28_13_46") {
+                bool disableAutoCreateSound = Editor::GetItemModel_DisableAutoCreateSound(item);
+                bool setDACS = UI::Checkbox("DisableAutoCreateSound", disableAutoCreateSound);
+                if (setDACS != disableAutoCreateSound) {
+                    Editor::SetItemModel_DisableAutoCreateSound(item, setDACS);
+                }
+            }
             DrawSkin();
             DrawMatModifier();
             DrawEMEdition();

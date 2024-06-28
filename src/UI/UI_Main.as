@@ -156,13 +156,15 @@ void UI_Main_Render() {
 bool CheckIfShowEppPluginReminder() {
     auto now = Time::Now;
     auto app = GetApp();
+    auto editor = cast<CGameCtnEditorFree>(app.Editor);
     bool noMsgsForAWhile = IsInEditor
         && !IsInCurrentPlayground
         && now - lastTimeEnteredEditor > 2000
         && now - FromML::lastEventTime > 2000
         && !dismissedPluginEnableRequest
         && app.BasicDialogs.Dialog != CGameDialogs::EDialog::WaitMessage
-        && !DGameCtnEditorFree(app.Editor).IsCalculatingShadows
+        && editor !is null
+        && !DGameCtnEditorFree(editor).IsCalculatingShadows
         ;
     if (noMsgsForAWhile) {
         FromML::FramesWithoutEvents++;

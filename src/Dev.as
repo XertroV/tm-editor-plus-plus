@@ -354,6 +354,8 @@ class ReferencedNod {
 
 // MARK: Offsets & size
 
+// MARK: O Map
+
 const uint16 SZ_PACKDESC = 0xB0;
 
 const uint16 SZ_CTNCHALLENGE = 0x870;
@@ -406,7 +408,6 @@ const uint16 O_LIGHTMAPSTRUCT_IMAGES = 0x30;
 
 const uint16 O_LIGHTMAPCACHE_PIMP = GetOffset("CHmsLightMap", "m_PImp");
 
-
 // 0x488 -- possible flag for lightmap invalidation
 
 // 0x298
@@ -458,6 +459,8 @@ some editor mode things (+BE8); tests like this:
 const uint16 O_LM_PIMP_Buf2 = 0xA8;
 const uint16 SZ_LM_SPIMP_Buf2_EL = 0x58;
 
+// MARK: O Editor
+
 // is a uint
 const uint16 O_EDITOR_CURR_PIVOT_OFFSET = GetOffset("CGameCtnEditorFree", "UndergroundBox") + (0xBC4 - 0xAC0);
 const uint16 O_EDITOR_LAUNCHEDCPS = GetOffset("CGameCtnEditorFree", "Radius") + 0x10;
@@ -482,7 +485,13 @@ const uint16 O_EDITOR_FREELOOK_ENABLED = O_EDITOR_GridColor - (0xC08 - 0xBF0); /
 
 const uint16 SZ_CGAMECURSORITEM = 0xE8;
 
-const uint16 O_ITEM_MODEL_SKIN = 0xA0;
+// MARK: O Item Mdl
+
+// 0xA0 = 0xB8 - 0x18
+const uint16 O_ITEM_MODEL_SKIN = GetOffset("CGameItemModel", "DefaultSkinFileRef") - 0x18;
+
+// orig: 0x118 = 0x120 - 8
+const uint16 O_ITEM_MODEL_FLAGS = GetOffset("CGameItemModel", "PhyModelCustom") - 0x8;
 
 const uint16 O_STATICOBJMODEL_GENSHAPE = 0x38;
 
@@ -506,6 +515,9 @@ const uint16 O_SOLID2MODEL_PRELIGHT_GEN = 0x298;
 
 const uint16 O_SOLID2MODEL_ITEM_FID = 0x338;
 const uint16 SZ_SOLID2MODEL = 0x390; // 912;
+
+
+// MARK: O Blocks
 
 // more block offsets in Editor/Blocks.as
 // 0x38
@@ -547,6 +559,7 @@ const uint16 O_BLOCKINFOMOBIL_PlacementPatches = O_BLOCKINFOMOBIL_SolidCache - 0
 // CPlugPlacementPatch, 0xE0
 const uint16 SZ_PLACEMENTPATCH = 0xE0;
 
+// MARK: O Skin
 
 // 0x168 bytes
 const uint SZ_GAMESKIN = 0x168;
@@ -564,6 +577,7 @@ const uint16 O_MATMOD_REMAPPING = GetOffset("CPlugGameSkinAndFolder", "Remapping
 const uint16 O_MATMOD_REMAPPING_NOTRACKWALL = GetOffset("CPlugGameSkinAndFolder", "Remapping_NoTrackWall_Cache");
 const uint16 O_MATMOD_REMAPFOLDER = GetOffset("CPlugGameSkinAndFolder", "RemapFolder");
 
+// MARK: O Item/Mat
 
 // scale at 0x80 (2024_02_26)
 const uint16 O_ANCHOREDOBJ_SKIN_SCALE = GetOffset("CGameCtnAnchoredObject", "Scale");
@@ -573,7 +587,6 @@ const uint16 O_ANCHOREDOBJ_WAYPOINTPROP = GetOffset("CGameCtnAnchoredObject", "W
 const uint16 O_ANCHOREDOBJ_MACROBLOCKINSTID = O_ANCHOREDOBJ_WAYPOINTPROP - 0x4;
 
 // CGameCtnBlock offsets in src/Editor/Blocks.as
-
 
 const uint16 O_MATERIAL_PHYSICS_ID = 0x28;
 const uint16 O_MATERIAL_GAMEPLAY_ID = 0x29;
@@ -602,6 +615,7 @@ const uint16 O_VARLIST_VARIANTS = GetOffset("NPlugItem_SVariantList", "Variants"
 const uint32 SZ_VARLIST_VARIANT = 0x28;
 const uint16 O_SVARIANT_MODELFID = GetOffset("NPlugItem_SVariant", "EntityModelFidForReload");
 
+// MARK: O Ivn/Editor
 
 const uint16 O_INVENTORY_NormHideFolderDepth = 0xF8;
 const uint16 O_INVENTORY_NormSelectedFolder = 0x100;
@@ -619,6 +633,8 @@ const uint16 O_ITEMCURSOR_CurrentModelsBuf = GetOffset("CGameCursorItem", "Helpe
 // const uint16 O_ITEMCURSOR_MaxVariantMaybe = 0xC4;
 
 
+// MARK: O MB
+
 const uint16 O_MACROBLOCK_BLOCKSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x8; // 0x148 + 8 = 0x150
 const uint16 O_MACROBLOCK_SKINSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x18; // 0x148 + 0x18 = 0x160
 const uint16 O_MACROBLOCK_ITEMSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x28; // 0x148 + 0x28 = 0x170
@@ -634,7 +650,7 @@ const uint16 SZ_CPlugVisualIndexedTriangles = 0x190;
 
 
 
-// MARK: MEDIA TRACKER STUFF
+// MARK: MT STUFF
 
 
 uint16 O_MT_CLIPGROUP_TRIGGER_BUF = 0x28;

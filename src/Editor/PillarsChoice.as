@@ -155,16 +155,21 @@ namespace PillarsChoice {
 
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (nullifiedSkinsOnLoad && editor !is null) {
-            UI::SetNextWindowSize(300, 140);
+            UI::SetNextWindowSize(300, 180);
             UI::SetNextWindowPos(g_screen.x * .5 - 150, g_screen.y * .5 - 60);
             UI::PushStyleColor(UI::Col::WindowBg, Math::Lerp(Math::Lerp(cRed, cMagenta, Math::Sin(float(Time::Now % 3142) / 1000.) ** 2), cBlack, .5));
             if (UI::Begin("\\$fdbSkins nullified: Save and reload map", nullifiedSkinsOnLoad)) {
                 UI::Text("\\$fdbSkins on pillars were nullified on load.");
-                UI::Text("You should now save and reload the map.");
+                UI::TextWrapped("If pillars appear to still have skins: save and reload the map.");
+                UI::TextWrapped("Or you can ignore this message: the map will still save without pillar skins, but the visuals might not match.");
                 if (editor.Challenge.MapInfo.FileName.Length == 0) {
                     UI::Text("\\$fdbMap not saved! Please save the map.");
                 } else if (UI::ButtonColored("Save and Reload", .4, .5, .5)) {
                     startnew(Editor::SaveAndReloadMap);
+                    nullifiedSkinsOnLoad = false;
+                }
+                UI::SameLine();
+                if (UI::Button("Dismiss / Ignore")) {
                     nullifiedSkinsOnLoad = false;
                 }
             }

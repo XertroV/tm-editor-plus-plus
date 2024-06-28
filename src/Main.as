@@ -321,12 +321,13 @@ UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
     if (Bind::IsRebinding) {
         return Bind::OnKeyPress(down, key);
     }
+    if (!IsInAnyEditor) return UI::InputBlocking::DoNothing;
 
     auto app = GetApp();
     auto editor = cast<CGameCtnEditorFree>(app.Editor);
     if (editor is null) return UI::InputBlocking::DoNothing;
     if (app.CurrentPlayground !is null) return OnKeyPressInPlayground(app, editor, down, key);
-    if (DGameCtnEditorFree(editor).IsCalculatingShadows) return UI::InputBlocking::DoNothing;
+    if (IsCalculatingShadows) return UI::InputBlocking::DoNothing;
     if (app.BasicDialogs.Dialogs.CurrentFrame !is null) return UI::InputBlocking::DoNothing;
     bool block = false;
     block = block || ShouldBlockEscapePress(down, key, app, editor);
