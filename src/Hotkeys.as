@@ -10,6 +10,7 @@ class Hotkey {
     string _id;
     bool editorOnly = true;
 
+    string formatted;
     string keyStr = "";
 
     Hotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name) {
@@ -25,6 +26,11 @@ class Hotkey {
 
     void GenKeyStr() {
         keyStr = HotkeyKey(key, ctrl, alt, shift);
+        formatted = "";
+        if (ctrl) formatted += "Ctrl + ";
+        if (alt) formatted += "Alt + ";
+        if (shift) formatted += "Shift + ";
+        formatted += tostring(key);
     }
 
     void UpdateKey(VirtualKey newKey, bool andSave = true) {

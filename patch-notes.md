@@ -2,6 +2,13 @@ TODO: item stuff with cbs
 TODO: changing props of blocks/items will cache the new values as deleted, not the old ones
 
 
+- FEAT: All E++ hotkeys are now rebindable
+- make nullified pillars alert clearer and add dismiss button
+- game version data
+
+
+
+
 - FEAT: Add autolink CPs (based on distance; CPs tab + popup when placing CPs)
 - FEAT: Automatically delete duplicate blocks
 - Map Together support
