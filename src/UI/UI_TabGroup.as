@@ -5,15 +5,32 @@ class TabGroup {
     string groupName;
     string fullName;
     bool IsRoot = false;
+    string tabGroupId;
 
     TabGroup(const string &in name, Tab@ parent) {
         groupName = name;
         @Parent = parent;
         if (parent is null) return;
+        if (parent.Parent !is null) {
+            tabGroupId = parent.Parent.tabGroupId + ".";
+        }
+        tabGroupId += Text::StripOpenplanetFormatCodes(name);
         fullName = parent.fullName;
         if (name.Length > 0 && name != parent.tabName) {
             fullName += " > " + name;
         }
+    }
+
+    string mainWindowTitle;
+
+    string MainWindowTitle() {
+        if (mainWindowTitle.Length == 0) {
+            mainWindowTitle = MenuTitle;
+            if (groupName != "Root") {
+                mainWindowTitle += " > " + groupName;
+            }
+        }
+        return mainWindowTitle;
     }
 
     bool AnyActive() {
@@ -72,8 +89,8 @@ class TabGroup {
     vec2 framePadding;
     vec2 regionSize;
     int _selectedTabIx = 0;
-    int get_selectedTabIx() { return _selectedTabIx; }
-    void set_selectedTabIx(int value) { _selectedTabIx = value; }
+    int get_selectedTabIx() { return GetSelectedTabFor(tabGroupId); }
+    void set_selectedTabIx(int value) { SetSelectedTabFor(tabGroupId, value); }
 
     void DrawTabsAsSidebar(const string &in title = "") {
         framePadding = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
@@ -134,19 +151,50 @@ class TabGroup {
 }
 
 class RootTabGroupCls : TabGroup {
-    RootTabGroupCls() {
-        super("Root", null);
+    RootTabGroupCls(const string &in name = "Root") {
+        super(name, null);
         // root
-        groupName = "Root";
+        groupName = name;
         // fullName = "E++";
         fullName = PluginIcon + "\\$z";
+        tabGroupId = Text::StripOpenplanetFormatCodes(name);
         IsRoot = true;
     }
 
     int get_selectedTabIx() override property {
-        return Math::Min(tabs.Length - 1, S_MainSelectedTab);
+        return Math::Min(tabs.Length - 1, GetSelectedTabFor(tabGroupId));
     }
     void set_selectedTabIx(int value) override property {
-        S_MainSelectedTab = value;
+        SetSelectedTabFor(tabGroupId, value);
     }
+}
+
+Json::Value@ _cachedSelectedTabsJson = null;
+
+int GetSelectedTabFor(const string &in tabGroupId) {
+    if (_cachedSelectedTabsJson is null) {
+        @_cachedSelectedTabsJson = Json::Parse(S_SelectedTabsJson);
+    }
+    auto @j = _cachedSelectedTabsJson;
+    if (j.GetType() != Json::Type::Object || !j.HasKey(tabGroupId)) {
+        return 0;
+    }
+    try {
+        return int(j[tabGroupId]);
+    } catch {
+        j[tabGroupId] = 0;
+        return 0;
+    }
+}
+
+void SetSelectedTabFor(const string &in tabGroupId, int value) {
+    if (_cachedSelectedTabsJson is null) {
+        @_cachedSelectedTabsJson = Json::Parse(S_SelectedTabsJson);
+    }
+    auto @j = _cachedSelectedTabsJson;
+    if (j.GetType() != Json::Type::Object) {
+        @j = Json::Object();
+    }
+    j[tabGroupId] = value;
+    S_SelectedTabsJson = Json::Write(j);
 }

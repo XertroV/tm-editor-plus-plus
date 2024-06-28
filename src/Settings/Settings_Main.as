@@ -21,8 +21,10 @@ bool S_DrawPickedBlockHelpers = true;
 [Setting hidden]
 bool S_DrawPickedBlockBox = true;
 
+// [Setting hidden]
+// int S_MainSelectedTab = 0;
 [Setting hidden]
-int S_MainSelectedTab = 0;
+string S_SelectedTabsJson = "{}";
 
 [Setting hidden]
 bool S_PickedBlockWindowOpen = false;

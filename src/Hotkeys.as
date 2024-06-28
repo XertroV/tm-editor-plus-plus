@@ -144,7 +144,7 @@ void UI_DrawHotkeyList() {
             UI::TableNextColumn();
             UI::Text(h.name);
             UI::TableNextColumn();
-            UI::Text(tostring(h.key));
+            UI::Text(tostring(h.formatted));
             UI::TableNextColumn();
             if (UI::Button("Rebind##" + h._id)) {
                 h.StartRebind();

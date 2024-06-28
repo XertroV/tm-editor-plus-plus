@@ -65,7 +65,7 @@ void UI_Main_Render() {
         vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::FirstUseEver);
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::FirstUseEver);
-        if (UI::Begin(MenuTitle, ShowWindow, UI::WindowFlags::MenuBar)) {
+        if (UI::Begin(tabToDraw.MainWindowTitle(), ShowWindow, UI::WindowFlags::MenuBar)) {
             MenuBar::Draw();
             // RootTabGroup_Editor.DrawTabsAsSidebar("Editor++");
             tabToDraw.DrawTabsAsSidebar();
@@ -438,7 +438,7 @@ FavoritesTab@ g_Favorites;
 CoordPathDrawingTab@ g_CoordPathDrawingTool;
 
 TabGroup@ CreateInMapRT() {
-    auto root = RootTabGroupCls();
+    auto root = RootTabGroupCls("In-Map");
     InMap_ItemsBrowserTab(root);
     InMap_BlocksBrowserTab(root);
     InMap_BakedBlocksBrowserTab(root);
@@ -446,7 +446,7 @@ TabGroup@ CreateInMapRT() {
 }
 
 TabGroup@ CreateToolsTabGroup() {
-    auto tools = RootTabGroupCls();
+    auto tools = RootTabGroupCls("Tools");
 
     QuaternionCalcTab(tools);
     MaterialsListTab(tools);
@@ -457,13 +457,13 @@ TabGroup@ CreateToolsTabGroup() {
 }
 
 TabGroup@ CreateMeshEditorRT() {
-    auto root = RootTabGroupCls();
+    auto root = RootTabGroupCls("Mesh Editor");
     MM_BrowserTab(root);
     return root;
 }
 
 TabGroup@ CreateMTEditorRT() {
-    auto root = RootTabGroupCls();
+    auto root = RootTabGroupCls("Mediatracker");
     MT_TriggersTab(root);
     MT_GpsHelperTab(root);
     MT_RipGhostPathTab(root);
@@ -476,7 +476,7 @@ TabGroup@ CreateMTEditorRT() {
 }
 
 TabGroup@ CreateItemEditorRT() {
-    auto root = RootTabGroupCls();
+    auto root = RootTabGroupCls("Item Editor");
     IE_FeaturesTab(root);
     ItemEditCurrentPropsTab(root);
     IE_ManipulateMeshesTab(root);
