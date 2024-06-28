@@ -169,6 +169,8 @@ void RenderEarly() {
         Event::RunOnLeavingPlaygroundCbs();
     }
 
+    IsCalculatingShadows = IsInEditor && DGameCtnEditorFree(editor).IsCalculatingShadows;
+
     g_WasDragging = g_IsDragging;
     g_LmbDown = IsLMBPressed();
 
@@ -316,6 +318,10 @@ bool[] hotkeysFlags = array<bool>(256);
 /** Called whenever a key is pressed on the keyboard. See the documentation for the [`VirtualKey` enum](https://openplanet.dev/docs/api/global/VirtualKey).
 */
 UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
+    if (Bind::IsRebinding) {
+        return Bind::OnKeyPress(down, key);
+    }
+
     auto app = GetApp();
     auto editor = cast<CGameCtnEditorFree>(app.Editor);
     if (editor is null) return UI::InputBlocking::DoNothing;
@@ -344,9 +350,14 @@ UI::InputBlocking OnKeyPressInPlayground(CGameCtnApp@ app, CGameCtnEditorFree@ e
     // only test mode
     if (!Editor::IsInTestMode(editor)) return UI::InputBlocking::DoNothing;
     bool block = false;
-    if (down && key == S_SetRespawnPosTestModeHotkey) {
-        Editor::SetEditorTestModeRespawnPositionFromCurrentVis();
+    if (down && hotkeysFlags[key]) {
+        // trace('checking hotkey: ' + tostring(key));
+        block = CheckHotkey(key, false) == UI::InputBlocking::Block || block;
     }
-    // block = block || CheckPlaygroundHotkeys(app, editor, down, key);
+
+    // if (down && key == S_SetRespawnPosTestModeHotkey) {
+    //     Editor::SetEditorTestModeRespawnPositionFromCurrentVis();
+    // }
+    // // block = block || CheckPlaygroundHotkeys(app, editor, down, key);
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
 }

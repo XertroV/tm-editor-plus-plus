@@ -10,3 +10,4 @@ bool EnteringMTEditor = false;
 bool IsLeavingPlayground = false;
 bool WasInPlayground = false;
 bool IsInAnyEditor = false;
+bool IsCalculatingShadows = false;

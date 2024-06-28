@@ -38,6 +38,7 @@ namespace FromML {
     uint pluginLoads = 0;
     uint pgSwitches = 0;
     bool lockedThumbnail = false;
+    uint FramesWithoutEvents = 0;
 }
 
 class ML_Event {

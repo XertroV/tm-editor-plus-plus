@@ -8,7 +8,7 @@ class InventorySearchTab : Tab {
         @searcher = InvSearcher();
         searcher.SetUpdateCallbacks(CoroutineFunc(this.SearchUpdateStart), CoroutineFunc(this.SearchUpdateEnd));
         // Oem5 = backslash `\`
-        AddHotkey(VirtualKey::Oem5, false, false, false, HotkeyFunction(this.OnShowSearchWindow));
+        AddHotkey(VirtualKey::Oem5, false, false, false, HotkeyFunction(this.OnShowSearchWindow), "Search Inventory");
         closeWindowOnEscape = true;
     }
 

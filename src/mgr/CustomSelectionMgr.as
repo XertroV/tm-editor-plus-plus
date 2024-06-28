@@ -11,7 +11,7 @@ class CustomSelectionMgr {
     OnCustomSelectionDoneF@ doneCB;
 
     CustomSelectionMgr() {
-        AddHotkey(VirtualKey::F, true, false, false, HotkeyFunction(this.OnFillHotkey));
+        AddHotkey(VirtualKey::F, true, false, false, HotkeyFunction(this.OnFillHotkey), "Fill Selection");
         trace('added custom selection mgr hotkey, ' + tostring(VirtualKey::F) + ', ' + int(VirtualKey::F));
         RegisterOnLeavingPlaygroundCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
         RegisterOnEditorLoadCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");

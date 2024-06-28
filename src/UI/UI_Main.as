@@ -113,8 +113,7 @@ void UI_Main_Render() {
         UI::End();
     }
 
-    auto now = Time::Now;
-    if (IsInEditor && !IsInCurrentPlayground && now - lastTimeEnteredEditor > 2000 && now - FromML::lastEventTime > 2000 && !dismissedPluginEnableRequest && GetApp().BasicDialogs.Dialog != CGameDialogs::EDialog::WaitMessage) {
+    if (CheckIfShowEppPluginReminder()) {
         vec2 size = vec2(300, 120);
         vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
         pos.y = 200;
@@ -151,6 +150,26 @@ void UI_Main_Render() {
     }
 
     UI::PopStyleColor(2);
+}
+
+
+bool CheckIfShowEppPluginReminder() {
+    auto now = Time::Now;
+    auto app = GetApp();
+    bool noMsgsForAWhile = IsInEditor
+        && !IsInCurrentPlayground
+        && now - lastTimeEnteredEditor > 2000
+        && now - FromML::lastEventTime > 2000
+        && !dismissedPluginEnableRequest
+        && app.BasicDialogs.Dialog != CGameDialogs::EDialog::WaitMessage
+        && !DGameCtnEditorFree(app.Editor).IsCalculatingShadows
+        ;
+    if (noMsgsForAWhile) {
+        FromML::FramesWithoutEvents++;
+    } else {
+        FromML::FramesWithoutEvents = 0;
+    }
+    return FromML::FramesWithoutEvents > 20;
 }
 
 
