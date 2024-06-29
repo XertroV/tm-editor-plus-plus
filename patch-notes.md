@@ -2,9 +2,15 @@ TODO: item stuff with cbs
 TODO: changing props of blocks/items will cache the new values as deleted, not the old ones
 
 
-- FEAT: All E++ hotkeys are now rebindable
+- FEAT: All E++ hotkeys are now re-bindable
+- Remember which tabs you were on properly (separate records for item editor, blocks & items sub tabs, etc)
 - make nullified pillars alert clearer and add dismiss button
+- FIX: Lock thumbnail was broken for months, now it's fixed
+- FIX: E++ editor plugin check now waits for a few frames before reminding you to enable the plugin.
+- FIX: some null pointer issues and crashes
+- FIX: the model browser crashes the game for items that don't have the struct that contains LMSideLengthMeters
 - game version data
+- add CCT_CustomColorTables to editor plugin script
 
 
 

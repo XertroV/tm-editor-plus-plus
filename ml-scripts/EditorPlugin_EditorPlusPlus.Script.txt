@@ -72,11 +72,13 @@ Void SendAllInfo() {
 	declare metadata Integer EPP_MappingTime_Mapping for Map = 0;
 	declare metadata Boolean EPP_ThumbnailLocked for Map = False;
 	declare metadata Boolean EPP_MetadataDisabled for Map = False;
+	declare metadata Text CCT_CustomColorTables for Map = "";
 	SendEvent("PluginLoads", [""^EPP_EditorPluginLoads]);
 	SendEvent("PGSwitches", [""^EPP_PlaygroundSwitches]);
 	SendEvent("MappingTime", [""^EPP_MappingTime, ""^EPP_MappingTime_Mapping, ""^EPP_MappingTime_Testing, ""^EPP_MappingTime_Validating]);
 	SendEvent("LockedThumbnail", [""^EPP_ThumbnailLocked]);
 	SendEvent("MetadataDisabled", [""^EPP_MetadataDisabled]);
+	SendEvent("CustomColorTables", [""^CCT_CustomColorTables]);
 }
 
 declare Boolean ShouldBreakLoop;
@@ -88,9 +90,7 @@ Void ProcessIncomingMessages() {
 		if (InMsg.count == 0) continue;
 		declare MsgType = InMsg[0];
 		log("E++ EditorPlugin got incoming msg of type: " ^ MsgType);
-		if (MsgType == "LockThumbnail") {
-			LockThumbnail(InMsg[1] == "true");
-		} else if (MsgType == "ResyncPlease") {
+		if (MsgType == "ResyncPlease") {
 			SendAllInfo();
 		} else if (MsgType == "MetadataCleared") {
 			ShouldBreakLoop = True;
@@ -98,12 +98,21 @@ Void ProcessIncomingMessages() {
 				declare metadata Boolean EPP_MetadataDisabled for Map = False;
 				EPP_MetadataDisabled = True;
 			}
+		} else if (InMsg.count == 1) {
+			// any msgs with args go below this; no args: above.
+			log("E++ EditorPlugin: unknown bodyless message type: " ^ MsgType);
+			continue;
+		} else if (MsgType == "LockThumbnail") {
+			LockThumbnail(InMsg[1] == "true");
 		} else if (MsgType == "SetMetadataEnabled") {
 			ShouldBreakLoop = True;
 			DisableMetadata = InMsg.count > 1 && InMsg[1] == "false";
-		} else if (MsgType == "AddValidationTime" && InMsg.count >= 2) {
+		} else if (MsgType == "AddValidationTime") {
 			declare metadata Integer EPP_MappingTime_Validating for Map = 0;
 			EPP_MappingTime_Validating += TL::ToInteger(InMsg[1]);
+		} else if (MsgType == "SetCustomColorTables") {
+			declare metadata Text CCT_CustomColorTables for Map = "";
+			CCT_CustomColorTables = InMsg[1];
 		}
 	}
 	EPP_MsgQueue.clear();
@@ -154,6 +163,7 @@ main() {
 		declare metadata Integer EPP_MappingTime_Validating for Map = 0;
 		declare metadata Integer EPP_MappingTime_Mapping for Map = 0;
 		declare metadata Boolean EPP_ThumbnailLocked for Map = False;
+		declare metadata Text CCT_CustomColorTables for Map = "";
 		EPP_EditorPluginLoads += 1;
 		declare metadata Integer[] Race_AuthorRaceWaypointTimes for Map;
 		declare Integer[] Race_Share_AuthorRaceWaypointTimes for Map;

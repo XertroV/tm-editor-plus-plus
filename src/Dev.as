@@ -389,6 +389,12 @@ const uint16 O_MAP_TIMEOFDAY_PACKED_U16 = O_MAP_CUSTMUSICPACKDESC + 0x8;
 const uint16 O_MAP_DAYLENGTH_MS = O_MAP_TIMEOFDAY_PACKED_U16 + 0x4;
 const uint16 O_MAP_DYNAMIC_TIMEOFDAY = O_MAP_TIMEOFDAY_PACKED_U16 + 0x8;
 
+// originally 0x188
+const uint16 O_MAP_ObjectiveTextAuthor = GetOffset("CGameCtnChallenge", "ObjectiveTextAuthor");
+
+// originally 0x178 = 0x188 - 0x10
+const uint16 O_MAP_THUMBNAIL_BUF = O_MAP_ObjectiveTextAuthor - 0x10;
+
 // 0x1d8
 const uint16 O_MAP_CLIPAMBIANCE = GetOffset("CGameCtnChallenge", "ClipAmbiance");
 const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8;
