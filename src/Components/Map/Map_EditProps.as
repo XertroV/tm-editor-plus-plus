@@ -299,6 +299,22 @@ class MapEditPropsTab : Tab {
             UI::Unindent();
         }
 
+        UI::SeparatorText("Custom Color Tables \\$i(Experimental)");
+        if (FromML::HasCustomColors()) {
+            UI::Text("Embedded Custom Colors (Encoded): " + FromML::_customColorTablesRaw);
+            if (UX::SmallButton("Clear")) {
+                ToML::SetEmbeddedCustomColors("");
+            }
+            UI::SameLine();
+        } else {
+            UI::Text("No Embedded Custom Colors.");
+        }
+        if (UX::SmallButton("Append some test data")) {
+            ToML::SetEmbeddedCustomColors(FromML::_customColorTablesRaw + "_test");
+        }
+
+
+
         UI::Separator();
 
         S_ShowVehicleTestWindow = UI::Checkbox("Show choice of vehicle when testing?", S_ShowVehicleTestWindow);

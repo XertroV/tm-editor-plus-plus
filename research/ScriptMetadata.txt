@@ -1,0 +1,78 @@
+map.ScriptMetadata has a MwBuffer<MetadataStruct>
+
+MetadataStruct (len = 0x88):
+  +0 string name
+  +10 uint type
+  +14 uint u1 = 0 / uncleared
+  +18 value (up to 0x18 long?)
+  +28 string if string
+
+  +48: sometimes metadata to flags and function ptrs
+
+  for array values
+  +68 buffer to (ShorterStruct*, ShorterStruct*) (length: 0x10 per element)
+    -> 1st element null in normal arrays, otherwise ptr to ShorterStruct
+    -> 2nd element ptr to ShorterStruct
+
+  for struct values:
+  buffer at 0x78 (to kv paris?)
+      - 0x0: ix?
+      - 0x10: string (login or something? key?)
+      - 0x20: ff
+
+
+
+example: Text[]
+type: 27 02 00 00 / 0x227 / 551
+u1: 0
+18: 1.0, 0.925573
+20: 87 1E 01 2B 00 00 00 00
+28: 0
+30: 6538545, 0
+38: FF 00 00 FF CD D1 D0 00
+40: 0.854212, 0.453804, 1.0, 0.782226
+50,58: uncleared?
+58: -2.81224,5.92999
+60: 0
+68: buffer -> 0x10 struct
+    0: 0x00 * 8 (key)
+    8: ptr -> 0x80 len struct?
+
+
+----------
+
+ShorterStruct (len 0x80 i think)
+for int or other values, value is at 0x0
+for string:
+    00: u1, u2 // these 0x10 bytes probs uncleared: contents: :\$8f0\$z Dee
+    08: u3, u4
+    10: string
+    20: FF 00 00 73 (then 4x uncleared)
+    28: uncleared
+    30: uncleared
+    38: uncleared
+    40: ?? or uncleared
+    48-70: zeros
+    78: uncleared
+
+
+----------
+
+CGameTeamProfile:
++0x20 also? (server only?)
+    -> 0: code
+    -> 8: update count?
+    -> C: uncleared
+    -> x10: buffer<0x20>
+        string name
+        10: type
+        18: ptr to container holding value; NOTE: trailing digit can be 1, but code will `and rdx,-02` it, which ands with 0xFFFF...FFFE
+                    Trackmania.exe.text+8430E1 - 48 83 E2 FE           - and rdx,-02 { 254 }
+
+
++0x30 also? (server only?)
++0x38 -> struct? Like script metadata but not exactly
+  +0 code ptr
+  +8 ref count? (540); 0
+  +10 buffer of ML elements MwBuffer<MetadataStruct>
+  +20 u1 = 0, u2 = 7449

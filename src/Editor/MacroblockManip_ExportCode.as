@@ -66,6 +66,8 @@ namespace Editor {
     import bool IsMapCacheStale() from "Editor";
     import void RefreshMapCacheSoon() from "Editor";
 
+    import void Set_Map_EmbeddedCustomColorsEncoded(const string &in raw) from "Editor";
+    import string Get_Map_EmbeddedCustomColorsEncoded() from "Editor";
 }
 
 namespace Editor {

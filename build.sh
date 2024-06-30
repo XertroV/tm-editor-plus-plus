@@ -77,7 +77,7 @@ for pluginSrc in ${pluginSources[@]}; do
 
   # remove parens, replace spaces with dashes, and uppercase characters with lowercase ones
   # => `Never Give Up (Dev)` becomes `never-give-up-dev`
-  PLUGIN_NAME=$(echo "$PLUGIN_PRETTY_NAME" | tr -d '+(),:;'\''"' | tr 'A-Z ' 'a-z-')
+  PLUGIN_NAME=$(echo "$PLUGIN_PRETTY_NAME" | tr -d '+(),:;'\''"')
   # echo $PLUGIN_NAME
   _colortext16 green "✅ Output file/folder name: ${PLUGIN_NAME}"
 

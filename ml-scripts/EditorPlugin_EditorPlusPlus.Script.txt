@@ -112,7 +112,10 @@ Void ProcessIncomingMessages() {
 			EPP_MappingTime_Validating += TL::ToInteger(InMsg[1]);
 		} else if (MsgType == "SetCustomColorTables") {
 			declare metadata Text CCT_CustomColorTables for Map = "";
+			log("CCT_CustomColorTables prior: " ^ CCT_CustomColorTables);
 			CCT_CustomColorTables = InMsg[1];
+			log("CCT_CustomColorTables after: " ^ CCT_CustomColorTables);
+			SendEvent("CustomColorTables", [""^CCT_CustomColorTables]);
 		}
 	}
 	EPP_MsgQueue.clear();
@@ -130,6 +133,13 @@ main() {
 
 	LayersDefaultManialinkVersion = 3;
 	ManialinkText = CreateManialink();
+
+	if (!DisableMetadata) {
+		declare metadata Text CCT_CustomColorTables for Map = "nil";
+		if (CCT_CustomColorTables == "nil") {
+			CCT_CustomColorTables = "";
+		}
+	}
 
 	// outer loop: used to re-init metadata after clear
 	while (True) {
@@ -163,7 +173,6 @@ main() {
 		declare metadata Integer EPP_MappingTime_Validating for Map = 0;
 		declare metadata Integer EPP_MappingTime_Mapping for Map = 0;
 		declare metadata Boolean EPP_ThumbnailLocked for Map = False;
-		declare metadata Text CCT_CustomColorTables for Map = "";
 		EPP_EditorPluginLoads += 1;
 		declare metadata Integer[] Race_AuthorRaceWaypointTimes for Map;
 		declare Integer[] Race_Share_AuthorRaceWaypointTimes for Map;

@@ -25,6 +25,8 @@ void OnEppLayerCustomEvent(const string &in type, MwFastBuffer<wstring> &in rawD
         } else {
             Editor::EnableMapThumbnailUpdate();
         }
+    } else if (type == "CustomColorTables") {
+        FromML::_SetCustomColorTablesRaw(data[0]);
     }
 }
 
@@ -39,6 +41,19 @@ namespace FromML {
     uint pgSwitches = 0;
     bool lockedThumbnail = false;
     uint FramesWithoutEvents = 0;
+    string _customColorTablesRaw;
+
+    uint leftCurly = "{"[0];
+    uint rightCurly = "}"[0];
+
+    void _SetCustomColorTablesRaw(const string &in raw) {
+        _customColorTablesRaw = raw;
+    }
+
+    bool HasCustomColors() {
+        if (_customColorTablesRaw.Length == 0) return false;
+        return true;
+    }
 }
 
 class ML_Event {
@@ -75,6 +90,10 @@ namespace ToML {
         SendMessage("MetadataCleared", {});
     }
 
+    void SetEmbeddedCustomColors(const string &in raw) {
+        SendMessage("SetCustomColorTables", {raw});
+    }
+
     const string TIMENOW_DELIM = "/*TIMENOW*/";
     const string EVENTS_DELIM = "/*EVENTS*/";
     const string PageAttachId = "E++ Supporting Plugin";
@@ -109,5 +128,18 @@ namespace ToML {
             }
         }
         return null;
+    }
+}
+
+namespace Editor {
+    void Set_Map_EmbeddedCustomColorsEncoded(const string &in raw) {
+        ToML::SetEmbeddedCustomColors(raw);
+    }
+
+    string Get_Map_EmbeddedCustomColorsEncoded() {
+        if (FromML::HasCustomColors()) {
+            return FromML::_customColorTablesRaw;
+        }
+        return "";
     }
 }
