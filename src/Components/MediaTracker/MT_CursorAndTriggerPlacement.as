@@ -14,7 +14,7 @@ class MT_CursorAndTriggerPlacementTab : Tab {
         UI::PushItemWidth(UI::GetContentRegionAvail().x / 2.);
         auto api = cast<CGameEditorMediaTrackerPluginAPI>(mteditor.PluginAPI);
         UX::InputIntDevUint32("MT Trigger Placement Height (0 - 254)", api, O_MTAPI_PlaceHeight, 0, 0xFE);
-        auto blockCursor = cast<CGameCursorBlock>(Dev::GetOffsetNod(api, O_MTAPI_BlockCursor));
+        auto blockCursor = cast<CGameCursorBlock>(Dev_GetOffsetNodSafe(api, O_MTAPI_BlockCursor));
         if (blockCursor !is null) {
             LabeledValue("Cursor Coord", blockCursor.Coord, true);
         }
@@ -34,7 +34,14 @@ class MT_CursorAndTriggerPlacementTab : Tab {
 
     CGameControlCameraEditorOrbital@ GetMTOrbitalCam(CGameEditorMediaTracker@ mtEditor) {
         if (mtEditor is null) return null;
-        auto cam = DGameCamera(Dev::GetOffsetUint64(mtEditor, 0x60));
+        auto ptr = Dev::GetOffsetUint64(mtEditor, 0x60);
+        if (ptr == 0) return null;
+        if (Dev_PointerLooksBad(ptr)) {
+            warn("MT Editor orbital cam -- bad pointer: " + Text::FormatPointer(ptr));
+            return null;
+        }
+        auto cam = DGameCamera(ptr);
+        if (cam is null || cam.CurrentCamControl is null) return null;
         return cast<CGameControlCameraEditorOrbital>(cam.CurrentCamControl);
     }
 }

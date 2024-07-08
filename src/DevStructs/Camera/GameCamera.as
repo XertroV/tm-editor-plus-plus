@@ -72,7 +72,7 @@ class DGameCamera : RawBufferElem {
 	// Free = 0x2, Cam1 = 0x12, 13, 14
 	uint get_ChosenCamera() { return (this.GetUint32(0x1A8)); }
 	void set_ChosenCamera(uint value) { this.SetUint32(0x1A8, value); }
-	// 0x230: ptr to unk - same as 0x2D0 in MT editor
+	// 0x230: ptr to unk - same as 0x2E0 in MT editor
 	// 
 	iso4 get_CameraMatrix() { return (this.GetIso4(0x260)); }
 	float get_Fov() { return (this.GetFloat(0x294)); }
@@ -85,7 +85,7 @@ class DGameCamera : RawBufferElem {
 	uint get_UnkVisEntId2C0() { return (this.GetUint32(0x2C0)); }
 	void set_UnkVisEntId2C0(uint value) { this.SetUint32(0x2C0, value); }
 	// points to game camera nod (self) when in map; control camera in editor
-	CGameControlCamera@ get_CurrentCamControl() { return cast<CGameControlCamera>(this.GetNod(0x2D0)); }
+	CGameControlCamera@ get_CurrentCamControl() { return cast<CGameControlCamera>(this.GetNod(0x2E0)); }
 }
 
 

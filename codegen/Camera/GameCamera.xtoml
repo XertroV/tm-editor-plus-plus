@@ -66,7 +66,7 @@ ChosenCamera = uint, 0x1A8, GS
 # unknown purpose, spec cam or something?
 UnkCameraThing = uint, 0x1AC, 0x15
 
-# 0x230: ptr to unk - same as 0x2D0 in MT editor
+# 0x230: ptr to unk - same as 0x2E0 in MT editor
 #
 CameraMatrix = iso4, 0x260, G
 
@@ -79,4 +79,4 @@ VisEntId2BC = uint, 0x2bC, GS
 UnkVisEntId2C0 = uint, 0x2C0, GS
 
 # points to game camera nod (self) when in map; control camera in editor
-CurrentCamControl = CGameControlCamera, 0x2D0, G
+CurrentCamControl = CGameControlCamera, 0x2E0, G

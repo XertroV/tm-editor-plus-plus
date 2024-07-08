@@ -87,7 +87,7 @@ namespace StringAlloc {
         Dev::SetOffset(tmpNod, 0x8, uint64(0));
         Dev::SetOffset(tmpNod, 0, uint64(0));
 
-        auto tmplBuf = MemoryBuffer(size, 0x20);
+        auto tmplBuf = MemoryBuffer(size, 0x0);
         // setting a string over 0x0,0x0 should allocate new memory
         Dev::SetOffset(tmpNod, 0, tmplBuf.ReadString(size));
         uint64 ptr = Dev::GetOffsetUint64(tmpNod, 0);

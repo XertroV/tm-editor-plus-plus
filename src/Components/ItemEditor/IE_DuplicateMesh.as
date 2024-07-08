@@ -264,15 +264,19 @@ namespace MeshDuplication {
     }
 
     void ZeroFids(CPlugSolid2Model@ mesh) {
-        ApplyMaterialMods(mesh);
         ZeroNodFid(mesh);
-        auto tgaFile = Dev::GetOffsetNod(mesh, 0x280);
+        ApplyMaterialMods(mesh);
+        auto tgaFile = Dev_GetOffsetNodSafe(mesh, 0x280);
         // todo: this may crash servers or something mb? idk
         if (tgaFile !is null) {
+            dev_trace('zeroing tga file at ' + Text::FormatPointer(Dev::GetOffsetUint64(mesh, 0x280)) + ' for mesh');
             ZeroNodFid(tgaFile);
         }
-        FixMatsOnMesh(mesh);
         FixLightsOnMesh(mesh);
+        FixMatsOnMesh(mesh);
+// #if DEV
+//         return;
+// #endif
     }
 
     void ZeroFids(NPlugTrigger_SWaypoint@ wp) {
