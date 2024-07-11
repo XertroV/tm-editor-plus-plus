@@ -128,9 +128,13 @@ const bool HAS_Z_DRIVE_WINE_INDICATOR = IO::FolderExists("Z:\\etc\\");
 [Setting category="General" name="Force disable linux-wine check if you have a Z:\\ drive with an etc folder"]
 bool S_ForceDisableLinuxWineCheck = false;
 
+[Setting category="General" name="Reduce lower bound on pointer sizes (rarely needed for windows, linux/wine handled automatically)"]
+bool S_ReducedPointerSizeCheck = false;
+
+
 bool Dev_PointerLooksBad(uint64 ptr) {
     // ! testing
-    if (HAS_Z_DRIVE_WINE_INDICATOR && !S_ForceDisableLinuxWineCheck) {
+    if (S_ReducedPointerSizeCheck || (HAS_Z_DRIVE_WINE_INDICATOR && !S_ForceDisableLinuxWineCheck)) {
         // dev_trace('Has Z drive / ptr: ' + Text::FormatPointer(ptr) + ' < 0x100000000 = ' + tostring(ptr < 0x100000000));
         // dev_trace('base addr end: ' + Text::FormatPointer(BASE_ADDR_END));
         if (ptr < 0x1000000) return true;
@@ -162,6 +166,7 @@ CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
 
 namespace NodPtrs {
     void InitializeTmpPointer() {
+        if (g_TmpPtrSpace != 0) return;
         g_TmpPtrSpace = RequestMemory(0x1000);
         auto nod = CMwNod();
         uint64 tmp = Dev::GetOffsetUint64(nod, 0);
@@ -172,6 +177,15 @@ namespace NodPtrs {
 
     uint64 g_TmpPtrSpace = 0;
     CMwNod@ g_TmpSpaceAsNod = null;
+
+    void Cleanup() {
+        warn("NodPtrs::Cleanup");
+        @g_TmpSpaceAsNod = null;
+        if (g_TmpPtrSpace != 0) {
+            // freeing happens elsewhere
+            g_TmpPtrSpace = 0;
+        }
+    }
 }
 
 CMwNod@ Dev_GetArbitraryNodAt(uint64 ptr) {

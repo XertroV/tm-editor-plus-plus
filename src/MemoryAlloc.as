@@ -27,10 +27,15 @@ uint64 RequestMemory(uint size, bool exec = false) {
 }
 
 void FreeAllAllocated() {
+    warn("FreeAllAllocated: freeing all memory allocations");
     for (uint i = 0; i < memoryAllocations.Length; i++) {
         Dev::Free(memoryAllocations[i]);
     }
     memoryAllocations.RemoveRange(0, memoryAllocations.Length);
+    for (uint i = 0; i < stringAllocations.Length; i++) {
+        stringAllocations[i].DestroyNow();
+    }
+    stringAllocations.RemoveRange(0, stringAllocations.Length);
 }
 
 void FreeAllocated(uint64 ptr) {
@@ -122,6 +127,10 @@ namespace StringAlloc {
 #if DEV
             dev_trace("Ignoring str alloc at " + Text::FormatPointer(ptr) + " of size " + size + " (destructor called)");
 #endif
+        }
+
+        void DestoryNow() {
+            // forgot that we expect the game to clean these up, so we don't need to do anything here
         }
 
         void MarkAvailable() {

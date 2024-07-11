@@ -89,6 +89,7 @@ void Unload(bool freeMem = true) {
     CustomCursorRotations::BeforeAfterCursorUpdateHook.Unapply();
     LightMapCustomRes::Unpatch();
     PillarsChoice::IsActive = false;
+    NodPtrs::Cleanup();
     FreeAllAllocated();
 }
 

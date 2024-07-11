@@ -68,7 +68,7 @@ class MapEditPropsTab : Tab {
     VehicleToPlace m_VehicleTestType = VehicleToPlace::Map_Default;
     uint m_ChosenVehicleMwId = -1;
     uint m_ChosenVehicleAuthorMwId = -1;
-    uint m_ChosenVehicleCollection = 0x2713;
+    uint m_ChosenVehicleCollection = 10003; // 0x2713
 
     void DrawTestPlacementWindows() {
         if (!drawTestPlacementWindow) return;
@@ -621,7 +621,7 @@ class MapEditPropsTab : Tab {
             } else {
                 vehicleMwIds.InsertAt(0, uint(-1));
                 vehicleNames.InsertAt(0, "Map Default");
-                vehicleCollections.InsertAt(0, 0x2713);
+                vehicleCollections.InsertAt(0, 10003);
                 vehicleAuthorMwIds.InsertAt(0, uint(-1));
             }
         }
