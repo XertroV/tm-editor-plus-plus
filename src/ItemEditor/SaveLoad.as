@@ -256,13 +256,18 @@ namespace Editor {
         auto itemsFolder = Fids::GetUserFolder("Items");
         string itemsFolderPrefix = itemsFolder.FullDirName;
         auto itemPath = itemsFolderPrefix + "/" + item;
-        auto itemPathBackup = itemPath + ".back";
-        CopyFile(itemPath, itemPathBackup);
-        if (isFirst) ItemEditor::OpenItem(item);
-        else IO::Delete(itemPath);
-        ItemEditor::SaveItemAs(item);
-        CopyFile(itemPathBackup, itemPath);
-        IO::Delete(itemPathBackup);
+        if (!IO::FileExists(itemPath)) {
+            warn("Item file does not exist: " + itemPath);
+            return;
+        }
+        // auto itemPathBackup = itemPath + ".back";
+        // CopyFile(itemPath, itemPathBackup);
+        ItemEditor::OpenItem(item);
+        // if (isFirst) ItemEditor::OpenItem(item);
+        // else IO::Delete(itemPath);
+        // ItemEditor::SaveItemAs(item);
+        // CopyFile(itemPathBackup, itemPath);
+        // IO::Delete(itemPathBackup);
     }
 }
 
