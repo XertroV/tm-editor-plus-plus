@@ -462,6 +462,9 @@ namespace Editor {
         uint64 ObjPtr;
         CGameCtnAnchoredObject@ GameItem;
 
+        CSystemPackDesc@ _rawFGSkin = null;
+        CSystemPackDesc@ _rawBGSkin = null;
+
         ~ItemSpecPriv() {
             if (Model !is null) {
                 Model.MwRelease();
@@ -505,7 +508,8 @@ namespace Editor {
             if (item.WaypointSpecialProperty !is null) {
                 @waypoint = WaypointSpec(item.WaypointSpecialProperty);
             }
-            // ignore skins for the moment
+            @_rawBGSkin = Editor::GetItemBGSkin(item);
+            @_rawFGSkin = Editor::GetItemFGSkin(item);
             SetModel(item.ItemModel);
         }
 
@@ -531,6 +535,8 @@ namespace Editor {
             if (item.Waypoint !is null) {
                 @waypoint = WaypointSpec(item.Waypoint);
             }
+            @_rawBGSkin = item.BGSkin;
+            @_rawFGSkin = item.FGSkin;
             // ignore skins for the moment
             SetModel(item.Model);
         }
@@ -624,8 +630,8 @@ namespace Editor {
                 item.Waypoint.Order = waypoint.order;
                 item.Waypoint.Tag = waypoint.tag;
             }
-            @item.BGSkin = null;
-            @item.FGSkin = null;
+            @item.FGSkin = _rawFGSkin;
+            @item.BGSkin = _rawBGSkin;
             if (Model is null) {
                 SetModel(TryLoadingModelFromFid());
             }

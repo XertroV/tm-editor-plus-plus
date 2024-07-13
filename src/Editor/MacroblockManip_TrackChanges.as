@@ -320,17 +320,17 @@ namespace Editor {
         auto mbSpec = cast<MacroblockSpecPriv>(macroblock);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (mbSpec is null || editor is null || editor.PluginMapType is null) {
-            dev_warn("PlaceMacroblock: invalid macroblock or editor null");
+            NotifyError("PlaceMacroblock: invalid macroblock or editor null");
             return false;
         }
         auto pmt = editor.PluginMapType;
         if (pmt.MacroblockModels.Length == 0) {
-            dev_warn("PlaceMacroblock: no macroblock models");
+            NotifyError("PlaceMacroblock: no macroblock models");
             return false;
         }
         auto mb = pmt.GetMacroblockModelFromFilePath("Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx");
         if (mb is null) {
-            dev_warn("PlaceMacroblock: failed to get macroblock model");
+            NotifyError("PlaceMacroblock: failed to get macroblock model");
             return false;
         }
         mbSpec._TempWriteToMacroblock(mb);
@@ -349,6 +349,9 @@ namespace Editor {
         }
         mbSpec._RestoreMacroblock();
         dev_trace("PlaceMacroblock returning: " + placed);
+
+        // todo: skins?
+
         return placed;
     }
     bool DeleteMacroblock(MacroblockSpec@ macroblock, bool addUndoRedoPoint = false) {
@@ -378,6 +381,7 @@ namespace Editor {
     SetSkinSpec@[] queuedSkins;
 
     void QueueSkinApplication(SetSkinSpec@ skin) {
+        if (skin is null) return;
         queuedSkins.InsertLast(skin);
     }
 

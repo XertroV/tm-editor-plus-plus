@@ -466,6 +466,12 @@ namespace Editor {
             }
         }
 
+        SetSkinSpec(ItemSpec@ item, const string &in fgSkin, const string &in bgSkin) {
+            @this.item = item;
+            this.fgSkin = fgSkin;
+            this.bgSkin = bgSkin;
+        }
+
         SetSkinSpec(MemoryBuffer@ buf) {
             ReadFromNetworkBuffer(buf);
         }
