@@ -28,17 +28,13 @@ namespace Editor {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto pos = vec3(mat.tx, mat.ty, mat.tz);
         auto invTrans = mat4::Translate(pos * -1);
-        // item cursor expects this for some reason
+        // item cursor matrix rotations sorta backwards; expects this for some reason
         auto rot = (invTrans * mat);
         SetAllCursorPos(pos);
-        auto cursorPYR = PitchYawRollFromRotationMatrix(mat4::Inverse(rot));
-        // auto cursorPYR = EulerFromRotationMatrix(rot);
-        auto er = EditorRotation(cursorPYR);
-        er.SetCursor(editor.Cursor);
         SetItemCursorMat(editor.ItemCursor, mat);
-        // SetItemCursorPos(editor.ItemCursor, pos);
-        CustomCursorRotations::cursorCustomPYR = cursorPYR;
-        CustomCursorRotations::NormalizeCustomYaw(editor.Cursor, editor.Cursor.Dir);
+        // invert rotations to get block cursor compatible rotations
+        auto cursorPYR = PitchYawRollFromRotationMatrix(mat4::Inverse(rot));
+        CustomCursorRotations::SetCustomPYRAndCursor(cursorPYR, editor.Cursor);
     }
 
     void SetAllCursorPos(vec3 pos) {

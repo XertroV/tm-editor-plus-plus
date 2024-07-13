@@ -39,7 +39,7 @@ namespace Gizmo {
         if (_IsActive == v) return;
         if (v && CursorControl::RequestExclusiveControl(gizmoControlName)) {
             _IsActive = v;
-            startnew(GizmoLoop).WithRunContext(Meta::RunContext::AfterScripts);
+            startnew(GizmoLoop); // .WithRunContext(Meta::RunContext::AfterScripts);
         } else if (!v) {
             OnGoInactive();
         } else {
@@ -136,7 +136,19 @@ namespace Gizmo {
                 editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
             }
         } else {
+            Editor::SetAllCursorPos(lastPickedItemPos);
+            CustomCursorRotations::SetCustomPYRAndCursor(lastPickedItemRot.Euler, editor.Cursor);
+            startnew(_GizmoUpdateBBFromSelected);
+            yield();
             @bb = Editor::GetSelectedItemAABB();
+            if (bb is null) {
+                warn("no selected item BB");
+            } else {
+                bb.mat = mat4::Inverse(Editor::GetItemMatrix(lastPickedItem.AsItem()));
+                // bb is not always accurate -- will use last cursor pos which only showed before user pressed ctrl
+                bb.pos = lastPickedItemPos;
+            }
+            lastPickedItemRot.SetCursor(editor.Cursor);
         }
         if (bb is null) {
             IsActive = false;
@@ -146,6 +158,13 @@ namespace Gizmo {
         @gizmo = RotationTranslationGizmo("gizmo").WithBoundingBox(bb)
             .WithOnApplyF(_GizmoOnApply).WithOnExitF(_GizmoOnCancel);
         IsActive = true;
+    }
+
+    void _GizmoUpdateBBFromSelected() {
+        yield(2);
+        if (gizmo is null) return;
+        @bb = Editor::GetSelectedItemAABB();
+        gizmo.WithBoundingBox(bb);
     }
 
     void _GizmoOnApply() {

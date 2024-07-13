@@ -180,7 +180,9 @@ class EditorRotation {
     }
 
     EditorRotation(float pitch, float yaw, float roll) {
-        euler = vec3(pitch, yaw, roll);
+        euler.x = pitch;
+        euler.y = yaw;
+        euler.z = roll;
         UpdateDirFromPry();
     }
 
@@ -210,13 +212,14 @@ class EditorRotation {
     }
 
     float NormalizeAngle(float angle) {
-        while (angle < - Math::PI) {
-            angle += TAU;
-        }
-        while (angle > Math::PI) {
-            angle -= TAU;
-        }
-        return angle;
+        return (angle + Math::PI) % TAU - Math::PI;
+        // while (angle < - Math::PI) {
+        //     angle += TAU;
+        // }
+        // while (angle > Math::PI) {
+        //     angle -= TAU;
+        // }
+        // return angle;
     }
 
     void SetCursor(CGameCursorBlock@ cursor) {
@@ -224,7 +227,7 @@ class EditorRotation {
         cursor.Roll = Roll;
         cursor.Dir = Dir;
         cursor.AdditionalDir = AdditionalDir;
-        if (cursor.UseSnappedLoc) {
+        if (true || cursor.UseSnappedLoc) {
             cursor.SnappedLocInMap_Pitch = Pitch;
             cursor.SnappedLocInMap_Roll = Roll;
             cursor.SnappedLocInMap_Yaw = Yaw;
@@ -252,13 +255,17 @@ class EditorRotation {
     void UpdateDirFromPry() {
         NormalizeAngles();
         auto yaw = euler.y;
+        // yaw = (yaw + PI) % TAU - PI;
         dir = CGameCursorBlock::ECardinalDirEnum(YawToCardinalDirection(yaw));
         yaw -= CardinalDirectionToYaw(dir);
         // this can happen transitioning directions sometimes.
         if (yaw > PI) yaw -= TAU;
         // trace('yaw: ' + yaw);
+        if (0 > yaw || yaw > HALF_PI) {
+            warn('yaw out of bounds: ' + yaw);
+        }
         yaw = Math::Clamp(yaw, 0.0, HALF_PI);
-        if (yaw + 0.01 > HALF_PI) {
+        if (yaw + 0.0001 > HALF_PI) {
             yaw = 0.0;
             dir = CGameCursorBlock::ECardinalDirEnum((int(dir) + 3) % 4);
         }

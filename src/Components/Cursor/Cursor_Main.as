@@ -637,6 +637,20 @@ namespace CustomCursorRotations {
         if (nextUseSnapPos > 0) return;
     }
 
+    void SetCustomPYRAndCursor(vec3 pyr, CGameCursorBlock@ cursor) {
+        cursorCustomPYR = pyr;
+        auto rots = EditorRotation(cursorCustomPYR);
+        cursor.Pitch = rots.Pitch;
+        cursor.Roll = rots.Roll;
+        cursor.Dir = CGameCursorBlock::ECardinalDirEnum(rots.Dir);
+        cursorCustomPYR.y = rots.additionalYaw;
+        cursor.AdditionalDir = rots.AdditionalDir;
+        if (cursor.UseSnappedLoc) {
+            cursor.SnappedLocInMap_Pitch = cursorCustomPYR.x;
+            cursor.SnappedLocInMap_Roll = cursorCustomPYR.z;
+            cursor.SnappedLocInMap_Yaw = rots.YawWithCustomExtra(cursorCustomPYR.y);
+        }
+    }
 
     void NormalizeCustomYaw(CGameCursorBlock@ cursor, int lastDir) {
         if (cursorCustomPYR.y > HALF_PI - 0.000) {

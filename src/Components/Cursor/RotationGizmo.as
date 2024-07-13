@@ -103,13 +103,14 @@ class RotationTranslationGizmo {
 
     RotationTranslationGizmo@ WithMatrix(const mat4 &in m) {
         pos = vec3(m.tx, m.ty, m.tz);
-        rot = mat4::Inverse(mat4::Translate(pos * -1.) * m);
+        // rot = mat4::Inverse(mat4::Translate(pos * -1.) * m);
+        rot = (mat4::Translate(pos * -1.) * m);
         return this;
     }
 
     RotationTranslationGizmo@ WithBoundingBox(Editor::AABB@ bb) {
         WithMatrix(bb.mat);
-        scale = MathX::Max(bb.halfDiag) * 2.;
+        scale = MathX::Max(bb.halfDiag) * 2.0;
         return this;
     }
 
@@ -213,11 +214,12 @@ class RotationTranslationGizmo {
         for (int c = 0; c < 3; c++) {
             bool thicken = lastClosestAxis == Axis(c) && mouseInClickRange;
             float colAdd = thicken ? 0.2 : 0.;
+            float strokeWidth = thicken ? 5 : 2;
             nvg::Reset();
             nvg::LineCap(nvg::LineCapType::Round);
             nvg::LineJoin(nvg::LineCapType::Round);
             nvg::BeginPath();
-            nvg::StrokeWidth(thicken ? 5 : 2);
+            nvg::StrokeWidth(strokeWidth);
             // nvg::Circle(mousePos, 5.);
             auto @circle = isRotMode ? circlesAroundXYZ[c] : axisDragArrows[c];
             auto col = circleColors[c];
@@ -234,6 +236,7 @@ class RotationTranslationGizmo {
                 isNearSide = (worldPos - camPos).LengthSquared() < c2pLen2;
             }
             bool wasNearSide = isNearSide;
+            nvg::StrokeWidth(isNearSide ? strokeWidth * 1.5 : strokeWidth);
             nvg::StrokeColor((isNearSide ? col : col2) + colAdd);
             vec3 p1 = Camera::ToScreen(worldPos);
             nvg::MoveTo(p1.xy);
@@ -253,6 +256,7 @@ class RotationTranslationGizmo {
                     nvg::ClosePath();
                     nvg::BeginPath();
                     nvg::StrokeColor((isNearSide ? col : col2) + colAdd);
+                    nvg::StrokeWidth(isNearSide ? strokeWidth * 1.5 : strokeWidth);
                     nvg::MoveTo(p1.xy);
                 }
                 p1 = Camera::ToScreen(worldPos);
@@ -274,12 +278,13 @@ class RotationTranslationGizmo {
             nvg::Stroke();
             nvg::ClosePath();
         }
+        // MARK: hndl input
         if (!isMouseDown) {
             lastClosestAxis = closestAxis;
             lastClosestMouseDist = closestMouseDist;
             if (IsAltDown() || Editor::IsInFreeLookMode(cast<CGameCtnEditorFree>(GetApp().Editor))) {
                 // do nothing: camera inputs
-            } if (IsLMBPressed()) {
+            } if (UI::IsMouseClicked(UI::MouseButton::Left)) {
                 isMouseDown = true;
                 mouseDownStart = Time::Now;
                 mouseDownPos = mousePos;
@@ -296,6 +301,7 @@ class RotationTranslationGizmo {
             // RMB while mouse is down -> reset and disable mouse down mode
             // isMouseDown = false;
             mouseDownPos = vec2(-100);
+            lastClosestMouseDist = 1000000.;
             ResetTmp();
         } else if (mouseInClickRange) {
             bool skipSetLastDD = false;

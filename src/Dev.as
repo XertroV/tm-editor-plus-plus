@@ -501,7 +501,8 @@ const uint16 O_EDITOR_LAST_RMB_PRESSED = O_EDITOR_LAST_LMB_PRESSED + 0x4; // 0xB
 const uint16 O_EDITOR_LMB_PRESSED1 = O_EDITOR_LAST_RMB_PRESSED + 0x4; // 0xBB8
 const uint16 O_EDITOR_RMB_PRESSED1 = O_EDITOR_LMB_PRESSED1 + 0x4; // 0xBBC
 const uint16 O_EDITOR_LMB_PRESSED2 = O_EDITOR_RMB_PRESSED1 + 0x4; // 0xBC0
-const uint16 O_EDITOR_FREELOOK_ENABLED = O_EDITOR_GridColor - (0xC08 - 0xBF0); // 0xBF0
+// 1 when freelook, 2 when deleting block, 3 when picking block, 4 in copy mode add, 5 copy sub, 8 in block props, 11 in plugin, 13 offzone
+const uint16 O_EDITOR_EDIT_MODE = O_EDITOR_GridColor - (0xC10 - 0xBF8); // 0xBF8
 
 const uint16 SZ_CGAMECURSORITEM = 0xE8;
 

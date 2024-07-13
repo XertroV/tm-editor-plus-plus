@@ -24,6 +24,17 @@ namespace Editor {
         if (gameItemSMgrPtr == 0) return null;
         auto buf = RawBuffer(gameItemSMgrPtr + 0x38, 0x130, false);
         auto len = buf.Length;
+        // the cursor item is usually the last in the buffer, but not if you've placed an item of that type recently
+        while(len > 0) {
+            auto item = buf[len - 1];
+            // 0x98 - class ID of NGamePrefabPhy_SInst?
+            // 0x9C - 0xFFFFFFFF for item in cursor; counter/ix otherwise
+            // 0xA0 - 0 for item in cursor; counter/ix otherwise
+            if (item.GetUint32(0x98) == 0 &&
+                item.GetInt32(0x9C) == -1 &&
+                item.GetInt32(0xA0) == 0) break;
+            len--;
+        }
         if (len == 0) return null;
         auto last = buf[len - 1];
         auto hasModel = last.GetBool(0xF8);
@@ -50,6 +61,10 @@ namespace Editor {
 
         vec3 get_pos() {
             return vec3(mat.tx, mat.ty, mat.tz);
+        }
+
+        void set_pos(const vec3 &in newPos) {
+            mat = mat4::Translate(newPos) * mat4::Translate(this.pos * -1.) * mat;
         }
 
         vec3 get_min() {
