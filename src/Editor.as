@@ -191,6 +191,10 @@ namespace Editor {
         editor.PluginMapType.EditMode = mode;
     }
 
+    bool IsInFreeLookMode(CGameCtnEditorFree@ editor) {
+        return GetEditMode(editor) == CGameEditorPluginMap::EditMode::FreeLook;
+    }
+
     // checks edit mode == Place
     bool IsInPlacementMode(CGameCtnEditorFree@ editor) {
         return Editor::GetEditMode(editor) == CGameEditorPluginMap::EditMode::Place;

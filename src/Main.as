@@ -57,6 +57,9 @@ void Main() {
 
     startnew(RegisterEditorLeaveUndoStandingRespawnCheck);
 
+    yield(2);
+    startnew(ColorSelectionHook::SetupHooks);
+
     sleep(500);
     CallbacksEnabledPostInit = true;
 
@@ -89,6 +92,7 @@ void Unload(bool freeMem = true) {
     CustomCursorRotations::BeforeAfterCursorUpdateHook.Unapply();
     LightMapCustomRes::Unpatch();
     PillarsChoice::IsActive = false;
+    Gizmo::IsActive = false;
     NodPtrs::Cleanup();
     FreeAllAllocated();
 }
@@ -101,6 +105,7 @@ bool dismissedCamReturnToStadium = false;
 uint g_PriorRenderEarlyTime;
 uint g_ThisRenderEarlyTime;
 vec2 g_screen;
+float g_scale = UI::GetScale();
 
 void RenderEarly() {
     g_PriorRenderEarlyTime = g_ThisRenderEarlyTime;
@@ -196,6 +201,7 @@ void Render() {
     // }
 
     PillarsChoice::Render();
+    Gizmo::Render();
 }
 
 void RenderInterface() {
@@ -261,9 +267,11 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     if (lmbDown && g_CoordPathDrawingTool.ShouldBlockLMB()) {
         block = true;
     } else {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         block = (lmbDown && FarlandsHelper::FH_CheckPlacing()) || block;
         block = (lmbDown && CheckPlaceMacroblockAirMode()) || block;
         block = (lmbDown && CheckPlacingItemFreeMode()) || block;
+        block = (lmbDown && Gizmo::CheckEnterGizmoMode(editor)) || block;
     }
 
     g_LastMouseBDown = down;

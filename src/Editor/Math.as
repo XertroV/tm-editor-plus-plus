@@ -143,33 +143,124 @@ int3 PosToCoordDist(vec3 pos) {
     );
 }
 
-// mat4 QuatToMat4(quat &in q) {
-//     float x = q.x, y = q.y, z = q.z, w = q.w;
-//     float x2 = x + x, y2 = y + y, z2 = z + z;
-//     float xx = x * x2, xy = x * y2, xz = x * z2;
-//     float yy = y * y2, yz = y * z2, zz = z * z2;
-//     float wx = w * x2, wy = w * y2, wz = w * z2;
-//     return mat4(
-//         vec4(1.0 - (yy + zz), xy + wz, xz - wy, 0.0),
-//         vec4(xy - wz, 1.0 - (xx + zz), yz + wx, 0.0),
-//         vec4(xz + wy, yz - wx, 1.0 - (xx + yy), 0.0),
-//         vec4(0.0, 0.0, 0.0, 1.0)
-//     );
-// }
-mat4 QuatToMat4(const quat &in q) {
-    float x = q.x, y = q.y, z = q.z, w = q.w;
-    float x2 = x + x, y2 = y + y, z2 = z + z;
-    float xx = x * x2, yy = y * y2, zz = z * z2;
-    float xy = x * y2, xz = x * z2, yz = y * z2;
-    float wx = w * x2, wy = w * y2, wz = w * z2;
 
-    return mat4(
-        vec4(1.0f - (yy + zz), xy - wz, xz + wy, 0.0f),
-        vec4(xy + wz, 1.0f - (xx + zz), yz - wx, 0.0f),
-        vec4(xz - wy, yz + wx, 1.0f - (xx + yy), 0.0f),
-        vec4(0.0f, 0.0f, 0.0f, 1.0f)
-    );
+// Game: XZY, Openplanet: XYZ
+enum EulerOrder {
+    XYZ,
+    YXZ,
+    ZXY,
+    ZYX,
+    YZX,
+    XZY
 }
+
+EulerOrder EulerOrder_Openplanet = EulerOrder::XYZ;
+// EulerOrder EulerOrder_Openplanet = EulerOrder::XZY;
+// EulerOrder EulerOrder_Openplanet = EulerOrder::YZX;
+// EulerOrder EulerOrder_Openplanet = EulerOrder::YXZ;
+// EulerOrder EulerOrder_Openplanet = EulerOrder::ZXY;
+// EulerOrder EulerOrder_Openplanet = EulerOrder::ZYX;
+EulerOrder EulerOrder_Game = EulerOrder::XZY;
+
+vec3 EulerFromRotationMatrix(const mat4 &in mat, EulerOrder order = EulerOrder::XZY) {
+    float m11 = mat.xx, m12 = mat.xy, m13 = mat.xz,
+        m21 = mat.yx, m22 = mat.yy, m23 = mat.yz,
+        m31 = mat.zx, m32 = mat.zy, m33 = mat.zz;
+    float x, y, z;
+    switch (order) {
+        case EulerOrder::XYZ:
+            y = Math::Asin(Math::Clamp(m13, -1.0, 1.0));
+            if (Math::Abs(m13) < 0.9999999) {
+                x = Math::Atan2(-m23, m33);
+                z = Math::Atan2(-m12, m11);
+            } else {
+                x = Math::Atan2(m32, m22);
+                z = 0;
+            }
+            return vec3(x, y, z) * -1.;
+        case EulerOrder::YXZ:
+            x = Math::Asin(-Math::Clamp(m23, -1.0, 1.0));
+            if (Math::Abs(m23) < 0.9999999) {
+                y = Math::Atan2(m13, m33);
+                z = Math::Atan2(m21, m22);
+            } else {
+                y = Math::Atan2(-m31, m11);
+                z = 0;
+            }
+            return vec3(x, y, z) * -1.;
+        case EulerOrder::ZXY:
+            x = Math::Asin(Math::Clamp(m32, -1.0, 1.0));
+            if (Math::Abs(m32) < 0.9999999) {
+                y = Math::Atan2(-m31, m33);
+                z = Math::Atan2(-m12, m22);
+            } else {
+                y = 0;
+                z = Math::Atan2(m21, m11);
+            }
+            return vec3(x, y, z) * -1.;
+        case EulerOrder::ZYX:
+            y = Math::Asin(-Math::Clamp(m31, -1.0, 1.0));
+            if (Math::Abs(m31) < 0.9999999) {
+                x = Math::Atan2(m32, m33);
+                z = Math::Atan2(m21, m11);
+            } else {
+                x = 0;
+                z = Math::Atan2(-m12, m22);
+            }
+            return vec3(x, y, z) * -1.;
+        case EulerOrder::YZX:
+            z = Math::Asin(Math::Clamp(m21, -1.0, 1.0));
+            if (Math::Abs(m21) < 0.9999999) {
+                x = Math::Atan2(-m23, m22);
+                y = Math::Atan2(-m31, m11);
+            } else {
+                x = 0;
+                y = Math::Atan2(m13, m33);
+            }
+            return vec3(x, y, z) * -1.;
+        case EulerOrder::XZY:
+            z = Math::Asin(-Math::Clamp(m12, -1.0, 1.0));
+            if (Math::Abs(m12) < 0.9999999) {
+                x = Math::Atan2(m32, m22);
+                y = Math::Atan2(m13, m11);
+            } else {
+                x = Math::Atan2(-m23, m33);
+                y = 0;
+            }
+            return vec3(x, y, z) * -1.;
+        default:
+            print("EulerFromRotationMatrix: Unknown Euler order: " + tostring(order));
+            break;
+    }
+    return vec3(x, y, z);
+}
+
+mat4 EulerToRotationMatrix(vec3 pyr, EulerOrder order) {
+    switch (order) {
+        case EulerOrder::XYZ:
+            return mat4::Rotate(pyr.z, BACKWARD) * mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.x, RIGHT);
+        case EulerOrder::YXZ:
+            return mat4::Rotate(pyr.z, BACKWARD) * mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.y, UP);
+        case EulerOrder::ZXY:
+            return mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.z, BACKWARD);
+        case EulerOrder::ZYX:
+            return mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.z, BACKWARD);
+        case EulerOrder::YZX:
+            return mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.z, BACKWARD) * mat4::Rotate(pyr.y, UP);
+        case EulerOrder::XZY:
+            return mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.z, BACKWARD) * mat4::Rotate(pyr.x, RIGHT);
+        default:
+            print("EulerToRotationMatrix: Unknown Euler order: " + tostring(order));
+            break;
+    }
+    return mat4::Identity();
+}
+
+// Probably depends on the order of the Euler angles
+mat4 QuatToMat4(quat q) {
+    return mat4::Rotate(q.Angle(), q.Axis());
+}
+
 
 quat EulerToQuat(vec3 e) {
     // throw('broken');
@@ -249,11 +340,6 @@ vec3 PitchYawRollFromRotationMatrix(mat4 m) {
     return e * -1.;
 }
 
-
-// mat4 EulerToMat4_Inv(vec3 euler) {
-//     // order XZY
-//     return mat4::Inverse(EulerToMat(euler));
-// }
 
 
 // From Rxelux's `mat4x` lib, modified

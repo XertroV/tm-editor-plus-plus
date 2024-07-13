@@ -6,6 +6,8 @@ namespace Editor {
     import const array<ItemSpec@>@ ThisFrameItemsPlaced() from "Editor";
     import const array<SetSkinSpec@>@ ThisFrameSkinsSet() from "Editor";
     import const array<SetSkinSpec@>@ ThisFrameSkinsSetByAPI() from "Editor";
+    import const array<BlockSpec@>@ ThisFrameBlocksColorsChanged() from "Editor";
+    import const array<ItemSpec@>@ ThisFrameItemsColorsChanged() from "Editor";
     import const array<BlockSpec@>@ LastFrameBlocksDeleted() from "Editor";
     import const array<BlockSpec@>@ LastFrameBlocksDeletedByAPI() from "Editor";
     import const array<ItemSpec@>@ LastFrameItemsDeleted() from "Editor";
@@ -13,6 +15,8 @@ namespace Editor {
     import const array<ItemSpec@>@ LastFrameItemsPlaced() from "Editor";
     import const array<SetSkinSpec@>@ LastFrameSkinsSet() from "Editor";
     import const array<SetSkinSpec@>@ LastFrameSkinsSetByAPI() from "Editor";
+    import const array<BlockSpec@>@ LastFrameBlocksColorsChanged() from "Editor";
+    import const array<ItemSpec@>@ LastFrameItemsColorsChanged() from "Editor";
     import MacroblockWithSetSkins@ GetMapAsMacroblock() from "Editor";
     import MacroblockSpec@ MakeMacroblockSpec() from "Editor";
     import MacroblockSpec@ MakeMacroblockSpec(CGameCtnBlock@[]@ blocks, CGameCtnAnchoredObject@[]@ items) from "Editor";

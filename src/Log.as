@@ -17,7 +17,27 @@ LogLevel S_LogLevel = LogLevel::INFO;
 namespace Log {
     void Trace(const string &in msg) {
         if (S_LogLevel <= LogLevel::TRACE) {
-            trace(msg);
+            trace('[' + Time::Now + '] ' + msg);
+        }
+    }
+    void Debug(const string &in msg) {
+        if (S_LogLevel <= LogLevel::DEBUG) {
+            trace('[' + Time::Now + '] ' + msg);
+        }
+    }
+    void Info(const string &in msg) {
+        if (S_LogLevel <= LogLevel::INFO) {
+            print('[' + Time::Now + '] ' + msg);
+        }
+    }
+    void Warn(const string &in msg) {
+        if (S_LogLevel <= LogLevel::WARN) {
+            warn('[' + Time::Now + '] ' + msg);
+        }
+    }
+    void Error(const string &in msg) {
+        if (S_LogLevel <= LogLevel::ERROR) {
+            error('[' + Time::Now + '] ' + msg);
         }
     }
 }

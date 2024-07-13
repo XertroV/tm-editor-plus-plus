@@ -33,6 +33,7 @@ void FreeAllAllocated() {
     }
     memoryAllocations.RemoveRange(0, memoryAllocations.Length);
     for (uint i = 0; i < stringAllocations.Length; i++) {
+        // does nothing atm
         stringAllocations[i].DestroyNow();
     }
     stringAllocations.RemoveRange(0, stringAllocations.Length);
@@ -129,7 +130,7 @@ namespace StringAlloc {
 #endif
         }
 
-        void DestoryNow() {
+        void DestroyNow() {
             // forgot that we expect the game to clean these up, so we don't need to do anything here
         }
 

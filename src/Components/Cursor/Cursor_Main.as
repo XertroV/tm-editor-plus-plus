@@ -378,11 +378,9 @@ namespace CustomCursorRotations {
 
     bool CustomYawActive {
         get {
-            return AfterSetCursorRotationHook.IsApplied()
-                ;
+            return AfterSetCursorRotationHook.IsApplied();
         }
         set {
-
             AfterSetCursorRotationHook.SetApplied(value);
         }
     }
@@ -697,18 +695,17 @@ namespace CustomCursorRotations {
     }
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
+        if (!CustomYawActive) return false;
         // todo: custom yaw
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cursor = editor.Cursor;
         auto itemCursor = DGameCursorItem(editor.ItemCursor);
         bool autoRotating = itemCursor.snappedGlobalIx == uint(-1) && itemCursor.isAutoRotate;
-        if (CustomYawActive) {
-            if (!autoRotating && Editor::IsInAnyItemPlacementMode(editor)) {
-                item.Yaw += cursorCustomPYR.y - AdditionalDirToYaw(cursor.AdditionalDir);
-            } else {
-                // we must be in macroblock mode, or autorotate (probably)
-                // so do nothing
-            }
+        if (!autoRotating && Editor::IsInAnyItemPlacementMode(editor)) {
+            item.Yaw += cursorCustomPYR.y - AdditionalDirToYaw(cursor.AdditionalDir);
+        } else {
+            // we must be in macroblock mode, or autorotate (probably)
+            // so do nothing
         }
         return false;
     }

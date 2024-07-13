@@ -1,9 +1,14 @@
+enum BlockOrItem {
+    Block, Item
+}
+
 bool g_UseSnappedLoc = false;
 
 string lastPickedItemName;
 vec3 lastPickedItemPos = vec3();
 EditorRotation@ lastPickedItemRot = EditorRotation(0, 0, 0);
 ReferencedNod@ lastPickedItem = null;
+BlockOrItem lastPickedType = BlockOrItem::Block;
 
 void UpdatePickedItemProps(CGameCtnEditorFree@ editor) {
     if (editor is null) {
@@ -14,6 +19,7 @@ void UpdatePickedItemProps(CGameCtnEditorFree@ editor) {
     auto po = editor.PickedObject;
     @lastPickedItem = ReferencedNod(po);
     UpdatePickedItemCachedValues();
+    lastPickedType = BlockOrItem::Item;
 }
 
 void UpdatePickedItemCachedValues() {
@@ -41,6 +47,7 @@ void UpdatePickedBlockProps(CGameCtnEditorFree@ editor) {
     auto pb = editor.PickedBlock;
     @lastPickedBlock = ReferencedNod(pb);
     UpdatePickedBlockCachedValues();
+    lastPickedType = BlockOrItem::Block;
 }
 
 void UpdatePickedBlockCachedValues() {

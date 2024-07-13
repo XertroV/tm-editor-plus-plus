@@ -13,6 +13,10 @@ namespace Editor {
     array<SetSkinSpec@>@ skinsSetByAPIThisFrame = {};
     array<SetSkinSpec@>@ skinsSetLastFrame = {};
     array<SetSkinSpec@>@ skinsSetByAPILastFrame = {};
+    array<BlockSpec@>@ blocksColorsChangedThisFrame = {};
+    array<BlockSpec@>@ blocksColorsChangedLastFrame = {};
+    array<ItemSpec@>@ itemsColorsChangedThisFrame = {};
+    array<ItemSpec@>@ itemsColorsChangedLastFrame = {};
 
     const array<BlockSpec@>@ ThisFrameBlocksDeleted() {
         return blocksRemovedThisFrame;
@@ -35,6 +39,12 @@ namespace Editor {
     const array<SetSkinSpec@>@ ThisFrameSkinsSetByAPI() {
         return skinsSetByAPIThisFrame;
     }
+    const array<BlockSpec@>@ ThisFrameBlocksColorsChanged() {
+        return blocksColorsChangedThisFrame;
+    }
+    const array<ItemSpec@>@ ThisFrameItemsColorsChanged() {
+        return itemsColorsChangedThisFrame;
+    }
     const array<BlockSpec@>@ LastFrameBlocksDeleted() {
         return blocksRemovedLastFrame;
     }
@@ -55,6 +65,12 @@ namespace Editor {
     }
     const array<SetSkinSpec@>@ LastFrameSkinsSetByAPI() {
         return skinsSetByAPILastFrame;
+    }
+    const array<BlockSpec@>@ LastFrameBlocksColorsChanged() {
+        return blocksColorsChangedLastFrame;
+    }
+    const array<ItemSpec@>@ LastFrameItemsColorsChanged() {
+        return itemsColorsChangedLastFrame;
     }
 
 
@@ -181,6 +197,42 @@ namespace Editor {
         }
     }
 
+    void TrackMap_OnSetBlockColor(CGameCtnBlock@ block) {
+        auto cache = Editor::GetMapCache();
+        auto points = cache.objsRoot.FindPointsWithin(Editor::GetBlockLocation(block), .1);
+        BlockSpec@ point;
+        bool updatedExisting = false;
+        for (uint i = 0; i < points.Length; i++) {
+            @point = points[i].block;
+            if (point is null) continue;
+            if (point.MatchesBlock(block)) {
+                point.color = block.MapElemColor;
+                blocksColorsChangedThisFrame.InsertLast(point);
+                updatedExisting = true;
+            }
+        }
+        if (updatedExisting) return;
+        blocksColorsChangedThisFrame.InsertLast(BlockSpecPriv(block));
+    }
+
+    void TrackMap_OnSetItemColor(CGameCtnAnchoredObject@ item) {
+        auto cache = Editor::GetMapCache();
+        auto points = cache.objsRoot.FindPointsWithin(Editor::GetItemLocation(item), .1);
+        ItemSpec@ point;
+        bool updatedExisting = false;
+        for (uint i = 0; i < points.Length; i++) {
+            @point = points[i].item;
+            if (point is null) continue;
+            if (point.MatchesItem(item)) {
+                point.color = item.MapElemColor;
+                itemsColorsChangedThisFrame.InsertLast(point);
+                updatedExisting = true;
+            }
+        }
+        if (updatedExisting) return;
+        itemsColorsChangedThisFrame.InsertLast(ItemSpecPriv(item));
+    }
+
     // run in earliest context possible.
     void ResetTrackMapChanges_Loop() {
         while (true) {
@@ -200,6 +252,8 @@ namespace Editor {
         @itemsRemovedLastFrame = itemsRemovedThisFrame;
         @skinsSetLastFrame = skinsSetThisFrame;
         @skinsSetByAPILastFrame = skinsSetByAPIThisFrame;
+        @blocksColorsChangedLastFrame = blocksColorsChangedThisFrame;
+        @itemsColorsChangedLastFrame = itemsColorsChangedThisFrame;
         @blocksAddedThisFrame = {};
         @blocksRemovedThisFrame = {};
         @blocksRemovedByAPIThisFrame = {};
@@ -207,6 +261,8 @@ namespace Editor {
         @itemsRemovedThisFrame = {};
         @skinsSetThisFrame = {};
         @skinsSetByAPIThisFrame = {};
+        @blocksColorsChangedThisFrame = {};
+        @itemsColorsChangedThisFrame = {};
     }
 
     MacroblockSpec@ MacroblockSpecFromBuf(MemoryBuffer@ buf) {

@@ -95,6 +95,7 @@ bool CheckPlaceMacroblockAirMode() {
 bool S_HelpPlaceItemsOnFreeBlocks = false;
 
 // true => block click
+// function behind S_HelpPlaceItemsOnFreeBlocks
 bool CheckPlacingItemFreeMode() {
     // dev_trace('CheckPlacingItemFreeMode');
     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);

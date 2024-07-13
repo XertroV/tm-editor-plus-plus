@@ -31,6 +31,8 @@ CoroutineFunc@[] onAfterCursorUpdateCbs;
 string[] onAfterCursorUpdateCbNames;
 CoroutineFunc@[] onBeforeCursorUpdateCbs;
 string[] onBeforeCursorUpdateCbNames;
+CoroutineFuncUserdataInt64@[] onApplyColorToSelectionCbs;
+string[] onApplyColorToSelectionCbNames;
 // CoroutineFunc@[] selectedBlockChangedCbs;
 
 // set this shortly after loading the plugin
@@ -157,6 +159,13 @@ void RegisterNewBeforeCursorUpdateCallback(CoroutineFunc@ f, const string &in na
     }
 }
 
+void RegisterOnApplyColorToSelectionCallback(CoroutineFuncUserdataInt64@ f, const string &in name) {
+    if (f !is null) {
+        onApplyColorToSelectionCbs.InsertLast(f);
+        onApplyColorToSelectionCbNames.InsertLast(name);
+    }
+}
+
 // void RegisterBlockChangedCallback(CoroutineFunc@ f) {
 //     if (f !is null) {
 //         selectedBlockChangedCbs.InsertLast(f);
@@ -260,21 +269,18 @@ namespace Event {
     bool OnSetItemBgSkin(CGameCtnAnchoredObject@ item) {
         if (TMP_DISABLE_ONBlockItem_CB) return false;
         Log::Trace("Running OnSetItemBgSkin");
-        // todo
-        Editor::TrackMap_OnSetSkin("", GetSkinPath(Editor::GetItemBGSkin(item)), null, item);
+        Editor::TrackMap_OnSetSkin(GetSkinPath(Editor::GetItemFGSkin(item)), GetSkinPath(Editor::GetItemBGSkin(item)), null, item);
         return false;
     }
     bool OnSetItemFgSkin(CGameCtnAnchoredObject@ item) {
         if (TMP_DISABLE_ONBlockItem_CB) return false;
         Log::Trace("Running OnSetItemFgSkin");
-        // todo
-        Editor::TrackMap_OnSetSkin(GetSkinPath(Editor::GetItemFGSkin(item)), "", null, item);
+        Editor::TrackMap_OnSetSkin(GetSkinPath(Editor::GetItemFGSkin(item)), GetSkinPath(Editor::GetItemBGSkin(item)), null, item);
         return false;
     }
     bool OnSetBlockSkin(CGameCtnBlock@ block) {
         if (TMP_DISABLE_ONBlockItem_CB) return false;
         Log::Trace("Running OnSetBlockSkin");
-        // todo
         Editor::TrackMap_OnSetSkin(GetSkinPath(block.Skin.ForegroundPackDesc), GetSkinPath(block.Skin.PackDesc), block, null);
         return false;
     }
@@ -309,6 +315,17 @@ namespace Event {
         for (uint i = 0; i < onBeforeCursorUpdateCbs.Length; i++) {
             onBeforeCursorUpdateCbs[i]();
         }
+    }
+    void OnApplyColorToSelection(CGameEditorPluginMap::EMapElemColor col) {
+        for (uint i = 0; i < onApplyColorToSelectionCbs.Length; i++) {
+            onApplyColorToSelectionCbs[i](int64(col));
+        }
+    }
+    void OnSetBlockColor(CGameCtnBlock@ block) {
+        Editor::TrackMap_OnSetBlockColor(block);
+    }
+    void OnSetItemColor(CGameCtnAnchoredObject@ item) {
+        Editor::TrackMap_OnSetItemColor(item);
     }
 }
 

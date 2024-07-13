@@ -392,7 +392,9 @@ namespace Editor {
                 ((isFree && Editor::IsBlockFree(block)) || MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0))) &&
                 dir == block.Direction && dir2 == block.Direction &&
                 MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)) &&
-                color == block.MapElemColor && lmQual == block.MapElemLmQuality && mobilIx == block.MobilIndex &&
+                // color == block.MapElemColor &&
+                // lmQual == block.MapElemLmQuality &&
+                mobilIx == block.MobilIndex &&
                 (mobilVariant == block.MobilVariantIndex || mobilVariant == 63 || block.MobilVariantIndex == 63 || isNormal) &&
                 // variant == block.BlockInfoVariantIndex &&
                 flags == uint8((block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None)) &&
@@ -425,7 +427,8 @@ namespace Editor {
             return name == other.name && collection == other.collection && author == other.author &&
                 MathX::Nat3Eq(coord, other.coord) && dir == other.dir && dir2 == other.dir2 &&
                 MathX::Vec3Eq(pos, other.pos) &&
-                color == other.color && lmQual == other.lmQual && mobilIx == other.mobilIx &&
+                // color == other.color && lmQual == other.lmQual &&
+                mobilIx == other.mobilIx &&
                 // mobilVariant not set when block is being placed
                 (mobilVariant == other.mobilVariant || mobilVariant == 63 || other.mobilVariant == 63 || isNormal) &&
                 // variant == other.variant && // ignore variant, can be wrong?
@@ -548,7 +551,8 @@ namespace Editor {
                 // uint8(dir) == uint(-1) &&
                 MathX::Vec3Eq(pos, Editor::GetItemLocation(item) + vec3(0, 56, 0)) &&
                 scale == item.Scale &&
-                color == item.MapElemColor && lmQual == item.MapElemLmQuality && phase == item.AnimPhaseOffset &&
+                // color == item.MapElemColor && lmQual == item.MapElemLmQuality &&
+                phase == item.AnimPhaseOffset &&
                 MathX::Vec3Eq(pivotPos, Editor::GetItemPivot(item)) &&
                 isFlying == uint8(item.IsFlying ? 1 : 0) &&
                 variantIx == item.IVariant;
@@ -584,7 +588,8 @@ namespace Editor {
                 MathX::Nat3Eq(coord, other.coord) &&
                 // uint8(dir) == uint8(other.dir) && // maybe ignore dir, can be ff or other
                 MathX::Vec3Eq(pos, other.pos) &&
-                scale == other.scale && color == other.color && lmQual == other.lmQual &&
+                scale == other.scale &&
+                color == other.color && lmQual == other.lmQual &&
                 phase == other.phase && MathX::Vec3Eq(pivotPos, other.pivotPos) &&
                 // isFlying == other.isFlying && // ignore isflying
                 variantIx == other.variantIx &&
