@@ -99,7 +99,7 @@ namespace Gizmo {
             // update cursor from gizmo
             bool isAltDown = IsAltDown();
             editor.PluginMapType.EnableEditorInputsCustomProcessing = !isAltDown;
-            // editor.PluginMapType.HideEditorInterface = true;
+            editor.PluginMapType.HideEditorInterface = true;
             auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
             if (isAltDown) {
                 editor.PluginMapType.EditMode = CGameEditorPluginMap::EditMode::FreeLook;

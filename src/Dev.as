@@ -541,6 +541,8 @@ const uint16 SZ_SOLID2MODEL = 0x390; // 912;
 // MARK: O Blocks
 
 // more block offsets in Editor/Blocks.as
+// 0x28
+const uint16 O_CTNBLOCK_BlockModel = GetOffset("CGameCtnBlock", "BlockModel");
 // 0x38
 const uint16 O_CTNBLOCK_SKIN = GetOffset("CGameCtnBlock", "Skin");
 // 0x6C

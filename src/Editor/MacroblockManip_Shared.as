@@ -532,10 +532,8 @@ namespace Editor {
         uint itemGroupOnBlock;
         // ? refcounted
         WaypointSpec@ waypoint;
-        // bg skin
-        SetSkinSpec@ bgSkin;
-        // fg skin
-        SetSkinSpec@ fgSkin;
+        // bg & fg skin
+        SetSkinSpec@ skin;
         // model -- set in ItemSpecPriv
         CGameItemModel@ Model;
 

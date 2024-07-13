@@ -550,7 +550,7 @@ class MapEditPropsTab : Tab {
         bool placed = false;
         for (placeX = 4; placeX < map.Size.x-4; placeX++) {
             for (placeZ = 4; placeZ < map.Size.z-4; placeZ++) {
-                if (placed = pmt.PlaceBlock(blockInfo, int3(placeX, placeY, placeZ), CGameEditorPluginMap::ECardinalDirections::North)) {
+                if (placed = pmt.PlaceBlock_NoDestruction(blockInfo, int3(placeX, placeY, placeZ), CGameEditorPluginMap::ECardinalDirections::North)) {
                     trace('placed screen block');
                     break;
                 }

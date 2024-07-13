@@ -49,6 +49,9 @@ namespace Editor {
     // use this to end an intercept-gather for freeblocks queued for deletion by macroblock deletion functions
     import BlockSpec@[]@ EndInterceptFreeblockQueueAndGather() from "Editor";
 
+    // get CSystemPackDescs for skin purposes
+    import CSystemPackDesc@[]@ GetPackDescs(const string[]@ fileOrUrls) from "Editor";
+
     import CGameEditorPluginMap::EPlaceMode GetPlacementMode(CGameCtnEditorFree@ editor) from "Editor";
     import CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) from "Editor";
     // Some camera things
@@ -72,6 +75,9 @@ namespace Editor {
 
     import void Set_Map_EmbeddedCustomColorsEncoded(const string &in raw) from "Editor";
     import string Get_Map_EmbeddedCustomColorsEncoded() from "Editor";
+
+    // pass in paths relative to `Trackmania/Items/` folder
+    import void ReloadItemsAsync(string[]@ paths) from "Editor";
 }
 
 namespace Editor {

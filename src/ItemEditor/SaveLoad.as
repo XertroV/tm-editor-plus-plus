@@ -197,8 +197,75 @@ namespace ItemEditor {
         if (frame !is null) return;
         Editor::DoItemEditorAction(ieditor, Editor::ItemEditorAction::OpenItem);
     }
-
 }
+
+
+namespace Editor {
+    void ReloadItemsAsync(string[]@ paths) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (paths.Length == 0) {
+            trace("refresh 0 items requested");
+            return;
+        }
+        auto inv = Editor::GetInventoryCache();
+        auto initModel = cast<CGameItemModel>(inv.GetItemByPath("LightCube8m").GetCollectorNod());
+        if (initModel is null) NotifyWarning("Attempting to load init model but it is null");
+        Editor::OpenItemEditor(editor, initModel);
+
+        // todo: push some flag that disables item editor features that auto-change the item
+        auto renameFeatureActive = S_UpdateItemNameFromFileName;
+        S_UpdateItemNameFromFileName = false;
+
+        uint Reloading_Done = 0;
+
+        yield();
+        for (uint i = 0; i < paths.Length; i++) {
+            RunLoadItem(editor, paths[i], i == 0);
+            Reloading_Done += 1;
+        }
+        RunLoadItem(editor, paths[0], false);
+
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        ieditor.Exit();
+        yield();
+        // yield();
+        // yield();
+
+        // while (inv.isRefreshing) yield();
+
+        S_UpdateItemNameFromFileName = renameFeatureActive;
+
+        // for (uint i = 0; i < items.Length; i++) {
+        //     auto node = inv.GetItemByPath(items[i]);
+        //     Editor::SetSelectedInventoryNode(editor, node, true);
+        //     Reloading_Done++;
+        //     yield();
+        // }
+        // Reloading_Done = 0;
+        // for (uint i = 0; i < items.Length; i++) {
+        //     auto node = inv.GetItemByPath(items[i]);
+        //     Editor::SetSelectedInventoryNode(editor, node, true);
+        //     Reloading_Done++;
+        //     yield();
+        // }
+
+        Reloading_Done = 0;
+    }
+
+    void RunLoadItem(CGameCtnEditorFree@ editor, const string &in item, bool isFirst) {
+        auto itemsFolder = Fids::GetUserFolder("Items");
+        string itemsFolderPrefix = itemsFolder.FullDirName;
+        auto itemPath = itemsFolderPrefix + "/" + item;
+        auto itemPathBackup = itemPath + ".back";
+        CopyFile(itemPath, itemPathBackup);
+        if (isFirst) ItemEditor::OpenItem(item);
+        else IO::Delete(itemPath);
+        ItemEditor::SaveItemAs(item);
+        CopyFile(itemPathBackup, itemPath);
+        IO::Delete(itemPathBackup);
+    }
+}
+
 
 CControlBase@ GetFrameChildFromChain(CControlContainer@ frame, uint[]@ childs) {
     CControlContainer@ next = frame;
