@@ -1,0 +1,7 @@
+CPlugVisualSprite
+- 0x130
+  buffer of (vec3, vec3, vec4)
+  pos, (size, rotation, eccentricity), color
+  - a bit similar to SGmSurfMultiSphereElem
+
+Can use CPlugCloudsParam to generate buffer of certain length

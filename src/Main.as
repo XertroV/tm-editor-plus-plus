@@ -40,6 +40,8 @@ void Main() {
     RegisterOnEditorUnloadCallback(PillarsChoice::OnEditorUnload, "PillarsChoice::OnEditorUnload");
     // RegisterNewBlockCallback_Private(PillarsChoice::OnBlockPlaced, "PillarsChoice::OnBlockPlaced", 0);
 
+    VisSpriteDots::OnPluginLoad();
+
     // need to start this on load so that it's active when we enter the editor
     CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
     ExtraUndoFix::OnLoad();

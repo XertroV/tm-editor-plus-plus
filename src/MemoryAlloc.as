@@ -139,3 +139,76 @@ namespace StringAlloc {
         }
     }
 }
+
+
+namespace BufferAlloc {
+    CPlugCloudsParam@ _bufferAllocNod = CPlugCloudsParam();
+    // buffer of floats
+    uint16 O_CPLUGCLOUDPARAM_PointDists = GetOffset("CPlugCloudsParam", "PointDists");
+
+    void _ClearBufferInAllocNod() {
+        Dev::SetOffset(_bufferAllocNod, O_CPLUGCLOUDPARAM_PointDists, uint64(0));
+        Dev::SetOffset(_bufferAllocNod, O_CPLUGCLOUDPARAM_PointDists + 8, uint64(0));
+    }
+
+    AllocdBuffer@ Alloc(uint nbElements, uint elSize) {
+        auto size = nbElements * elSize;
+        if (size % 4 != 0) throw("BufferAlloc::Alloc: size must be a multiple of 4");
+        if (Dev::GetOffsetUint64(_bufferAllocNod, O_CPLUGCLOUDPARAM_PointDists) > 0) {
+            NotifyWarning("BufferAlloc::Alloc: O_CPLUGCLOUDPARAM_PointDists already set, this will overwrite it");
+            _ClearBufferInAllocNod();
+        }
+        uint pushedBytes = 0;
+        while (pushedBytes < size) {
+            _bufferAllocNod.PointDists.Add(0.0);
+            pushedBytes += 4;
+        }
+        auto ret = AllocdBuffer(_bufferAllocNod, elSize);
+        _ClearBufferInAllocNod();
+        return ret;
+    }
+
+    class AllocdBuffer {
+        uint64 ptr;
+        uint32 capacity;
+        uint32 elSize;
+
+        AllocdBuffer(CPlugCloudsParam@ nod, uint elSize) {
+            ptr = Dev::GetOffsetUint64(nod, O_CPLUGCLOUDPARAM_PointDists);
+            capacity = Dev::GetOffsetUint32(nod, O_CPLUGCLOUDPARAM_PointDists + 0xC) * 4 / elSize;
+            this.elSize = elSize;
+            LogAllocation();
+        }
+
+        AllocdBuffer(uint64 ptr, uint32 capacity, uint elSize) {
+            this.ptr = ptr;
+            this.capacity = capacity * 4 / elSize;
+            this.elSize = elSize;
+            LogAllocation();
+        }
+
+        void LogAllocation() {
+            trace('\\$bf0\\$iAllocated buffer at ' + Text::FormatPointer(ptr) + ' with capacity ' + capacity);
+        }
+
+        void WriteToNod(CMwNod@ nod, uint offset, uint length = 0) {
+            if (length > capacity) {
+                throw("BufferAlloc::AllocdBuffer::WriteToNod: length exceeds capacity");
+            }
+            trace("Writing buffer to nod at offset " + offset + " with length " + length);
+            Dev::SetOffset(nod, offset, ptr);
+            Dev::SetOffset(nod, offset + 0x8, length);
+            Dev::SetOffset(nod, offset + 0xC, capacity);
+        }
+
+        void WriteAtPtr(uint64 writeAt, uint length = 0) {
+            if (length > capacity) {
+                throw("BufferAlloc::AllocdBuffer::WriteAtPtr: length exceeds capacity");
+            }
+            trace("Writing buffer to " + Text::FormatPointer(writeAt) + " with length " + length);
+            Dev::Write(writeAt + 0x0, ptr);
+            Dev::Write(writeAt + 0x8, length);
+            Dev::Write(writeAt + 0xC, capacity);
+        }
+    }
+}
