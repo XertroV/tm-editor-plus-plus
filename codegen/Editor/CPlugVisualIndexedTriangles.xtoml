@@ -1,0 +1,46 @@
+[DPlugVisualIndexedTriangles : SZ_CPlugVisualIndexedTriangles]
+NativeClass = CPlugVisualIndexedTriangles
+# 0x18: ptr to unk structure (with ptr back to this at +0x20)
+# 0x40: uint(1)
+# 0x60: uint(0)
+# 0x88: vec3(1,1,~0)
+# 0x9A: vec3(1.5,1,.5) midpoint
+# 0xA8: ptr?? (on vehicle shape)
+# 0xB8: uint(1)
+# 0xC0: CPlugVertexStream
+# 0xE0: 1
+# 0xE8: func ptr? / normal ptr? on vehicle shape (to random data)
+# 0xF4: 0xFFFFFFFF
+# 0xF8: 0xF..F
+# 0x108: uint(0)
+# 0x118: uint(0)
+# 0x128: 0xF..F
+# 0x180: CPlugIndexBuffer
+Struct: IndexBuffer = DPlugIndexBuffer, 0x180, G
+
+[DPlugIndexBuffer : 56]
+NativeClass = CPlugIndexBuffer
+IsStatic = uint8, 0x20, GS
+Inline: uint get_IndexType() { return this.GetUint32(0x20) >> 2; }
+Inline: void set_IndexType(uint8 v) { this.SetUint32(0x20, (v << 2) | (this.GetUint32(0x20) & 3)); }
+# 0x28: buffer of indexes?
+# probably some winding.
+# 0,1,2,0,2,3,4,5,6,4,6,7,8,9,a,9,b,a,c,d,e,d,f,e,10,11,12,12,11,13
+# 0x30: length / IndexCount
+
+[DPlugVertexStream : 112]
+NativeClass = CPlugVertexStream
+# 0x18: ptr -> { self: 0x0 }
+# 0x30: 20, 20 / 0x14
+# 0x38: 1, flags; 1=IsStatic, 2=IsDirtyVision, 8=SkipVision
+IsStatic = bool, 0x38, GS
+# 0x40: Buffer of struct { ptr, unk32, n }; n = 0,0x30,0x40,0x60,0x80,0x90
+#   ptr can be %4, contig mem   # unk32 as u8: 0,5,10,11,18,20
+#    coords of UVs? .5, 0, -.5,0.556,.664,.001,.9989,0,0,-.5,0,.5 (then more after)
+#   ptr is inot buffer at 0x50
+# 0x48: len, ?
+# 0x50: Buffer of floats (len 800)
+# to +0x640 or 648? yep
+# 0x58: len, 0sa
+# 0x60: same buf of floats ptr as above
+# 0x68: 0, ?

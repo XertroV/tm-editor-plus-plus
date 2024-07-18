@@ -19,7 +19,7 @@ namespace Editor {
 
         void StopRefreshing() {
             ResetCache();
-            cacheRefreshNonce++;
+            ++cacheRefreshNonce;
             trace('stopped refreshing inventory (or should have done)');
         }
 
@@ -51,18 +51,18 @@ namespace Editor {
 
         uint cacheRefreshNonce = 1;
         void RefreshCache() {
-            while (PAUSE_INVENTORY_CACHING) sleep(0);
+            while (PAUSE_INVENTORY_CACHING) yield();
             auto myNonce = ResetCache();
-            sleep(0);
-            if (myNonce != cacheRefreshNonce) return;
+            yield();
+            if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
             auto editor = GetEditor(GetApp());
             // this can be called when outside the editor
             if (editor is null) return;
             auto inv = editor.PluginMapType.Inventory;
 
-            while (inv.RootNodes.Length < 4) sleep(0);
-            if (GetEditor(GetApp()) is null) return;
-            if (myNonce != cacheRefreshNonce) return;
+            while (inv.RootNodes.Length < 4) yield();
+            // if (GetEditor(GetApp()) is null) return;
+            if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
 
             CGameCtnArticleNodeDirectory@ blockRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[1]);
             CGameCtnArticleNodeDirectory@ itemRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[3]);
@@ -72,21 +72,21 @@ namespace Editor {
             _IsScanningItems = false;
             _IsScanningMacroblocks = false;
             CacheInvNode(blockRN, myNonce);
-            sleep(0);
-            if (myNonce != cacheRefreshNonce) return;
-            if (GetEditor(GetApp()) is null) return;
+            yield();
+            if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
+            // if (GetEditor(GetApp()) is null) return;
             trace('Caching inventory items...');
             _IsScanningItems = true;
             hasClubItems = itemRN.ChildNodes.Length >= 3;
             CacheInvNode(itemRN, myNonce);
-            if (myNonce != cacheRefreshNonce) return;
-            if (GetEditor(GetApp()) is null) return;
+            if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
+            // if (GetEditor(GetApp()) is null) return;
             trace('Caching inventory macroblocks...');
             _IsScanningItems = false;
             _IsScanningMacroblocks = true;
             CacheInvNode(mbRN, myNonce);
-            if (myNonce != cacheRefreshNonce) return;
-            if (GetEditor(GetApp()) is null) return;
+            if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
+            // if (GetEditor(GetApp()) is null) return;
             trace('Caching inventory complete.');
             if (myNonce == cacheRefreshNonce) {
                 // trigger update in other things
@@ -215,8 +215,8 @@ namespace Editor {
 
 
         protected void CacheInvNode(CGameCtnArticleNode@ node, uint nonce) {
-            if (nonce != cacheRefreshNonce) return;
-            if (GetEditor(GetApp()) is null) return;
+            if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 1"); return; }
+            // if (GetEditor(GetApp()) is null) return;
             auto dir = cast<CGameCtnArticleNodeDirectory>(node);
             if (dir is null) {
                 CacheInvNode(cast<CGameCtnArticleNodeArticle>(node), nonce);
@@ -226,15 +226,16 @@ namespace Editor {
         }
 
         protected void CacheInvNode(CGameCtnArticleNodeDirectory@ node, uint nonce) {
-            if (nonce != cacheRefreshNonce) return;
-            if (GetEditor(GetApp()) is null) return;
+            if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 2"); return; }
+            // if (GetEditor(GetApp()) is null) return;
             loadTotal += node.Children.Length + 1;
             loadProgress += 1;
             for (uint i = 0; i < node.ChildNodes.Length; i++) {
                 CheckPause();
-                if (GetEditor(GetApp()) is null) return;
-                if (nonce != cacheRefreshNonce) return;
+                // if (GetEditor(GetApp()) is null) return;
+                if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 3"); return; }
                 CacheInvNode(node.ChildNodes[i], nonce);
+                if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 3"); return; }
             }
             string name = GetInvDirFullPath(node);
             if (_IsScanningItems) {
@@ -257,8 +258,8 @@ namespace Editor {
         }
 
         protected void CacheInvNode(CGameCtnArticleNodeArticle@ node, uint nonce) {
-            if (nonce != cacheRefreshNonce) return;
-            if (GetEditor(GetApp()) is null) return;
+            if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 4"); return; }
+            // if (GetEditor(GetApp()) is null) return;
             if (node.Article is null) {
                 warn('null article nod for ' + node.Name);
                 return;

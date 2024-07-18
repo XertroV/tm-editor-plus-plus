@@ -819,11 +819,21 @@ namespace CreateObj {
     }
 
     CGameItemModel@ GetModelFromSource(const string &in path) {
+        // does requesting like this prevent the fid being created?
+        auto gameFid = Fids::GetFidsFile(Fids::GetGameFolder(""), path);
+        if (gameFid !is null && Fids::Preload(gameFid) !is null) return GetModelFromSource(gameFid);
+        auto userFid = Fids::GetFidsFile(Fids::GetUserFolder(""), path);
+        if (userFid !is null && Fids::Preload(userFid) !is null) return GetModelFromSource(userFid);
+        // try inventory
         auto art = Editor::GetInventoryCache().GetItemByPath(path);
         if (art is null) {
             throw("Model source not found: " + path);
         }
         return cast<CGameItemModel>(art.GetCollectorNod());
+    }
+
+    CGameItemModel@ GetModelFromSource(CSystemFidFile@ fid) {
+        return cast<CGameItemModel>(Fids::Preload(fid));
     }
 
     CGameItemModel@ SetVarListVariantModel(NPlugItem_SVariantList@ varList, uint ix, const string &in source) {

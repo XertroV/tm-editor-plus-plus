@@ -665,6 +665,9 @@ namespace MeshDuplication {
         auto nbCustomMats = Dev::GetOffsetUint32(mesh, 0x1F8 + 0x8);
         auto allocCustomMats = Dev::GetOffsetUint32(mesh, 0x1F8 + 0xC);
 
+        auto nbMatIds = Dev::GetOffsetUint32(mesh, 0xD8 + 0x8);
+        auto matIdsBuf = Dev::GetOffsetNod(mesh, 0xD8);
+
         // auto bufStructPtr = Dev::GetOffsetUint64(mesh, 0x138);
         // auto bufStructLenSize = Dev::GetOffsetUint64(mesh, 0x138 + 0x8);
 
@@ -679,10 +682,12 @@ namespace MeshDuplication {
             NotifyWarning('nbMats > alloc, though this may be because it is not a vanilla item (safe to ignore this warning if it is already custom)');
         // } else if (nbMats != staticObj.Shape.Materials.Length) {
         //     NotifyWarning('nbMats != staticObj.Shape.Materials.Length');
-        } else if (nbMats > 0 && nbUserMats == 0) {
+        } else if ((nbMats > 0 || nbMatIds > 0) && nbUserMats == 0) {
+            bool hasMatIds = nbMatIds > 0;
+            nbMats = hasMatIds ? nbMatIds : nbMats;
             // create a MwBuffer<CPlugMaterialUserInst> and set in the mesh
             trace('Creating custom materials');
-            if (matBufFakeNod is null) {
+            if (matBufFakeNod is null && matIdsBuf is null) {
                 NotifyError("material buffer null?");
                 return;
             }
@@ -697,8 +702,17 @@ namespace MeshDuplication {
             auto userMatBufFakeNod = Dev::GetOffsetNod(mesh, 0xF8);
             for (uint i = 0; i < nbMats; i++) {
                 trace('Getting material ' + (i + 1));
-                auto origMat = cast<CPlugMaterial>(Dev::GetOffsetNod(matBufFakeNod, i * 0x8));
-                auto origMatName = GetMaterialName(origMat);
+                CPlugMaterial@ origMat;
+                string origMatName;
+                if (hasMatIds) {
+                    auto idVal = Dev::GetOffsetUint32(matIdsBuf, i * 0x4);
+                    origMatName = GetMwIdName(idVal);
+                    trace('\\$8f8\\$i >> Skipping unknown vehicle mat: ' + origMatName);
+                } else {
+                    @origMat = cast<CPlugMaterial>(Dev::GetOffsetNod(matBufFakeNod, i * 0x8));
+                    if (origMat !is null) origMatName = GetMaterialName(origMat);
+                    else origMatName = "UNKNOWN";
+                }
                 trace('Creating user mat ' + origMatName);
                 auto matUserInst = CPlugMaterialUserInst();
                 matUserInst.MwAddRef();
@@ -708,10 +722,13 @@ namespace MeshDuplication {
                 matUserInst.Link = CreateMwIdWithName(origMatName);
 
                 // bug setting matUserInst.PhysicsID / GameplayID
-                Dev::SetOffset(matUserInst, O_USERMATINST_PHYSID, Dev::GetOffsetUint8(origMat, 0x28));
-                Dev::SetOffset(matUserInst, O_USERMATINST_GAMEPLAY_ID, Dev::GetOffsetUint8(origMat, 0x29));
+                // Phys of 28 = NoCollision
+                Dev::SetOffset(matUserInst, O_USERMATINST_PHYSID, origMat is null ? 28 : Dev::GetOffsetUint8(origMat, 0x28));
+                Dev::SetOffset(matUserInst, O_USERMATINST_GAMEPLAY_ID, origMat is null ? 0 : Dev::GetOffsetUint8(origMat, 0x29));
 
-                matUserInst._LinkFull = GetMaterialLinkFull(origMat);
+                if (origMat !is null) {
+                    matUserInst._LinkFull = GetMaterialLinkFull(origMat);
+                }
                 trace('Setting user mat ptr in buffer ' + (i + 1));
                 Dev::SetOffset(userMatBufFakeNod, 0x18 * i, matUserInst);
             }

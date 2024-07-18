@@ -1,0 +1,24 @@
+Trackmania.exe+10052DC - 74 39                 - je Trackmania.exe.text+1004317 { set to jmp when vehicle should be removed to keep vehicle state
+ }
+Trackmania.exe+10052DE - 48 89 5C 24 40        - mov [rsp+40],rbx
+Trackmania.exe+10052E3 - 48 8B 5C 24 20        - mov rbx,[rsp+20]
+Trackmania.exe+10052E8 - 48 89 7C 24 48        - mov [rsp+48],rdi
+Trackmania.exe+10052ED - 8B F8                 - mov edi,eax
+Trackmania.exe+10052EF - 90                    - nop
+Trackmania.exe+10052F0 - 83 3B FF              - cmp dword ptr [rbx],-01 { 255 }
+Trackmania.exe+10052F3 - 74 0B                 - je Trackmania.exe.text+1004300 { ->Trackmania.exe+1005300 }
+Trackmania.exe+10052F5 - 48 8B D3              - mov rdx,rbx
+Trackmania.exe+10052F8 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe+10052FB - E8 B0900000           - call Trackmania.exe.text+100D3B0 { remove vehicle state call
+ }
+Trackmania.exe+1005300 - 48 81 C3 A0000000     - add rbx,000000A0 { 160 }
+Trackmania.exe+1005307 - 48 83 EF 01           - sub rdi,01 { 1 }
+Trackmania.exe+100530B - 75 E3                 - jne Trackmania.exe.text+10042F0 { ->Trackmania.exe+10052F0 }
+Trackmania.exe+100530D - 48 8B 7C 24 48        - mov rdi,[rsp+48]
+Trackmania.exe+1005312 - 48 8B 5C 24 40        - mov rbx,[rsp+40]
+Trackmania.exe+1005317 - 48 83 C4 30           - add rsp,30 { 48 }
+Trackmania.exe+100531B - 5E                    - pop rsi
+Trackmania.exe+100531C - C3                    - ret
+
+
+74 39 48 89 5C 24 40 48 8B 5C 24 20 48 89 7C 24 48 8B F8 90 83 3B FF 74 0B 48 8B D3 48 8B CE E8 B0 90 00 00 48 81 C3 A0 00 00 00 48 83 EF 01 75 E3 48 8B 7C 24 48 48 8B 5C 24 40 48 83 C4 30 5E C3

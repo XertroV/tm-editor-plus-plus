@@ -63,12 +63,32 @@ class DevMiscTab : Tab {
         super(p, "Misc Dev", "");
     }
 
+    CGameItemModel@ testVehicleItem;
+
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
 
         UI::Text("Placement Mode: " + tostring(Editor::GetPlacementMode(editor)));
         UI::Text("Item Mode: " + tostring(Editor::GetItemPlacementMode()));
         UI::Text("Custom Rot Mode: " + Editor::IsInCustomRotPlacementMode(editor));
+
+        UI::Separator();
+
+        if (UI::Button("Create and Explore Test Vehicle Item")) {
+            @testVehicleItem = Editor::CreateTestVehicleItem();
+        }
+        if (testVehicleItem !is null) {
+            UI::SameLine();
+            CopiableLabeledPtr(testVehicleItem);
+        }
+
+        if (UI::Button("Create and Place Test Vehicle Item")) {
+            startnew(Editor::CreateAndPlaceTestVehicleItem);
+        }
+
+        if (UI::Button("Create and Place Test Empty Item")) {
+            startnew(Editor::CreateAndPlaceTestEmptyItem);
+        }
 
         UI::Separator();
 

@@ -1,0 +1,85 @@
+[DPlugSolid2Model : SZ_SOLID2MODEL]
+NativeClass = CPlugSolid2Model
+
+# 0x30: f..f
+Unk_30 = uint32, 0x30, GS
+# 0x34: 0x7a 0 0 0
+Flags = uint32, 0x34, GS
+# 0x38: 0x1 in simple, 0 in fresh; 2 = dynamic, 3 = car, 4 = sm body
+VisCstType = uint32, 0x38, GS
+# 0x40: ptr but looks like uninitialized
+# 0x48: ptr but looks like uninitialized
+# 0x5C: vec3(-1)
+
+# 0x80: Buf of MwIds (bone names?): Body, FLWheel,FRWheel,...,SpoilerTopL,...,FRGuard
+# 0x90: DamageZone
+
+# 0xA8: buffer of Visual Indexed Triangles *
+BufVisIxTrisPtr = uint64, 0xA8, GS
+BufVisIxTrisLen = uint32, 0xB0, GS
+BufVisIxTrisCap = uint32, 0xB4, GS
+
+# 0xC8: buffer of materials for nadeo items
+
+# 0xD8 buf of mwids: (7) _GlassDmgCrack_Glass,_DetailsDmgNormal_Details,_SkinDmg_Skin,...,_SkinDmgDecal_Skin
+# 0xD8: MaterialIds[]
+
+# 0xE8: string = "Stadium\Media\Material\"
+MaterialsFolderName = string, 0xE8, GS
+
+# 0xF8: buffer of user materials *
+BufUserMaterialsPtr = uint64, 0xF8, GS
+BufUserMaterialsLen = uint32, 0x100, GS
+BufUserMaterialsCap = uint32, 0x104, GS
+
+# 0x118: uint(2)
+# 0x120: CPlugShaderApply Tech3 CarSkelDmg Teleport
+# 0x128: CPlugShaderApply Tech3 CarSkelDmg Shield
+# 0x130: uint(2)
+# 0x138: CPlugMaterial VehicleTeleport
+# 0x140: CPlugMaterial VehicleShield
+
+# 0x158: buffer of ?? [(0, 0, 1, 1)] - 1 per vis index tri
+
+# 0x168: buffer of lights
+# 0x178: buffer of user lights
+
+# 0x198: buffer of floats? 4,10,40,80
+# 0x1a8: buffer of uint [0x14] / 75731,58700,27996,4956,1108 / vertex count per lod?
+# 0x1b8: buffer of uint [0x0A] / 99656,70976,28449,4438,780
+# 0x1c8: buffer of uint [?] / 58,56,50,8,1
+
+# 0x1e0: uint(1) in fresh and simple
+
+# 0x1F8: buffer of custom materials (like materials but for non-nadeo items)
+BufCustomMaterialsPtr = uint64, 0x1F8, GS
+BufCustomMaterialsLen = uint32, 0x1A0, GS
+BufCustomMaterialsCap = uint32, 0x1A4, GS
+
+# 0x208: buffer of cplugmaterial -- copy of 0x1F8
+
+# 0x218: CPlugVisualIndexedTriangles on vehicle mesh / index: static false, 16b, IndexCount: 2340
+# 0x220: buf (len1), 5, 0, 1026, 0.707107, 0.707107, 0, 0, ...
+
+PreLightGeneratorPtr = uint64, 0x298, G
+Struct: PreLightGenerator = DPlugSolid2ModelPreLightGenerator, O_SOLID2MODEL_PRELIGHT_GEN, G
+
+# 0x2b0 ? ?
+
+# 0x2c8: string of len 0, was: "NadeoImporter Item Items/TestItemEasyToManip-v2.Item.xml"
+
+ItemFid = CSystemFidFile, O_SOLID2MODEL_ITEM_FID, GS
+# 0x340: 1, 1
+UnkFlags_340 = uint32, 0x340, GS
+UnkFlags_344 = uint32, 0x344, GS
+
+[DPlugSolid2ModelPreLightGenerator : 0x24]
+LMSideLengthMeters = float, 0x0, GS
+u03 = float, 0x4, GS
+u04 = float, 0x8, GS
+u05 = float, 0xC, GS
+u06 = float, 0x10, GS
+u07 = float, 0x14, GS
+u08 = float, 0x18, GS
+u09 = float, 0x1C, GS
+u10 = float, 0x20, GS

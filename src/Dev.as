@@ -505,7 +505,7 @@ const uint16 O_EDITOR_LMB_PRESSED2 = O_EDITOR_RMB_PRESSED1 + 0x4; // 0xBC0
 const uint16 O_EDITOR_EDIT_MODE = O_EDITOR_GridColor - (0xC10 - 0xBF8); // 0xBF8
 
 const uint16 SZ_CGAMECURSORITEM = 0xE8;
-
+const uint16 SZ_CGAMECURSORBLOCK = 0x4c8;
 // MARK: O Item Mdl
 
 // 0xA0 = 0xB8 - 0x18
@@ -513,6 +513,8 @@ const uint16 O_ITEM_MODEL_SKIN = GetOffset("CGameItemModel", "DefaultSkinFileRef
 
 // orig: 0x118 = 0x120 - 8
 const uint16 O_ITEM_MODEL_FLAGS = GetOffset("CGameItemModel", "PhyModelCustom") - 0x8;
+
+const uint16 O_ITEM_MODEL_EntityModel = GetOffset("CGameItemModel", "EntityModel");
 
 const uint16 O_STATICOBJMODEL_GENSHAPE = 0x38;
 
@@ -531,6 +533,7 @@ const uint16 O_SOLID2MODEL_USERLIGHTS_BUF = 0x178;
 
 const uint16 O_SOLID2MODEL_USERMAT_BUF = 0xF8;
 const uint16 O_SOLID2MODEL_CUSTMAT_BUF = 0x1F8;
+const uint16 O_SOLID2MODEL_CUSTMAT_BUF_COPY = 0x208;
 
 const uint16 O_SOLID2MODEL_PRELIGHT_GEN = 0x298;
 
@@ -669,7 +672,7 @@ const uint16 SZ_CTNMACROBLOCK = 0x248;
 
 
 
-const uint16 SZ_CPlugVisualIndexedTriangles = 0x190;
+const uint16 SZ_CPlugVisualIndexedTriangles = 0x190; // 400
 
 
 

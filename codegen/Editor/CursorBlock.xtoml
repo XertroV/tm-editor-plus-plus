@@ -1,0 +1,10 @@
+[DGameCursorBlock: SZ_CGAMECURSORBLOCK]
+NativeClass = CGameCursorBlock
+
+# 0x288: some flag checked early on in block update
+
+# 0x28c: should draw / update cursor box & blocks (but items drawn separately)
+# 0x3fc: comapred to 28c (and copied from it)
+
+# 0x410: buf of block models to draw
+# 0x430: buf of item models to draw

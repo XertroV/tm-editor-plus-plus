@@ -115,11 +115,8 @@ namespace Editor {
         if (mb is null) return;
         for (uint i = 0; i < mb.Blocks.Length; i++) {
             if (!mb.Blocks[i].isFree) continue;
-            // NotifyWarning("Freeblock deletion disabled atm b/c game crashes");
-            // return;
             QueueFreeBlockDeletion(mb.Blocks[i]);
         }
-        // RunDeleteFreeBlockDetection();
     }
 
     void QueueFreeBlockDeletion(BlockSpec@ block) {
