@@ -22,7 +22,7 @@ Buffer: displayedItems = DGameCursorItem_ItemDescs, 0xB8, 0xA0, false
 Zeros1 = vec4, 0xC8, G
 
 [DGameCursorItem_ItemDesc: 0xA0]
-# -1 when not drawn, can be other values like 2b otherwise
+# -1 when not drawn, can be other values like 2b otherwise, 3 for car
 u1 = uint, 0x0, GS
 # unused i think
 u2 = uint, 0x4, GS

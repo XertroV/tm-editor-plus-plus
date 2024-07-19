@@ -1,0 +1,28 @@
+test: break on this routine and check if it's before other editor stuff -- yes
+
+Trackmania.exe+E36E1F - 48 8D 15 CA9ADD00     - lea rdx,[Trackmania.exe.rdata+3078F0] { ("CGameCtnApp::Trackmania_GameState_EditorQuit") }
+Trackmania.exe+E36E26 - 33 F6                 - xor esi,esi
+Trackmania.exe+E36E28 - 48 8D 4C 24 20        - lea rcx,[rsp+20]
+Trackmania.exe+E36E2D - 89 74 24 30           - mov [rsp+30],esi
+Trackmania.exe+E36E31 - E8 3A222DFF           - call Trackmania.exe.text+108070 { ->Trackmania.exe+109070 }
+Trackmania.exe+E36E36 - 48 8B 0B              - mov rcx,[rbx]
+Trackmania.exe+E36E39 - 48 85 C9              - test rcx,rcx
+Trackmania.exe+E36E3C - 75 2A                 - jne Trackmania.exe.text+E35E68 { ->Trackmania.exe+E36E68 }
+Trackmania.exe+E36E3E - 8D 4E 18              - lea ecx,[rsi+18]
+Trackmania.exe+E36E41 - E8 5A606BFF           - call Trackmania.exe.text+4EBEA0 { ->Trackmania.exe+4ECEA0 }
+Trackmania.exe+E36E46 - 48 8B C8              - mov rcx,rax
+Trackmania.exe+E36E49 - 48 85 C0              - test rax,rax
+Trackmania.exe+E36E4C - 74 14                 - je Trackmania.exe.text+E35E62 { ->Trackmania.exe+E36E62 }
+Trackmania.exe+E36E4E - 48 8D 05 FB61CB00     - lea rax,[Trackmania.exe.rdata+1E4050] { (7FF63946F150) }
+Trackmania.exe+E36E55 - 48 89 71 08           - mov [rcx+08],rsi
+Trackmania.exe+E36E59 - 48 89 01              - mov [rcx],rax
+Trackmania.exe+E36E5C - 48 89 71 10           - mov [rcx+10],rsi
+Trackmania.exe+E36E60 - EB 03                 - jmp Trackmania.exe.text+E35E65 { ->Trackmania.exe+E36E65 }
+Trackmania.exe+E36E62 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe+E36E65 - 48 89 0B              - mov [rbx],rcx
+Trackmania.exe+E36E68 - 83 79 08 00           - cmp dword ptr [rcx+08],00 { 0 }
+Trackmania.exe+E36E6C - 48 8B 74 24 50        - mov rsi,[rsp+50]
+Trackmania.exe+E36E71 - 75 09                 - jne Trackmania.exe.text+E35E7C { ->Trackmania.exe+E36E7C }
+Trackmania.exe+E36E73 - C7 07 01000000        - mov [rdi],00000001 { 1 }
+Trackmania.exe+E36E79 - 48 8B 0B              - mov rcx,[rbx]
+Trackmania.exe+E36E7C - 48 8D 41 FF           - lea rax,[rcx-01]

@@ -180,6 +180,31 @@ namespace Editor {
             @tmpMacroblock = null;
             releaseTmpMacroblock = false;
         }
+
+        array<MacroblockSpec@>@ CreateChunks(int chunkSize) override {
+            MacroblockSpec@[] chunks;
+            auto chunk = MacroblockSpecPriv();
+            nat3 lastCoord;
+            for (uint i = 0; i < this.blocks.Length; i++) {
+                if (!MathX::Nat3XZEq(lastCoord, this.blocks[i].coord) && chunk.Length >= chunkSize) {
+                    chunks.InsertLast(chunk);
+                    @chunk = MacroblockSpecPriv();
+                }
+                chunk.AddBlock(this.blocks[i]);
+                lastCoord = this.blocks[i].coord;
+            }
+            for (uint i = 0; i < this.items.Length; i++) {
+                if (chunk.Length >= chunkSize) {
+                    chunks.InsertLast(chunk);
+                    @chunk = MacroblockSpecPriv();
+                }
+                chunk.AddItem(this.items[i]);
+            }
+            if (chunk.Length > 0) {
+                chunks.InsertLast(chunk);
+            }
+            return chunks;
+        }
     }
 
     const uint32 MAGIC_BLOCKS = 0x734b4c42;

@@ -214,6 +214,11 @@ namespace Editor {
             throw("implemented elsewhere");
             return null;
         }
+
+        MacroblockSpec@[]@ CreateChunks(int chunkSize) {
+            throw("CreateChunks implemented elsewhere");
+            return {this};
+        }
     }
 
     shared class MacroblockWithSetSkins : NetworkSerializable {
