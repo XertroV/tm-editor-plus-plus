@@ -39,7 +39,8 @@ string[][]@ GenEditorControlsArray() {
     string[][] r;
     r.InsertLast({"Erase Mode", "Hold X"});
     r.InsertLast({"Delete free/ghost blocks on hover", "Hold Del"});
-    r.InsertLast({"Place many free/ghost blocks", "Hold space"});
+    r.InsertLast({"Place many normal blocks ", "Hold space"});
+    r.InsertLast({"Place block or item ", "Space / Left Click"});
     r.InsertLast({"Pivot Change", "Q"});
     r.InsertLast({"Toggle Cursor Helper Plane", "M"});
     r.InsertLast({"Camera Rotations", "Numpad 1-9"});
@@ -53,7 +54,7 @@ string[][]@ GenEditorControlsArray() {
     r.InsertLast({"Cursor Yaw", "Numpad +/-"});
     r.InsertLast({"Enter copy mode", "C"});
     r.InsertLast({"Show/Hide Inventory", "Tab"});
-    r.InsertLast({"Skinning Mode - Apply Last", "Shift Click"});
+    r.InsertLast({"Skinning Mode - Apply Last", "Shift + Click"});
     r.InsertLast({"Select picked block/item", "Ctrl + Click"});
     r.InsertLast({"Focus on picked block/item", "Ctrl + R-Click"});
     r.InsertLast({"Show/hide in-game helpers", "H"});

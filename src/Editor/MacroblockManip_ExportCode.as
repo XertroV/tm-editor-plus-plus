@@ -29,7 +29,7 @@ namespace Editor {
     import bool DeleteBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items, bool addUndoRedoPoint = false) from "Editor";
     import bool DeleteBlocks(CGameCtnBlock@[]@ blocks, bool addUndoRedoPoint = false) from "Editor";
     import bool PlaceBlocks(BlockSpec@[]@ blocks, bool addUndoRedoPoint = false) from "Editor";
-    // returns the newply placed replacement block
+    // returns the newly placed replacement block
     import CGameCtnBlock@ ConvertBlockToFree(CGameCtnBlock@ block) from "Editor";
     import bool DeleteItems(CGameCtnAnchoredObject@[]@ items, bool addUndoRedoPoint = false) from "Editor";
     import bool PlaceItems(ItemSpec@[]@ items, bool addUndoRedoPoint = false) from "Editor";
@@ -37,16 +37,16 @@ namespace Editor {
     import bool DeleteMacroblock(MacroblockSpec@ macroblock, bool addUndoRedoPoint = false) from "Editor";
     import bool SetSkins(SetSkinSpec@[]@ skins) from "Editor";
     // import void SetAirblockMode(bool airBlockEnabled) from "Editor";
-    // Running this in the wrong context can crash the game, use GameLoop or MainLoop
+    // WARNING Running this in the wrong context can crash the game, use GameLoop or MainLoop
     import void RunDeleteFreeBlockDetection() from "Editor";
     import bool HasPendingFreeBlocksToDelete() from "Editor";
-    // run this in GameLoop or MainLoop
+    // (Safe alt: Use DeleteBlocks instead) WARNING run this in GameLoop or MainLoop
     import uint DeleteFreeblocks(CGameCtnBlock@[]@ blocks) from "Editor";
-    // run this in GameLoop or MainLoop
+    // (Safe alt: Use DeleteBlocks instead) WARNING run this in GameLoop or MainLoop
     import uint DeleteFreeblocks(BlockSpec@[]@ blocks) from "Editor";
-    // use this to start an intercept-gather for freeblocks queued for deletion by macroblock deletion functions -- EndInterceptFreeblockQueueAndGather MUST be called later.
+    // WARNING use this to start an intercept-gather for freeblocks queued for deletion by macroblock deletion functions -- EndInterceptFreeblockQueueAndGather MUST be called later.
     import void BeginInterceptFreeblockQueueAndGather() from "Editor";
-    // use this to end an intercept-gather for freeblocks queued for deletion by macroblock deletion functions
+    // WARNING use this to end an intercept-gather for freeblocks queued for deletion by macroblock deletion functions
     import BlockSpec@[]@ EndInterceptFreeblockQueueAndGather() from "Editor";
 
     // get CSystemPackDescs for skin purposes
@@ -55,8 +55,10 @@ namespace Editor {
     import CGameEditorPluginMap::EPlaceMode GetPlacementMode(CGameCtnEditorFree@ editor) from "Editor";
     import CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) from "Editor";
     // Some camera things
+    // Easy way to set the editor camera to some target
     import bool SetCamAnimationGoTo(vec2 lookAngleHV, vec3 position, float targetDist) from "Editor";
     import vec2 DirToLookUvFromCamera(vec3 target) from "Editor";
+    // returns lookAngleHV suitable for SetCamAnimationGoTo
     import vec2 DirToLookUv(vec3 dir) from "Editor";
 
     // returns a const version of the cached octree for all blocks/items in the map

@@ -59,7 +59,7 @@ class DGameCursorItem_ItemDesc : RawBufferElem {
 		super(ptr, 0xA0);
 	}
 
-	// -1 when not drawn, can be other values like 2b otherwise
+	// -1 when not drawn, can be other values like 2b otherwise, 3 for car
 	uint get_u1() { return (this.GetUint32(0x0)); }
 	void set_u1(uint value) { this.SetUint32(0x0, value); }
 	// unused i think

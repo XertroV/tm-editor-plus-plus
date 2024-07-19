@@ -215,6 +215,7 @@ namespace Editor {
             return null;
         }
 
+        // Turn this macroblock into chunks of <= chunkSize (except blocks with the same XZ coord like pillars)
         MacroblockSpec@[]@ CreateChunks(int chunkSize) {
             throw("CreateChunks implemented elsewhere");
             return {this};
