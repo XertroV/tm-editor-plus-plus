@@ -116,6 +116,8 @@ namespace Gizmo {
     Editor::AABB@ bb = null;
     RotationTranslationGizmo@ gizmo;
 
+    vec3 lastAppliedPivot;
+
     void Gizmo_Setup(CGameCtnEditorFree@ editor) {
         if (editor is null) {
             IsActive = false;
@@ -136,17 +138,42 @@ namespace Gizmo {
                 editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
             }
         } else {
-            Editor::SetAllCursorPos(lastPickedItemPos);
+            Editor::SetCurrentPivot(editor, 0);
             CustomCursorRotations::SetCustomPYRAndCursor(lastPickedItemRot.Euler, editor.Cursor);
-            startnew(_GizmoUpdateBBFromSelected);
+            // startnew(_GizmoUpdateBBFromSelected);
             yield();
+            Editor::SetAllCursorPos(lastPickedItemPos);
             @bb = Editor::GetSelectedItemAABB();
             if (bb is null) {
                 warn("no selected item BB");
             } else {
-                bb.mat = mat4::Inverse(Editor::GetItemMatrix(lastPickedItem.AsItem()));
-                // bb is not always accurate -- will use last cursor pos which only showed before user pressed ctrl
-                bb.pos = lastPickedItemPos;
+                dev_trace("bb.pos before: " + bb.pos.ToString());
+                auto item = lastPickedItem.AsItem();
+                auto im = item.ItemModel;
+                // we need to account for the items pivot and default pivot
+                lastAppliedPivot = Editor::GetItemPivot(item);
+                if (im.DefaultPlacementParam_Content.PivotPositions.Length > 0) {
+                    lastAppliedPivot = im.DefaultPlacementParam_Content.PivotPositions[0];
+                }
+
+                auto _pos = bb.pos;
+                auto itemMat = Editor::GetItemMatrix(item);
+                auto itemPos = item.AbsolutePositionInMap;
+                // main bb to use to set cursor // mat4::Inverse
+                auto rot = (mat4::Translate(itemPos * -1.) * itemMat);
+                auto relPivot = mat4::Translate(lastPickedItemPivot + lastAppliedPivot);
+                bb.mat = rot * relPivot;
+                bb.mat = mat4::Translate(itemPos) * (bb.mat);
+                bb.InvertRotation();
+                // dev_trace("bb.pos mid: " + bb.pos.ToString());
+                // // bb is not always accurate -- will use last cursor pos which only showed before user pressed ctrl
+                // bb.pos = lastPickedItemPos;
+                // dev_trace("bb.pos mid: " + bb.pos.ToString());
+                // // we add the pivots here because the one from the item is -1.* the actual pivot according to params
+                // bb.mat = bb.mat * relPivot;
+                dev_trace("bb.pos after: " + bb.pos.ToString());
+                dev_trace("lastAppliedPivot: " + lastAppliedPivot.ToString());
+                dev_trace("lastPickedItemPivot: " + lastPickedItemPivot.ToString());
             }
             lastPickedItemRot.SetCursor(editor.Cursor);
         }
@@ -158,6 +185,11 @@ namespace Gizmo {
         @gizmo = RotationTranslationGizmo("gizmo").WithBoundingBox(bb)
             .WithOnApplyF(_GizmoOnApply).WithOnExitF(_GizmoOnCancel);
         IsActive = true;
+        // auto lookUv = Editor::DirToLookUvFromCamera(bb.pos);
+        auto lookUv = Editor::GetCurrentCamState(editor).LookUV;
+        Editor::SetCamAnimationGoTo(lookUv, bb.pos, bb.halfDiag.Length() * 6.);
+
+        yield();
     }
 
     void _GizmoUpdateBBFromSelected() {

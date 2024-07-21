@@ -204,7 +204,11 @@ void Render() {
     // }
 
     PillarsChoice::Render();
-    Gizmo::Render();
+    if (IsInEditor) {
+        Gizmo::Render();
+        ToolsTG.DrawWindows();
+    }
+
 }
 
 void RenderInterface() {

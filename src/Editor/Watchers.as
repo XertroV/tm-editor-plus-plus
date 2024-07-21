@@ -6,6 +6,7 @@ bool g_UseSnappedLoc = false;
 
 string lastPickedItemName;
 vec3 lastPickedItemPos = vec3();
+vec3 lastPickedItemPivot = vec3();
 EditorRotation@ lastPickedItemRot = EditorRotation(0, 0, 0);
 ReferencedNod@ lastPickedItem = null;
 BlockOrItem lastPickedType = BlockOrItem::Block;
@@ -28,6 +29,7 @@ void UpdatePickedItemCachedValues() {
     if (po is null || po.ItemModel is null) return;
     lastPickedItemName = po.ItemModel.IdName;
     lastPickedItemPos = po.AbsolutePositionInMap;
+    lastPickedItemPivot = Editor::GetItemPivot(po);
     @lastPickedItemRot = EditorRotation(po.Pitch, po.Yaw, po.Roll);
 }
 

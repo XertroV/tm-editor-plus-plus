@@ -198,7 +198,7 @@ enum BlockPlacementFlags {
 
 class PillarsAutochangerTab : EffectTab, WithGetPillarsAndReplacements {
     PillarsAutochangerTab(TabGroup@ p) {
-        super(p, "Pillars" + NewIndicator, Icons::University + Icons::Flask);
+        super(p, "Pillars", Icons::University + Icons::Flask);
         RegisterNewBlockCallback(ProcessBlock(this.OnPlaceBlock), "PillarsAutochanger");
     }
 

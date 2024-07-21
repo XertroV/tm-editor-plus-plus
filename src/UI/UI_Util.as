@@ -130,3 +130,17 @@ shared bool CopiableLabeledValueTooltip(const string &in label, const string &in
 float G_GetSmallerInputWidth() {
     return Math::Max(400.0, UI::GetWindowContentRegionWidth() * 0.5);
 }
+
+
+namespace UX {
+    // call this before you end the popup
+    void CloseCurrentPopupIfMouseFarAway(bool closeAnyway = false) {
+        auto wPos = UI::GetWindowPos();
+        auto wSize = UI::GetWindowSize();
+        auto showBoundsRect = vec4(wPos + vec2(-50), wSize + vec2(100));
+
+        closeAnyway = closeAnyway || !MathX::Within(UI::GetMousePos(), showBoundsRect);
+        // trace(UI::GetMousePos().ToString() + " " + showBoundsRect.ToString());
+        if (closeAnyway) UI::CloseCurrentPopup();
+    }
+}

@@ -48,6 +48,10 @@ namespace Editor {
         vec3 midPoint;
         vec3 halfDiag;
         mat4 mat;
+
+        mat4 rot;
+        mat4 invRot;
+
         AABB(const iso4 &in mat, const vec3 &in midPoint, const vec3 &in halfDiag) {
             this.mat = mat;
             this.midPoint = midPoint;
@@ -73,6 +77,13 @@ namespace Editor {
 
         vec3 get_max() {
             return midPoint + halfDiag;
+        }
+
+        void InvertRotation() {
+            vec3 _pos = this.pos;
+            rot = mat4::Translate(_pos * -1.) * mat;
+            invRot = mat4::Inverse(rot);
+            mat = mat4::Translate(_pos) * invRot;
         }
     }
 

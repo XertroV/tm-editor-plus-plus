@@ -12,6 +12,8 @@ const vec4 cBlack75 =  vec4(0,0,0, .75);
 const vec4 cGray =  vec4(.5, .5, .5, 1);
 const vec4 cGray50 =  vec4(.5, .5, .5, .5);
 const vec4 cWhite = vec4(1);
+const vec4 cWhite50 = vec4(1, 1, 1, .5);
+const vec4 cWhite75 = vec4(1, 1, 1, .75);
 
 
 const float hueRed = 0.0;

@@ -43,9 +43,7 @@ namespace Editor {
         editor.Cursor.FreePosInMap = pos;
         editor.Cursor.Coord = PosToCoord(pos);
         editor.Cursor.UseFreePos = true;
-        if (editor.Cursor.UseSnappedLoc) {
-            editor.Cursor.SnappedLocInMap_Trans = pos;
-        }
+        editor.Cursor.SnappedLocInMap_Trans = pos;
         SetItemCursorPos(editor.ItemCursor, pos);
     }
 

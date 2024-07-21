@@ -172,7 +172,9 @@ class RotationTranslationGizmo {
     vec3 worldPos;
     vec3 lastWorldPos;
     vec3 lastScreenPos;
+    // screen pos of 0,0,0 for item
     vec2 centerScreenPos;
+    vec2 centerScreenPosWTmp;
     bool shouldDrawGizmo = true;
 
     bool _isCtrlDown = false;
@@ -202,6 +204,7 @@ class RotationTranslationGizmo {
 
         float tmpDist;
         centerScreenPos = Camera::ToScreen(pos).xy;
+        centerScreenPosWTmp = Camera::ToScreen(pos + tmpPos).xy;
         bool isRotMode = mode == Gizmo::Mode::Rotation;
         int segSkip =  isRotMode ? 4 : 1; // c2pLen2 > 40. ? 4 : 2;
         bool isNearSide = false;
@@ -211,11 +214,17 @@ class RotationTranslationGizmo {
         vec2 translateRadialDir;
         bool mouseInClickRange = lastClosestMouseDist < S_GizmoClickSensitivity;
 
+        nvg::Reset();
+        nvg::BeginPath();
+        nvg::FillColor(cWhite75);
+        nvg::Circle(centerScreenPos, Math::Clamp(100. / c2pLen, 2., 10.));
+        nvg::Fill();
+        nvg::ClosePath();
+
         for (int c = 0; c < 3; c++) {
             bool thicken = lastClosestAxis == Axis(c) && mouseInClickRange;
             float colAdd = thicken ? 0.2 : 0.;
             float strokeWidth = thicken ? 5 : 2;
-            nvg::Reset();
             nvg::LineCap(nvg::LineCapType::Round);
             nvg::LineJoin(nvg::LineCapType::Round);
             nvg::BeginPath();
@@ -289,7 +298,7 @@ class RotationTranslationGizmo {
                 mouseDownStart = Time::Now;
                 mouseDownPos = mousePos;
                 ResetTmp();
-            } else if (UI::IsMouseClicked(UI::MouseButton::Right) && mouseInClickRange) {
+            } else if (UI::IsMouseClicked(UI::MouseButton::Right) && mouseInClickRange && !IsAltDown()) {
                 mode = isRotMode ? Gizmo::Mode::Translation : Gizmo::Mode::Rotation;
                 ResetTmp();
             }
@@ -397,30 +406,86 @@ class RotationTranslationGizmo {
         DrawAll();
     }
 
+    bool useGlobal = false;
+
+    vec3 lastAppliedPivot;
+
     void DrawWindow() {
         bool isRotMode = mode == Gizmo::Mode::Rotation;
-        if (UI::Begin("###rgz-ctrl-"+name, UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
+        auto nbBtns = 3.;
+        auto btnSize = g_screen.y * .05;
+        auto btnSize2 = vec2(btnSize);
+        auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
+        UI::SetNextWindowPos(.5 * g_screen.x, 24 * g_scale, UI::Cond::Appearing);
+        if (UI::Begin("###gz-tlbr-"+name, UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
             // UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(g_screen.y * 0.005));
             UI::PushFont(g_BigFont);
-            if (UI::Button(isRotMode ? Icons::Dribbble : Icons::ArrowsAlt, vec2(g_screen.y * 0.05))) {
+            if (UI::Button(isRotMode ? Icons::Dribbble : Icons::ArrowsAlt, btnSize2)) {
                 mode = isRotMode ? Gizmo::Mode::Translation : Gizmo::Mode::Rotation;
             }
+            AddSimpleTooltip("Rotation or Translation?");
+
+            // UI::SameLine();
+            // if (UI::Button(isRotMode ? Icons::Dribbble : Icons::ArrowsAlt, btnSize2)) {
+            //     mode = isRotMode ? Gizmo::Mode::Translation : Gizmo::Mode::Rotation;
+            // }
+
             UI::SameLine();
-            if (UI::Button(isRotMode ? Icons::Dribbble : Icons::ArrowsAlt, vec2(g_screen.y * 0.05))) {
-                mode = isRotMode ? Gizmo::Mode::Translation : Gizmo::Mode::Rotation;
-            }
-            UI::SameLine();
-            if (UI::Button(Icons::Check, vec2(g_screen.y * 0.05))) {
+            if (UI::Button(useGlobal ? "Glb" : "Loc", btnSize2)) {
                 onApply();
             }
+            AddSimpleTooltip("Global or Local space? (Local will move along object's axes)");
+
             UI::SameLine();
-            if (UI::Button(Icons::Times, vec2(g_screen.y * 0.05))) {
+            if (UI::Button("Piv", btnSize2)) {
+                onApply();
+            }
+            if (UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Right)) {
+                UI::OpenPopup("gizmo-toolbar-edit-pivot");
+            }
+            AddSimpleTooltip("Cycle Pivot (RMB to edit)");
+
+            UI::SameLine();
+            if (UI::Button(Icons::Check, btnSize2)) {
+                onApply();
+            }
+            AddSimpleTooltip("Apply");
+
+            UI::SameLine();
+            if (UI::Button(Icons::Times, btnSize2)) {
                 onExit();
             }
+            AddSimpleTooltip("Cancel");
             UI::PopFont();
             // UI::PopStyleVar();
         }
         UI::End();
+
+        if (UI::BeginPopup("gizmo-toolbar-edit-pivot")) {
+            UI::Text("Edit Pivot");
+            UI::Separator();
+            UI::Text("Pivot: " + pos.ToString());
+            UI::Text("Scale: " + scale);
+            UI::Separator();
+            UI::Text("Set Pivot to:");
+            UI::PushItemWidth(100);
+            UI::InputFloat3("##gizmo-pivot", pos);
+            UI::InputFloat("##gizmo-pivot-scale", scale);
+            UI::PopItemWidth();
+            UI::Separator();
+            if (UI::Button("Apply")) {
+                onApply();
+                UI::CloseCurrentPopup();
+            }
+            UI::SameLine();
+            if (UI::Button("Cancel")) {
+                UI::CloseCurrentPopup();
+            }
+
+            UX::CloseCurrentPopupIfMouseFarAway();
+            UI::EndPopup();
+        }
+
 
         // // UX::PushInvisibleWindowStyle();
         // if (UI::Begin("###rgz"+name)) {

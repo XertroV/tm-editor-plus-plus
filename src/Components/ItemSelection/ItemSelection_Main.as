@@ -289,8 +289,8 @@ class CurrentItem_PlacementToolbar : Tab {
         if (toggleFlying) ToggleFlying(pp);
 
         if (toggleGridDisable) ToggleGridDisabled(pp);
-        if (decrGridSize && _isGridDisabled) GridDecrease(pp, 1);
-        if (incrGridSize && _isGridDisabled) GridIncrease(pp, 1);
+        if (decrGridSize && !_isGridDisabled) GridDecrease(pp, 1);
+        if (incrGridSize && !_isGridDisabled) GridIncrease(pp, 1);
         if (toggleAutoRotate) ToggleAutoRotate(pp);
         if (toggleAutoPivot) ToggleAutoPivot(pp);
     }
@@ -321,13 +321,7 @@ class CurrentItem_PlacementToolbar : Tab {
             pp.GridSnap_VOffset = UI::InputFloat("V Offset", pp.GridSnap_VOffset, 0.1);
             UI::EndDisabled();
 
-            auto wPos = UI::GetWindowPos();
-            auto wSize = UI::GetWindowSize();
-            auto showBoundsRect = vec4(wPos + vec2(-50), wSize + vec2(100));
-
-            closePopup = !MathX::Within(UI::GetMousePos(), showBoundsRect);
-            // trace(UI::GetMousePos().ToString() + " " + showBoundsRect.ToString());
-            if (closePopup) UI::CloseCurrentPopup();
+            UX::CloseCurrentPopupIfMouseFarAway(closePopup);
 
             UI::EndPopup();
         }

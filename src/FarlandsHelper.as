@@ -66,6 +66,9 @@ namespace FarlandsHelper {
             // skip if we're setting the cursor pos atm
             if (updateBlockPosFHHelper) continue;
 
+            // skip if something else is doing cursor things
+            if (!CursorControl::RequestExclusiveControl(farlandsHelperCursorControlName)) continue;
+
             // auto occ = editor.OrbitalCameraControl;
             auto camTarget = editor.PluginMapType.CameraTargetPosition;
             lastCursorPos = Picker::GetMouseToWorldAtHeight(camTarget.y);
@@ -79,8 +82,12 @@ namespace FarlandsHelper {
             ) {
                 cursor.SnappedLocInMap_Trans = lastCursorPos;
             }
+
+            CursorControl::ReleaseExclusiveControl(farlandsHelperCursorControlName);
         }
     }
+
+    const string farlandsHelperCursorControlName = "FarlandsHelper::CursorLoop";
 
     HookHelper@ GetCursorRotation_ForDrawing_Hook = HookHelper(
         "0F 11 0B F2 0F 11 43 10 48 8B 5C 24 60 48 83 C4 50 5F C3",

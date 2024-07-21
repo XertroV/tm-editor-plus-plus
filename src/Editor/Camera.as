@@ -59,14 +59,15 @@ namespace Editor {
     }
 
     vec2 DirToLookUvFromCamera(vec3 target) {
-        auto pos = cast<CGameCtnEditorFree>(GetApp().Editor).OrbitalCameraControl.Pos;
+        // auto pos = cast<CGameCtnEditorFree>(GetApp().Editor).OrbitalCameraControl.Pos;
+        auto pos = Camera::GetCurrentPosition();
         return DirToLookUv((target - pos).Normalized());
     }
 
     vec2 DirToLookUv(vec3 &in dir) {
         auto xz = (dir * vec3(1, 0, 1)).Normalized();
-        auto pitch = -Math::Asin(Math::Dot(dir, vec3(0, 1, 0)));
-        auto yaw = Math::Asin(Math::Dot(xz, vec3(1, 0, 0)));
+        auto pitch = -/*Math::Asin*/(Math::Dot(dir, vec3(0, 1, 0)));
+        auto yaw = /*Math::Asin*/(Math::Dot(xz, vec3(1, 0, 0)));
         if (Math::Dot(xz, vec3(0, 0, -1)) > 0) {
             yaw = - yaw - Math::PI;
             // trace('alt case');

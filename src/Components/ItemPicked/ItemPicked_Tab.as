@@ -52,7 +52,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             return;
         }
 
-        UI::TextWrapped("\\$f80Warning! \\$zRefreshing items can sometimes result in a crash. To disable auto-refresh, uncheck 'Save to refresh' under the 'Advanced' menu. Some maps are prone to this, but most are okay.");
+        UI::TextWrapped("\\$af0Hey! \\$zWhy not try the new gizmo? (Ctrl+Shift Click on an item)");
         UI::Separator();
 
         auto item = FocusedItem.AsItem();
@@ -165,6 +165,12 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             nvg::StrokeColor(vec4(0, 1, 1, 1));
             nvg::StrokeWidth(3);
             nvg::Stroke();
+            // nvgCircleWorldPos((Editor::GetItemMatrix(item) * Editor::GetItemPivot(item)).xyz);
+            // nvgCircleWorldPos((Editor::GetItemMatrix(item) * mat4::Translate(Editor::GetItemPivot(item)) * vec3(0,0,0)).xyz);
+            // nvg::Stroke();
+            // nvgCircleWorldPos((Editor::GetItemMatrix(item) * mat4::Translate(Editor::GetItemPivot(item)) * vec3(2, 8, 0)).xyz);
+            // nvg::StrokeWidth(3);
+            // nvg::Stroke();
             nvgToWorldPos(item.AbsolutePositionInMap);
             nvgDrawCoordHelpers(Editor::GetItemMatrix(item), cursorCoordHelpersSize);
         }
