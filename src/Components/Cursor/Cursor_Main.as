@@ -550,8 +550,8 @@ class CustomCursorTab : EffectTab {
         CustomCursorRotations::ItemSnappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled (Default: On)", CustomCursorRotations::ItemSnappingEnabled);
         AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly). Normal game behavior is when this is *true*.");
 
-        CustomCursor::AllowFreeWaterBlocksPatchActive = UI::Checkbox("Allow Placing Free Water Blocks" + NewIndicator, CustomCursor::AllowFreeWaterBlocksPatchActive);
-        AddSimpleTooltip("Allows placing water blocks in free block and free macroblock mode.");
+        CustomCursor::AllowFreeWaterBlocksPatchActive = UI::Checkbox("Allow Placing Rotated Free Water Blocks" + NewIndicator, CustomCursor::AllowFreeWaterBlocksPatchActive);
+        AddSimpleTooltip("Allows placing water blocks with pitch and roll in free block and free macroblock mode.");
         UI::SameLine();
         S_AutoApplyFreeWaterBlocksPatch = UI::Checkbox("Auto-apply##fwbp", S_AutoApplyFreeWaterBlocksPatch);
 
@@ -711,6 +711,7 @@ namespace CustomCursorRotations {
     vec3 cursorCustomPYR = vec3();
 
     void DrawSettings() {
+        UI::PushItemWidth(120.);
         if (customRot <= 0.0005) customRot = 0.0005;
         int origParts = int(Math::Round(TAU / 4. / customRot));
         int newParts = Math::Clamp(UI::InputInt("Taps per 90 degrees", origParts), 2, 360);
@@ -718,6 +719,7 @@ namespace CustomCursorRotations {
         float crDeg = Math::ToDeg(customRot);
         float crNewDec = UI::InputFloat("Rotation (Deg)", crDeg);
         if (crNewDec != crDeg) customRot = Math::ToRad(crNewDec);
+        UI::PopItemWidth();
     }
 
     void SetCustomCursorRot(float _customRot) {
