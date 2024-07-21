@@ -64,12 +64,12 @@ class ItemPlacementTab : Tab {
         AddSimpleTooltip("Unknown or untested.\n Default?: 0.0 (some items may differ)");
         pp_content.PivotSnap_Distance = UI::InputFloat("PivotSnap_Distance", pp_content.PivotSnap_Distance, 0.01);
         AddSimpleTooltip("Unknown or untested.\n Defaults?: -1.0, 0.0 (some items may differ)");
-        pp_content.FlyStep = UI::InputFloat("FlyStep", pp_content.FlyStep, 0.01);
+        pp_content.FlyStep = UI::InputFloat("FlyStep", pp_content.FlyStep, 1.0);
         AddSimpleTooltip("In item mode: When <= 0, the item will lock to the ground. When > 0, it's how far each scroll up/down input moves you up/down.");
-        pp_content.FlyOffset = UI::InputFloat("FlyOffset", pp_content.FlyOffset, 0.01);
+        pp_content.FlyOffset = UI::InputFloat("FlyOffset", pp_content.FlyOffset, 1.0);
         AddSimpleTooltip("Unknown");
         pp_content.AutoRotation = UI::Checkbox("AutoRotation", pp_content.AutoRotation);
-        AddSimpleTooltip("Auto-rotate items to match the surface");
+        AddSimpleTooltip("Auto-rotate items to match the surface. Note: grid snap must = 0.");
         pp_content.GhostMode = UI::Checkbox("GhostMode", pp_content.GhostMode);
         AddSimpleTooltip("Unknown");
         pp_content.IsFreelyAnchorable = UI::Checkbox("IsFreelyAnchorable", pp_content.IsFreelyAnchorable);

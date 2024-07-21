@@ -452,6 +452,7 @@ TabGroup@ CreateToolsTabGroup() {
     MaterialsListTab(tools);
     @g_CursorPositionWindow = CursorPosition(tools);
     @g_CoordPathDrawingTool = CoordPathDrawingTab(tools);
+    @g_ItemPlacementToolbar = CurrentItem_PlacementToolbar(tools);
     // @g_MapBaseSizeChanger = MapBaseSizeChangerTab(tools);
     return tools;
 }
@@ -500,6 +501,7 @@ MapEditPropsTab@ g_MapPropsTab;
 BI_MainTab@ g_BlocksItemsTab;
 InventorySearchTab@ g_InvSearchTab;
 NG::GraphTab@ g_GraphTab;
+CurrentItem_PlacementToolbar@ g_ItemPlacementToolbar;
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
