@@ -61,6 +61,7 @@ class CursorPosition : Tab {
         this.windowOpen = S_CursorWindowOpen;
         if (S_AutoActivateCustomRotations) CustomCursorRotations::Active = true;
         if (S_AutoActivateCustomYaw) CustomCursorRotations::CustomYawActive = true;
+        if (S_AutoApplyFreeWaterBlocksPatch) CustomCursor::AllowFreeWaterBlocksPatchActive = true;
     }
 
     bool get_windowOpen() override property {
@@ -255,7 +256,7 @@ void DrawFreeBlockClipsForInMapBlocksNear(vec3 pos, float blockRadius) {
         if (blk is null) continue;
         if (!blk.isFree) continue;
         auto bi = blk.BlockInfo;
-        auto varIx = blk.isGround ? blk.variant : (blk.variant - bi.AdditionalVariantsGround.Length - 1);
+        auto varIx = (blk.isGround || blk.variant == 0) ? blk.variant : (blk.variant - bi.AdditionalVariantsGround.Length - 1);
         auto var = Editor::GetBlockInfoVariant(bi, varIx, blk.isGround);
         if (var is null) continue;
         auto pos = blk.pos -  vec3(0, 56, 0);
@@ -420,6 +421,8 @@ uint[]@ GetSeekingClipIds(CGameCtnBlockInfoClip@ clip, uint[]@ ids = {}) {
     if (clip.ClipType != CGameCtnBlockInfoClip::EnumClipType::ClassicClip
         // && clip.TopBottomMultiDir == CGameCtnBlockInfoClip::EMultiDirEnum::SymmetricalDirs
     ) {
+        if (clip.SymmetricalClipId.Value < uint(-1))
+            ids.InsertLast(clip.SymmetricalClipId.Value);
         if (clip.SymmetricalBlockInfoId.Value < uint(-1))
             ids.InsertLast(clip.SymmetricalBlockInfoId.Value);
         if (clip.SymmetricalClipGroupId.Value < uint(-1))
@@ -546,7 +549,14 @@ class CustomCursorTab : EffectTab {
     void DrawInner() override {
         CustomCursorRotations::ItemSnappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled (Default: On)", CustomCursorRotations::ItemSnappingEnabled);
         AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly). Normal game behavior is when this is *true*.");
+
+        CustomCursor::AllowFreeWaterBlocksPatchActive = UI::Checkbox("Allow Placing Free Water Blocks" + NewIndicator, CustomCursor::AllowFreeWaterBlocksPatchActive);
+        AddSimpleTooltip("Allows placing water blocks in free block and free macroblock mode.");
+        UI::SameLine();
+        S_AutoApplyFreeWaterBlocksPatch = UI::Checkbox("Auto-apply##fwbp", S_AutoApplyFreeWaterBlocksPatch);
+
         DrawFreeBlockSnapRadiusSettings();
+
         bool wasActive = CustomCursorRotations::Active;
         auto nextActive = UI::Checkbox("Enable Custom Cursor Rotation Amounts", wasActive);
         if (wasActive != nextActive) CustomCursorRotations::Active = nextActive;
@@ -605,8 +615,8 @@ class CustomCursorTab : EffectTab {
 
         UI::Indent();
         S_DrawFreeBlockClips = UI::Checkbox("Draw Block Clip Helpers" + NewIndicator, S_DrawFreeBlockClips);
-        S_DrawAnySnapRadiusOnHelpers = UI::Checkbox("Draw Snap Radius on Helpers", S_DrawAnySnapRadiusOnHelpers);
-        S_DrawFreeBlockClipsOnNearbyBlocks = UI::Checkbox("Draw Block Clip Helpers on Nearby Blocks", S_DrawFreeBlockClipsOnNearbyBlocks);
+        S_DrawAnySnapRadiusOnHelpers = UI::Checkbox("Draw Snap Radius on Helpers" + NewIndicator, S_DrawAnySnapRadiusOnHelpers);
+        S_DrawFreeBlockClipsOnNearbyBlocks = UI::Checkbox("Draw Block Clip Helpers on Nearby Blocks" + NewIndicator, S_DrawFreeBlockClipsOnNearbyBlocks);
         UI::Unindent();
     }
 }
@@ -672,7 +682,7 @@ class CursorPropsTab : Tab {
             g_CursorPositionWindow.windowOpen = UI::Checkbox("Show Cursor Info Window", g_CursorPositionWindow.windowOpen);
         }
         S_CursorWindowRotControls = UI::Checkbox("Cursor Window Includes Rotation Controls", S_CursorWindowRotControls);
-        S_CursorWindowShowDetailed = UI::Checkbox("Show Details: exact position and snapping" + NewIndicator, S_CursorWindowShowDetailed);
+        S_CursorWindowShowDetailed = UI::Checkbox("Show Details: exact position and snapping", S_CursorWindowShowDetailed);
     }
 }
 
@@ -684,6 +694,8 @@ void ResetCursor(CGameCursorBlock@ cursor) {
     CustomCursorRotations::cursorCustomPYR = vec3();
 }
 
+[Setting hidden]
+bool S_AutoApplyFreeWaterBlocksPatch = true;
 
 [Setting hidden]
 bool S_EnablePromiscuousItemSnapping = true;
@@ -1094,6 +1106,61 @@ namespace CustomCursorRotations {
 }
 
 namespace CustomCursor {
+    MemPatcher@ Patch_AllowFreeWaterBlocks = MemPatcher(
+      // v cmp water len   v jbe             v mov
+        "39 87 ?? ?? 00 00 0F 86 ?? ?? 00 00 48 8B 4C 24 30",
+        {6}, {"90 E9"},  {"0F 86"} // patch jbe -> jmp
+    );
+
+    MemPatcher@ Patch_AllowFreeWaterMacroBlocks = MemPatcher(
+        // v cmp           v jbe             v start of movss
+        "39 83 ?? ?? 00 00 0F 86 ?? 00 00 00 F3",
+        {6}, {"90 E9"},  {"0F 86"} // patch jbe -> jmp
+    );
+
+    bool AllowFreeWaterBlocksPatchActive {
+        get {
+            return Patch_AllowFreeWaterBlocks.IsApplied
+                && Patch_AllowFreeWaterMacroBlocks.IsApplied;
+        }
+        set {
+            Patch_AllowFreeWaterBlocks.IsApplied = value;
+            Patch_AllowFreeWaterMacroBlocks.IsApplied = value;
+        }
+    }
+
+    MemPatcher@ Patch_DoNotSetCursorVisibleFlag = MemPatcher(
+        // [rdx] to xmm0 to [rcx+1f8], then next 16 bytes
+        // v      v                    v           v
+        "0F 10 02 0F 11 81 F8 01 00 00 0F 10 4A 10 0F 11 89 08 02 00 00",
+        {3}, {"90 90 90 90 90 90 90"}
+    );
+
+    bool NoSetCursorVisFlagPatchActive {
+        get {
+            return Patch_DoNotSetCursorVisibleFlag.IsApplied;
+        }
+        set {
+            Patch_DoNotSetCursorVisibleFlag.IsApplied = value;
+        }
+    }
+
+    // warning: if used when changing out of test mode, the vehicle will stick around and leaving the editor will crash the game.
+    MemPatcher@ Patch_DoNotHideCursorItemModels = MemPatcher(
+        //                                   v call function that hides cursor item models
+        "90 83 3B FF 74 0B 48 8B D3 48 8B CE E8",
+        {12}, {"90 90 90 90 90"}
+    );
+
+    bool NoHideCursorItemModelsPatchActive {
+        get {
+            return Patch_DoNotHideCursorItemModels.IsApplied;
+        }
+        set {
+            Patch_DoNotHideCursorItemModels.IsApplied = value;
+        }
+    }
+
     const string fbSnapRadiusPattern =
         // v loads block x,y size to later be multiplied    v mulss xmm11 by (.25 by default)
         "F3 45 0F 10 04 24 8B 4B 20 45 0F 28 D8 48 8B 43 18 F3 44 0F 59 1D"; // " ?? ?? ?? ??"

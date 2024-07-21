@@ -43,7 +43,6 @@ class LightmapTab : Tab {
         if (UI::Button("Recalculate LM")) {
             // set to VFast
             Dev::SetOffset(lm.m_PImp.Cache, GetOffset("CHmsLightMapCache", "m_Quality"), int(0));
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor !is null) {
                 editor.PluginMapType.ComputeShadows1(m_SetLMQuality);
             } else {

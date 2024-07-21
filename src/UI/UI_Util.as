@@ -117,7 +117,7 @@ void LabeledValue(const string &in label, int3 &in value, bool clickToCopy = fal
 
 
 
-shared bool CopiableLabeledValueTooltip(const string &in label, const string &in value) {
+bool CopiableLabeledValueTooltip(const string &in label, const string &in value) {
     bool clicked = ClickableLabel(label, "", "");
     AddSimpleTooltip(value);
     if (clicked) {

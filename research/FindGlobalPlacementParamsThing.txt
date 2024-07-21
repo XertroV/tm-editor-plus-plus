@@ -1,4 +1,5 @@
 Pivot Position / Global Editor Params
+
 - can update these to move item arbitrarily
 
 v some kind of flag or magic bytes or something?
@@ -7,6 +8,9 @@ v vtable for item placement params
 E0 DB CC 2F F6 7F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 v buf of pivot points (works to update cursor each frame)
 C0 48 2B B2 6D 01 00 00 04 00 00 00 04 00 00 00
+
+
+48 89 6C 24 30 48 89 7C 24 38 48 8B 08 8B 04 0A 39 05
 
 
 Trackmania.exe.text+DDE44D - 65 48 8B 04 25 58000000  - mov rax,gs:[00000058] { 88 }

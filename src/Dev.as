@@ -653,6 +653,11 @@ const uint16 O_INVENTORY_ItemHideFolderDepth = 0x1E8;
 const uint16 O_INVENTORY_ItemSelectedFolder = 0x1F0;
 
 
+const uint16 O_BLOCKCURSOR_SnappedLocInMap_Roll = GetOffset("CGameCursorBlock", "SnappedLocInMap_Roll");
+// bool, 1 to draw (works in freelook mode, for example)
+const uint16 O_BLOCKCURSOR_DrawCursor = O_BLOCKCURSOR_SnappedLocInMap_Roll + (0x1f8 - 0x184);
+
+
 const uint16 O_ITEMCURSOR_CurrentPos = GetOffset("CGameCursorItem", "MagnetSnapping_LocalRotation_Deg") + 0x40;
 const uint16 O_ITEMCURSOR_CurrentModelsBuf = GetOffset("CGameCursorItem", "HelperMobil") + 0x8;
 // const uint16 O_ITEMCURSOR_VariantOrNbMaybe = 0xC0;

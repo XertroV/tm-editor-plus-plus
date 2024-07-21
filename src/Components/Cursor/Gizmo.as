@@ -39,7 +39,12 @@ namespace Gizmo {
         if (_IsActive == v) return;
         if (v && CursorControl::RequestExclusiveControl(gizmoControlName)) {
             _IsActive = v;
-            startnew(GizmoLoop); // .WithRunContext(Meta::RunContext::AfterScripts);
+            // startnew(GizmoLoop); // .WithRunContext(Meta::RunContext::AfterScripts);
+            startnew(GizmoLoop).WithRunContext(Meta::RunContext::GameLoop);
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            origEditMode = CGameEditorPluginMap::EditMode::Place;
+            origPlaceMode = Editor::GetPlacementMode(editor);
+            // CustomCursor::NoSetCursorVisFlagPatchActive = true;
         } else if (!v) {
             OnGoInactive();
         } else {
@@ -55,6 +60,8 @@ namespace Gizmo {
         if (editor !is null) {
             _OnInactive_UpdatePMT(editor.PluginMapType);
         }
+        CustomCursor::NoSetCursorVisFlagPatchActive = false;
+        CustomCursor::NoHideCursorItemModelsPatchActive = false;
     }
 
     void _OnActive_UpdatePMT(CGameEditorPluginMapMapType@ pmt) {
@@ -82,6 +89,9 @@ namespace Gizmo {
         if (!IsShiftDown()) return false;
         if (!IsCtrlDown()) return false;
         // conditions met
+        if (Editor::IsInMacroblockPlacementMode(editor, false)) {
+            editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
+        }
         IsActive = true;
         // don't block click => ctrl+click will select the block/item for us
         return false;
@@ -94,17 +104,27 @@ namespace Gizmo {
         auto app = GetApp();
         CGameCtnEditorFree@ editor = cast<CGameCtnEditorFree>(app.Editor);
         Gizmo_Setup(editor);
-        origEditMode = Editor::GetEditMode(editor);
+        origEditMode = CGameEditorPluginMap::EditMode::Place;
+        origPlaceMode = Editor::GetPlacementMode(editor);
+        bool isItem = modeTargetType == BlockOrItem::Item;
+        CustomCursor::NoSetCursorVisFlagPatchActive = !isItem;
+        CustomCursor::NoHideCursorItemModelsPatchActive = isItem;
         while (IsActive && (@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) {
             // update cursor from gizmo
             bool isAltDown = IsAltDown();
             editor.PluginMapType.EnableEditorInputsCustomProcessing = !isAltDown;
             editor.PluginMapType.HideEditorInterface = true;
             auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
+            if (!isItem) Editor::SetCursorBlockVisible(editor.Cursor, true);
+            editor.Cursor.Color = vec3(0.039f, 0.039f, 0.078f);
             if (isAltDown) {
                 pmt.EditMode = CGameEditorPluginMap::EditMode::FreeLook;
+                editor.Cursor.UseFreePos = true;
             } else {
                 pmt.EditMode = origEditMode;
+                if (pmt.PlaceMode != origPlaceMode) {
+                    pmt.PlaceMode = origPlaceMode;
+                }
             }
             editor.Cursor.UseSnappedLoc = true;
             Editor::SetAllCursorMat(gizmo.GetCursorMat());
@@ -119,7 +139,37 @@ namespace Gizmo {
     Editor::ItemSpecPriv@ itemSpec;
     Editor::BlockSpecPriv@ blockSpec;
 
+    // just used to track item initial pivot
     vec3 lastAppliedPivot;
+    uint lastAppliedPivotIx = 0;
+
+    void CyclePivot() {
+        if (modeTargetType == BlockOrItem::Block) {
+            if (gizmo.pivotPoint.LengthSquared() == 0) {
+                ApplyPivot(bb.halfDiag);
+            } else {
+                ApplyPivot(vec3());
+            }
+        } else {
+            auto pp = itemSpec.Model.DefaultPlacementParam_Content;
+            if (pp.PivotPositions.Length > 1) {
+                lastAppliedPivotIx = (lastAppliedPivotIx + 1) % pp.PivotPositions.Length;
+                ApplyPivot(pp.PivotPositions[lastAppliedPivotIx] - lastAppliedPivot);
+            } else {
+                lastAppliedPivotIx = uint(-1);
+                if (gizmo.pivotPoint.LengthSquared() == 0) {
+                    ApplyPivot(bb.halfDiag - lastAppliedPivot);
+                } else {
+                    ApplyPivot(vec3());
+                }
+            }
+        }
+    }
+
+    void ApplyPivot(vec3 newPivot) {
+        gizmo.SetPivotPoint(newPivot);
+        gizmo.FocusCameraOn(gizmo.pos);
+    }
 
     void Gizmo_Setup(CGameCtnEditorFree@ editor) {
         if (editor is null) {
@@ -130,6 +180,7 @@ namespace Gizmo {
         modeTargetType = lastPickedType;
         @itemSpec = null;
         @blockSpec = null;
+        lastAppliedPivot = vec3();
 
         if (modeTargetType == BlockOrItem::Block) {
             lastPickedBlock = Editor::GetPickedBlock();
@@ -145,20 +196,26 @@ namespace Gizmo {
             }
             @blockSpec = Editor::BlockSpecPriv(b);
         } else {
+            auto item = lastPickedItem.AsItem();
+            if (item is null) {
+                warn("no last picked item");
+                IsActive = false;
+                return;
+            }
             Editor::SetCurrentPivot(editor, 0);
             CustomCursorRotations::SetCustomPYRAndCursor(lastPickedItemRot.Euler, editor.Cursor);
-            @itemSpec = Editor::ItemSpecPriv(lastPickedItem.AsItem());
-            yield();
+            @itemSpec = Editor::ItemSpecPriv(item);
+            yield(2);
             Editor::SetAllCursorPos(lastPickedItemPos);
             @bb = Editor::GetSelectedItemAABB();
             if (bb is null) {
                 warn("no selected item BB");
             } else {
                 dev_trace("bb.pos before: " + bb.pos.ToString());
-                auto item = lastPickedItem.AsItem();
                 auto im = item.ItemModel;
                 // we need to account for the items pivot and default pivot
                 lastAppliedPivot = Editor::GetItemPivot(item);
+                lastAppliedPivotIx = 0;
                 if (im.DefaultPlacementParam_Content.PivotPositions.Length > 0) {
                     lastAppliedPivot = im.DefaultPlacementParam_Content.PivotPositions[0];
                 }
@@ -190,7 +247,16 @@ namespace Gizmo {
         editor.PluginMapType.AutoSave();
         if (modeTargetType == BlockOrItem::Block) {
             if (blockSpec.isFree) {
-                Editor::DeleteFreeblocks({lastPickedBlock.AsBlock()});
+                Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
+                Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+                // Editor::DeleteFreeblocks(array<Editor::BlockSpec@> = {blockSpec});
+                Editor::SetEditorPickedBlock(editor, null);
+                Editor::QueueFreeBlockDeletion(blockSpec);
+                Editor::RunDeleteFreeBlockDetection();
+                // startnew(Editor::RunDeleteFreeBlockDetection).WithRunContext(Meta::RunContext::GameLoop);
+                // yield(3);
+                Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
+                Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
             } else {
                 Editor::DeleteBlocksAndItems({blockSpec}, {});
             }
@@ -201,6 +267,12 @@ namespace Gizmo {
         Editor::SetAllCursorPos(bb.pos);
         @gizmo = RotationTranslationGizmo("gizmo").WithBoundingBox(bb)
             .WithOnApplyF(_GizmoOnApply).WithOnExitF(_GizmoOnCancel);
+
+        if (modeTargetType == BlockOrItem::Item) {
+            gizmo.WithPlacementParams(lastPickedItem.AsItem().ItemModel.DefaultPlacementParam_Content);
+            // gizmo.pivotPoint = lastAppliedPivot;
+        }
+
         Editor::SetAllCursorMat(gizmo.GetCursorMat());
         IsActive = true;
         // auto lookUv = Editor::DirToLookUvFromCamera(bb.pos);
@@ -220,24 +292,35 @@ namespace Gizmo {
     void _GizmoOnApply() {
         // todo
         if (modeTargetType == BlockOrItem::Item) {
-            itemSpec.pivotPos = lastAppliedPivot;
-            itemSpec.pos = gizmo.pos + vec3(0, 56, 0);
+            dev_trace("Applying gizmo item: ");
+            dev_trace("   lastAppliedPivot: " + lastAppliedPivot.ToString());
+            dev_trace("   gizmo.placementParamOffset: " + gizmo.placementParamOffset.ToString());
+            dev_trace("   gizmo.pivotPoint: " + gizmo.pivotPoint.ToString());
+
+            itemSpec.pivotPos = (lastAppliedPivot * -1.); // - gizmo.placementParamOffset * 2.;
+            itemSpec.pos = gizmo.pos + vec3(0, 56, 0) + gizmo.GetRotatedPivotPoint();
             itemSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
             Editor::PlaceItems({itemSpec}, true);
         } else {
             blockSpec.flags = uint8(Editor::BlockFlags::Free);
-            blockSpec.pos = gizmo.pos + vec3(0, 56, 0);
+            blockSpec.pos = gizmo.pos + vec3(0, 56, 0) + gizmo.GetRotatedPivotPoint();
             blockSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
             Editor::PlaceBlocks({blockSpec}, true);
-            if (blockSpec.skin !is null) {
-                auto skin = blockSpec.skin;
-                @blockSpec.skin = null;
-                @skin.block = blockSpec;
-                Editor::SetSkins({skin});
-            }
+            startnew(_AfterApply_SetBlockSkin);
         }
         IsActive = false;
         // startnew(DisableGizmoInAsync, uint64(1));
+    }
+
+    void _AfterApply_SetBlockSkin() {
+        if (blockSpec.skin !is null) {
+            auto skin = blockSpec.skin;
+            @blockSpec.skin = null;
+            @skin.block = blockSpec;
+            Editor::SetSkins({skin});
+            yield();
+            Editor::SetSkins({skin});
+        }
     }
 
     void _GizmoOnCancel() {

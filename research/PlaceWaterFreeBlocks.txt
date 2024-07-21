@@ -1,0 +1,56 @@
+Trackmania.exe.text+10F7149 - 48 81 C1 08040000     - add rcx,00000408 { 1032 }
+Trackmania.exe.text+10F7150 - E8 6B26A3FF           - call Trackmania.exe.text+B297C0
+Trackmania.exe.text+10F7155 - 85 C0                 - test eax,eax
+Trackmania.exe.text+10F7157 - 0F85 8E000000         - jne Trackmania.exe.text+10F71EB
+Trackmania.exe.text+10F715D - 39 87 B8010000        - cmp [rdi+000001B8],eax { load water array len
+ }
+Trackmania.exe.text+10F7163 - 0F86 C3000000         - jbe Trackmania.exe.text+10F722C { change to jmp to place water; orig: jbe 7FF73DD5822C (0f86 c3000000). jmp blah (E9 C4 00 00 00)
+ }
+Trackmania.exe.text+10F7169 - 48 8B 4C 24 30        - mov rcx,[rsp+30]
+Trackmania.exe.text+10F716E - F3 0F10 41 10         - movss xmm0,[rcx+10]
+Trackmania.exe.text+10F7173 - 0F2F C7               - comiss xmm0,xmm7
+Trackmania.exe.text+10F7176 - 72 05                 - jb Trackmania.exe.text+10F717D
+Trackmania.exe.text+10F7178 - 0F2F F0               - comiss xmm6,xmm0
+Trackmania.exe.text+10F717B - 77 21                 - ja Trackmania.exe.text+10F719E
+Trackmania.exe.text+10F717D - F3 0F5C C7            - subss xmm0,xmm7
+
+
+// ---------
+
+
+Trackmania.exe.text+10F715D - 39 87 B8010000        - cmp [rdi+000001B8],eax { load water array len
+ }
+Trackmania.exe.text+10F7163 - 0F86 C3000000         - jbe Trackmania.exe.text+10F722C { change to jmp to place water; orig: jbe 7FF73DD5822C (0f86 c3000000). jmp blah (E9 C4 00 00 00)
+ }
+Trackmania.exe.text+10F7169 - 48 8B 4C 24 30        - mov rcx,[rsp+30]
+Trackmania.exe.text+10F716E - F3 0F10 41 10         - movss xmm0,[rcx+10]
+
+v cmp water len   v jbe             v mov          v mov
+39 87 B8 01 00 00 0F 86 C3 00 00 00 48 8B 4C 24 30 F3 0F 10 41 10
+39 87 ?? ?? 00 00 0F 86 C3 00 00 00 48 8B 4C 24 30 F3 0F 10 41 10
+
+// unique:
+39 87 ?? ?? 00 00 0F 86 C3 00 00 00 48 8B 4C 24 30
+
+
+
+
+
+// MARK: Macroblock
+
+
+Trackmania.exe.text+10F6C90 - 85 C0                 - test eax,eax
+Trackmania.exe.text+10F6C92 - 0F85 9D000000         - jne Trackmania.exe.text+10F6D35
+Trackmania.exe.text+10F6C98 - 39 83 B8010000        - cmp [rbx+000001B8],eax { get water len (macroblock cursor place)
+ }
+Trackmania.exe.text+10F6C9E - 0F86 8A000000         - jbe Trackmania.exe.text+10F6D2E { jbe -> jmp to place water
+ }
+Trackmania.exe.text+10F6CA4 - F3 0F10 47 10         - movss xmm0,[rdi+10]
+Trackmania.exe.text+10F6CA9 - 0F2F 05 04BFBA00      - comiss xmm0,[Trackmania.exe.rdata+39ABB4] { (-3.14) }
+
+85 C0
+0F85 9D000000
+39 83 B8 01 00 00 0F 86 8A 00 00 00 F3 0F 10 47 10
+// unique
+// v cmp          v jbe             v start of movss
+39 83 ?? ?? 00 00 0F 86 ?? 00 00 00 F3

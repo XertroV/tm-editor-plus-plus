@@ -25,6 +25,11 @@ namespace Editor {
         return EditorRotation(cursor);
     }
 
+    void SetCursorBlockVisible(CGameCursorBlock@ cursor, bool visible) {
+        // cursor.CursorBox.Mobil.IsVisible = visible;
+        Dev::SetOffset(cursor, O_BLOCKCURSOR_DrawCursor, uint(visible ? 1 : 0));
+    }
+
     void SetAllCursorMat(const mat4 &in mat) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto pos = vec3(mat.tx, mat.ty, mat.tz);

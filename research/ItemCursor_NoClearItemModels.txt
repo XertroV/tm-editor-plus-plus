@@ -1,0 +1,22 @@
+Trackmania.exe.text+10042EF - 90                    - nop
+Trackmania.exe.text+10042F0 - 83 3B FF              - cmp dword ptr [rbx],-01 { 255 }
+Trackmania.exe.text+10042F3 - 74 0B                 - je Trackmania.exe.text+1004300
+Trackmania.exe.text+10042F5 - 48 8B D3              - mov rdx,rbx
+Trackmania.exe.text+10042F8 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+10042FB - E8 B0900000           - call Trackmania.exe.text+100D3B0 { calls thing that makes item model not be drawn
+ }
+Trackmania.exe.text+1004300 - 48 81 C3 A0000000     - add rbx,000000A0 { 160 }
+Trackmania.exe.text+1004307 - 48 83 EF 01           - sub rdi,01 { 1 }
+Trackmania.exe.text+100430B - 75 E3                 - jne Trackmania.exe.text+10042F0
+Trackmania.exe.text+100430D - 48 8B 7C 24 48        - mov rdi,[rsp+48]
+Trackmania.exe.text+1004312 - 48 8B 5C 24 40        - mov rbx,[rsp+40]
+Trackmania.exe.text+1004317 - 48 83 C4 30           - add rsp,30 { 48 }
+Trackmania.exe.text+100431B - 5E                    - pop rsi
+Trackmania.exe.text+100431C - C3                    - ret
+
+
+90 83 3B FF 74 0B 48 8B D3 48 8B CE E8 B0 90 00 00 48 81 C3 A0 00 00 00 48 83 EF 01 75 E3 48 8B 7C 24 48 48 8B 5C 24 40 48 83 C4 30 5E C3
+
+
+90 83 3B FF 74 0B 48 8B D3 48 8B CE E8 B0 90 00 00
+90 83 3B FF 74 0B 48 8B D3 48 8B CE E8 ?? ?? ?? ??

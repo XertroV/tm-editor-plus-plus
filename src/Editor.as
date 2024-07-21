@@ -473,10 +473,8 @@ namespace Editor {
     }
 
     void SetEditorPickedBlock(CGameCtnEditorFree@ editor, CGameCtnBlock@ block) {
-        block.MwAddRef();
-        if (editor.PickedBlock !is null) {
-            editor.PickedBlock.MwRelease();
-        }
+        if (block !is null) block.MwAddRef();
+        if (editor.PickedBlock !is null) editor.PickedBlock.MwRelease();
         Dev::SetOffset(editor, GetOffset(editor, "PickedBlock"), block);
     }
 

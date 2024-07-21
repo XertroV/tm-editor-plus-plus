@@ -151,8 +151,10 @@ namespace Editor {
         TrackMap_OnRemoveBlock_BeginAPI();
         // changing the placement mode triggers a cursor update
         if (_delFreeOrigPlacement != CGameEditorPluginMap::EPlaceMode::FreeBlock) {
+            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
             Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
         } else {
+            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
             Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::GhostBlock);
         }
         if (canDeleteFreeBlocks || waitingToDeleteFreeBlocks) {
@@ -161,8 +163,8 @@ namespace Editor {
         TrackMap_OnRemoveBlock_EndAPI();
 
         Editor::SetEditMode(editor, _delFreeOrigEdit);
-        Editor::SetPlacementMode(editor, _delFreeOrigPlacement);
         Editor::SetItemPlacementMode(_delFreeOrigItem);
+        Editor::SetPlacementMode(editor, _delFreeOrigPlacement);
         if (_delFreeOrigEdit != CGameEditorPluginMap::EditMode::Place) {
             dev_trace('del free blocks resetting edit mode, was: ' + tostring(editor.PluginMapType.EditMode) + ', new: ' + tostring(_delFreeOrigEdit));
             Editor::SetEditMode(editor, _delFreeOrigEdit);
@@ -215,12 +217,11 @@ namespace Editor {
         }
         warn('checking if safe to del free blocks');
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor.PickedBlock !is null || editor.PickedObject !is null) return;
+        if (editor.PickedBlock !is null || editor.PickedObject !is null) { dev_trace("skipping free block delete b/c picked block/item"); return; }
         if (editor.Cursor is null) return;
-        if (Editor::IsSpaceBarDown(editor)) return;
+        if (Editor::IsSpaceBarDown(editor)) { dev_trace("skipping free block delete b/c space bar down"); return; }
         canDeleteFreeBlocks = false;
         warn('proceeding with deleting free blocks');
-
         auto mbInsts = DGameCtnChallenge(editor.Challenge).MacroblockInstances;
         auto minInst = mbInsts.Length;
         if (minInst > 0) {
@@ -228,7 +229,6 @@ namespace Editor {
         }
         auto mbInstId = Math::Rand(minInst + 1000, 100000000);
         CGameCtnBlock@[] blocks;
-        BlockSpec@ bs;
         auto pmt = editor.PluginMapType;
 
         auto toDelTree = OctTreeNode(nat3(255));

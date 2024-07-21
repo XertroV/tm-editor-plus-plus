@@ -110,7 +110,6 @@ class DevMiscTab : Tab {
         }
         UI::Separator();
         if (UI::CollapsingHeader("Latest Macroblock Instance")) {
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             auto mbInst = editor.PluginMapType.GetLatestMacroblockInstance();
             if (mbInst !is null) {
                 CopiableLabeledValue("mb inst ptr", Text::FormatPointer(Dev_GetPointerForNod(mbInst)));

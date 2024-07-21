@@ -277,10 +277,10 @@ namespace Editor {
             if (block.Skin is null) return;
             string fg, bg;
             if (block.Skin.PackDesc !is null) {
-                fg = block.Skin.PackDesc.Url.Length > 0 ? block.Skin.PackDesc.Url : block.Skin.PackDesc.Name;
+                fg = block.Skin.PackDesc.Url.Length > 0 ? block.Skin.PackDesc.Url : string(block.Skin.PackDesc.Name);
             }
             if (block.Skin.ForegroundPackDesc !is null) {
-                bg = block.Skin.ForegroundPackDesc.Url.Length > 0 ? block.Skin.ForegroundPackDesc.Url : block.Skin.ForegroundPackDesc.Name;
+                bg = block.Skin.ForegroundPackDesc.Url.Length > 0 ? block.Skin.ForegroundPackDesc.Url : string(block.Skin.ForegroundPackDesc.Name);
             }
             if (fg.Length == 0 && bg.Length == 0) {
                 @skin = null;

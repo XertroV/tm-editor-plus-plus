@@ -108,9 +108,19 @@ class RotationTranslationGizmo {
         return this;
     }
 
+    vec3 bbHalfDiag;
+    vec3 bbMidPoint;
+
     RotationTranslationGizmo@ WithBoundingBox(Editor::AABB@ bb) {
         WithMatrix(bb.mat);
-        scale = MathX::Max(bb.halfDiag) * 2.0;
+        scale = bb.halfDiag.Length() * 1.333;
+        bbHalfDiag = bb.halfDiag;
+        bbMidPoint = bb.midPoint;
+        return this;
+    }
+
+    RotationTranslationGizmo@ WithPlacementParams(CGameItemPlacementParam@ pp) {
+        placementParamOffset = vec3(pp.GridSnap_HOffset, pp.GridSnap_VOffset, pp.GridSnap_HOffset);
         return this;
     }
 
@@ -120,12 +130,21 @@ class RotationTranslationGizmo {
     // }
 
     RotationTranslationGizmo@ AddTmpRotation(Axis axis, float delta_theta) {
-        tmpRot = mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * tmpRot;
+        // tmpRot = mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * tmpRot;
+        // accounting for pivotPoint:
+        tmpRot = mat4::Translate(pivotPoint * -1.) * mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * mat4::Translate(pivotPoint) * tmpRot;
+        auto p = vec3(tmpRot.tx, tmpRot.ty, tmpRot.tz);
+        tmpRot = mat4::Translate(p * -1) * tmpRot;
+        // tmpPos -= p;
         return this;
     }
 
-    RotationTranslationGizmo@ AddTmpTranslation(const vec3 &in t) {
-        tmpPos = tmpPos + t;
+    RotationTranslationGizmo@ AddTmpTranslation(const vec3 &in t, bool rotateToLocal = false) {
+        if (rotateToLocal) {
+            tmpPos += (mat4::Inverse(rot) * t).xyz;
+        } else {
+            tmpPos += t;
+        }
         return this;
     }
 
@@ -142,6 +161,7 @@ class RotationTranslationGizmo {
     RotationTranslationGizmo@ ApplyTmpRotation() {
         rot = tmpRot * rot;
         tmpRot = mat4::Identity();
+        ApplyTmpTranslation();
         return this;
     }
 
@@ -151,12 +171,30 @@ class RotationTranslationGizmo {
         return this;
     }
 
+    void CyclePivot() {
+        Gizmo::CyclePivot();
+    }
+
+    void SetPivotPoint(vec3 newPivot) {
+        dev_trace("Gizmo: set pivot point: " + newPivot.ToString());
+        AddTmpTranslation(newPivot - pivotPoint, true);
+        ApplyTmpTranslation();
+        pivotPoint = newPivot;
+    }
+
     mat4 GetCursorMat() {
         auto xyz_rot = tmpRot * rot;
+        auto pivotRotated = (mat4::Inverse(xyz_rot) * ((pivotPoint) * -1.)).xyz;
         // auto pyr = EulerFromRotationMatrix(xyz_rot, EulerOrder_Openplanet);
         // * EulerToRotationMatrix(pyr, EulerOrder_Game);
-        return mat4::Translate(pos + tmpPos) * xyz_rot;
+        return mat4::Translate(pos + tmpPos + pivotRotated) * xyz_rot;
     }
+
+    vec3 GetRotatedPivotPoint() {
+        return (mat4::Inverse(tmpRot * rot) * (pivotPoint * -1.)).xyz;
+    }
+
+    vec3 placementParamOffset = vec3();
 
     Axis lastClosestAxis = Axis::X;
     float lastClosestMouseDist = 1000000.;
@@ -181,17 +219,18 @@ class RotationTranslationGizmo {
     bool _wasCtrlDown = false;
     bool _ctrlPressed = false;
 
-    void DrawCirclesManual(vec3 pos, float _scale = 2.0) {
+    void DrawCirclesManual(vec3 objOriginPos, float _scale = 2.0) {
+        // objOriginPos -= pivotPoint;
         camPos = Camera::GetCurrentPosition();
         mousePos = UI::GetMousePos();
         float closestMouseDist = 1000000.;
         vec3 closestRotationPoint;
         Axis closestAxis;
         // withTmpRot = (tmpRot * rot);
-        withTmpRot = mat4::Inverse(tmpRot * rot);
-        float c2pLen2 = (pos - camPos).LengthSquared();
-        float c2pLen = (pos - camPos).Length();
-        shouldDrawGizmo = true || Camera::IsBehind(pos) || c2pLen < _scale;
+        withTmpRot = useGlobal ? mat4::Identity() : mat4::Inverse(tmpRot * rot);
+        float c2pLen2 = (objOriginPos - camPos).LengthSquared();
+        float c2pLen = (objOriginPos - camPos).Length();
+        shouldDrawGizmo = true || Camera::IsBehind(objOriginPos) || c2pLen < _scale;
         if (!shouldDrawGizmo) {
             if (c2pLen < _scale) trace('c2pLen < scale');
             else trace('Camera::IsBehind(pos)');
@@ -203,8 +242,8 @@ class RotationTranslationGizmo {
         _ctrlPressed = _wasCtrlDown != _isCtrlDown && _isCtrlDown;
 
         float tmpDist;
-        centerScreenPos = Camera::ToScreen(pos).xy;
-        centerScreenPosWTmp = Camera::ToScreen(pos + tmpPos).xy;
+        centerScreenPos = Camera::ToScreen(objOriginPos).xy;
+        centerScreenPosWTmp = Camera::ToScreen(objOriginPos + tmpPos).xy;
         bool isRotMode = mode == Gizmo::Mode::Rotation;
         int segSkip =  isRotMode ? 4 : 1; // c2pLen2 > 40. ? 4 : 2;
         bool isNearSide = false;
@@ -235,9 +274,9 @@ class RotationTranslationGizmo {
             auto col2 = col * vec4(.67, .67, .67, .5);
             int i = 0;
             int imod;
-            worldPos = (withTmpRot * circle[i]).xyz * _scale + pos + tmpPos;
+            worldPos = (withTmpRot * circle[i]).xyz * _scale + objOriginPos + tmpPos;
             if (Math::IsNaN(worldPos.LengthSquared())) {
-                worldPos = circle[i] * _scale + pos + tmpPos;
+                worldPos = circle[i] * _scale + objOriginPos + tmpPos;
             }
             if (isMouseDown) {
                 isNearSide = circlesAroundIsNearSide[c][0];
@@ -252,7 +291,7 @@ class RotationTranslationGizmo {
             translateRadialDir = centerScreenPos - p1.xy;
             for (i = 0; i <= segments; i += segSkip) {
                 imod = i % segments;
-                worldPos = (withTmpRot * circle[imod]).xyz * _scale + pos + tmpPos;
+                worldPos = (withTmpRot * circle[imod]).xyz * _scale + objOriginPos + tmpPos;
                 // trace('imod: ' + imod);
                 if (isMouseDown) {
                     isNearSide = circlesAroundIsNearSide[c][imod];
@@ -331,7 +370,10 @@ class RotationTranslationGizmo {
                         d = mag * c2pLen * 0.2;
                         if (_isCtrlDown) d = d - d % stepDist;
                         if (d == 0.) skipSetLastDD = true;
-                        else AddTmpTranslation((mat4::Inverse(rot) * AxisToVec(lastClosestAxis)).xyz * d); // * (lastClosestAxis == Axis::Y ? 1 : -1));
+                        else {
+                            // AddTmpTranslation((mat4::Inverse(rot) * AxisToVec(lastClosestAxis)).xyz * d); // * (lastClosestAxis == Axis::Y ? 1 : -1));
+                            AddTmpTranslation(AxisToVec(lastClosestAxis) * d, !useGlobal); // * (lastClosestAxis == Axis::Y ? 1 : -1));
+                        }
                     }
                     // SetTmpRotation(lastClosestAxis, mag);
                     // trace('lastClosestAxis: ' + tostring(lastClosestAxis) + '; dd: ' + ((dd.x + dd.y) / g_screen.y * TAU));
@@ -382,21 +424,13 @@ class RotationTranslationGizmo {
     mat4 camPersp;
     mat4 camProj;
 
+    vec3 pivotPoint;
+
     void DrawAll() {
         auto cam = Camera::GetCurrent();
         if (cam is null) return;
         auto camLoc = mat4(cam.Location);
         camPos = vec3(camLoc.tx, camLoc.ty, camLoc.tz);
-
-#if DEV
-        if (pos.LengthSquared() == 0) {
-            pos = camPos - vec3(4.);
-            try {
-                auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-                pos = editor.OrbitalCameraControl.m_TargetedPosition;
-            } catch {}
-        }
-#endif
 
         DrawCirclesManual(pos, scale * scaleExtraCoef);
         DrawWindow();
@@ -408,14 +442,17 @@ class RotationTranslationGizmo {
 
     bool useGlobal = false;
 
-    vec3 lastAppliedPivot;
+    // vec3 lastAppliedPivot;
 
     void DrawWindow() {
         bool isRotMode = mode == Gizmo::Mode::Rotation;
-        auto nbBtns = 3.;
         auto btnSize = g_screen.y * .05;
         auto btnSize2 = vec2(btnSize);
-        auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
+        // auto nbBtns = 3.;
+        // auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+
+
         UI::SetNextWindowPos(.5 * g_screen.x, 24 * g_scale, UI::Cond::Appearing);
         if (UI::Begin("###gz-tlbr-"+name, UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
             // UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(g_screen.y * 0.005));
@@ -432,18 +469,24 @@ class RotationTranslationGizmo {
 
             UI::SameLine();
             if (UI::Button(useGlobal ? "Glb" : "Loc", btnSize2)) {
-                onApply();
+                useGlobal = !useGlobal;
             }
             AddSimpleTooltip("Global or Local space? (Local will move along object's axes)");
 
             UI::SameLine();
             if (UI::Button("Piv", btnSize2)) {
-                onApply();
+                CyclePivot();
             }
             if (UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Right)) {
                 UI::OpenPopup("gizmo-toolbar-edit-pivot");
             }
             AddSimpleTooltip("Cycle Pivot (RMB to edit)");
+
+            UI::SameLine();
+            if (UI::Button(Icons::Camera, btnSize2)) {
+                FocusCameraOn(pos);
+            }
+            AddSimpleTooltip("Reset Camera");
 
             UI::SameLine();
             if (UI::Button(Icons::Check, btnSize2)) {
@@ -459,8 +502,6 @@ class RotationTranslationGizmo {
             UI::PopFont();
             // UI::PopStyleVar();
         }
-        UI::End();
-
         if (UI::BeginPopup("gizmo-toolbar-edit-pivot")) {
             UI::Text("Edit Pivot");
             UI::Separator();
@@ -485,6 +526,8 @@ class RotationTranslationGizmo {
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();
         }
+        UI::End();
+
 
 
         // // UX::PushInvisibleWindowStyle();
@@ -513,29 +556,19 @@ class RotationTranslationGizmo {
     }
 
     float d;
+
+    void FocusCameraOn(vec3 p) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto camState = Editor::GetCurrentCamState(editor);
+        camState.Pos = p;
+        camState.TargetDist = this.scale * 4.5;
+        Editor::SetCamAnimationGoTo(camState);
+    }
 }
 
 const quat ROT_Q_AROUND_UP = quat(UP, HALF_PI);
 const quat ROT_Q_AROUND_FWD = quat(FORWARD, HALF_PI);
 
-
-void Mat4_GetEllipseData(const mat4 &in m, vec3 &out r1_r2_theta, float scale = 1.0) {
-    auto c1 = vec2(m.xx, m.yx);
-    auto c2 = vec2(m.xy, m.yy);
-    auto c1Len = c1.Length();
-    auto c2Len = c2.Length();
-    vec2 c;
-    if (c1Len < c2Len) {
-        c = c2;
-        r1_r2_theta.y = c1Len;
-    } else {
-        c = c1;
-        r1_r2_theta.y = c2Len;
-    }
-    r1_r2_theta.x = scale;
-    r1_r2_theta.y *= scale;
-    r1_r2_theta.z = Math::Atan2(c.y, c.x);
-}
 
 
 namespace UX {
