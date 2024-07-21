@@ -530,6 +530,7 @@ namespace Editor {
         CGameCtnAnchoredObject::EMapElemColor color;
         CGameCtnAnchoredObject::EMapElemLightmapQuality lmQual;
         CGameCtnAnchoredObject::EPhaseOffset phase;
+        // note: always identity
         mat3 visualRot = mat3::Identity();
         vec3 pivotPos;
         uint8 isFlying;

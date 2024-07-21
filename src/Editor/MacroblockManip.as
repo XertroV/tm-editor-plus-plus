@@ -213,6 +213,7 @@ namespace Editor {
 
     class BlockSpecPriv : BlockSpec {
         uint64 ObjPtr;
+        SetSkinSpec@ skin;
         // CGameCtnBlock@ GameBlock;
 
         BlockSpecPriv() {
@@ -235,6 +236,7 @@ namespace Editor {
             // block.MwAddRef();
             super();
             SetFrom(block);
+            SetSkinsFrom(block);
         }
 
         void SetFrom(CGameCtnBlock@ block) override {
@@ -269,6 +271,22 @@ namespace Editor {
                 @waypoint = WaypointSpec(block.WaypointSpecialProperty);
             }
             SetBlockInfo(block.BlockInfo);
+        }
+
+        void SetSkinsFrom(CGameCtnBlock@ block) {
+            if (block.Skin is null) return;
+            string fg, bg;
+            if (block.Skin.PackDesc !is null) {
+                fg = block.Skin.PackDesc.Url.Length > 0 ? block.Skin.PackDesc.Url : block.Skin.PackDesc.Name;
+            }
+            if (block.Skin.ForegroundPackDesc !is null) {
+                bg = block.Skin.ForegroundPackDesc.Url.Length > 0 ? block.Skin.ForegroundPackDesc.Url : block.Skin.ForegroundPackDesc.Name;
+            }
+            if (fg.Length == 0 && bg.Length == 0) {
+                @skin = null;
+            } else {
+                @skin = SetSkinSpecPriv(null, fg, bg);
+            }
         }
 
         void SetBlockInfo(CGameCtnBlockInfo@ _blockInfo) {

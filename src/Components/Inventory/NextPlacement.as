@@ -100,6 +100,7 @@ bool CheckPlacingItemFreeMode() {
     // dev_trace('CheckPlacingItemFreeMode');
     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
     if (!S_HelpPlaceItemsOnFreeBlocks || editor is null) return false;
+    if (editor.PluginMapType.EnableEditorInputsCustomProcessing) return false;
     auto picker = GetApp().Viewport.Picker;
     if (picker.Overlay !is null) return false;
     auto pmt = editor.PluginMapType;

@@ -1013,7 +1013,7 @@ namespace CustomCursorRotations {
         cursor.Dir = CGameCursorBlock::ECardinalDirEnum(rots.Dir);
         cursorCustomPYR.y = rots.additionalYaw;
         cursor.AdditionalDir = rots.AdditionalDir;
-        if (cursor.UseSnappedLoc) {
+        if (true || cursor.UseSnappedLoc) {
             cursor.SnappedLocInMap_Pitch = cursorCustomPYR.x;
             cursor.SnappedLocInMap_Roll = cursorCustomPYR.z;
             cursor.SnappedLocInMap_Yaw = rots.YawWithCustomExtra(cursorCustomPYR.y);

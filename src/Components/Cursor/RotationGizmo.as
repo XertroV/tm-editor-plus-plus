@@ -217,7 +217,7 @@ class RotationTranslationGizmo {
         nvg::Reset();
         nvg::BeginPath();
         nvg::FillColor(cWhite75);
-        nvg::Circle(centerScreenPos, Math::Clamp(100. / c2pLen, 2., 10.));
+        nvg::Circle(centerScreenPosWTmp, Math::Clamp(100. / c2pLen, 2., 10.));
         nvg::Fill();
         nvg::ClosePath();
 

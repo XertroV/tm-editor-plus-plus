@@ -108,19 +108,19 @@ namespace Editor {
     }
 }
 
-Meta::PluginCoroutine@ testLoadPackDescs = startnew(function() {
-    yield(120);
-    print('loading pack descs in 10s');
-    sleep(5000);
-    print('loading pack descs in 5s');
-    sleep(5000);
-    print('loading pack descs');
-    // Editor::LoadPackDescsForAsync({"https://assets.xk.io/d++/img/stealth/4.png", "https://assets.xk.io/d++/img/stealth/5.png"});
-    auto start = Time::Now;
-    auto packs = Editor::GetPackDescs({"https://assets.xk.io/d++/img/stealth/4.png?234", "https://assets.xk.io/d++/img/stealth/5.png?234", "Skins\\Stadium\\LightColors\\Marine.dds", "https://mariejuku.github.io/trackmania/modernSkinPack/dist/stadium2020/Advertisement6x1/checkpoint2.webm"});
-    for (uint i = 0; i < packs.Length; i++) {
-        print(tostring(i+1) + ". " + packs[i].Name + " (" + packs[i].Url + ") | refs: " + Reflection::GetRefCount(packs[i]));
-    }
-    print('took ' + (Time::Now - start) + ' ms');
-    print('done');
-});
+// Meta::PluginCoroutine@ testLoadPackDescs = startnew(function() {
+//     yield(120);
+//     print('loading pack descs in 10s');
+//     sleep(5000);
+//     print('loading pack descs in 5s');
+//     sleep(5000);
+//     print('loading pack descs');
+//     // Editor::LoadPackDescsForAsync({"https://assets.xk.io/d++/img/stealth/4.png", "https://assets.xk.io/d++/img/stealth/5.png"});
+//     auto start = Time::Now;
+//     auto packs = Editor::GetPackDescs({"https://assets.xk.io/d++/img/stealth/4.png?234", "https://assets.xk.io/d++/img/stealth/5.png?234", "Skins\\Stadium\\LightColors\\Marine.dds", "https://mariejuku.github.io/trackmania/modernSkinPack/dist/stadium2020/Advertisement6x1/checkpoint2.webm"});
+//     for (uint i = 0; i < packs.Length; i++) {
+//         print(tostring(i+1) + ". " + packs[i].Name + " (" + packs[i].Url + ") | refs: " + Reflection::GetRefCount(packs[i]));
+//     }
+//     print('took ' + (Time::Now - start) + ' ms');
+//     print('done');
+// });

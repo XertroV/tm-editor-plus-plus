@@ -180,7 +180,11 @@ namespace Editor {
     }
 
     mat4 GetBlockMatrix(CGameCtnBlock@ block) {
-        return mat4::Translate(GetBlockLocation(block)) * EulerToMat(GetBlockRotation(block));
+        return mat4::Translate(GetBlockLocation(block)) * GetBlockRotationMatrix(block);
+    }
+
+    mat4 GetBlockRotationMatrix(CGameCtnBlock@ block) {
+        return EulerToMat(GetBlockRotation(block));
     }
 
     /* for normal/ghost blocks, ensure you have no references to the block in questiton!
