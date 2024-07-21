@@ -183,8 +183,13 @@ namespace Gizmo {
         lastAppliedPivot = vec3();
 
         if (modeTargetType == BlockOrItem::Block) {
-            lastPickedBlock = Editor::GetPickedBlock();
-            auto b = lastPickedBlock.AsBlock();
+            yield();
+            CGameCtnBlock@ b;
+            if (lastPickedBlock is null || (@b = lastPickedBlock.AsBlock()) is null) {
+                warn("no last picked block");
+                IsActive = false;
+                return;
+            }
             // if (!Editor::IsBlockFree(b)) {
             //     IsActive = false;
             //     return;
@@ -195,6 +200,7 @@ namespace Gizmo {
                 editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
             }
             @blockSpec = Editor::BlockSpecPriv(b);
+            yield();
         } else {
             auto item = lastPickedItem.AsItem();
             if (item is null) {
@@ -249,10 +255,10 @@ namespace Gizmo {
             if (blockSpec.isFree) {
                 Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
                 Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
-                // Editor::DeleteFreeblocks(array<Editor::BlockSpec@> = {blockSpec});
                 Editor::SetEditorPickedBlock(editor, null);
-                Editor::QueueFreeBlockDeletion(blockSpec);
-                Editor::RunDeleteFreeBlockDetection();
+                Editor::DeleteFreeblocks(array<CGameCtnBlock@> = {lastPickedBlock.AsBlock()});
+                // Editor::QueueFreeBlockDeletion(blockSpec);
+                // Editor::RunDeleteFreeBlockDetection();
                 // startnew(Editor::RunDeleteFreeBlockDetection).WithRunContext(Meta::RunContext::GameLoop);
                 // yield(3);
                 Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
