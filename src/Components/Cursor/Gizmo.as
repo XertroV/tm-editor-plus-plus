@@ -54,14 +54,14 @@ namespace Gizmo {
 
     void OnGoInactive() {
         _IsActive = false;
+        CustomCursor::NoHideCursorItemModelsPatchActive = false;
+        CustomCursor::NoSetCursorVisFlagPatchActive = false;
         CursorControl::ReleaseExclusiveControl(gizmoControlName);
         @gizmo = null;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor !is null) {
             _OnInactive_UpdatePMT(editor.PluginMapType);
         }
-        CustomCursor::NoSetCursorVisFlagPatchActive = false;
-        CustomCursor::NoHideCursorItemModelsPatchActive = false;
     }
 
     void _OnActive_UpdatePMT(CGameEditorPluginMapMapType@ pmt) {
@@ -104,12 +104,17 @@ namespace Gizmo {
         auto app = GetApp();
         CGameCtnEditorFree@ editor = cast<CGameCtnEditorFree>(app.Editor);
         Gizmo_Setup(editor);
-        origEditMode = CGameEditorPluginMap::EditMode::Place;
         origPlaceMode = Editor::GetPlacementMode(editor);
+        origEditMode = CGameEditorPluginMap::EditMode::Place;
+        yield();
         bool isItem = modeTargetType == BlockOrItem::Item;
         CustomCursor::NoSetCursorVisFlagPatchActive = !isItem;
         CustomCursor::NoHideCursorItemModelsPatchActive = isItem;
         while (IsActive && (@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) {
+            if (IsEscDown()) {
+                _GizmoOnCancel();
+                break;
+            }
             // update cursor from gizmo
             bool isAltDown = IsAltDown();
             editor.PluginMapType.EnableEditorInputsCustomProcessing = !isAltDown;
@@ -145,7 +150,7 @@ namespace Gizmo {
 
     void CyclePivot() {
         if (modeTargetType == BlockOrItem::Block) {
-            if (gizmo.pivotPoint.LengthSquared() == 0) {
+            if (gizmo.pivotPoint.LengthSquared() < 0.01) {
                 ApplyPivot(bb.halfDiag);
             } else {
                 ApplyPivot(vec3());
@@ -157,7 +162,7 @@ namespace Gizmo {
                 ApplyPivot(pp.PivotPositions[lastAppliedPivotIx] - lastAppliedPivot);
             } else {
                 lastAppliedPivotIx = uint(-1);
-                if (gizmo.pivotPoint.LengthSquared() == 0) {
+                if (gizmo.pivotPoint.LengthSquared() < 0.01) {
                     ApplyPivot(bb.halfDiag - lastAppliedPivot);
                 } else {
                     ApplyPivot(vec3());
@@ -168,7 +173,6 @@ namespace Gizmo {
 
     void ApplyPivot(vec3 newPivot) {
         gizmo.SetPivotPoint(newPivot);
-        gizmo.FocusCameraOn(gizmo.pos);
     }
 
     void Gizmo_Setup(CGameCtnEditorFree@ editor) {
@@ -190,10 +194,6 @@ namespace Gizmo {
                 IsActive = false;
                 return;
             }
-            // if (!Editor::IsBlockFree(b)) {
-            //     IsActive = false;
-            //     return;
-            // }
             auto size = Editor::GetBlockSize(b);
             @bb = Editor::AABB(mat4::Translate(Editor::GetBlockLocation(b)) * mat4::Inverse(Editor::GetBlockRotationMatrix(b)), size/2., size/2.);
             if (!Editor::IsInFreeBlockPlacementMode(editor)) {
@@ -296,7 +296,7 @@ namespace Gizmo {
     }
 
     void _GizmoOnApply() {
-        // todo
+        CustomCursor::NoHideCursorItemModelsPatchActive = false;
         if (modeTargetType == BlockOrItem::Item) {
             dev_trace("Applying gizmo item: ");
             dev_trace("   lastAppliedPivot: " + lastAppliedPivot.ToString());
@@ -330,13 +330,18 @@ namespace Gizmo {
     }
 
     void _GizmoOnCancel() {
+        if (!IsActive) return;
+        bool hadGizmo = gizmo !is null;
+        CustomCursor::NoHideCursorItemModelsPatchActive = false;
         IsActive = false;
-        // Editor::PlaceItems({itemSpec}, false);
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        editor.PluginMapType.Undo();
+        if (hadGizmo) {
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            editor.PluginMapType.Undo();
+        }
     }
 
     void DisableGizmoInAsync(uint64 frames) {
+        CustomCursor::NoHideCursorItemModelsPatchActive = false;
         yield(frames);
         IsActive = false;
     }

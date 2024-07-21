@@ -129,3 +129,8 @@ bool IsShiftDown() {
     if (user32 is null || GetAsyncKeyState is null) return false;
     return 0 < 0x8000 & GetAsyncKeyState.CallUInt16(int(VirtualKey::Shift));
 }
+
+bool IsEscDown() {
+    if (user32 is null || GetAsyncKeyState is null) return false;
+    return 0 < 0x8000 & GetAsyncKeyState.CallUInt16(int(VirtualKey::Escape));
+}

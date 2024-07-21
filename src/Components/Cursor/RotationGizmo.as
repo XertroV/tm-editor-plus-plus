@@ -129,10 +129,15 @@ class RotationTranslationGizmo {
     //     return this;
     // }
 
-    RotationTranslationGizmo@ AddTmpRotation(Axis axis, float delta_theta) {
+    RotationTranslationGizmo@ AddTmpRotation(Axis axis, float delta_theta, bool rotateToLocal = true) {
         // tmpRot = mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * tmpRot;
         // accounting for pivotPoint:
-        tmpRot = mat4::Translate(pivotPoint * -1.) * mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * mat4::Translate(pivotPoint) * tmpRot;
+        if (rotateToLocal) {
+            tmpRot = mat4::Translate(pivotPoint * -1.) * mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * mat4::Translate(pivotPoint) * tmpRot;
+        } else {
+            // rotate about global axes
+            tmpRot = tmpRot * mat4::Translate(pivotPoint * -1.) * mat4::Rotate(delta_theta * -1., ((tmpRot * rot) * AxisToVecForRot(axis)).xyz) * mat4::Translate(pivotPoint);
+        }
         auto p = vec3(tmpRot.tx, tmpRot.ty, tmpRot.tz);
         tmpRot = mat4::Translate(p * -1) * tmpRot;
         // tmpPos -= p;
@@ -175,11 +180,44 @@ class RotationTranslationGizmo {
         Gizmo::CyclePivot();
     }
 
-    void SetPivotPoint(vec3 newPivot) {
-        dev_trace("Gizmo: set pivot point: " + newPivot.ToString());
+    AnimMgr@ pivotAnimator;
+
+    void SetPivotPoint(vec3 newPivot, bool animate = true) {
+        if (animate) {
+            destinationPivotPoint = newPivot;
+            if (pivotAnimator !is null) {
+                // Dev_NotifyWarning("Gizmo: pivotAnimator already running!?");
+                // pivotAnimator.SetAt(1.0);
+            }
+            @pivotAnimator = AnimMgr(false, S_AnimationDuration);
+            startnew(CoroutineFunc(RunPivotAnim));
+            AddTmpTranslation(newPivot - pivotPoint, true);
+            FocusCameraOn(pos + tmpPos);
+            AddTmpTranslation(pivotPoint - newPivot, true);
+            return;
+        }
+        // dev_trace("Gizmo: set pivot point: " + newPivot.ToString());
         AddTmpTranslation(newPivot - pivotPoint, true);
         ApplyTmpTranslation();
         pivotPoint = newPivot;
+    }
+
+    vec3 destinationPivotPoint;
+    void RunPivotAnim() {
+        auto toPos = destinationPivotPoint;
+        auto fromPos = pivotPoint;
+        auto @anim = pivotAnimator;
+        // dev_trace("[Before] Gizmo: pivotAnimator done? " + anim.IsDone + " / progress: " + anim.Progress);
+        while (anim.Update(true)) {
+            // dev_trace("[Update] Gizmo: pivotAnimator done? " + anim.IsDone + " / progress: " + anim.Progress);
+            SetPivotPoint(Math::Lerp(fromPos, toPos, anim.Progress), false);
+            if (anim.IsDone) break;
+            yield();
+        }
+        // dev_trace("Gizmo: pivotAnimator done? " + anim.IsDone + " / progress: " + anim.Progress);
+        if (anim is pivotAnimator) {
+            @pivotAnimator = null;
+        }
     }
 
     mat4 GetCursorMat() {
@@ -365,7 +403,7 @@ class RotationTranslationGizmo {
                         d = mag;
                         if (_isCtrlDown) d = d - d % stepRot;
                         if (d == 0.) skipSetLastDD = true;
-                        else AddTmpRotation(lastClosestAxis, d);
+                        else AddTmpRotation(lastClosestAxis, d, !useGlobal);
                     } else {
                         d = mag * c2pLen * 0.2;
                         if (_isCtrlDown) d = d - d % stepDist;
@@ -448,12 +486,12 @@ class RotationTranslationGizmo {
         bool isRotMode = mode == Gizmo::Mode::Rotation;
         auto btnSize = g_screen.y * .05;
         auto btnSize2 = vec2(btnSize);
-        // auto nbBtns = 3.;
-        // auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
+        auto nbBtns = 6.;
+        auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
 
+        UI::SetNextWindowPos(.5 * (g_screen.x - (btnSize + itemSpacing.x) * nbBtns) / g_scale, 24 * g_scale, UI::Cond::Appearing);
 
-        UI::SetNextWindowPos(.5 * g_screen.x, 24 * g_scale, UI::Cond::Appearing);
         if (UI::Begin("###gz-tlbr-"+name, UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
             // UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(g_screen.y * 0.005));
             UI::PushFont(g_BigFont);
@@ -468,13 +506,13 @@ class RotationTranslationGizmo {
             // }
 
             UI::SameLine();
-            if (UI::Button(useGlobal ? "Glb" : "Loc", btnSize2)) {
+            if (UI::Button(useGlobal ? "World" : "Local", btnSize2)) {
                 useGlobal = !useGlobal;
             }
             AddSimpleTooltip("Global or Local space? (Local will move along object's axes)");
 
             UI::SameLine();
-            if (UI::Button("Piv", btnSize2)) {
+            if (UI::Button("Pivot\n   "+Icons::Refresh, btnSize2)) {
                 CyclePivot();
             }
             if (UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Right)) {
@@ -504,24 +542,25 @@ class RotationTranslationGizmo {
         }
         if (UI::BeginPopup("gizmo-toolbar-edit-pivot")) {
             UI::Text("Edit Pivot");
-            UI::Separator();
-            UI::Text("Pivot: " + pos.ToString());
-            UI::Text("Scale: " + scale);
-            UI::Separator();
-            UI::Text("Set Pivot to:");
-            UI::PushItemWidth(100);
-            UI::InputFloat3("##gizmo-pivot", pos);
-            UI::InputFloat("##gizmo-pivot-scale", scale);
-            UI::PopItemWidth();
-            UI::Separator();
-            if (UI::Button("Apply")) {
-                onApply();
-                UI::CloseCurrentPopup();
-            }
-            UI::SameLine();
-            if (UI::Button("Cancel")) {
-                UI::CloseCurrentPopup();
-            }
+            UI::SeparatorText("Edit Pivot");
+            UI::Text("\\$iTodo");
+            // UI::Text("Pivot: " + pos.ToString());
+            // UI::Text("Scale: " + scale);
+            // UI::Separator();
+            // UI::Text("Set Pivot to:");
+            // UI::PushItemWidth(100);
+            // UI::InputFloat3("##gizmo-pivot", pos);
+            // UI::InputFloat("##gizmo-pivot-scale", scale);
+            // UI::PopItemWidth();
+            // UI::Separator();
+            // if (UI::Button("Apply")) {
+            //     onApply();
+            //     UI::CloseCurrentPopup();
+            // }
+            // UI::SameLine();
+            // if (UI::Button("Cancel")) {
+            //     UI::CloseCurrentPopup();
+            // }
 
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();

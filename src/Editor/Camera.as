@@ -152,6 +152,7 @@ class AnimMgr {
         t = startOpen ? 1.0 : 0.0;
         animOut = t;
         animDuration = duration;
+        lastGrowing = !startOpen;
     }
 
     void SetAt(float newT) {
@@ -159,13 +160,13 @@ class AnimMgr {
         lastGrowingChange = Time::Now;
     }
 
-    // return true if
+    // return true if open
     bool Update(bool growing, float clampMax = 1.0) {
         if (lastGrowingChange == 0) lastGrowingChange = Time::Now;
         if (lastGrowingCheck == 0) lastGrowingCheck = Time::Now;
 
         float delta = float(int(Time::Now) - int(lastGrowingCheck)) / animDuration;
-        delta = Math::Min(delta, 0.2);
+        delta = Math::Min(delta, 0.1);
         lastGrowingCheck = Time::Now;
 
         float sign = growing ? 1.0 : -1.0;
@@ -178,7 +179,7 @@ class AnimMgr {
         // QuadOut
         animOut = -(t * (t - 2.));
         animOut = Math::Min(clampMax, animOut);
-        return animOut > 0.;
+        return !IsDone;
     }
 
     float Progress {
@@ -189,7 +190,7 @@ class AnimMgr {
 
     bool IsDone {
         get {
-            return animOut >= 1.0;
+            return lastGrowing ? animOut >= 1.0 : animOut <= 0.0;
         }
     }
 }

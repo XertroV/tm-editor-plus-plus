@@ -1,23 +1,30 @@
 
 
-shared void Notify(const string &in msg) {
+void Notify(const string &in msg) {
     UI::ShowNotification(Meta::ExecutingPlugin().Name, msg);
     trace("Notified: " + msg);
 }
 
-shared void NotifySuccess(const string &in msg) {
+void NotifySuccess(const string &in msg) {
     UI::ShowNotification(Meta::ExecutingPlugin().Name, msg, vec4(.4, .7, .1, .3), 10000);
     trace("Notified: " + msg);
 }
 
-shared void NotifyError(const string &in msg) {
+void NotifyError(const string &in msg) {
     warn(msg);
     UI::ShowNotification(Meta::ExecutingPlugin().Name + ": Error", msg, vec4(.9, .3, .1, .3), 15000);
 }
 
-shared void NotifyWarning(const string &in msg) {
+void NotifyWarning(const string &in msg) {
     warn(msg);
     UI::ShowNotification(Meta::ExecutingPlugin().Name + ": Warning", msg, vec4(.9, .6, .2, .3), 15000);
+}
+
+void Dev_NotifyWarning(const string &in msg) {
+#if DEV
+    warn(msg);
+    UI::ShowNotification("Dev: Warning", msg, vec4(.9, .6, .2, .3), 15000);
+#endif
 }
 
 
@@ -32,7 +39,7 @@ void AddSimpleTooltip(const string &in msg, bool pushFont = false) {
     }
 }
 
-shared void AddMarkdownTooltip(const string &in msg) {
+void AddMarkdownTooltip(const string &in msg) {
     if (UI::IsItemHovered()) {
         UI::SetNextWindowSize(400, 0, UI::Cond::Appearing);
         UI::BeginTooltip();
@@ -47,7 +54,7 @@ void SetClipboard(const string &in msg) {
     Notify("Copied: " + msg.SubStr(0, 300));
 }
 
-shared funcdef bool LabeledValueF(const string &in l, const string &in v);
+funcdef bool LabeledValueF(const string &in l, const string &in v);
 
 bool ClickableLabel(const string &in label, const string &in value) {
     return ClickableLabel(label, value, ": ");

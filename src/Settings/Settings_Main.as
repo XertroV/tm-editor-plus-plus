@@ -33,7 +33,7 @@ bool S_PickedBlockWindowOpen = false;
 bool S_PickedItemWindowOpen = false;
 
 [Setting hidden]
-uint S_AnimationDuration = 250;
+uint S_AnimationDuration = 150;
 
 [Setting hidden]
 bool S_RenderQuickToggle = true;

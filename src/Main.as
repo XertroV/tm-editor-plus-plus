@@ -86,6 +86,7 @@ void OnDisabled() { Unload(false); }
 void Unload(bool freeMem = true) {
     // hmm not sure this is a great idea b/c some of it might be used by the game.
     // still, openplanet frees it anyway, so i guess nbd.
+    Gizmo::_GizmoOnCancel();
     UnloadIntercepts();
     Editor::EnableMapThumbnailUpdate();
     Editor::OffzonePatch::Unapply();
