@@ -258,6 +258,12 @@ class RotationTranslationGizmo {
     bool _ctrlPressed = false;
 
     void DrawCirclesManual(vec3 objOriginPos, float _scale = 2.0) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto cam = Camera::GetCurrent();
+        auto camState = Editor::GetCurrentCamState(editor);
+        auto maxScale = 0.7 * camState.TargetDist * Math::Tan(Math::ToRad(cam.Fov * .5));
+        _scale = Math::Min(_scale, maxScale);
+
         // objOriginPos -= pivotPoint;
         camPos = Camera::GetCurrentPosition();
         mousePos = UI::GetMousePos();
@@ -313,8 +319,10 @@ class RotationTranslationGizmo {
             int i = 0;
             int imod;
             worldPos = (withTmpRot * circle[i]).xyz * _scale + objOriginPos + tmpPos;
+            auto worldPos2 = (withTmpRot * circle[1]).xyz * _scale + objOriginPos + tmpPos;
             if (Math::IsNaN(worldPos.LengthSquared())) {
                 worldPos = circle[i] * _scale + objOriginPos + tmpPos;
+                worldPos2 = circle[1] * _scale + objOriginPos + tmpPos;
             }
             if (isMouseDown) {
                 isNearSide = circlesAroundIsNearSide[c][0];
@@ -325,6 +333,8 @@ class RotationTranslationGizmo {
             nvg::StrokeWidth(isNearSide ? strokeWidth * 1.5 : strokeWidth);
             nvg::StrokeColor((isNearSide ? col : col2) + colAdd);
             vec3 p1 = Camera::ToScreen(worldPos);
+            lastWorldPos = worldPos;
+            lastScreenPos = p1;
             nvg::MoveTo(p1.xy);
             translateRadialDir = centerScreenPos - p1.xy;
             for (i = 0; i <= segments; i += segSkip) {
@@ -351,7 +361,8 @@ class RotationTranslationGizmo {
                 } else {
                     nvg::LineTo(p1.xy);
                 }
-                if (!isMouseDown && (tmpDist = (mousePos - p1.xy).LengthSquared()) <= closestMouseDist) {
+                // if (!isMouseDown && (tmpDist = (mousePos - p1.xy).LengthSquared()) <= closestMouseDist) {
+                if (!isMouseDown && (tmpDist = sdSegment(mousePos, lastScreenPos.xy, p1.xy)) <= closestMouseDist) {
                     closestMouseDist = tmpDist;
                     closestRotationPoint = worldPos;
                     closestAxis = Axis(c);
