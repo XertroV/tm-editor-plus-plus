@@ -145,6 +145,7 @@ namespace FarlandsHelper {
 
         if (GetApp().Viewport.Picker.Overlay !is null) return false;
         _addBlockSetPos = cursor.FreePosInMap;
+        @_addBlockSetRot = CustomCursorRotations::GetEditorCursorRotations(cursor);
         dev_trace('setting cursor to middle of map');
 
         cursor.FreePosInMap = _addBlockCursorPos = Editor::GetMapMidpoint(editor.Challenge);
@@ -152,6 +153,9 @@ namespace FarlandsHelper {
             _addBlockSetPos = cursor.SnappedLocInMap_Trans;
         }
         cursor.SnappedLocInMap_Trans = _addBlockCursorPos;
+        // cursor.SnappedLocInMap_Pitch = 0.;
+        // cursor.SnappedLocInMap_Roll = 0.;
+        // cursor.SnappedLocInMap_Yaw = 0.;
         cursor.Coord = editor.Challenge.Size / 2;
         cursor.Coord.y = 8;
         updateBlockPosFHHelper = true;
@@ -179,6 +183,7 @@ namespace FarlandsHelper {
         Editor::SetItemCursorPos(editor.ItemCursor, _addBlockSetPos);
     }
     vec3 _addBlockSetPos;
+    EditorRotation@ _addBlockSetRot;
     vec3 _addBlockCursorPos;
 
     bool checkedCursorPos = false;
@@ -204,6 +209,7 @@ namespace FarlandsHelper {
         auto origPos = Editor::GetBlockLocation(block, true);
         auto finalPos = _addBlockSetPos + origPos - _addBlockCursorPos;
         Editor::SetBlockLocation(block, finalPos);
+        // Editor::SetBlockRotation(block, _addBlockSetRot.Euler);
         // dev_trace('set location on block: ' + block.Id.Value + ': ' + origPos.ToString() + ' -> ' + _addBlockSetPos.ToString() + ' (with cursor pos: '+_addBlockCursorPos.ToString()+')');
         // dev_trace('final pos: ' + finalPos.ToString());
         return false;
@@ -215,6 +221,7 @@ namespace FarlandsHelper {
         auto origPos = Editor::GetItemLocation(item);
         auto finalPos = _addBlockSetPos + origPos - _addBlockCursorPos;
         Editor::SetItemLocation(item, finalPos);
+        // Editor::SetItemRotation(item, _addBlockSetRot.Euler);
         // dev_trace('set location on block: ' + item.Id.Value + ': ' + origPos.ToString() + ' -> ' + _addBlockSetPos.ToString() + ' (with cursor pos: '+_addBlockCursorPos.ToString()+')');
         // dev_trace('final pos: ' + finalPos.ToString());
         return false;

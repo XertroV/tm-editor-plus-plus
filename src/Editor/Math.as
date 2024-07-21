@@ -44,7 +44,7 @@ bool AnglesVeryClose(const vec3 &in a, const vec3 &in b) {
 // }
 
 float CardinalDirectionToYaw(int dir) {
-    return NormalizeAngle(-1.0 * float(dir % 4) * Math::PI/2.);
+    return NormalizeAngle(double(dir % 4) * HALF_PI * -1.);
 }
 
 int YawToCardinalDirection(float yaw) {
@@ -60,7 +60,7 @@ CGameCursorBlock::EAdditionalDirEnum YawToAdditionalDir(float yaw) {
     if (yaw < 0 || yaw > HALF_PI) {
         NotifyWarning("YawToAdditionalDir: yaw out of range: " + yaw);
     }
-    int yawStep = Math::Clamp(int(Math::Floor(yaw / HALF_PI * 6. + 0.0001) % 6), 0, 5);
+    int yawStep = Math::Clamp(int(Math::Floor(yaw * 6. / HALF_PI) % 6.), 0, 5);
     return CGameCursorBlock::EAdditionalDirEnum(yawStep);
 }
 
@@ -119,12 +119,16 @@ vec3 MTCoordToPos(vec3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666))
     return vec3((mtCoord.x + 0) * mtBlockSize.x, (mtCoord.y - 8) * mtBlockSize.y, (mtCoord.z + 0) * mtBlockSize.z);
 }
 
-vec3 CoordDistToPos(int3 coord) {
+vec3 CoordDistToPos(const int3 &in coord) {
     return vec3(coord.x * 32, coord.y * 8, coord.z * 32);
 }
 
-vec3 CoordDistToPos(vec3 coord) {
-    return vec3(coord.x * 32, (int(coord.y)) * 8, coord.z * 32);
+vec3 CoordDistToPos(const nat3 &in coord) {
+    return vec3(coord.x * 32, coord.y * 8, coord.z * 32);
+}
+
+vec3 CoordDistToPos(const vec3 &in coord) {
+    return vec3(coord.x * 32., coord.y * 8., coord.z * 32.);
 }
 
 nat3 PosToCoord(vec3 pos) {

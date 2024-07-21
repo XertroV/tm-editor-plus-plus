@@ -187,7 +187,14 @@ class EditorRotation {
     }
 
     EditorRotation(CGameCursorBlock@ cursor) {
-        SetFromCursorProps(cursor.Pitch, cursor.Roll, cursor.Dir, cursor.AdditionalDir);
+        if (cursor.UseSnappedLoc) {
+            euler.x = cursor.SnappedLocInMap_Pitch;
+            euler.y = cursor.SnappedLocInMap_Yaw;
+            euler.z = cursor.SnappedLocInMap_Roll;
+            UpdateDirFromPry();
+        } else {
+            SetFromCursorProps(cursor.Pitch, cursor.Roll, cursor.Dir, cursor.AdditionalDir);
+        }
     }
     // EditorRotation(CGameCursorBlock@ cursor) {
     //     SetFromCursorProps(cursor.Pitch, cursor.Roll, cursor.Dir, cursor.AdditionalDir);
@@ -235,7 +242,11 @@ class EditorRotation {
     }
 
     float YawWithCustomExtra(float extra) {
-        return CardinalDirectionToYaw(dir) + extra;
+        auto y = CardinalDirectionToYaw(dir) + extra;
+        if (-0.0001 < y && y < 0.) {
+            y = 0.;
+        }
+        return y;
     }
 
     void UpdateYawFromDir() {
@@ -259,16 +270,17 @@ class EditorRotation {
         dir = CGameCursorBlock::ECardinalDirEnum(YawToCardinalDirection(yaw));
         yaw -= CardinalDirectionToYaw(dir);
         // this can happen transitioning directions sometimes.
-        if (yaw > PI) yaw -= TAU;
+        if (yaw >= PI) yaw -= TAU;
         // trace('yaw: ' + yaw);
         if (0 > yaw || yaw > HALF_PI) {
             warn('yaw out of bounds: ' + yaw);
         }
         yaw = Math::Clamp(yaw, 0.0, HALF_PI);
-        if (yaw + 0.0001 > HALF_PI) {
-            yaw = 0.0;
-            dir = CGameCursorBlock::ECardinalDirEnum((int(dir) + 3) % 4);
-        }
+        // if (yaw >= HALF_PI) {
+        //     yaw = 0.0;
+        //     // dir = CGameCursorBlock::ECardinalDirEnum((int(dir) + 3) % 4);
+        //     dir = CGameCursorBlock::ECardinalDirEnum((int(dir) + 1) % 4);
+        // }
         // trace('yaw2: ' + yaw);
         additionalDir = YawToAdditionalDir(yaw);
         additionalYaw = yaw;
@@ -329,5 +341,12 @@ class EditorRotation {
     }
     const string ToString() const {
         return euler.ToString();
+    }
+
+    mat4 GetMatrix(const vec3 &in worldPos = vec3(), bool invert = false) {
+        auto mat = EulerToMat(euler);
+        if (invert) mat = mat4::Inverse(mat);
+        if (worldPos.LengthSquared() == 0) return mat;
+        return mat4::Translate(worldPos) * mat;
     }
 }

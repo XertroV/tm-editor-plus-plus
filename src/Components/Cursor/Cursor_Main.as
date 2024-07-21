@@ -81,6 +81,13 @@ class CursorPosition : Tab {
         UI::SetNextWindowSize(130, 0, UI::Cond::Always);
     }
 
+    bool DrawWindow() override {
+        if (S_DrawFreeBlockClips) {
+            DrawFreeBlockClips();
+        }
+        return Tab::DrawWindow();
+    }
+
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
@@ -197,6 +204,318 @@ class CursorPosition : Tab {
 
 CursorPosition@ g_CursorPositionWindow;
 
+[Setting hidden]
+#if DEV
+bool S_DrawFreeBlockClips = true;
+#else
+bool S_DrawFreeBlockClips = false;
+#endif
+
+[Setting hidden]
+bool S_DrawAnySnapRadiusOnHelpers = true;
+[Setting hidden]
+bool S_DrawFreeBlockClipsOnNearbyBlocks = true;
+
+void DrawFreeBlockClips() {
+    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    if (editor is null) return;
+    if (!Editor::IsInFreeBlockPlacementMode(editor)) return;
+    auto bi = editor.CurrentGhostBlockInfo;
+    if (bi is null) return;
+    bool isAir = Editor::GetIsBlockAirModeActive(editor);
+    auto cursor = editor.Cursor;
+    auto varIx = Editor::GetCurrentBlockVariant(cursor);
+    CGameCtnBlockInfoVariant@ var;
+    @var = Editor::GetBlockInfoVariant(bi, varIx, !isAir);
+    if (var is null) return;
+    BlockClips@[] clips;
+
+    auto pos = Editor::GetCursorPos(editor);
+    auto rot = CustomCursorRotations::GetEditorCursorRotations(cursor);
+    auto mat = rot.GetMatrix(pos);
+
+    for (uint i = 0; i < var.BlockUnitInfos.Length; i++) {
+        auto bui = var.BlockUnitInfos[i];
+        clips.InsertLast(BlockClips(bui));
+        clips[clips.Length - 1].Draw(mat, true);
+    }
+
+    if (S_DrawFreeBlockClipsOnNearbyBlocks) {
+        auto size = CoordDistToPos(var.Size);
+        DrawFreeBlockClipsForInMapBlocksNear(pos + size * .5, size.Length() * 2.0);
+    }
+}
+
+void DrawFreeBlockClipsForInMapBlocksNear(vec3 pos, float blockRadius) {
+    auto cache = Editor::GetMapCache();
+    // auto mb = Editor::GetMapAsMacroblock();
+    auto objs = cache.objsRoot.FindPointsWithin(pos, blockRadius);
+    for (uint i = 0; i < objs.Length; i++) {
+        auto blk = objs[i].block;
+        if (blk is null) continue;
+        if (!blk.isFree) continue;
+        auto bi = blk.BlockInfo;
+        auto varIx = blk.isGround ? blk.variant : (blk.variant - bi.AdditionalVariantsGround.Length - 1);
+        auto var = Editor::GetBlockInfoVariant(bi, varIx, blk.isGround);
+        if (var is null) continue;
+        auto pos = blk.pos -  vec3(0, 56, 0);
+        auto rot = EditorRotation(blk.pyr);
+        auto mat = rot.GetMatrix(pos);
+        for (uint j = 0; j < var.BlockUnitInfos.Length; j++) {
+            auto bui = var.BlockUnitInfos[j];
+            BlockClips(bui).Draw(mat);
+        }
+    }
+
+}
+
+
+class BlockClips {
+    CGameCtnBlockUnitInfo@ bui;
+    bool isCursorBlock = false;
+
+    BlockClips(CGameCtnBlockUnitInfo@ bui, bool isCursorBlock = false) {
+        this.isCursorBlock = isCursorBlock;
+        @this.bui = bui;
+        bui.MwAddRef();
+    }
+    ~BlockClips() {
+        bui.MwRelease();
+    }
+
+    void Draw(const mat4 &in cursorMat, bool drawSnapRadius = false) {
+        auto _cursorPos = (cursorMat * vec3()).xyz;
+        auto uv = Camera::ToScreen(_cursorPos);
+        if (uv.z > 0) return;
+        // trace("drawing at " + _cursorPos.ToString());
+        nvg::Reset();
+        auto offsetPos = CoordDistToPos(bui.RelativeOffset)
+            + CoordDistToPos(vec3(.5));
+        auto mat = cursorMat * mat4::Translate(offsetPos);
+        auto clipPlaces = Editor::GetBlockUnitClips(bui);
+        // ResetColors();
+        uint[] seekingClipIds;
+        uint[] hasClipIds;
+        vec4[] seekingColors;
+        vec4[] hasColors;
+        for (uint i = 0; i < bui.AllClips.Length; i++) {
+            auto clip = bui.AllClips[i];
+            bool isDone;
+            auto clipPlace = FindNonzeroEntryAndDecrement(clipPlaces, isDone);
+            if (int(clip.ClipType) == 0) continue;
+            auto faceOffset = GetClipPlaceOffset(clipPlace);
+            GetSeekingClipIds(clip, seekingClipIds);
+            GetHasClipIds(clip, hasClipIds);
+            GetColorsFor(seekingClipIds, seekingColors);
+            GetColorsFor(hasClipIds, hasColors);
+
+            if (!isDone) continue;
+
+            int nbToDraw = Math::Max(seekingClipIds.Length, hasClipIds.Length);
+            auto faceSideDir = GetDrawAxisBaseForClipPlace(clipPlace);
+            auto perpFaceDir = GetDrawAxisPerpendicularBaseForClipPlace(clipPlace);
+            // auto faceNorm = Math::Cross(faceSideDir, perpFaceDir);
+
+            // draw hit radius for snapping
+            if (drawSnapRadius && S_DrawAnySnapRadiusOnHelpers) {
+                // DrawSnapPlug(mat * mat4::Translate(faceOffset), CustomCursor::GetCurrentSnapRadius(), vec4(1, 1, 1, 0.5), faceSideDir, perpFaceDir, 24, false);
+                DrawSnapPlug(mat * mat4::Translate(faceOffset) * mat4::Rotate(HALF_PI, faceSideDir), CustomCursor::GetCurrentSnapRadius(), vec4(1, 1, 1, 0.5), faceSideDir, perpFaceDir, 24, false);
+            }
+
+            // draw the plug shapes
+            auto incrPos = faceSideDir * (16. / (nbToDraw + 1));
+            auto pos = faceSideDir * -8. + incrPos;
+            for (int j = 0; j < nbToDraw; j++) {
+                auto drawMat = mat * mat4::Translate(faceOffset + pos);
+                if (j < int(seekingClipIds.Length)) {
+                    DrawSeeking(drawMat, 2.0, seekingColors[j], faceSideDir, perpFaceDir);
+                }
+                if (j < int(hasClipIds.Length)) {
+                    DrawHasPlugs(drawMat, 1.0, hasColors[j], faceSideDir, perpFaceDir);
+                }
+                pos += incrPos;
+            }
+            seekingClipIds.RemoveRange(0, seekingClipIds.Length);
+            hasClipIds.RemoveRange(0, hasClipIds.Length);
+            seekingColors.RemoveRange(0, seekingColors.Length);
+            hasColors.RemoveRange(0, hasColors.Length);
+        }
+    }
+
+    void DrawSeeking(const mat4 &in mat, float radius, const vec4 &in color, const vec3 &in alongFaceDir, const vec3 &in perpAlongFaceDir) {
+        DrawSnapPlug(mat, radius, color, alongFaceDir, perpAlongFaceDir, 6);
+    }
+
+    void DrawHasPlugs(const mat4 &in mat, float radius, const vec4 &in color, const vec3 &in alongFaceDir, const vec3 &in perpAlongFaceDir) {
+        DrawSnapPlug(mat, radius, color, alongFaceDir, perpAlongFaceDir, 15, true);
+    }
+
+    void DrawSnapPlug(const mat4 &in mat, float radius, const vec4 &in color, const vec3 &in alongFaceDir, const vec3 &in perpAlongFaceDir, uint nbPoints, bool fill = false) {
+        nvg::BeginPath();
+        nvg::StrokeWidth(4.0);
+        auto increment = TAU / float(nbPoints);
+        vec2 firstUv;
+        for (uint i = 0; i < nbPoints; i++) {
+            auto angle = increment * i;
+            auto x = Math::Cos(angle) * radius;
+            auto y = Math::Sin(angle) * radius;
+            auto pos = (mat * (alongFaceDir * x + perpAlongFaceDir * y)).xyz;
+            auto uv = Camera::ToScreen(pos);
+            if (i == 0) {
+                firstUv = uv.xy;
+                nvg::MoveTo(uv.xy);
+            } else {
+                nvg::LineTo(uv.xy);
+            }
+        }
+        nvg::LineTo(firstUv);
+        if (fill) {
+            nvg::FillColor(color);
+            nvg::Fill();
+        } else {
+            nvg::StrokeColor(color);
+            nvg::Stroke();
+        }
+        nvg::ClosePath();
+    }
+
+    // clip MwIds to map to color
+    uint[] mwIds;
+    vec4[] colors;
+
+    void ResetColors() {
+        mwIds.RemoveRange(0, mwIds.Length);
+    }
+
+    vec4 GetColorFor(uint mwId, int ix = -1) {
+        if (ix == -1) ix = mwIds.Find(mwId);
+        if (ix == -1) {
+            ix = mwIds.Length;
+            mwIds.InsertLast(mwId);
+            while (int(colors.Length) <= ix) AddNextColor();
+        }
+        return colors[ix];
+    }
+
+    vec4[]@ GetColorsFor(uint[]@ mwIds, vec4[]@ outColors = {}) {
+        for (uint i = 0; i < mwIds.Length; i++) {
+            outColors.InsertLast(GetColorFor(mwIds[i]));
+        }
+        return outColors;
+    }
+
+    void AddNextColor() {
+        auto n = float(colors.Length);
+        if (n < 3.) {
+            colors.InsertLast(UI::HSV(n * 0.3333, .85, .75));
+        } else if (n < 9.) {
+            colors.InsertLast(UI::HSV((n - 2.) * 0.142857, .85, .75));
+        } else {
+            colors.InsertLast(vec4(RandVec3Norm(), 1.));
+        }
+    }
+}
+
+uint[]@ GetSeekingClipIds(CGameCtnBlockInfoClip@ clip, uint[]@ ids = {}) {
+    if (clip.ClipType != CGameCtnBlockInfoClip::EnumClipType::ClassicClip
+        // && clip.TopBottomMultiDir == CGameCtnBlockInfoClip::EMultiDirEnum::SymmetricalDirs
+    ) {
+        if (clip.SymmetricalBlockInfoId.Value < uint(-1))
+            ids.InsertLast(clip.SymmetricalBlockInfoId.Value);
+        if (clip.SymmetricalClipGroupId.Value < uint(-1))
+            ids.InsertLast(clip.SymmetricalClipGroupId.Value);
+        if (clip.SymmetricalClipGroupId2.Value < uint(-1))
+            ids.InsertLast(clip.SymmetricalClipGroupId2.Value);
+        if (clip.ClipGroupId.Value < uint(-1) && ids.Find(clip.ClipGroupId.Value) == -1)
+            ids.InsertLast(clip.ClipGroupId.Value);
+    }
+    return ids;
+}
+
+uint[]@ GetHasClipIds(CGameCtnBlockInfoClip@ clip, uint[]@ ids = {}) {
+    if (clip.ClipType != CGameCtnBlockInfoClip::EnumClipType::ClassicClip
+        // && clip.TopBottomMultiDir == CGameCtnBlockInfoClip::EMultiDirEnum::SymmetricalDirs
+    ) {
+        if (clip.Id.Value < uint(-1))
+            ids.InsertLast(clip.Id.Value);
+        if (clip.ClipGroupId.Value < uint(-1))
+            ids.InsertLast(clip.ClipGroupId.Value);
+        if (clip.ClipGroupId2.Value < uint(-1))
+            ids.InsertLast(clip.ClipGroupId2.Value);
+    }
+    return ids;
+}
+
+const float HOffsetClipPlace = 0.0;
+
+vec3 GetClipPlaceOffset(uint clipPlace) {
+    switch (clipPlace) {
+        // North
+        case 0: return CoordDistToPos(vec3(0., HOffsetClipPlace, .5));
+        // East
+        case 1: return CoordDistToPos(vec3(-.5, HOffsetClipPlace, 0.));
+        // South
+        case 2: return CoordDistToPos(vec3(0., HOffsetClipPlace, -.5));
+        // West
+        case 3: return CoordDistToPos(vec3(.5,  HOffsetClipPlace, 0.));
+        // Top
+        case 4: return CoordDistToPos(vec3(0., .5, 0.));
+        // Bottom
+        case 5: return CoordDistToPos(vec3(0., -.5, 0.));
+    }
+    return CoordDistToPos(vec3(-1.));
+}
+
+// When we draw shapes for the clip, we want to be able to go left and right along the face. This function returns a Right direction.
+vec3 GetDrawAxisBaseForClipPlace(uint clipPlace) {
+    switch (clipPlace) {
+        // North
+        case 0: return (vec3(1, 0, 0));
+        // East
+        case 1: return (vec3(0, 0, 1));
+        // South
+        case 2: return (vec3(-1, 0, 0));
+        // West
+        case 3: return (vec3(0, 0, -1));
+        // Top
+        case 4: return (vec3(0, 0, 1));
+        // Bottom
+        case 5: return (vec3(0, 0, -1));
+    }
+    return vec3(-1);
+}
+
+vec3 GetDrawAxisPerpendicularBaseForClipPlace(uint clipPlace) {
+    switch (clipPlace) {
+        // North
+        case 0: return (vec3(0, 1, 0));
+        // East
+        case 1: return (vec3(0, 1, 0));
+        // South
+        case 2: return (vec3(0, 1, 0));
+        // West
+        case 3: return (vec3(0, 1, 0));
+        // Top
+        case 4: return (vec3(1, 0, 0));
+        // Bottom
+        case 5: return (vec3(1, 0, 0));
+    }
+    return vec3(-1);
+}
+
+uint FindNonzeroEntryAndDecrement(uint8[]@ arr, bool &out isDone) {
+    for (uint i = 0; i < arr.Length; i++) {
+        if (arr[i] > 0) {
+            arr[i]--;
+            isDone = arr[i] == 0;
+            return i;
+        }
+    }
+    isDone = true;
+    return uint(-1);
+}
+
+
 class CursorFavTab : Tab {
     CursorTab@ cursorTab;
 
@@ -225,15 +544,16 @@ class CustomCursorTab : EffectTab {
     }
 
     void DrawInner() override {
-        CustomCursorRotations::ItemSnappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled (Default: On)" + NewIndicator, CustomCursorRotations::ItemSnappingEnabled);
+        CustomCursorRotations::ItemSnappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled (Default: On)", CustomCursorRotations::ItemSnappingEnabled);
         AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly). Normal game behavior is when this is *true*.");
+        DrawFreeBlockSnapRadiusSettings();
         bool wasActive = CustomCursorRotations::Active;
         auto nextActive = UI::Checkbox("Enable Custom Cursor Rotation Amounts", wasActive);
         if (wasActive != nextActive) CustomCursorRotations::Active = nextActive;
         AddSimpleTooltip("Only works for Pitch and Roll");
 
         wasActive = CustomCursorRotations::CustomYawActive;
-        nextActive = UI::Checkbox("Enable Custom Yaw" + BetaIndicator + NewIndicator, wasActive);
+        nextActive = UI::Checkbox("Enable Custom Yaw" + BetaIndicator, wasActive);
         if (wasActive != nextActive) CustomCursorRotations::CustomYawActive = nextActive;
         AddSimpleTooltip("Note: this currently does not work correctly with item-to-block snapping.");
 
@@ -248,11 +568,46 @@ class CustomCursorTab : EffectTab {
         DrawInfinitePrecisionSetting();
 
         wasActive = S_EnablePromiscuousItemSnapping;
-        S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping" + NewIndicator, S_EnablePromiscuousItemSnapping);
+        S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping", S_EnablePromiscuousItemSnapping);
         AddSimpleTooltip("Items that snap to blocks will be less picky about which blocks they snap to. Example: trees will now snap to all terrain.\n\nNOTE: If you toggle this, it will only take effect for newly placed blocks, or when you reload the map.");
         if (wasActive != S_EnablePromiscuousItemSnapping) {
             CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
         }
+    }
+
+    void DrawFreeBlockSnapRadiusSettings() {
+        float currSnapRadius = CustomCursor::GetCurrentSnapRadius();
+        UI::SetNextItemWidth(60.);
+        UI::InputText("##fb-snap-r", Text::Format("%.2f", currSnapRadius), int(UI::InputTextFlags::ReadOnly));
+        float btnWidth = UI::GetFrameHeight() * 1.5;
+        UI::SameLine();
+        bool decr_radius = UI::Button(Icons::Minus + "##fb-snap-r", vec2(btnWidth, 0)); //  || UI::IsItemClicked()
+        UI::SameLine();
+        bool incr_radius = UI::Button(Icons::Plus + "##fb-snap-r", vec2(btnWidth, 0)); //  || UI::IsItemClicked()
+        UI::SameLine();
+        bool incr_radius_lots = UI::Button(Icons::FastForward + "##fb-snap-r", vec2(btnWidth, 0)); //  || UI::IsItemClicked()
+        UI::SameLine();
+        bool reset_radius = UI::Button(Icons::Refresh + "##fb-snap-rst", vec2(btnWidth, 0)); //  || UI::IsItemClicked()
+        UI::SameLine();
+        UI::Text("Free Block Snap Radius" + NewIndicator);
+        if (decr_radius) {
+            CustomCursor::StepFreeBlockSnapRadius(false);
+        } else if (incr_radius) {
+            CustomCursor::StepFreeBlockSnapRadius(true);
+        } else if (incr_radius_lots) {
+            float newRadiusMin = CustomCursor::GetCurrentSnapRadius() + 1.;
+            while (newRadiusMin > CustomCursor::GetCurrentSnapRadius()) {
+                CustomCursor::StepFreeBlockSnapRadius(true);
+            }
+        } else if (reset_radius) {
+            CustomCursor::ResetSnapRadius();
+        }
+
+        UI::Indent();
+        S_DrawFreeBlockClips = UI::Checkbox("Draw Block Clip Helpers" + NewIndicator, S_DrawFreeBlockClips);
+        S_DrawAnySnapRadiusOnHelpers = UI::Checkbox("Draw Snap Radius on Helpers", S_DrawAnySnapRadiusOnHelpers);
+        S_DrawFreeBlockClipsOnNearbyBlocks = UI::Checkbox("Draw Block Clip Helpers on Nearby Blocks", S_DrawFreeBlockClipsOnNearbyBlocks);
+        UI::Unindent();
     }
 }
 
@@ -359,6 +714,19 @@ namespace CustomCursorRotations {
 
     float GetCustomCursorRot() {
         return customRot;
+    }
+
+    // Compatible with custom yaw
+    EditorRotation@ GetEditorCursorRotations(CGameCursorBlock@ cursor) {
+        auto rot = EditorRotation(cursor);
+        if (Active) {
+            rot.Pitch = cursorCustomPYR.x;
+            rot.Roll = cursorCustomPYR.z;
+        }
+        if (CustomYawActive) {
+            rot.Yaw = rot.YawWithCustomExtra(cursorCustomPYR.y);
+        }
+        return rot;
     }
 
     bool Active {
@@ -722,5 +1090,96 @@ namespace CustomCursorRotations {
             // so do nothing
         }
         return false;
+    }
+}
+
+namespace CustomCursor {
+    const string fbSnapRadiusPattern =
+        // v loads block x,y size to later be multiplied    v mulss xmm11 by (.25 by default)
+        "F3 45 0F 10 04 24 8B 4B 20 45 0F 28 D8 48 8B 43 18 F3 44 0F 59 1D"; // " ?? ?? ?? ??"
+        //                 ^ mov    ^movaps     ^ mov
+        // offset: 22
+
+    uint64 _fbSnapRadiusAddr = 0;
+
+    uint64 GetSnapRadiusCodeAddr() {
+        if (_fbSnapRadiusAddr == 0) _fbSnapRadiusAddr = Dev::FindPattern(fbSnapRadiusPattern);
+        if (_fbSnapRadiusAddr == 0) {
+            throw("Failed to find snap radius pattern");
+        }
+        return _fbSnapRadiusAddr + 22;
+    }
+
+    void ResetSnapRadius() {
+        if (_fbSnapRadiusAddr == 0) return;
+        auto ptr = GetSnapRadiusCodeAddr();
+        if (origSnapRadiusBytes.Length > 0 && origSnapRadiusBytes != Dev::Read(ptr, 4)) {
+            Dev::Patch(ptr, origSnapRadiusBytes);
+        }
+    }
+
+    string origSnapRadiusBytes;
+
+    float GetCurrentSnapRadius() {
+        auto multPtr = GetSnapRadiusCodeAddr();
+        auto offset = Dev::ReadInt32(multPtr);
+        if (origSnapRadiusBytes.Length == 0) {
+            origSnapRadiusBytes = Dev::Read(multPtr, 4);
+        }
+        auto floatPtr = multPtr + 4 + offset;
+        auto mult = Dev::ReadFloat(floatPtr);
+        return 32. * mult;
+    }
+
+    uint64 GetFloatPtr() {
+        auto multPtr = GetSnapRadiusCodeAddr();
+        dev_trace("Current mult ptr: " + Text::FormatPointer(multPtr));
+        auto offset = Dev::ReadInt32(multPtr);
+        dev_trace("Current offset: " + offset);
+        return multPtr + 4 + offset;
+    }
+
+    void StepFreeBlockSnapRadius(bool increment) {
+        dev_trace("Stepping free block snap radius");
+        int step = increment ? 4 : -4;
+        auto floatPtr = GetFloatPtr();
+        dev_trace("Current float ptr: " + Text::FormatPointer(floatPtr));
+        float mult = Dev::ReadFloat(floatPtr);
+        dev_trace("Current mult: " + mult);
+        // don't go outside these bounds
+        if (mult >= 100. && increment) return;
+        if (mult <= 0.01 && !increment) return;
+        float origMult = mult;
+        int offsetDelta = 0;
+        dev_trace("Scanning for new mult...");
+        if (increment) {
+            while ((mult = Dev::ReadFloat(floatPtr)) < 0.00001 || (mult <= origMult && mult <= 100.0) || mult > 9999.0) {
+                // keep going
+                floatPtr += step;
+                offsetDelta += step;
+            }
+        } else {
+            while ((mult = Dev::ReadFloat(floatPtr)) < 0.00001 || (mult >= origMult && mult >= 0.01) || mult > 9999.0) {
+                // keep going
+                floatPtr += step;
+                offsetDelta += step;
+            }
+        }
+        dev_trace("Found new mult: " + mult);
+        if (mult < 0.01 || mult > 100.0) {
+            throw("mult got outside range! " + mult);
+            return;
+        }
+        if (Math::Abs(offsetDelta) > 0x1000) {
+            throw("moving too much, are there even floats there?");
+        }
+        auto multPtr = GetSnapRadiusCodeAddr();
+        auto offset = Dev::ReadInt32(multPtr);
+        dev_trace("Current offset: " + offset);
+        dev_trace("Offset delta: " + offsetDelta);
+        Dev::Patch(multPtr, UintToBytes(offset + offsetDelta));
+        // Dev::Write(multPtr, offset + offsetDelta);
+        dev_trace("Updated float offset by " + offsetDelta + ". Getting radius...");
+        dev_trace("Snap radius: " + GetCurrentSnapRadius());
     }
 }

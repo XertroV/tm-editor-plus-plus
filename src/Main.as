@@ -90,6 +90,7 @@ void Unload(bool freeMem = true) {
     Editor::EnableMapThumbnailUpdate();
     Editor::OffzonePatch::Unapply();
     CheckUnhookAllRegisteredHooks();
+    CustomCursor::ResetSnapRadius();
     CustomCursorRotations::PromiscuousItemToBlockSnapping.Unapply();
     CustomCursorRotations::BeforeAfterCursorUpdateHook.Unapply();
     LightMapCustomRes::Unpatch();

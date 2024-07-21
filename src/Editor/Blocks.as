@@ -133,7 +133,10 @@ namespace Editor {
 
     CGameCtnBlockInfoVariant@ GetBlockInfoVariant(CGameCtnBlock@ block) {
         auto bivIx = block.BlockInfoVariantIndex;
-        auto bi = block.BlockInfo;
+        return GetBlockInfoVariant(block.BlockInfo, block.BlockInfoVariantIndex, block.IsGround);
+    }
+
+    CGameCtnBlockInfoVariant@ GetBlockInfoVariant(CGameCtnBlockInfo@ bi, uint bivIx, bool isGround) {
         if (bi is null) return null;
         CGameCtnBlockInfoVariant@ biv;
         // trace('bi is null: ' + (bi is null));
@@ -142,16 +145,16 @@ namespace Editor {
         // trace('lengths: ' + bi.AdditionalVariantsGround.Length + ' / ');
         // trace('bi.AdditionalVariantsAir.Length: ' + bi.AdditionalVariantsAir.Length);
         if (bivIx > 0) {
-            auto maxIx = block.IsGround ? bi.AdditionalVariantsGround.Length : bi.AdditionalVariantsAir.Length;
+            auto maxIx = isGround ? bi.AdditionalVariantsGround.Length : bi.AdditionalVariantsAir.Length;
             if (bivIx - 1 >= maxIx) {
                 warn("bivIx out of range: " + bivIx + " / " + bi.AdditionalVariantsGround.Length);
                 return null;
             }
-            @biv = block.IsGround ? cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsGround[bivIx - 1]) : cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsAir[bivIx - 1]);
+            @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsGround[bivIx - 1]) : cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsAir[bivIx - 1]);
         } else {
-            @biv = block.IsGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
+            @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
             if (biv is null) {
-                @biv = block.IsGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantBaseGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantBaseAir);
+                @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantBaseGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantBaseAir);
             }
         }
         return biv;
@@ -277,6 +280,30 @@ namespace Editor {
 
     void SetBlockMbInstId(CGameCtnBlock@ block, int id) {
         Dev::SetOffset(block, O_CTNBLOCK_MACROBLOCK_INST_NB, id);
+    }
+
+    uint8[]@ GetBlockUnitClips(CGameCtnBlockUnitInfo@ bui) {
+        // 0x24
+        // up to 7 clips per direction
+        // takes 2 bytes
+        // example: 40 80 = 1 south, 1 bottom
+        //          49 90 = 1 N, 1E, 1 S, 1 B
+        //          20 80 = 4 E, 1 B
+        //          29 80 = 1 N, 5 E, 1 B
+        //          27 C0 = 7 N, 4 E, 4 T, 1 B
+        //          27 C3 = 7 N, 4 E, 4 S, 1 W, 4 T, 1 B
+        //          0F 00 = 7 N, 1 E
+        //          04 00 = 4 N
+        //          10 00 = 2 E
+        //          18 00 = 3 E
+        //          1C 00 = 4 N, 3 E
+        auto flags = Dev::GetOffsetUint32(bui, 0x24);
+        uint8[] clipsByDir;
+        for (int i = 0; i < 6; i++) {
+            clipsByDir.InsertLast(flags & 0x7);
+            flags >>= 3;
+        }
+        return clipsByDir;
     }
 }
 

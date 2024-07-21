@@ -96,12 +96,12 @@ shared class OctTreePoint {
     }
 
     OctTreePoint(Editor::ItemSpec@ item) {
-        this.point = item.pos;
+        this.point = item.pos - vec3(0, 56, 0);
         @this.item = item;
     }
 
     OctTreePoint(Editor::BlockSpec@ block) {
-        this.point = block.pos;
+        this.point = block.pos - vec3(0, 56, 0);
         @this.block = block;
     }
 

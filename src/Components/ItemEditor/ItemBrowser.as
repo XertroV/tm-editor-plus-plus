@@ -427,6 +427,10 @@ class ItemModelTreeElement {
 
     void Draw(CGameCtnBlockInfo@ blockInfo) {
         if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfo", DEFAULT_OPEN)) {
+            auto biClip = cast<CGameCtnBlockInfoClip>(blockInfo);
+            if (biClip !is null) {
+                DrawBiClipExtra(biClip);
+            }
             MkAndDrawChildNode(blockInfo.MaterialModifier, O_BLOCKINFO_MATERIALMOD, "MaterialModifier");
             auto mmOffset = GetOffset(blockInfo, "MatModifierPlacementTag");
             auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
@@ -448,6 +452,56 @@ class ItemModelTreeElement {
             }
             EndTreeNode();
         }
+    }
+
+    void DrawBiClipExtra(CGameCtnBlockInfoClip@ clip) {
+        DrawMwId("SymmetricalClipId", clip.SymmetricalClipId);
+
+        DrawMwId("ClipGroupId", clip.ClipGroupId);
+        UI::SameLine();
+        DrawMwId("ClipGroupId2", clip.ClipGroupId2);
+
+        DrawMwId("SymmetricalClipGroupId", clip.SymmetricalClipGroupId);
+        UI::SameLine();
+        DrawMwId("SymmetricalClipGroupId2", clip.SymmetricalClipGroupId2);
+
+        CopiableLabeledValue("ClipType", tostring(clip.ClipType));
+        UI::SameLine();
+        CopiableLabeledValue("TopBottomMultiDir", tostring(clip.TopBottomMultiDir));
+
+#if SIG_DEVELOPER
+        clip.IsFullFreeClip = UI::Checkbox("IsFullFreeClip", clip.IsFullFreeClip);
+        UI::SameLine();
+        clip.IsExclusiveFreeClip = UI::Checkbox("IsExclusiveFreeClip", clip.IsExclusiveFreeClip);
+        clip.CanBeDeletedByFullFreeClip = UI::Checkbox("CanBeDeletedByFullFreeClip", clip.CanBeDeletedByFullFreeClip);
+        UI::SameLine();
+        clip.IsAlwaysVisibleFreeClip = UI::Checkbox("IsAlwaysVisibleFreeClip", clip.IsAlwaysVisibleFreeClip);
+        clip.IsFCTOrFCBIgnoredByVFC = UI::Checkbox("IsFCTOrFCBIgnoredByVFC", clip.IsFCTOrFCBIgnoredByVFC);
+        UI::SameLine();
+        clip.IsAntiClip = UI::Checkbox("IsAntiClip", clip.IsAntiClip);
+#else
+        LabeledValue("IsFullFreeClip", tostring(clip.IsFullFreeClip));
+        UI::SameLine();
+        LabeledValue("IsExclusiveFreeClip", tostring(clip.IsExclusiveFreeClip));
+        LabeledValue("CanBeDeletedByFullFreeClip", tostring(clip.CanBeDeletedByFullFreeClip));
+        UI::SameLine();
+        LabeledValue("IsAlwaysVisibleFreeClip", tostring(clip.IsAlwaysVisibleFreeClip));
+        LabeledValue("IsFCTOrFCBIgnoredByVFC", tostring(clip.IsFCTOrFCBIgnoredByVFC));
+        UI::SameLine();
+        LabeledValue("IsAntiClip", tostring(clip.IsAntiClip));
+#endif
+
+        auto bicv = cast<CGameCtnBlockInfoClipVertical@>(clip);
+        auto bich = cast<CGameCtnBlockInfoClipHorizontal@>(clip);
+        if (bicv !is null) {
+            DrawMwId("VerticalClipGroupId", bicv.VerticalClipGroupId);
+        } else if (bich !is null) {
+            DrawMwId("HorizontalClipGroupId", bich.HorizontalClipGroupId);
+        }
+    }
+
+    void DrawMwId(const string &in name, const MwId &in id) {
+        CopiableLabeledValue(name, toHex(id.Value) + " | " + id.GetName());
     }
 
     void Draw(CGameCtnBlockInfoVariant@ infoVar) {

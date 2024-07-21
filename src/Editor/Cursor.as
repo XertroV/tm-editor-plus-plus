@@ -14,12 +14,13 @@ namespace Editor {
     // }
 
     // prefer GetCursorRot
-    vec3 GetCursorPitchRollYaw(CGameCursorBlock@ cursor) {
-        return vec3(cursor.Pitch,
-            Math::ToRad(float(cursor.AdditionalDir) / 5.0 * 75.0),
-            cursor.Roll);
-    }
+    // vec3 GetCursorPitchRollYaw(CGameCursorBlock@ cursor) {
+    //     return vec3(cursor.Pitch,
+    //         Math::ToRad(float(cursor.AdditionalDir) / 5.0 * 75.0),
+    //         cursor.Roll);
+    // }
 
+    // Note: prefer `CustomCursorRotations::GetEditorCursorRotations`
     EditorRotation@ GetCursorRot(CGameCursorBlock@ cursor) {
         return EditorRotation(cursor);
     }
@@ -59,6 +60,8 @@ namespace Editor {
     vec3 GetCursorPos(CGameCtnEditorFree@ editor) {
         if (Editor::IsInAnyItemPlacementMode(editor)) {
             return GetItemCursorPos(editor.ItemCursor);
+        } else if (editor.Cursor.UseSnappedLoc) {
+            return editor.Cursor.SnappedLocInMap_Trans;
         } else if (Editor::IsInAnyFreePlacementMode(editor)) {
             return editor.Cursor.FreePosInMap;
         } else {

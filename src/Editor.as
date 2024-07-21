@@ -94,6 +94,13 @@ namespace Editor {
         }
     }
 
+    const uint16 O_CURSOR_SNAPPED_ROLL = GetOffset("CGameCursorBlock", "SnappedLocInMap_Roll"); // 0x184
+    const uint16 O_CURSOR_BLOCK_VARIANT = O_CURSOR_SNAPPED_ROLL + (0x1BC - 0x184);
+
+    uint GetCurrentBlockVariant(CGameCursorBlock@ cursor) {
+        return Dev::GetOffsetUint32(cursor, O_CURSOR_BLOCK_VARIANT);
+    }
+
     enum ItemMode {
         None = 0,
         Normal = 1,

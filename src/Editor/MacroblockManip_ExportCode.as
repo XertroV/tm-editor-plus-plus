@@ -92,6 +92,7 @@ namespace Editor {
     import mat4 EulerToMat(vec3 euler) from "Editor";
 
     import vec3 CoordDistToPos(int3 coord) from "Editor";
+    import vec3 CoordDistToPos(nat3 coord) from "Editor";
     import vec3 CoordDistToPos(vec3 coord) from "Editor";
     import vec3 CoordToPos(nat3 coord) from "Editor";
     import vec3 CoordToPos(vec3 coord) from "Editor";
