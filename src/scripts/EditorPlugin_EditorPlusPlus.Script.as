@@ -130,13 +130,22 @@ Boolean EPP_GetMetadataDisabled() {
 
 Void InitializeCustomSelectionCoords() {
 	CustomSelectionCoords.clear();
+	declare Integer S;
+	declare Boolean Bit1 = False;
+	declare Boolean Bit2 = False;
 	for (X, 0, 48) {
-		for (Y, 0, 6) {
-			for (Z, 0, 48) {
-				if ((X + Y + Z) % 2 == 0) continue;
-				CustomSelectionCoords.add(<X, Y, Z>);
+		for (Z, 0, 48) {
+			S = X + Z;
+			if (Bit1) {
+				CustomSelectionCoords.add(<X, 0, Z>);
+			} else {
+				CustomSelectionCoords.add(<X, 2, Z>);
 			}
+			Bit1 = !Bit1;
+			if (!Bit1) Bit2 = !Bit2;
 		}
+		Bit1 = !Bit1;
+		Bit2 = !Bit2;
 	}
 	// HideCustomSelection();
 }
@@ -229,17 +238,17 @@ main() {
 				break;
 			}
 
-			// signal from angelscript: clear CustomSelectionCoords
-			if (CustomSelectionCoords.count == 1 && CustomSelectionCoords[0].X == -1) {
-				CustomSelectionCoords.clear();
-				LastCustomSelectionSize = 0;
-			} else if (CustomSelectionCoords.count != LastCustomSelectionSize) {
-				LastCustomSelectionSize = CustomSelectionCoords.count;
-				declare Int3[] Tmp = [];
-				foreach (Coord in CustomSelectionCoords) { Tmp.add(Coord); }
-				CustomSelectionCoords.clear();
-				foreach (Coord in Tmp) { CustomSelectionCoords.add(Coord); }
-			}
+			// // signal from angelscript: clear CustomSelectionCoords
+			// if (CustomSelectionCoords.count == 1 && CustomSelectionCoords[0].X == -1) {
+			// 	CustomSelectionCoords.clear();
+			// 	LastCustomSelectionSize = 0;
+			// } else if (CustomSelectionCoords.count != LastCustomSelectionSize) {
+			// 	LastCustomSelectionSize = CustomSelectionCoords.count;
+			// 	declare Int3[] Tmp = [];
+			// 	foreach (Coord in CustomSelectionCoords) { Tmp.add(Coord); }
+			// 	CustomSelectionCoords.clear();
+			// 	foreach (Coord in Tmp) { CustomSelectionCoords.add(Coord); }
+			// }
 
 			// track playground in-out
 			if ((IsTesting || IsValidating) != IsInPlayground) {

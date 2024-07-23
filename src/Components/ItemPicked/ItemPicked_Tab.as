@@ -52,7 +52,10 @@ class FocusedItemTab : Tab, NudgeItemBlock {
             return;
         }
 
-        UI::TextWrapped("\\$af0Hey! \\$zWhy not try the new gizmo? (Ctrl+Shift Click on an item)");
+        UI::Indent();
+        UI::TextWrapped("\\$af0 " + Icons::ExclamationTriangle + " \\$iHey! \\$zWhy not try the new gizmo? (Ctrl+Shift Click on an item)");
+        UI::Unindent();
+
         UI::Separator();
 
         auto item = FocusedItem.AsItem();

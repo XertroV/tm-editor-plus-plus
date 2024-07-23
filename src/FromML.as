@@ -129,6 +129,23 @@ namespace ToML {
         }
         return null;
     }
+
+    void AutoEnablePlugin() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto pmt = GetPluginPMT();
+        dbg_print_inventory();
+        pmt.PlaceMode = CGameEditorPluginMap::EPlaceMode::Plugin;
+        dbg_print_inventory();
+    }
+
+    void dbg_print_inventory() {
+        auto iac = CControl::Editor_FrameInventoryArticlesCards;
+        for (uint i = 0; i < iac.ListCards.Length; i++) {
+            auto obj = iac.ListCards[i];
+            print("Card " + i + ": " + obj.IdName);
+            obj.StackText
+        }
+    }
 }
 
 namespace Editor {

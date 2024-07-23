@@ -133,7 +133,9 @@ void UI_DrawHotkeyList() {
     UI::SeparatorText("Hotkeys");
 
     if (Bind::IsRebinding) {
-        UI::Text("Press a key to rebind " + Bind::currHotkey.name + " or press ESC to cancel.");
+        UI::PushFont(g_MidFont);
+        UI::TextWrapped("\\$8f0\\$i "+Icons::InfoCircle+" Press a key to rebind " + Bind::currHotkey.name + " or press ESC to cancel. " + Icons::InfoCircle);
+        UI::PopFont();
     }
 
     UI::BeginDisabled(Bind::IsRebinding);

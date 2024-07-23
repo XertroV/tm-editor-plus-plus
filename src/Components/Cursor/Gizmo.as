@@ -6,7 +6,7 @@ const vec3& AxisToVec(Axis a) {
     switch (a) {
         case Axis::X: return RIGHT;
         case Axis::Y: return UP;
-        case Axis::Z: return BACKWARD;
+        case Axis::Z: return FORWARD;
     }
     throw("unknown axis: " + tostring(a));
     return UP;
@@ -16,7 +16,7 @@ const vec3& AxisToVecForRot(Axis a) {
     switch (a) {
         case Axis::X: return LEFT;
         case Axis::Y: return UP;
-        case Axis::Z: return FORWARD;
+        case Axis::Z: return BACKWARD;
     }
     throw("unknown axis: " + tostring(a));
     return UP;

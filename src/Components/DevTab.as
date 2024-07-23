@@ -322,39 +322,9 @@ class SelectionBoxTab : Tab {
 
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto box = editor.SelectionBox;
-        if (box is null) {
-            UI::Text("No Selection Box");
-            return;
-        }
-        auto quadsTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x18));
-        auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x28));
-        auto otherTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x38));
-        if (quadsTree is null) {
-            UI::Text("No Quads Tree");
-            return;
-        }
-        if (linesTree is null) {
-            UI::Text("No Lines Tree");
-            return;
-        }
 
-        CopiableLabeledValue("Quads", Text::FormatPointer(Dev_GetPointerForNod(quadsTree)));
-        CopiableLabeledValue("Lines", Text::FormatPointer(Dev_GetPointerForNod(quadsTree)));
-
-        auto quadsVis = cast<CPlugVisualQuads>(quadsTree.Visual);
-        auto linesVis = cast<CPlugVisualLines>(linesTree.Visual);
-
-        if (quadsVis is null) {
-            UI::Text("No Quads Visual");
-            return;
-        }
-        if (linesVis is null) {
-            UI::Text("No Lines Visual");
-            return;
-        }
-
-        Draw_DevVerts(quadsVis, "Quads");
-        Draw_DevVerts(linesVis, "Lines");
+        DrawOutlineBoxDevUI(editor.SelectionBox, "Selection Box");
+        DrawOutlineBoxDevUI(editor.CustomSelectionBox, "Custom Selection Box");
 
         // if (quadsVis !is null) {
         //     if (UI::Button("Update Quads")) {
@@ -382,6 +352,44 @@ class SelectionBoxTab : Tab {
         //         UI::TreePop();
         //     }
         // }
+    }
+
+    void DrawOutlineBoxDevUI(CGameOutlineBox@ box, const string &in name) {
+        UI::SeparatorText("Box: " + name);
+        if (box is null) {
+            UI::Text("No Selection Box");
+            return;
+        }
+        auto quadsTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x18));
+        auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x28));
+        auto otherTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x38));
+        if (quadsTree is null) {
+            UI::Text("No Quads Tree");
+            return;
+        }
+        if (linesTree is null) {
+            UI::Text("No Lines Tree");
+            return;
+        }
+
+        UI::Indent();
+
+        CopiableLabeledValue("Quads", Text::FormatPointer(Dev_GetPointerForNod(quadsTree)));
+        CopiableLabeledValue("Lines", Text::FormatPointer(Dev_GetPointerForNod(quadsTree)));
+
+        auto quadsVis = cast<CPlugVisualQuads>(quadsTree.Visual);
+        auto linesVis = cast<CPlugVisualLines>(linesTree.Visual);
+
+        if (quadsVis is null) {
+            UI::Text("No Quads Visual");
+        } else if (linesVis is null) {
+            UI::Text("No Lines Visual");
+        } else {
+            Draw_DevVerts(quadsVis, "Quads");
+            Draw_DevVerts(linesVis, "Lines");
+        }
+
+        UI::Unindent();
     }
 
     void Draw_DevVerts(CPlugVisual3D@ vis, const string &in name) {

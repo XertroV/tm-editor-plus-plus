@@ -1321,13 +1321,13 @@ class HookHelper {
 
     // protected string name;
     protected string pattern;
-    protected uint offset;
+    protected int offset;
     protected uint padding;
     protected string functionName;
     protected Dev::PushRegisters pushReg;
 
     // const string &in name,
-    HookHelper(const string &in pattern, uint offset, uint padding, const string &in functionName, Dev::PushRegisters pushRegs = Dev::PushRegisters::SSE, bool findPtrEarly = false) {
+    HookHelper(const string &in pattern, int offset, uint padding, const string &in functionName, Dev::PushRegisters pushRegs = Dev::PushRegisters::SSE, bool findPtrEarly = false) {
         this.pattern = pattern;
         this.offset = offset;
         this.padding = padding;

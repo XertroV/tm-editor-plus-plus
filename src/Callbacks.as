@@ -27,6 +27,8 @@ CoroutineFunc@[] onLeavingPlaygroundCbs;
 string[] onLeavingPlaygroundCbNames;
 CoroutineFunc@[] onMapTypeUpdateCbs;
 string[] onMapTypeUpdateCbNames;
+CoroutineFunc@[] afterMapTypeUpdateCbs;
+string[] afterMapTypeUpdateCbNames;
 CoroutineFunc@[] onAfterCursorUpdateCbs;
 string[] onAfterCursorUpdateCbNames;
 CoroutineFunc@[] onBeforeCursorUpdateCbs;
@@ -144,6 +146,13 @@ void RegisterOnMapTypeUpdateCallback(CoroutineFunc@ f, const string &in name) {
         onMapTypeUpdateCbNames.InsertLast(name);
     }
 }
+
+// void RegisterAfterMapTypeUpdateCallback(CoroutineFunc@ f, const string &in name) {
+//     if (f !is null) {
+//         afterMapTypeUpdateCbs.InsertLast(f);
+//         afterMapTypeUpdateCbNames.InsertLast(name);
+//     }
+// }
 
 void RegisterNewAfterCursorUpdateCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
@@ -305,6 +314,14 @@ namespace Event {
             onMapTypeUpdateCbs[i]();
         }
         // Log::Trace("Finished OnMapTypeUpdate");
+    }
+    void AfterMapTypeUpdate() {
+        // don't log these, 2 every frame :/
+        // Log::Trace("Running AfterMapTypeUpdate");
+        for (uint i = 0; i < afterMapTypeUpdateCbs.Length; i++) {
+            afterMapTypeUpdateCbs[i]();
+        }
+        // Log::Trace("Finished AfterMapTypeUpdate");
     }
     void OnAfterCursorUpdate() {
         for (uint i = 0; i < onAfterCursorUpdateCbs.Length; i++) {

@@ -242,17 +242,17 @@ vec3 EulerFromRotationMatrix(const mat4 &in mat, EulerOrder order = EulerOrder::
 mat4 EulerToRotationMatrix(vec3 pyr, EulerOrder order) {
     switch (order) {
         case EulerOrder::XYZ:
-            return mat4::Rotate(pyr.z, BACKWARD) * mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.x, RIGHT);
+            return mat4::Rotate(pyr.z, FORWARD) * mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.x, RIGHT);
         case EulerOrder::YXZ:
-            return mat4::Rotate(pyr.z, BACKWARD) * mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.y, UP);
+            return mat4::Rotate(pyr.z, FORWARD) * mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.y, UP);
         case EulerOrder::ZXY:
-            return mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.z, BACKWARD);
+            return mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.z, FORWARD);
         case EulerOrder::ZYX:
-            return mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.z, BACKWARD);
+            return mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.z, FORWARD);
         case EulerOrder::YZX:
-            return mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.z, BACKWARD) * mat4::Rotate(pyr.y, UP);
+            return mat4::Rotate(pyr.x, RIGHT) * mat4::Rotate(pyr.z, FORWARD) * mat4::Rotate(pyr.y, UP);
         case EulerOrder::XZY:
-            return mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.z, BACKWARD) * mat4::Rotate(pyr.x, RIGHT);
+            return mat4::Rotate(pyr.y, UP) * mat4::Rotate(pyr.z, FORWARD) * mat4::Rotate(pyr.x, RIGHT);
         default:
             print("EulerToRotationMatrix: Unknown Euler order: " + tostring(order));
             break;

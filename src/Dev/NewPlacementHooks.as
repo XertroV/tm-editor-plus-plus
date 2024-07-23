@@ -35,6 +35,17 @@ namespace PlacementHooks {
         0, 0, "PlacementHooks::After_CGameCtnEditorPluginMap_Update_PreScript_EmitEvent", Dev::PushRegisters(0)
     );
 
+    // HookHelper@ After_CGameCtnEditorPluginMap_Update_PostScript_Hook = HookHelper(
+    //     // 75 bytes of calls before this
+    //     "74 12 48 8B 8E ?? 04 00 00 E8 ?? ?? ?? ?? 89 AE ?? 07 00 00 48 8B CE E8",
+    //     -80, 0, "PlacementHooks::After_CGameCtnEditorPluginMap_Update_PostScript_EmitEvent", Dev::PushRegisters::Basic
+    // );
+    // FunctionHookHelper@ After_CGameCtnEditorPluginMap_Update_PostScript_Hook = FunctionHookHelper(
+    //     // v jmp we want to hook after                                        v jmps to here, which is a function call
+    //     "74 12 48 8B 8E ?? 04 00 00 E8 ?? ?? ?? ?? 89 AE ?? 07 00 00 48 8B CE E8",
+    //     23, 0, "PlacementHooks::After_CGameCtnEditorPluginMap_Update_PostScript_EmitEvent", Dev::PushRegisters::Basic
+    // );
+
     // Hooks over a call to QuaternionFromEuler, note: we don't use this atm
     FunctionHookHelper@ OnGetCursorRotation = FunctionHookHelper(
         //                       vv this byte is the offset for Rbp, so keep it here so we know if it changes
@@ -70,6 +81,7 @@ namespace PlacementHooks {
         OnSetItemBgSkin.Apply();
         OnSetItemFgSkin.Apply();
         After_CGameCtnEditorPluginMap_Update_PreScript_Hook.Apply();
+        // After_CGameCtnEditorPluginMap_Update_PostScript_Hook.Apply();
         // dev_trace("PlacementHooks::SetupHooks Done");
         trace("PlacementHooks::SetupHooks Done");
         // OnGetCursorRotation.Apply();
@@ -84,6 +96,7 @@ namespace PlacementHooks {
         OnSetItemBgSkin.Unapply();
         OnSetItemFgSkin.Unapply();
         After_CGameCtnEditorPluginMap_Update_PreScript_Hook.Unapply();
+        // After_CGameCtnEditorPluginMap_Update_PostScript_Hook.Unapply();
         // OnGetCursorRotation.Unapply();
     }
 
@@ -93,6 +106,14 @@ namespace PlacementHooks {
             return;
         }
         Event::OnMapTypeUpdate();
+    }
+
+    void After_CGameCtnEditorPluginMap_Update_PostScript_EmitEvent() {
+        if (!IsInEditor) {
+            warn_every_60_s("After_CGameCtnEditorPluginMap_Update_PostScript: called outside editor! (this is a bug)");
+            return;
+        }
+        Event::AfterMapTypeUpdate();
     }
 
     void OnSetItemFgSkin_rbx(uint64 rbx) {

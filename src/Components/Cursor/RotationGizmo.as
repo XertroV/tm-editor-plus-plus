@@ -617,7 +617,7 @@ class RotationTranslationGizmo {
 }
 
 const quat ROT_Q_AROUND_UP = quat(UP, HALF_PI);
-const quat ROT_Q_AROUND_FWD = quat(FORWARD, HALF_PI);
+const quat ROT_Q_AROUND_FWD = quat(BACKWARD, HALF_PI);
 
 
 

@@ -1,3 +1,18 @@
+- custom action (node graph) on click (use pick mode + click blocking)
+- can set editor flag for placeable or not (around 0x600)
+- find -> apply node graph
+
+
+
+
+
+
+
+
+
+
+
+
 - shaded_geoms in S2M
 
 free block: show which blocks can connect to which other blocks and in which rotation
@@ -7,14 +22,12 @@ which end works of the free block
 
 - [x] place macroblock air mode
 - filter inventory
-- [ ] favorites for inventory
 - check item placed when selecting in manip mesh
 - ensure item saved before editing properties
 - [x] custom selection
 - recently selected blocks and items history
 - [x] Quick idea please, would it be possible to redirect to the "Picked Item" tab when clicking this button on the "Blocks & Items" tab?
 - [x] edit block coord of item
-- [ ] duplicate free blocks helper tool
 - [ ] where is EditorHelpers color set?
 
 - [ ] 3d move/rotate handle draggable things <https://discord.com/channels/276076890714800129/1103713844288819311/1103935116188844083>

@@ -171,12 +171,80 @@ namespace VisSpriteDots {
 
 namespace Editor {
     namespace DrawLines {
-        // pass in pairs of coords for each line segment
-        void SetVertices(vec3[]@ points) {
-            if (points.Length % 2 != 0) {
-                throw("SetVertices: points.Length is not even");
+        // on custom selection box
+        void UpdateBoxFaces(vec3 min, vec3 max, vec4 color) {
+            vec3[] points;
+            auto size = max - min;
+            auto orig = min + vec3(0, 64, 0);
+            // loop through each face and add just for that face
+            vec3 ax1;
+            vec3 ax2;
+            for (uint f = 0; f < 6; f++) {
+                ax1 = f % 3 == 0 ? RIGHT : (f % 3 == 1 ? UP : FORWARD);
+                ax2 = f % 3 == 0 ? UP : (f % 3 == 1 ? FORWARD : RIGHT);
+                if (f > 2) {
+                    ax1 *= -1;
+                    ax2 *= -1;
+                    if (f == 3) orig += size;
+                    points.InsertLast(orig);
+                    points.InsertLast(orig + ax1 * size);
+                    points.InsertLast(orig + ax2 * size);
+                } else {
+                    // need to reverse winding order for back faces
+                    points.InsertLast(orig);
+                    points.InsertLast(orig + ax2 * size);
+                    points.InsertLast(orig + ax1 * size);
+                }
+                points.InsertLast(orig + ax1 * size + ax2 * size);
+            }
+            SetCustomSelectionQuads(points, color);
+            SetVertices(points);
+        }
+
+        void SetCustomSelectionQuads(vec3[]@ points, vec4 color) {
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor is null) {
+                warn("SetCustomSelectionQuads: editor is null");
                 return;
             }
+            auto box = editor.CustomSelectionBox;
+            auto quadsTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x18));
+            if (quadsTree is null) {
+                warn("SetCustomSelectionQuads: quadsTree is null");
+                return;
+            }
+            auto quadsVis = cast<CPlugVisualQuads>(quadsTree.Visual);
+            if (quadsVis is null) {
+                warn("SetCustomSelectionQuads: quadsTree.Visual is null");
+                return;
+            }
+            auto quads = DPlugVisual3D(quadsVis);
+            auto vertices = quads.Vertexes;
+            if (vertices.Capacity < points.Length) {
+                warn("SetCustomSelectionQuads: vertices.Capacity is less than points.Length");
+                return;
+            }
+            vertices.Length = points.Length;
+            for (uint i = 0; i < points.Length; i++) {
+                vertices.SetElementOffsetVec3(i, 0, points[i]);
+                // vertices.SetElementOffsetVec4(i, 0x18, color);
+                // vertices.GetVertex(i).Color = vec4(1., 1., 1., 1.);
+            }
+            box.Mobil.Show();
+            box.Mobil.IsVisible = true;
+            box.Mobil.Item.IsVisible = true;
+            // return;
+
+            auto shader = cast<CPlugShaderApply>(quadsTree.Shader);
+            if (shader is null) return;
+            auto n1 = Dev_GetOffsetNodSafe(shader, 0x18);
+            if (n1 is null) return;
+            auto n2 = Dev_GetOffsetNodSafe(n1, 0x198);
+            if (n2 is null) return;
+            Dev::SetOffset(n2, 0x0, color);
+        }
+
+        void SetVertices(vec3[]@ points) {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) {
                 warn("SetVertices: editor is null");
@@ -184,6 +252,14 @@ namespace Editor {
             }
             auto box = editor.CustomSelectionBox;
             auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x28));
+            // if (editor.Grid is null || editor.Grid.Item is null || editor.Grid.Item.Solid is null) {
+            //     warn("SetVertices: editor.Grid.Item.Solid is null");
+            //     return;
+            // }
+            // @linesTree = cast<CPlugTree>(editor.Grid.Item.Solid);
+            // auto quadTree = linesTree.Childs[0];
+            // @linesTree = linesTree.Childs[1];
+
             if (linesTree is null) {
                 warn("SetVertices: linesTree is null");
                 return;
@@ -193,18 +269,22 @@ namespace Editor {
                 warn("SetVertices: linesTree.Visual is null");
                 return;
             }
+            auto nbPoints = points.Length * 2;
             auto lines = DPlugVisual3D(linesVis);
             auto vertices = lines.Vertexes;
-            if (vertices.Capacity < points.Length) {
-                warn("SetVertices: vertices.Capacity is less than points.Length");
+            if (vertices.Capacity < nbPoints) {
+                warn("SetVertices: vertices.Capacity is less than nbPoints");
                 return;
             }
-            vertices.Length = points.Length;
-            trace("\\$bf0\\$iSetVertices: points.Length: " + points.Length);
-            for (uint i = 0; i < points.Length; i++) {
-                vertices.SetElementOffsetVec3(i, 0, points[i]);
-                // vertices.GetVertex(i).Pos = points[i];
+            vertices.Length = nbPoints;
+            // trace("\\$bf0\\$iSetVertices: nbPoints: " + nbPoints);
+            for (uint i = 0; i < nbPoints-1; i++) {
+                if (i != 0) vertices.SetElementOffsetVec3(i, 0, points[(i + 1)/2]);
+                vertices.SetElementOffsetVec3(i, 0, points[(i + 1)/2]);
+                // vertices.GetVertex(i).Normal = vec3(10.);
+                // vertices.GetVertex(i).Color = vec4(.2, 1., .2, 1.);
             }
+            vertices.SetElementOffsetVec3(nbPoints-1, 0, points[0]);
 
             box.Mobil.Show();
             box.Mobil.IsVisible = true;

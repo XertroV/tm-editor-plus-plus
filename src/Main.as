@@ -52,6 +52,7 @@ void Main() {
     RegisterNewAfterCursorUpdateCallback(CustomCursorRotations::CustomYaw_AfterCursorUpdate, "CustomCursorRotaitons::CustomYaw");
     // startnew(Editor::OffzonePatch::Apply);
     Editor::SetupApplySkinsCBs();
+    CustomSelection::OnPluginLoad();
 
     startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
@@ -335,7 +336,9 @@ bool[] hotkeysFlags = array<bool>(256);
 /** Called whenever a key is pressed on the keyboard. See the documentation for the [`VirtualKey` enum](https://openplanet.dev/docs/api/global/VirtualKey).
 */
 UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
+    bool block = false;
     if (Bind::IsRebinding) {
+        // expecting a key press for rebinding
         return Bind::OnKeyPress(down, key);
     }
     if (!IsInAnyEditor) return UI::InputBlocking::DoNothing;
@@ -346,13 +349,13 @@ UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
     if (app.CurrentPlayground !is null) return OnKeyPressInPlayground(app, editor, down, key);
     if (IsCalculatingShadows) return UI::InputBlocking::DoNothing;
     if (app.BasicDialogs.Dialogs.CurrentFrame !is null) return UI::InputBlocking::DoNothing;
-    bool block = false;
     block = block || ShouldBlockEscapePress(down, key, app, editor);
     // trace('key down: ' + tostring(key));
     if (down && hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
         block = CheckHotkey(key) == UI::InputBlocking::Block || block;
     }
+
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
 }
 

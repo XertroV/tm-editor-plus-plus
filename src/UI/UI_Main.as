@@ -121,6 +121,11 @@ void UI_Main_Render() {
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
         if (UI::Begin("Please Load E++ Editor Plugin", UI::WindowFlags::NoCollapse | UI::WindowFlags::NoResize)) {
             UI::TextWrapped("\\$f80" + Icons::ExclamationTriangle + "\\$z Please enable the E++ Editor Plugin.\n\\$8f8 Press 'P', then toggle 'EditorPlusPlus' on.");
+#if DEV
+            if (UI::Button("AutoEnable")) {
+                ToML::AutoEnablePlugin();
+            }
+#endif
             if (UI::Button("Dismiss this msg")) {
                 dismissedPluginEnableRequest = true;
             }

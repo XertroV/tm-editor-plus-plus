@@ -1,0 +1,65 @@
+Trackmania.exe.text+F09D60 - 39 AE A8070000        - cmp [rsi+000007A8],ebp
+Trackmania.exe.text+F09D66 - 74 12                 - je Trackmania.exe.text+F09D7A
+Trackmania.exe.text+F09D68 - 48 8B 8E 88040000     - mov rcx,[rsi+00000488]
+Trackmania.exe.text+F09D6F - E8 6C5DEDFF           - call Trackmania.exe.text+DDFAE0
+Trackmania.exe.text+F09D74 - 89 AE A8070000        - mov [rsi+000007A8],ebp
+Trackmania.exe.text+F09D7A - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+F09D7D - E8 9E11FEFF           - call Trackmania.exe.text+EEAF20
+
+
+
+39 AE A8 07 00 00
+
+74 12 48 8B 8E ?? 04 00 00 E8 ?? ?? ?? ?? 89 AE ?? 07 00 00 48 8B CE E8 ?? ?? ?? ??
+
+
+
+
+
+
+
+
+
+Trackmania.exe.text+F09D13 - 44 8B C3              - mov r8d,ebx
+Trackmania.exe.text+F09D16 - 8B D7                 - mov edx,edi
+Trackmania.exe.text+F09D18 - 48 8B CE              - mov rcx,rsi
+
+
+Trackmania.exe.text+F09D1B - E8 C027FEFF           - call Trackmania.exe.text+EEC4E0
+Trackmania.exe.text+F09D20 - 48 8D 96 D8070000     - lea rdx,[rsi+000007D8]
+Trackmania.exe.text+F09D27 - E8 E444FEFF           - call Trackmania.exe.text+EEE210
+Trackmania.exe.text+F09D2C - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+F09D2F - E8 5CF4FFFF           - call Trackmania.exe.text+F09190
+Trackmania.exe.text+F09D34 - 48 8B 8E 88040000     - mov rcx,[rsi+00000488]
+Trackmania.exe.text+F09D3B - E8 00800700           - call Trackmania.exe.text+F81D40
+Trackmania.exe.text+F09D40 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+F09D43 - E8 38F4FFFF           - call Trackmania.exe.text+F09180
+Trackmania.exe.text+F09D48 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+F09D4B - E8 00FAFFFF           - call Trackmania.exe.text+F09750
+Trackmania.exe.text+F09D50 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+F09D53 - E8 D8F2FFFF           - call Trackmania.exe.text+F09030
+Trackmania.exe.text+F09D58 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+F09D5B - E8 B0F1FFFF           - call Trackmania.exe.text+F08F10
+Trackmania.exe.text+F09D60 - 39 AE A8070000        - cmp [rsi+000007A8],ebp
+
+
+Trackmania.exe.text+F09D66 - 74 12                 - je Trackmania.exe.text+F09D7A
+Trackmania.exe.text+F09D68 - 48 8B 8E 88040000     - mov rcx,[rsi+00000488]
+Trackmania.exe.text+F09D6F - E8 6C5DEDFF           - call Trackmania.exe.text+DDFAE0
+Trackmania.exe.text+F09D74 - 89 AE A8070000        - mov [rsi+000007A8],ebp
+Trackmania.exe.text+F09D7A - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+F09D7D - E9 4C730FBF           - jmp 7FF6FCC620CE
+Trackmania.exe.text+F09D82 - 85 C0                 - test eax,eax
+Trackmania.exe.text+F09D84 - 74 46                 - je Trackmania.exe.text+F09DCC
+Trackmania.exe.text+F09D86 - 39 AE 30080000        - cmp [rsi+00000830],ebp
+Trackmania.exe.text+F09D8C - 75 3E                 - jne Trackmania.exe.text+F09DCC
+Trackmania.exe.text+F09D8E - 48 8B 96 78040000     - mov rdx,[rsi+00000478]
+
+
+// 2x mov to hook
+8B D7 48 8B CE
+
+// 75 bytes of calls
+E8 C0 27 FE FF 48 8D 96 D8 07 00 00 E8 E4 44 FE FF 48 8B CE E8 5C F4 FF FF 48 8B 8E 88 04 00 00 E8 00 80 07 00 48 8B CE E8 38 F4 FF FF 48 8B CE E8 00 FA FF FF 48 8B CE E8 D8 F2 FF FF 48 8B CE E8 B0 F1 FF FF 39 AE A8 07 00 00
+
+// idea: offset by = -80
