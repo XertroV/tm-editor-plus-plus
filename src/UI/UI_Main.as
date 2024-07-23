@@ -114,18 +114,17 @@ void UI_Main_Render() {
     }
 
     if (CheckIfShowEppPluginReminder()) {
-        vec2 size = vec2(300, 120);
+        vec2 size = vec2(300, 160);
         vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
         pos.y = 200;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
         if (UI::Begin("Please Load E++ Editor Plugin", UI::WindowFlags::NoCollapse | UI::WindowFlags::NoResize)) {
-            UI::TextWrapped("\\$f80" + Icons::ExclamationTriangle + "\\$z Please enable the E++ Editor Plugin.\n\\$8f8 Press 'P', then toggle 'EditorPlusPlus' on.");
-#if DEV
-            if (UI::Button("AutoEnable")) {
-                ToML::AutoEnablePlugin();
+            UI::TextWrapped("\\$f80" + Icons::ExclamationTriangle + "\\$z Please enable the E++ Editor Plugin.");
+            if (UI::Button("Auto Enable")) {
+                startnew(ToML::AutoEnablePlugin);
             }
-#endif
+            UI::TextWrapped("Alternatively: \\$8f8 Press 'P', then toggle 'EditorPlusPlus' on.");
             if (UI::Button("Dismiss this msg")) {
                 dismissedPluginEnableRequest = true;
             }

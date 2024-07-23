@@ -130,21 +130,79 @@ namespace ToML {
         return null;
     }
 
+    CGameEditorPluginMap::EPlaceMode afterAutoReturnToMode = CGameEditorPluginMap::EPlaceMode::Block;
+
     void AutoEnablePlugin() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto pmt = GetPluginPMT();
-        dbg_print_inventory();
+        auto pmt = editor.PluginMapType;
+        // dbg_print_inventory();
+        if (pmt.PlaceMode != CGameEditorPluginMap::EPlaceMode::Plugin) {
+            afterAutoReturnToMode = pmt.PlaceMode;
+        }
         pmt.PlaceMode = CGameEditorPluginMap::EPlaceMode::Plugin;
-        dbg_print_inventory();
+        // order:
+        // Order: BeforeScripts, MainLoop, GameLoop, NetworkAfterMainLoop, AfterScripts, UpdateSceneEngine
+        // startnew(AsyncPrint, "BeforeScripts").WithRunContext(Meta::RunContext::BeforeScripts);
+        // startnew(AsyncPrint, "MainLoop").WithRunContext(Meta::RunContext::MainLoop);
+        // startnew(AsyncPrint, "GameLoop").WithRunContext(Meta::RunContext::GameLoop);
+        // ! UI inventory stuff available after NetworkAfterMainLoop
+        // startnew(AsyncPrint, "NetworkAfterMainLoop").WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
+        // startnew(AsyncPrint, "AfterScripts").WithRunContext(Meta::RunContext::AfterScripts);
+        // startnew(AsyncPrint, "UpdateSceneEngine").WithRunContext(Meta::RunContext::UpdateSceneEngine);
+
+        startnew(_EnablePluginSoon).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
+    }
+
+    void AsyncPrint(const string &in context) {
+        dev_trace("\\$df8 .<!>. context: " + context);
+    }
+
+    uint nonce = 0;
+
+    void _EnablePluginSoon() {
+        auto plugins = CControl::Editor_FrameInventoryArticlesCards;
+        // auto plugins = CControl::Editor_FrameInventoryPluginsArticles;
+        CControlContainer@ eppCard;
+        for (uint i = 0; i < plugins.ListCards.Length; i++) {
+            auto card = cast<CControlContainer>(plugins.ListCards[i]);
+            if (card is null) continue;
+            if (card.Childs.Length > 6) {
+                auto entry = cast<CControlEntry>(CControl::FindChild(card, "EntryInfos"));
+                if (entry is null) continue;
+                if (entry.String == "EditorPlusPlus") {
+                    @eppCard = card;
+                    break;
+                }
+            }
+        }
+
+        dev_trace("E++ card found: " + (eppCard !is null));
+        if (eppCard is null) {
+            warn("E++ card not found");
+            return;
+        }
+        auto select = cast<CControlButton>(eppCard.Childs[0]);
+        if (select is null) {
+            warn("E++ card select button not found");
+            return;
+        }
+        select.OnAction();
+        dev_trace("E++ card selected");
+
+        yield();
+
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Block;
     }
 
     void dbg_print_inventory() {
         auto iac = CControl::Editor_FrameInventoryArticlesCards;
+        dev_trace("\\$d83//-- CARD IDS Under " + iac.Parent.IdName + " --//");
         for (uint i = 0; i < iac.ListCards.Length; i++) {
             auto obj = iac.ListCards[i];
-            print("Card " + i + ": " + obj.IdName);
-            obj.StackText
+            dev_trace("  \\$bbb\\$iCard " + i + ": " + obj.IdName);
         }
+        dev_trace("\\$\\$i444//----------------- " + iac.Parent.IdName + " --//");
     }
 }
 
