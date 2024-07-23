@@ -12,6 +12,7 @@ class DevMainTab : Tab {
         DevCallbacksTab(Children);
         DevMiscTab(Children);
         MapChangesFrameTab(Children);
+        SelectionBoxTab(Children);
     }
 
     void DrawInner() override {
@@ -305,6 +306,128 @@ class MapChangesFrameTab : Tab {
         UI::Text("I Placed: " + Editor::ThisFrameItemsPlaced().Length);
         UI::Text("I Deleted: " + Editor::ThisFrameItemsDeleted().Length);
         UI::Text("Skins Set: " + Editor::ThisFrameSkinsSet().Length);
+    }
+}
+
+
+class SelectionBoxTab : Tab {
+    SelectionBoxTab(TabGroup@ p) {
+        super(p, "Selection Box", "");
+    }
+
+    void DrawInner() override {
+        if (UI::Button("Add Lines Test")) {
+            RunAddLinesTest();
+        }
+
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto box = editor.SelectionBox;
+        if (box is null) {
+            UI::Text("No Selection Box");
+            return;
+        }
+        auto quadsTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x18));
+        auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x28));
+        auto otherTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x38));
+        if (quadsTree is null) {
+            UI::Text("No Quads Tree");
+            return;
+        }
+        if (linesTree is null) {
+            UI::Text("No Lines Tree");
+            return;
+        }
+
+        CopiableLabeledValue("Quads", Text::FormatPointer(Dev_GetPointerForNod(quadsTree)));
+        CopiableLabeledValue("Lines", Text::FormatPointer(Dev_GetPointerForNod(quadsTree)));
+
+        auto quadsVis = cast<CPlugVisualQuads>(quadsTree.Visual);
+        auto linesVis = cast<CPlugVisualLines>(linesTree.Visual);
+
+        if (quadsVis is null) {
+            UI::Text("No Quads Visual");
+            return;
+        }
+        if (linesVis is null) {
+            UI::Text("No Lines Visual");
+            return;
+        }
+
+        Draw_DevVerts(quadsVis, "Quads");
+        Draw_DevVerts(linesVis, "Lines");
+
+        // if (quadsVis !is null) {
+        //     if (UI::Button("Update Quads")) {
+        //         quadsVis.NegNormals();
+        //         quadsVis.NegNormals();
+        //     }
+        //     auto quads = DPlugVisual3D(quadsVis);
+        //     auto qVerts = quads.Vertexes;
+        //     CopiableLabeledValue("Quads Vis", Text::FormatPointer(Dev_GetPointerForNod(quadsVis)));
+        //     auto nbVerts = qVerts.Length;
+        //     CopiableLabeledValue("Quads Vis Vertexes", tostring(nbVerts));
+        //     if (UI::TreeNode("Quads Vertexes##"+quads.Ptr)) {
+        //         UI::ListClipper clipper(nbVerts);
+        //         while (clipper.Step()) {
+        //             for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+        //                 auto vert = qVerts.GetVertex(i);
+        //                 UI::SeparatorText("Vertex " + i);
+        //                 UI::Indent();
+        //                 vert.Pos = UI::InputFloat3("Pos##"+i, vert.Pos);
+        //                 vert.Normal = UI::InputFloat3("Normal##"+i, vert.Normal);
+        //                 vert.Color = UI::InputColor4("Color##"+i, vert.Color);
+        //                 UI::Unindent();
+        //             }
+        //         }
+        //         UI::TreePop();
+        //     }
+        // }
+    }
+
+    void Draw_DevVerts(CPlugVisual3D@ vis, const string &in name) {
+        if (vis is null) {
+            UI::Text("No " + name + " Visual");
+            return;
+        }
+        auto dvis = DPlugVisual3D(vis);
+        auto verts = dvis.Vertexes;
+        auto nbVerts = verts.Length;
+        CopiableLabeledValue(name + " Visual", Text::FormatPointer(Dev_GetPointerForNod(vis)));
+        CopiableLabeledValue(name + " Visual Vertexes", tostring(nbVerts));
+        if (UI::TreeNode(name + " Visual##"+dvis.Ptr)) {
+            if (UX::SmallButton("Update " + name)) {
+                vis.NegNormals();
+                vis.NegNormals();
+            }
+            UI::ListClipper clipper(nbVerts);
+            while (clipper.Step()) {
+                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+                    auto vert = verts.GetVertex(i);
+                    UI::SeparatorText("Vertex " + i);
+                    UI::Indent();
+                    vert.Pos = UI::InputFloat3("Pos##"+i, vert.Pos);
+                    vert.Normal = UI::InputFloat3("Normal##"+i, vert.Normal);
+                    vert.Color = UI::InputColor4("Color##"+i, vert.Color);
+                    UI::Unindent();
+                }
+            }
+            UI::TreePop();
+        }
+    }
+
+    void RunAddLinesTest() {
+        auto box = CGameOutlineBox();
+        test_print("Box? " + (box !is null));
+        if (box is null) return;
+        test_print("box.Mobil? " + (box.Mobil !is null));
+        if (box.Mobil is null) return;
+        test_print("box.Mobil.Item? " + (box.Mobil.Item !is null));
+        test_print("box.Mobil.Solid? " + (box.Mobil.Solid !is null));
+        ExploreNod("new box", box);
+    }
+
+    void test_print(const string &in msg) {
+        print("\\$af1\\$i" + msg);
     }
 }
 

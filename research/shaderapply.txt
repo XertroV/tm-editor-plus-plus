@@ -1,0 +1,6 @@
+works from grid thing
+shaderapply
+- 0x18 ptr -> thing
+  - 0x198 ptr -> thing
+    0x00 vec4 color
+    0x10 ptr?

@@ -678,6 +678,9 @@ const uint16 SZ_CTNMACROBLOCK = 0x248;
 
 
 const uint16 SZ_CPlugVisualIndexedTriangles = 0x190; // 400
+const uint16 SZ_CPlugVisualQuads = 0x180; // 384
+const uint16 SZ_CPlugVisualLines = 0x180; // 384
+const uint16 SZ_CPlugVisual3D = 0x180; // 384
 
 
 
@@ -772,7 +775,14 @@ class RawBuffer {
     uint get_Length() {
         return Dev::ReadUInt32(ptr + 0x8);
     }
+    void set_Length(uint value) {
+        if (value > Capacity) throw("RawBuffer length cannot exceed capacity");
+        Dev::Write(ptr + 0x8, value);
+    }
     uint get_Reserved() {
+        return Dev::ReadUInt32(ptr + 0xC);
+    }
+    uint get_Capacity() {
         return Dev::ReadUInt32(ptr + 0xC);
     }
 
@@ -788,6 +798,62 @@ class RawBuffer {
             elStartOffset = 0;
         }
         return RawBufferElem(ptr2 + elStartOffset, size);
+    }
+
+    void SetElementOffsetFloat(uint i, uint o, float value) {
+        if (i >= Length) throw("RawBufferElem out of range!");
+        if (ptr == 0) return;
+        uint64 ptr2 = Dev::ReadUInt64(ptr);
+        if (ptr2 == 0) return;
+        uint elStartOffset = i * size;
+        if (structBehindPtr) {
+            ptr2 = ptr2 + i * 0x8;
+            ptr2 = Dev::ReadUInt64(ptr2);
+            elStartOffset = 0;
+        }
+        Dev::Write(ptr2 + elStartOffset + o, value);
+    }
+
+    void SetElementOffsetVec4(uint i, uint o, const vec4 &in value) {
+        if (i >= Length) throw("RawBufferElem out of range!");
+        if (ptr == 0) return;
+        uint64 ptr2 = Dev::ReadUInt64(ptr);
+        if (ptr2 == 0) return;
+        uint elStartOffset = i * size;
+        if (structBehindPtr) {
+            ptr2 = ptr2 + i * 0x8;
+            ptr2 = Dev::ReadUInt64(ptr2);
+            elStartOffset = 0;
+        }
+        Dev::Write(ptr2 + elStartOffset + o, value);
+    }
+
+    void SetElementOffsetVec3(uint i, uint o, const vec3 &in value) {
+        if (i >= Length) throw("RawBufferElem out of range!");
+        if (ptr == 0) return;
+        uint64 ptr2 = Dev::ReadUInt64(ptr);
+        if (ptr2 == 0) return;
+        uint elStartOffset = i * size;
+        if (structBehindPtr) {
+            ptr2 = ptr2 + i * 0x8;
+            ptr2 = Dev::ReadUInt64(ptr2);
+            elStartOffset = 0;
+        }
+        Dev::Write(ptr2 + elStartOffset + o, value);
+    }
+
+    void SetElementOffsetUint(uint i, uint o, uint value) {
+        if (i >= Length) throw("RawBufferElem out of range!");
+        if (ptr == 0) return;
+        uint64 ptr2 = Dev::ReadUInt64(ptr);
+        if (ptr2 == 0) return;
+        uint elStartOffset = i * size;
+        if (structBehindPtr) {
+            ptr2 = ptr2 + i * 0x8;
+            ptr2 = Dev::ReadUInt64(ptr2);
+            elStartOffset = 0;
+        }
+        Dev::Write(ptr2 + elStartOffset + o, value);
     }
 }
 

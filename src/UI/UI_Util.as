@@ -10,7 +10,7 @@ void NotifySuccess(const string &in msg) {
     trace("Notified: " + msg);
 }
 
-void NotifyError(const string &in msg) {
+shared void NotifyError(const string &in msg) {
     warn(msg);
     UI::ShowNotification(Meta::ExecutingPlugin().Name + ": Error", msg, vec4(.9, .3, .1, .3), 15000);
 }

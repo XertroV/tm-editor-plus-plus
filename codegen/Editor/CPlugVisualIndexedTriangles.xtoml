@@ -1,6 +1,37 @@
+# same structure as DPlugVisualIndexedTriangles to 0x180
+[DPlugVisual3D : SZ_CPlugVisual3D]
+NativeClass = CPlugVisual3D
+# 0x24: Flags;
+# --- A__ -> 0__; IsIndexationStatic false, UseVertexNormal false
+# --- __1 -> __0; UseVertexColor false
+
+flags = uint32, 0x24, GS
+# 0x130: buffer of Faces
+Buffer: Vertexes = DPV_Vertexs, 0x130, 0x28, false
+
+[DPV_Vertex : 0x28]
+# updated on gpu each frame!
+Pos = vec3, 0, GS
+PosX = float, 0, GS
+PosY = float, 4, GS
+PosZ = float, 8, GS
+# not sure if this is used with selection box at least
+Normal = vec3, 0xC, GS
+NormalX = float, 0xC, GS
+NormalY = float, 0x10, GS
+NormalZ = float, 0x14, GS
+# does not update live
+Color = vec4, 0x18, GS
+R = float, 0x18, GS
+G = float, 0x1C, GS
+B = float, 0x20, GS
+A = float, 0x24, GS
+
+
+
 [DPlugVisualIndexedTriangles : SZ_CPlugVisualIndexedTriangles]
 NativeClass = CPlugVisualIndexedTriangles
-# 0x18: ptr to unk structure (with ptr back to this at +0x20)
+# 0x18: ptr to unk structure (with ptr back to this at +0x20; maybe gpu related)
 # 0x40: uint(1)
 # 0x60: uint(0)
 # 0x88: vec3(1,1,~0)

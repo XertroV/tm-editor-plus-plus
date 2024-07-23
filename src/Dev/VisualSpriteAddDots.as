@@ -169,6 +169,51 @@ namespace VisSpriteDots {
     }
 }
 
+namespace Editor {
+    namespace DrawLines {
+        // pass in pairs of coords for each line segment
+        void SetVertices(vec3[]@ points) {
+            if (points.Length % 2 != 0) {
+                throw("SetVertices: points.Length is not even");
+                return;
+            }
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor is null) {
+                warn("SetVertices: editor is null");
+                return;
+            }
+            auto box = editor.CustomSelectionBox;
+            auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x28));
+            if (linesTree is null) {
+                warn("SetVertices: linesTree is null");
+                return;
+            }
+            auto linesVis = cast<CPlugVisualLines>(linesTree.Visual);
+            if (linesVis is null) {
+                warn("SetVertices: linesTree.Visual is null");
+                return;
+            }
+            auto lines = DPlugVisual3D(linesVis);
+            auto vertices = lines.Vertexes;
+            if (vertices.Capacity < points.Length) {
+                warn("SetVertices: vertices.Capacity is less than points.Length");
+                return;
+            }
+            vertices.Length = points.Length;
+            trace("\\$bf0\\$iSetVertices: points.Length: " + points.Length);
+            for (uint i = 0; i < points.Length; i++) {
+                vertices.SetElementOffsetVec3(i, 0, points[i]);
+                // vertices.GetVertex(i).Pos = points[i];
+            }
+
+            box.Mobil.Show();
+            box.Mobil.IsVisible = true;
+            box.Mobil.Item.IsVisible = true;
+        }
+    }
+}
+
+#if DEV
 
 void TestRunVisSpriteDots() {
     while (GetApp().Editor is null) yield();
@@ -200,4 +245,60 @@ void TestRunVisSpriteDots() {
     }
 }
 
+void TestRunVisLines() {
+    while (GetApp().Editor is null) yield();
+    print("\\$bf0\\$iTestRunVisLines sleeping 1s");
+    sleep(1000);
+    print("\\$bf0\\$iTestRunVisLines running");
+    IO::FileSource pj("points.json");
+    auto pointsJ = Json::Parse(pj.ReadToEnd());
+    vec3[] points;
+    mat4 mat = mat4::Translate(vec3(768, 256, 768)) * mat4::Rotate(PI, RIGHT);
+    vec3 pos;
+    vec4 col = vec4(1., 1., 1., 1.);
+    for (uint i = 0; i < pointsJ.Length; i++) {
+        auto path = pointsJ[i];
+        vec3 p0;
+        for (uint j = 0; j < path.Length; j++) {
+            pos.x = path[j][0];
+            pos.y = path[j][1];
+            pos.z = 0;
+            pos = (mat * pos).xyz;
+            // points.InsertLast(VisSpriteDots::Dot(pos, col));
+            // if (j == 0 && points.Length > 0) points.InsertLast(points[points.Length - 1]);
+            if (j == 0) p0 = pos;
+            points.InsertLast(pos);
+            if (j != 0) points.InsertLast(pos);
+        }
+        points.InsertLast(p0);
+    }
+    if (points.Length % 2 == 1) {
+        warn('dgb adding extra point');
+        points.InsertLast(points[points.Length - 1]);
+    }
+    yield();
+    print("got points: " + points.Length);
+    yield();
+    auto nbPoints = points.Length;
+    // copy points a second time, but offset a little
+    for (uint i = 0; i < nbPoints; i++) {
+        points.InsertLast(points[i] + vec3(.1));
+    }
+
+
+    // while (IsInAnyEditor) {
+    //     VisSpriteDots::PushDots(points);
+    //     yield();
+    // }
+    if (IsInAnyEditor) {
+        trace('\\$bf0\\$iTestRunVisLines: Drawing lines');
+        Editor::DrawLines::SetVertices(points);
+    }
+}
+
+
+
 // Meta::PluginCoroutine@ testRunVisSpriteDots = startnew(TestRunVisSpriteDots);
+Meta::PluginCoroutine@ testRunVisLines = startnew(TestRunVisLines);
+
+#endif

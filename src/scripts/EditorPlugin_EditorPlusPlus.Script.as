@@ -127,6 +127,25 @@ Boolean EPP_GetMetadataDisabled() {
 	return EPP_MetadataDisabled;
 }
 
+
+Void InitializeCustomSelectionCoords() {
+	CustomSelectionCoords.clear();
+	for (X, 0, 48) {
+		for (Y, 0, 6) {
+			for (Z, 0, 48) {
+				if ((X + Y + Z) % 2 == 0) continue;
+				CustomSelectionCoords.add(<X, Y, Z>);
+			}
+		}
+	}
+	// HideCustomSelection();
+}
+
+Void DeInitializeCustomSelectionCoords() {
+	// CustomSelectionCoords.clear();
+	// ShowCustomSelection();
+}
+
 main() {
 	ShouldBreakLoop = False;
 
@@ -142,9 +161,18 @@ main() {
 		}
 	}
 
+	declare Boolean ResetCustomSelectionCoords = True;
+	InitializeCustomSelectionCoords();
+
 	// outer loop: used to re-init metadata after clear
 	while (True) {
 		yield;
+
+		if (ResetCustomSelectionCoords) {
+			ResetCustomSelectionCoords = False;
+			DeInitializeCustomSelectionCoords();
+		}
+
 		declare Text[][] EPP_MsgQueue for ManialinkPage = [];
 		ShouldBreakLoop = False;
 		if (DisableMetadata) {
