@@ -335,6 +335,9 @@ namespace Editor {
         }
         mbSpec._TempWriteToMacroblock(mb);
 
+        bool forceMbColor = pmt.ForceMacroblockColor;
+        pmt.ForceMacroblockColor = false;
+
         trace('wrote mb spec to mb: ' + mb.IdName);
         auto dmb = DGameCtnMacroBlockInfo(mb);
         trace('nb blocks: ' + dmb.Blocks.Length);
@@ -351,6 +354,8 @@ namespace Editor {
         dev_trace("PlaceMacroblock returning: " + placed);
 
         // todo: skins?
+
+        pmt.ForceMacroblockColor = forceMbColor;
 
         return placed;
     }

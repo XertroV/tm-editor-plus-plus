@@ -2,16 +2,30 @@
 - can set editor flag for placeable or not (around 0x600)
 - find -> apply node graph
 
+- gizmo: skins
+- macroblock: skins
+
+- [x] plugin easy load button
+
+- block history on RHS? (clickable & draggable onto map)
+-
 
 
+- [ ] fix fill performance
+- [x] custom selection performance
+- [ ] nudging skins
+- [ ] macroblock skins
 
+- [ ] better nudging
 
+- [ ] grid / units for nudging stuff
 
-
-
-
-
-
+- [ ] blender keybinds for nudging / axes
+- [ ] plane dragging in addition to axes dragging (little square between axes to drag)
+- [ ] test better key blocking (if it's implemented)
+- [x] hide back of cube option
+- [x] use dot for block midpoint
+-
 
 - shaded_geoms in S2M
 

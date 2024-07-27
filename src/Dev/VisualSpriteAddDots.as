@@ -77,6 +77,11 @@ namespace VisSpriteDots {
             this.color = col;
         }
 
+        Dot@ WSize(float s) {
+            size = s;
+            return this;
+        }
+
         void opAssign(const Dot &in other) {
             pos = other.pos;
             size = other.size;
@@ -379,6 +384,6 @@ void TestRunVisLines() {
 
 
 // Meta::PluginCoroutine@ testRunVisSpriteDots = startnew(TestRunVisSpriteDots);
-Meta::PluginCoroutine@ testRunVisLines = startnew(TestRunVisLines);
+// Meta::PluginCoroutine@ testRunVisLines = startnew(TestRunVisLines);
 
 #endif

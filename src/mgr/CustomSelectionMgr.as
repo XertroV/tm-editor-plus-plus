@@ -1,4 +1,4 @@
-funcdef void OnCustomSelectionDoneF(CGameCtnEditorFree@ editor, CSmEditorPluginMapType@ pmt);
+funcdef void OnCustomSelectionDoneF(CGameCtnEditorFree@ editor, CSmEditorPluginMapType@ pmt, nat3 min, nat3 max);
 
 class CustomSelectionMgr {
     uint HIST_LIMIT = 10;
@@ -8,46 +8,38 @@ class CustomSelectionMgr {
 
     int currentlySelected = -1;
     OnCustomSelectionDoneF@ doneCB;
+    CGameEditorPluginMap::EPlaceMode origPlacementMode;
 
     CustomSelectionMgr() {
-        AddHotkey(VirtualKey::F, true, false, false, HotkeyFunction(this.OnFillHotkey), "Fill Selection");
+        // AddHotkey(VirtualKey::F, true, false, false, HotkeyFunction(this.OnFillHotkey), "Fill Selection");
         // RegisterOnLeavingPlaygroundCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
         // RegisterOnEditorLoadCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
     }
 
     void HideCustomSelection() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
         editor.PluginMapType.CustomSelectionCoords.RemoveRange(0, editor.PluginMapType.CustomSelectionCoords.Length);
         editor.PluginMapType.HideCustomSelection();
-    }
-
-    UI::InputBlocking OnFillHotkey() {
-        startnew(CoroutineFunc(Enable));
-        @doneCB = OnCustomSelectionDoneF(this.OnFillSelectionComplete);
-        dev_trace('running enable hotkey');
-        // blocks editor inputs, unblock next frame
-        Editor::EnableCustomCameraInputs();
-        startnew(Editor::DisableCustomCameraInputs);
-        return UI::InputBlocking::DoNothing;
     }
 
     bool get_IsActive() {
         return active;
     }
 
-    CGameEditorPluginMap::EPlaceMode origPlacementMode;
-
-
-    void Enable() {
+    bool Enable(OnCustomSelectionDoneF@ cb) {
         if (active) {
-            Notify("Cannot enable a new custom selection while one is still active.");
-            return;
+            warn_every_60_s("Cannot enable a new custom selection while one is still active.");
+            return false;
         }
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return false;
         origPlacementMode = editor.PluginMapType.PlaceMode;
         if (SupportedFillModes.Find(origPlacementMode) < 0) {
             NotifyWarning("Place mode not supported for fill: " + tostring(origPlacementMode));
+            return false;
         }
+        @doneCB = cb;
         // Editor::CustomSelectionCoords_Clear(editor);
         // editor.PluginMapType.CustomSelectionCoords.Add(nat3(uint(-1)));
         auto cursorCoord = editor.PluginMapType.CursorCoord;
@@ -58,6 +50,7 @@ class CustomSelectionMgr {
         active = true;
         // Editor::EnableCustomCameraInputs();
         startnew(CoroutineFunc(this.WatchLoop)); //.WithRunContext(Meta::RunContext::BeforeScripts);
+        return true;
     }
 
     // if user presses escape
@@ -66,28 +59,10 @@ class CustomSelectionMgr {
     }
 
     nat3 startCoord;
-    // bool updateML = false;
+    // the last min coord
     protected nat3 updateMin;
+    // the last max coord
     protected nat3 updateMax;
-    // use UpdateSelection
-    protected void _DoUpdateSelection() { // ref@ r
-        throw('deprecating');
-        // if (!updateML) return;
-        // updateML = false;
-        // dev_trace('updating selection: ');
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return;
-        Editor::CustomSelectionCoords_Clear(editor);
-        for (uint x = updateMin.x; x <= updateMax.x; x++) {
-            for (uint y = updateMin.y; y <= updateMax.y; y++) {
-                for (uint z = updateMin.z; z <= updateMax.z; z++) {
-                    editor.PluginMapType.CustomSelectionCoords.Add(nat3(x, y, z));
-                }
-            }
-        }
-        auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
-        pmt.CustomSelectionRGB = vec3(Math::Sin(0.001 * Time::Now) * .5 + .5, Math::Cos(0.001 * Time::Now) * .5 + .5, 1);
-    }
 
     vec4 lastColor;
 
@@ -109,19 +84,19 @@ class CustomSelectionMgr {
         float a = 1.; // .5;
         float b = .5; // should set to 0 for symmetric around 0
         while (UI::IsMouseDown() && ((@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) && !_cancel) {
-            lastColor = vec4(Math::Sin(0.001 * Time::Now) * a + b, Math::Cos(.77 + 0.00127 * Time::Now) * a + b, 1. + 0. * Math::Sin(1.23 + 0.0014 * Time::Now) * a + b, -10.) * .1;
+            lastColor = vec4(Math::Sin(0.001 * Time::Now - .1337) * .5 * a + b, Math::Cos(.77 + 0.00127 * Time::Now) * .5 * a + b, 1. + 0. * Math::Sin(1.23 + 0.0014 * Time::Now) * a + b, -10.) * .1;
             pmt.CustomSelectionRGB = lastColor.xyz;
             if (pmt.PlaceMode != CGameEditorPluginMap::EPlaceMode::CustomSelection) break;
             UpdateSelection(editor, pmt, startCoord, pmt.CursorCoord);
             auto minPos = CoordToPos(updateMin);
-            nvgDrawBlockBox(mat4::Translate(minPos), CoordToPos(updateMax + 1) - minPos);
+            nvgDrawBlockBox(mat4::Translate(minPos), CoordDistToPos(updateMax - updateMin + 1), cWhite);
             yield();
         }
         if (editor !is null && pmt.PlaceMode == CGameEditorPluginMap::EPlaceMode::CustomSelection && !_cancel) {
-            dev_trace('mouse released');
+            dev_trace('mouse released, finalizing');
             try {
                 dev_trace('running callback');
-                if (doneCB !is null) doneCB(editor, pmt);
+                if (doneCB !is null) OnFillSelectionComplete(editor, pmt);
                 if (!IsInEditor) {
                     active = false;
                     @doneCB = null;
@@ -135,8 +110,7 @@ class CustomSelectionMgr {
             pmt.PlaceMode = origPlacementMode;
         }
         if (editor !is null) {
-            pmt.HideCustomSelection();
-            pmt.CustomSelectionCoords.RemoveRange(0, pmt.CustomSelectionCoords.Length);
+            HideCustomSelection();
         }
         active = false;
         @doneCB = null;
@@ -176,60 +150,18 @@ class CustomSelectionMgr {
     CGameEditorPluginMap::EPlaceMode[] SupportedFillModes = {
         CGameEditorPluginMap::EPlaceMode::Block,
         CGameEditorPluginMap::EPlaceMode::GhostBlock,
+        CGameEditorPluginMap::EPlaceMode::FreeBlock,
         CGameEditorPluginMap::EPlaceMode::Item,
-        CGameEditorPluginMap::EPlaceMode::Macroblock
+        CGameEditorPluginMap::EPlaceMode::Macroblock,
+        CGameEditorPluginMap::EPlaceMode::FreeMacroblock
     };
 
     void OnFillSelectionComplete(CGameCtnEditorFree@ editor, CSmEditorPluginMapType@ pmt) {
-        int3 coord;
-        nat3 c;
-
-        CGameCtnBlockInfo@ block;
-        CGameCtnMacroBlockInfo@ macroblock;
-        CGameItemModel@ item;
-        if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Block) {
-            @block = selectedBlockInfo is null ? null : selectedBlockInfo.AsBlockInfo();
-        } else if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::GhostBlock) {
-            @block = selectedGhostBlockInfo is null ? null : selectedGhostBlockInfo.AsBlockInfo();
-        } else if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Macroblock) {
-            @macroblock = selectedMacroBlockInfo.AsMacroBlockInfo();
-        } else if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Item) {
-            @item = selectedItemModel.AsItemModel();
-        }
-        if (block is null && macroblock is null && item is null) return;
-        dev_trace('Running OnFillSelectionComplete');
-        for (uint i = 0; i < pmt.CustomSelectionCoords.Length; i++) {
-            c = pmt.CustomSelectionCoords[i];
-            coord = int3(c.x, c.y, c.z);
-            if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Block) {
-                pmt.PlaceBlock(block, coord, pmt.CursorDir);
-            } else if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::GhostBlock) {
-                pmt.PlaceGhostBlock(block, coord, pmt.CursorDir);
-            } else if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Item) {
-                NotifyWarning("Item fill mode not implemented yet");
-                return;
-            } else if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Macroblock) {
-                NotifyWarning("Macroblock fill mode not implemented yet");
-                return;
-            } else {
-                NotifyWarning("Unsupported for fill mode: " + tostring(origPlacementMode));
-                return;
-            }
-            CheckPause();
-            if (UI::IsKeyPressed(UI::Key::Escape)) {
-                trace("Exiting fill loop as escape was pressed");
-                break;
-            }
-            // if we exit the editor, this loop would crash the game
-            if (!IsInEditor) return;
-        }
-        pmt.AutoSave();
-        // pmt.Selection
+        doneCB(editor, pmt, updateMin, updateMax);
     }
 }
 
 CustomSelectionMgr@ customSelectionMgr = CustomSelectionMgr();
-
 
 
 
@@ -250,13 +182,13 @@ namespace CustomSelection {
     void OnMapTypeUpdate() {
         if (shouldSetCoordsNextFrame) {
             auto pmt = ToML::GetPluginPMT();
-            pmt.HideCustomSelection();
             if (minCoord == lastMin && maxCoord == lastMax && pmt.CustomSelectionCoords.Length > 0) {
                 pmt.CustomSelectionCoords.RemoveRange(0, pmt.CustomSelectionCoords.Length);
             }
-            print("Setting coords next frame: " + minCoord.ToString() + " to " + maxCoord.ToString());
             shouldSetCoordsNextFrame = false;
-            WriteCoordsToPMT();
+            // might need to use normal editor PMT here?
+            pmt.ShowCustomSelection();
+            pmt.PlaceMode = CGameEditorPluginMap::EPlaceMode::CustomSelection;
         }
     }
 
@@ -273,41 +205,5 @@ namespace CustomSelection {
         maxCoord = max;
         // shouldSetCoordsNextFrame = true;
         Editor::DrawLines::UpdateBoxFaces(CoordToPos(min), CoordToPos(max + 1), color);
-    }
-
-    void WriteCoordsToPMT() {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return;
-        auto pmt = editor.PluginMapType;
-        if (pmt is null) return;
-        auto size = maxCoord - minCoord + 1;
-        auto nbCoords = size.x * size.y * size.z;
-        auto currSize = pmt.CustomSelectionCoords.Length;
-        pmt.ShowCustomSelection();
-        pmt.PlaceMode = CGameEditorPluginMap::EPlaceMode::CustomSelection;
-
-        // pmt.CustomSelectionCoords.RemoveRange(0, currSize);
-        // if (lastFrameSelectedOrigin) {
-        //     pmt.CustomSelectionCoords.Add(minCoord);
-        //     pmt.CustomSelectionCoords.Add(maxCoord);
-        // }
-        // // if (!lastFrameSelectedOrigin) pmt.CustomSelectionCoords.Add(nat3());
-        // lastFrameSelectedOrigin = !lastFrameSelectedOrigin;
-        return;
-
-
-        uint i;
-        auto xy = size.x * size.y;
-        for (i = 0; i < currSize; i++) {
-            pmt.CustomSelectionCoords[i] = minCoord + nat3(i % size.x, (i / size.x) % size.y, i / xy);
-        }
-
-        if (currSize < nbCoords) {
-            for (; i < nbCoords; i++) {
-                pmt.CustomSelectionCoords.Add(minCoord + nat3(i % size.x, (i / size.x) % size.y, i / xy));
-            }
-        } else if (currSize > nbCoords) {
-            pmt.CustomSelectionCoords.RemoveRange(nbCoords, currSize - nbCoords);
-        }
     }
 }

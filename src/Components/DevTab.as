@@ -320,6 +320,13 @@ class SelectionBoxTab : Tab {
             RunAddLinesTest();
         }
 
+        if (lastFacePoints.Length >= 4) {
+            LabeledValue("lastFacePoints[0]", lastFacePoints[0]);
+            LabeledValue("lastFacePoints[1]", lastFacePoints[1]);
+            LabeledValue("lastFacePoints[2]", lastFacePoints[2]);
+            LabeledValue("lastFacePoints[3]", lastFacePoints[3]);
+        }
+
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto box = editor.SelectionBox;
 

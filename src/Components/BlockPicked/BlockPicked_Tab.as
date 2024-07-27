@@ -166,8 +166,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         auto m = mat4::Translate(preDesc.Pos) * EulerToMat(preDesc.Rot);
 
         if (ShowBlockBox) {
-            nvgDrawBlockBox(m, lastPickedBlockSize);
-            nvgDrawBlockBox(m, vec3(32, 8, 32));
+            nvgDrawBlockBox(m, lastPickedBlockSize, cWhite, DrawFaces::Visible);
+            nvgDrawBlockBox(m, vec3(32, 8, 32), cWhite, DrawFaces::Visible);
             // test code for rotate map
             // auto m2 = mat4::Translate(CoordToPos(nat3(24, 8, 24))) * EulerToMat(vec3(0, PI/2., 0.)) * mat4::Translate(CoordToPos(vec3(-24, 8, -24))) * m;
             // nvgDrawBlockBox(m2, lastPickedBlockSize);
@@ -180,13 +180,16 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             // auto m3 = mat4::Translate(CoordToPos(coord)) * EulerToMat(rot);
             // nvgDrawBlockBox(m3, Editor::GetBlockCoordSize(block) * MAP_COORD, cCyan);
             // nvgDrawBlockBox(m3, MAP_COORD, cCyan);
+
         }
         if (ShowHelpers) {
             nvg::StrokeWidth(3);
             nvgMoveToWorldPos(preDesc.Pos);
             nvgDrawCoordHelpers(m);
             // nvgDrawCoordHelpers(m * mat4::Translate(vec3(16, 2, 16)));
-            nvgCircleWorldPos(Editor::GetCtnBlockMidpoint(block));
+            auto midPoint = Editor::GetCtnBlockMidpoint(block);
+            // nvgCircleWorldPos(midPoint);
+            VisSpriteDots::PushDots({VisSpriteDots::Dot(midPoint, cYellow).WSize(5.)});
         }
 
         UI::Separator();

@@ -53,6 +53,7 @@ void Main() {
     // startnew(Editor::OffzonePatch::Apply);
     Editor::SetupApplySkinsCBs();
     CustomSelection::OnPluginLoad();
+    FillBlocks::OnPluginLoad();
 
     startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
@@ -333,9 +334,18 @@ void Update(float dt) {
 // virtual keys that are registered for a hotkey
 bool[] hotkeysFlags = array<bool>(256);
 
-/** Called whenever a key is pressed on the keyboard. See the documentation for the [`VirtualKey` enum](https://openplanet.dev/docs/api/global/VirtualKey).
-*/
+
 UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
+    auto resp = OnKeyPress_Inner(down, key);
+    if (resp == UI::InputBlocking::Block && IsInEditor) {
+        Editor::EnableCustomCameraInputs();
+        startnew(Editor::DisableCustomCameraInputs);
+        return UI::InputBlocking::DoNothing;
+    }
+    return resp;
+}
+
+UI::InputBlocking OnKeyPress_Inner(bool down, VirtualKey key) {
     bool block = false;
     if (Bind::IsRebinding) {
         // expecting a key press for rebinding
@@ -360,7 +370,9 @@ UI::InputBlocking OnKeyPress(bool down, VirtualKey key) {
 }
 
 bool ShouldBlockEscapePress(bool down, VirtualKey key, CGameCtnApp@ app, CGameCtnEditorFree@ editor) {
-    return S_BlockEscape && down && key == VirtualKey::Escape && app.CurrentPlayground is null
+    return down && key == VirtualKey::Escape
+        && (S_BlockEscape || customSelectionMgr.IsActive)
+        && app.CurrentPlayground is null
         && !Editor::IsInTestPlacementMode(editor);
 }
 

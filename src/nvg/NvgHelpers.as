@@ -1,5 +1,3 @@
-
-
 void nvgCircleWorldPos(vec3 pos, vec4 col = vec4(1, .5, 0, 1)) {
     auto uv = Camera::ToScreen(pos);
     if (uv.z < 0) {
@@ -93,6 +91,18 @@ void nvgMoveToWorldPos(vec3 pos) {
     nvgWorldPosLastVisible = true;
 }
 
+void nvgLineToWorldPos(vec3 pos) {
+    nvgLastWorldPos = pos;
+    nvgLastUv = Camera::ToScreen(pos);
+    if (nvgLastUv.z > 0) {
+        nvgWorldPosLastVisible = false;
+        return;
+    }
+    nvg::LineTo(nvgLastUv.xy);
+    nvgWorldPosLastVisible = true;
+}
+
+
 // left, up, dir are already translated and rotated! they are the end points
 void nvgDrawCoordHelpers(vec3 &in pos, vec3 &in left, vec3 &in up, vec3 &in dir) {
     vec3 beforePos = nvgLastWorldPos;
@@ -113,31 +123,11 @@ void nvgDrawCoordHelpers(mat4 &in m, float size = 10.) {
     nvgDrawCoordHelpers(pos, left, up, dir);
 }
 
-void nvgDrawBlockBox(const mat4 &in m, const vec3 &in size, const vec4 &in color = cWhite) {
-    nvg::Reset();
-    nvg::StrokeColor(color);
-    nvg::StrokeWidth(2.0);
-    vec3 prePos = nvgLastWorldPos;
-    vec3 pos = (m * vec3()).xyz;
-    nvgMoveToWorldPos(pos);
-    nvgToWorldPos(pos, color);
-    nvgToWorldPos((m * (size * vec3(1, 0, 0))).xyz, color);
-    nvgToWorldPos((m * (size * vec3(1, 0, 1))).xyz, color);
-    nvgToWorldPos((m * (size * vec3(0, 0, 1))).xyz, color);
-    nvgToWorldPos(pos, color);
-    nvgToWorldPos((m * (size * vec3(0, 1, 0))).xyz, color);
-    nvgToWorldPos((m * (size * vec3(1, 1, 0))).xyz, color);
-    nvgToWorldPos((m * (size * vec3(1, 1, 1))).xyz, color);
-    nvgToWorldPos((m * (size * vec3(0, 1, 1))).xyz, color);
-    nvgToWorldPos((m * (size * vec3(0, 1, 0))).xyz, color);
-    nvgMoveToWorldPos((m * (size * vec3(1, 0, 0))).xyz);
-    nvgToWorldPos((m * (size * vec3(1, 1, 0))).xyz, color);
-    nvgMoveToWorldPos((m * (size * vec3(1, 0, 1))).xyz);
-    nvgToWorldPos((m * (size * vec3(1, 1, 1))).xyz, color);
-    nvgMoveToWorldPos((m * (size * vec3(0, 0, 1))).xyz);
-    nvgToWorldPos((m * (size * vec3(0, 1, 1))).xyz, color);
-    nvgMoveToWorldPos(prePos);
+void nvgDrawBlockBox(const mat4 &in m, const vec3 &in size, const vec4 &in strokeCol = cWhite, DrawFaces drawFaces = DrawFaces::All) {
+    nvgDrawRect3d(m, size, strokeCol, drawFaces);
 }
+
+vec3[] lastFacePoints;
 
 void nvgDrawPath(const array<vec3> &in path, const vec4 &in color = cWhite) {
     nvg::Reset();
