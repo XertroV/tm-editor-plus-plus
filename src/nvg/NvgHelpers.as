@@ -105,6 +105,7 @@ void nvgLineToWorldPos(vec3 pos) {
 
 // left, up, dir are already translated and rotated! they are the end points
 void nvgDrawCoordHelpers(vec3 &in pos, vec3 &in left, vec3 &in up, vec3 &in dir) {
+    nvg::BeginPath();
     vec3 beforePos = nvgLastWorldPos;
     nvgMoveToWorldPos(pos);
     nvgToWorldPos(up, cGreen);
@@ -113,6 +114,7 @@ void nvgDrawCoordHelpers(vec3 &in pos, vec3 &in left, vec3 &in up, vec3 &in dir)
     nvgMoveToWorldPos(pos);
     nvgToWorldPos(left, cRed);
     nvgMoveToWorldPos(beforePos);
+    nvg::ClosePath();
 }
 
 void nvgDrawCoordHelpers(mat4 &in m, float size = 10.) {

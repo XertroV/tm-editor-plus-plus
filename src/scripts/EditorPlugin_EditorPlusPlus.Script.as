@@ -129,6 +129,7 @@ Boolean EPP_GetMetadataDisabled() {
 
 
 Void InitializeCustomSelectionCoords() {
+	ShowCustomSelection();
 	CustomSelectionCoords.clear();
 	declare Integer S;
 	declare Boolean Bit1 = False;
@@ -147,7 +148,6 @@ Void InitializeCustomSelectionCoords() {
 		Bit1 = !Bit1;
 		Bit2 = !Bit2;
 	}
-	// HideCustomSelection();
 }
 
 Void DeInitializeCustomSelectionCoords() {
@@ -172,6 +172,7 @@ main() {
 
 	declare Boolean ResetCustomSelectionCoords = True;
 	InitializeCustomSelectionCoords();
+	yield;
 
 	// outer loop: used to re-init metadata after clear
 	while (True) {

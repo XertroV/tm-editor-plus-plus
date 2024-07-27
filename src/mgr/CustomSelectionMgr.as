@@ -11,9 +11,8 @@ class CustomSelectionMgr {
     CGameEditorPluginMap::EPlaceMode origPlacementMode;
 
     CustomSelectionMgr() {
-        // AddHotkey(VirtualKey::F, true, false, false, HotkeyFunction(this.OnFillHotkey), "Fill Selection");
-        // RegisterOnLeavingPlaygroundCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
-        // RegisterOnEditorLoadCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
+        RegisterOnLeavingPlaygroundCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
+        RegisterOnEditorLoadCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
     }
 
     void HideCustomSelection() {
@@ -21,6 +20,13 @@ class CustomSelectionMgr {
         if (editor is null) return;
         editor.PluginMapType.CustomSelectionCoords.RemoveRange(0, editor.PluginMapType.CustomSelectionCoords.Length);
         editor.PluginMapType.HideCustomSelection();
+    }
+
+    // for when Esc is pressed
+    bool CheckCancel(bool down, VirtualKey key) {
+        if (!IsActive || !down || key != VirtualKey::Escape) return false;
+        Cancel();
+        return true;
     }
 
     bool get_IsActive() {
