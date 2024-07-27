@@ -6,7 +6,16 @@ array<vec3>@[] axisDragArrows = {
     {vec3(0, 0, .3), vec3(0, 0, 1), vec3(0.1, 0, 0.9), vec3(-0.1, 0, 0.9), vec3(0, 0, 1), vec3(0, 0.1, 0.9), vec3(0, -0.1, 0.9), vec3(0, 0, 1)}
 };
 
-const int ARROW_SEGS = 14;
+// XZ, XY, YZ
+const float PLANE_DRAG_OFFSET = 0.67;
+const float PLANE_DRAG_END = 0.80;
+const array<vec3>[] planeDragSquares = {
+    {vec3(0, PLANE_DRAG_OFFSET, PLANE_DRAG_OFFSET), vec3(0, PLANE_DRAG_END, PLANE_DRAG_OFFSET), vec3(0, PLANE_DRAG_END, PLANE_DRAG_END), vec3(0, PLANE_DRAG_OFFSET, PLANE_DRAG_END), vec3(0, PLANE_DRAG_OFFSET, PLANE_DRAG_OFFSET)},
+    {vec3(PLANE_DRAG_OFFSET, 0, PLANE_DRAG_OFFSET), vec3(PLANE_DRAG_END, 0, PLANE_DRAG_OFFSET), vec3(PLANE_DRAG_END, 0, PLANE_DRAG_END), vec3(PLANE_DRAG_OFFSET, 0, PLANE_DRAG_END), vec3(PLANE_DRAG_OFFSET, 0, PLANE_DRAG_OFFSET)},
+    {vec3(PLANE_DRAG_OFFSET, PLANE_DRAG_OFFSET, 0), vec3(PLANE_DRAG_END, PLANE_DRAG_OFFSET, 0), vec3(PLANE_DRAG_END, PLANE_DRAG_END, 0), vec3(PLANE_DRAG_OFFSET, PLANE_DRAG_END, 0), vec3(PLANE_DRAG_OFFSET, PLANE_DRAG_OFFSET, 0)}
+};
+
+const int ARROW_SEGS = 8;
 const int CIRCLE_SEGMENTS = 256; // 64;
 vec3[] circleAroundY;
 vec3[] circleAroundX;
@@ -36,14 +45,14 @@ void InitCirclesAround() {
         circlesAroundIsNearSide.InsertLast(array<bool>(CIRCLE_SEGMENTS));
     }
     //--
-    if (axisDragArrows[0].Length < 10) {
-        for (int i = 0; i < 3; i++) {
-            auto snd = axisDragArrows[i][1];
-            for (float x = 0.9; x > 0.31; x -= 0.1) {
-                axisDragArrows[i].InsertLast(snd * x);
-            }
-        }
-    }
+    // if (axisDragArrows[0].Length < 10) {
+    //     for (int i = 0; i < 3; i++) {
+    //         auto snd = axisDragArrows[i][1];
+    //         for (float x = 0.9; x > 0.31; x -= 0.1) {
+    //             axisDragArrows[i].InsertLast(snd * x);
+    //         }
+    //     }
+    // }
 }
 
 vec4[] circleColors = {
@@ -56,6 +65,8 @@ const quat DEFAULT_QUAT = quat(0,0,0,1);
 
 [Setting hidden]
 float S_GizmoClickSensitivity = 400.;
+
+const float GIZMO_MAX_SCALE_COEF = .45;
 
 class RotationTranslationGizmo {
     // drawing gizmo
@@ -236,8 +247,10 @@ class RotationTranslationGizmo {
 
     Axis lastClosestAxis = Axis::X;
     float lastClosestMouseDist = 1000000.;
+    bool hoveringAlt = false;
 
     bool isMouseDown = false;
+    bool mouseInClickRange = false;
     uint mouseDownStart = 0;
     vec2 mouseDownPos;
     // the direction from center of circle to this point -- used to take dot product of drag delta to decide how much to rotate
@@ -252,24 +265,28 @@ class RotationTranslationGizmo {
     vec2 centerScreenPos;
     vec2 centerScreenPosWTmp;
     bool shouldDrawGizmo = true;
+    vec3 planePos;
 
     bool _isCtrlDown = false;
     bool _wasCtrlDown = false;
     bool _ctrlPressed = false;
 
+    vec3 _closestRotationPoint;
+    Axis _closestAxis;
+    float _closestMouseDist;
+    bool _hoveringAlt;
+
     void DrawCirclesManual(vec3 objOriginPos, float _scale = 2.0) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cam = Camera::GetCurrent();
         auto camState = Editor::GetCurrentCamState(editor);
-        auto maxScale = 0.7 * camState.TargetDist * Math::Tan(Math::ToRad(cam.Fov * .5));
+        auto maxScale = GIZMO_MAX_SCALE_COEF * camState.TargetDist * Math::Tan(Math::ToRad(cam.Fov * .5));
         _scale = Math::Min(_scale, maxScale);
-
+        _closestRotationPoint = vec3();
         // objOriginPos -= pivotPoint;
         camPos = Camera::GetCurrentPosition();
         mousePos = UI::GetMousePos();
-        float closestMouseDist = 1000000.;
-        vec3 closestRotationPoint;
-        Axis closestAxis;
+        _closestMouseDist = 1000000.;
         // withTmpRot = (tmpRot * rot);
         withTmpRot = useGlobal ? mat4::Identity() : mat4::Inverse(tmpRot * rot);
         float c2pLen2 = (objOriginPos - camPos).LengthSquared();
@@ -295,7 +312,7 @@ class RotationTranslationGizmo {
         int segments = isRotMode ? CIRCLE_SEGMENTS : ARROW_SEGS;
 
         vec2 translateRadialDir;
-        bool mouseInClickRange = lastClosestMouseDist < S_GizmoClickSensitivity;
+        mouseInClickRange = lastClosestMouseDist < S_GizmoClickSensitivity;
 
         nvg::Reset();
         nvg::BeginPath();
@@ -304,8 +321,10 @@ class RotationTranslationGizmo {
         nvg::Fill();
         nvg::ClosePath();
 
+        // MARK: Rings/Arrows
+
         for (int c = 0; c < 3; c++) {
-            bool thicken = lastClosestAxis == Axis(c) && mouseInClickRange;
+            bool thicken = lastClosestAxis == Axis(c) && mouseInClickRange && !hoveringAlt;
             float colAdd = thicken ? 0.2 : 0.;
             float strokeWidth = thicken ? 5 : 2;
             nvg::LineCap(nvg::LineCapType::Round);
@@ -361,12 +380,13 @@ class RotationTranslationGizmo {
                 } else {
                     nvg::LineTo(p1.xy);
                 }
-                // if (!isMouseDown && (tmpDist = (mousePos - p1.xy).LengthSquared()) <= closestMouseDist) {
-                if (!isMouseDown && (tmpDist = sdSegment(mousePos, lastScreenPos.xy, p1.xy)) <= closestMouseDist) {
-                    closestMouseDist = tmpDist;
-                    closestRotationPoint = worldPos;
-                    closestAxis = Axis(c);
+                // if we're not dragging and mouse is closest to this segment, set it as the closest axis
+                if (!isMouseDown && (tmpDist = sdSegment(mousePos, lastScreenPos.xy, p1.xy)) <= _closestMouseDist) {
+                    _closestMouseDist = tmpDist;
+                    _closestRotationPoint = worldPos;
+                    _closestAxis = Axis(c);
                     radialDir = isRotMode ? (p1.xy - lastScreenPos.xy).Normalized() : translateRadialDir.Normalized();
+                    _hoveringAlt = false;
                 }
                 wasNearSide = isNearSide;
                 lastWorldPos = worldPos;
@@ -375,10 +395,16 @@ class RotationTranslationGizmo {
             nvg::Stroke();
             nvg::ClosePath();
         }
+
+        if (mode == Gizmo::Mode::Translation) {
+            DrawPlaneDraggers(_scale);
+        }
+
         // MARK: hndl input
         if (!isMouseDown) {
-            lastClosestAxis = closestAxis;
-            lastClosestMouseDist = closestMouseDist;
+            lastClosestAxis = _closestAxis;
+            lastClosestMouseDist = _closestMouseDist;
+            hoveringAlt = _hoveringAlt;
             if (IsAltDown() || Editor::IsInFreeLookMode(cast<CGameCtnEditorFree>(GetApp().Editor))) {
                 // do nothing: camera inputs
             } if (UI::IsMouseClicked(UI::MouseButton::Left)) {
@@ -396,43 +422,99 @@ class RotationTranslationGizmo {
             ApplyTmpTranslation();
         } else if (UI::IsMouseClicked(UI::MouseButton::Right)) {
             // RMB while mouse is down -> reset and disable mouse down mode
-            // isMouseDown = false;
-            mouseDownPos = vec2(-100);
-            lastClosestMouseDist = 1000000.;
-            ResetTmp();
+            ResetGizmoRMB();
         } else if (mouseInClickRange) {
             bool skipSetLastDD = false;
             if (_ctrlPressed) ResetTmp();
             dragDelta = UI::GetMouseDragDelta(UI::MouseButton::Left, 1);
             auto ddd = dragDelta - lastDragDelta;
             if (ddd.LengthSquared() > 0.) {
-                auto mag = Math::Dot(ddd.Normalized(), radialDir) * ddd.Length() / g_screen.y * TAU * -1.;
-                // trace('mag: ' + mag);
-                if (IsShiftDown()) mag *= 0.1;
-                if (!Math::IsNaN(mag)) {
+                if (hoveringAlt) {
+                    // we drag in plane rather than axis
                     if (isRotMode) {
-                        d = mag;
-                        if (_isCtrlDown) d = d - d % stepRot;
-                        if (d == 0.) skipSetLastDD = true;
-                        else AddTmpRotation(lastClosestAxis, d, !useGlobal);
+                        warn("hoveringAlt while in rot mode");
+                        ResetGizmoRMB();
                     } else {
-                        d = mag * c2pLen * 0.2;
-                        if (_isCtrlDown) d = d - d % stepDist;
-                        if (d == 0.) skipSetLastDD = true;
-                        else {
-                            // AddTmpTranslation((mat4::Inverse(rot) * AxisToVec(lastClosestAxis)).xyz * d); // * (lastClosestAxis == Axis::Y ? 1 : -1));
-                            AddTmpTranslation(AxisToVec(lastClosestAxis) * d, !useGlobal); // * (lastClosestAxis == Axis::Y ? 1 : -1));
-                        }
+                        auto normal = (withTmpRot * AxisToVec(lastClosestAxis)).xyz;
+                        auto pickedPos = Picker::GetMouseToWorldOnPlane(normal, planePos);
+                        SetTmpTranslation(pickedPos - planePos);
                     }
-                    // SetTmpRotation(lastClosestAxis, mag);
-                    // trace('lastClosestAxis: ' + tostring(lastClosestAxis) + '; dd: ' + ((dd.x + dd.y) / g_screen.y * TAU));
-                    // trace('mag: ' + mag);
                 } else {
-                    // warn('mag is NaN');
+                    // we drag along axis
+                    auto mag = Math::Dot(ddd.Normalized(), radialDir) * ddd.Length() / g_screen.y * TAU * -1.;
+                    // trace('mag: ' + mag);
+                    if (IsShiftDown()) mag *= 0.1;
+                    if (!Math::IsNaN(mag)) {
+                        if (isRotMode) {
+                            d = mag;
+                            if (_isCtrlDown) d = d - d % stepRot;
+                            if (d == 0.) skipSetLastDD = true;
+                            else AddTmpRotation(lastClosestAxis, d, !useGlobal);
+                        } else {
+                            d = mag * c2pLen * 0.2;
+                            if (_isCtrlDown) d = d - d % stepDist;
+                            if (d == 0.) skipSetLastDD = true;
+                            else {
+                                // AddTmpTranslation((mat4::Inverse(rot) * AxisToVec(lastClosestAxis)).xyz * d); // * (lastClosestAxis == Axis::Y ? 1 : -1));
+                                AddTmpTranslation(AxisToVec(lastClosestAxis) * d, !useGlobal); // * (lastClosestAxis == Axis::Y ? 1 : -1));
+                            }
+                        }
+                        // SetTmpRotation(lastClosestAxis, mag);
+                        // trace('lastClosestAxis: ' + tostring(lastClosestAxis) + '; dd: ' + ((dd.x + dd.y) / g_screen.y * TAU));
+                        // trace('mag: ' + mag);
+                    } else {
+                        // warn('mag is NaN');
+                    }
                 }
             }
-            DrawRadialLine();
+            if (!hoveringAlt) DrawRadialLine();
             if (!skipSetLastDD) lastDragDelta = dragDelta;
+        }
+    }
+
+    void ResetGizmoRMB() {
+        mouseDownPos = vec2(-100);
+        lastClosestMouseDist = 1000000.;
+        hoveringAlt = false;
+        ResetTmp();
+    }
+
+    // MARK: Plane Draggers
+    void DrawPlaneDraggers(float _scale) {
+        for (uint c = 0; c < 3; c++) {
+            bool thicken = lastClosestAxis == Axis(c) && mouseInClickRange && hoveringAlt;
+            auto col = circleColors[c];
+            auto col2 = col * vec4(.67, .67, .67, .5);
+            nvg::BeginPath();
+            nvg::FillColor((thicken ? col : col2));
+            nvg::StrokeColor((thicken ? col : col2));
+            nvg::StrokeColor(vec4());
+            nvg::StrokeWidth(0);
+            auto @square = planeDragSquares[c];
+            auto worldPos = (withTmpRot * square[0]).xyz * _scale + pos + tmpPos;
+            auto p1 = Camera::ToScreen(worldPos);
+            vec2[] points = {p1.xy, p1.xy, p1.xy, p1.xy};
+            nvg::MoveTo(p1.xy);
+            for (uint i = 1; i < square.Length; i++) {
+                worldPos = (withTmpRot * square[i]).xyz * _scale + pos + tmpPos;
+                p1 = Camera::ToScreen(worldPos);
+                points[i - 1] = p1.xy;
+                if (p1.z > 0) {
+                    nvg::MoveTo(p1.xy);
+                } else {
+                    nvg::LineTo(p1.xy);
+                }
+            }
+            nvg::ClosePath();
+            nvg::Fill();
+            // nvg::Stroke();
+            if (!isMouseDown && _closestMouseDist > 0 && pointInQuad(mousePos, points)) {
+                _closestMouseDist = 0;
+                _closestAxis = Axis(c);
+                _hoveringAlt = true;
+                planePos = worldPos;
+                planePos = Picker::GetMouseToWorldOnPlane((withTmpRot * AxisToVec(_closestAxis)).xyz, planePos);
+            }
         }
     }
 

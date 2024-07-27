@@ -144,6 +144,7 @@ void nvgDrawPointCircle(const vec3 &in pos, float radius, const vec4 &in color =
     nvgMoveToWorldPos(pos);
     if (!nvgWorldPosLastVisible)
         return;
+    nvg::BeginPath();
     nvg::Reset();
     nvg::StrokeColor(color);
     nvg::StrokeWidth(2.0);

@@ -151,8 +151,8 @@ Void InitializeCustomSelectionCoords() {
 }
 
 Void DeInitializeCustomSelectionCoords() {
-	// CustomSelectionCoords.clear();
-	// ShowCustomSelection();
+	CustomSelectionCoords.clear();
+	HideCustomSelection();
 }
 
 main() {

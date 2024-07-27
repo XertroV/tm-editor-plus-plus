@@ -41,6 +41,16 @@ namespace Picker {
         return camPos - pickDirection * (camPos.y - height) / pickDirection.y;
     }
 
+    vec3 GetMouseToWorldOnPlane(vec3 planeNormal, vec3 planePos) {
+        auto d = Math::Dot(pickDirection, planeNormal);
+        if (Math::Abs(d) < 1e-5) return vec3(0);
+        auto t = Math::Dot((camPos-planePos), planeNormal) / d;
+        if (t < 0) dev_warn("t < 0");
+        auto r = camPos - pickDirection * t;
+        trace(planePos.ToString() + ' -> ' + r.ToString());
+        return r;
+    }
+
     void DrawDebugWindow() {
         if (UI::Begin("mouse to world debug")) {
             LabeledValue("Screen", screen);

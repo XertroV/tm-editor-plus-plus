@@ -21,11 +21,17 @@
 - [ ] grid / units for nudging stuff
 
 - [ ] blender keybinds for nudging / axes
-- [ ] plane dragging in addition to axes dragging (little square between axes to drag)
-- [ ] test better key blocking (if it's implemented)
+- [x] plane dragging in addition to axes dragging (little square between axes to drag)
+- [x] test better key blocking (if it's implemented)
 - [x] hide back of cube option
 - [x] use dot for block midpoint
 -
+- [ ] fill toolbar
+  - [ ] Toolbar class
+
+
+
+
 
 - shaded_geoms in S2M
 
