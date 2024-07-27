@@ -663,6 +663,8 @@ const uint16 O_ITEMCURSOR_CurrentModelsBuf = GetOffset("CGameCursorItem", "Helpe
 // const uint16 O_ITEMCURSOR_VariantOrNbMaybe = 0xC0;
 // const uint16 O_ITEMCURSOR_MaxVariantMaybe = 0xC4;
 
+const uint16 O_CGAMEOUTLINEBOX_QUADS_TREE = 0x18;
+const uint16 O_CGAMEOUTLINEBOX_LINES_TREE = 0x28;
 
 // MARK: O MB
 

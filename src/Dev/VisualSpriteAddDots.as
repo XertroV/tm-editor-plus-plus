@@ -248,7 +248,7 @@ namespace Editor {
             box.Mobil.Show();
             box.Mobil.IsVisible = true;
             box.Mobil.Item.IsVisible = true;
-            // return;
+            quadsTree.IsVisible = true;
 
             auto shader = cast<CPlugShaderApply>(quadsTree.Shader);
             if (shader is null) return;
@@ -382,8 +382,8 @@ void TestRunVisSpriteDots() {
 
 void TestRunVisLines() {
     while (GetApp().Editor is null) yield();
-    print("\\$bf0\\$iTestRunVisLines sleeping 1s");
-    sleep(1000);
+    print("\\$bf0\\$iTestRunVisLines sleeping 2s");
+    sleep(2000);
     print("\\$bf0\\$iTestRunVisLines running");
     IO::FileSource pj("points.json");
     auto pointsJ = Json::Parse(pj.ReadToEnd());
@@ -391,6 +391,8 @@ void TestRunVisLines() {
     mat4 mat = mat4::Translate(vec3(768, 256, 768)) * mat4::Rotate(PI, RIGHT);
     vec3 pos;
     vec4 col = vec4(1., 1., 1., 1.);
+    auto di = Editor::DrawLinesAndQuads::GetNewDrawInstance("hello-op");
+    yield(10);
     for (uint i = 0; i < pointsJ.Length; i++) {
         auto path = pointsJ[i];
         vec3 p0;
@@ -401,38 +403,43 @@ void TestRunVisLines() {
             pos = (mat * pos).xyz;
             // points.InsertLast(VisSpriteDots::Dot(pos, col));
             // if (j == 0 && points.Length > 0) points.InsertLast(points[points.Length - 1]);
-            if (j == 0) p0 = pos;
+            // if (j == 0) p0 = pos;
             points.InsertLast(pos);
-            if (j != 0) points.InsertLast(pos);
+            // if (j != 0) points.InsertLast(pos);
         }
-        points.InsertLast(p0);
+        // points.InsertLast(p0);
+        di.PushLineSegmentsFromPath(points);
     }
-    if (points.Length % 2 == 1) {
-        warn('dgb adding extra point');
-        points.InsertLast(points[points.Length - 1]);
-    }
-    print("got points: " + points.Length);
-    yield();
-    yield();
-    auto nbPoints = points.Length;
-    // copy points a second time, but offset a little
-    for (uint i = 0; i < nbPoints; i++) {
-        points.InsertLast(points[i] + vec3(.1));
-    }
-
-
-    // while (IsInAnyEditor) {
-    //     VisSpriteDots::PushDots(points);
-    //     yield();
+    di.RequestLineColor(col.xyz);
+    di.DrawFor(360000);
+    sleep(360000);
+    di.Deregister();
+    // if (points.Length % 2 == 1) {
+    //     warn('dgb adding extra point');
+    //     points.InsertLast(points[points.Length - 1]);
     // }
-    while (!IsInAnyEditor) yield();
-    yield(5);
-    if (IsInAnyEditor) {
-        trace('\\$bf0\\$iTestRunVisLines: Drawing lines');
-        Editor::DrawLines::SetVertices(points);
-    } else {
-        warn('TestRunVisLines: not in editor');
-    }
+    // print("got points: " + points.Length);
+    // yield();
+    // yield();
+    // auto nbPoints = points.Length;
+    // // copy points a second time, but offset a little
+    // for (uint i = 0; i < nbPoints; i++) {
+    //     points.InsertLast(points[i] + vec3(.1));
+    // }
+
+
+    // // while (IsInAnyEditor) {
+    // //     VisSpriteDots::PushDots(points);
+    // //     yield();
+    // // }
+    // while (!IsInAnyEditor) yield();
+    // yield(5);
+    // if (IsInAnyEditor) {
+    //     trace('\\$bf0\\$iTestRunVisLines: Drawing lines');
+    //     Editor::DrawLines::SetVertices(points);
+    // } else {
+    //     warn('TestRunVisLines: not in editor');
+    // }
 }
 
 

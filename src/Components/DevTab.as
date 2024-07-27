@@ -383,7 +383,7 @@ class SelectionBoxTab : Tab {
         UI::Indent();
 
         CopiableLabeledValue("Quads", Text::FormatPointer(Dev_GetPointerForNod(quadsTree)));
-        CopiableLabeledValue("Lines", Text::FormatPointer(Dev_GetPointerForNod(quadsTree)));
+        CopiableLabeledValue("Lines", Text::FormatPointer(Dev_GetPointerForNod(linesTree)));
 
         auto quadsVis = cast<CPlugVisualQuads>(quadsTree.Visual);
         auto linesVis = cast<CPlugVisualLines>(linesTree.Visual);

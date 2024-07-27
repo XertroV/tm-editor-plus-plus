@@ -44,7 +44,7 @@ class ViewKinematicsTab : Tab {
             }
         }
         UI::SameLine();
-        UI::Text("\\$b88Note: Effects only visuals; physics unchanged.");
+        UI::Text("\\$b88Note: Affects only visuals; physics unchanged.");
 
         UI::BeginDisabled(!kinematicsControlPatch.IsApplied);
 
@@ -53,8 +53,8 @@ class ViewKinematicsTab : Tab {
 
         uint newSceneTime = UI::InputInt("Scene Time", sceneTime, 1000);
 
-        if (UI::Button("Set Time = 0")) {
-            newSceneTime = 0;
+        if (UI::Button("Set Time = 10")) {
+            newSceneTime = 10;
         }
 
         if (sceneTime != newSceneTime) Dev::SetOffset(scene, O_GAMESSCENE_TIME, newSceneTime);

@@ -6,6 +6,8 @@ namespace Editor {
             protected bool hasQuads;
             protected vec3 linesColor = vec3(.5, .5, .5);
             protected vec3 quadsColor = vec3(.1, .1, .1);
+            protected bool hasLinesColor = false;
+            protected bool hasQuadsColor = false;
             protected uint drawExpiry = 0;
             protected bool active = false;
             protected bool deregister = false;
@@ -36,8 +38,43 @@ namespace Editor {
                 return !deregister && (active || Time::Now < drawExpiry);
             }
 
+            bool get_HasLines() const {
+                return hasLines;
+            }
+
+            bool get_HasQuads() const {
+                return hasQuads;
+            }
+
             bool get_WasUpdated() const {
                 return updated;
+            }
+
+            const array<vec3>@ get_LineVertices() const {
+                return lineVertices;
+                if (!IO::FolderExists(IO::FromStorageFolder("subfolder"))) {
+                    IO::CreateFolder(IO::FromStorageFolder("subfolder"));
+                }
+            }
+
+            const array<vec3>@ get_QuadVertices() const {
+                return quadVertices;
+            }
+
+            vec3 get_LinesColor() const {
+                return linesColor;
+            }
+
+            vec3 get_QuadsColor() const {
+                return quadsColor;
+            }
+
+            bool get_HasLinesColor() const {
+                return hasLinesColor;
+            }
+
+            bool get_HasQuadsColor() const {
+                return hasQuadsColor;
             }
 
             void _AfterDraw() {
@@ -67,6 +104,7 @@ namespace Editor {
             // request that lines be drawn in this color (not guarenteed)
             void RequestLineColor(vec3 color) {
                 linesColor = color;
+                hasLinesColor = true;
             }
 
             int PushLineSegment(const vec3 &in a, const vec3 &in b) {
@@ -127,6 +165,7 @@ namespace Editor {
             // Request quads be drawn in this color (not guarenteed)
             void RequestQuadColor(vec3 color) {
                 quadsColor = color;
+                hasQuadsColor = true;
             }
 
             int PushQuad(const vec3 &in a, const vec3 &in b, const vec3 &in c, const vec3 &in d) {
