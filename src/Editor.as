@@ -199,7 +199,7 @@ namespace Editor {
     }
 
     bool IsInFreeLookMode(CGameCtnEditorFree@ editor) {
-        return GetEditMode(editor) == CGameEditorPluginMap::EditMode::FreeLook;
+        return editor !is null && GetEditMode(editor) == CGameEditorPluginMap::EditMode::FreeLook;
     }
 
     // checks edit mode == Place

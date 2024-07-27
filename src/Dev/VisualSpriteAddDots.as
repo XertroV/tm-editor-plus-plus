@@ -124,11 +124,14 @@ namespace VisSpriteDots {
         if (nb == 0) {
             return;
         }
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        bool freeLook = Editor::IsInFreeLookMode(editor);
         auto existingCap = Dev::GetOffsetUint32(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer + 0xC);
         auto existingLen = Dev::GetOffsetUint32(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer + 0x8);
         if (existingLen >= nb) {
             existingLen = 0;
         }
+        if (freeLook) existingLen += 2;
         if (existingLen + nb > existingCap) {
             MemoryBuffer existing = MemoryBuffer(existingLen * 0x28);
             uint64 existingPtr = Dev::GetOffsetUint64(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer);
@@ -150,7 +153,7 @@ namespace VisSpriteDots {
         }
         auto bufPtr = Dev::GetOffsetUint64(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer);
         Dot dot;
-        if (existingLen > 0) trace("["+Time::Now+"] \\$bf0\\$i Writing " + nb + " dots to " + Text::FormatPointer(bufPtr) + " with existingLen: " + existingLen);
+        // if (existingLen > 0) trace("["+Time::Now+"] \\$bf0\\$i Writing " + nb + " dots to " + Text::FormatPointer(bufPtr) + " with existingLen: " + existingLen);
         for (uint i = 0; i < nb; i++) {
             dot = dotQueue[i];
             Dev::Write(bufPtr + (existingLen + i) * 0x28 + 0x0, dot.pos);

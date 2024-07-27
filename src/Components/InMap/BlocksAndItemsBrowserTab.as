@@ -188,7 +188,7 @@ class InMap_ItemsListTab : InMap_BlockItemListTab {
 
         if (rowHovered) {
             nvgDrawCoordHelpers(Editor::GetItemMatrix(item), 10.);
-            nvgDrawPointCircle(item.AbsolutePositionInMap, 5., cOrange);
+            nvgDrawPointRing(item.AbsolutePositionInMap, 5., cOrange);
         }
     }
 }

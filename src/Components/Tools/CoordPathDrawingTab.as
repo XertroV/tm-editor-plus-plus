@@ -176,7 +176,7 @@ class CoordPathDrawingTab : EffectTab {
         auto color = path.color;
         nvgMoveToWorldPos(path.points[0]);
         if (path.points.Length < 2) {
-            nvgDrawPointCircle(path.points[0], 5, color);
+            nvgDrawPointRing(path.points[0], 5, color);
             return;
         }
         nvgDrawPath(path.points, color);

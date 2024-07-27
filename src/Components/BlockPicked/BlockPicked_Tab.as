@@ -189,7 +189,9 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
             // nvgDrawCoordHelpers(m * mat4::Translate(vec3(16, 2, 16)));
             auto midPoint = Editor::GetCtnBlockMidpoint(block);
             // nvgCircleWorldPos(midPoint);
+            nvgDrawPointRing(midPoint, 5., vec4(1, .5, 0, 1));
             VisSpriteDots::PushDots({VisSpriteDots::Dot(midPoint, cYellow).WSize(5.)});
+            // Editor::DrawLines::
         }
 
         UI::Separator();

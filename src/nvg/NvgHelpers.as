@@ -140,7 +140,7 @@ void nvgDrawPath(const array<vec3> &in path, const vec4 &in color = cWhite) {
     nvgMoveToWorldPos(prePos);
 }
 
-void nvgDrawPointCircle(const vec3 &in pos, float radius, const vec4 &in color = cWhite) {
+void nvgDrawPointRing(const vec3 &in pos, float radius, const vec4 &in color = cWhite) {
     nvgMoveToWorldPos(pos);
     if (!nvgWorldPosLastVisible)
         return;

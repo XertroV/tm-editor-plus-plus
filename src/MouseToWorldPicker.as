@@ -45,9 +45,7 @@ namespace Picker {
         auto d = Math::Dot(pickDirection, planeNormal);
         if (Math::Abs(d) < 1e-5) return vec3(0);
         auto t = Math::Dot((camPos-planePos), planeNormal) / d;
-        if (t < 0) dev_warn("t < 0");
         auto r = camPos - pickDirection * t;
-        trace(planePos.ToString() + ' -> ' + r.ToString());
         return r;
     }
 
