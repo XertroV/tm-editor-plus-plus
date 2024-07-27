@@ -1,0 +1,5 @@
+namespace Editor {
+    namespace DrawLinesAndQuads {
+
+    }
+}

@@ -126,12 +126,13 @@ namespace VisSpriteDots {
         }
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         bool freeLook = Editor::IsInFreeLookMode(editor);
+        bool belowGround = editor !is null && editor.OrbitalCameraControl.m_TargetedPosition.y < 8.;
         auto existingCap = Dev::GetOffsetUint32(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer + 0xC);
         auto existingLen = Dev::GetOffsetUint32(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer + 0x8);
-        if (existingLen >= nb) {
+        if (existingLen >= nb && !freeLook) {
             existingLen = 0;
         }
-        if (freeLook) existingLen += 2;
+        // if (freeLook) existingLen += belowGround ? 1 : 2;
         if (existingLen + nb > existingCap) {
             MemoryBuffer existing = MemoryBuffer(existingLen * 0x28);
             uint64 existingPtr = Dev::GetOffsetUint64(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer);
@@ -177,8 +178,14 @@ namespace VisSpriteDots {
     }
 }
 
+
+
 namespace Editor {
     namespace DrawLines {
+        void UpdateLinesBeforeScripts() {
+            // todo
+        }
+
         // on custom selection box
         void UpdateBoxFaces(vec3 min, vec3 max, vec4 color) {
             vec3[] points;
@@ -252,6 +259,34 @@ namespace Editor {
             Dev::SetOffset(n2, 0x0, color);
         }
 
+        void ResizeBuffer(DPV_Vertexs@ vertices, uint nb) {
+            auto elSize = vertices.ElSize;
+            auto existingCap = vertices.Capacity;
+            auto existingLen = vertices.Length;
+            if (nb > existingCap) {
+                MemoryBuffer existing = MemoryBuffer(existingLen * elSize);
+                uint64 existingPtr = vertices.Ptr;
+                for (uint i = 0; i < existingLen; i++) {
+                    for (uint o = 0; o < elSize; o += 0x8) {
+                        existing.Write(Dev::ReadUInt64(existingPtr + i * elSize + o));
+                    }
+                }
+                existing.Seek(0);
+                auto allocd = BufferAlloc::Alloc((existingLen + nb), elSize);
+                allocd.WriteToRawBuf(vertices, existingLen);
+                trace("\\$bf0\\$iexistingLen: " + existingLen + ", existingCap: " + existingCap + ", existing.GetSize() (bytes): " + existing.GetSize());
+                for (uint i = 0; i < existingLen; i++) {
+                    for (uint o = 0; o < elSize; o += 0x8) {
+                        Dev::Write(allocd.ptr + i * elSize + o, existing.ReadUInt64());
+                    }
+                }
+                trace("\\$bf0\\$iCompleted ResizeBuffer");
+            }
+        }
+
+        vec3 linesColor = vec3(.5);
+
+        // set vertices for lines
         void SetVertices(vec3[]@ points) {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) {
@@ -259,6 +294,7 @@ namespace Editor {
                 return;
             }
             auto box = editor.CustomSelectionBox;
+            // @box = editor.UndergroundBox;
             auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x28));
             // if (editor.Grid is null || editor.Grid.Item is null || editor.Grid.Item.Solid is null) {
             //     warn("SetVertices: editor.Grid.Item.Solid is null");
@@ -281,22 +317,33 @@ namespace Editor {
             auto lines = DPlugVisual3D(linesVis);
             auto vertices = lines.Vertexes;
             if (vertices.Capacity < nbPoints) {
-                warn("SetVertices: vertices.Capacity is less than nbPoints");
-                return;
+                warn("SetVertices: vertices.Capacity ("+vertices.Capacity+") is less than nbPoints");
+                ResizeBuffer(vertices, nbPoints);
             }
             vertices.Length = nbPoints;
             // trace("\\$bf0\\$iSetVertices: nbPoints: " + nbPoints);
             for (uint i = 0; i < nbPoints-1; i++) {
-                if (i != 0) vertices.SetElementOffsetVec3(i, 0, points[(i + 1)/2]);
                 vertices.SetElementOffsetVec3(i, 0, points[(i + 1)/2]);
+
+                // vertices.SetElementOffsetVec3(i, 0, point);
                 // vertices.GetVertex(i).Normal = vec3(10.);
                 // vertices.GetVertex(i).Color = vec4(.2, 1., .2, 1.);
             }
             vertices.SetElementOffsetVec3(nbPoints-1, 0, points[0]);
 
-            box.Mobil.Show();
+            // line color
+            auto shader = cast<CPlugShaderApply>(linesTree.Shader);
+            auto shaderPass = cast<CPlugShaderPass>(Dev_GetOffsetNodSafe(shader, 0x170));
+            auto shaderColor = Dev_GetOffsetNodSafe(shaderPass, 0x78);
+            if (shaderColor !is null) {
+                Dev::SetOffset(shaderColor, 0x0, linesColor);
+            }
+
             box.Mobil.IsVisible = true;
             box.Mobil.Item.IsVisible = true;
+            linesTree.IsVisible = true;
+            box.Mobil.Show();
+            warn("SetVertices: done");
         }
     }
 }
@@ -364,8 +411,8 @@ void TestRunVisLines() {
         warn('dgb adding extra point');
         points.InsertLast(points[points.Length - 1]);
     }
-    yield();
     print("got points: " + points.Length);
+    yield();
     yield();
     auto nbPoints = points.Length;
     // copy points a second time, but offset a little
@@ -378,15 +425,19 @@ void TestRunVisLines() {
     //     VisSpriteDots::PushDots(points);
     //     yield();
     // }
+    while (!IsInAnyEditor) yield();
+    yield(5);
     if (IsInAnyEditor) {
         trace('\\$bf0\\$iTestRunVisLines: Drawing lines');
         Editor::DrawLines::SetVertices(points);
+    } else {
+        warn('TestRunVisLines: not in editor');
     }
 }
 
 
 
 // Meta::PluginCoroutine@ testRunVisSpriteDots = startnew(TestRunVisSpriteDots);
-// Meta::PluginCoroutine@ testRunVisLines = startnew(TestRunVisLines);
+Meta::PluginCoroutine@ testRunVisLines = startnew(TestRunVisLines);
 
 #endif

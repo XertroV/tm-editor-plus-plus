@@ -19,8 +19,13 @@ class DDx11Viewport : RawBufferElem {
 
 	// DisplayNames + 0x10
 	DxRenderStuff@ get_mDxRenderStuff() { auto _ptr = this.GetUint64(0x6E0); if (_ptr == 0) return null; return DxRenderStuff(_ptr); }
-	// depth buffer: HyperZ texture
+	// depth buffer: HyperZ.Texture
 	CVisionResourceFile@ get_VisionResourceFile() { return cast<CVisionResourceFile>(this.GetNod(0x1170)); }
+	// reshade identifies this as the depth buffer -- ptr matches
+	uint64 get_DepthBufferSomething() { return (this.GetUint64(0x15c8)); }
+	// from bitmap: +a8, +258
+	CPlugBitmap@ get_HyperZBitmap() { return cast<CPlugBitmap>(this.GetNod(0x1620)); }
+	CPlugBitmap@ get_DepthBufferBitmap() { return cast<CPlugBitmap>(this.GetNod(0x16c0)); }
 	// ----------- 0x1b60 - 0x1b80
 	// Some Dx11 related struct
 	Dx11Stuff@ get_mDx11Stuff() { auto _ptr = this.GetUint64(0x1b60); if (_ptr == 0) return null; return Dx11Stuff(_ptr); }

@@ -13,6 +13,8 @@ CoroutineFunc@[] onMTEditorLoadCbs;
 string[] onMTEditorLoadCbNames;
 CoroutineFunc@[] onEditorUnloadCbs;
 string[] onEditorUnloadCbNames;
+CoroutineFunc@[] onEditorGoneNullCbs;
+string[] onEditorGoneNullCbNames;
 ProcessItem@[] itemCallbacks;
 string[] itemCallbackNames;
 ProcessItem@[] itemDelCallbacks;
@@ -67,10 +69,19 @@ void RegisterOnMTEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
     }
 }
 
+// when editor changes (e.g., editor -> item editor)
 void RegisterOnEditorUnloadCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
         onEditorUnloadCbs.InsertLast(f);
         onEditorUnloadCbNames.InsertLast(name);
+    }
+}
+
+// when returning to menu
+void RegisterOnEditorGoneNullCallback(CoroutineFunc@ f, const string &in name) {
+    if (f !is null) {
+        onEditorGoneNullCbs.InsertLast(f);
+        onEditorGoneNullCbNames.InsertLast(name);
     }
 }
 
@@ -223,6 +234,13 @@ namespace Event {
             onEditorUnloadCbs[i]();
         }
         Log::Trace("Finished OnEditorUnload callbacks");
+    }
+    void RunOnEditorGoneNullCbs() {
+        Log::Trace("Running OnEditorGoneNull callbacks");
+        for (uint i = 0; i < onEditorGoneNullCbs.Length; i++) {
+            onEditorGoneNullCbs[i]();
+        }
+        Log::Trace("Finished OnEditorGoneNull callbacks");
     }
     bool OnNewBlock(CGameCtnBlock@ block) {
         if (TMP_DISABLE_ONBlockItem_CB) return false;

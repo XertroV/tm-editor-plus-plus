@@ -16,15 +16,17 @@
 - [ ] nudging skins
 - [ ] macroblock skins
 
-- [ ] better nudging
+- [ ] better nudging UI (local/global)
 
 - [ ] grid / units for nudging stuff
+- [ ] grid "toolbar" -- multipurpose (gizmo, placement, nudging)
 
 - [ ] blender keybinds for nudging / axes
 - [x] plane dragging in addition to axes dragging (little square between axes to drag)
 - [x] test better key blocking (if it's implemented)
 - [x] hide back of cube option
 - [x] use dot for block midpoint
+- [ ] lines manager for using custom selection lines
 -
 - [ ] fill toolbar
   - [ ] Toolbar class

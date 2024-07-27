@@ -330,6 +330,7 @@ class SelectionBoxTab : Tab {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto box = editor.SelectionBox;
 
+        DrawOutlineBoxDevUI(editor.Cursor.CursorBox, "Cursor Box");
         DrawOutlineBoxDevUI(editor.SelectionBox, "Selection Box");
         DrawOutlineBoxDevUI(editor.CustomSelectionBox, "Custom Selection Box");
 

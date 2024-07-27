@@ -201,6 +201,15 @@ namespace BufferAlloc {
             Dev::SetOffset(nod, offset + 0xC, capacity);
         }
 
+        void WriteToRawBuf(RawBuffer@ buf, uint length = 0) {
+            if (length > capacity) throw("BufferAlloc::AllocdBuffer::WriteToRawBuf: length exceeds capacity");
+            if (buf.Ptr == 0) throw("BufferAlloc::AllocdBuffer::WriteToRawBuf: buf.Ptr is null");
+            trace("Writing buffer to raw buffer with length " + length);
+            Dev::Write(buf.Ptr + 0x0, ptr);
+            Dev::Write(buf.Ptr + 0x8, length);
+            Dev::Write(buf.Ptr + 0xC, capacity);
+        }
+
         void WriteAtPtr(uint64 writeAt, uint length = 0) {
             if (length > capacity) {
                 throw("BufferAlloc::AllocdBuffer::WriteAtPtr: length exceeds capacity");

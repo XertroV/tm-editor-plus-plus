@@ -3,8 +3,13 @@ NativeClass = CDx11Viewport
 # DisplayNames + 0x10
 Struct: mDxRenderStuff = DxRenderStuff, 0x6E0, G
 Buffer: mDepthBufferStructs = DepthBufferStructs, 0x840, 0x20, false
-# depth buffer: HyperZ texture
+# depth buffer: HyperZ.Texture
 VisionResourceFile = CVisionResourceFile, 0x1170, G
+# reshade identifies this as the depth buffer -- ptr matches
+DepthBufferSomething = uint64, 0x15c8, G
+# from bitmap: +a8, +258
+HyperZBitmap = CPlugBitmap, 0x1620, G
+DepthBufferBitmap = CPlugBitmap, 0x16c0, G
 #----------- 0x1b60 - 0x1b80
 # Some Dx11 related struct
 Struct: mDx11Stuff = Dx11Stuff, 0x1b60, G

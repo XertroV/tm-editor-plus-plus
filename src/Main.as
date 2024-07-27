@@ -130,6 +130,7 @@ void RenderEarly() {
     auto mtEditor = cast<CGameEditorMediaTracker>(anyEditor);
     auto currPg = cast<CSmArenaClient>(GetApp().CurrentPlayground);
 
+    WasInAnyEditor = IsInAnyEditor;
     IsInAnyEditor = anyEditor !is null;
     WasInPlayground = IsInCurrentPlayground;
     IsInCurrentPlayground = currPg !is null;
@@ -168,6 +169,10 @@ void RenderEarly() {
         CacheMapBounds();
     } else if (LeavingEditor) {
         Event::RunOnEditorUnloadCbs();
+    }
+
+    if (WasInAnyEditor && !IsInAnyEditor) {
+        Event::RunOnEditorGoneNullCbs();
     }
 
     if (EnteringItemEditor) {
