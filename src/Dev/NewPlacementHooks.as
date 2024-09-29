@@ -31,7 +31,7 @@ namespace PlacementHooks {
     );
 
     FunctionHookHelper@ After_CGameCtnEditorPluginMap_Update_PreScript_Hook = FunctionHookHelper(
-        "E8 ?? ?? ?? ?? 48 8B 93 ?? 08 00 00 48 8D 8B ?? 08 00 00",
+        "E8 ?? ?? ?? ?? 48 8B 93 ?? ?? 00 00 48 8D 8B ?? ?? 00 00",
         0, 0, "PlacementHooks::After_CGameCtnEditorPluginMap_Update_PreScript_EmitEvent", Dev::PushRegisters(0)
     );
 

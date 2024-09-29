@@ -20,7 +20,8 @@ namespace Editor {
     // loads ptr to thumbnail buf, calls update thumbnail, loads a stack pointer, calls something else, then some tests and jmps
     // const string SAVE_MAP_THUMBNAIL_PATTERN = "48 8D 8F 78 01 00 00 E8 ?? ?? ?? ?? 44 8B 45 D8 48 8B 55 D0 48 8B 8F 78 01 00 00 E8 ?? ?? ?? ?? 48 8D 4D B8 E8 ?? ?? ?? ?? 48 85 DB 74 0E 83 43 10 FF 75 08 48 8B CB";
     // when overwriting thumbnail, it is the first code to access the thumbnail img buf at Map + 0x178.
-    const string SAVE_MAP_THUMBNAIL_PATTERN = "48 ?? ?? 78 01 00 00 E8 ?? ?? ?? ?? 44 8B 45 ?? 48 8B 55 ?? 48 ?? ?? 78 01 00 00 E8";
+    //                                                  88                                                          88
+    const string SAVE_MAP_THUMBNAIL_PATTERN = "48 ?? ?? ?? 01 00 00 E8 ?? ?? ?? ?? 44 8B 45 ?? 48 8B 55 ?? 48 ?? ?? ?? 01 00 00 E8";
     const uint16 SAVE_MAP_THUMBNAIL_OFFSET1 = 7; // overwrites a call so no padding
     const uint16 SAVE_MAP_THUMBNAIL_OFFSET2 = 27; // overwrites a call so no padding
 
