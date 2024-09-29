@@ -46,6 +46,7 @@ namespace Editor {
         MapThumb::origBytes1 = Dev::Patch(MapThumb::saveThumbPtr + SAVE_MAP_THUMBNAIL_OFFSET1, "90 90 90 90 90");
         MapThumb::origBytes2 = Dev::Patch(MapThumb::saveThumbPtr + SAVE_MAP_THUMBNAIL_OFFSET2, "90 90 90 90 90");
         MapThumb::patchActive = true;
+        dev_trace("Thumbnail hook: disabled thumbnail update");
     }
 
     void EnableMapThumbnailUpdate() {
@@ -53,6 +54,7 @@ namespace Editor {
         Dev::Patch(MapThumb::saveThumbPtr + SAVE_MAP_THUMBNAIL_OFFSET1, MapThumb::origBytes1);
         Dev::Patch(MapThumb::saveThumbPtr + SAVE_MAP_THUMBNAIL_OFFSET2, MapThumb::origBytes2);
         MapThumb::patchActive = false;
+        dev_trace("Thumbnail hook: enabled thumbnail update");
     }
 
     void _OnEditorSaveMapAfterThumbnailWritten() {

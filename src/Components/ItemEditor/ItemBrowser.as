@@ -419,6 +419,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CPlugFxSystemNode@ fxNode) {
+        UI::Text("Todo: CPlugFxSystemNode");
     }
 
     void DrawFxNodeInner(CPlugFxSystemNode@ fxNode) {
@@ -440,7 +441,9 @@ class ItemModelTreeElement {
             } else {
                 CopiableLabeledValue("PageName", blockInfo.PageName);
                 CopiableLabeledValue("CatalogPosition", tostring(blockInfo.CatalogPosition));
-                UI::Text("MatModiferPlacementTag: " + mmPlacementTag.ToString());
+                string extra = "-";
+                try { extra = string(blockInfo.MatModifierPlacementTag.Type); } catch {}
+                UI::Text("MatModiferPlacementTag: " + mmPlacementTag.ToString() + " / " + extra);
             }
             MkAndDrawChildNode(blockInfo.VariantBaseGround, "VariantBaseGround");
             MkAndDrawChildNode(blockInfo.VariantBaseAir, "VariantBaseAir");

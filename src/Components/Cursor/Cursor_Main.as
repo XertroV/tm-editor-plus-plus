@@ -555,6 +555,9 @@ class CustomCursorTab : EffectTab {
         UI::SameLine();
         S_AutoApplyFreeWaterBlocksPatch = UI::Checkbox("Auto-apply##fwbp", S_AutoApplyFreeWaterBlocksPatch);
 
+        S_HelpPlaceItemsOnFreeBlocks = UI::Checkbox("Help place items on free/ghost blocks", S_HelpPlaceItemsOnFreeBlocks);
+        AddSimpleTooltip("\\$<\\$8f4\\$iVery helpful for checkpoints!\\$> The item will have a red box, but it will place okay.");
+
         DrawFreeBlockSnapRadiusSettings();
 
         bool wasActive = CustomCursorRotations::Active;

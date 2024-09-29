@@ -343,7 +343,7 @@ namespace Editor {
             box.Mobil.Item.IsVisible = true;
             linesTree.IsVisible = true;
             box.Mobil.Show();
-            warn("SetVertices: done");
+            // dev_trace("SetVertices: done");
         }
     }
 }

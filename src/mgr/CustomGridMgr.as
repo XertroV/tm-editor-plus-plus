@@ -58,7 +58,7 @@ namespace CustomGridMgr {
         gridPos.x = Math::Round(gridPos.x);
         gridPos.y = Math::Round(gridPos.y);
         gridPos.z = Math::Round(gridPos.z);
-        pos = gridMat * (gridPos * vec3(32, 8, 32));
+        pos = (gridMat * (gridPos * vec3(32, 8, 32))).xyz;
         Editor::SetAllCursorPos(pos);
     }
 }

@@ -53,7 +53,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         }
 
         UI::Indent();
-        UI::TextWrapped("\\$af0 " + Icons::ExclamationTriangle + " \\$iHey! \\$zWhy not try the new gizmo? (Ctrl+Shift Click on an item)");
+        UI::TextWrapped("\\$af0 " + Icons::ExclamationTriangle + " \\$iHey!   \\$zWhy not try the new gizmo? (Ctrl+Shift Click on an item)");
         UI::Unindent();
 
         UI::Separator();

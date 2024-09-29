@@ -65,16 +65,18 @@ namespace PillarsChoice {
     }
 
     // CGameCtnApp::InitChallengeData ; the `or` updates the map flags; then flags are read
+    // (2e8 before 24-6-1 and 2f8 after 2024-09-19)    v read map + 0x2F8                     v Global address for flag to load NoTrackWall skin
+    const string ALWAYS_READ_OLD_PILLARS_2024_09_19 = "83 8F ?? ?? 00 00 04 8B 87 ?? ?? 00 00 C1 E8 02 F7 D0 83 E0 01 89 05"; /* ?? ?? ?? ??" (note: can't end with ??) */
+    // (2024-06-01)                                    v read map + 0x2E0                     v add rcx, 38
+    const string ALWAYS_READ_OLD_PILLARS_2024_06_01 = "83 8F ?? ?? 00 00 04 8B 87 ?? ?? 00 00 48 8B 8F ?? ?? 00 00 C1 E8 02 48 83 C1 38 F7 D0 83 E0 01 89 05 ?? ?? ?? ?? 8B";
+
     MemPatcher@ AlwaysReadOldPillars = MemPatcher(
-        //[XX XX XX XX XX XX XX XX XX XX XX XX XX] <- the bytes we will patch
-        // v or dword ptr [rdi+2E8],04
-        //                      v read map + 0x2e8                        v Global address for flag to load NoTrackWall skin
-        { "83 8F ?? ?? 00 00 04 8B 87 ?? ?? 00 00 C1 E8 02 F7 D0 83 E0 01 89 05 ?? ?? ?? ?? 48"
-        // (2024-06-01)                           v read map + 0x2E0            v add rcx, 38
-        , "83 8F ?? ?? 00 00 04 8B 87 ?? ?? 00 00 48 8B 8F ?? ?? 00 00 C1 E8 02 48 83 C1 38 F7 D0 83 E0 01 89 05 ?? ?? ?? ?? 8B"},
-        //     v NOP update map     v MOV EAX, 1; NOP
+        { ALWAYS_READ_OLD_PILLARS_2024_09_19
+        , ALWAYS_READ_OLD_PILLARS_2024_06_01
+        },
         {0},
-        { "90 90 90 90 90 90 90 B8 01 00 00 00 90"}, {"83 8F E8 02 00 00 04 8B 87 E8 02 00 00"}
+        // v NOP update map     v MOV EAX, 1; NOP
+        { "90 90 90 90 90 90 90 B8 01 00 00 00 90"}, {"83 8F F8 02 00 00 04 8B 87 F8 02 00 00"}
     );
 
     MemPatcher@ SkipUpdateAllPillarBlockSkinRemapFolders = MemPatcher(
