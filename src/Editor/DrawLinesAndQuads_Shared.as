@@ -52,9 +52,6 @@ namespace Editor {
 
             const array<vec3>@ get_LineVertices() const {
                 return lineVertices;
-                if (!IO::FolderExists(IO::FromStorageFolder("subfolder"))) {
-                    IO::CreateFolder(IO::FromStorageFolder("subfolder"));
-                }
             }
 
             const array<vec3>@ get_QuadVertices() const {
@@ -99,6 +96,17 @@ namespace Editor {
                 deregister = true;
             }
 
+            // call this to reset the state of the object
+            void Reset() {
+                hasLines = false;
+                hasQuads = false;
+                hasLinesColor = false;
+                hasQuadsColor = false;
+                updated = true;
+                lineVertices.Resize(0);
+                quadVertices.Resize(0);
+            }
+
             // MARK: Line Segs
 
             // request that lines be drawn in this color (not guarenteed)
@@ -107,6 +115,7 @@ namespace Editor {
                 hasLinesColor = true;
             }
 
+            // Push a line segment to be drawn, returns the index of the line segment
             int PushLineSegment(const vec3 &in a, const vec3 &in b) {
                 hasLines = true;
                 lineVertices.InsertLast(a);
@@ -122,8 +131,9 @@ namespace Editor {
             }
 
             void SetLineSegmentsFromPath(const vec3[]@ points, int startAt = 0) {
+                if (points.Length < 2) return;
                 hasLines = true;
-                lineVertices.Resize((points.Length - 1 + startAt) * 2);
+                lineVertices.Resize(startAt + (points.Length - 1) * 2);
                 for (uint i = 0; i < points.Length - 1; i++) {
                     lineVertices[startAt + i * 2] = points[i];
                     lineVertices[startAt + i * 2 + 1] = points[i + 1];
@@ -132,8 +142,7 @@ namespace Editor {
             }
 
             void PushLineSegmentsFromPath(const vec3[]@ points) {
-                auto startAt = lineVertices.Length / 2;
-                SetLineSegmentsFromPath(points, startAt);
+                SetLineSegmentsFromPath(points, lineVertices.Length);
             }
 
             void GetLineSegment(int i, vec3 &out a, vec3 &out b) const {

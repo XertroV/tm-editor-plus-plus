@@ -330,6 +330,7 @@ class SelectionBoxTab : Tab {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto box = editor.SelectionBox;
 
+        DrawOutlineBoxDevUI(editor.Cursor.CursorBoxShadow, "Cursor Box Shadow");
         DrawOutlineBoxDevUI(editor.Cursor.CursorBox, "Cursor Box");
         DrawOutlineBoxDevUI(editor.SelectionBox, "Selection Box");
         DrawOutlineBoxDevUI(editor.CustomSelectionBox, "Custom Selection Box");
@@ -360,6 +361,34 @@ class SelectionBoxTab : Tab {
         //         UI::TreePop();
         //     }
         // }
+    }
+
+    void DrawOutlineBoxDevUI(CPlugTree@ tree, const string &in name) {
+        UI::SeparatorText("Tree: " + name);
+        if (tree is null) {
+            UI::Text("No CPlugTree");
+            return;
+        }
+
+        UI::Indent();
+
+        CopiableLabeledValue("Tree", Text::FormatPointer(Dev_GetPointerForNod(tree)));
+
+        auto quadsVis = cast<CPlugVisualQuads>(tree.Visual);
+        auto linesVis = cast<CPlugVisualLines>(tree.Visual);
+
+        if (quadsVis is null) {
+            UI::Text("No Quads Visual");
+        } else {
+            Draw_DevVerts(quadsVis, "Quads");
+        }
+        if (linesVis is null) {
+            UI::Text("No Lines Visual");
+        } else {
+            Draw_DevVerts(linesVis, "Lines");
+        }
+
+        UI::Unindent();
     }
 
     void DrawOutlineBoxDevUI(CGameOutlineBox@ box, const string &in name) {
@@ -432,14 +461,7 @@ class SelectionBoxTab : Tab {
     }
 
     void RunAddLinesTest() {
-        auto box = CGameOutlineBox();
-        test_print("Box? " + (box !is null));
-        if (box is null) return;
-        test_print("box.Mobil? " + (box.Mobil !is null));
-        if (box.Mobil is null) return;
-        test_print("box.Mobil.Item? " + (box.Mobil.Item !is null));
-        test_print("box.Mobil.Solid? " + (box.Mobil.Solid !is null));
-        ExploreNod("new box", box);
+        startnew(TestRunVisLines_Main);
     }
 
     void test_print(const string &in msg) {

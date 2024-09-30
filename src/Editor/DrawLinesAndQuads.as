@@ -5,6 +5,7 @@ namespace Editor {
             RegisterOnEditorLoadCallback(OnEnterEditor, "DrawLinesAndQuads");
         }
 
+        // this is run when the plugin is started, so doesn't need to be called elsewhere.
         Meta::PluginCoroutine@ onInitCoro = startnew(OnInit);
 
         class DrawInstancePriv : DrawInstance {
@@ -16,7 +17,7 @@ namespace Editor {
             uint lastQuadsIx = -1;
 
             bool LinesNeedWriting(uint i) {
-                if (lastLinesIx != i) {
+                if (lastLinesIx != i || updated) {
                     lastLinesIx = i;
                     return true;
                 }
@@ -24,7 +25,7 @@ namespace Editor {
             }
 
             bool QuadsNeedWriting(uint i) {
-                if (lastQuadsIx != i) {
+                if (lastQuadsIx != i || updated) {
                     lastQuadsIx = i;
                     return true;
                 }
@@ -51,7 +52,8 @@ namespace Editor {
                 // ClearInstances();
             }
             startnew(InstanceMaintenanceLoopCoro).WithRunContext(Meta::RunContext::BeforeScripts);
-            startnew(EditorDrawLoopCoro).WithRunContext(Meta::RunContext::AfterMainLoop);
+            // startnew(EditorDrawLoopCoro).WithRunContext(Meta::RunContext::AfterMainLoop);
+            startnew(EditorDrawLoopCoro).WithRunContext(Meta::RunContext::UpdateSceneEngine);
         }
 
         void InstanceMaintenanceLoopCoro() {
@@ -91,6 +93,7 @@ namespace Editor {
                 UpdateLinesAndQuads();
                 yield();
             }
+            dev_trace("EditorDrawLoopCoro exited");
         }
 
         class VertexWriter {
@@ -107,6 +110,32 @@ namespace Editor {
                 @quadsTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, O_CGAMEOUTLINEBOX_QUADS_TREE));
             }
 
+            void FixTreeParentBB() {
+                if (linesTree !is null) {
+                    FixTreeBB(linesTree);
+                    auto parentBBNod = Dev_GetOffsetNodSafe(linesTree, O_CPlugTree_ParentTree);
+                    if (parentBBNod is null) {
+                        dev_warn("linesTree parentBBNod is null");
+                        return;
+                    }
+                    auto parentBB = cast<CPlugTree>(parentBBNod);
+                    if (parentBB !is null) {
+                        FixTreeBB(parentBB);
+                    } else {
+                        dev_warn("linesTree parentBB is null");
+                    }
+                }
+            }
+
+            void FixTreeBB(CPlugTree@ tree) {
+                if (tree is null) {
+                    dev_warn("tree is null");
+                    return;
+                }
+                Dev::SetOffset(tree, O_CPlugTree_BoundingBoxPos, vec3(32, 8, 32) * 23.5);
+                Dev::SetOffset(tree, O_CPlugTree_BoundingBoxHalf, vec3(16384));
+            }
+
             void WriteLinesFromSources(DrawInstancePriv@[]@ insts) {
                 auto vertexIx = 0;
                 auto linesVis = cast<CPlugVisualLines>(linesTree.Visual);
@@ -119,8 +148,11 @@ namespace Editor {
                 for (uint i = 0; i < insts.Length; i++) {
                     auto di = insts[i];
                     if (!di.HasLines) continue;
-                    if (!di.LinesNeedWriting(vertexIx)) continue;
                     if (di.HasLinesColor) lastLineColor = di.LinesColor;
+                    if (!di.LinesNeedWriting(vertexIx)) {
+                        vertexIx += di.LineVertices.Length;
+                        continue;
+                    }
                     auto @verts = di.LineVertices;
                     if (verts.Length % 2 != 0) {
                         warn("Line vertices length not divisible by 2; wiping vertices");
@@ -151,8 +183,8 @@ namespace Editor {
                 for (uint i = 0; i < insts.Length; i++) {
                     auto di = insts[i];
                     if (!di.HasQuads) continue;
-                    if (!di.QuadsNeedWriting(vertexIx)) continue;
                     if (di.HasQuadsColor) lastQuadColor = di.QuadsColor;
+                    if (!di.QuadsNeedWriting(vertexIx)) continue;
                     auto @verts = di.QuadVertices;
                     if (verts.Length % 4 != 0) {
                         warn("Quads vertices length not divisible by 4; wiping vertices");
@@ -207,6 +239,7 @@ namespace Editor {
         void UpdateLinesAndQuads() {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             VertexWriter writer(editor.CustomSelectionBox);
+            writer.FixTreeParentBB();
             writer.WriteLinesFromSources(drawInstances);
             writer.WriteQuadsFromSources(drawInstances);
             writer.WriteColors();
@@ -217,10 +250,11 @@ namespace Editor {
         DrawInstancePriv@[] inactiveDrawInstances;
 
         // Get a new draw instance with the given id
-        DrawInstance@ GetNewDrawInstance(const string &in id) {
+        DrawInstance@ GetOrCreateDrawInstance(const string &in id) {
             for (uint i = 0; i < drawInstances.Length; i++) {
                 if (drawInstances[i].Id == id) {
-                    throw("DrawInstance with id " + id + " already exists");
+                    return drawInstances[i];
+                    // throw("DrawInstance with id " + id + " already exists");
                 }
             }
             auto di = DrawInstancePriv(id);

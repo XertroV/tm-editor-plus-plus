@@ -684,7 +684,29 @@ const uint16 SZ_CPlugVisualQuads = 0x180; // 384
 const uint16 SZ_CPlugVisualLines = 0x180; // 384
 const uint16 SZ_CPlugVisual3D = 0x180; // 384
 
-
+const uint16 O_CPlugTree_BoundingBoxPos = GetOffset("CPlugTree", "FuncTree") + 0x8; // 0xC8
+const uint16 O_CPlugTree_BoundingBoxHalf = O_CPlugTree_BoundingBoxPos + 0xC; // 0xD4
+const uint16 O_CPlugTree_ParentTree = GetOffset("CPlugTree", "Childs") - 0x8; // 0x38
+const uint16 O_CPlugTree_Flags = GetOffset("CPlugTree", "Generator") - 0x8; // 0xA8
+// flags:
+// 1: isPortal
+// 2: unk
+// 4: UseLocation
+// 8: IsVisible
+// 16:
+// 32:
+// 64: IsPickable
+// 128: IsCollidable
+// 256: IsFixedRatio2D
+// 512: IsLightVolume
+// 1024: IsLightVolumeVisible
+// 2048: IsPickableVisual
+// 4096: UseRenderBefore
+// 8192: TestBBoxVisibility
+// 16384: IsShadowCaster
+// 32768: IsRooted
+// 65536: ??
+// 131072: nothing?
 
 // MARK: MT STUFF
 

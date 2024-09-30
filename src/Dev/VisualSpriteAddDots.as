@@ -9,6 +9,7 @@ namespace VisSpriteDots {
 
     void OnEditorLoad() {
         startnew(VisSpriteDots::WatchForSpriteNod);
+        startnew(Editor::DrawLines::ReplaceShaderOnLinesTree);
     }
 
     const uint16 O_HMSZONE_SpritesBuf1 = GetOffset("CHmsZone", "VisionCst") + 0x8;
@@ -186,9 +187,39 @@ namespace Editor {
             // todo
         }
 
+        // Fix ZBias drawing lines using custom selection box
+        // Yep, this actually works :)
+        void ReplaceShaderOnLinesTree() {
+            // dev_trace("\\$bf0\\$iReplaceShaderOnLinesTree sleeping 2.5s");
+            // sleep(2500);
+            // dev_trace("\\$bf0\\$iReplaceShaderOnLinesTree running");
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor is null) {
+                warn("ReplaceShaderOnLinesTree: editor is null");
+                return;
+            }
+            auto box = editor.CustomSelectionBox;
+            auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, O_CGAMEOUTLINEBOX_LINES_TREE));
+            if (linesTree is null) {
+                warn("ReplaceShaderOnLinesTree: linesTree is null");
+                return;
+            }
+            auto boxShadow = editor.Cursor.CursorBoxShadow;
+            auto boxShadowShader = boxShadow.Shader;
+            if (linesTree.Shader is boxShadow.Shader) {
+                warn("ReplaceShaderOnLinesTree: linesTree.Shader is already boxShadow.Shader");
+                return;
+            }
+            boxShadowShader.MwAddRef();
+            @linesTree.Shader = boxShadowShader;
+            // dev_trace("\\$bf0\\$iReplaceShaderOnLinesTree: done");
+        }
+
+
         // on custom selection box
         void UpdateBoxFaces(vec3 min, vec3 max, vec4 color) {
             vec3[] points;
+            vec3[][] paths;
             auto size = max - min;
             auto orig = min + vec3(0, 64, 0);
             // loop through each face and add just for that face
@@ -211,9 +242,17 @@ namespace Editor {
                     points.InsertLast(orig + ax1 * size);
                 }
                 points.InsertLast(orig + ax1 * size + ax2 * size);
+                auto path = array<vec3>(5);
+                path[0] = orig + ax1 * size;
+                path[1] = orig;
+                path[2] = orig + ax2 * size;
+                path[3] = orig + ax1 * size + ax2 * size;
+                path[4] = path[0];
+                paths.InsertLast(path);
             }
             SetCustomSelectionQuads(points, color);
-            SetVertices(points);
+            paths.InsertLast(points);
+            SetVertices(paths);
         }
 
         void SetCustomSelectionQuads(vec3[]@ points, vec4 color) {
@@ -223,7 +262,7 @@ namespace Editor {
                 return;
             }
             auto box = editor.CustomSelectionBox;
-            auto quadsTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x18));
+            auto quadsTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, O_CGAMEOUTLINEBOX_QUADS_TREE));
             if (quadsTree is null) {
                 warn("SetCustomSelectionQuads: quadsTree is null");
                 return;
@@ -245,10 +284,10 @@ namespace Editor {
                 // vertices.SetElementOffsetVec4(i, 0x18, color);
                 // vertices.GetVertex(i).Color = vec4(1., 1., 1., 1.);
             }
-            box.Mobil.Show();
             box.Mobil.IsVisible = true;
             box.Mobil.Item.IsVisible = true;
             quadsTree.IsVisible = true;
+            box.Mobil.Show();
 
             auto shader = cast<CPlugShaderApply>(quadsTree.Shader);
             if (shader is null) return;
@@ -287,7 +326,17 @@ namespace Editor {
         vec3 linesColor = vec3(.5);
 
         // set vertices for lines
-        void SetVertices(vec3[]@ points) {
+        void SetVertices(array<array<vec3>>@ paths) {
+            dev_trace("\\$bf0\\$iSetVertices: paths: " + paths.Length);
+
+            auto di = Editor::DrawLinesAndQuads::GetOrCreateDrawInstance("UpdateBoxFaces");
+            di.Reset();
+            for (uint i = 0; i < paths.Length; i++) {
+                di.PushLineSegmentsFromPath(paths[i]);
+            }
+            di.Draw();
+            return;
+
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) {
                 warn("SetVertices: editor is null");
@@ -295,7 +344,7 @@ namespace Editor {
             }
             auto box = editor.CustomSelectionBox;
             // @box = editor.UndergroundBox;
-            auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x28));
+            auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, O_CGAMEOUTLINEBOX_LINES_TREE));
             // if (editor.Grid is null || editor.Grid.Item is null || editor.Grid.Item.Solid is null) {
             //     warn("SetVertices: editor.Grid.Item.Solid is null");
             //     return;
@@ -313,23 +362,35 @@ namespace Editor {
                 warn("SetVertices: linesTree.Visual is null");
                 return;
             }
-            auto nbPoints = points.Length * 2;
-            auto lines = DPlugVisual3D(linesVis);
-            auto vertices = lines.Vertexes;
+
+            auto nbPoints = 0;
+            for (uint i = 0; i < paths.Length; i++) {
+                nbPoints += PathPoints(paths[i].Length);
+            }
+
+            auto lines3d = DPlugVisual3D(linesVis);
+            auto vertices = lines3d.Vertexes;
             if (vertices.Capacity < nbPoints) {
                 warn("SetVertices: vertices.Capacity ("+vertices.Capacity+") is less than nbPoints");
                 ResizeBuffer(vertices, nbPoints);
             }
             vertices.Length = nbPoints;
-            // trace("\\$bf0\\$iSetVertices: nbPoints: " + nbPoints);
-            for (uint i = 0; i < nbPoints-1; i++) {
-                vertices.SetElementOffsetVec3(i, 0, points[(i + 1)/2]);
 
-                // vertices.SetElementOffsetVec3(i, 0, point);
-                // vertices.GetVertex(i).Normal = vec3(10.);
-                // vertices.GetVertex(i).Color = vec4(.2, 1., .2, 1.);
+            // trace("\\$bf0\\$iSetVertices: nbPoints: " + nbPoints);
+            for (uint p = 0; p < paths.Length; p++) {
+                auto @path = paths[p];
+                auto pathLen = path.Length;
+                if (pathLen < 2) {
+                    warn("SetVertices: path " + p + " has less than 2 points");
+                    continue;
+                }
+                auto offset = 0;
+                for (uint i = 0; i < pathLen-1; i++) {
+                    vertices.SetElementOffsetVec3(offset, 0, path[i]);
+                    vertices.SetElementOffsetVec3(offset+1, 0, path[i+1]);
+                    offset += 2;
+                }
             }
-            vertices.SetElementOffsetVec3(nbPoints-1, 0, points[0]);
 
             // line color
             auto shader = cast<CPlugShaderApply>(linesTree.Shader);
@@ -344,6 +405,37 @@ namespace Editor {
             linesTree.IsVisible = true;
             box.Mobil.Show();
             // dev_trace("SetVertices: done");
+        }
+
+        // the number of points needed to draw all line segments in this path
+        int PathPoints(int nb) {
+            return nb < 2 ? 0 : (nb - 1) * 2;
+        }
+
+        void SetColorOnLinesTree(vec4 color) {
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor is null) {
+                warn("SetColorOnLinesTree: editor is null");
+                return;
+            }
+            auto box = editor.CustomSelectionBox;
+            auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, O_CGAMEOUTLINEBOX_LINES_TREE));
+            if (linesTree is null) {
+                warn("SetColorOnLinesTree: linesTree is null");
+                return;
+            }
+            auto linesVis = cast<CPlugVisualLines>(linesTree.Visual);
+            if (linesVis is null) {
+                warn("SetColorOnLinesTree: linesTree.Visual is null");
+                return;
+            }
+            auto shader = cast<CPlugShaderApply>(linesTree.Shader);
+            auto shaderPass = cast<CPlugShaderPass>(Dev_GetOffsetNodSafe(shader, 0x170));
+            auto shaderColor = Dev_GetOffsetNodSafe(shaderPass, 0x78);
+            if (shaderColor !is null) {
+                Dev::SetOffset(shaderColor, 0x0, color);
+            }
+
         }
     }
 }
@@ -385,16 +477,22 @@ void TestRunVisLines() {
     print("\\$bf0\\$iTestRunVisLines sleeping 2s");
     sleep(2000);
     print("\\$bf0\\$iTestRunVisLines running");
+    TestRunVisLines_Main();
+}
+
+void TestRunVisLines_Main() {
     IO::FileSource pj("points.json");
     auto pointsJ = Json::Parse(pj.ReadToEnd());
-    vec3[] points;
+    yield();
+    // vec3[] points;
     mat4 mat = mat4::Translate(vec3(768, 256, 768)) * mat4::Rotate(PI, RIGHT);
     vec3 pos;
     vec4 col = vec4(1., 1., 1., 1.);
-    auto di = Editor::DrawLinesAndQuads::GetNewDrawInstance("hello-op");
-    yield(10);
+    auto di = Editor::DrawLinesAndQuads::GetOrCreateDrawInstance("hello-op");
+    di.Reset();
     for (uint i = 0; i < pointsJ.Length; i++) {
         auto path = pointsJ[i];
+        vec3[] points;
         vec3 p0;
         for (uint j = 0; j < path.Length; j++) {
             pos.x = path[j][0];
@@ -404,15 +502,22 @@ void TestRunVisLines() {
             // points.InsertLast(VisSpriteDots::Dot(pos, col));
             // if (j == 0 && points.Length > 0) points.InsertLast(points[points.Length - 1]);
             // if (j == 0) p0 = pos;
-            points.InsertLast(pos);
+            if (pos.LengthSquared() > 0.1) {
+                points.InsertLast(pos);
+            }
             // if (j != 0) points.InsertLast(pos);
         }
-        // points.InsertLast(p0);
+        points.InsertLast(points[points.Length - 1]);
+        points.InsertLast(points[0]);
         di.PushLineSegmentsFromPath(points);
     }
     di.RequestLineColor(col.xyz);
-    di.DrawFor(360000);
-    sleep(360000);
+    di.DrawFor(36000);
+    dev_trace("\\$bf0\\$iTestRunVisLines: sleeping 36s");
+    sleep(36000);
+    dev_trace("\\$bf0\\$iTestRunVisLines: DrawFor expired. sleeping 36s");
+    sleep(36000);
+    dev_trace("\\$bf0\\$iTestRunVisLines: Deregistering");
     di.Deregister();
     // if (points.Length % 2 == 1) {
     //     warn('dgb adding extra point');

@@ -537,6 +537,11 @@ class CustomCursorTab : EffectTab {
 
     CustomCursorTab(TabGroup@ parent) {
         super(parent, "Custom Cursor", Icons::HandPointerO + Icons::ExclamationTriangle);
+        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad), this.tabName);
+    }
+
+    void OnEditorLoad() {
+        UpdateCursorOptions();
     }
 
     bool get__IsActive() override property {
@@ -586,6 +591,22 @@ class CustomCursorTab : EffectTab {
         if (wasActive != S_EnablePromiscuousItemSnapping) {
             CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
         }
+
+        UI::SeparatorText("Cursor Options");
+
+        S_BlockCursorShowQuads = UI::Checkbox("Show Cursor Quads", S_BlockCursorShowQuads);
+        S_BlockCursorShowLines = UI::Checkbox("Show Cursor Lines", S_BlockCursorShowLines);
+
+        UpdateCursorOptions();
+    }
+
+    void UpdateCursorOptions() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        auto cursor = editor.Cursor;
+        if (cursor is null) return;
+        cursor.CursorBox.IsShowQuads = S_BlockCursorShowQuads;
+        cursor.CursorBox.IsShowLines = S_BlockCursorShowLines;
     }
 
     void DrawFreeBlockSnapRadiusSettings() {
@@ -702,6 +723,13 @@ bool S_AutoApplyFreeWaterBlocksPatch = true;
 
 [Setting hidden]
 bool S_EnablePromiscuousItemSnapping = true;
+
+[Setting hidden]
+bool S_BlockCursorShowQuads = true;
+
+[Setting hidden]
+bool S_BlockCursorShowLines = true;
+
 
 namespace CustomCursorRotations {
     [Setting hidden]
