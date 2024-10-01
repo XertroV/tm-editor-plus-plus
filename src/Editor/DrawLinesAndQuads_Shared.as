@@ -141,6 +141,7 @@ namespace Editor {
             void SetLineSegment(int i, const vec3 &in a, const vec3 &in b) {
                 lineVertices[i * 2] = a;
                 lineVertices[i * 2 + 1] = b;
+
                 updated = true;
             }
 

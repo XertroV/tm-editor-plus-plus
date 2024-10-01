@@ -75,6 +75,7 @@ class DevMiscTab : Tab {
 
         UI::Separator();
 
+#if DEV
         if (UI::Button("Create and Explore Test Vehicle Item")) {
             @testVehicleItem = Editor::CreateTestVehicleItem();
         }
@@ -90,6 +91,7 @@ class DevMiscTab : Tab {
         if (UI::Button("Create and Place Test Empty Item")) {
             startnew(Editor::CreateAndPlaceTestEmptyItem);
         }
+#endif
 
         UI::Separator();
 
