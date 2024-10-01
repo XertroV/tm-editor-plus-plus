@@ -299,7 +299,11 @@ class MapEditPropsTab : Tab {
             UI::Unindent();
         }
 
-        UI::SeparatorText("Custom Color Tables \\$i(Experimental)");
+        UI::SeparatorText("Color Palette " + NewIndicator);
+
+        editor.PluginMapType.MapElemColorPalette = DrawComboEMapElemColorPalette("Color Palette", editor.PluginMapType.MapElemColorPalette);
+
+        UI::SeparatorText("Custom Color Tables \\$i(Experimental) \\$f80(Not the new color palettes!)");
         if (FromML::HasCustomColors()) {
             UI::Text("Embedded Custom Colors (Encoded): " + FromML::_customColorTablesRaw);
             if (UX::SmallButton("Clear")) {

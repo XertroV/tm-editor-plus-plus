@@ -193,6 +193,14 @@ CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType DrawComboEnumAutoTerrai
     );
 }
 
+CGameEditorPluginMap::EMapElemColorPalette DrawComboEMapElemColorPalette(const string &in label, CGameEditorPluginMap::EMapElemColorPalette val) {
+    return CGameEditorPluginMap::EMapElemColorPalette(
+        DrawArbitraryEnum(label, int(val), 13, function(int v) {
+            return tostring(CGameEditorPluginMap::EMapElemColorPalette(v));
+        })
+    );
+}
+
 EPlugSurfaceMaterialId DrawComboEPlugSurfaceMaterialId(const string &in label, EPlugSurfaceMaterialId val) {
     return EPlugSurfaceMaterialId(
         // DrawArbitraryEnum(label, int(val), 81, function(int v) {
