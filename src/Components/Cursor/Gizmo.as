@@ -66,6 +66,7 @@ namespace Gizmo {
 
     void _OnActive_UpdatePMT(CGameEditorPluginMapMapType@ pmt) {
         pmt.EnableEditorInputsCustomProcessing = true;
+        pmt.HideEditorInterface = true;
     }
 
     void _OnInactive_UpdatePMT(CGameEditorPluginMapMapType@ pmt) {
