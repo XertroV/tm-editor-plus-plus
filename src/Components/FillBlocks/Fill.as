@@ -2,6 +2,7 @@ namespace FillBlocks {
     CGameEditorPluginMap::EPlaceMode origPlacementMode;
     bool origAirMode;
     uint objVariant;
+    CGameEditorPluginMap::EMapElemColor currColor = CGameEditorPluginMap::EMapElemColor::Default;
 
 
     void OnPluginLoad() {
@@ -14,6 +15,7 @@ namespace FillBlocks {
         origPlacementMode = editor.PluginMapType.PlaceMode;
         origAirMode = Editor::GetIsBlockAirModeActive(editor);
         objVariant = Editor::GetCurrentBlockVariant(editor.Cursor);
+        currColor = editor.PluginMapType.NextMapElemColor;
         if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Item) {
             try {
                 objVariant = editor.CurrentItemModel.DefaultPlacementParam_Content.PlacementClass.CurVariant;
@@ -198,6 +200,7 @@ namespace FillBlocks {
                     // only set ground if not ghost or free
                     // else b.isGround = locs[i].y == 0.0;
                     b.variant = objVariant;
+                    b.color = CGameCtnBlock::EMapElemColor(int(currColor));
                     mb.AddBlock(b);
                 }
             } else if (macroblock !is null) {
@@ -208,6 +211,7 @@ namespace FillBlocks {
                 for (uint i = 0; i < locs.Length; i++) {
                     auto itemSpec = Editor::MakeItemSpec(item, locs[i], cursorRot.Euler);
                     itemSpec.variantIx = objVariant;
+                    itemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(currColor));
                     mb.AddItem(itemSpec);
                 }
             }

@@ -280,17 +280,19 @@ class RotationTranslationGizmo {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cam = Camera::GetCurrent();
         auto camState = Editor::GetCurrentCamState(editor);
-        auto maxScale = GIZMO_MAX_SCALE_COEF * camState.TargetDist * Math::Tan(Math::ToRad(cam.Fov * .5));
+
+        camPos = Camera::GetCurrentPosition();
+        mousePos = UI::GetMousePos();
+        float c2pLen2 = (objOriginPos - camPos).LengthSquared();
+        float c2pLen = (objOriginPos - camPos).Length();
+
+        auto maxScale = GIZMO_MAX_SCALE_COEF * c2pLen * Math::Tan(Math::ToRad(cam.Fov * .5));
         _scale = Math::Min(_scale, maxScale);
         _closestRotationPoint = vec3();
         // objOriginPos -= pivotPoint;
-        camPos = Camera::GetCurrentPosition();
-        mousePos = UI::GetMousePos();
         _closestMouseDist = 1000000.;
         // withTmpRot = (tmpRot * rot);
         withTmpRot = useGlobal ? mat4::Identity() : mat4::Inverse(tmpRot * rot);
-        float c2pLen2 = (objOriginPos - camPos).LengthSquared();
-        float c2pLen = (objOriginPos - camPos).Length();
         shouldDrawGizmo = true || Camera::IsBehind(objOriginPos) || c2pLen < _scale;
         if (!shouldDrawGizmo) {
             if (c2pLen < _scale) trace('c2pLen < scale');
@@ -563,8 +565,14 @@ class RotationTranslationGizmo {
         auto camLoc = mat4(cam.Location);
         camPos = vec3(camLoc.tx, camLoc.ty, camLoc.tz);
 
-        DrawCirclesManual(pos, scale * scaleExtraCoef);
         DrawWindow();
+
+        // don't draw if behind camera, or gizmo outside screen bounds
+        auto posToScreen = Camera::ToScreen(pos);
+        if (posToScreen.z >= 0) return;
+        if (posToScreen.x < -3.1 || posToScreen.x > g_screen.x + 3.1 || posToScreen.y < -3.1 || posToScreen.y > g_screen.y + 3.1) return;
+
+        DrawCirclesManual(pos, scale * scaleExtraCoef);
     }
 
     void Render() {

@@ -203,6 +203,7 @@ namespace Event {
     void RunOnEditorLoadCbs() {
         Log::Trace("Running OnEditorLoad callbacks");
         for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
+            trace("Running OnEditorLoad callback: " + onEditorLoadCbNames[i]);
             onEditorLoadCbs[i]();
         }
         Log::Trace("Finished OnEditorLoad callbacks");
@@ -323,7 +324,7 @@ namespace Event {
         for (uint i = 0; i < onLeavingPlaygroundCbs.Length; i++) {
             onLeavingPlaygroundCbs[i]();
         }
-        Log::Trace("Finished OnEditorLoad callbacks");
+        Log::Trace("Finished OnLeavingPlayground callbacks");
     }
     void OnMapTypeUpdate() {
         // don't log these, 2 every frame :/
