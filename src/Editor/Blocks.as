@@ -120,6 +120,7 @@ namespace Editor {
         return GetBlockCoordSize(block) * vec3(32, 8, 32);
     }
 
+    // coord size as vec3 (not distance, so <1, 1, 1> is a 1x1x1 block)
     vec3 GetBlockCoordSize(CGameCtnBlock@ block) {
         auto @biv = GetBlockInfoVariant(block);
         if (biv is null) return vec3(1);

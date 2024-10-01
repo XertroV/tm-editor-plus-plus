@@ -18,12 +18,20 @@ namespace Editor {
     import const array<BlockSpec@>@ LastFrameBlocksColorsChanged() from "Editor";
     import const array<ItemSpec@>@ LastFrameItemsColorsChanged() from "Editor";
     import MacroblockWithSetSkins@ GetMapAsMacroblock() from "Editor";
+
     import MacroblockSpec@ MakeMacroblockSpec() from "Editor";
     import MacroblockSpec@ MakeMacroblockSpec(CGameCtnBlock@[]@ blocks, CGameCtnAnchoredObject@[]@ items) from "Editor";
     import MacroblockSpec@ MakeMacroblockSpec(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items) from "Editor";
+    import MacroblockSpec@ MakeMacroblockSpec(CGameCtnMacroBlockInfo@ mb) from "Editor";
     import MacroblockSpec@ MacroblockSpecFromBuf(MemoryBuffer@ buf) from "Editor";
+
     import BlockSpec@ MakeBlockSpec(CGameCtnBlock@ block) from "Editor";
+    import BlockSpec@ MakeBlockSpec(CGameCtnBlockInfo@ blockInfo, const nat3 &in _coord, int dir) from "Editor";
+    import BlockSpec@ MakeBlockSpec(CGameCtnBlockInfo@ blockInfo, const vec3 &in position, const vec3 &in pyrRotation) from "Editor";
+
     import ItemSpec@ MakeItemSpec(CGameCtnAnchoredObject@ item) from "Editor";
+    import ItemSpec@ MakeItemSpec(CGameItemModel@ itemModel, const vec3 &in position, const vec3 &in pyrRotation) from "Editor";
+
     import SetSkinSpec@ SetSkinSpecFromBuf(MemoryBuffer@ buf) from "Editor";
     import bool PlaceBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items, bool addUndoRedoPoint = false) from "Editor";
     import bool DeleteBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items, bool addUndoRedoPoint = false) from "Editor";

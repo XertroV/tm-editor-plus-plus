@@ -281,12 +281,25 @@ namespace Editor {
     MacroblockSpec@ MakeMacroblockSpec(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items) {
         return MacroblockSpecPriv(blocks, items);
     }
+    MacroblockSpec@ MakeMacroblockSpec(CGameCtnMacroBlockInfo@ mb) {
+        return MacroblockSpecPriv(mb);
+    }
 
     BlockSpec@ MakeBlockSpec(CGameCtnBlock@ block) {
         return BlockSpecPriv(block);
     }
+    BlockSpec@ MakeBlockSpec(CGameCtnBlockInfo@ blockInfo, const nat3 &in _coord, int dir) {
+        return BlockSpecPriv(blockInfo, _coord, dir);
+    }
+    BlockSpec@ MakeBlockSpec(CGameCtnBlockInfo@ blockInfo, const vec3 &in position, const vec3 &in pyrRotation) {
+        return BlockSpecPriv(blockInfo, position, pyrRotation);
+    }
+
     ItemSpec@ MakeItemSpec(CGameCtnAnchoredObject@ item) {
         return ItemSpecPriv(item);
+    }
+    ItemSpec@ MakeItemSpec(CGameItemModel@ itemModel, const vec3 &in position, const vec3 &in pyrRotation) {
+        return ItemSpecPriv(itemModel, position, pyrRotation);
     }
 
     bool PlaceBlocksAndItems(const BlockSpec@[]@ blocks, const ItemSpec@[]@ items, bool addUndoRedoPoint = false) {

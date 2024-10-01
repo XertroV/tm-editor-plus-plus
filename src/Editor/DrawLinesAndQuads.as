@@ -63,8 +63,12 @@ namespace Editor {
                 for (uint i = 0; i < drawInstances.Length; i++) {
                     auto di = drawInstances[i];
                     if (di.IsDeregistered) {
-                        drawInstances.RemoveAt(i);
-                        i--;
+                        if (di.HasLines || di.HasQuads) {
+                            di.Reset();
+                        } else {
+                            drawInstances.RemoveAt(i);
+                            i--;
+                        }
                     } else if (di.IsInactive) {
                         drawInstances.RemoveAt(i);
                         inactiveDrawInstances.InsertLast(di);
@@ -74,8 +78,12 @@ namespace Editor {
                 for (uint i = 0; i < inactiveDrawInstances.Length; i++) {
                     auto di = inactiveDrawInstances[i];
                     if (di.IsDeregistered) {
-                        inactiveDrawInstances.RemoveAt(i);
-                        i--;
+                        if (di.HasLines || di.HasQuads) {
+                            di.Reset();
+                        } else {
+                            inactiveDrawInstances.RemoveAt(i);
+                            i--;
+                        }
                     } else if (di.IsActive) {
                         inactiveDrawInstances.RemoveAt(i);
                         drawInstances.InsertLast(di);
@@ -104,26 +112,43 @@ namespace Editor {
             vec3 lastQuadColor = vec3(0);
             vec3 lastLineColor = vec3(0);
 
-            VertexWriter(CGameOutlineBox@ box) {
-                @this.box = box;
-                @linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, O_CGAMEOUTLINEBOX_LINES_TREE));
-                @quadsTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, O_CGAMEOUTLINEBOX_QUADS_TREE));
+            VertexWriter(CGameCtnEditorFree@ e) {
+                if (e is null) {
+                    dev_warn("VW: editor is null");
+                    return;
+                }
+                @this.box = Editor::DrawLines::GetHostSelectionBox(e);
+                @linesTree = Editor::DrawLines::GetHostLinesTree(e);
+                @quadsTree = Editor::DrawLines::GetHostQuadsTree(e);
+                if (linesTree is null) {
+                    dev_warn("VW: linesTree is null");
+                }
+                if (quadsTree is null) {
+                    dev_warn("VW: quadsTree is null");
+                }
             }
 
             void FixTreeParentBB() {
                 if (linesTree !is null) {
-                    FixTreeBB(linesTree);
-                    auto parentBBNod = Dev_GetOffsetNodSafe(linesTree, O_CPlugTree_ParentTree);
-                    if (parentBBNod is null) {
-                        dev_warn("linesTree parentBBNod is null");
-                        return;
-                    }
-                    auto parentBB = cast<CPlugTree>(parentBBNod);
-                    if (parentBB !is null) {
-                        FixTreeBB(parentBB);
-                    } else {
-                        dev_warn("linesTree parentBB is null");
-                    }
+                    FixTreeAndParentBB(linesTree);
+                }
+                if (quadsTree !is null) {
+                    FixTreeAndParentBB(quadsTree);
+                }
+            }
+
+            void FixTreeAndParentBB(CPlugTree@ tree) {
+                FixTreeBB(tree);
+                auto parentBBNod = Dev_GetOffsetNodSafe(tree, O_CPlugTree_ParentTree);
+                if (parentBBNod is null) {
+                    dev_warn("tree parentBBNod is null");
+                    return;
+                }
+                auto parentBB = cast<CPlugTree>(parentBBNod);
+                if (parentBB !is null) {
+                    FixTreeBB(parentBB);
+                } else {
+                    dev_warn("tree parentBB is null");
                 }
             }
 
@@ -145,6 +170,7 @@ namespace Editor {
                 }
                 DPlugVisual3D@ lines = DPlugVisual3D(linesVis);
                 auto vertices = lines.Vertexes;
+                bool gotNewLines = false;
                 for (uint i = 0; i < insts.Length; i++) {
                     auto di = insts[i];
                     if (!di.HasLines) continue;
@@ -153,6 +179,7 @@ namespace Editor {
                         vertexIx += di.LineVertices.Length;
                         continue;
                     }
+                    gotNewLines = true;
                     auto @verts = di.LineVertices;
                     if (verts.Length % 2 != 0) {
                         warn("Line vertices length not divisible by 2; wiping vertices");
@@ -168,7 +195,11 @@ namespace Editor {
                         vertices.SetElementOffsetVec3(vertexIx++, 0, verts[j+1]);
                     }
                 }
+                vertices.Length = vertexIx;
                 linesTree.IsVisible = true;
+                if (gotNewLines) {
+                    // dev_trace("WriteLinesFromSources done. linesTree.Vertexes.Length: " + lines.Vertexes.Length);
+                }
             }
 
             void WriteQuadsFromSources(DrawInstancePriv@[]@ insts) {
@@ -180,20 +211,27 @@ namespace Editor {
                 }
                 DPlugVisual3D@ quads = DPlugVisual3D(quadsVis);
                 auto vertices = quads.Vertexes;
+                bool gotNewQuads = false;
                 for (uint i = 0; i < insts.Length; i++) {
                     auto di = insts[i];
                     if (!di.HasQuads) continue;
                     if (di.HasQuadsColor) lastQuadColor = di.QuadsColor;
-                    if (!di.QuadsNeedWriting(vertexIx)) continue;
+                    if (!di.QuadsNeedWriting(vertexIx)) {
+                        vertexIx += di.QuadVertices.Length;
+                        continue;
+                    }
                     auto @verts = di.QuadVertices;
                     if (verts.Length % 4 != 0) {
                         warn("Quads vertices length not divisible by 4; wiping vertices");
                         di.ResizeQuads(0);
                         continue;
                     }
+                    gotNewQuads = true;
                     if (vertices.Capacity < vertexIx + verts.Length) {
                         Editor::DrawLines::ResizeBuffer(vertices, (vertexIx + verts.Length) * 2);
+                        // dev_trace("Resized quads vertex buffer to " + (vertexIx + verts.Length) * 2);
                     }
+                    vertices.Length = vertexIx + verts.Length;
                     for (uint j = 0; j < verts.Length; j += 4) {
                         vertices.SetElementOffsetVec3(vertexIx++, 0, verts[j]);
                         vertices.SetElementOffsetVec3(vertexIx++, 0, verts[j+1]);
@@ -201,7 +239,11 @@ namespace Editor {
                         vertices.SetElementOffsetVec3(vertexIx++, 0, verts[j+3]);
                     }
                 }
+                vertices.Length = vertexIx;
                 quadsTree.IsVisible = true;
+                if (gotNewQuads) {
+                    // dev_trace("WriteQuadsFromSources done. quadsTree.Vertexes.Length: " + quads.Vertexes.Length);
+                }
             }
 
             void WriteColors() {
@@ -222,6 +264,14 @@ namespace Editor {
             void SetVisible() {
                 linesTree.IsVisible = true;
                 quadsTree.IsVisible = true;
+
+                auto box2 = Editor::DrawLines::GetHostBoxForQuads(cast<CGameCtnEditorFree>(GetApp().Editor));
+                if (box2 !is null) {
+                    box2.Mobil.IsVisible = true;
+                    box2.Mobil.Item.IsVisible = true;
+                    box2.Mobil.Show();
+                }
+
                 box.Mobil.IsVisible = true;
                 box.Mobil.Item.IsVisible = true;
                 box.Mobil.Show();
@@ -230,7 +280,10 @@ namespace Editor {
                     auto zWriteTree = quadsTree.Childs[0];
                     auto zWriteVis = cast<CPlugVisual3D>(zWriteTree.Visual);
                     if (zWriteVis !is null) {
-                        DPlugVisual3D(zWriteVis).Vertexes.Length = 0;
+                        // this is same as quadsTree.Visual.Vertexes :/
+                        // DPlugVisual3D(zWriteVis).Vertexes.Length = 0;
+                        zWriteTree.UpdateBBox();
+                        zWriteTree.IsVisible = false;
                     }
                 }
             }
@@ -238,12 +291,15 @@ namespace Editor {
 
         void UpdateLinesAndQuads() {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            VertexWriter writer(editor.CustomSelectionBox);
+            VertexWriter writer(editor);
             writer.FixTreeParentBB();
             writer.WriteLinesFromSources(drawInstances);
             writer.WriteQuadsFromSources(drawInstances);
             writer.WriteColors();
             writer.SetVisible();
+            for (uint i = 0; i < drawInstances.Length; i++) {
+                drawInstances[i]._AfterDraw();
+            }
         }
 
         DrawInstancePriv@[] drawInstances;

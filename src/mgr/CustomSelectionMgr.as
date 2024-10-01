@@ -1,4 +1,4 @@
-funcdef void OnCustomSelectionDoneF(CGameCtnEditorFree@ editor, CSmEditorPluginMapType@ pmt, nat3 min, nat3 max);
+funcdef void OnCustomSelectionDoneF(CGameCtnEditorFree@ editor, CSmEditorPluginMapType@ pmt, nat3 min, nat3 max, vec3 coordSize);
 
 class CustomSelectionMgr {
     uint HIST_LIMIT = 10;
@@ -9,6 +9,7 @@ class CustomSelectionMgr {
     int currentlySelected = -1;
     OnCustomSelectionDoneF@ doneCB;
     CGameEditorPluginMap::EPlaceMode origPlacementMode;
+    vec3 coordSize;
 
     CustomSelectionMgr() {
         RegisterOnLeavingPlaygroundCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
@@ -33,26 +34,53 @@ class CustomSelectionMgr {
         return active;
     }
 
+    vec3 GetGridCoordSize(CGameCtnEditorFree@ editor) {
+        switch (origPlacementMode) {
+            case CGameEditorPluginMap::EPlaceMode::Block:
+            case CGameEditorPluginMap::EPlaceMode::GhostBlock:
+            case CGameEditorPluginMap::EPlaceMode::FreeBlock:
+                return Editor::GetSelectedBlockSize(editor);
+            case CGameEditorPluginMap::EPlaceMode::Item:
+                return Editor::GetSelectedItemSizeFromCursor(editor);
+            case CGameEditorPluginMap::EPlaceMode::Macroblock:
+            case CGameEditorPluginMap::EPlaceMode::FreeMacroblock:
+                return Editor::GetSelectedMacroblockSize(editor);
+            default:
+                return Editor::DEFAULT_COORD_SIZE;
+        }
+    }
+
     bool Enable(OnCustomSelectionDoneF@ cb) {
         if (active) {
-            warn_every_60_s("Cannot enable a new custom selection while one is still active.");
-            return false;
+            warn_every_60_s("Enabling a new custom selection while one is still active :/.");
+            // return false;
         }
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return false;
+        if (editor.PluginMapType.PlaceMode == CGameEditorPluginMap::EPlaceMode::CustomSelection) {
+            NotifyWarning("Custom selection is already enabled. Change to block/item mode.");
+            return false;
+        }
         origPlacementMode = editor.PluginMapType.PlaceMode;
+        coordSize = GetGridCoordSize(editor);
+        if (coordSize.LengthSquared() < 0.01) {
+            NotifyWarning("No size of object detected; setting to default coord size.");
+            coordSize = Editor::DEFAULT_COORD_SIZE;
+        }
         if (SupportedFillModes.Find(origPlacementMode) < 0) {
             NotifyWarning("Place mode not supported for fill: " + tostring(origPlacementMode));
             return false;
         }
         @doneCB = cb;
+
         // Editor::CustomSelectionCoords_Clear(editor);
         // editor.PluginMapType.CustomSelectionCoords.Add(nat3(uint(-1)));
         auto cursorCoord = editor.PluginMapType.CursorCoord;
         CustomSelection::SetCoords(cursorCoord, cursorCoord);
         Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::CustomSelection);
-        editor.PluginMapType.CustomSelectionRGB = lastColor.xyz;
-        editor.PluginMapType.ShowCustomSelection();
+        // editor.PluginMapType.CustomSelectionRGB = lastColor.xyz;
+        editor.PluginMapType.HideCustomSelection();
+        editor.PluginMapType.CustomSelectionCoords.RemoveRange(0, editor.PluginMapType.CustomSelectionCoords.Length);
         active = true;
         // Editor::EnableCustomCameraInputs();
         startnew(CoroutineFunc(this.WatchLoop)); //.WithRunContext(Meta::RunContext::BeforeScripts);
@@ -62,6 +90,7 @@ class CustomSelectionMgr {
     // if user presses escape
     void Cancel() {
         _cancel = true;
+        active = false;
     }
 
     nat3 startCoord;
@@ -70,12 +99,20 @@ class CustomSelectionMgr {
     // the last max coord
     protected nat3 updateMax;
 
-    vec4 lastColor;
+    vec4 lastColor = vec4(1);
 
     protected bool _cancel = false;
     void WatchLoop() {
         auto app = GetApp();
         auto input = app.InputPort;
+        // if we start with a cancel, check it isn't handled and then return if it's still true.
+        if (_cancel) {
+            yield();
+            if (_cancel) {
+                _cancel = false;
+                return;
+            }
+        }
 
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
@@ -90,16 +127,18 @@ class CustomSelectionMgr {
         float a = 1.; // .5;
         float b = .5; // should set to 0 for symmetric around 0
         while (UI::IsMouseDown() && ((@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) && !_cancel) {
-            lastColor = vec4(Math::Sin(0.001 * Time::Now - .1337) * .5 * a + b, Math::Cos(.77 + 0.00127 * Time::Now) * .5 * a + b, 1. + 0. * Math::Sin(1.23 + 0.0014 * Time::Now) * a + b, -10.) * .1;
-            pmt.CustomSelectionRGB = lastColor.xyz;
+            lastColor = vec4(Math::Sin(0.001 * Time::Now - .1337) * .5 * a + b, Math::Cos(.77 + 0.00127 * Time::Now) * .5 * a + b, 1. + 0. * Math::Sin(1.23 + 0.0014 * Time::Now) * a + b, 10) * .1;
+            // pmt.CustomSelectionRGB = lastColor.xyz;
             if (pmt.PlaceMode != CGameEditorPluginMap::EPlaceMode::CustomSelection) break;
             UpdateSelection(editor, pmt, startCoord, pmt.CursorCoord);
             auto minPos = CoordToPos(updateMin);
             nvgDrawBlockBox(mat4::Translate(minPos), CoordDistToPos(updateMax - updateMin + 1), cWhite);
+            editor.PluginMapType.HideCustomSelection();
             yield();
         }
         if (editor !is null && pmt.PlaceMode == CGameEditorPluginMap::EPlaceMode::CustomSelection && !_cancel) {
             dev_trace('mouse released, finalizing');
+            Editor::DrawLines::ClearBoxFaces();
             try {
                 dev_trace('running callback');
                 if (doneCB !is null) OnFillSelectionComplete(editor, pmt);
@@ -163,7 +202,7 @@ class CustomSelectionMgr {
     };
 
     void OnFillSelectionComplete(CGameCtnEditorFree@ editor, CSmEditorPluginMapType@ pmt) {
-        doneCB(editor, pmt, updateMin, updateMax);
+        doneCB(editor, pmt, updateMin, updateMax, coordSize);
     }
 }
 
@@ -186,29 +225,31 @@ namespace CustomSelection {
 
     bool shouldSetCoordsNextFrame;
     void OnMapTypeUpdate() {
-        if (shouldSetCoordsNextFrame) {
+        if (shouldSetCoordsNextFrame && false) {
             auto pmt = ToML::GetPluginPMT();
             if (minCoord == lastMin && maxCoord == lastMax && pmt.CustomSelectionCoords.Length > 0) {
                 pmt.CustomSelectionCoords.RemoveRange(0, pmt.CustomSelectionCoords.Length);
             }
             shouldSetCoordsNextFrame = false;
             // might need to use normal editor PMT here?
-            pmt.ShowCustomSelection();
+            // pmt.ShowCustomSelection();
             pmt.PlaceMode = CGameEditorPluginMap::EPlaceMode::CustomSelection;
+            // pmt.HideCustomSelection();
         }
     }
 
     nat3 minCoord;
     nat3 maxCoord;
 
-    void SetCoords(nat3 min, nat3 max, vec4 color = vec4()) {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return;
-        auto pmt = editor.PluginMapType;
-        if (pmt is null) return;
-        pmt.CustomSelectionCoords.RemoveRange(0, pmt.CustomSelectionCoords.Length);
-        minCoord = min;
-        maxCoord = max;
+    void SetCoords(nat3 min, nat3 max, vec4 color = vec4(1)) {
+        // dev_trace('SetCoords: ' + min.ToString() + ' to ' + max.ToString());
+        // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        // if (editor is null) return;
+        // auto pmt = editor.PluginMapType;
+        // if (pmt is null) return;
+        // pmt.CustomSelectionCoords.RemoveRange(0, pmt.CustomSelectionCoords.Length);
+        // minCoord = min;
+        // maxCoord = max;
         // shouldSetCoordsNextFrame = true;
         Editor::DrawLines::UpdateBoxFaces(CoordToPos(min), CoordToPos(max + 1), color);
     }

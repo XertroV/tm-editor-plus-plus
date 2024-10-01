@@ -204,7 +204,7 @@ namespace BufferAlloc {
         void WriteToRawBuf(RawBuffer@ buf, uint length = 0) {
             if (length > capacity) throw("BufferAlloc::AllocdBuffer::WriteToRawBuf: length exceeds capacity");
             if (buf.Ptr == 0) throw("BufferAlloc::AllocdBuffer::WriteToRawBuf: buf.Ptr is null");
-            trace("Writing buffer to raw buffer with length " + length);
+            trace("Writing buffer to raw buffer at " + Text::FormatPointer(ptr) + " with length " + length);
             Dev::Write(buf.Ptr + 0x0, ptr);
             Dev::Write(buf.Ptr + 0x8, length);
             Dev::Write(buf.Ptr + 0xC, capacity);

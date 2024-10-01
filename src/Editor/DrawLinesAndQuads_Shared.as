@@ -107,6 +107,20 @@ namespace Editor {
                 quadVertices.Resize(0);
             }
 
+            void ResetQuads() {
+                hasQuads = false;
+                hasQuadsColor = false;
+                updated = true;
+                quadVertices.Resize(0);
+            }
+
+            void ResetLines() {
+                hasLines = false;
+                hasLinesColor = false;
+                updated = true;
+                lineVertices.Resize(0);
+            }
+
             // MARK: Line Segs
 
             // request that lines be drawn in this color (not guarenteed)
@@ -134,6 +148,7 @@ namespace Editor {
                 if (points.Length < 2) return;
                 hasLines = true;
                 lineVertices.Resize(startAt + (points.Length - 1) * 2);
+                // dev_trace("SetLineSegmentsFromPath: " + lineVertices.Length + " vertices; startAt: " + startAt + "; points: " + points.Length);
                 for (uint i = 0; i < points.Length - 1; i++) {
                     lineVertices[startAt + i * 2] = points[i];
                     lineVertices[startAt + i * 2 + 1] = points[i + 1];

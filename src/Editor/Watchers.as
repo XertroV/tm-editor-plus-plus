@@ -170,18 +170,24 @@ void EnsureSnappedLoc(CGameCtnEditorFree@ editor) {
 }
 
 
-class EditorRotation {
+class SEditorRotation {
     protected vec3 euler;
     protected CGameCursorBlock::ECardinalDirEnum dir;
     protected CGameCursorBlock::EAdditionalDirEnum additionalDir;
     float additionalYaw;
 
+    SEditorRotation() {}
+}
+
+class EditorRotation : SEditorRotation {
     EditorRotation(vec3 euler) {
+        super();
         this.euler = euler;
         UpdateDirFromPry();
     }
 
     EditorRotation(float pitch, float yaw, float roll) {
+        super();
         euler.x = pitch;
         euler.y = yaw;
         euler.z = roll;
@@ -189,6 +195,7 @@ class EditorRotation {
     }
 
     EditorRotation(CGameCursorBlock@ cursor) {
+        super();
         if (cursor.UseSnappedLoc) {
             euler.x = cursor.SnappedLocInMap_Pitch;
             euler.y = cursor.SnappedLocInMap_Yaw;
@@ -203,6 +210,7 @@ class EditorRotation {
     // }
 
     EditorRotation(float pitch, float roll, CGameCursorBlock::ECardinalDirEnum dir, CGameCursorBlock::EAdditionalDirEnum additionalDir) {
+        super();
         SetFromCursorProps(pitch, roll, dir, additionalDir);
     }
 
@@ -330,6 +338,9 @@ class EditorRotation {
     }
     CGameCursorBlock::ECardinalDirEnum get_Dir() {
         return dir;
+    }
+    CGameCtnBlock::ECardinalDirections get_Dir2() {
+        return CGameCtnBlock::ECardinalDirections(int(dir));
     }
     CGameCursorBlock::EAdditionalDirEnum get_AdditionalDir() {
         return additionalDir;

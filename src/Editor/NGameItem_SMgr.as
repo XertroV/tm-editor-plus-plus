@@ -5,7 +5,7 @@ namespace Editor {
     NGameItem_SMgr@ GetNGameItem_SMgr(ISceneVis@ scene) {
         if (scene is null) return null;
         auto @nGameItemMgr = Dev::GetOffsetNod(scene, O_GAMESCENE_NGameItem_SMgr_Offset);
-        if (nGameItemMgr !is null) Dev::ForceCast<NGameItem_SMgr@>(nGameItemMgr).Get();
+        if (nGameItemMgr !is null) return Dev::ForceCast<NGameItem_SMgr@>(nGameItemMgr).Get();
         return null;
     }
 

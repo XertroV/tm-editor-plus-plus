@@ -155,8 +155,7 @@ class RootTabGroupCls : TabGroup {
         super(name, null);
         // root
         groupName = name;
-        // fullName = "E++";
-        fullName = PluginIcon + "\\$z";
+        fullName = PluginIcon;
         tabGroupId = Text::StripOpenplanetFormatCodes(name);
         IsRoot = true;
     }

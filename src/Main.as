@@ -3,6 +3,7 @@ bool UserHasPermissions = false;
 void Main() {
     // sets vars that should be non-zero asap
     VTables::InitVTableAddrs();
+    // Init_CreateTabGroups();
 
     // callbacks that must be registered first
     RegisterNewBlockCallback_Private(CustomCursorRotations::OnNewBlock, "CustomCursorRotations::OnNewBlock", 0);

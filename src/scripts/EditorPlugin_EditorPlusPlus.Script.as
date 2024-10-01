@@ -129,7 +129,7 @@ Boolean EPP_GetMetadataDisabled() {
 
 
 Void InitializeCustomSelectionCoords() {
-	ShowCustomSelection();
+	// ShowCustomSelection();
 	CustomSelectionCoords.clear();
 	declare Integer S;
 	declare Boolean Bit1 = False;

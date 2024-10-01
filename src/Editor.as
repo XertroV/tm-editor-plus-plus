@@ -350,11 +350,46 @@ namespace Editor {
         return null;
     }
 
+    vec3 GetSelectedBlockSize(CGameCtnEditorFree@ editor) {
+        auto nodRef = GetSelectedBlockInfoNodRef(editor);
+        if (nodRef !is null) {
+            auto bi = nodRef.AsBlockInfo();
+            if (bi is null) return vec3();
+            nat3 maxSize = MathX::Max(bi.VariantBaseAir.Size, bi.VariantBaseGround.Size);
+            if (Nat3ToVec3(maxSize).LengthSquared() <= 0.01) {
+                dev_warn("GetSelectedBlockSize: block size is 0; VBA: " + bi.VariantBaseAir.Size.ToString() + ", VBG: " + bi.VariantBaseGround.Size.ToString());
+            }
+            return CoordDistToPos(maxSize);
+        }
+        dev_trace("GetSelectedBlockSize: no block info selected");
+        return vec3();
+    }
+
+    // Note: This is only accurate for compass aligned items with no pitch/roll.
+    vec3 GetSelectedItemSizeFromCursor(CGameCtnEditorFree@ editor) {
+        auto tree = GameOutlineBox::GetQuadsTree(editor.Cursor.CursorBox);
+        if (tree is null) {
+            warn("GetSelectedItemSizeFromCursor: no tree to get half diag from");
+            return vec3();
+        }
+        return tree.BoundingBoxHalfDiag * 2.;
+    }
+
     CGameCtnBlock@ GetPickedBlock() {
         if (lastPickedBlock !is null) {
             return lastPickedBlock.AsBlock();
         }
         return null;
+    }
+
+    const vec3 DEFAULT_COORD_SIZE = vec3(32, 8, 32);
+
+    vec3 GetSelectedMacroblockSize(CGameCtnEditorFree@ editor) {
+        auto mbi = editor.CurrentMacroBlockInfo;
+        if (mbi is null) return DEFAULT_COORD_SIZE;
+        auto gbi = mbi.GeneratedBlockInfo;
+        if (gbi is null) return DEFAULT_COORD_SIZE;
+        return CoordDistToPos(MathX::Max(gbi.VariantBaseAir.Size, gbi.VariantBaseGround.Size));
     }
 
     // ! does not work

@@ -327,7 +327,7 @@ quat Mat4ToQuat(mat4 &in m) {
 }
 
 // from threejs Euler.js -- order XZY then *-1 at the end
-vec3 PitchYawRollFromRotationMatrix(mat4 m) {
+vec3 PitchYawRollFromRotationMatrix(const mat4 &in m) {
     float m11 = m.xx, m12 = m.xy, m13 = m.xz,
           /*m21 = m.yx,*/ m22 = m.yy, m23 = m.yz,
           /*m31 = m.zx,*/ m32 = m.zy, m33 = m.zz

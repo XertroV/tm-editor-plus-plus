@@ -67,6 +67,38 @@ namespace Editor {
             return this;
         }
 
+        NewMbParts@ AddMacroblock(CGameCtnMacroBlockInfo@ macroblock, const vec3 &in position, const vec3 &in rotation) override {
+            auto rot = EulerToMat(rotation);
+            auto mb = DGameCtnMacroBlockInfo(macroblock);
+            auto newParts = NewMbParts();
+            auto mbBlocks = mb.Blocks;
+            for (uint i = 0; i < mbBlocks.Length; i++) {
+                auto block = BlockSpecPriv(mbBlocks[i]);
+                auto blockMat = block.GetTransform();
+                auto transform = mat4::Translate(position) * rot * blockMat;
+                block.pos = (transform * vec3()).xyz;
+                // block.pos = (transform * block.pos).xyz;
+                block.pyr = PitchYawRollFromRotationMatrix(mat4::Translate(block.pos * -1.) * transform);
+                block.pos += vec3(0, 56, 0);
+                blocks.InsertLast(block);
+                newParts.blocks.InsertLast(block);
+            }
+            auto mbItems = mb.Items;
+            for (uint i = 0; i < mbItems.Length; i++) {
+                auto item = ItemSpecPriv(mbItems[i]);
+                auto itemMat = item.GetTransform();
+                auto transform = mat4::Translate(position) * rot * itemMat;
+                item.pos = (transform * vec3()).xyz;
+                // item.pos = (transform * item.pos).xyz;
+                item.pyr = PitchYawRollFromRotationMatrix(mat4::Translate(item.pos * -1.) * transform);
+                item.pos += vec3(0, 56, 0);
+                items.InsertLast(item);
+                newParts.items.InsertLast(item);
+            }
+            // todo: skins
+            return newParts;
+        }
+
         void AddBlock(CGameCtnBlock@ block) override {
             blocks.InsertLast(BlockSpecPriv(block));
         }
@@ -239,6 +271,53 @@ namespace Editor {
             SetSkinsFrom(block);
         }
 
+        BlockSpecPriv(CGameCtnBlockInfo@ block, const nat3 &in _coord, int dir) {
+            super();
+            SetBlockInfo(block);
+            SetCoord_AlsoPosRot(_coord, block, dir);
+        }
+
+        BlockSpecPriv(CGameCtnBlockInfo@ block, const vec3 &in position, const vec3 &in pyrRotation) {
+            super();
+            SetBlockInfo(block);
+            SetPosRot_AlsoCoordDir(position, pyrRotation);
+            this.isFree = true;
+            this.isGhost = false;
+            this.isGround = false;
+        }
+
+        void SetCoord_AlsoPosRot(const nat3 &in _coord, CGameCtnBlockInfo@ block, int _dir) override {
+            auto coordSize = Nat3ToVec3(MathX::Max(block.VariantBaseAir.Size, block.VariantBaseGround.Size));
+            SetCoord_AlsoPosRot(_coord, coordSize, _dir);
+        }
+
+        // CoordSize is size of block in coord units (e.g., `Nat3ToVec3(blockInfo.VariantBaseAir.Size)`)
+        void SetCoord_AlsoPosRot(const nat3 &in _coord, vec3 coordSize, int _dir) override {
+            coord = _coord;
+            pos = BlockCoordAndCoordSizeToPos(_coord, coordSize, _dir) + vec3(0, 56, 0);
+            // pos = CoordToPos(_coord) + vec3(0, 56, 0);
+            auto er = EditorRotation(0, 0, CGameCursorBlock::ECardinalDirEnum(_dir), CGameCursorBlock::EAdditionalDirEnum::P0deg);
+            pyr = er.Euler;
+            this.dir = CGameCtnBlock::ECardinalDirections(_dir);
+            this.dir2 = this.dir;
+            if (coord.y > 0) {
+                coord.y -= 1;
+            }
+        }
+
+        void SetPosRot_AlsoCoordDir(vec3 position, vec3 pyrRotation) override {
+            pos = position + vec3(0, 56, 0);
+
+            pyr = pyrRotation;
+            dir = EditorRotation(pyrRotation).Dir2;
+            dir2 = dir;
+
+            coord = PosToCoord(position);
+            if (coord.y > 0) {
+                coord.y -= 1;
+            }
+        }
+
         void SetFrom(CGameCtnBlock@ block) override {
             ObjPtr = Dev_GetPointerForNod(block);
             name = block.BlockInfo.IdName;
@@ -295,6 +374,8 @@ namespace Editor {
             }
             @BlockInfo = _blockInfo;
             if (BlockInfo !is null) {
+                name = BlockInfo.IdName;
+                author = BlockInfo.Author.GetName();
                 BlockInfo.MwAddRef();
             }
         }
@@ -528,10 +609,8 @@ namespace Editor {
             // @GameItem = item;
             // item.MwAddRef();
             super();
-            name = item.ItemModel.IdName;
             // collection = blah
             // need to offset coords by 0,1,0 and make height relative to that
-            author = item.ItemModel.Author.GetName();
             coord = item.BlockUnitCoord - nat3(0, 1, 0);
             SetCoordFromAssociatedBlock(Editor::GetItemsBlockAssociation(item));
             dir = CGameCtnAnchoredObject::ECardinalDirections(uint8(-1));
@@ -554,6 +633,24 @@ namespace Editor {
             @_rawBGSkin = Editor::GetItemBGSkin(item);
             @_rawFGSkin = Editor::GetItemFGSkin(item);
             SetModel(item.ItemModel);
+        }
+
+        ItemSpecPriv(CGameItemModel@ itemModel, const vec3 &in position, const vec3 &in pyrRotation) {
+            super();
+            // name and author are set by SetModel
+            coord = PosToCoord(position) - nat3(0, 1, 0);
+            dir = CGameCtnAnchoredObject::ECardinalDirections(uint8(-1));
+            pos = position + vec3(0, 56, 0);
+            pyr = pyrRotation;
+            //if (pyr.y < NegPI) pyr.y += TAU;
+            color = CGameCtnAnchoredObject::EMapElemColor::Default;
+            visualRot = mat3::Identity();
+            pivotPos = vec3(0, 0, 0);
+            isFlying = 1;
+            variantIx = 0;
+            associatedBlockIx = uint(-1);
+            itemGroupOnBlock = uint(-1);
+            SetModel(itemModel);
         }
 
         ItemSpecPriv(DGameCtnMacroBlockInfo_Item@ item) {
@@ -705,6 +802,8 @@ namespace Editor {
             }
             @Model = _model;
             if (Model !is null) {
+                name = _model.IdName;
+                author = _model.Author.GetName();
                 Model.MwAddRef();
             }
         }

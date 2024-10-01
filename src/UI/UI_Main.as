@@ -24,11 +24,24 @@ TabGroup@ RootTabGroup_MediaTracker = CreateMTEditorRT();
 TabGroup@ RootTabGroup_InMap = CreateInMapRT();
 TabGroup@ ToolsTG = CreateToolsTabGroup();
 
+
+// void Init_CreateTabGroups() {
+//     if (RootTabGroup_Editor !is null) return;
+//     @RootTabGroup_Editor = CreateRootTabGroup();
+//     @RootTabGroup_ItemEditor = CreateItemEditorRT();
+//     @RootTabGroup_MeshEditor = CreateMeshEditorRT();
+//     @RootTabGroup_MediaTracker = CreateMTEditorRT();
+//     @RootTabGroup_InMap = CreateInMapRT();
+//     @ToolsTG = CreateToolsTabGroup();
+// }
+
+
 void UI_Main_Render() {
     if (!UserHasPermissions) return;
     if (!AreFontsLoaded) return;
 
     auto tabToDraw = RootTabGroup_Editor;
+    if (tabToDraw is null) return;
 
     if (IsInEditor && IsInCurrentPlayground) {
 #if DEV
@@ -182,6 +195,10 @@ bool CheckIfShowEppPluginReminder() {
 const string WARNING_TRIANGLE_START = "\\$f80" + Icons::ExclamationTriangle + " ";
 
 
+[Setting hidden]
+bool SF_EggRun = false;
+
+
 namespace MenuBar {
     string m_MenuSearch;
 
@@ -199,6 +216,18 @@ namespace MenuBar {
 
             if (UI::BeginMenu("Tools")) {
                 ToolsTG.DrawTabsAsMenuItems();
+                UI::EndMenu();
+            }
+
+            auto eggLabel = SF_EggRun ? "Egg" : ("Egg" + NewIndicator);
+            if (UI::BeginMenu(eggLabel + "###Egg")) {
+                UI::SeparatorTextOpenplanet("Egg");
+                if (UI::Button("Hello Openplanet (Clears after 70s)")) {
+                    SF_EggRun = true;
+                    startnew(DemoRunVisLines_Main);
+                    Editor::SetCamAnimationGoTo(vec2(-.8, 0.12) * Math::PI, vec3(875.341, 142.509, 763.686), 250);
+                    Notify("Try placing some blocks over it.");
+                }
                 UI::EndMenu();
             }
 

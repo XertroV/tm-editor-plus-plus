@@ -334,6 +334,20 @@ class SelectionBoxTab : Tab {
         DrawOutlineBoxDevUI(editor.Cursor.CursorBox, "Cursor Box");
         DrawOutlineBoxDevUI(editor.SelectionBox, "Selection Box");
         DrawOutlineBoxDevUI(editor.CustomSelectionBox, "Custom Selection Box");
+        if (UI::CollapsingHeader("Other Boxes")) {
+            UI::Indent();
+            DrawOutlineBoxDevUI(editor.UndergroundBox, "UndergroundBox");
+            DrawOutlineBoxDevUI(editor.ItemSelectionBox, "ItemSelectionBox");
+            DrawOutlineBoxDevUI(editor.OffZoneSelectionBox, "OffZoneSelectionBox");
+            DrawOutlineBoxDevUI(editor.ConstraintsBox, "ConstraintsBox");
+            DrawOutlineBoxDevUI(editor.SectorConstraintsBox, "SectorConstraintsBox");
+            DrawOutlineBoxDevUI(editor.ConstructibleZoneBorderBox, "ConstructibleZoneBorderBox");
+            DrawOutlineBoxDevUI(editor.SectorsOutlineBox, "SectorsOutlineBox");
+            DrawOutlineBoxDevUI(editor.CurrentSectorOutlineBox, "CurrentSectorOutlineBox");
+            DrawOutlineBoxDevUI(editor.AnimatedElemOutlineBox_Block, "AnimatedElemOutlineBox_Block");
+            DrawOutlineBoxDevUI(editor.AnimatedElemOutlineBox_Items, "AnimatedElemOutlineBox_Items");
+            UI::Unindent();
+        }
 
         // if (quadsVis !is null) {
         //     if (UI::Button("Update Quads")) {
@@ -397,6 +411,7 @@ class SelectionBoxTab : Tab {
             UI::Text("No Selection Box");
             return;
         }
+        auto ptr = Dev_GetPointerForNod(box);
         auto quadsTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x18));
         auto linesTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x28));
         auto otherTree = cast<CPlugTree>(Dev_GetOffsetNodSafe(box, 0x38));
@@ -410,6 +425,12 @@ class SelectionBoxTab : Tab {
         }
 
         UI::Indent();
+
+        if (Editor::DrawLines::g_Box is box) {
+            UI::Text("\\$i\\$4f4Box is g_Box");
+        } else if (UI::Button("Set g_Box##"+ptr)) {
+            Editor::DrawLines::SetHostBox(box);
+        }
 
         CopiableLabeledValue("Quads", Text::FormatPointer(Dev_GetPointerForNod(quadsTree)));
         CopiableLabeledValue("Lines", Text::FormatPointer(Dev_GetPointerForNod(linesTree)));
@@ -461,7 +482,7 @@ class SelectionBoxTab : Tab {
     }
 
     void RunAddLinesTest() {
-        startnew(TestRunVisLines_Main);
+        startnew(DemoRunVisLines_Main);
     }
 
     void test_print(const string &in msg) {

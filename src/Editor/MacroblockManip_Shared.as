@@ -85,6 +85,10 @@ namespace Editor {
             auto z = buf.ReadUInt32();
             return nat3(x, y, z);
         }
+
+        void _throwUnimpl() {
+            throw("This method is implemented elsewhere. Instantiate using Editor::Make*() functions.");
+        }
     }
 
     shared class MacroblockSpec : NetworkSerializable {
@@ -157,6 +161,11 @@ namespace Editor {
                 AddBlock(blocks[i]);
             }
         }
+        void AddBlocks(BlockSpec@[]@ blocks) {
+            for (uint i = 0; i < blocks.Length; i++) {
+                blocks.InsertLast(blocks[i]);
+            }
+        }
         void AddBlock(CGameCtnBlock@ block) {
             throw('override me');
         }
@@ -176,6 +185,11 @@ namespace Editor {
         void AddItems(CGameCtnAnchoredObject@[]@ items) {
             for (uint i = 0; i < items.Length; i++) {
                 AddItem(items[i]);
+            }
+        }
+        void AddItems(ItemSpec@[]@ items) {
+            for (uint i = 0; i < items.Length; i++) {
+                items.InsertLast(items[i]);
             }
         }
         void AddItem(CGameCtnAnchoredObject@ item) {
@@ -220,6 +234,25 @@ namespace Editor {
             throw("CreateChunks implemented elsewhere");
             return {this};
         }
+
+        // Does not clone block and item specs! This will add all blocks and items from the other macroblock to this one.
+        void AddMacroblock(MacroblockSpec@ macroblock) {
+            // todo: handle skins
+            AddBlocks(macroblock.blocks);
+            AddItems(macroblock.items);
+        }
+
+        NewMbParts@ AddMacroblock(CGameCtnMacroBlockInfo@ macroblock, const vec3 &in position, const vec3 &in rotation) {
+            throw("AddMacroblock for MacroBlockInfo not implemented here");
+            return null;
+        }
+    }
+
+    shared class NewMbParts {
+        BlockSpec@[] blocks;
+        ItemSpec@[] items;
+        SetSkinSpec@[] setSkins;
+        NewMbParts() {}
     }
 
     shared class MacroblockWithSetSkins : NetworkSerializable {
@@ -274,7 +307,7 @@ namespace Editor {
         CGameCtnBlock::EMapElemColor color;
         CGameCtnBlock::EMapElemLightmapQuality lmQual;
         uint mobilIx;
-        uint mobilVariant;
+        uint mobilVariant = 63;
         uint variant;
         // Set via Editor::BlockFlags enum values
         uint8 flags;
@@ -315,15 +348,43 @@ namespace Editor {
         bool get_isFree() const {
             return flags & uint8(BlockFlags::Free) != 0;
         }
+        void set_isFree(bool value) {
+            if (value) {
+                flags |= uint8(BlockFlags::Free);
+            } else {
+                flags &= ~uint8(BlockFlags::Free);
+            }
+        }
+
         bool get_isGround() const {
             return flags & uint8(BlockFlags::Ground) != 0;
         }
+        void set_isGround(bool value) {
+            if (value) {
+                flags |= uint8(BlockFlags::Ground);
+            } else {
+                flags &= ~uint8(BlockFlags::Ground) & 0x7;
+            }
+        }
+
         bool get_isGhost() const {
             return flags & uint8(BlockFlags::Ghost) != 0;
         }
-        bool get_isNormal() const {
-            return flags & 7 == 0;
+        void set_isGhost(bool value) {
+            if (value) {
+                flags |= uint8(BlockFlags::Ghost);
+            } else {
+                flags &= ~uint8(BlockFlags::Ghost) & 0x7;
+            }
         }
+
+        bool get_isNormal() const {
+            return flags & 6 == 0;
+        }
+        void SetToNormal() {
+            flags &= uint8(BlockFlags::Ground);
+        }
+
 
         uint CalcSize() override {
             uint size = 0;
@@ -389,6 +450,63 @@ namespace Editor {
             }
             return this;
         }
+
+        void SetCoord_AlsoPosRot(const nat3 &in _coord, CGameCtnBlockInfo@ block, int _dir) { _throwUnimpl(); }
+        void SetCoord_AlsoPosRot(const nat3 &in _coord, vec3 coordSize, int _dir) { _throwUnimpl(); }
+        void SetPosRot_AlsoCoordDir(vec3 position, vec3 pyrRotation) { _throwUnimpl(); }
+
+        void SetColor(CGameCtnBlock::EMapElemColor _color) {
+            color = _color;
+        }
+
+        void SetLmQual(CGameCtnBlock::EMapElemLightmapQuality _lmQual) {
+            lmQual = _lmQual;
+        }
+
+        void SetMobilIx(uint _mobilIx) {
+            mobilIx = _mobilIx;
+        }
+
+        void SetMobilVariant(uint _mobilVariant) {
+            mobilVariant = _mobilVariant;
+        }
+
+        // void SetAirVariant() {
+        //     if (BlockInfo is null) {
+        //         warn("BlockInfo is null");
+        //         return;
+        //     }
+        //     auto nbGroundVars = BlockInfo.AdditionalVariantsGround.Length + 1;
+        //     if (variant < nbGroundVars) {
+        //         variant = nbGroundVars;
+        //     }
+        //     // fix air variant ix
+        //     if (BlockInfo.VariantBaseAir.IsObsoleteVariant) variant++;
+        //     else return;
+        //     for (int i = 0; i < int(BlockInfo.AdditionalVariantsAir.Length) - 1; i++) {
+        //         if (BlockInfo.AdditionalVariantsGround[i].IsObsoleteVariant) variant++;
+        //         else return;
+        //     }
+        // }
+
+        // void SetGroundVariant() {
+        //     if (BlockInfo is null) {
+        //         warn("BlockInfo is null");
+        //         return;
+        //     }
+        //     variant = 0;
+        //     // fix variant ix
+        //     if (BlockInfo.VariantBaseGround.IsObsoleteVariant) variant++;
+        //     else return;
+        //     for (int i = 0; i < int(BlockInfo.AdditionalVariantsGround.Length) - 1; i++) {
+        //         if (BlockInfo.AdditionalVariantsGround[i].IsObsoleteVariant) variant++;
+        //         else return;
+        //     }
+        // }
+
+        mat4 GetTransform() {
+            return mat4::Translate(pos) * EulerToMat_Shared(pyr);
+        }
     }
 
     shared class WaypointSpec : NetworkSerializable {
@@ -398,6 +516,11 @@ namespace Editor {
         WaypointSpec(CGameWaypointSpecialProperty@ waypoint) {
             tag = waypoint.Tag;
             order = waypoint.Order;
+        }
+
+        WaypointSpec(const string &in tag, uint order) {
+            this.tag = tag;
+            this.order = order;
         }
 
         WaypointSpec(MemoryBuffer@ buf) {
@@ -526,7 +649,7 @@ namespace Editor {
         CGameCtnAnchoredObject::ECardinalDirections dir;
         vec3 pos;
         vec3 pyr;
-        float scale;
+        float scale = 1.0;
         CGameCtnAnchoredObject::EMapElemColor color;
         CGameCtnAnchoredObject::EMapElemLightmapQuality lmQual;
         CGameCtnAnchoredObject::EPhaseOffset phase;
@@ -655,6 +778,10 @@ namespace Editor {
             }
             // ignore skins don't write them
             return this;
+        }
+
+        mat4 GetTransform() {
+            return mat4::Translate(pos) * EulerToMat_Shared(pyr);
         }
     }
 }
