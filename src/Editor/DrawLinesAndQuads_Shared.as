@@ -1,7 +1,7 @@
 namespace Editor {
     namespace DrawLinesAndQuads {
         // shared
-        class DrawInstance {
+        shared class DrawInstance {
             protected bool hasLines;
             protected bool hasQuads;
             protected vec3 linesColor = vec3(.5, .5, .5);

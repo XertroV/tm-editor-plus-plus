@@ -1,3 +1,5 @@
+#if DEV
+
 namespace Editor {
     const string VehicleStdMesh = "GameData/Skins/Models/CarSport/Stadium/Standard/MainBody.Mesh.gbx";
     const string VehicleSnowMesh = "GameData/Skins/Models/CarSport/Snow/MainBody.Mesh.gbx";
@@ -115,3 +117,5 @@ namespace Editor {
         Editor::PlaceItems({spec});
     }
 }
+
+#endif
