@@ -232,14 +232,14 @@ namespace MenuBar {
             }
 
             if (UI::BeginMenu("Advanced")) {
-                UI::SeparatorText("Reload or Change Base/Mood");
+                UI::SeparatorText("\\$i\\$bbbReload or Change Base/Mood");
 
                 if (UI::MenuItem("Save and reload map")) {
                     startnew(Editor::SaveAndReloadMap);
                 }
                 DrawChangeMapMoodMenu();
 
-                UI::SeparatorText("Refresh Blocks and Items");
+                UI::SeparatorText("\\$i\\$bbbRefresh Blocks and Items");
 
                 if (UI::MenuItem(Icons::ExclamationTriangle + " Safe to refresh Blocks & Items", "", Editor::IsRefreshSafe())) {
                     EditorPriv::_RefreshUnsafe = !EditorPriv::_RefreshUnsafe;
@@ -250,7 +250,7 @@ namespace MenuBar {
                 }
                 UI::EndDisabled();
 
-                UI::SeparatorText("Patches");
+                UI::SeparatorText("\\$i\\$bbbPatches");
 
                 if (UI::MenuItem("Patch: NOP update pillar skins", "", PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied)) {
                     PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied = !PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied;
