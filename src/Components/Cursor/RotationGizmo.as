@@ -135,6 +135,16 @@ class RotationTranslationGizmo {
         return this;
     }
 
+    void OffsetBlockOnStart() {
+        AddTmpTranslation(DOWN * .25, true);
+        ApplyTmpTranslation();
+    }
+
+    void OffsetBlockOnApply() {
+        AddTmpTranslation(DOWN * -.25, true);
+        ApplyTmpTranslation();
+    }
+
     // RotationTranslationGizmo@ SetRotation(const mat4 &in r) {
     //     rot = r;
     //     return this;
@@ -454,7 +464,10 @@ class RotationTranslationGizmo {
                             else AddTmpRotation(lastClosestAxis, d, !useGlobal);
                         } else {
                             d = mag * c2pLen * 0.2;
-                            if (_isCtrlDown) d = d - d % stepDist;
+                            if (_isCtrlDown) {
+                                d = d - d % stepDist;
+                                trace('d: ' + d);
+                            }
                             if (d == 0.) skipSetLastDD = true;
                             else {
                                 // AddTmpTranslation((mat4::Inverse(rot) * AxisToVec(lastClosestAxis)).xyz * d); // * (lastClosestAxis == Axis::Y ? 1 : -1));
@@ -585,7 +598,7 @@ class RotationTranslationGizmo {
 
     void DrawWindow() {
         bool isRotMode = mode == Gizmo::Mode::Rotation;
-        auto btnSize = g_screen.y * .05;
+        auto btnSize = g_screen.y * .05 * g_scale;
         auto btnSize2 = vec2(btnSize);
         auto nbBtns = 6.;
         auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
@@ -628,6 +641,12 @@ class RotationTranslationGizmo {
             AddSimpleTooltip("Reset Camera");
 
             UI::SameLine();
+            if (UI::Button(Icons::Cog, btnSize2)) {
+                UI::OpenPopup("gizmo-toolbar-settings");
+            }
+            AddSimpleTooltip("Settings");
+
+            UI::SameLine();
             if (UI::Button(Icons::Check, btnSize2)) {
                 onApply();
             }
@@ -641,6 +660,7 @@ class RotationTranslationGizmo {
             UI::PopFont();
             // UI::PopStyleVar();
         }
+
         if (UI::BeginPopup("gizmo-toolbar-edit-pivot")) {
             UI::Text("Edit Pivot");
             UI::SeparatorText("Edit Pivot");
@@ -666,8 +686,17 @@ class RotationTranslationGizmo {
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();
         }
-        UI::End();
 
+        if (UI::BeginPopup("gizmo-toolbar-settings")) {
+            // UI::Text("Gizmo Settings");
+            UI::SeparatorText("Gizmo Settings");
+            S_Gizmo_MoveCameraOnStart = UI::Checkbox("Move Camera when Starting Gizmo", S_Gizmo_MoveCameraOnStart);
+            UX::CloseCurrentPopupIfMouseFarAway();
+            UI::EndPopup();
+        }
+
+        // end window
+        UI::End();
 
 
         // // UX::PushInvisibleWindowStyle();
