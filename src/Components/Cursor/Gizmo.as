@@ -56,7 +56,6 @@ namespace Gizmo {
     }
 
     void OnGoInactive() {
-        _IsActive = false;
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
         CustomCursor::NoShowCursorItemModelsPatchActive = false;
         CustomCursor::NoSetCursorVisFlagPatchActive = false;
@@ -67,6 +66,7 @@ namespace Gizmo {
         if (editor !is null) {
             _OnInactive_UpdatePMT(editor.PluginMapType);
         }
+        _IsActive = false;
     }
 
     void _OnActive_UpdatePMT(CGameEditorPluginMapMapType@ pmt) {
@@ -390,11 +390,11 @@ namespace Gizmo {
     void _GizmoOnCancel() {
         if (!IsActive) return;
         bool hadGizmo = gizmo !is null;
-        IsActive = false;
         if (hadGizmo) {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             editor.PluginMapType.Undo();
         }
+        IsActive = false;
     }
 
     void DisableGizmoInAsync(uint64 frames) {

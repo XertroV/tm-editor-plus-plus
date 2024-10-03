@@ -1156,7 +1156,8 @@ namespace CustomCursorRotations {
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
         if (!CustomYawActive) return false;
-        // todo: custom yaw
+        if (Gizmo::IsActive) return false;
+        // apply extra yaw to item
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cursor = editor.Cursor;
         auto itemCursor = DGameCursorItem(editor.ItemCursor);

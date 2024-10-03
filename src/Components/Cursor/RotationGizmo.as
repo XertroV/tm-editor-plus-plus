@@ -607,9 +607,9 @@ class RotationTranslationGizmo {
 
     void DrawWindow() {
         bool isRotMode = mode == Gizmo::Mode::Rotation;
-        auto btnSize = g_screen.y * .05 * g_scale;
+        auto btnSize = Math::Max(64.0, g_screen.y * .05) * g_scale;
         auto btnSize2 = vec2(btnSize);
-        auto nbBtns = 6.;
+        auto nbBtns = 7.;
         auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
 
