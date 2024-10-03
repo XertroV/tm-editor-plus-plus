@@ -230,7 +230,7 @@ class CurrentItem_PlacementToolbar : Tab {
     }
 
     bool BtnToolbar(const string &in label, const string &in desc, BtnStatus status, vec2 size = vec2()) {
-        if (size.LengthSquared() == 0) size = d_ToolbarBtnSize;
+        if (size.LengthSquared() == 0) size = d_ToolbarBtnSize * g_scale;
         auto hue = BtnStatusHue(status);
         auto click = UI::ButtonColored(label, hue, .6, .6, size);
         if (desc.Length > 0) AddSimpleTooltip(desc, true);
@@ -239,16 +239,18 @@ class CurrentItem_PlacementToolbar : Tab {
 
     bool BtnToolbarHalfH(const string &in label, const string &in desc, BtnStatus status) {
         float framePad = UI::GetStyleVarVec2(UI::StyleVar::FramePadding).x;
-        return BtnToolbar(label, desc, status, vec2(d_ToolbarBtnSize.x * .5 - framePad, d_ToolbarBtnSize.y));
+        return BtnToolbar(label, desc, status, vec2(d_ToolbarBtnSize.x * .5 - framePad, d_ToolbarBtnSize.y) * g_scale);
     }
 
     bool BtnToolbarHalfV(const string &in label, const string &in desc, BtnStatus status) {
-        return BtnToolbar(label, desc, status, vec2(d_ToolbarBtnSize.x, d_ToolbarBtnSize.y * .5));
+        return BtnToolbar(label, desc, status, vec2(d_ToolbarBtnSize.x, d_ToolbarBtnSize.y * .5) * g_scale);
     }
 
     bool get_windowOpen() override property {
+        auto app = GetApp();
         return S_ShowItemPlacementToolbar
-            && Editor::IsInAnyItemPlacementMode(cast<CGameCtnEditorFree>(GetApp().Editor))
+            && Editor::IsInAnyItemPlacementMode(cast<CGameCtnEditorFree>(app.Editor))
+            && app.CurrentPlayground is null
             && Tab::get_windowOpen();
     }
 
@@ -446,7 +448,7 @@ float BtnStatusHue(BtnStatus status) {
     return 0.5;
 }
 
-const vec2 d_ToolbarBtnSize = vec2(48);
+const vec2 d_ToolbarBtnSize = vec2(52);
 
 class PlacementClassCopy {
     PlacementClassCopy() {}
