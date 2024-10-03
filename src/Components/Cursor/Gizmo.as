@@ -66,6 +66,12 @@ namespace Gizmo {
         if (editor !is null) {
             _OnInactive_UpdatePMT(editor.PluginMapType);
         }
+        if (Editor::GetPlacementMode(editor) != origPlaceMode) {
+            Editor::SetPlacementMode(editor, origPlaceMode);
+        }
+        if (origModeWasItem) {
+            Editor::SetItemPlacementMode(origItemPlacementMode);
+        }
         _IsActive = false;
     }
 
@@ -102,8 +108,10 @@ namespace Gizmo {
         }
         wasInFreeBlockMode = Editor::IsInFreeBlockPlacementMode(editor, false);
 
+        origItemPlacementMode = Editor::GetItemPlacementMode(false);
         origModeWasItem = Editor::IsInAnyItemPlacementMode(editor, false);
         origModeWasBlock = Editor::IsInBlockPlacementMode(editor, false);
+        if (origModeWasItem) dev_trace("Item placement mode: " + tostring(origItemPlacementMode));
 
         IsActive = true;
         // don't block click => ctrl+click will select the block/item for us
@@ -113,6 +121,7 @@ namespace Gizmo {
     CGameEditorPluginMap::EditMode origEditMode;
     CGameEditorPluginMap::EPlaceMode origPlaceMode;
     CGameEditorPluginMap::EPlaceMode desiredGizmoPlaceMode;
+    Editor::ItemMode origItemPlacementMode;
     bool origCustomYawActive;
     bool wasInFreeBlockMode = false;
     bool origModeWasItem = false;

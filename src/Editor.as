@@ -115,9 +115,9 @@ namespace Editor {
         return ItemMode(Dev::GetOffsetUint32(editor, O_EDITOR_ITEM_PLACEMENT_OFFSET) + 1);
     }
 
-    ItemMode GetItemPlacementMode() {
+    ItemMode GetItemPlacementMode(bool checkEditMode = true) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (!IsInAnyItemPlacementMode(editor, true)) return ItemMode::None;
+        if (!IsInAnyItemPlacementMode(editor, checkEditMode)) return ItemMode::None;
         // return GetItemPlacementMode_Raw(editor);
         // this is very slow?
         try {
