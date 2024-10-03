@@ -232,11 +232,14 @@ namespace MenuBar {
             }
 
             if (UI::BeginMenu("Advanced")) {
+                UI::SeparatorText("Reload or Change Base/Mood");
+
                 if (UI::MenuItem("Save and reload map")) {
                     startnew(Editor::SaveAndReloadMap);
                 }
+                DrawChangeMapMoodMenu();
 
-                UI::Separator();
+                UI::SeparatorText("Refresh Blocks and Items");
 
                 if (UI::MenuItem(Icons::ExclamationTriangle + " Safe to refresh Blocks & Items", "", Editor::IsRefreshSafe())) {
                     EditorPriv::_RefreshUnsafe = !EditorPriv::_RefreshUnsafe;
@@ -247,7 +250,7 @@ namespace MenuBar {
                 }
                 UI::EndDisabled();
 
-                UI::Separator();
+                UI::SeparatorText("Patches");
 
                 if (UI::MenuItem("Patch: NOP update pillar skins", "", PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied)) {
                     PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied = !PillarsChoice::SkipUpdateAllPillarBlockSkinRemapFolders.IsApplied;
@@ -465,6 +468,40 @@ namespace MenuBar {
     void InitPopulateSearchOptions() {
         // todo
     }
+
+    void DrawChangeMapMoodMenu() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        UI::BeginDisabled(editor is null);
+        if (UI::BeginMenu("Change Map Mood (Will "+Icons::FloppyO+" & Reload)")) {
+            for (int i = 0; i < int(MapDecoChoice::XXX_Last); i++) {
+                switch (i) {
+                    case 0: UI::SeparatorText("Old Stadium"); break;
+                    case 4: UI::SeparatorText("No Stadium"); break;
+                    case 8: UI::SeparatorText("New (155) Stadium"); break;
+                }
+                if (UI::MenuItem(tostring(MapDecoChoice(i)))) {
+                    Map_SetDeco(editor.Challenge, MapDecoChoice(i));
+                }
+            }
+            UI::EndMenu();
+        }
+        UI::EndDisabled();
+    }
+
+    // Editor::Mood setMapMood = Editor::Mood::Sunrise;
+
+    // void RunChangeMapMood() {
+    //     auto mood = setMapMood;
+    //     Editor::SaveAndReloadMap_(mood);
+    // }
+
+    // Editor::MapBase setMapBase = Editor::MapBase::NoStadium;
+
+    // void RunChangeMapMoodAndBase() {
+    //     auto mood = setMapMood;
+    //     auto base = setMapBase;
+    //     Editor::SaveAndReloadMap_(mood, Editor::BaseAndMoodToDecoId(base, mood));
+    // }
 }
 
 FavoritesTab@ g_Favorites;

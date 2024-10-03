@@ -906,6 +906,33 @@ CGameCtnDecoration@ GetDecoration(MapDecoChoice d) {
     return null;
 }
 
+void Map_SetDeco(CGameCtnChallenge@ map, MapDecoChoice d) {
+    auto @deco = map.Decoration;
+    auto newDeco = GetDecoration(d);
+    if (newDeco !is null) {
+        @map.Decoration = newDeco;
+        startnew(CoroutineFuncUserdata(Map_SaveAndRevertDeco), deco);
+    }
+}
+
+
+void Map_SaveAndRevertDeco(ref@ data) {
+    auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+    auto deco = cast<CGameCtnDecoration>(data);
+    if (deco is null) return;
+    // sleep(100);
+    yield();
+    if (!Editor::SaveMapSameName(editor)) {
+        NotifyError("Failed to save map.");
+        return;
+    }
+    yield();
+    @editor.Challenge.Decoration = deco;
+    // sleep(100);
+    yield();
+    Editor::NoSaveAndReloadMap();
+}
+
 enum VehicleToPlace {
     Map_Default = 0,
     CarSport = 1,

@@ -89,31 +89,47 @@ namespace Editor {
         }
         auto currCam = GetCurrentCamState(editor);
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
+        @editor = null;
         app.BackToMainMenu();
         Log::Trace('back to menu');
         AwaitReturnToMenu();
         sleep(100);
         app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
         AwaitEditor();
+        startnew(_RestoreMapName);
         SetCamAnimationGoTo(currCam);
-        @editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        // @editor = cast<CGameCtnEditorFree>(GetApp().Editor);
     }
 
     void SaveAndReloadMap() {
+        SaveAndReloadMap_();
+    }
+
+    // provide a mood or a full deco name (which overwrites mood)
+    void SaveAndReloadMap_(Mood mood = Mood::Whatever, string _decoName = "") {
         Log::Trace('save and reload map');
         auto app = cast<CTrackMania>(GetApp());
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         if (!SaveMapSameName(editor)) {
-            NotifyWarning("Map must be saved, first. Please save and reload manually!");
+            NotifyWarning("Map must be saved, first. Please save and try again or reload manually!");
             return;
         }
         auto currCam = GetCurrentCamState(editor);
         string fileName = editor.Challenge.MapInfo.FileName;
+        auto modNameOrUrl = GetMapModNameOrUrl(editor.Challenge);
+        // string decoName = _decoName.Length > 0 ? _decoName : (mood == Mood::Whatever ? "" : MapCurrentDecoWithMood(editor.Challenge, mood));
+        // if (decoName.StartsWith("Base")) decoName = decoName.SubStr(4);
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
         app.BackToMainMenu();
         Log::Trace('back to menu');
         AwaitReturnToMenu();
+        dev_trace("edit map: " + fileName);
         app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
+        // if (mood == Mood::Whatever) {
+        // } else {
+        //     dev_trace("edit map 2: " + fileName + ", deco=" + decoName + ", mod=" + modNameOrUrl);
+        //     app.ManiaTitleControlScriptAPI.EditMap2(fileName, decoName, modNameOrUrl, "", "", "");
+        // }
         AwaitEditor();
         startnew(_RestoreMapName);
         SetCamAnimationGoTo(currCam);
@@ -283,6 +299,93 @@ namespace Editor {
             priorModPack.MwRelease();
         }
     }
+
+    string GetMapModNameOrUrl(CGameCtnChallenge@ map) {
+        auto modPackDesc = map.ModPackDesc;
+        if (modPackDesc is null) return "";
+        if (modPackDesc.Fid !is null) return modPackDesc.Fid.FullFileName;
+        if (modPackDesc.Url.Length > 0) return modPackDesc.Url;
+        return modPackDesc.Name;
+    }
+
+    enum Mood {
+        // Don't set a mood
+        Whatever,
+        Sunrise,
+        Day,
+        Sunset,
+        Night,
+    }
+
+    // string MoodToString(Mood mood) {
+    //     switch (mood) {
+    //         case Mood::Sunrise: return "Sunrise";
+    //         case Mood::Day: return "Day";
+    //         case Mood::Sunset: return "Sunset";
+    //         case Mood::Night: return "Night";
+    //     }
+    //     return "Day";
+    // }
+
+    // string MapCurrentDecoWithMood(CGameCtnChallenge@ map, Mood mood) {
+    //     if (mood == Mood::Whatever) return GetMapDecoName(map);
+    //     auto base = GetMapBase(map);
+    //     return BaseAndMoodToDecoId(base, mood);
+    // }
+
+    // enum MapBase {
+    //     NoStadium = 0,
+    //     StadiumOld = 1,
+    //     Stadium155 = 2,
+    // }
+
+    // string BaseAndMoodToDecoId(MapBase base, Mood mood) {
+    //     switch (base) {
+    //         case MapBase::NoStadium:
+    //             switch (mood) {
+    //                 case Mood::Day: return "NoStadium48x48Day";
+    //                 case Mood::Night: return "NoStadium48x48Night";
+    //                 case Mood::Sunset: return "NoStadium48x48Sunset";
+    //                 case Mood::Sunrise: return "NoStadium48x48Sunrise";
+    //             }
+    //         case MapBase::StadiumOld:
+    //             switch (mood) {
+    //                 case Mood::Day: return "Base48x48Day";
+    //                 case Mood::Night: return "Base48x48Night";
+    //                 case Mood::Sunset: return "Base48x48Sunset";
+    //                 case Mood::Sunrise: return "Base48x48Sunrise";
+    //             }
+    //         case MapBase::Stadium155:
+    //             switch (mood) {
+    //                 case Mood::Day: return "Base48x48Screen155Day";
+    //                 case Mood::Night: return "Base48x48Screen155Night";
+    //                 case Mood::Sunset: return "Base48x48Screen155Sunset";
+    //                 case Mood::Sunrise: return "Base48x48Screen155Sunrise";
+    //             }
+    //     }
+    //     NotifyWarning("BaseAndMoodToDecoId: Unknown base and mood: " + base + ", " + mood);
+    //     return "Base48x48Screen155Day";
+    // }
+
+    // string GetMapDecoName(CGameCtnChallenge@ map) {
+    //     return map.DecorationName;
+    // }
+
+    // MapBase GetMapBase(CGameCtnChallenge@ map) {
+    //     auto decoName = GetMapDecoName(map);
+    //     if (decoName.IndexOf("NoStadium") != -1) return MapBase::NoStadium;
+    //     if (decoName.IndexOf("Screen155") != -1) return MapBase::Stadium155;
+    //     return MapBase::StadiumOld;
+    // }
+
+    // Mood GetMapMood(CGameCtnChallenge@ map) {
+    //     auto decoName = GetMapDecoName(map);
+    //     if (decoName.IndexOf("Sunrise") != -1) return Mood::Sunrise;
+    //     if (decoName.IndexOf("Day") != -1) return Mood::Day;
+    //     if (decoName.IndexOf("Sunset") != -1) return Mood::Sunset;
+    //     if (decoName.IndexOf("Night") != -1) return Mood::Night;
+    //     return Mood::Whatever;
+    // }
 
     uint GetNbMacroblocks(CGameCtnChallenge@ map) {
         return Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0x8);
