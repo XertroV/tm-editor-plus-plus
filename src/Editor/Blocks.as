@@ -145,7 +145,7 @@ namespace Editor {
         // trace('bivIx: ' + bivIx + ' / ' + block.IsGround + ' / ');
         // trace('lengths: ' + bi.AdditionalVariantsGround.Length + ' / ');
         // trace('bi.AdditionalVariantsAir.Length: ' + bi.AdditionalVariantsAir.Length);
-        if (bivIx == uint(-1)) bivIx = 0;
+        if (int(bivIx) < 0) bivIx = 0;
         if (bivIx > 0) {
             auto maxIx = isGround ? bi.AdditionalVariantsGround.Length : bi.AdditionalVariantsAir.Length;
             if (bivIx - 1 >= maxIx) {
