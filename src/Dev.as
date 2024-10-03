@@ -481,6 +481,9 @@ const uint16 SZ_LM_SPIMP_Buf2_EL = 0x58;
 
 // MARK: O Editor
 
+const uint16 O_EDITOR_CurrentBlockInfo = GetOffset("CGameCtnEditorFree", "CurrentBlockInfo");
+const uint16 O_EDITOR_CurrentGhostBlockInfo = GetOffset("CGameCtnEditorFree", "CurrentGhostBlockInfo");
+
 // is a uint
 const uint16 O_EDITOR_CURR_PIVOT_OFFSET = GetOffset("CGameCtnEditorFree", "UndergroundBox") + (0xBC4 - 0xAC0);
 const uint16 O_EDITOR_LAUNCHEDCPS = GetOffset("CGameCtnEditorFree", "Radius") + 0x10;
@@ -656,6 +659,8 @@ const uint16 O_INVENTORY_ItemSelectedFolder = 0x1F0;
 const uint16 O_BLOCKCURSOR_SnappedLocInMap_Roll = GetOffset("CGameCursorBlock", "SnappedLocInMap_Roll");
 // bool, 1 to draw (works in freelook mode, for example)
 const uint16 O_BLOCKCURSOR_DrawCursor = O_BLOCKCURSOR_SnappedLocInMap_Roll + (0x1f8 - 0x184);
+// the offset used for free blocks (sometimes?) is at 0x110; it's a vec2, the second one seems to affect normal blocks (sometimes?); default: vec2(.25, 0)
+const uint16 O_BLOCKCURSOR_FreeBlockCursorOffset = GetOffset("CGameCursorBlock", "SubdivFactors") - 0xC; // 0x11C - 0x110 = 0xC
 
 
 const uint16 O_ITEMCURSOR_CurrentPos = GetOffset("CGameCursorItem", "MagnetSnapping_LocalRotation_Deg") + 0x40;

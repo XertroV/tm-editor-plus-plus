@@ -20,3 +20,75 @@ Trackmania.exe.text+100431C - C3                    - ret
 
 90 83 3B FF 74 0B 48 8B D3 48 8B CE E8 B0 90 00 00
 90 83 3B FF 74 0B 48 8B D3 48 8B CE E8 ?? ?? ?? ??
+
+------------------------
+
+sets item visible sometimes if editing block from item mode
+
+found by break on write for when it's shown in the particular circumstance, and then going back up the function stack till we I found a convenient jump (noping calls before that caused crashes)
+
+74 1B F3 0F 10 5B 28 48 8D 55 F7 4C 8B C0 C7 44 24 20 01 00 00 00 E8 ?? ?? ?? ??
+
+
+
+Trackmania.exe.text+10E8E2B - 74 1B                 - je Trackmania.exe.text+10E8E48 { je -> jmp to not draw items
+ }
+Trackmania.exe.text+10E8E2D - F3 0F10 5B 28         - movss xmm3,[rbx+28]
+Trackmania.exe.text+10E8E32 - 48 8D 55 F7           - lea rdx,[rbp-09]
+Trackmania.exe.text+10E8E36 - 4C 8B C0              - mov r8,rax
+Trackmania.exe.text+10E8E39 - C7 44 24 20 01000000  - mov [rsp+20],00000001 { 1 }
+Trackmania.exe.text+10E8E41 - E8 9A17F1FF           - call Trackmania.exe.text+FFA5E0 { sets visible
+ }
+
+
+
+
+Trackmania.exe.text+10E8DF6 - 48 8B 8B B8000000     - mov rcx,[rbx+000000B8]
+Trackmania.exe.text+10E8DFD - 40 F6 C7 02           - test dil,02 { 2 }
+Trackmania.exe.text+10E8E01 - 8B 93 C0000000        - mov edx,[rbx+000000C0]
+Trackmania.exe.text+10E8E07 - 4C 8B BC 24 B0000000  - mov r15,[rsp+000000B0]
+Trackmania.exe.text+10E8E0F - 48 8B BC 24 F8000000  - mov rdi,[rsp+000000F8]
+Trackmania.exe.text+10E8E17 - 48 89 4D B7           - mov [rbp-49],rcx
+Trackmania.exe.text+10E8E1B - 48 8D 4D B7           - lea rcx,[rbp-49]
+Trackmania.exe.text+10E8E1F - 89 55 BF              - mov [rbp-41],edx
+Trackmania.exe.text+10E8E22 - 0F28 45 B7            - movaps xmm0,[rbp-49]
+Trackmania.exe.text+10E8E26 - 66 0F7F 45 B7         - movdqa [rbp-49],xmm0
+Trackmania.exe.text+10E8E2B - 74 1B                 - je Trackmania.exe.text+10E8E48 { je -> jmp to not draw items
+ }
+Trackmania.exe.text+10E8E2D - F3 0F10 5B 28         - movss xmm3,[rbx+28]
+Trackmania.exe.text+10E8E32 - 48 8D 55 F7           - lea rdx,[rbp-09]
+Trackmania.exe.text+10E8E36 - 4C 8B C0              - mov r8,rax
+Trackmania.exe.text+10E8E39 - C7 44 24 20 01000000  - mov [rsp+20],00000001 { 1 }
+Trackmania.exe.text+10E8E41 - E8 9A17F1FF           - call Trackmania.exe.text+FFA5E0 { sets visible
+ }
+Trackmania.exe.text+10E8E46 - EB 08                 - jmp Trackmania.exe.text+10E8E50
+Trackmania.exe.text+10E8E48 - 48 8B D0              - mov rdx,rax
+Trackmania.exe.text+10E8E4B - E8 901CF1FF           - call Trackmania.exe.text+FFAAE0
+Trackmania.exe.text+10E8E50 - 48 8B 4D 2F           - mov rcx,[rbp+2F]
+Trackmania.exe.text+10E8E54 - 48 33 CC              - xor rcx,rsp
+Trackmania.exe.text+10E8E57 - E8 14933F00           - call Trackmania.exe.text+14E2170
+
+
+
+---------------------------------------
+
+code to offset cursor model for free blocks; see comments
+
+
+Trackmania.exe.text+10E1B20 - 48 83 EC 28           - sub rsp,28 { 40 }
+Trackmania.exe.text+10E1B24 - 83 79 2C 00           - cmp dword ptr [rcx+2C],00 { starts at block cursor + 0x130; +2c = use free pos
+
+ }
+Trackmania.exe.text+10E1B28 - 75 18                 - jne Trackmania.exe.text+10E1B42
+Trackmania.exe.text+10E1B2A - 83 79 3C 00           - cmp dword ptr [rcx+3C],00 { check use snapped loc
+ }
+Trackmania.exe.text+10E1B2E - 75 12                 - jne Trackmania.exe.text+10E1B42
+Trackmania.exe.text+10E1B30 - E8 BBFFFFFF           - call Trackmania.exe.text+10E1AF0
+Trackmania.exe.text+10E1B35 - F3 0F58 82 FC000000   - addss xmm0,[rdx+000000FC] { rdx = block cursor + 0x18
+ }
+Trackmania.exe.text+10E1B3D - 48 83 C4 28           - add rsp,28 { 40 }
+Trackmania.exe.text+10E1B41 - C3                    - ret
+Trackmania.exe.text+10E1B42 - F3 0F10 82 FC000000   - movss xmm0,[rdx+000000FC]
+Trackmania.exe.text+10E1B4A - F3 0F58 82 F8000000   - addss xmm0,[rdx+000000F8]
+Trackmania.exe.text+10E1B52 - 48 83 C4 28           - add rsp,28 { 40 }
+Trackmania.exe.text+10E1B56 - C3                    - ret

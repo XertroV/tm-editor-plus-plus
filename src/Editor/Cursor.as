@@ -98,6 +98,10 @@ namespace Editor {
             && Dev::GetOffsetUint8(cursor, O_CURSOR_SUBDIV + (0x1FC - 0x1E4)) == 0x0
             && Dev::GetOffsetUint8(cursor, O_CURSOR_SUBDIV + (0x1F0 - 0x1E4)) == 0x0;
     }
+
+    void SetCursorFreeBlockOffset(CGameCursorBlock@ cursor, float offset) {
+        Dev::SetOffset(cursor, O_BLOCKCURSOR_FreeBlockCursorOffset, offset);
+    }
 }
 
 

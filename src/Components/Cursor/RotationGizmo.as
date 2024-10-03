@@ -137,12 +137,18 @@ class RotationTranslationGizmo {
         return this;
     }
 
+    bool blockOffsetApplied = false;
+
     void OffsetBlockOnStart() {
+        if (blockOffsetApplied) return;
+        blockOffsetApplied = true;
         AddTmpTranslation(DOWN * .25, true);
         ApplyTmpTranslation();
     }
 
     void OffsetBlockOnApply() {
+        if (!blockOffsetApplied) return;
+        blockOffsetApplied = false;
         AddTmpTranslation(DOWN * -.25, true);
         ApplyTmpTranslation();
     }
@@ -467,7 +473,9 @@ class RotationTranslationGizmo {
                         } else {
                             d = mag * c2pLen * 0.2;
                             if (_isCtrlDown) {
-                                d = d - d % S_Gizmo_TranslateCtrlStepDist;
+                                auto step = S_Gizmo_TranslateCtrlStepDist;
+                                if (Math::Abs(step) < 0.01) step = 0.25;
+                                d = d - d % step;
                             }
                             if (d == 0.) skipSetLastDD = true;
                             else {
@@ -688,9 +696,12 @@ class RotationTranslationGizmo {
             UI::EndPopup();
         }
 
+
         if (UI::BeginPopup("gizmo-toolbar-settings")) {
             // UI::Text("Gizmo Settings");
-            UI::SeparatorText("Gizmo Settings");
+            UI::SeparatorText("Gizmo Startup Settings");
+            // S_Gizmo_ApplyBlockOffset = UI::Checkbox("Apply Block Offset of 0.25", S_Gizmo_ApplyBlockOffset);
+            // AddSimpleTooltip("The cursor for freeblocks is raised up 0.25, so this will apply a -0.25 offset when starting the gizmo. \\$<\\$i\\$f80HOWEVER,\\$> this is somewhat inconsistent. This setting allows you to disable the feature.");
             S_Gizmo_MoveCameraOnStart = UI::Checkbox("Move Camera when Starting Gizmo", S_Gizmo_MoveCameraOnStart);
 
             UI::SeparatorText("Translate");
@@ -698,12 +709,12 @@ class RotationTranslationGizmo {
             AddSimpleTooltip("Default: 0.25.\nHow much to move (step size) when holding Ctrl while dragging (translation).");
 
             UI::SeparatorText("Controls");
-            UI::TextWrapped("Escape: cancel and exit gizmo.");
-            UI::TextWrapped("Hold Shift to slow down rotation speed.");
-            UI::TextWrapped("Hold Ctrl: Limit step size.");
-            UI::TextWrapped("Hold Alt: Move camera.");
-            UI::TextWrapped("Right click (on gizmo): Cycle between Translate and Rotate.");
-            UI::TextWrapped("Right click (while dragging): Reset.");
+            UI::Text("Escape: cancel and exit gizmo.");
+            UI::Text("Hold Shift to slow down rotation speed.");
+            UI::Text("Hold Ctrl: Limit step size.");
+            UI::Text("Hold Alt: Move camera.");
+            UI::Text("Right click (on gizmo): Cycle between Translate and Rotate.");
+            UI::Text("Right click (while dragging): Reset.");
 
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();

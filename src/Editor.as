@@ -521,6 +521,23 @@ namespace Editor {
         Dev::SetOffset(editor, GetOffset(editor, "PickedObject"), nodToEdit);
     }
 
+    void SetSelectedBlockInfo(CGameCtnEditorFree@ editor, CGameCtnBlockInfo@ info) {
+        SetSelectedNormalBlockInfo(editor, info);
+        SetSelectedGhostBlockInfo(editor, info);
+    }
+
+    void SetSelectedNormalBlockInfo(CGameCtnEditorFree@ editor, CGameCtnBlockInfo@ info) {
+        if (info !is null) info.MwAddRef();
+        if (editor.CurrentBlockInfo !is null) editor.CurrentBlockInfo.MwRelease();
+        Dev::SetOffset(editor, O_EDITOR_CurrentBlockInfo, info);
+    }
+
+    void SetSelectedGhostBlockInfo(CGameCtnEditorFree@ editor, CGameCtnBlockInfo@ info) {
+        if (info !is null) info.MwAddRef();
+        if (editor.CurrentGhostBlockInfo !is null) editor.CurrentGhostBlockInfo.MwRelease();
+        Dev::SetOffset(editor, O_EDITOR_CurrentGhostBlockInfo, info);
+    }
+
     shared enum ItemEditorAction {
         LeaveItemEditor = 1,
         OpenItem = 2,

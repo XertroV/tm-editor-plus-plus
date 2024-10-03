@@ -22,6 +22,9 @@ const vec3& AxisToVecForRot(Axis a) {
     return UP;
 }
 
+[Setting hidden]
+bool S_Gizmo_ApplyBlockOffset = true;
+
 namespace Gizmo {
     enum Mode {
         Rotation,
@@ -45,7 +48,6 @@ namespace Gizmo {
             origEditMode = CGameEditorPluginMap::EditMode::Place;
             origPlaceMode = Editor::GetPlacementMode(editor);
             origCustomYawActive = CustomCursorRotations::CustomYawActive;
-            // CustomCursor::NoSetCursorVisFlagPatchActive = true;
         } else if (!v) {
             OnGoInactive();
         } else {
@@ -56,6 +58,7 @@ namespace Gizmo {
     void OnGoInactive() {
         _IsActive = false;
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
+        CustomCursor::NoShowCursorItemModelsPatchActive = false;
         CustomCursor::NoSetCursorVisFlagPatchActive = false;
         CustomCursorRotations::CustomYawActive = origCustomYawActive;
         CursorControl::ReleaseExclusiveControl(gizmoControlName);
@@ -86,6 +89,7 @@ namespace Gizmo {
     // will enter gizmo mode if conditions are met. returns whether to block click, always false
     bool CheckEnterGizmoMode(CGameCtnEditorFree@ editor) {
         if (editor is null) return false;
+        if (IsActive) return false;
         if (!CursorControl::IsExclusiveControlAvailable()) return false;
         // true while ctrl is down
         if (Editor::GetEditMode(editor) != CGameEditorPluginMap::EditMode::Pick) return false;
@@ -96,6 +100,11 @@ namespace Gizmo {
         if (Editor::IsInMacroblockPlacementMode(editor, false)) {
             editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
         }
+        wasInFreeBlockMode = Editor::IsInFreeBlockPlacementMode(editor, false);
+
+        origModeWasItem = Editor::IsInAnyItemPlacementMode(editor, false);
+        origModeWasBlock = Editor::IsInBlockPlacementMode(editor, false);
+
         IsActive = true;
         // don't block click => ctrl+click will select the block/item for us
         return false;
@@ -103,7 +112,11 @@ namespace Gizmo {
 
     CGameEditorPluginMap::EditMode origEditMode;
     CGameEditorPluginMap::EPlaceMode origPlaceMode;
+    CGameEditorPluginMap::EPlaceMode desiredGizmoPlaceMode;
     bool origCustomYawActive;
+    bool wasInFreeBlockMode = false;
+    bool origModeWasItem = false;
+    bool origModeWasBlock = false;
 
     void GizmoLoop() {
         auto app = GetApp();
@@ -113,7 +126,17 @@ namespace Gizmo {
         yield();
         bool isItem = modeTargetType == BlockOrItem::Item;
         CustomCursor::NoSetCursorVisFlagPatchActive = !isItem;
-        CustomCursor::NoHideCursorItemModelsPatchActive = isItem;
+        if (isItem) CustomCursor::NoHideCursorItemModelsPatchActive = true;
+        CustomCursor::NoShowCursorItemModelsPatchActive = !isItem;
+
+        desiredGizmoPlaceMode = origPlaceMode;
+        if (isItem) {
+            desiredGizmoPlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
+        } else if (origPlaceMode == CGameEditorPluginMap::EPlaceMode::FreeBlock) {
+            // fix for offset in freeblock mode.
+            desiredGizmoPlaceMode = CGameEditorPluginMap::EPlaceMode::Block;
+        }
+
         while (IsActive && (@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) {
             if (IsEscDown()) {
                 _GizmoOnCancel();
@@ -131,8 +154,8 @@ namespace Gizmo {
                 editor.Cursor.UseFreePos = true;
             } else {
                 pmt.EditMode = origEditMode;
-                if (pmt.PlaceMode != origPlaceMode) {
-                    pmt.PlaceMode = origPlaceMode;
+                if (pmt.PlaceMode != desiredGizmoPlaceMode) {
+                    pmt.PlaceMode = desiredGizmoPlaceMode;
                 }
             }
             editor.Cursor.UseSnappedLoc = true;
@@ -192,6 +215,16 @@ namespace Gizmo {
         @itemSpec = null;
         @blockSpec = null;
         lastAppliedPivot = vec3();
+        bool applyingItem = modeTargetType == BlockOrItem::Item;
+        bool modeMismatch = applyingItem != origModeWasItem;
+        // fix mode mismatch, otherwise we place blocks when gizmoing an item from block mode
+        if (modeMismatch) {
+            if (applyingItem) {
+                origPlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
+            } else {
+                origPlaceMode = CGameEditorPluginMap::EPlaceMode::Block;
+            }
+        }
 
         if (modeTargetType == BlockOrItem::Block) {
             yield();
@@ -203,10 +236,11 @@ namespace Gizmo {
             }
             auto size = Editor::GetBlockSize(b);
             @bb = Editor::AABB(mat4::Translate(Editor::GetBlockLocation(b)) * mat4::Inverse(Editor::GetBlockRotationMatrix(b)), size/2., size/2.);
-            if (!Editor::IsInFreeBlockPlacementMode(editor)) {
+            if (!wasInFreeBlockMode) {
                 editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
             }
             @blockSpec = Editor::BlockSpecPriv(b);
+            Editor::SetSelectedBlockInfo(editor, blockSpec.BlockInfo);
             yield();
         } else {
             auto item = lastPickedItem.AsItem();
@@ -215,6 +249,8 @@ namespace Gizmo {
                 IsActive = false;
                 return;
             }
+
+            editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
             Editor::SetCurrentPivot(editor, 0);
             CustomCursorRotations::SetCustomPYRAndCursor(lastPickedItemRot.Euler, editor.Cursor);
             @itemSpec = Editor::ItemSpecPriv(item);
@@ -259,6 +295,7 @@ namespace Gizmo {
         }
         editor.PluginMapType.AutoSave();
         if (modeTargetType == BlockOrItem::Block) {
+            // origPlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
             if (blockSpec.isFree) {
                 Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
                 Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
@@ -275,6 +312,8 @@ namespace Gizmo {
             }
             yield();
         } else {
+            Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Item);
+            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
             Editor::DeleteBlocksAndItems({}, {itemSpec});
         }
         Editor::SetAllCursorPos(bb.pos);
@@ -286,7 +325,10 @@ namespace Gizmo {
             // gizmo.pivotPoint = lastAppliedPivot;
         } else if (modeTargetType == BlockOrItem::Block) {
             // blocks are offset by 0.25 in the local y axis for the free-block cursor.
-            gizmo.OffsetBlockOnStart();
+            // sometimes this is not necessary. IDK :/
+            // if (S_Gizmo_ApplyBlockOffset && wasInFreeBlockMode) {
+            //     gizmo.OffsetBlockOnStart();
+            // }
         }
 
         Editor::SetAllCursorMat(gizmo.GetCursorMat());
@@ -309,6 +351,7 @@ namespace Gizmo {
 
     void _GizmoOnApply() {
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
+        CustomCursor::NoShowCursorItemModelsPatchActive = false;
         if (modeTargetType == BlockOrItem::Item) {
             dev_trace("Applying gizmo item: ");
             dev_trace("   lastAppliedPivot: " + lastAppliedPivot.ToString());
@@ -321,6 +364,7 @@ namespace Gizmo {
             itemSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
             Editor::PlaceItems({itemSpec}, true);
         } else {
+            // this will only unapply if it was applied earlier
             gizmo.OffsetBlockOnApply();
             blockSpec.flags = uint8(Editor::BlockFlags::Free);
             blockSpec.pos = gizmo.pos + vec3(0, 56, 0) + gizmo.GetRotatedPivotPoint();
@@ -346,7 +390,6 @@ namespace Gizmo {
     void _GizmoOnCancel() {
         if (!IsActive) return;
         bool hadGizmo = gizmo !is null;
-        CustomCursor::NoHideCursorItemModelsPatchActive = false;
         IsActive = false;
         if (hadGizmo) {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -355,7 +398,6 @@ namespace Gizmo {
     }
 
     void DisableGizmoInAsync(uint64 frames) {
-        CustomCursor::NoHideCursorItemModelsPatchActive = false;
         yield(frames);
         IsActive = false;
     }

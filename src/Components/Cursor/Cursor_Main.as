@@ -65,8 +65,9 @@ class CursorPosition : Tab {
     }
 
     bool get_windowOpen() override property {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        return editor !is null && Tab::get_windowOpen();
+        auto app = GetApp();
+        auto editor = cast<CGameCtnEditorFree>(app.Editor);
+        return editor !is null && !IsInCurrentPlayground && Tab::get_windowOpen();
     }
 
     void set_windowOpen(bool value) override property {
@@ -552,6 +553,12 @@ class CustomCursorTab : EffectTab {
     }
 
     void DrawInner() override {
+        // use this as a temp var. Named for CustomCursorRotaitons below.
+        bool wasActive;
+
+        // -----------
+        UI::SeparatorText("General");
+
         CustomCursorRotations::ItemSnappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled (Default: On)", CustomCursorRotations::ItemSnappingEnabled);
         AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly). Normal game behavior is when this is *true*.");
 
@@ -563,9 +570,24 @@ class CustomCursorTab : EffectTab {
         S_HelpPlaceItemsOnFreeBlocks = UI::Checkbox("Help place items on free/ghost blocks", S_HelpPlaceItemsOnFreeBlocks);
         AddSimpleTooltip("\\$<\\$8f4\\$iVery helpful for checkpoints!\\$> The item will have a red box, but it will place okay.");
 
+        DrawInfinitePrecisionSetting();
+
+        wasActive = S_EnablePromiscuousItemSnapping;
+        S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping", S_EnablePromiscuousItemSnapping);
+        AddSimpleTooltip("Items that snap to blocks will be less picky about which blocks they snap to. Example: trees will now snap to all terrain.\n\nNOTE: If you toggle this, it will only take effect for newly placed blocks, or when you reload the map.");
+        if (wasActive != S_EnablePromiscuousItemSnapping) {
+            CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
+        }
+
+        // -----------------
+        UI::SeparatorText("Free Blocks");
+
         DrawFreeBlockSnapRadiusSettings();
 
-        bool wasActive = CustomCursorRotations::Active;
+        // -----------------
+        UI::SeparatorText("Rotations");
+
+        wasActive = CustomCursorRotations::Active;
         auto nextActive = UI::Checkbox("Enable Custom Cursor Rotation Amounts", wasActive);
         if (wasActive != nextActive) CustomCursorRotations::Active = nextActive;
         AddSimpleTooltip("Only works for Pitch and Roll");
@@ -583,15 +605,7 @@ class CustomCursorTab : EffectTab {
         S_AutoActivateCustomYaw = UI::Checkbox("Auto-activate custom cursor rotations (Yaw)", S_AutoActivateCustomYaw);
         AddSimpleTooltip("Activates when entering the editor");
 
-        DrawInfinitePrecisionSetting();
-
-        wasActive = S_EnablePromiscuousItemSnapping;
-        S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping", S_EnablePromiscuousItemSnapping);
-        AddSimpleTooltip("Items that snap to blocks will be less picky about which blocks they snap to. Example: trees will now snap to all terrain.\n\nNOTE: If you toggle this, it will only take effect for newly placed blocks, or when you reload the map.");
-        if (wasActive != S_EnablePromiscuousItemSnapping) {
-            CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
-        }
-
+        // -----------------
         UI::SeparatorText("Cursor Options");
 
         S_BlockCursorShowQuads = UI::Checkbox("Show Cursor Quads", S_BlockCursorShowQuads);
@@ -610,6 +624,8 @@ class CustomCursorTab : EffectTab {
     }
 
     void DrawFreeBlockSnapRadiusSettings() {
+        UI::Indent();
+
         float currSnapRadius = CustomCursor::GetCurrentSnapRadius();
         UI::SetNextItemWidth(60.);
         UI::InputText("##fb-snap-r", Text::Format("%.2f", currSnapRadius), int(UI::InputTextFlags::ReadOnly));
@@ -637,11 +653,28 @@ class CustomCursorTab : EffectTab {
             CustomCursor::ResetSnapRadius();
         }
 
-        UI::Indent();
         S_DrawFreeBlockClips = UI::Checkbox("Draw Block Clip Helpers" + NewIndicator, S_DrawFreeBlockClips);
         S_DrawAnySnapRadiusOnHelpers = UI::Checkbox("Draw Snap Radius on Helpers" + NewIndicator, S_DrawAnySnapRadiusOnHelpers);
         S_DrawFreeBlockClipsOnNearbyBlocks = UI::Checkbox("Draw Block Clip Helpers on Nearby Blocks" + NewIndicator, S_DrawFreeBlockClipsOnNearbyBlocks);
+        DrawFreeBlockOffsetForm();
+
         UI::Unindent();
+    }
+
+    void DrawFreeBlockOffsetForm() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto cursor = editor.Cursor;
+        vec3 offsets = Dev::GetOffsetVec3(cursor, O_BLOCKCURSOR_FreeBlockCursorOffset);
+
+        UI::SetNextItemWidth(120.);
+        offsets.x = UI::InputFloat("FreeBlock Vertical Offset (In-Cursor)", offsets.x, 0.125);
+        AddSimpleTooltip("Default 0.25. \\$iHow much the cursor offsets free blocks when previewing before placement. You may need to select a new block for it to take effect.");
+        UI::SetNextItemWidth(120.);
+        offsets.y = UI::InputFloat("\\$i\\$999Normal Block Offset?? (In-Cursor)", offsets.y);
+        AddSimpleTooltip("Not exactly sure what this does, but seems to effect normal blocks before placement.");
+        // offsets.z = UI::InputFloat("Unknown 3", offsets.z); // default 8
+
+        Dev::SetOffset(cursor, O_BLOCKCURSOR_FreeBlockCursorOffset, offsets);
     }
 }
 
@@ -1191,6 +1224,22 @@ namespace CustomCursor {
         }
         set {
             Patch_DoNotHideCursorItemModels.IsApplied = value;
+        }
+    }
+
+    MemPatcher@ Patch_DoNotShowCursorItemModels = MemPatcher(
+        // 74 1B F3 0F 10 5B 28 48 8D 55 F7 4C 8B C0 C7 44 24 20 01 00 00 00 E8 ?? ?? ?? ??
+        // v je, then prep xmm3, registers, stack
+        "74 1B F3 0F 10 5B 28 48 8D 55 F7 4C",
+        {0}, {"EB"}, {"74"}
+    );
+
+    bool NoShowCursorItemModelsPatchActive {
+        get {
+            return Patch_DoNotShowCursorItemModels.IsApplied;
+        }
+        set {
+            Patch_DoNotShowCursorItemModels.IsApplied = value;
         }
     }
 
