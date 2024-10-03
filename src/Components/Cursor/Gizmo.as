@@ -136,10 +136,10 @@ namespace Gizmo {
                 }
             }
             editor.Cursor.UseSnappedLoc = true;
-            Editor::SetAllCursorMat(gizmo.GetCursorMat());
             if (CustomCursorRotations::CustomYawActive) {
                 CustomCursorRotations::CustomYawActive = false;
             }
+            Editor::SetAllCursorMat(gizmo.GetCursorMat());
             yield();
         }
         IsActive = false;

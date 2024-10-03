@@ -23,6 +23,9 @@ vec3[] circleAroundZ;
 array<vec3>@[] circlesAroundXYZ;
 array<bool>[] circlesAroundIsNearSide;
 
+[Setting hidden]
+float S_Gizmo_TranslateCtrlStepDist = 0.25;
+
 void InitCirclesAround() {
     circleAroundY.Resize(CIRCLE_SEGMENTS);
     circleAroundX.Resize(CIRCLE_SEGMENTS);
@@ -84,7 +87,6 @@ class RotationTranslationGizmo {
     string name;
     Gizmo::Mode mode = Gizmo::Mode::Rotation;
 
-    float stepDist = 0.25;
     float stepRot = PI/32.;
 
     // roughly: size in meters of target object. set via WithBoundingBox
@@ -465,8 +467,7 @@ class RotationTranslationGizmo {
                         } else {
                             d = mag * c2pLen * 0.2;
                             if (_isCtrlDown) {
-                                d = d - d % stepDist;
-                                trace('d: ' + d);
+                                d = d - d % S_Gizmo_TranslateCtrlStepDist;
                             }
                             if (d == 0.) skipSetLastDD = true;
                             else {
@@ -691,6 +692,19 @@ class RotationTranslationGizmo {
             // UI::Text("Gizmo Settings");
             UI::SeparatorText("Gizmo Settings");
             S_Gizmo_MoveCameraOnStart = UI::Checkbox("Move Camera when Starting Gizmo", S_Gizmo_MoveCameraOnStart);
+
+            UI::SeparatorText("Translate");
+            S_Gizmo_TranslateCtrlStepDist = UI::InputFloat("Step Size (Holding Ctrl)", S_Gizmo_TranslateCtrlStepDist, 0.25);
+            AddSimpleTooltip("Default: 0.25.\nHow much to move (step size) when holding Ctrl while dragging (translation).");
+
+            UI::SeparatorText("Controls");
+            UI::TextWrapped("Escape: cancel and exit gizmo.");
+            UI::TextWrapped("Hold Shift to slow down rotation speed.");
+            UI::TextWrapped("Hold Ctrl: Limit step size.");
+            UI::TextWrapped("Hold Alt: Move camera.");
+            UI::TextWrapped("Right click (on gizmo): Cycle between Translate and Rotate.");
+            UI::TextWrapped("Right click (while dragging): Reset.");
+
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();
         }
