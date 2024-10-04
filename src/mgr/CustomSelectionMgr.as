@@ -141,7 +141,9 @@ class CustomSelectionMgr {
             Editor::DrawLines::ClearBoxFaces();
             try {
                 dev_trace('running callback');
-                if (doneCB !is null) OnFillSelectionComplete(editor, pmt);
+                if (doneCB !is null) {
+                    startnew(CoroutineFunc(RunOnFillSelectionComplete));
+                }
                 if (!IsInEditor) {
                     active = false;
                     @doneCB = null;
@@ -149,6 +151,7 @@ class CustomSelectionMgr {
                     return;
                 }
             } catch {
+                PrintActiveContextStack();
                 warn('catch in custom selection done callback: ' + getExceptionInfo());
             }
             // Editor::CustomSelectionCoords_Clear(editor);
@@ -203,6 +206,12 @@ class CustomSelectionMgr {
 
     void OnFillSelectionComplete(CGameCtnEditorFree@ editor, CSmEditorPluginMapType@ pmt) {
         doneCB(editor, pmt, updateMin, updateMax, coordSize);
+    }
+
+    void RunOnFillSelectionComplete() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
+        OnFillSelectionComplete(editor, pmt);
     }
 }
 

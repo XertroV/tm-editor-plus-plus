@@ -41,7 +41,19 @@ namespace FillBlocks {
         fillObjSize = coordSize;
         Filler@ filler = Filler().WithInitialPlaceMode(origPlacementMode, origAirMode)
             .WithMinMax(min, max);
-        Editor::PlaceMacroblock(filler.GetMacroblockSpec(), true);
+        auto mb = filler.GetMacroblockSpec();
+        auto chunks = mb.CreateChunks(1000);
+        for (uint i = 0; i < chunks.Length; i++) {
+            bool isLast = i == chunks.Length - 1;
+            Editor::PlaceMacroblock(chunks[i], isLast);
+            CheckPause();
+            if (UI::IsKeyPressed(UI::Key::Escape)) {
+                trace("Exiting fill loop as escape was pressed");
+                break;
+            }
+            // if we exit the editor, this loop would crash the game
+            if (!IsInEditor) return;
+        }
 
         // dev_trace('Running OnFillSelectionComplete');
         // for (uint i = 0; i < pmt.CustomSelectionCoords.Length; i++) {
