@@ -26,7 +26,7 @@ class MacroblockOptsTab : Tab {
 
         UI::Separator();
 
-        S_MbShowGhostFreeApplied = UI::Checkbox("Show Ghost/Free Blocks in Macroblock Cursor" + NewIndicator, IsMbShowGhostFreeApplied);
+        S_MbShowGhostFreeApplied = UI::Checkbox("Show Ghost/Free Blocks in Macroblock Cursor", IsMbShowGhostFreeApplied);
         if (S_MbShowGhostFreeApplied != IsMbShowGhostFreeApplied) {
             IsMbShowGhostFreeApplied = S_MbShowGhostFreeApplied;
         }

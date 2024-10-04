@@ -10,7 +10,7 @@ class EditorMiscTab : Tab {
     bool lastBlockTypeWasGhost = false;
 
     EditorMiscTab(TabGroup@ parent) {
-        super(parent, "Editor Misc" + NewIndicator, Icons::Cog + Icons::Camera);
+        super(parent, "Editor Misc", Icons::Cog + Icons::Camera);
         RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditorLoad), this.tabName);
         startnew(CoroutineFunc(this.WatchForVarResets));
     }
@@ -215,7 +215,7 @@ class EditorMiscTab : Tab {
 
         editor.ExperimentalFeatures.SaveLaunchedCheckpointsInMap = UI::Checkbox("Save Launched CPs in Map", editor.ExperimentalFeatures.SaveLaunchedCheckpointsInMap);
 
-        S_LoadMapsWithOldPillars = UI::Checkbox("Load maps with old pillars" + NewIndicator, S_LoadMapsWithOldPillars);
+        S_LoadMapsWithOldPillars = UI::Checkbox("Load maps with old pillars", S_LoadMapsWithOldPillars);
 
         // set values in case they changed
         UpdateEditorValuesSync(editor);
