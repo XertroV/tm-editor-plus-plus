@@ -15,6 +15,9 @@ class JitterEffectTab : EffectTab {
 
     bool OnNewBlock(CGameCtnBlock@ block) {
         if (!_IsActive) return false;
+        if (!applyToFreeblocks) return false;
+        if (block is null || !Editor::IsBlockFree(block)) return false;
+        ApplyJitter(block);
         return false;
     }
 
@@ -32,6 +35,7 @@ class JitterEffectTab : EffectTab {
     // }
 
     bool _IsActive = false;
+    bool applyToFreeblocks = true;
 
     bool jitterPos = true;
     vec3 jitterPosAmt = vec3(8, 1, 8);
@@ -51,6 +55,7 @@ class JitterEffectTab : EffectTab {
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         UI::Text("Jitter applies a random offset to newly placed items' position and/or rotation.");
+        applyToFreeblocks = UI::Checkbox("Apply to Free Blocks", applyToFreeblocks);
 
         // UI::TextWrapped("\\$f80Note!\\$z Too much ctrl+z can undo the jitter (and a re-do is then required if jitter isn't active at the time of the undo).");
         if (UI::Button(_IsActive ? "Deactivate##jitter" : "Activate##jitter")) {
@@ -111,6 +116,27 @@ class JitterEffectTab : EffectTab {
         }
         if (jitterColor) {
             item.MapElemColor = CGameCtnAnchoredObject::EMapElemColor(Math::Rand(0, 6));
+        }
+    }
+
+    void ApplyJitter(CGameCtnBlock@ block) {
+        if (!Editor::IsBlockFree(block)) return;
+        if (jitterPos) {
+            auto _jitter = jitterPosAmt * vec3(Math::Rand(-1.0, 1.0), Math::Rand(-1.0, 1.0), Math::Rand(-1.0, 1.0));
+            Editor::SetBlockLocation(block, Editor::GetBlockLocation(block) + jitterPosOffset + _jitter);
+        }
+
+        if (jitterRot) {
+            auto rotMod = jitterRotAmt * vec3(Math::Rand(-1.0, 1.0), Math::Rand(-1.0, 1.0), Math::Rand(-1.0, 1.0));
+            Editor::SetBlockRotation(block, Editor::GetBlockRotation(block) + rotMod);
+        }
+
+        if (jitterLM) {
+            block.MapElemLmQuality = CGameCtnBlock::EMapElemLightmapQuality(Math::Rand(0, 7));
+        }
+
+        if (jitterColor) {
+            block.MapElemColor = CGameCtnBlock::EMapElemColor(Math::Rand(0, 6));
         }
     }
 }
