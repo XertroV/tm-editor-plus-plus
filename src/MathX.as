@@ -48,6 +48,10 @@ namespace MathX {
         );
     }
 
+    vec3 Abs(vec3 &in a) {
+        return vec3(Math::Abs(a.x), Math::Abs(a.y), Math::Abs(a.z));
+    }
+
     shared bool Vec2Eq(vec2 &in a, vec2 &in b) {
         return a.x == b.x && a.y == b.y;
         return (a-b).LengthSquared() < 1e10;

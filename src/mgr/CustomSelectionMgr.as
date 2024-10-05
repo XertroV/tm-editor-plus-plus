@@ -53,6 +53,8 @@ class CustomSelectionMgr {
     bool Enable(OnCustomSelectionDoneF@ cb) {
         if (active) {
             warn_every_60_s("Enabling a new custom selection while one is still active :/.");
+            trace("Attempting to release exclusive cursor control if it's still active.");
+            CursorControl::ReleaseExclusiveControl("custom-selection");
             // return false;
         }
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -81,6 +83,13 @@ class CustomSelectionMgr {
         // editor.PluginMapType.CustomSelectionRGB = lastColor.xyz;
         editor.PluginMapType.HideCustomSelection();
         editor.PluginMapType.CustomSelectionCoords.RemoveRange(0, editor.PluginMapType.CustomSelectionCoords.Length);
+
+        //
+        if (!CursorControl::IsExclusiveControlAvailable()) {
+            NotifyWarning("Something else is controlling the cursor.");
+            return false;
+        }
+
         active = true;
         // Editor::EnableCustomCameraInputs();
         startnew(CoroutineFunc(this.WatchLoop)); //.WithRunContext(Meta::RunContext::BeforeScripts);
@@ -114,11 +123,24 @@ class CustomSelectionMgr {
             }
         }
 
+        if (!CursorControl::RequestExclusiveControl("custom-selection")) {
+            NotifyWarning("Failed to acquire exclusive cursor control.");
+            active = false;
+            @doneCB = null;
+            _cancel = false;
+            return ;
+        }
+
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
         // Editor::EnableCustomCameraInputs();
         while (!(UI::IsMouseDown() && int(input.MouseVisibility) == 0) && ((@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) && !_cancel) {
-            if (pmt.PlaceMode != CGameEditorPluginMap::EPlaceMode::CustomSelection) break;
+            if (pmt.PlaceMode != CGameEditorPluginMap::EPlaceMode::CustomSelection
+                || UI::IsKeyPressed(UI::Key::Escape)) {
+                Notify("Cancelled custom selection.");
+                _cancel = true;
+                break;
+            }
             currentlySelected = editor.PluginMapType.CustomSelectionCoords.Length;
             startCoord = editor.PluginMapType.CursorCoord;
             yield();
@@ -144,10 +166,12 @@ class CustomSelectionMgr {
                 if (doneCB !is null) {
                     startnew(CoroutineFunc(RunOnFillSelectionComplete));
                 }
+                yield(2);
                 if (!IsInEditor) {
                     active = false;
                     @doneCB = null;
                     _cancel = false;
+                    CursorControl::ReleaseExclusiveControl("custom-selection");
                     return;
                 }
             } catch {
@@ -163,6 +187,7 @@ class CustomSelectionMgr {
         active = false;
         @doneCB = null;
         _cancel = false;
+        CursorControl::ReleaseExclusiveControl("custom-selection");
         // Editor::DisableCustomCameraInputs();
     }
 

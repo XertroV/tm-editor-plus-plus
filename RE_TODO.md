@@ -2,6 +2,8 @@
 - can set editor flag for placeable or not (around 0x600)
 - find -> apply node graph
 
+- super delete mode: e.g., for connected finishes
+
 - gizmo: skins
 - macroblock: skins
 

@@ -216,6 +216,7 @@ void Render() {
     if (IsInEditor) {
         Gizmo::Render();
         ToolsTG.DrawWindows();
+        FillBlocks::RenderFillPrompt();
     }
 
 }
@@ -367,6 +368,7 @@ UI::InputBlocking OnKeyPress_Inner(bool down, VirtualKey key) {
     if (app.BasicDialogs.Dialogs.CurrentFrame !is null) return UI::InputBlocking::DoNothing;
     block = block || ShouldBlockEscapePress(down, key, app, editor);
     block = customSelectionMgr.CheckCancel(down, key) || block;
+    block = FillBlocks::CheckDismissPromptHotkeys(down, key) || block;
     // trace('key down: ' + tostring(key));
     if (down && hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
