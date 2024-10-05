@@ -102,6 +102,11 @@ namespace Editor {
     void SetCursorFreeBlockOffset(CGameCursorBlock@ cursor, float offset) {
         Dev::SetOffset(cursor, O_BLOCKCURSOR_FreeBlockCursorOffset, offset);
     }
+
+    bool IsEastOrWest(int dir) {
+        dir = dir % 4;
+        return dir == 1 || dir == 3;
+    }
 }
 
 

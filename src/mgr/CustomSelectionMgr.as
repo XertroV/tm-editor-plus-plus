@@ -9,11 +9,13 @@ class CustomSelectionMgr {
     int currentlySelected = -1;
     OnCustomSelectionDoneF@ doneCB;
     CGameEditorPluginMap::EPlaceMode origPlacementMode;
+    Editor::ItemMode origItemMode;
     vec3 coordSize;
 
     CustomSelectionMgr() {
         RegisterOnLeavingPlaygroundCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
         RegisterOnEditorLoadCallback(CoroutineFunc(HideCustomSelection), "HideCustomSelection");
+        RegisterNewAfterCursorUpdateCallback(CoroutineFunc(AfterCursorUpdate), "CustomSelectionMgr");
     }
 
     void HideCustomSelection() {
@@ -21,6 +23,15 @@ class CustomSelectionMgr {
         if (editor is null) return;
         editor.PluginMapType.CustomSelectionCoords.RemoveRange(0, editor.PluginMapType.CustomSelectionCoords.Length);
         editor.PluginMapType.HideCustomSelection();
+    }
+
+    void AfterCursorUpdate() {
+        if (!active) return;
+        if (!freeSelectionMode) return;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        editor.Cursor.UseFreePos = true;
+        editor.Cursor.FreePosInMap = Picker::GetMouseToWorldAtHeight(editor.OrbitalCameraControl.m_TargetedPosition.y);
     }
 
     // for when Esc is pressed
@@ -41,7 +52,7 @@ class CustomSelectionMgr {
             case CGameEditorPluginMap::EPlaceMode::FreeBlock:
                 return Editor::GetSelectedBlockSize(editor);
             case CGameEditorPluginMap::EPlaceMode::Item:
-                return Editor::GetSelectedItemSizeFromCursor(editor);
+                return Editor::GetSelectedItemSize(editor);
             case CGameEditorPluginMap::EPlaceMode::Macroblock:
             case CGameEditorPluginMap::EPlaceMode::FreeMacroblock:
                 return Editor::GetSelectedMacroblockSize(editor);
@@ -64,11 +75,14 @@ class CustomSelectionMgr {
             return false;
         }
         origPlacementMode = editor.PluginMapType.PlaceMode;
+        origItemMode = Editor::GetItemPlacementMode(false, false);
+        freeSelectionMode = Editor::IsAnyFreePlacementMode(origPlacementMode);
         coordSize = GetGridCoordSize(editor);
         if (coordSize.LengthSquared() < 0.01) {
             NotifyWarning("No size of object detected; setting to default coord size.");
             coordSize = Editor::DEFAULT_COORD_SIZE;
         }
+        dev_trace('CustomSelectionMgr got coordSize: ' + coordSize.ToString() + ' for origPlacementMode: ' + tostring(origPlacementMode));
         if (SupportedFillModes.Find(origPlacementMode) < 0) {
             NotifyWarning("Place mode not supported for fill: " + tostring(origPlacementMode));
             return false;
@@ -102,11 +116,17 @@ class CustomSelectionMgr {
         active = false;
     }
 
+    bool freeSelectionMode = false;
+
     nat3 startCoord;
     // the last min coord
     protected nat3 updateMin;
     // the last max coord
     protected nat3 updateMax;
+
+    vec3 startPos;
+    vec3 updateMinPos;
+    vec3 updateMaxPos;
 
     vec4 lastColor = vec4(1);
 
@@ -183,10 +203,16 @@ class CustomSelectionMgr {
         }
         if (editor !is null) {
             HideCustomSelection();
+            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+            Editor::SetPlacementMode(editor, origPlacementMode);
+            if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Item) {
+                Editor::SetItemPlacementMode(origItemMode);
+            }
         }
         active = false;
         @doneCB = null;
         _cancel = false;
+        Editor::DrawLines::ClearBoxFaces();
         CursorControl::ReleaseExclusiveControl("custom-selection");
         // Editor::DisableCustomCameraInputs();
     }

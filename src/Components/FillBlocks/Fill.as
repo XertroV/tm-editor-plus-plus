@@ -54,6 +54,11 @@ namespace FillBlocks {
             }
         }
 
+        // if using world coords, rotate obj size to match cursor rotation
+        if (!w_RotateFillDirToLocal && Editor::IsEastOrWest(int(editor.Cursor.Dir))) {
+            fillObjSize = vec3(fillObjSize.z, fillObjSize.y, fillObjSize.x);
+        }
+
         auto mb = filler.GetMacroblockSpec();
         Editor::MacroblockSpec@[]@ chunks;
         if (w_ApplyInChunks) {

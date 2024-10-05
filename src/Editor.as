@@ -115,9 +115,9 @@ namespace Editor {
         return ItemMode(Dev::GetOffsetUint32(editor, O_EDITOR_ITEM_PLACEMENT_OFFSET) + 1);
     }
 
-    ItemMode GetItemPlacementMode(bool checkEditMode = true) {
+    ItemMode GetItemPlacementMode(bool checkEditMode = true, bool checkPlacementMode = true) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (!IsInAnyItemPlacementMode(editor, checkEditMode)) return ItemMode::None;
+        if (checkPlacementMode && !IsInAnyItemPlacementMode(editor, checkEditMode)) return ItemMode::None;
         // return GetItemPlacementMode_Raw(editor);
         // this is very slow?
         try {
@@ -259,6 +259,13 @@ namespace Editor {
             || GetItemPlacementMode() == ItemMode::Free;
     }
 
+    // macroblocks, blocks, and items
+    bool IsAnyFreePlacementMode(CGameEditorPluginMap::EPlaceMode mode) {
+        return mode == CGameEditorPluginMap::EPlaceMode::FreeBlock
+            || mode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock
+            || mode == CGameEditorPluginMap::EPlaceMode::Item;
+    }
+
     // any mode we can do custom rotations in: free macroblocks, free blocks, and any item mode
     bool IsInCustomRotPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
         if (checkEditMode && !IsInPlacementMode(editor))
@@ -375,6 +382,32 @@ namespace Editor {
         return tree.BoundingBoxHalfDiag * 2.;
     }
 
+    // Will get the size from the cache, otherwise the Item Mgr, otherwise will use the cursor
+    vec3 GetSelectedItemSize(CGameCtnEditorFree@ editor) {
+        if (lastSelectedItemBB !is null) {
+            dev_trace("\\$8f8GetSelectedItemSize: using cached size");
+            return lastSelectedItemBB.halfDiag * 2.;
+        }
+        if (selectedItemModel !is null) {
+            auto model = selectedItemModel.AsItemModel();
+            if (model !is null) {
+                auto aabb = GetItemAABB(model);
+                if (aabb !is null) {
+                    dev_trace("\\$8f8GetSelectedItemSize: found model aabb");
+                    return aabb.halfDiag * 2.;
+                }
+                dev_trace("\\$8f8GetSelectedItemSize: no aabb for model");
+            }
+        }
+        dev_trace("\\$8f8GetSelectedItemSize: checking item mgr");
+        auto aabb = GetSelectedItemAABB();
+        if (aabb !is null) {
+            return aabb.halfDiag * 2.;
+        }
+        dev_trace("\\$8f8GetSelectedItemSize: using cursor");
+        return GetSelectedItemSizeFromCursor(editor);
+    }
+
     CGameCtnBlock@ GetPickedBlock() {
         if (lastPickedBlock !is null) {
             return lastPickedBlock.AsBlock();
@@ -391,6 +424,8 @@ namespace Editor {
         if (gbi is null) return DEFAULT_COORD_SIZE;
         return CoordDistToPos(MathX::Max(gbi.VariantBaseAir.Size, gbi.VariantBaseGround.Size));
     }
+
+
 
     // ! does not work
     // void RefreshItemGbxFiles() {

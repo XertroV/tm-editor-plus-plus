@@ -10,6 +10,8 @@ vec3 lastPickedItemPivot = vec3();
 EditorRotation@ lastPickedItemRot = EditorRotation(0, 0, 0);
 ReferencedNod@ lastPickedItem = null;
 BlockOrItem lastPickedType = BlockOrItem::Block;
+Editor::AABB@ lastPickedItemBB = null;
+uint lastPickedItemModelId = 0;
 
 void UpdatePickedItemProps(CGameCtnEditorFree@ editor) {
     if (editor is null) {
@@ -19,8 +21,10 @@ void UpdatePickedItemProps(CGameCtnEditorFree@ editor) {
     if (editor.PickedObject is null) return;
     auto po = editor.PickedObject;
     @lastPickedItem = ReferencedNod(po);
-    UpdatePickedItemCachedValues();
     lastPickedType = BlockOrItem::Item;
+    @lastPickedItemBB = null;
+    // run as coro to avoid blocking if we yield
+    startnew(UpdatePickedItemCachedValues);
 }
 
 void UpdatePickedItemCachedValues() {
@@ -31,6 +35,26 @@ void UpdatePickedItemCachedValues() {
     lastPickedItemPos = po.AbsolutePositionInMap;
     lastPickedItemPivot = Editor::GetItemPivot(po);
     @lastPickedItemRot = EditorRotation(po.Pitch, po.Yaw, po.Roll);
+
+    bool isSameModel = lastPickedItemModelId == po.ItemModel.Id.Value;
+    lastPickedItemModelId = po.ItemModel.Id.Value;
+    if (isSameModel) return;
+
+    if (itemModelIdToAABB.Exists(po.ItemModel.IdName)) {
+        @lastPickedItemBB = cast<Editor::AABB>(itemModelIdToAABB[po.ItemModel.IdName]);
+        if (lastPickedItemBB !is null) {
+            return;
+        }
+    }
+
+    // takes a frame if the item is new, and it's slow otherwise
+    yield();
+    auto aabb = Editor::GetItemAABB(po.ItemModel);
+    if (aabb !is null) {
+        @lastPickedItemBB = aabb;
+    } else {
+        dev_trace("\\$f20UpdatePickedItemCachedValues: aabb null");
+    }
 }
 
 string lastPickedBlockName;
@@ -95,10 +119,41 @@ void UpdateSelectedBlockItem(CGameCtnEditorFree@ editor) {
         @selectedGhostBlockInfo = ReferencedNod(editor.CurrentGhostBlockInfo);
     }
     if (editor.CurrentItemModel !is null) {
+        auto lastItem = selectedItemModel !is null ? selectedItemModel.AsItemModel() : null;
         @selectedItemModel = ReferencedNod(editor.CurrentItemModel);
+        if (lastItem !is selectedItemModel.AsItemModel()) {
+            startnew(CacheSelectedItemValues);
+        }
     }
     if (editor.CurrentMacroBlockInfo !is null) {
         @selectedMacroBlockInfo = ReferencedNod(editor.CurrentMacroBlockInfo);
+    }
+}
+
+Editor::AABB@ lastSelectedItemBB = null;
+dictionary itemModelIdToAABB;
+
+void CacheSelectedItemValues() {
+    if (selectedItemModel is null) return;
+    auto model = selectedItemModel.AsItemModel();
+    if (model is null) return;
+    @lastSelectedItemBB = null;
+
+    if (itemModelIdToAABB.Exists(model.IdName)) {
+        @lastPickedItemBB = cast<Editor::AABB>(itemModelIdToAABB[model.IdName]);
+        if (lastPickedItemBB !is null) {
+            return;
+        }
+    }
+
+    // takes a frame if the item is new, and it's slow otherwise
+    yield();
+    auto aabb = Editor::GetItemAABB(model);
+    if (aabb !is null) {
+        @lastPickedItemBB = aabb;
+        @itemModelIdToAABB[model.IdName] = aabb;
+    } else {
+        dev_trace("\\$f20CacheSelectedItemValues: aabb null");
     }
 }
 

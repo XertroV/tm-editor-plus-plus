@@ -819,6 +819,10 @@ class RawBuffer {
     }
 
     RawBufferElem@ opIndex(uint i) {
+        return GetElement(i);
+    }
+
+    RawBufferElem@ GetElement(uint i, RawBufferElem@ reuse = null) {
         if (i >= Length) throw("RawBufferElem out of range!");
         if (ptr == 0) return null;
         uint64 ptr2 = Dev::ReadUInt64(ptr);
@@ -829,7 +833,10 @@ class RawBuffer {
             ptr2 = Dev::ReadUInt64(ptr2);
             elStartOffset = 0;
         }
-        return RawBufferElem(ptr2 + elStartOffset, size);
+        if (reuse is null) {
+            return RawBufferElem(ptr2 + elStartOffset, size);
+        }
+        return reuse.ReuseMe(ptr2 + elStartOffset, size);
     }
 
     void SetElementOffsetFloat(uint i, uint o, float value) {
@@ -894,9 +901,14 @@ class RawBufferElem {
     protected uint64 ptr;
     protected uint size;
     RawBufferElem(uint64 ptr, uint size) {
+        ReuseMe(ptr, size);
+    }
+
+    RawBufferElem@ ReuseMe(uint64 ptr, uint size) {
         if (ptr == 0) throw("Null pointer passed to RawBufferElem");
         this.ptr = ptr;
         this.size = size;
+        return this;
     }
 
     uint64 get_Ptr() { return ptr; }

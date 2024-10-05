@@ -2,27 +2,38 @@ namespace Editor {
     // ix 46
     const uint16 O_GAMESCENE_NGameItem_SMgr_Offset = 0x180;
 
-    NGameItem_SMgr@ GetNGameItem_SMgr(ISceneVis@ scene) {
-        if (scene is null) return null;
-        auto @nGameItemMgr = Dev::GetOffsetNod(scene, O_GAMESCENE_NGameItem_SMgr_Offset);
-        if (nGameItemMgr !is null) return Dev::ForceCast<NGameItem_SMgr@>(nGameItemMgr).Get();
+    NGameItem_SMgr@ GetNGameItem_SMgr() {
+        throw("Unused atm. Remove this line to enable.");
+        auto mgr = FindManager(Reflection::GetType("NGameItem_SMgr").ID);
+        if (mgr is null) return null;
+        if (mgr.ptr == 0) return null;
+        auto mgrNwp = NodWithPtr(Dev_GetNodFromPointer(mgr.ptr));
+        // auto @nGameItemMgr = Dev::GetOffsetNod(scene, O_GAMESCENE_NGameItem_SMgr_Offset);
+        return Dev::ForceCast<NGameItem_SMgr@>(mgrNwp.nod).Get();
         return null;
     }
 
     uint64 GetNGameItem_SMgr_Ptr(ISceneVis@ scene) {
         if (scene is null) return 0;
-        return Dev::GetOffsetUint64(scene, O_GAMESCENE_NGameItem_SMgr_Offset);
+        // We don't actually use the scene in this case. Maybe should refactor.
+        auto mgr = FindManager(Reflection::GetType("NGameItem_SMgr").ID);
+        if (mgr is null) return 0;
+        return mgr.ptr;
     }
 
-    AABB@ GetSelectedItemAABB() {
+    RawBuffer@ Get_NGameItem_SMgr_Buffer() {
         auto app = GetApp();
         auto scene = app.GameScene;
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         if (scene is null || editor is null) return null;
-        if (!Editor::IsInAnyItemPlacementMode(editor)) return null;
+        // if (!Editor::IsInAnyItemPlacementMode(editor)) return null;
         auto gameItemSMgrPtr = GetNGameItem_SMgr_Ptr(scene);
         if (gameItemSMgrPtr == 0) return null;
-        auto buf = RawBuffer(gameItemSMgrPtr + 0x38, 0x130, false);
+        return RawBuffer(gameItemSMgrPtr + 0x38, 0x130, false);
+    }
+
+    AABB@ GetSelectedItemAABB() {
+        auto buf = Get_NGameItem_SMgr_Buffer();
         auto len = buf.Length;
         // the cursor item is usually the last in the buffer, but not if you've placed an item of that type recently
         while(len > 0) {
@@ -39,9 +50,27 @@ namespace Editor {
         auto last = buf[len - 1];
         auto hasModel = last.GetBool(0xF8);
         if (!hasModel) return null;
-        // auto midPoint = last.GetVec3(0xFC);
-        // auto halfDiag = last.GetVec3(0x108);
-        return AABB(last.GetIso4(0x8), last.GetVec3(0xFC), last.GetVec3(0x108));
+        auto midPoint = last.GetVec3(0xFC);
+        auto halfDiag = last.GetVec3(0x108);
+        return AABB(last.GetIso4(0x8), midPoint, halfDiag);
+    }
+
+    AABB@ GetItemAABB(CGameItemModel@ model) {
+        if (model is null) return null;
+        auto modelPtr = Dev_GetPointerForNod(model);
+        auto buf = Get_NGameItem_SMgr_Buffer();
+        RawBufferElem@ el;
+        for (int ix = buf.Length - 1; ix >= 0; ix--) {
+            @el = buf.GetElement(ix, el);
+            if (el.GetUint64(0) == modelPtr) {
+                auto hasModel = el.GetBool(0xF8);
+                if (!hasModel) continue;
+                auto midPoint = el.GetVec3(0xFC);
+                auto halfDiag = el.GetVec3(0x108);
+                return AABB(el.GetIso4(0x8), midPoint, halfDiag);
+            }
+        }
+        return null;
     }
 
     class AABB {
@@ -84,6 +113,10 @@ namespace Editor {
             rot = mat4::Translate(_pos * -1.) * mat;
             invRot = mat4::Inverse(rot);
             mat = mat4::Translate(_pos) * invRot;
+        }
+
+        string ToString() {
+            return "AABB: mp = " + midPoint.ToString() + " / hd = " + halfDiag.ToString();
         }
     }
 
