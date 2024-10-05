@@ -391,6 +391,13 @@ namespace Editor {
         if (selectedItemModel !is null) {
             auto model = selectedItemModel.AsItemModel();
             if (model !is null) {
+                if (itemModelIdToAABB.Exists(model.IdName)) {
+                    auto aabb = cast<Editor::AABB>(itemModelIdToAABB[model.IdName]);
+                    if (aabb !is null) {
+                        dev_trace("\\$8f8GetSelectedItemSize: found cached " + aabb.ToString());
+                        return aabb.halfDiag * 2.;
+                    }
+                }
                 auto aabb = GetItemAABB(model);
                 if (aabb !is null) {
                     dev_trace("\\$8f8GetSelectedItemSize: found model aabb");

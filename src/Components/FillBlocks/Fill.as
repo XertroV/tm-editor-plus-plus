@@ -54,8 +54,8 @@ namespace FillBlocks {
             }
         }
 
-        // if using world coords, rotate obj size to match cursor rotation
-        if (!w_RotateFillDirToLocal && Editor::IsEastOrWest(int(editor.Cursor.Dir))) {
+        // if using world coords, rotate item obj size to match cursor rotation
+        if (!w_RotateFillDirToLocal && filler.IsModeAnyItem() && Editor::IsEastOrWest(int(editor.Cursor.Dir))) {
             fillObjSize = vec3(fillObjSize.z, fillObjSize.y, fillObjSize.x);
         }
 
@@ -149,6 +149,7 @@ namespace FillBlocks {
                 || placeMode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock;
         }
 
+        // Block free modes
         bool IsModeFree() {
             return placeMode == CGameEditorPluginMap::EPlaceMode::FreeBlock
                 || placeMode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock;
@@ -162,6 +163,11 @@ namespace FillBlocks {
             return placeMode == CGameEditorPluginMap::EPlaceMode::Block
                 || placeMode == CGameEditorPluginMap::EPlaceMode::Macroblock
                 || placeMode == CGameEditorPluginMap::EPlaceMode::Item;
+        }
+
+        // free block, mb, item
+        bool IsModeAnyFree() {
+            return IsModeFree() || IsModeAnyItem();
         }
 
         bool IsModeAir() {
@@ -189,7 +195,7 @@ namespace FillBlocks {
             vec3 up = vec3(0, axes.y, 0);
             vec3 forward = vec3(0, 0, axes.z);
 
-            if (w_RotateFillDirToLocal) {
+            if (w_RotateFillDirToLocal && this.IsModeAnyFree()) {
                 auto mat = fillCursorRot.GetMatrix();
                 left = EnsurePositive((mat * left).xyz, Axis::X);
                 up = EnsurePositive((mat * up).xyz, Axis::Y);

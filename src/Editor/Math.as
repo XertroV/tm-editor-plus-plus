@@ -49,7 +49,8 @@ float CardinalDirectionToYaw(int dir) {
 
 int YawToCardinalDirection(float yaw) {
     // NormalizeAngle(yaw) * -1.0 / Math::PI * 2.0;
-    int dir = int(Math::Ceil(-NormalizeAngle(yaw) / Math::PI * 2.));
+    // add a small amount to avoid floating point errors
+    int dir = int(Math::Ceil(-NormalizeAngle(yaw + 0.001) / Math::PI * 2.));
     while (dir < 0) {
         dir += 4;
     }

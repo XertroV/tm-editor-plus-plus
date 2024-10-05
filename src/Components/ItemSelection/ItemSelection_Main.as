@@ -264,6 +264,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
     void _BeforeBeginWindow() override {
         UI::SetNextWindowPos(0, 400, UI::Cond::FirstUseEver);
+        UI::SetNextWindowSize(d_ToolbarBtnSize.x, d_ToolbarBtnSize.y, UI::Cond::Appearing);
     }
 
     void DrawInner() override {

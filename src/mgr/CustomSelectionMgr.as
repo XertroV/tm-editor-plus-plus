@@ -154,7 +154,7 @@ class CustomSelectionMgr {
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
         // Editor::EnableCustomCameraInputs();
-        while (!(UI::IsMouseDown() && int(input.MouseVisibility) == 0) && ((@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) && !_cancel) {
+        while (!(UI::IsMouseDown() && !IsAltDown() && int(input.MouseVisibility) == 0) && ((@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) && !_cancel) {
             if (pmt.PlaceMode != CGameEditorPluginMap::EPlaceMode::CustomSelection
                 || UI::IsKeyPressed(UI::Key::Escape)) {
                 Notify("Cancelled custom selection.");

@@ -170,36 +170,6 @@ void CacheSelectedItemValues() {
 
 //     }
 // }
-// dictionary ItemBBLookup;
-
-
-// void CheckItemBoundingBoxCache(CGameCtnEditorFree@ editor) {
-//     auto cursor = editor.Cursor;
-//     auto currItemMode = Editor::GetItemPlacementMode();
-//     if (currItemMode == Editor::ItemMode::None) {
-//         return;
-//     }
-//     string itemName;
-//     vec3 rotation;
-//     vec3 position;
-//     if (editor.PickedObject !is null) {
-//         itemName = editor.PickedObject.ItemModel.IdName;
-//         rotation = Editor::GetItemRotation(editor.PickedObject);
-//         position = editor.PickedObject.AbsolutePositionInMap;
-//     } else if (editor.CurrentItemModel !is null) {
-//         itemName = editor.CurrentItemModel.IdName;
-//         rotation = EditorRotation(cursor).euler;
-//         position = editor.ItemCursor.CurrentPos;
-//     } else {
-//         return;
-//     }
-//     if (ItemBBLookup.Exists(itemName)) {
-//         // return;
-//     }
-//     @ItemBBLookup[itemName] = ItemBB(itemName, cursor, position, rotation);
-// }
-
-
 
 // East + 75deg is nearly north.
 void CheckForPickedItem_CopyRotation(CGameCtnEditorFree@ editor) {
