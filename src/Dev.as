@@ -520,6 +520,17 @@ const uint16 O_EDITOR_LMB_PRESSED2 = O_EDITOR_RMB_PRESSED1 + 0x4; // 0xBC0
 // 1 when freelook, 2 when deleting block, 3 when picking block, 4 in copy mode add, 5 copy sub, 8 in block props, 11 in plugin, 13 offzone
 const uint16 O_EDITOR_EDIT_MODE = O_EDITOR_GridColor - (0xC10 - 0xBF8); // 0xBF8
 
+
+const uint16 O_EDITORCAMERACTRLORBITAL_TARGETED_POS = GetOffset("CGameControlCameraEditorOrbital", "m_TargetedPosition");
+// vec2
+const uint16 O_EDITORCAMERACTRLORBITAL_occ_MinXZ = O_EDITORCAMERACTRLORBITAL_TARGETED_POS + 0x18;
+// vec2
+const uint16 O_EDITORCAMERACTRLORBITAL_occ_MaxXZ = O_EDITORCAMERACTRLORBITAL_TARGETED_POS + 0x20;
+// vec2
+const uint16 O_EDITORCAMERACTRLORBITAL_occ_YBounds = O_EDITORCAMERACTRLORBITAL_TARGETED_POS + 0x28;
+
+
+
 const uint16 SZ_CGAMECURSORITEM = 0xE8;
 const uint16 SZ_CGAMECURSORBLOCK = 0x4c8;
 // MARK: O Item Mdl

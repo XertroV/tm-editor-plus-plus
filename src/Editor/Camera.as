@@ -4,9 +4,9 @@ namespace Editor {
     }
 
     void UnlockCamera(CGameControlCameraEditorOrbital@ occ) {
-        Dev::SetOffset(occ, GetOffset(occ, "m_TargetedPosition") + 0x18, vec2(-90000000)); // occ_MinXZ
-        Dev::SetOffset(occ, GetOffset(occ, "m_TargetedPosition") + 0x20, vec2(90000000)); // occ_MaxXZ
-        Dev::SetOffset(occ, GetOffset(occ, "m_TargetedPosition") + 0x28, vec2(-100, 4000)); // occ_YBounds
+        Dev::SetOffset(occ, O_EDITORCAMERACTRLORBITAL_occ_MinXZ, vec2(-90000000)); // occ_MinXZ
+        Dev::SetOffset(occ, O_EDITORCAMERACTRLORBITAL_occ_MaxXZ, vec2(90000000)); // occ_MaxXZ
+        Dev::SetOffset(occ, O_EDITORCAMERACTRLORBITAL_occ_YBounds, vec2(-100, 4000)); // occ_YBounds
         occ.m_MinDistance = 0.1;
     }
 
@@ -41,6 +41,14 @@ namespace Editor {
         if (editor is null) return;
         editor.PluginMapType.CameraHAngle = h;
         editor.PluginMapType.CameraVAngle = v;
+    }
+
+    vec2 GetCamCtrlOrbital_YBounds(CGameControlCameraEditorOrbital@ occ) {
+        return Dev::GetOffsetVec2(occ, O_EDITORCAMERACTRLORBITAL_occ_YBounds);
+    }
+
+    void SetCamCtrlOrbital_YBounds(CGameControlCameraEditorOrbital@ occ, vec2 yBounds) {
+        Dev::SetOffset(occ, O_EDITORCAMERACTRLORBITAL_occ_YBounds, yBounds);
     }
 
     bool SetCamAnimationGoTo(vec2 lookAngleHV, vec3 position, float targetDist) {
