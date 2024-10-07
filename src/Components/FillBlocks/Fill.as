@@ -200,12 +200,32 @@ namespace FillBlocks {
             return mb;
         }
 
+        array<vec3>@ GetFillLocationsOnGrid() {
+            auto mat = fillCursorRot.GetMatrix();
+            auto fillObjDims = MathX::Abs((mat * fillObjSize).xyz);
+            auto size = Vec3ToNat3(MathX::Round(fillObjDims / Editor::DEFAULT_COORD_SIZE));
+            array<vec3> locs;
+            for (uint x = coordMin.x; x <= coordMax.x; x += size.x) {
+                for (uint y = coordMin.y; y <= coordMax.y; y += size.y) {
+                    for (uint z = coordMin.z; z <= coordMax.z; z += size.z) {
+                        locs.InsertLast(CoordToPos(nat3(x, y, z)));
+                    }
+                }
+            }
+            return locs;
+        }
+
         array<vec3>@ GetFillLocations() {
+            if (IsModeOnGrid()) {
+                return GetFillLocationsOnGrid();
+            }
             array<vec3> locs;
             vec3 axes = fillObjSize;
+            // enough buffer to ensure we fill the entire volume
+            vec3 extraDist = vec3(fillObjSize.Length() * 2.0);
             // create a lot of buffer in start,end
-            vec3 start = min - (max - min);
-            vec3 end = max + (max - min);
+            vec3 start = min - extraDist;
+            vec3 end = max + extraDist;
             vec3 midPoint = (start + end) / 2;
 
             vec3 left = vec3(axes.x, 0, 0);

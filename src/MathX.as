@@ -52,6 +52,10 @@ namespace MathX {
         return vec3(Math::Abs(a.x), Math::Abs(a.y), Math::Abs(a.z));
     }
 
+    vec3 Round(vec3 &in a) {
+        return vec3(Math::Round(a.x), Math::Round(a.y), Math::Round(a.z));
+    }
+
     shared bool Vec2Eq(vec2 &in a, vec2 &in b) {
         return a.x == b.x && a.y == b.y;
         return (a-b).LengthSquared() < 1e10;

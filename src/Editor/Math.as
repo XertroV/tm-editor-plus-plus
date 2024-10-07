@@ -100,11 +100,11 @@ vec4 QuatToVec4(quat q) {
 const vec3 MAP_COORD = vec3(32., 8., 32.);
 const vec3 HALF_COORD = vec3(16., 4., 16.);
 
-vec3 CoordToPos(nat3 coord) {
+vec3 CoordToPos(const nat3 &in coord) {
     return vec3(coord.x * 32, (int(coord.y) - 8) * 8, coord.z * 32);
 }
 
-vec3 CoordToPos(vec3 coord) {
+vec3 CoordToPos(const vec3 &in coord) {
     return vec3(coord.x * 32, (int(coord.y) - 8) * 8, coord.z * 32);
 }
 
