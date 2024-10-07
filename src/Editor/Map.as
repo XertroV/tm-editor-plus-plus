@@ -33,6 +33,10 @@ namespace Editor {
         return CoordToPos(map.Size) / 2;
     }
 
+    uint GetGroundCoordY(CGameCtnChallenge@ map) {
+        return map.DecoBaseHeightOffset + 1;
+    }
+
     // this works for height and doesn't crash stuff
     void SetNewMapHeight(CGameCtnChallenge@ map, uint newHeight) {
         _SetMapSize(map, nat3(map.Size.x, newHeight, map.Size.z));

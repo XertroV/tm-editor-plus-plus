@@ -18,7 +18,7 @@ namespace FillBlocks {
         origAirMode = Editor::GetIsBlockAirModeActive(editor);
         objVariant = Editor::GetCurrentBlockVariant(editor.Cursor);
         currColor = editor.PluginMapType.NextMapElemColor;
-        @fillCursorRot = Editor::GetCursorRot(editor.Cursor);
+        @fillCursorRot = Editor::GetCursorRot(editor.Cursor).WithCardinalOnly(!Editor::IsAnyFreePlacementMode(origPlacementMode));
         if (origPlacementMode == CGameEditorPluginMap::EPlaceMode::Item) {
             try {
                 objVariant = editor.CurrentItemModel.DefaultPlacementParam_Content.PlacementClass.CurVariant;
@@ -106,8 +106,13 @@ namespace FillBlocks {
         Filler@ WithMinMax(nat3 min, nat3 max) {
             this.min = CoordToPos(min);
             this.max = CoordToPos(max + nat3(1, 1, 1));
+            this.coordMin = min;
+            this.coordMax = max;
             return this;
         }
+
+        nat3 coordMin;
+        nat3 coordMax;
 
         // min of selection in world space
         vec3 min;
@@ -148,6 +153,11 @@ namespace FillBlocks {
                 || placeMode == CGameEditorPluginMap::EPlaceMode::FreeBlock;
         }
 
+        bool  IsModeBlockNormOrGhost() {
+            return placeMode == CGameEditorPluginMap::EPlaceMode::Block
+                || placeMode == CGameEditorPluginMap::EPlaceMode::GhostBlock;
+        }
+
         bool IsModeAnyItem() {
             return placeMode == CGameEditorPluginMap::EPlaceMode::Item;
         }
@@ -169,8 +179,7 @@ namespace FillBlocks {
 
         bool IsModeNormal() {
             return placeMode == CGameEditorPluginMap::EPlaceMode::Block
-                || placeMode == CGameEditorPluginMap::EPlaceMode::Macroblock
-                || placeMode == CGameEditorPluginMap::EPlaceMode::Item;
+                || placeMode == CGameEditorPluginMap::EPlaceMode::Macroblock;
         }
 
         // free block, mb, item
@@ -203,15 +212,15 @@ namespace FillBlocks {
             vec3 up = vec3(0, axes.y, 0);
             vec3 forward = vec3(0, 0, axes.z);
 
+            auto mat = fillCursorRot.GetMatrix();
             if (w_RotateFillDirToLocal && this.IsModeAnyFree()) {
-                auto mat = fillCursorRot.GetMatrix();
-                left = EnsurePositive((mat * left).xyz, Axis::X);
-                up = EnsurePositive((mat * up).xyz, Axis::Y);
-                forward = EnsurePositive((mat * forward).xyz, Axis::Z);
-                midPoint -= (mat * (fillObjSize / -2)).xyz;
+                left = (mat * left).xyz; // EnsurePositive((mat * left).xyz, Axis::X);
+                up = (mat * up).xyz; // EnsurePositive((mat * up).xyz, Axis::Y);
+                forward = (mat * forward).xyz; // EnsurePositive((mat * forward).xyz, Axis::Z);
             } else if (IsModeAnyFree()) {
-                midPoint -= fillObjSize / -2;
+                // midPoint -= fillObjSize / -2;
             }
+            midPoint -= (mat * (fillObjSize / -2)).xyz;
             // dev
             nvgDrawPointRing(midPoint, 4.0, cRed);
 
@@ -230,12 +239,12 @@ namespace FillBlocks {
                 }
             }
 
-            dir = up;
+            dir = forward;
             for (uint i = 0; i < along_x.Length; i++) {
                 p = along_x[i];
                 along_xy.InsertLast(p);
                 for (float sign = -1; sign <= 1; sign += 2) {
-                    dir = up * sign;
+                    dir = forward * sign;
                     p = along_x[i] + dir;
                     while (MathX::Within(p, start, end)) {
                         along_xy.InsertLast(p);
@@ -244,12 +253,12 @@ namespace FillBlocks {
                 }
             }
 
-            dir = forward;
+            dir = up;
             for (uint i = 0; i < along_xy.Length; i++) {
                 p = along_xy[i];
                 along_xyz.InsertLast(p);
                 for (float sign = -1; sign <= 1; sign += 2) {
-                    dir = forward * sign;
+                    dir = up * sign;
                     p = along_xy[i] + dir;
                     while (MathX::Within(p, start, end)) {
                         along_xyz.InsertLast(p);
@@ -258,36 +267,29 @@ namespace FillBlocks {
                 }
             }
 
-            auto nearlyMax = max - vec3(0.01);
+            vec3[] topLayer = {};
+            auto nearlyMax = max - vec3(0.0025);
+
             for (uint i = 0; i < along_xyz.Length; i++) {
-                if (MathX::Within(along_xyz[i], min, nearlyMax)) {
-                    locs.InsertLast(along_xyz[i]);
-                }
-            }
-
-
-            return locs;
-        }
-
-        /*
-        correctly rotates blocks, but does not fill in the area (rather translates the area too)
-
-
-            for (float x = start.x; x < end.x; x += axes.x) {
-                for (float y = start.y; y < end.y; y += axes.y) {
-                    for (float z = start.z; z < end.z; z += axes.z) {
-                        locs.InsertLast(vec3(x, y, z));
+                p = along_xyz[i];
+                if (MathX::Within(p, min, nearlyMax)) {
+                    if (!MathX::Within(p + up, min, nearlyMax)) {
+                        // if the point 'above' this
+                        topLayer.InsertLast(p);
+                    } else {
+                        locs.InsertLast(along_xyz[i]);
                     }
                 }
             }
-            if (w_RotateFillDirToLocal) {
-                auto mat = fillCursorRot.GetMatrix();
-                mat = mat4::Translate(start) * mat * mat4::Translate(start * -1);
-                for (uint i = 0; i < locs.Length; i++) {
-                    locs[i] = (mat * locs[i]).xyz;
-                }
+
+            for (uint i = 0; i < topLayer.Length; i++) {
+                locs.InsertLast(topLayer[i]);
             }
-        */
+            lastLocsNbTopLayer = topLayer.Length;
+
+            return locs;
+        }
+        uint lastLocsNbTopLayer = 0;
 
         // Size in nb of objects
         vec3 GetNbObjectsVec3() {
@@ -310,12 +312,18 @@ namespace FillBlocks {
         void PopulateMacroblockSpec(Editor::MacroblockSpecPriv@ mb, EditorRotation@ cursorRot) {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             auto locs = GetFillLocations();
-            SortLocationsByHeightDescending(locs);
-            // bool normal = IsModeNormal();
+            uint topLayerStartIx = locs.Length - lastLocsNbTopLayer;
+            SortLocationsByHeightAscending(locs, 0, topLayerStartIx - 1);
+            // SortLocationsByHeightDescending(locs, 0, topLayerStartIx - 1);
             bool ghost = IsModeGhost();
             bool free = IsModeFree();
+            bool isNormBlock = IsModeAnyBlock() && !ghost && !free;
+            auto groundCoordY = Editor::GetGroundCoordY(editor.Challenge);
             bool airMode = IsModeAir();
+            // for water blocks mostly,
+
             if (block !is null) {
+                bool setAltVar = ShouldSetAltVariant(block);
                 for (uint i = 0; i < locs.Length; i++) {
                     auto b = Editor::MakeBlockSpec(block, locs[i], cursorRot.Euler);
                     // reset flags
@@ -324,8 +332,9 @@ namespace FillBlocks {
                     if (ghost) b.isGhost = true;
                     else if (free) b.isFree = true;
                     // only set ground if not ghost or free
-                    // else b.isGround = locs[i].y == 0.0;
-                    b.variant = objVariant;
+                    if (isNormBlock) b.isGround = b.coord.y == groundCoordY;
+                    // set the variant to 1 if it's not a top-layer block
+                    b.variant = setAltVar && i < topLayerStartIx ? 1 : objVariant;
                     b.color = CGameCtnBlock::EMapElemColor(int(currColor));
                     mb.AddBlock(b);
                 }
@@ -342,8 +351,24 @@ namespace FillBlocks {
                 }
             }
         }
+
+        bool ShouldSetAltVariant(CGameCtnBlockInfo@ block) {
+            if (!IsModeAnyBlock()) return false;
+            if (block.AdditionalVariantsAir.Length == 0 || block.AdditionalVariantsGround.Length == 0) return false;
+            auto idName = block.IdName;
+            if (idName.Contains("RoadWater")) return false;
+            if (idName.Contains("TrackWallWater")) return true;
+            if (idName.Contains("DecoWallWater")) return true;
+            if (BLOCK_SET_ALT_VARS.Find(idName) >= 0) return true;
+            return false;
+        }
     }
 
+    // blocks that have a beneath variant like deep water platform;
+    // note: we match TrackWallWater separately
+    const string[] BLOCK_SET_ALT_VARS = {
+        "DecoWallWaterBase", "DecoWallWaterDiag"
+    };
 
 
 
@@ -545,18 +570,18 @@ void QuickSort_Vec3(vec3[]@ arr, QS_vec3_LessF@ f, int left = 0, int right = -1)
     if (i < right) QuickSort_Vec3(arr, f, i, right);
 }
 
-void SortLocationsByHeightAscending(array<vec3>@ locs) {
+void SortLocationsByHeightAscending(array<vec3>@ locs, int start = 0, int end = -1) {
     QuickSort_Vec3(locs, function(const vec3 &in m1, const vec3 &in m2) {
         if (m1.y < m2.y) return -1;
         if (m1.y > m2.y) return 1;
         return 0;
-    });
+    }, start, end);
 }
 
-void SortLocationsByHeightDescending(array<vec3>@ locs) {
+void SortLocationsByHeightDescending(array<vec3>@ locs, int start = 0, int end = -1) {
     QuickSort_Vec3(locs, function(const vec3 &in m1, const vec3 &in m2) {
         if (m1.y < m2.y) return 1;
         if (m1.y > m2.y) return -1;
         return 0;
-    });
+    }, start, end);
 }

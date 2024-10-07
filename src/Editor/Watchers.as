@@ -239,6 +239,16 @@ class EditorRotation : SEditorRotation {
         SetFromCursorProps(pitch, roll, dir, additionalDir);
     }
 
+    EditorRotation@ WithCardinalOnly(bool cardinalOnly) {
+        if (cardinalOnly) {
+            euler.x = 0;
+            euler.z = 0;
+            euler.y = YawWithCustomExtra(0);
+            UpdateDirFromPry();
+        }
+        return this;
+    }
+
     protected void SetFromCursorProps(float pitch, float roll, CGameCursorBlock::ECardinalDirEnum dir, CGameCursorBlock::EAdditionalDirEnum additionalDir) {
         this.dir = dir;
         this.additionalDir = additionalDir;
