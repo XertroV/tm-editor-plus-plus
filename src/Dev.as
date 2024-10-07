@@ -227,6 +227,18 @@ CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
     return Dev_GetArbitraryNodAt(ptr);
 }
 
+void AddRefIfNonNull(CMwNod@ clip) {
+    if (clip !is null) {
+        clip.MwAddRef();
+    }
+}
+
+void ReleaseIfNonNull(CMwNod@ clip) {
+    if (clip !is null) {
+        clip.MwRelease();
+    }
+}
+
 
 string UintToBytes(uint x) {
     NodPtrs::InitializeTmpPointer();
@@ -411,6 +423,7 @@ const uint16 O_MAP_THUMBNAIL_BUF = O_MAP_ObjectiveTextAuthor - 0x10;
 
 // 0x1d8
 const uint16 O_MAP_CLIPAMBIANCE = GetOffset("CGameCtnChallenge", "ClipAmbiance");
+const uint16 O_MAP_CLIPPODIUM = O_MAP_CLIPAMBIANCE - 0x8;
 const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8;
 const uint16 O_MAP_LAUNCHEDCPS = O_MAP_CLIPAMBIANCE + 0x28; // 0x200 - 0x1D8;
 

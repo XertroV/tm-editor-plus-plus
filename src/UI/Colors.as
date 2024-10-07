@@ -22,5 +22,6 @@ const vec4 cWhite75 = vec4(1, 1, 1, .75);
 
 
 const float hueRed = 0.0;
+const float hueOrange = 0.042;
 const float hueGreen = 0.3;
 const float hueBlue = 0.6;

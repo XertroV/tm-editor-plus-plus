@@ -11,6 +11,8 @@ CoroutineFunc@[] onItemEditorLoadCbs;
 string[] onItemEditorLoadCbNames;
 CoroutineFunc@[] onMTEditorLoadCbs;
 string[] onMTEditorLoadCbNames;
+CoroutineFunc@[] onMTEditorUnloadCbs;
+string[] onMTEditorUnloadCbNames;
 CoroutineFunc@[] onEditorUnloadCbs;
 string[] onEditorUnloadCbNames;
 CoroutineFunc@[] onEditorGoneNullCbs;
@@ -66,6 +68,12 @@ void RegisterOnMTEditorLoadCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
         onMTEditorLoadCbs.InsertLast(f);
         onMTEditorLoadCbNames.InsertLast(name);
+    }
+}
+void RegisterOnMTEditorUnloadCallback(CoroutineFunc@ f, const string &in name) {
+    if (f !is null) {
+        onMTEditorUnloadCbs.InsertLast(f);
+        onMTEditorUnloadCbNames.InsertLast(name);
     }
 }
 
@@ -226,6 +234,13 @@ namespace Event {
         Log::Trace("Running OnMTEditorLoad callbacks");
         for (uint i = 0; i < onMTEditorLoadCbs.Length; i++) {
             onMTEditorLoadCbs[i]();
+        }
+        Log::Trace("Finished OnMTEditorLoad callbacks");
+    }
+    void RunOnMTEditorUnloadCbs() {
+        Log::Trace("Running OnMTEditorUnload callbacks");
+        for (uint i = 0; i < onMTEditorUnloadCbs.Length; i++) {
+            onMTEditorUnloadCbs[i]();
         }
         Log::Trace("Finished OnMTEditorLoad callbacks");
     }

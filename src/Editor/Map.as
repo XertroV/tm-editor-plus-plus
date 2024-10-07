@@ -42,6 +42,17 @@ namespace Editor {
         _SetMapSize(map, nat3(map.Size.x, newHeight, map.Size.z));
     }
 
+    CGameCtnMediaClip@ GetMapPodiumClip(CGameCtnChallenge@ map) {
+        return cast<CGameCtnMediaClip>(Dev_GetOffsetNodSafe(map, O_MAP_CLIPPODIUM));
+    }
+
+    void SetMapPodiumClip(CGameCtnChallenge@ map, CGameCtnMediaClip@ clip) {
+        auto prevClip = GetMapPodiumClip(map);
+        if (prevClip !is null) prevClip.MwRelease();
+        if (clip !is null) clip.MwAddRef();
+        Dev::SetOffset(map, O_MAP_CLIPPODIUM, clip);
+    }
+
     // measured in partitions of a block; 3,1,3 => triggers are 1/3 w, 1/1 h, 1/3 d of a block
     nat3 GetMTTriggerSize(CGameCtnChallenge@ map) {
         return Dev::GetOffsetNat3(map, O_MAP_MTSIZE_OFFSET);

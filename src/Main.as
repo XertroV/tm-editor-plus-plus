@@ -41,6 +41,8 @@ void Main() {
     RegisterOnEditorUnloadCallback(PillarsChoice::OnEditorUnload, "PillarsChoice::OnEditorUnload");
     // RegisterNewBlockCallback_Private(PillarsChoice::OnBlockPlaced, "PillarsChoice::OnBlockPlaced", 0);
 
+    MediatrackerSaver::RegisterCallbacks();
+
     VisSpriteDots::OnPluginLoad();
 
     // need to start this on load so that it's active when we enter the editor
@@ -65,7 +67,10 @@ void Main() {
     yield(2);
     startnew(ColorSelectionHook::SetupHooks);
 
-    sleep(500);
+    yield(2);
+    Editor::SetInvPatchTy(S_InvPatchTy);
+
+    sleep(400);
     CallbacksEnabledPostInit = true;
 
     // auto fid = Fids::GetGame("GameData/Stadium/GameCtnDecoration/Map/DecoNoStadium48x48.Map.Gbx");
@@ -142,9 +147,11 @@ void RenderEarly() {
     if (IsInItemEditor) lastInItemEditor = Time::Now;
     EnteringItemEditor = IsInItemEditor && EnteringItemEditor;
 
+    WasInMTEditor = IsInMTEditor;
     EnteringMTEditor = !IsInMTEditor;
     IsInMTEditor = mtEditor !is null;
     EnteringMTEditor = IsInMTEditor && EnteringMTEditor;
+    LeavingMTEditor = WasInMTEditor && !IsInMTEditor;
 
     IsInMeshEditor = meshEditor !is null;
 
@@ -186,6 +193,9 @@ void RenderEarly() {
     if (EnteringMTEditor) {
         Event::RunOnMTEditorLoadCbs();
     }
+    if (LeavingMTEditor) {
+        Event::RunOnMTEditorUnloadCbs();
+    }
 
     if (IsLeavingPlayground && IsInEditor) {
         Event::RunOnLeavingPlaygroundCbs();
@@ -221,6 +231,7 @@ void Render() {
         Gizmo::Render();
         ToolsTG.DrawWindows();
         FillBlocks::RenderFillPrompt();
+        MediatrackerSaver::RenderWindow();
     }
 
 }

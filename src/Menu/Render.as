@@ -30,15 +30,23 @@ void DrawPluginsMenu_WhileInMainMenu() {
 #endif
         UI::Separator();
         UI::Text("Club Items Inventory Patch");
-        auto curr = Editor::GetInvPatchTy();
+        auto curr = S_InvPatchTy;
         if (UI::BeginCombo("##Club Items Inventory Patch", InvPatchMenuStr(curr))) {
-            if (UI::Selectable(InvPatchMenuStr(Editor::InvPatchType::None), curr == Editor::InvPatchType::None)) Editor::SetInvPatchTy(Editor::InvPatchType::None);
-            if (UI::Selectable(InvPatchMenuStr(Editor::InvPatchType::SkipClubUpdateCheck), curr == Editor::InvPatchType::SkipClubUpdateCheck)) Editor::SetInvPatchTy(Editor::InvPatchType::SkipClubUpdateCheck);
-            if (UI::Selectable(InvPatchMenuStr(Editor::InvPatchType::SkipClubEntirely), curr == Editor::InvPatchType::SkipClubEntirely)) Editor::SetInvPatchTy(Editor::InvPatchType::SkipClubEntirely);
+            if (UI::Selectable(InvPatchMenuStr(Editor::InvPatchType::None), curr == Editor::InvPatchType::None)) UpdateInvPatchTyAndSetting(Editor::InvPatchType::None);
+            if (UI::Selectable(InvPatchMenuStr(Editor::InvPatchType::SkipClubUpdateCheck), curr == Editor::InvPatchType::SkipClubUpdateCheck)) UpdateInvPatchTyAndSetting(Editor::InvPatchType::SkipClubUpdateCheck);
+            if (UI::Selectable(InvPatchMenuStr(Editor::InvPatchType::SkipClubEntirely), curr == Editor::InvPatchType::SkipClubEntirely)) UpdateInvPatchTyAndSetting(Editor::InvPatchType::SkipClubEntirely);
             UI::EndCombo();
         }
         UI::EndMenu();
     }
+}
+
+[Setting hidden]
+Editor::InvPatchType S_InvPatchTy = Editor::InvPatchType::None;
+
+void UpdateInvPatchTyAndSetting(Editor::InvPatchType ty) {
+    S_InvPatchTy = ty;
+    Editor::SetInvPatchTy(ty);
 }
 
 string InvPatchMenuStr(Editor::InvPatchType type) {

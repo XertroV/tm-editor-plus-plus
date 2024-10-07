@@ -399,6 +399,7 @@ class MapEditPropsTab : Tab {
         auto map = editor.Challenge;
 
         auto flags = Dev::GetOffsetUint32(map, O_MAP_FLAGS);
+        auto origFlags = flags;
         auto unk1 = flags & 1 > 0;
         auto oldWood = flags & 2 > 0;
         auto newPillars = flags & 4 > 0;
@@ -409,7 +410,10 @@ class MapEditPropsTab : Tab {
         newPillars = UI::Checkbox("New Pillars (4)", newPillars);
         AddSimpleTooltip("Note: you probably want to turn on 'Load map with old pillars' via the option under the Editor Misc tab.");
         flags = flags & ~7 | (unk1 ? 1 : 0) | (oldWood ? 2 : 0) | (newPillars ? 4 : 0);
-        Dev::SetOffset(map, O_MAP_FLAGS, flags);
+        if (flags != origFlags) Dev::SetOffset(map, O_MAP_FLAGS, flags);
+        UI::SameLine();
+        UI::Text("(Raw: " + Text::Format("%x", uint8(flags)) + ")");
+
 
         auto origBuildInfo = Editor::GetMapBuildInfo(map);
         LabeledValue("Map Game Build", origBuildInfo.SubStr(5, 16));
