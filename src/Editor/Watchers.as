@@ -307,7 +307,7 @@ class EditorRotation : SEditorRotation {
         // this can happen transitioning directions sometimes.
         if (yaw >= PI) yaw -= TAU;
         // trace('yaw: ' + yaw);
-        if (0 > yaw || yaw > HALF_PI) {
+        if (-0.0001 > yaw || yaw > HALF_PI) {
             warn('yaw out of bounds: ' + yaw);
         }
         yaw = Math::Clamp(yaw, 0.0, HALF_PI);
