@@ -316,7 +316,7 @@ class ViewAllItemsTab : BlockItemListTab {
                 g_PickedItemTab.SetSelectedTab();
             }
             @lastPickedItem = ReferencedNod(item);
-            UpdatePickedItemCachedValues();
+            startnew(UpdatePickedItemCachedValues);
         }
         rowHovered = UI::IsItemHovered() || rowHovered;
         UI::SameLine();

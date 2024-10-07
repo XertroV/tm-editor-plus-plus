@@ -187,6 +187,7 @@ namespace Editor {
     }
 
     void SetPlacementMode(CGameCtnEditorFree@ editor, CGameEditorPluginMap::EPlaceMode mode) {
+        if (editor.PluginMapType.PlaceMode == mode) return;
         editor.PluginMapType.PlaceMode = mode;
     }
 

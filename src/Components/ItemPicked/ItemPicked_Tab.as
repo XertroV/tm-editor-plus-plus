@@ -338,7 +338,7 @@ class PickedItemTab : FocusedItemTab {
 
     void set_FocusedItem(ReferencedNod@ value) override property {
         @lastPickedItem = value;
-        UpdatePickedItemCachedValues();
+        startnew(UpdatePickedItemCachedValues);
     }
 }
 

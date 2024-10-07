@@ -77,17 +77,25 @@ namespace FillBlocks {
             // if we exit the editor, this loop would crash the game
             if (!IsInEditor) return;
         }
+        Editor::SetPlacementMode(editor, filler.placeMode);
+        if (filler.IsModeAnyItem()) {
+            Editor::SetItemPlacementMode(filler.itemMode);
+        }
     }
 
     class Filler {
         CGameEditorPluginMap::EPlaceMode placeMode;
         bool isAirMode;
+        Editor::ItemMode itemMode;
 
         Filler() {}
 
         Filler@ WithInitialPlaceMode(CGameEditorPluginMap::EPlaceMode placeMode, bool isAirMode) {
             this.isAirMode = isAirMode;
             this.placeMode = placeMode;
+            if (IsModeAnyItem()) {
+                itemMode = Editor::GetItemPlacementMode(false, false);
+            }
             if (!GetObjectFromPM()) {
                 warn("Failed to get object from place mode");
                 return null;
@@ -200,7 +208,12 @@ namespace FillBlocks {
                 left = EnsurePositive((mat * left).xyz, Axis::X);
                 up = EnsurePositive((mat * up).xyz, Axis::Y);
                 forward = EnsurePositive((mat * forward).xyz, Axis::Z);
+                midPoint -= (mat * (fillObjSize / -2)).xyz;
+            } else if (IsModeAnyFree()) {
+                midPoint -= fillObjSize / -2;
             }
+            // dev
+            nvgDrawPointRing(midPoint, 4.0, cRed);
 
             vec3[] @along_x = {midPoint};
             vec3[] @along_xy = {};
@@ -297,6 +310,7 @@ namespace FillBlocks {
         void PopulateMacroblockSpec(Editor::MacroblockSpecPriv@ mb, EditorRotation@ cursorRot) {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             auto locs = GetFillLocations();
+            SortLocationsByHeightDescending(locs);
             // bool normal = IsModeNormal();
             bool ghost = IsModeGhost();
             bool free = IsModeFree();
@@ -504,4 +518,45 @@ vec3 EnsurePositive(vec3 v, Axis axis) {
             return v;
     }
     return v;
+}
+
+funcdef int QS_vec3_LessF(const vec3 &in m1, const vec3 &in m2);
+void QuickSort_Vec3(vec3[]@ arr, QS_vec3_LessF@ f, int left = 0, int right = -1) {
+    if (arr.Length < 2) return;
+    if (right < 0) right = arr.Length - 1;
+    int i = left;
+    int j = right;
+    vec3 pivot = arr[(left + right) / 2];
+    vec3 temp;
+
+    while (i <= j) {
+        while (f(arr[i], pivot) < 0) i++;
+        while (f(arr[j], pivot) > 0) j--;
+        if (i <= j) {
+            temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+            i++;
+            j--;
+        }
+    }
+
+    if (left < j) QuickSort_Vec3(arr, f, left, j);
+    if (i < right) QuickSort_Vec3(arr, f, i, right);
+}
+
+void SortLocationsByHeightAscending(array<vec3>@ locs) {
+    QuickSort_Vec3(locs, function(const vec3 &in m1, const vec3 &in m2) {
+        if (m1.y < m2.y) return -1;
+        if (m1.y > m2.y) return 1;
+        return 0;
+    });
+}
+
+void SortLocationsByHeightDescending(array<vec3>@ locs) {
+    QuickSort_Vec3(locs, function(const vec3 &in m1, const vec3 &in m2) {
+        if (m1.y < m2.y) return 1;
+        if (m1.y > m2.y) return -1;
+        return 0;
+    });
 }
