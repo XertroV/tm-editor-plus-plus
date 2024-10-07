@@ -124,6 +124,7 @@ void RenderEarly() {
     g_screen = vec2(Draw::GetWidth(), Draw::GetHeight());
     Picker::RenderEarly();
 
+    auto switcher = GetApp().Switcher;
     auto anyEditor = GetApp().Editor;
     auto editor = cast<CGameCtnEditorFree>(anyEditor);
     auto itemEditor = cast<CGameEditorItem>(anyEditor);
@@ -160,15 +161,18 @@ void RenderEarly() {
     EnteringEditor = EnteringEditor && IsInEditor;
     IsLeavingPlayground = !IsInCurrentPlayground && WasInPlayground;
         // && (!everEnteredEditor || (Time::Now - lastInItemEditor) > 1000);
-    auto LeavingEditor = WasInEditor && !IsInEditor;
+    EditorWasStillOnStack = EditorStillOnStack;
+    EditorStillOnStack = !IsInEditor && IsInAnyEditor && switcher.ModuleStack.Length > 1 && cast<CGameCtnEditorFree>(switcher.ModuleStack[0]) !is null;
+    LeavingEditor = WasInEditor && !IsInEditor;
 
-    if (EnteringEditor) {
+    // Only call entering/leaving editor if it's actually loading, rather than moving to item editor etc.
+    if (EnteringEditor && !EditorWasStillOnStack) {
         EditorPriv::ResetRefreshUnsafe();
         Event::RunOnEditorLoadCbs();
         everEnteredEditor = true;
         lastTimeEnteredEditor = Time::Now;
         CacheMapBounds();
-    } else if (LeavingEditor) {
+    } else if (LeavingEditor && !EditorStillOnStack) {
         Event::RunOnEditorUnloadCbs();
     }
 
