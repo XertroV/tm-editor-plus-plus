@@ -1,13 +1,7 @@
 
 /** Render function called every frame intended only for menu items in `UI`. */
 void RenderMenu() {
-    if (!IsInAnyEditor) {
-        DrawPluginsMenu_WhileInMainMenu();
-    } else {
-        if (UI::MenuItem(MenuTitle, "", ShowWindow)) {
-            ShowWindow = !ShowWindow;
-        }
-    }
+    DrawPluginsMenu_WhileInMainMenu();
 }
 
 
@@ -26,13 +20,15 @@ void RenderMenuMain() {
 
 void DrawPluginsMenu_WhileInMainMenu() {
     if (UI::BeginMenu(MenuTitle)) {
+        if (IsInAnyEditor && UI::MenuItem(MenuTitle, "", ShowWindow)) {
+            ShowWindow = !ShowWindow;
+        }
         S_LoadMapsWithOldPillars = UI::Checkbox("Load maps with old pillars", S_LoadMapsWithOldPillars);
+        S_AllowNonCarSportPlayerModelsEditingMap = UI::Checkbox("Do not reset the car when editing a map", S_AllowNonCarSportPlayerModelsEditingMap);
 #if SIG_DEVELOPER
         S_EnableInMapBrowser = UI::Checkbox("Enable in map browser", S_EnableInMapBrowser);
 #endif
-#if DEV
         UI::Separator();
-        UI::Text("Todo: enable after map together updated");
         UI::Text("Club Items Inventory Patch");
         auto curr = Editor::GetInvPatchTy();
         if (UI::BeginCombo("##Club Items Inventory Patch", InvPatchMenuStr(curr))) {
@@ -41,7 +37,6 @@ void DrawPluginsMenu_WhileInMainMenu() {
             if (UI::Selectable(InvPatchMenuStr(Editor::InvPatchType::SkipClubEntirely), curr == Editor::InvPatchType::SkipClubEntirely)) Editor::SetInvPatchTy(Editor::InvPatchType::SkipClubEntirely);
             UI::EndCombo();
         }
-#endif
         UI::EndMenu();
     }
 }
