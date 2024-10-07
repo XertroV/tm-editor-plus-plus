@@ -73,17 +73,28 @@ void UI_Main_Render() {
     UI::PushStyleColor(UI::Col::TitleBgCollapsed, newCollapsedBg);
     tabToDraw.DrawWindows();
 
-    if (ShowWindow) {
+    bool showWindow = ShowWindow && IsInAnyEditor || IsInCurrentPlayground && S_EnableInMapBrowser;
+
+    if (showWindow) {
         vec2 size = vec2(800, 800);
         vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        bool keepOpen = true;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::FirstUseEver);
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::FirstUseEver);
-        if (UI::Begin(tabToDraw.MainWindowTitle(), ShowWindow, UI::WindowFlags::MenuBar)) {
+        if (UI::Begin(tabToDraw.MainWindowTitle(), keepOpen, UI::WindowFlags::MenuBar)) {
             MenuBar::Draw();
             // RootTabGroup_Editor.DrawTabsAsSidebar("Editor++");
             tabToDraw.DrawTabsAsSidebar();
         }
         UI::End();
+
+        if (!keepOpen) {
+            if (IsInAnyEditor) {
+                ShowWindow = false;
+            } else if (IsInCurrentPlayground) {
+                S_EnableInMapBrowser = false;
+            }
+        }
     }
 
     // ToolsTG.DrawWindows();
@@ -344,7 +355,7 @@ namespace MenuBar {
                                         if (gameItem !is null) {
                                             g_PickedItemTab.SetSelectedTab();
                                             @lastPickedItem = ReferencedNod(gameItem);
-                                            UpdatePickedItemCachedValues();
+                                            startnew(UpdatePickedItemCachedValues);
                                             Editor::SetCamAnimationGoTo(vec2(TAU / 8., TAU / 8.), gameItem.AbsolutePositionInMap, 120.);
                                         } else {
                                             NotifyWarning("Item not found, try refreshing map cache.");

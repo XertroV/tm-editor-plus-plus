@@ -38,9 +38,6 @@ void UnloadIntercepts() {
     Dev::ResetInterceptProc("CGameEditorPluginMap", "LayerCustomEvent", _CGameEditorPluginMap_LayerCustomEvent);
 }
 
-
-bool EDIT_MAP_PASSTHROUGH = false;
-
 bool _EditMap(CMwStack &in stack) {
     Event::RunOnEditorStartingUpCbs(true);
     return true;
@@ -73,9 +70,25 @@ bool _EditMap4(CMwStack &in stack) {
     // return true;
 }
 
+bool _EditMap5_Passthrough = false;
+
+// used for UI things
 bool _EditMap5(CMwStack &in stack, CMwNod@ nod) {
-    Event::RunOnEditorStartingUpCbs(true);
-    return true;
+    if (_EditMap5_Passthrough) {
+        Event::RunOnEditorStartingUpCbs(true);
+        return true;
+    }
+    bool onlyForced = stack.CurrentBool(0);
+    bool upgradeAdv = stack.CurrentBool(1);
+    auto pluginArgs = stack.CurrentBufferWString(2);
+    auto pluginScripts = stack.CurrentBufferWString(3);
+    string playerModel = stack.CurrentWString(4);
+    string modNameOrUrl = stack.CurrentWString(5);
+    string decoration = stack.CurrentString(6);
+    string map = stack.CurrentWString(7);
+    CGameManiaTitleControlScriptAPI@ titleApi = cast<CGameManiaTitleControlScriptAPI>(nod);
+    EditMapIntercept::EditMap5(titleApi, map, decoration, modNameOrUrl, playerModel, pluginScripts, pluginArgs, upgradeAdv, onlyForced);
+    return false;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditMap5");
     // CGameManiaTitleControlScriptAPI@ titleApi = cast<CGameManiaTitleControlScriptAPI>(nod);
@@ -128,6 +141,41 @@ bool _EditMap5(CMwStack &in stack, CMwNod@ nod) {
 
     // return false;
 }
+
+[Setting hidden]
+bool S_AllowNonCarSportPlayerModelsEditingMap = true;
+
+namespace EditMapIntercept {
+    void EditMap5(CGameManiaTitleControlScriptAPI@ titleApi, string map, string decoration, string modNameOrUrl, string playerModel, MwFastBuffer<wstring> &in pluginScripts, MwFastBuffer<wstring> &in pluginArgs, bool upgradeAdv, bool onlyForced) {
+        dev_trace("map: " + map);
+        dev_trace("decoration: " + decoration);
+        dev_trace("modNameOrUrl: " + modNameOrUrl);
+        dev_trace("playerModel: " + playerModel);
+        dev_trace("pluginScripts: " + MwBufWstrToString(pluginScripts));
+        dev_trace("pluginArgs: " + MwBufWstrToString(pluginArgs));
+        dev_trace("upgradeAdv: " + upgradeAdv);
+        dev_trace("onlyForced: " + onlyForced);
+
+        if (S_AllowNonCarSportPlayerModelsEditingMap && playerModel == "CarSport") {
+            trace("Allowing any player/car model for editing map");
+            playerModel = "";
+        }
+
+        _EditMap5_Passthrough = true;
+        titleApi.EditMap5(map, decoration, modNameOrUrl, playerModel, pluginScripts, pluginArgs, upgradeAdv, onlyForced);
+        _EditMap5_Passthrough = false;
+    }
+
+    string MwBufWstrToString(MwFastBuffer<wstring> &in buf) {
+        string str;
+        for (uint i = 0; i < buf.Length; i++) {
+            str += (i > 0 ? ", " : "") + string(buf[i]);
+        }
+        return str;
+    }
+}
+
+
 bool _EditNewMap1(CMwStack &in stack) {
     Event::RunOnEditorStartingUpCbs(false);
     return true;
@@ -168,6 +216,7 @@ bool _EditNewMap3(CMwStack &in stack) {
     // dev_trace("_EditNewMap3");
     // return true;
 }
+
 // used for all UI calls
 bool _EditNewMap4(CMwStack &in stack, CMwNod@ nod) {
     Event::RunOnEditorStartingUpCbs(false);
