@@ -41,7 +41,7 @@ class FindReplaceTab : GenericApplyTab {
         if (success && AddWithoutReplace) {
             if (filteredObjectNames.Length > 0 && filteredObjectNames.Find(sourceItemModel.AsItemModel().IdName) < 0) {
                 // check the source block isn't a valid target before placing to avoid repeating until script timeout
-                Editor::PlaceMacroblock(Editor::MakeMacroblockSpec(newblockSpecs, newitemSpecs), true);
+                Editor::PlaceMacroblock(Editor::MakeMacroblockSpec(newblockSpecs, newitemSpecs));
             }
             newblockSpecs = {};
             newitemSpecs ={};
@@ -55,7 +55,7 @@ class FindReplaceTab : GenericApplyTab {
         if (success && AddWithoutReplace) {
             if (filteredObjectNames.Length > 0 && filteredObjectNames.Find(sourceBlockModel.AsBlockInfo().IdName) < 0) {
                 // check the source block isn't a valid target before placing to avoid repeating until script timeout
-                Editor::PlaceMacroblock(Editor::MakeMacroblockSpec(newblockSpecs, newitemSpecs), true);
+                Editor::PlaceMacroblock(Editor::MakeMacroblockSpec(newblockSpecs, newitemSpecs));
             }
             newblockSpecs = {};
             newitemSpecs ={};
@@ -85,7 +85,7 @@ class FindReplaceTab : GenericApplyTab {
             newitemSpecs.InsertLast(newitemSpec);
         } else {
             auto origModel = item.ItemModel;
-            Dev::SetOffset(item, GetOffset(item, "ItemModel"), sourceModel);
+            Editor::SetAO_ItemModel(item, sourceModel);
             Dev::SetOffset(item, 0x18, sourceModel.Id.Value);
             if (KeepSourceColor) {
                 item.MapElemColor = sourceItemColor;
@@ -149,7 +149,7 @@ class FindReplaceTab : GenericApplyTab {
         if (AddWithoutReplace) {
             Editor::PlaceMacroblock(Editor::MakeMacroblockSpec(newblockSpecs, newitemSpecs), true);
             newblockSpecs = {};
-            newitemSpecs ={};
+            newitemSpecs = {};
         }
         if (ClearAfterRun) {
             @sourceItemModel = null;
