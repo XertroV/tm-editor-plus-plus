@@ -78,18 +78,18 @@ class ItemModel {
     }
 
     void DrawEMEdition() {
+        if (isEditable) {
+            if (UX::SmallButton("Nullify EntityModelEdition")) {
+                Dev::SetOffset(item, O_ITEM_MODEL_EntityModelEdition, uint64(0));
+                trace('Nullified itemModel.EME');
+            }
+            AddSimpleTooltip("After nullifying, the item will fail to save if any CPlugSurfaces have materials -- to fix click TransformMaterialsToMatIds.");
+        }
+
         auto eme = item.EntityModelEdition;
         if (eme is null) {
             UI::Text("No EntityModelEdition");
             return;
-        }
-
-        if (isEditable) {
-            if (UX::SmallButton("Nullify EntityModelEdition")) {
-                // @item.EntityModelEdition = null;
-                Dev::SetOffset(item, O_ITEM_MODEL_EntityModelEdition, uint64(0));
-            }
-            AddSimpleTooltip("After nullifying, the item will fail to save if any CPlugSurfaces have materials -- to fix click TransformMaterialsToMatIds.");
         }
 
         auto emeCommon = cast<CGameCommonItemEntityModelEdition>(eme);
@@ -1374,6 +1374,11 @@ class ItemModelTreeElement {
                 DrawMaterialsAt("nbMaterials: " + surf.Materials.Length, surf, GetOffset(surf, "Materials"));
                 DrawMaterialIdsAt("nbMaterialIds: " + surf.MaterialIds.Length, surf, GetOffset(surf, "MaterialIds"));
                 if (isEditable) {
+                    UI::BeginDisabled(surf.Materials.Length == 0);
+                    if (UI::Button("TransformMaterialsToMatIds")) {
+                        Editor::TransformMaterialsToMatIds(surf);
+                    }
+                    UI::EndDisabled();
                     if (UI::Button("UpdateSurfMaterialIdsFromMaterialIndexs")) {
                         surf.UpdateSurfMaterialIdsFromMaterialIndexs();
                     }
