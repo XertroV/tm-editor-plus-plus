@@ -542,6 +542,7 @@ const uint16 O_ITEM_MODEL_SKIN = GetOffset("CGameItemModel", "DefaultSkinFileRef
 const uint16 O_ITEM_MODEL_FLAGS = GetOffset("CGameItemModel", "PhyModelCustom") - 0x8;
 
 const uint16 O_ITEM_MODEL_EntityModel = GetOffset("CGameItemModel", "EntityModel");
+const uint16 O_ITEM_MODEL_EntityModelEdition = GetOffset("CGameItemModel", "EntityModelEdition");
 
 const uint16 O_STATICOBJMODEL_GENSHAPE = 0x38;
 

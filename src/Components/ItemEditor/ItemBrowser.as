@@ -86,7 +86,8 @@ class ItemModel {
 
         if (isEditable) {
             if (UX::SmallButton("Nullify EntityModelEdition")) {
-                @item.EntityModelEdition = null;
+                // @item.EntityModelEdition = null;
+                Dev::SetOffset(item, O_ITEM_MODEL_EntityModelEdition, uint64(0));
             }
             AddSimpleTooltip("After nullifying, the item will fail to save if any CPlugSurfaces have materials -- to fix click TransformMaterialsToMatIds.");
         }
