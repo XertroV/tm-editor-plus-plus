@@ -47,6 +47,7 @@ namespace Editor {
             CoroutineFunc@ onEditorUnload;
             CoroutineFunc@ onEditorGoneNull;
             CoroutineFunc@ onLeavingPlayground;
+            CoroutineFunc@ onEnteringPlayground;
             CoroutineFunc@ onMapTypeUpdate;
             CoroutineFunc@ afterMapTypeUpdate;
             CoroutineFunc@ onAfterCursorUpdate;

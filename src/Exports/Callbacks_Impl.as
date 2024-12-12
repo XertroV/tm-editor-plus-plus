@@ -15,6 +15,7 @@ namespace Editor {
             IEppExtension@[] withEditorUnloadCbs;
             IEppExtension@[] withEditorGoneNullCbs;
             IEppExtension@[] withSelectedItemChangedCbs;
+            IEppExtension@[] withEnteringPlaygroundCbs;
             IEppExtension@[] withLeavingPlaygroundCbs;
             IEppExtension@[] withMapTypeUpdateCbs;
             IEppExtension@[] withAfterMapTypeUpdateCbs;
@@ -39,6 +40,7 @@ namespace Editor {
                 if (extension.onEditorUnload !is null) withEditorUnloadCbs.InsertLast(extension);
                 if (extension.onEditorGoneNull !is null) withEditorGoneNullCbs.InsertLast(extension);
                 if (extension.onLeavingPlayground !is null) withLeavingPlaygroundCbs.InsertLast(extension);
+                if (extension.onEnteringPlayground !is null) withEnteringPlaygroundCbs.InsertLast(extension);
                 if (extension.onMapTypeUpdate !is null) withMapTypeUpdateCbs.InsertLast(extension);
                 if (extension.afterMapTypeUpdate !is null) withAfterMapTypeUpdateCbs.InsertLast(extension);
                 if (extension.onAfterCursorUpdate !is null) withAfterCursorUpdateCbs.InsertLast(extension);
@@ -64,6 +66,7 @@ namespace Editor {
                 RemoveFromArrayIfExists(withEditorUnloadCbs, extension);
                 RemoveFromArrayIfExists(withEditorGoneNullCbs, extension);
                 RemoveFromArrayIfExists(withLeavingPlaygroundCbs, extension);
+                RemoveFromArrayIfExists(withEnteringPlaygroundCbs, extension);
                 RemoveFromArrayIfExists(withMapTypeUpdateCbs, extension);
                 RemoveFromArrayIfExists(withAfterMapTypeUpdateCbs, extension);
                 RemoveFromArrayIfExists(withAfterCursorUpdateCbs, extension);
@@ -178,6 +181,18 @@ namespace Editor {
                         continue;
                     }
                     ext.onLeavingPlayground();
+                }
+            }
+
+            void Run_OnEnteringPlayground() {
+                for (int i = 0; i < int(withEnteringPlaygroundCbs.Length); i++) {
+                    auto ext = withEnteringPlaygroundCbs[i];
+                    if (ext is null || ext.isDead || ext.onEnteringPlayground is null) {
+                        RemoveExtension_Immediate(ext);
+                        i--;
+                        continue;
+                    }
+                    ext.onEnteringPlayground();
                 }
             }
 

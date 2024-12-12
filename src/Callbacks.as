@@ -29,6 +29,8 @@ ProcessNewSelectedItem@[] selectedItemChangedCbs;
 string[] selectedItemChangedCbNames;
 CoroutineFunc@[] onLeavingPlaygroundCbs;
 string[] onLeavingPlaygroundCbNames;
+CoroutineFunc@[] onEnteringPlaygroundCbs;
+string[] onEnteringPlaygroundCbNames;
 CoroutineFunc@[] onMapTypeUpdateCbs;
 string[] onMapTypeUpdateCbNames;
 CoroutineFunc@[] afterMapTypeUpdateCbs;
@@ -161,6 +163,13 @@ void RegisterOnLeavingPlaygroundCallback(CoroutineFunc@ f, const string &in name
     if (f !is null) {
         onLeavingPlaygroundCbs.InsertLast(f);
         onLeavingPlaygroundCbNames.InsertLast(name);
+    }
+}
+
+void RegisterOnEnteringPlaygroundCallback(CoroutineFunc@ f, const string &in name) {
+    if (f !is null) {
+        onEnteringPlaygroundCbs.InsertLast(f);
+        onEnteringPlaygroundCbNames.InsertLast(name);
     }
 }
 
@@ -372,6 +381,14 @@ namespace Event {
         }
         Editor::Callbacks::Exts::Run_OnLeavingPlayground();
         Log::Trace("Finished OnLeavingPlayground callbacks");
+    }
+    void RunOnEnteringPlaygroundCbs() {
+        Log::Trace("Running OnEnteringPlayground callbacks");
+        for (uint i = 0; i < onEnteringPlaygroundCbs.Length; i++) {
+            onEnteringPlaygroundCbs[i]();
+        }
+        Editor::Callbacks::Exts::Run_OnEnteringPlayground();
+        Log::Trace("Finished OnEnteringPlayground callbacks");
     }
     void OnMapTypeUpdate() {
         // don't log these, 2 every frame :/

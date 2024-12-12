@@ -167,6 +167,7 @@ void RenderEarly() {
     // we didn't fire this on being in the item editor, but we sorta do need it to refresh the caches.
     EnteringEditor = EnteringEditor && IsInEditor;
     IsLeavingPlayground = !IsInCurrentPlayground && WasInPlayground;
+    IsEnteringPlayground = IsInCurrentPlayground && !WasInPlayground;
         // && (!everEnteredEditor || (Time::Now - lastInItemEditor) > 1000);
     EditorWasStillOnStack = EditorStillOnStack;
     EditorStillOnStack = !IsInEditor && IsInAnyEditor && switcher.ModuleStack.Length > 1 && cast<CGameCtnEditorFree>(switcher.ModuleStack[0]) !is null;
@@ -197,6 +198,9 @@ void RenderEarly() {
         Event::RunOnMTEditorUnloadCbs();
     }
 
+    if (IsEnteringPlayground && IsInEditor) {
+        Event::RunOnEnteringPlaygroundCbs();
+    }
     if (IsLeavingPlayground && IsInEditor) {
         Event::RunOnLeavingPlaygroundCbs();
     }

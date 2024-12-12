@@ -10,6 +10,7 @@ bool LeavingEditor = false;
 bool EnteringEditor = false;
 bool EnteringItemEditor = false;
 bool EnteringMTEditor = false;
+bool IsEnteringPlayground = false;
 bool IsLeavingPlayground = false;
 bool WasInPlayground = false;
 bool IsInAnyEditor = false;
