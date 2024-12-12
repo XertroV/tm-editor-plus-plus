@@ -183,8 +183,12 @@ namespace VisSpriteDots {
     }
 
     void UpdateLoop() {
-        while (IsInAnyEditor && !IsInCurrentPlayground && mainSpriteNod !is null) {
-            FlushPoints();
+        while (IsInAnyEditor && mainSpriteNod !is null) {
+            if (!IsInCurrentPlayground) {
+                FlushPoints();
+            } else {
+                dotQueue.Resize(0);
+            }
             yield();
         }
     }
