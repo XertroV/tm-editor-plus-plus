@@ -20,7 +20,7 @@ class CustomSelectionMgr {
 
     void HideCustomSelection() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return;
+        if (editor is null || editor.PluginMapType is null || editor.PluginMapType.CustomSelectionCoords.Length == 0) return;
         editor.PluginMapType.CustomSelectionCoords.RemoveRange(0, editor.PluginMapType.CustomSelectionCoords.Length);
         editor.PluginMapType.HideCustomSelection();
     }
