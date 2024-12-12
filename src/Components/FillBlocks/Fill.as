@@ -344,7 +344,8 @@ namespace FillBlocks {
             bool ghost = IsModeGhost();
             bool free = IsModeFree();
             bool mightBeGround = IsModeAnyBlock() && !free;
-            auto groundCoordY = Editor::GetGroundCoordY(editor.Challenge);
+            // y coord of blocks on the ground; note -1 for macroblock placement.
+            auto groundCoordY = Editor::GetGroundCoordY(editor.Challenge) - 1;
             bool airMode = IsModeAir();
             // for water blocks mostly,
 
@@ -359,8 +360,15 @@ namespace FillBlocks {
                     else if (free) b.isFree = true;
                     // only set ground if block not free
                     if (mightBeGround) b.isGround = b.coord.y == groundCoordY;
-                    // set the variant to 1 if it's not a top-layer block
+                    // FOR ALT VARIANT BLOCKS: set the variant to 1 if it's not a top-layer block
                     b.variant = setAltVar && i < topLayerStartIx ? 1 : objVariant;
+                    if (Editor::GetBlockSpecVariant(b) is null) {
+                        b.variant = 0;
+                        dev_warn("Failed to get block variant for " + block.IdName + "; resetting variant to 0");
+                        if (Editor::GetBlockSpecVariant(b) is null) {
+                            dev_warn("Failed to get 0th block variant for " + block.IdName + "!!!!");
+                        }
+                    }
                     b.color = CGameCtnBlock::EMapElemColor(int(currColor));
                     mb.AddBlock(b);
                 }

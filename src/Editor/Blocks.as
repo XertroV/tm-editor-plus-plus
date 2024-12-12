@@ -154,10 +154,7 @@ namespace Editor {
             }
             @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsGround[bivIx - 1]) : cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsAir[bivIx - 1]);
         } else {
-            @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
-            if (biv is null) {
-                @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantBaseGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantBaseAir);
-            }
+            @biv = GetBlockInfo0thVariant(bi, isGround);
         }
         return biv;
     }
@@ -167,14 +164,22 @@ namespace Editor {
         auto bi = block.BlockInfo;
         if (bivIx > 0) {
             auto maxIx = block.isGround ? bi.AdditionalVariantsGround.Length : bi.AdditionalVariantsAir.Length;
-            if (bivIx - 1 >= maxIx) {
+            if (bivIx > maxIx) {
                 warn("bivIx out of range: " + bivIx + " / " + bi.AdditionalVariantsGround.Length);
                 return null;
             }
             return block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsGround[bivIx - 1]) : cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsAir[bivIx - 1]);
         } else {
-            return block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
+            return GetBlockInfo0thVariant(bi, block.isGround); // block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
         }
+    }
+
+    CGameCtnBlockInfoVariant@ GetBlockInfo0thVariant(CGameCtnBlockInfo@ bi, bool isGround) {
+        auto @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
+        if (biv is null) {
+            @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantBaseGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantBaseAir);
+        }
+        return biv;
     }
 
     // shifted by 5 bits, limited to 0b111111 (6 bits)

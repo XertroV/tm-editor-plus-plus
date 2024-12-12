@@ -33,6 +33,7 @@ namespace Editor {
         return CoordToPos(map.Size) / 2;
     }
 
+    // returns the y coord for blocks that will be at ground level (default 9); note that block specs y coord is offset by 1.
     uint GetGroundCoordY(CGameCtnChallenge@ map) {
         return map.DecoBaseHeightOffset + 1;
     }

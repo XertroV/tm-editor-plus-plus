@@ -353,10 +353,13 @@ namespace Editor {
 
         trace('wrote mb spec to mb: ' + mb.IdName);
         auto dmb = DGameCtnMacroBlockInfo(mb);
-        trace('nb blocks: ' + dmb.Blocks.Length);
-        trace('nb items: ' + dmb.Items.Length);
-        trace('nb skins: ' + dmb.Skins.Length);
-        trace('wrote mb spec to mb: ' + mb.IdName);
+        trace('nb blocks/items/skins: ' + dmb.Blocks.Length + "/" + dmb.Items.Length + "/" + dmb.Skins.Length);
+#if DEV
+        if (mbSpec.Blocks.Length > 0) {
+            dev_trace('mbSpec.blocks[0]');
+            print(BlockSpecToDebugString(mbSpec.Blocks[0]));
+        }
+#endif
         auto placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
         // auto placed = pmt.PlaceMacroblock_AirMode(mb, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
         if (placed && addUndoRedoPoint) {
@@ -607,3 +610,11 @@ string GetSkinPath(CSystemPackDesc@ pack) {
     }
     return pack.Name;
 }
+
+
+#if DEV
+// only when #if DEV
+string BlockSpecToDebugString(Editor::BlockSpec@ spec) {
+    return "BlockSpec: " + spec.name + " | " + spec.coord.ToString() + " | " + tostring(spec.dir) + " | F: " + spec.flags + " | vx: " + spec.variant + " | mv: " + spec.mobilVariant + " | mx: " + spec.mobilIx + " | g: " + spec.isGround + " | n/g/f: " + spec.isNormal + "/" + spec.isGhost + "/" + spec.isFree;
+}
+#endif
