@@ -70,6 +70,29 @@ shared void _SAnimFunc_SetIx(NPlugDyna_SKinematicConstraint@ model, uint16 offse
     Dev::SetOffset(model, sfOffset + 0x4, duration);
 }
 
+shared class SAnimFunc_SubFunc {
+    SubFuncEasings type;
+    bool reverse;
+    uint duration;
+    SAnimFunc_SubFunc(SubFuncEasings type, bool reverse, uint duration) {
+        this.type = type;
+        this.reverse = reverse;
+        this.duration = duration;
+    }
+}
+
+shared SAnimFunc_SubFunc@ SAnimFunc_GetIx(NPlugDyna_SKinematicConstraint@ model, DynaKC_SubFuncType ty, uint8 ix) {
+    return _SAnimFunc_GetIx(model, _DynaKC_SubFuncTypeToOffset(ty), ix);
+}
+
+shared SAnimFunc_SubFunc@ _SAnimFunc_GetIx(NPlugDyna_SKinematicConstraint@ model, uint16 offset, uint8 ix) {
+    uint8 len = Dev::GetOffsetUint8(model, offset);
+    if (ix > len) throw('KC subfunc index out of bounds');
+    uint16 arrStartOffset = offset + 4;
+    auto sfOffset = arrStartOffset + ix * 0x8;
+    return SAnimFunc_SubFunc(SubFuncEasings(Dev::GetOffsetUint8(model, sfOffset + 0x0)), Dev::GetOffsetUint8(model, sfOffset + 0x1) != 0, Dev::GetOffsetUint32(model, sfOffset + 0x4));
+}
+
 // Get the number of easings in the subfunc list
 shared uint8 SAnimFunc_GetLength(NPlugDyna_SKinematicConstraint@ model, DynaKC_SubFuncType ty) {
     return _SAnimFunc_GetLength(model, _DynaKC_SubFuncTypeToOffset(ty));
