@@ -2,6 +2,8 @@
 class FindReplaceTab : GenericApplyTab {
     ReferencedNod@ sourceItemModel;
     ReferencedNod@ sourceBlockModel;
+    uint sourceBlockVarIx;
+
     bool applyToItems = true;
     bool applyToBlocks = true;
     bool awaitingPickedItem = false;
@@ -52,12 +54,28 @@ class FindReplaceTab : GenericApplyTab {
         if (sourceBlockModel is null || !applyToBlocks) return false;
         if (!MatchesConditions(block)) return false;
         auto origModel = block.BlockInfo;
+        // set blockinfo handle
         Dev::SetOffset(block, GetOffset(block, "BlockInfo"), sourceBlockModel.AsBlockInfo());
+        // set blockinfo MwId
         Dev::SetOffset(block, 0x18, sourceBlockModel.AsBlockInfo().Id.Value);
+        Editor::SetBlockInfoVariantIndex(block, sourceBlockVarIx);
         block.BlockInfo.MwAddRef();
         origModel.MwRelease();
         return true;
     }
+
+    void CheckBlockVariant(CGameCtnBlock@ block) {
+        auto variant = Editor::GetBlockInfoVariant(block);
+        if (variant is null) {
+            // block.BlockInfoVariantIndex = 0;
+            // todo
+            @variant = Editor::GetBlockInfoVariant(block);
+            if (variant is null) {
+                NotifyWarning("Find/Replace: Block variant does not seem to exist for the new block model.");
+            }
+        }
+    }
+
 
     void ApplyTo(CGameCtnBlock@ block) override {
         RunReplace(block);
@@ -149,6 +167,7 @@ class FindReplaceTab : GenericApplyTab {
             yield();
             if (editor.PickedBlock !is null) {
                 @sourceBlockModel = ReferencedNod(editor.PickedBlock.BlockInfo);
+                sourceBlockVarIx = Editor::GetBlockInfoVariantIndex(editor.PickedBlock);
                 break;
             }
         }
