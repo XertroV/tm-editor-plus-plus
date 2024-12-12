@@ -127,7 +127,7 @@ class ViewAllBlocksTab : BlockItemListTab {
         UI::Text(tostring(i));
 
         UI::TableNextColumn();
-        UI::Text(block.DescId.GetName());
+        UI::Text(block.BlockInfo.IdName);
         auto rowHovered = UI::IsItemHovered();
 
         UI::TableNextColumn();
@@ -196,7 +196,7 @@ class ViewAllBlocksTab : BlockItemListTab {
         // editor.PluginMapType.AutoSave();
         // if (block.IsGhostBlock()) {
         //     if (!editor.PluginMapType.RemoveGhostBlock(block.BlockInfo, Nat3ToInt3(block.Coord), block.Dir)) {
-        //         NotifyWarning("Unable to remove ghost block:\n Coord: " + block.Coord.ToString() + "\n Type: " + block.DescId.GetName() + "\n: Dir: " + tostring(block.Dir));
+        //         NotifyWarning("Unable to remove ghost block:\n Coord: " + block.Coord.ToString() + "\n Type: " + block.BlockInfo.IdName + "\n: Dir: " + tostring(block.Dir));
         //     }
         // } else {
         //     if (!editor.PluginMapType.RemoveBlock(Nat3ToInt3(block.Coord))) {

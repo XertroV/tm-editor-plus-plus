@@ -113,7 +113,7 @@ class BlockItemListTab : Tab {
             if (recheckSkip) {
                 recheckSkip = false;
                 auto block = map !is null ? GetBlock(map, 0) : null;
-                skipXZStarting = block !is null && block.DescId.GetName() == "Grass";
+                skipXZStarting = block !is null && block.BlockInfo.IdName == "Grass";
             }
             skipXZStarting = UI::Checkbox("Skip first " + sizeXZ + " blocks", skipXZStarting);
             if (!skipXZStarting) {

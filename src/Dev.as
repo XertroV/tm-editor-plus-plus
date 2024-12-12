@@ -257,7 +257,13 @@ uint32 GetMwId(const string &in name) {
 }
 
 string GetMwIdName(uint id) {
-    return MwId(id).GetName();
+    // return MwId(id).GetName();
+    if (tmp_ItemModelForMwIdSetting is null) {
+        @tmp_ItemModelForMwIdSetting = CGameItemModel();
+    }
+    Editor::Set_ItemModel_MwId(tmp_ItemModelForMwIdSetting, id);
+    // tmp_ItemModelForMwIdSetting.Id.Value = id;
+    return tmp_ItemModelForMwIdSetting.IdName;
 }
 
 
@@ -535,6 +541,8 @@ const uint16 SZ_CGAMECURSORITEM = 0xE8;
 const uint16 SZ_CGAMECURSORBLOCK = 0x4c8;
 // MARK: O Item Mdl
 
+const uint16 O_ITEM_MODEL_Id = 0x28;
+
 // 0xA0 = 0xB8 - 0x18
 const uint16 O_ITEM_MODEL_SKIN = GetOffset("CGameItemModel", "DefaultSkinFileRef") - 0x18;
 
@@ -582,7 +590,7 @@ const uint16 O_CTNBLOCK_DIR = GetOffset("CGameCtnBlock", "Dir");
 const uint16 O_CTNBLOCK_MOBILVARIANT = O_CTNBLOCK_DIR + (0x8C - 0x6C);
 // ground when & 0x10 == 0x10
 const uint16 O_CTNBLOCK_GROUND = O_CTNBLOCK_DIR + (0x8D - 0x6C);
-// shifted by 4; can crash game if out of bounds
+// shifted ~~by 4~~ by 5 now?; can crash game if out of bounds
 const uint16 O_CTNBLOCK_VARIANT = O_CTNBLOCK_DIR + (0x8E - 0x6C);
 // 0x8F -- 01, does something to variant Ix, went out of bounds (unsure of result)
 // 0x8F -- 00 Norm, 10 Ghost, 20 Free

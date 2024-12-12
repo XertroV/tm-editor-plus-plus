@@ -145,7 +145,7 @@ class ItemSceneryPlacementTab : Tab {
             return;
         }
 
-        UI::Text("Add " + block.DescId.GetName() + " to variants of " + itemModel.IdName);
+        UI::Text("Add " + block.BlockInfo.IdName + " to variants of " + itemModel.IdName);
         if (UI::Button("Add Block Placement Tag to Variants")) {
             for (uint i = 0; i < varList.Variants.Length; i++) {
                 varList.Variants[i].Tags;
@@ -256,8 +256,10 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
     bool get_windowOpen() override property {
         auto app = GetApp();
+        auto editor = cast<CGameCtnEditorFree>(app.Editor);
         return S_ShowItemPlacementToolbar
-            && Editor::IsInAnyItemPlacementMode(cast<CGameCtnEditorFree>(app.Editor))
+            && editor !is null
+            && Editor::IsInAnyItemPlacementMode(editor)
             && app.CurrentPlayground is null
             && Tab::get_windowOpen();
     }

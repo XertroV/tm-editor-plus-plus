@@ -495,7 +495,7 @@ namespace Editor {
         }
 
         bool MatchesBlock(CGameCtnBlock@ block) const override {
-            // if (block.DescId.GetName() == "Grass") return false;
+            // if (block.BlockInfo.IdName == "Grass") return false;
             // debug failed match
             // trace('name match: ' + (name == block.BlockInfo.IdName));
             // trace('collection match: ' + (collection == 26));
@@ -512,7 +512,7 @@ namespace Editor {
             // trace('variant match: ' + (variant == block.BlockInfoVariantIndex) + ' ' + variant + ' / ' + block.BlockInfoVariantIndex);
             // trace('flags match: ' + (flags == (block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None)));
 
-            return name == block.DescId.GetName() && collection == 26 && author == block.BlockInfo.Author.GetName() &&
+            return name == block.BlockInfo.IdName && collection == 26 && author == block.BlockInfo.Author.GetName() &&
                 ((isFree && Editor::IsBlockFree(block)) || MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0))) &&
                 dir == block.Direction && dir2 == block.Direction &&
                 MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)) &&

@@ -54,7 +54,7 @@ class InMap_BlocksListTab : InMap_BlockItemListTab {
         UI::Text(tostring(i));
 
         UI::TableNextColumn();
-        UI::Text(block.DescId.GetName());
+        UI::Text(block.BlockInfo.IdName);
         auto rowHovered = UI::IsItemHovered();
 
         UI::TableNextColumn();
