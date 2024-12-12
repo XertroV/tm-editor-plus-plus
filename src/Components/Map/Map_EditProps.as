@@ -604,14 +604,20 @@ class MapEditPropsTab : Tab {
             vehicleMwIds.RemoveRange(0, vehicleMwIds.Length);
             vehicleNames.RemoveRange(0, vehicleNames.Length);
         }
-        if (vehicleMwIds.Length > 0) return;
+        if (vehicleMwIds.Length > 0) {
+            // dev_trace("FindVehicles: Already found vehicles.");
+            return;
+        }
         auto app = GetApp();
         CGameCtnChapter@ chapter;
+        dev_trace('FindVehicles: Chapters: ' + app.GlobalCatalog.Chapters.Length);
         for (uint i = 0; i < app.GlobalCatalog.Chapters.Length; i++) {
             @chapter = app.GlobalCatalog.Chapters[i];
-            if (!(chapter.Id.GetName() == "#10003" || (S_LoadAllVehicles && chapter.Id.GetName() == "Vehicles"))) continue;
+            dev_trace('FindVehicles: Chapter: ' + chapter.IdName);
+            if (!(chapter.IdName == "#10003" || (S_LoadAllVehicles && chapter.IdName == "Vehicles"))) continue;
             CGameCtnArticle@ art;
             auto chapterId = chapter.Id.Value;
+            dev_trace('FindVehicles: Articles: ' + chapter.Articles.Length);
             for (uint i = 0; i < chapter.Articles.Length; i++) {
                 @art = chapter.Articles[i];
                 if (!S_LoadAllVehicles) {
@@ -624,14 +630,14 @@ class MapEditPropsTab : Tab {
                 vehicleCollections.InsertLast(chapterId);
                 vehicleAuthorMwIds.InsertLast(art.IdentAuthor.Value);
             }
-            if (vehicleMwIds.Length == 0) {
-                NotifyError("Could not find any vehicles in the Vehicles collection.");
-            } else {
-                vehicleMwIds.InsertAt(0, uint(-1));
-                vehicleNames.InsertAt(0, "Map Default");
-                vehicleCollections.InsertAt(0, 10003);
-                vehicleAuthorMwIds.InsertAt(0, uint(-1));
-            }
+        }
+        if (vehicleMwIds.Length == 0) {
+            NotifyError("Could not find any vehicles in the Vehicles collection.");
+        } else {
+            vehicleMwIds.InsertAt(0, uint(-1));
+            vehicleNames.InsertAt(0, "Map Default");
+            vehicleCollections.InsertAt(0, 10003);
+            vehicleAuthorMwIds.InsertAt(0, uint(-1));
         }
     }
 
