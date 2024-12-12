@@ -5,6 +5,11 @@ namespace VisSpriteDots {
     void OnPluginLoad() {
         RegisterOnEditorLoadCallback(VisSpriteDots::OnEditorLoad, "VisSpriteDots");
         RegisterOnEditorUnloadCallback(VisSpriteDots::OnEditorUnload, "VisSpriteDots");
+        RegisterOnEnteringPlaygroundCallback(VisSpriteDots::OnEnterPlayground, "VisSpriteDots");
+    }
+
+    void OnEnterPlayground() {
+        ClearAllDotsFromSpriteNod();
     }
 
     void OnEditorLoad() {
@@ -56,6 +61,11 @@ namespace VisSpriteDots {
         }
         print("\\$bf0\\$iWatchForSpriteNod: mainSpriteNod is " + (mainSpriteNod is null ? "null" : "not null"));
         startnew(VisSpriteDots::UpdateLoop).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
+    }
+
+    void ClearAllDotsFromSpriteNod() {
+        if (mainSpriteNod is null) return;
+        Dev::SetOffset(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer + 0x8, 0);
     }
 
     void OnEditorUnload() {
@@ -130,8 +140,8 @@ namespace VisSpriteDots {
         bool belowGround = editor !is null && editor.OrbitalCameraControl.m_TargetedPosition.y < 8.;
         auto existingCap = Dev::GetOffsetUint32(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer + 0xC);
         auto existingLen = Dev::GetOffsetUint32(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer + 0x8);
-        if (existingLen >= nb && !freeLook) {
-            existingLen = 0;
+        if (existingLen >= nb) {
+            existingLen = freeLook ? 2 : 0;
         }
         // if (freeLook) existingLen += belowGround ? 1 : 2;
         if (existingLen + nb > existingCap) {
@@ -158,11 +168,12 @@ namespace VisSpriteDots {
         // if (existingLen > 0) trace("["+Time::Now+"] \\$bf0\\$i Writing " + nb + " dots to " + Text::FormatPointer(bufPtr) + " with existingLen: " + existingLen);
         for (uint i = 0; i < nb; i++) {
             dot = dotQueue[i];
-            Dev::Write(bufPtr + (existingLen + i) * 0x28 + 0x0, dot.pos);
-            Dev::Write(bufPtr + (existingLen + i) * 0x28 + 0xC, dot.size);
-            Dev::Write(bufPtr + (existingLen + i) * 0x28 + 0x10, dot.rotation);
-            Dev::Write(bufPtr + (existingLen + i) * 0x28 + 0x14, dot.eccentricity);
-            Dev::Write(bufPtr + (existingLen + i) * 0x28 + 0x18, dot.color);
+            auto off = (existingLen + i) * 0x28;
+            Dev::Write(bufPtr + off + 0x0, dot.pos);
+            Dev::Write(bufPtr + off + 0xC, dot.size);
+            Dev::Write(bufPtr + off + 0x10, dot.rotation);
+            Dev::Write(bufPtr + off + 0x14, dot.eccentricity);
+            Dev::Write(bufPtr + off + 0x18, dot.color);
         }
         // trace("\\$bf0\\$i Completed writing dots");
         Dev::SetOffset(mainSpriteNod, O_CPlugVisualSprite_SpherePointsBuffer + 0x8, existingLen + nb);
@@ -172,7 +183,7 @@ namespace VisSpriteDots {
     }
 
     void UpdateLoop() {
-        while (IsInAnyEditor && mainSpriteNod !is null) {
+        while (IsInAnyEditor && !IsInCurrentPlayground && mainSpriteNod !is null) {
             FlushPoints();
             yield();
         }
