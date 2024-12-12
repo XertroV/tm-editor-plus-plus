@@ -250,10 +250,10 @@ void DrawSAnimFunc(const string &in label, NPlugDyna_SKinematicConstraint@ model
         UI::Indent();
         if (len < 4 && UI::Button("Add New Easing to Chain##"+label)) {
             Notify("Note: you may need to save and re-edit the item for new easings to be loaded.");
-            SAnimFunc_IncrementEasingCountSetDefaults(model, offset);
+            _SAnimFunc_IncrementEasingCountSetDefaults(model, offset);
         }
         if (len > 1 && UI::Button("Remove Last Easing from Chain##"+label)) {
-            SAnimFunc_DecrementEasingCount(model, offset);
+            _SAnimFunc_DecrementEasingCount(model, offset);
         }
         for (uint i = 0; i < len; i++) {
             if (i > 0) UI::Separator();
@@ -275,43 +275,6 @@ void DrawSAnimFunc(const string &in label, NPlugDyna_SKinematicConstraint@ model
     }
 }
 
-void SAnimFunc_SetIx(NPlugDyna_SKinematicConstraint@ model, uint16 offset, uint8 ix, SubFuncEasings type, bool reverse, uint duration) {
-    uint8 len = Dev::GetOffsetUint8(model, offset);
-    if (ix > len) throw('out of bounds');
-    uint16 arrStartOffset = offset + 4;
-    auto sfOffset = arrStartOffset + ix * 0x8;
-    Dev::SetOffset(model, sfOffset + 0x0, uint8(type));
-    Dev::SetOffset(model, sfOffset + 0x1, reverse ? 0x1 : 0x0);
-    Dev::SetOffset(model, sfOffset + 0x4, duration);
-}
-
-uint8 SAnimFunc_GetLength(NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
-    return Dev::GetOffsetUint8(model, offset);
-}
-
-void SAnimFunc_DecrementEasingCount(NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
-    uint8 len = Dev::GetOffsetUint8(model, offset);
-    if (len <= 1) throw ('cannot decrement past 1');
-    Dev::SetOffset(model, offset, uint8(len - 1));
-}
-
-void SAnimFunc_IncrementEasingCountSetDefaults(NPlugDyna_SKinematicConstraint@ model, uint16 offset) {
-    uint8 len = Dev::GetOffsetUint8(model, offset);
-    uint8 ix = len;
-    auto arrStartOffset = offset + 0x4;
-    // 4 maximum otherwise we overwrite other memory.
-    if (ix > 3) throw('cannot add more easings.');
-    auto sfOffset = arrStartOffset + ix * 0x8;
-    // set type, reverse, duration to known values
-    Dev::SetOffset(model, sfOffset, uint8(SubFuncEasings::QuadInOut));
-    Dev::SetOffset(model, sfOffset + 0x1, uint8(0));
-    Dev::SetOffset(model, sfOffset + 0x2, uint16(0));
-    Dev::SetOffset(model, sfOffset + 0x4, uint32(7500));
-    // finally, write new length
-    Dev::SetOffset(model, offset, uint32(len + 1));
-}
-
-
 
 SubFuncEasings DrawComboSubFuncEasings(const string &in label, SubFuncEasings val) {
     return SubFuncEasings(
@@ -319,44 +282,4 @@ SubFuncEasings DrawComboSubFuncEasings(const string &in label, SubFuncEasings va
             return tostring(SubFuncEasings(v));
         })
     );
-}
-
-// comment many of these because they don't work
-
-enum SubFuncEasings {
-    None = 0,
-    Linear = 1,
-    QuadIn,
-    QuadOut,
-    QuadInOut,
-    CubicIn,
-    CubicOut,
-    CubicInOut,
-    QuartIn,
-    QuartOut,
-    QuartInOut,
-    // QuintIn,
-    // QuintOut,
-    // QuintInOut,
-    // SineIn,
-    // SineOut,
-    // SineInOut,
-    // ExpIn,
-    // ExpOut,
-    // ExpInOut,
-    // CircIn,
-    // CircOut,
-    // CircInOut,
-    // BackIn,
-    // BackOut,
-    // BackInOut,
-    // ElasticIn,
-    // ElasticOut,
-    // ElasticInOut,
-    // ElasticIn2,
-    // ElasticOut2,
-    // ElasticInOut2,
-    // BounceIn,
-    // BounceOut,
-    // BounceInOut,
 }

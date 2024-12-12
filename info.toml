@@ -14,7 +14,7 @@ dependencies = ["Camera", "VehicleState"]
 # some editor things can take a while, like saving the map
 timeout  = 10000
 
-shared_exports = ["GBX/GBX.as", "Exports/Callbacks_Shared.as", "Editor/MacroblockManip_Shared.as", "OctTree/OctTree_Shared.as", "Editor/Shared_General.as", "Editor/DrawLinesAndQuads_Shared.as", "Editor/Math_Shared.as"]
+shared_exports = ["GBX/GBX.as", "Exports/Callbacks_Shared.as", "Editor/MacroblockManip_Shared.as", "OctTree/OctTree_Shared.as", "Editor/Shared_General.as", "Editor/DrawLinesAndQuads_Shared.as", "Editor/Math_Shared.as", "Exports/Item_MovingItems_Shared.as"]
 exports = ["Exports/Callbacks.as", "Exports/Functions.as", "Editor/MacroblockManip_ExportCode.as", "Editor/Exports_General.as", "Editor/DrawLinesAndQuads_Export.as"]
 
 module = "Editor"
