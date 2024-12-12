@@ -133,7 +133,7 @@ namespace Editor {
     }
 
     CGameCtnBlockInfoVariant@ GetBlockInfoVariant(CGameCtnBlock@ block) {
-        auto bivIx = block.BlockInfoVariantIndex;
+        // auto bivIx = block.BlockInfoVariantIndex;
         return GetBlockInfoVariant(block.BlockInfo, block.BlockInfoVariantIndex, block.IsGround);
     }
 
@@ -175,6 +175,22 @@ namespace Editor {
         } else {
             return block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
         }
+    }
+
+    // shifted by 5 bits, limited to 0b111111 (6 bits)
+    uint8 GetBlockInfoVariantIndex(CGameCtnBlock@ block) {
+        return uint8(Dev::GetOffsetUint16(block, O_CTNBLOCK_VARIANT) >> 5) & 63;
+    }
+
+    /*
+    WARNING: will crash the game if this is out of bounds (except 63, which is a special case that might cause it to be updated)
+    range: 0-63
+    */
+    void SetBlockInfoVariantIndex(CGameCtnBlock@ block, uint8 index) {
+        auto val = Dev::GetOffsetUint16(block, O_CTNBLOCK_VARIANT);
+        val &= 0b1111100000011111;
+        val |= uint16(index & 63) << 5;
+        Dev::SetOffset(block, O_CTNBLOCK_VARIANT, val);
     }
 
     vec3 GetCtnBlockMidpoint(CGameCtnBlock@ block) {

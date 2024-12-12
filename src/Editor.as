@@ -192,6 +192,7 @@ namespace Editor {
     }
 
     CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) {
+        if (editor is null) return CGameEditorPluginMap::EditMode::Unknown;
         return editor.PluginMapType.EditMode;
     }
 
@@ -246,6 +247,7 @@ namespace Editor {
 
     // checks placement mode, with optional edit mode checking
     bool IsInAnyItemPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (editor is null) return false;
         return (!checkEditMode || IsInPlacementMode(editor))
             && GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Item;
     }

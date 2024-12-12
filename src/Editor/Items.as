@@ -161,6 +161,10 @@ namespace Editor {
         SetAO_ItemModelAuthorMwId(ao, 0);
     }
 
+    void Set_ItemModel_MwId(CGameItemModel@ itemModel, uint mwIdValue) {
+        Dev::SetOffset(itemModel, O_ITEM_MODEL_Id, mwIdValue);
+    }
+
     // when there are duplicate blockIds this is may not save and occasionally results in crash-on-saves (but not autosaves)
     CGameCtnAnchoredObject@ DuplicateAndAddItem(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem, bool updateItemsAfter = false) {
         auto item = CGameCtnAnchoredObject();
