@@ -41,6 +41,8 @@ void Main() {
     RegisterOnEditorUnloadCallback(PillarsChoice::OnEditorUnload, "PillarsChoice::OnEditorUnload");
     // RegisterNewBlockCallback_Private(PillarsChoice::OnBlockPlaced, "PillarsChoice::OnBlockPlaced", 0);
 
+    RegisterOnLeavingPlaygroundCallback(Editor::ImproveDefaultThumbnailLocation_OnReturnFromPg, "Editor::ImproveDefaultThumbnailLocation_OnReturnFromPg");
+
     MediatrackerSaver::RegisterCallbacks();
 
     VisSpriteDots::OnPluginLoad();

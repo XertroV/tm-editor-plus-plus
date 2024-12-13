@@ -403,6 +403,9 @@ namespace MenuBar {
                         ExploreNod(editor.Challenge);
                     if (UI::MenuItem(Icons::FloppyO + " PMT.Autosave()"))
                         editor.PluginMapType.AutoSave();
+                    if (UI::MenuItem("Set Improved Thumbnail")) {
+                        Editor::ImproveDefaultThumbnailLocation(true);
+                    }
                 }
                 UI::EndMenu();
             }
@@ -628,6 +631,7 @@ TabGroup@ CreateRootTabGroup() {
     ColorApplyTab(root);
     PhaseOffsetApplyTab(root);
     FindReplaceTab(root);
+    MassDeleteTab(root);
     ApplyTranslationTab(root);
     // ApplyRotationTab(root);
 
