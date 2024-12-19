@@ -13,9 +13,11 @@ namespace Editor {
     import void SetItemPlacementModeInt(int mode) from "Editor";
 
     // Editor.as placement
-    import CGameEditorPluginMap::EPlaceMode GetPlacementMode(CGameCtnEditorFree@ editor) from "Editor";
+    // exported in macroblock exports
+    // import CGameEditorPluginMap::EPlaceMode GetPlacementMode(CGameCtnEditorFree@ editor) from "Editor";
+    // exported in macroblock exports
+    // import CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) from "Editor";
     import void SetPlacementMode(CGameCtnEditorFree@ editor, CGameEditorPluginMap::EPlaceMode mode) from "Editor";
-    import CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) from "Editor";
     import void SetEditMode(CGameCtnEditorFree@ editor, CGameEditorPluginMap::EditMode mode) from "Editor";
     import bool IsInFreeLookMode(CGameCtnEditorFree@ editor) from "Editor";
     import bool IsInPlacementMode(CGameCtnEditorFree@ editor) from "Editor";
