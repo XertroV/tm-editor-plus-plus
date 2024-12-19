@@ -403,7 +403,7 @@ namespace MenuBar {
                         ExploreNod(editor.Challenge);
                     if (UI::MenuItem(Icons::FloppyO + " PMT.Autosave()"))
                         editor.PluginMapType.AutoSave();
-                    if (UI::MenuItem("Set Improved Thumbnail")) {
+                    if (UI::MenuItem("Improve Default Thumbnail")) {
                         Editor::ImproveDefaultThumbnailLocation(true);
                     }
                 }

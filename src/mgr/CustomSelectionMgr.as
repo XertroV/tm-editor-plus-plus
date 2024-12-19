@@ -301,7 +301,7 @@ namespace CustomSelection {
     nat3 minCoord;
     nat3 maxCoord;
 
-    void SetCoords(nat3 min, nat3 max, vec4 color = vec4(1)) {
+    void SetCoords(nat3 min, nat3 max, vec4 color = vec4(.3)) {
         // dev_trace('SetCoords: ' + min.ToString() + ' to ' + max.ToString());
         // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         // if (editor is null) return;

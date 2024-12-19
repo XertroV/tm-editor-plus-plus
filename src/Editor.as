@@ -115,6 +115,10 @@ namespace Editor {
         return ItemMode(Dev::GetOffsetUint32(editor, O_EDITOR_ITEM_PLACEMENT_OFFSET) + 1);
     }
 
+    int GetItemPlacementModeInt(bool checkEditMode = true, bool checkPlacementMode = true) {
+        return int(GetItemPlacementMode(checkEditMode, checkPlacementMode));
+    }
+
     ItemMode GetItemPlacementMode(bool checkEditMode = true, bool checkPlacementMode = true) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (checkPlacementMode && !IsInAnyItemPlacementMode(editor, checkEditMode)) return ItemMode::None;
@@ -136,6 +140,11 @@ namespace Editor {
             NotifyWarning("Exception getting item placement mode: " + getExceptionInfo());
         }
         return ItemMode::None;
+    }
+
+    void SetItemPlacementModeInt(int mode) {
+        if (mode < 0 || mode > 3) throw("Invalid item placement mode: " + mode + ", must be 0-3 (none, normal, free ground, free)");
+        SetItemPlacementMode(ItemMode(mode));
     }
 
     void SetItemPlacementMode(ItemMode mode) {
