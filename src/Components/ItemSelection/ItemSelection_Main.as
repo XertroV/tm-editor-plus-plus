@@ -193,6 +193,8 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
         RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditor), this.tabName);
         RegisterItemChangedCallback(ProcessNewSelectedItem(OnNewItemSelection), this.tabName);
         RegisterOnEditorUnloadCallback(CoroutineFunc(this.ResetCached), this.tabName);
+        // don't forget window position; needs to be singleton instance
+        idNonce = "iptb";
     }
 
     ~CurrentItem_PlacementToolbar() {}
