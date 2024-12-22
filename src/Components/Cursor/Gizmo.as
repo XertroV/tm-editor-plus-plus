@@ -48,6 +48,7 @@ namespace Gizmo {
             origEditMode = CGameEditorPluginMap::EditMode::Place;
             origPlaceMode = Editor::GetPlacementMode(editor);
             origCustomYawActive = CustomCursorRotations::CustomYawActive;
+            origCursor = CustomCursorRotations::GetEditorCursorRotations(editor.Cursor);
         } else if (!v) {
             OnGoInactive();
         } else {
@@ -62,7 +63,11 @@ namespace Gizmo {
         CustomCursorRotations::CustomYawActive = origCustomYawActive;
         CursorControl::ReleaseExclusiveControl(gizmoControlName);
         @gizmo = null;
+
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        origCursor.SetCursor(editor.Cursor);
+        // CustomCursorRotations::SetCustomPYRAndCursor
+
         if (editor !is null) {
             _OnInactive_UpdatePMT(editor.PluginMapType);
         }
@@ -126,6 +131,7 @@ namespace Gizmo {
     bool wasInFreeBlockMode = false;
     bool origModeWasItem = false;
     bool origModeWasBlock = false;
+    EditorRotation@ origCursor;
 
     void GizmoLoop() {
         auto app = GetApp();

@@ -322,6 +322,7 @@ namespace Editor {
             ObjPtr = Dev_GetPointerForNod(block);
             name = block.BlockInfo.IdName;
             // collection = blah
+            // author = GetMwIdName(block.BlockInfo.Author);
             author = block.BlockInfo.Author.GetName();
             coord = block.Coord;
             // correct for mb offset at min location 0,1,0
