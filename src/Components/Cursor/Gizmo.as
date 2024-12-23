@@ -48,7 +48,7 @@ namespace Gizmo {
             origEditMode = CGameEditorPluginMap::EditMode::Place;
             origPlaceMode = Editor::GetPlacementMode(editor);
             origCustomYawActive = CustomCursorRotations::CustomYawActive;
-            origCursor = CustomCursorRotations::GetEditorCursorRotations(editor.Cursor);
+            @origCursor = CustomCursorRotations::GetEditorCursorRotations(editor.Cursor);
         } else if (!v) {
             OnGoInactive();
         } else {

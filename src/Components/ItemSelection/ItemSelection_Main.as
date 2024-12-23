@@ -155,7 +155,7 @@ class ItemSceneryPlacementTab : Tab {
     }
 }
 
-const string RMBIcon = " " + Icons::Kenney::MouseRightButton;
+const string RMBIcon = "\\$i\\$999 Right-clickable";
 
 [Setting hidden]
 bool S_ShowItemPlacementToolbar = true;
@@ -278,17 +278,18 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
             return;
         }
         bool toggleAutoRotate = BtnToolbar(Icons::Kenney::StickMoveLr + "##ar", "Auto Rotate", ActiveToBtnStatus(pp.AutoRotation));
-        bool toggleAutoPivot = BtnToolbar("AP##ap", "Automatically choose item pivot point", ActiveToBtnStatus(!pp.SwitchPivotManually));
+        bool toggleItemToBlockSnapping = BtnToolbarHalfV(Icons::Magnet + Icons::Cube + "##itbs", "Item-to-Block Snapping", ActiveToBtnStatus(CustomCursorRotations::ItemSnappingEnabled));
+        bool toggleAutoPivot = BtnToolbarHalfV("AP##ap", "Auto-Pivot: Automatically choose item pivot point", ActiveToBtnStatus(!pp.SwitchPivotManually));
 
-        bool toggleGridDisable = BtnToolbarHalfV(Icons::Th + "##gd", "Grid Snap" + RMBIcon, GridDisabledStatus(pp));
+        bool toggleGridDisable = BtnToolbarHalfV(Icons::Th + "##gd", "Grid Snap (RMB: Set Grid)" + RMBIcon, GridDisabledStatus(pp));
         DrawGridOptions_OnRMB(pp);
 
-        bool decrGridSize = BtnToolbarHalfH("[##gd", "Decrease Grid Size" + RMBIcon, GridStepBtnStatus(pp));
+        bool decrGridSize = BtnToolbarHalfH("[##gd", "Decrease Grid Size (RMB: Set Grid)" + RMBIcon, GridStepBtnStatus(pp));
         DrawGridOptions_OnRMB(pp);
 
         UI::PushFont(g_MidFont);
         UI::SameLine();
-        bool incrGridSize = BtnToolbarHalfH("]##gi", "Increase Grid Size" + RMBIcon, GridStepBtnStatus(pp));
+        bool incrGridSize = BtnToolbarHalfH("]##gi", "Increase Grid Size (RMB: Set Grid)" + RMBIcon, GridStepBtnStatus(pp));
         DrawGridOptions_OnRMB(pp);
         UI::PopFont();
 
@@ -308,6 +309,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
         if (incrGridSize && !_isGridDisabled) GridIncrease(pp, 1);
         if (toggleAutoRotate) ToggleAutoRotate(pp);
         if (toggleAutoPivot) ToggleAutoPivot(pp);
+        if (toggleItemToBlockSnapping) CustomCursorRotations::ItemSnappingEnabled = !CustomCursorRotations::ItemSnappingEnabled;
     }
 
     void DrawGridOptions_OnRMB(CGameItemPlacementParam@ pp) {
