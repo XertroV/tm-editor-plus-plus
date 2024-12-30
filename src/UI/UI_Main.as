@@ -97,6 +97,7 @@ void UI_Main_Render() {
         }
     }
 
+    // called in Main.as Render()
     // ToolsTG.DrawWindows();
 
     if (!Editor::IsRefreshSafe()) {

@@ -235,9 +235,11 @@ void Render() {
     PillarsChoice::Render();
     if (IsInEditor) {
         Gizmo::Render();
-        ToolsTG.DrawWindows();
         FillBlocks::RenderFillPrompt();
         MediatrackerSaver::RenderWindow();
+    }
+    if (IsInAnyEditor) {
+        ToolsTG.DrawWindows();
     }
 
 }
