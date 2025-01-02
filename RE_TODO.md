@@ -1,3 +1,5 @@
+- editor recap (block types placed etc) - gather stats
+
 - custom action (node graph) on click (use pick mode + click blocking)
 - can set editor flag for placeable or not (around 0x600)
 - find -> apply node graph
