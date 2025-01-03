@@ -75,6 +75,8 @@ void Main() {
     sleep(400);
     CallbacksEnabledPostInit = true;
 
+    startnew(LoadHotkeyDb);
+
     // auto fid = Fids::GetGame("GameData/Stadium/GameCtnDecoration/Map/DecoNoStadium48x48.Map.Gbx");
 
 #if DEV

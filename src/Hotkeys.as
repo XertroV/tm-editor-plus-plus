@@ -10,6 +10,8 @@ class Hotkey {
     string _id;
     bool editorOnly = true;
 
+    bool disabled = false;
+
     string formatted;
     string keyStr = "";
 
@@ -33,13 +35,46 @@ class Hotkey {
         formatted += tostring(key);
     }
 
-    void UpdateKey(VirtualKey newKey, bool andSave = true) {
+    void UnregisterBeforeChange() {
         hotkeysFlags[int(key)] = false;
         hotkeys.Delete(keyStr);
+    }
+
+    void UpdateKey(VirtualKey newKey, bool andSave = true) {
+        UnregisterBeforeChange();
         key = newKey;
         GenKeyStr();
         UpdateHotkey(this);
         if (andSave) SaveHotkeyDb();
+    }
+
+    void UpdateDisabled(bool disabled) {
+        this.disabled = disabled;
+        SaveHotkeyDb();
+    }
+
+    void UpdateCtrl(bool ctrl) {
+        UnregisterBeforeChange();
+        this.ctrl = ctrl;
+        GenKeyStr();
+        UpdateHotkey(this);
+        SaveHotkeyDb();
+    }
+
+    void UpdateAlt(bool alt) {
+        UnregisterBeforeChange();
+        this.alt = alt;
+        GenKeyStr();
+        UpdateHotkey(this);
+        SaveHotkeyDb();
+    }
+
+    void UpdateShift(bool shift) {
+        UnregisterBeforeChange();
+        this.shift = shift;
+        GenKeyStr();
+        UpdateHotkey(this);
+        SaveHotkeyDb();
     }
 
     void StartRebind() {
@@ -54,13 +89,22 @@ class Hotkey {
         jk["shift"] = shift;
         jk["name"] = name;
         jk["editorOnly"] = editorOnly;
+        jk["disabled"] = disabled;
         j[name] = jk;
     }
 
     void LoadFromJsonObj(Json::Value@ j) {
         Json::Value@ jk = j[name];
-        if (jk is null || jk.GetType() != Json::Type::Object) return;
+        if (jk is null || jk.GetType() != Json::Type::Object) {
+            warn("Failed to load hotkey: " + name + " from json: " + (jk is null ? "<null>" : Json::Write(jk)));
+            return;
+        }
         UpdateKey(VirtualKey(int(jk["key"])), false);
+        disabled = jk.Get("disabled", false);
+        editorOnly = jk.Get("editorOnly", true);
+        ctrl = jk.Get("ctrl", false);
+        alt = jk.Get("alt", false);
+        shift = jk.Get("shift", false);
 
         // key = VirtualKey(int(jk["key"]));
         // ctrl = bool(jk["ctrl"]);
@@ -71,6 +115,33 @@ class Hotkey {
         // GenKeyStr();
         // UpdateHotkey(this);
     }
+
+    void UI_DisabledCheckbox() {
+        if (UX::Toggler(_id, !disabled)) {
+            UpdateDisabled(!disabled);
+        }
+    }
+
+    void UI_CtrlCheckbox() {
+        bool newV = UI::Checkbox("##ctrl" + _id, ctrl);
+        if (newV != ctrl) {
+            UpdateCtrl(newV);
+        }
+    }
+
+    void UI_AltCheckbox() {
+        bool newV = UI::Checkbox("##alt" + _id, alt);
+        if (newV != alt) {
+            UpdateAlt(newV);
+        }
+    }
+
+    void UI_ShiftCheckbox() {
+        bool newV = UI::Checkbox("##shift" + _id, shift);
+        if (newV != shift) {
+            UpdateShift(newV);
+        }
+    }
 }
 
 UI::InputBlocking CheckHotkey(VirtualKey key, bool isEditor = true) {
@@ -79,7 +150,7 @@ UI::InputBlocking CheckHotkey(VirtualKey key, bool isEditor = true) {
     bool shiftDown = IsShiftDown();
     dev_trace('ctrl: ' + ctrlDown + ", alt: " + altDown + ", shift: " + shiftDown);
     auto h = GetHotkey(key, ctrlDown, altDown, shiftDown);
-    if (h is null) return UI::InputBlocking::DoNothing;
+    if (h is null || h.disabled) return UI::InputBlocking::DoNothing;
     if (h.editorOnly && !isEditor) return UI::InputBlocking::DoNothing;
     trace('running hotkey: ' + h.name);
     return h.f();
@@ -139,18 +210,34 @@ void UI_DrawHotkeyList() {
     }
 
     UI::BeginDisabled(Bind::IsRebinding);
-    if (UI::BeginTable("hotkeys", 3, UI::TableFlags::SizingStretchSame)) {
+    if (UI::BeginTable("hotkeys", 7, UI::TableFlags::SizingStretchSame)) {
+        UI::TableSetupColumn("Name", UI::TableColumnFlags::WidthStretch, 2.);
+        UI::TableSetupColumn("Key", UI::TableColumnFlags::WidthStretch, 1.);
+        UI::TableSetupColumn("Rebind", UI::TableColumnFlags::WidthFixed, 70);
+        UI::TableSetupColumn("Disabled", UI::TableColumnFlags::WidthFixed, 50);
+        UI::TableSetupColumn("Ctrl", UI::TableColumnFlags::WidthFixed, 30);
+        UI::TableSetupColumn("Alt", UI::TableColumnFlags::WidthFixed, 30);
+        UI::TableSetupColumn("Shift", UI::TableColumnFlags::WidthFixed, 40);
+        UI::TableHeadersRow();
         UI::TableNextRow();
         for (uint i = 0; i < hotkeyList.Length; i++) {
             auto h = hotkeyList[i];
             UI::TableNextColumn();
-            UI::Text(h.name);
+            UI::Text((h.disabled ? "\\$999" : "") + h.name);
             UI::TableNextColumn();
             UI::Text(tostring(h.formatted));
             UI::TableNextColumn();
             if (UI::Button("Rebind##" + h._id)) {
                 h.StartRebind();
             }
+            UI::TableNextColumn();
+            h.UI_DisabledCheckbox();
+            UI::TableNextColumn();
+            h.UI_CtrlCheckbox();
+            UI::TableNextColumn();
+            h.UI_AltCheckbox();
+            UI::TableNextColumn();
+            h.UI_ShiftCheckbox();
         }
         UI::EndTable();
     }
@@ -227,9 +314,8 @@ UI::InputBlocking _SetEditorTestModeRespawnHotkeyF() {
 void _InitAddHotkeys() {
     auto @setTestResapwnHK = AddHotkey(VirtualKey::Home, false, false, false, _SetEditorTestModeRespawnHotkeyF, "[TestMode] Set Respawn Position");
     setTestResapwnHK.editorOnly = false;
-
-    sleep(500);
-    LoadHotkeyDb();
+    // gets called in Main() after initialization of things that add hotkeys.
+    // LoadHotkeyDb();
 }
 
 Meta::PluginCoroutine@ addHotkeysCoro = startnew(_InitAddHotkeys);

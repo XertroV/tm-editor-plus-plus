@@ -150,4 +150,9 @@ namespace UX {
         // trace(UI::GetMousePos().ToString() + " " + showBoundsRect.ToString());
         if (closeAnyway) UI::CloseCurrentPopup();
     }
+
+    // returns true if pressed; i.e., true => toggled
+    bool Toggler(const string &in id, bool state) {
+        return UI::Button((state ? Icons::ToggleOn : Icons::ToggleOff) + "##" + id);
+    }
 }
