@@ -714,27 +714,6 @@ class RotationTranslationGizmo {
                 SetPivotPoint(newPivot, false);
                 FocusCameraOn(pos, false);
             }
-            // SetPivotButton("")
-            // UI::Text("Edit Pivot");
-            // UI::SeparatorText("Edit Pivot");
-            // UI::Text("\\$iTodo");
-            // UI::Text("Pivot: " + pos.ToString());
-            // UI::Text("Scale: " + scale);
-            // UI::Separator();
-            // UI::Text("Set Pivot to:");
-            // UI::PushItemWidth(100);
-            // UI::InputFloat3("##gizmo-pivot", pos);
-            // UI::InputFloat("##gizmo-pivot-scale", scale);
-            // UI::PopItemWidth();
-            // UI::Separator();
-            // if (UI::Button("Apply")) {
-            //     onApply();
-            //     UI::CloseCurrentPopup();
-            // }
-            // UI::SameLine();
-            // if (UI::Button("Cancel")) {
-            //     UI::CloseCurrentPopup();
-            // }
 
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();

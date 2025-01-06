@@ -133,8 +133,7 @@ Editor::CamState@ g_endCamState = Editor::CamState();
 
 void UpdateAnimAndCamera() {
     if (!IsInEditor || CameraAnimMgr is null) return;
-    if (!CameraAnimMgr.IsDone) {
-        CameraAnimMgr.Update(true);
+    if (CameraAnimMgr.Update(true)) {
         UpdateCameraProgress(CameraAnimMgr.Progress);
     } else {
         @CameraAnimMgr = null;
