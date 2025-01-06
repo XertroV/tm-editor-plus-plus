@@ -9,14 +9,9 @@
 - gizmo: skins
 - macroblock: skins
 
-- [x] plugin easy load button
-
 - block history on RHS? (clickable & draggable onto map)
 -
 
-
-- [ ] fix fill performance
-- [x] custom selection performance
 - [ ] nudging skins
 - [ ] macroblock skins
 

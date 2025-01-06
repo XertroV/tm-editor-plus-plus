@@ -258,8 +258,8 @@ namespace Gizmo {
             Editor::SetSelectedBlockInfo(editor, blockSpec.BlockInfo);
             yield();
         } else {
-            auto item = lastPickedItem.AsItem();
-            if (item is null) {
+            CGameCtnAnchoredObject@ item;
+            if (lastPickedItem is null || (@item = lastPickedItem.AsItem()) is null) {
                 warn("no last picked item");
                 IsActive = false;
                 return;

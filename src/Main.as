@@ -399,6 +399,9 @@ UI::InputBlocking OnKeyPress_Inner(bool down, VirtualKey key) {
         // trace('checking hotkey: ' + tostring(key));
         block = CheckHotkey(key) == UI::InputBlocking::Block || block;
     }
+    if ((Time::Now - _hotkeysLastVisible) < 500 && down) {
+        _ShowLastKeyPressed(key);
+    }
 
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
 }

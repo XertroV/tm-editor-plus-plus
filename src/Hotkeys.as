@@ -199,8 +199,19 @@ void UpdateHotkey(Hotkey@ h) {
     hotkeysFlags[int(h.key)] = true;
 }
 
+uint _hotkeysLastVisible = 0;
+VirtualKey _lastKeyPressed = VirtualKey(-1);
+
+void _ShowLastKeyPressed(VirtualKey k) {
+    _lastKeyPressed = k;
+}
+
 
 void UI_DrawHotkeyList() {
+    // keep track of when this is visible so we can show key-presses to the user.
+    _hotkeysLastVisible = Time::Now;
+    UI::Text("Last key pressed: " + tostring(_lastKeyPressed));
+
     UI::SeparatorText("Hotkeys");
 
     if (Bind::IsRebinding) {
