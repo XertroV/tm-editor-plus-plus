@@ -712,7 +712,7 @@ class RotationTranslationGizmo {
             vec3 newPivot = UI::InputFloat3("##gizmo-pivot", pivotPoint);
             if (newPivot != pivotPoint) {
                 SetPivotPoint(newPivot, false);
-                FocusCameraOn(pos + newPivot, false);
+                FocusCameraOn(pos, false);
             }
             // SetPivotButton("")
             // UI::Text("Edit Pivot");
