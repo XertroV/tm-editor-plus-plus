@@ -108,6 +108,8 @@ namespace Gizmo {
         gizmo.Render();
     }
 
+    // MARK: Enter Gizmo Mode
+
     // will enter gizmo mode if conditions are met. returns whether to block click, always false
     bool CheckEnterGizmoMode(CGameCtnEditorFree@ editor, bool lmb, bool rmb) {
         if (editor is null) return false;
@@ -154,6 +156,8 @@ namespace Gizmo {
     // LMB: remove target and select it
     // RMB: keep target, use current block/item
     bool shouldReplaceTarget = false;
+
+    // MARK: Gizmo Loop
 
     void GizmoLoop() {
         auto app = GetApp();
@@ -243,6 +247,8 @@ namespace Gizmo {
     void ApplyPivot(vec3 newPivot) {
         gizmo.SetPivotPoint(newPivot);
     }
+
+    // MARK: Setup
 
     void Gizmo_Setup(CGameCtnEditorFree@ editor) {
         if (editor is null) {
@@ -454,7 +460,17 @@ namespace Gizmo {
         gizmo.WithBoundingBox(bb);
     }
 
+    // MARK: Callbacks
+
     void _GizmoOnApply() {
+        _GizmoOnApply_Params(true);
+    }
+
+    void _GizmoOnApplyAndContinue() {
+        _GizmoOnApply_Params(false);
+    }
+
+    void _GizmoOnApply_Params(bool setInactiveAfter = true) {
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
         CustomCursor::NoShowCursorItemModelsPatchActive = false;
         if (modePlacingType == BlockOrItem::Item) {
@@ -462,7 +478,6 @@ namespace Gizmo {
             dev_trace("   lastAppliedPivot: " + lastAppliedPivot.ToString());
             dev_trace("   gizmo.placementParamOffset: " + gizmo.placementParamOffset.ToString());
             dev_trace("   gizmo.pivotPoint: " + gizmo.pivotPoint.ToString());
-
             itemSpec.pivotPos = (lastAppliedPivot * -1.); // - gizmo.placementParamOffset * 2.;
             itemSpec.pos = gizmo.pos + vec3(0, 56, 0) + gizmo.GetRotatedPivotPoint();
             itemSpec.coord = Int3ToNat3(PosToCoordDist(itemSpec.pos));
@@ -477,7 +492,9 @@ namespace Gizmo {
             Editor::PlaceBlocks({blockSpec}, true);
             startnew(_AfterApply_SetBlockSkin);
         }
-        IsActive = false;
+        if (setInactiveAfter) {
+            IsActive = false;
+        }
         // startnew(DisableGizmoInAsync, uint64(1));
     }
 
@@ -506,7 +523,112 @@ namespace Gizmo {
         yield(frames);
         IsActive = false;
     }
+
+    // MARK: Hotkeys
+
+    void DrawHotkeysTable() {
+        if (UI::BeginTable("gizmo hotkeys", 2)) {
+            UI::TableSetupColumn("Hotkey", UI::TableColumnFlags::WidthStretch, .25);
+            UI::TableSetupColumn("Action", UI::TableColumnFlags::WidthStretch, .75);
+            // UI::TableHeadersRow();
+            DrawHotkeyRow("Apply / Place", hk_Apply);
+            DrawHotkeyRow("Place & Continue", hk_ApplyAndContinue);
+            DrawHotkeyRow("Set Camera to Pivot", hk_ResetCam);
+            DrawHotkeyRow("Cycle Pivot", hk_CyclePivot);
+            DrawHotkeyRow("Move Pivot to Bottom", hk_MovePivotBot);
+            DrawHotkeyRow("Move Pivot to Top", hk_MovePivotTop);
+            DrawHotkeyRow("Move Pivot to Back", hk_MovePivotBack);
+            DrawHotkeyRow("Move Pivot to Front", hk_MovePivotFront);
+            DrawHotkeyRow("Move Pivot to Left", hk_MovePivotLeft);
+            DrawHotkeyRow("Move Pivot to Right", hk_MovePivotRight);
+            UI::EndTable();
+        }
+    }
+
+    void DrawHotkeyRow(const string &in name, Hotkey@ hk) {
+        UI::TableNextRow();
+        UI::TableNextColumn();
+        UI::Text(hk.formatted);
+        UI::TableNextColumn();
+        UI::Text(name);
+    }
+
+    Hotkey@ hk_Apply;
+    Hotkey@ hk_ApplyAndContinue;
+    Hotkey@ hk_ResetCam;
+    Hotkey@ hk_CyclePivot;
+    Hotkey@ hk_MovePivotBot;
+    Hotkey@ hk_MovePivotTop;
+    Hotkey@ hk_MovePivotBack;
+    Hotkey@ hk_MovePivotFront;
+    Hotkey@ hk_MovePivotLeft;
+    Hotkey@ hk_MovePivotRight;
+
+    void SetupGizmoHotkeysOnPluginStart() {
+        @hk_Apply = AddHotkey(VirtualKey::Space, false, false, false, Gizmo::Hotkey_Apply, "Gizmo: Apply / Place");
+        @hk_ApplyAndContinue = AddHotkey(VirtualKey::Space, false, false, true, Gizmo::Hotkey_ApplyAndContinue, "Gizmo: Place & Continue");
+        @hk_ResetCam = AddHotkey(VirtualKey::C, false, false, false, Gizmo::Hotkey_ResetCam, "Gizmo: Set Camera to Pivot");
+        @hk_CyclePivot = AddHotkey(VirtualKey::Tab, false, false, false, Gizmo::Hotkey_CyclePivot, "Gizmo: Cycle Pivot");
+        @hk_MovePivotBot = AddHotkey(VirtualKey::Q, false, false, false, Gizmo::Hotkey_MovePivotBot, "Gizmo: Move Pivot to Bottom");
+        @hk_MovePivotTop = AddHotkey(VirtualKey::E, false, false, false, Gizmo::Hotkey_MovePivotTop, "Gizmo: Move Pivot to Top");
+        @hk_MovePivotBack = AddHotkey(VirtualKey::W, false, false, false, Gizmo::Hotkey_MovePivotBack, "Gizmo: Move Pivot to Back");
+        @hk_MovePivotFront = AddHotkey(VirtualKey::S, false, false, false, Gizmo::Hotkey_MovePivotFront, "Gizmo: Move Pivot to Front");
+        @hk_MovePivotLeft = AddHotkey(VirtualKey::A, false, false, false, Gizmo::Hotkey_MovePivotLeft, "Gizmo: Move Pivot to Left");
+        @hk_MovePivotRight = AddHotkey(VirtualKey::D, false, false, false, Gizmo::Hotkey_MovePivotRight, "Gizmo: Move Pivot to Right");
+    }
+
+    UI::InputBlocking Hotkey_Apply() {
+        if (IsActive) _GizmoOnApply();
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_ApplyAndContinue() {
+        if (IsActive) _GizmoOnApplyAndContinue();
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_ResetCam() {
+        if (IsActive) gizmo.FocusCameraOn(gizmo.pos);
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_CyclePivot() {
+        if (IsActive) CyclePivot();
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_MovePivotBot() {
+        if (IsActive) gizmo.MovePivotTo(Axis::Y, 0);
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_MovePivotTop() {
+        if (IsActive) gizmo.MovePivotTo(Axis::Y, 1);
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_MovePivotBack() {
+        if (IsActive) gizmo.MovePivotTo(Axis::Z, 0);
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_MovePivotFront() {
+        if (IsActive) gizmo.MovePivotTo(Axis::Z, 1);
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_MovePivotLeft() {
+        if (IsActive) gizmo.MovePivotTo(Axis::X, 0);
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_MovePivotRight() {
+        if (IsActive) gizmo.MovePivotTo(Axis::X, 1);
+        return UI::InputBlocking::DoNothing;
+    }
 }
+
+// MARK: Settings
 
 [Setting hidden]
 bool S_Gizmo_MoveCameraOnStart = true;

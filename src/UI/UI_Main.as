@@ -231,17 +231,17 @@ namespace MenuBar {
                 UI::EndMenu();
             }
 
-            auto eggLabel = SF_EggRun ? "Egg" : ("Egg" + NewIndicator);
-            if (UI::BeginMenu(eggLabel + "###Egg")) {
-                UI::SeparatorTextOpenplanet("Egg");
-                if (UI::Button("Hello Openplanet (Clears after 70s)")) {
-                    SF_EggRun = true;
-                    startnew(DemoRunVisLines_Main);
-                    Editor::SetCamAnimationGoTo(vec2(-.8, 0.12) * Math::PI, vec3(875.341, 142.509, 763.686), 250);
-                    Notify("Try placing some blocks over it.");
-                }
-                UI::EndMenu();
-            }
+            // auto eggLabel = SF_EggRun ? "Egg" : ("Egg");
+            // if (UI::BeginMenu(eggLabel + "###Egg")) {
+            //     UI::SeparatorTextOpenplanet("Egg");
+            //     if (UI::Button("Hello Openplanet (Clears after 70s)")) {
+            //         SF_EggRun = true;
+            //         startnew(DemoRunVisLines_Main);
+            //         Editor::SetCamAnimationGoTo(vec2(-.8, 0.12) * Math::PI, vec3(875.341, 142.509, 763.686), 250);
+            //         Notify("Try placing some blocks over it.");
+            //     }
+            //     UI::EndMenu();
+            // }
 
             if (UI::BeginMenu("Advanced")) {
                 UI::SeparatorText("\\$i\\$bbbReload or Change Base/Mood");

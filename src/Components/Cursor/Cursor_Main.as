@@ -562,7 +562,7 @@ class CustomCursorTab : EffectTab {
         CustomCursorRotations::ItemSnappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled (Default: On)", CustomCursorRotations::ItemSnappingEnabled);
         AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly). Normal game behavior is when this is *true*.");
 
-        CustomCursor::AllowFreeWaterBlocksPatchActive = UI::Checkbox("Allow Placing Rotated Free Water Blocks" + NewIndicator, CustomCursor::AllowFreeWaterBlocksPatchActive);
+        CustomCursor::AllowFreeWaterBlocksPatchActive = UI::Checkbox("Allow Placing Rotated Free Water Blocks", CustomCursor::AllowFreeWaterBlocksPatchActive);
         AddSimpleTooltip("Allows placing water blocks with pitch and roll in free block and free macroblock mode.");
         UI::SameLine();
         S_AutoApplyFreeWaterBlocksPatch = UI::Checkbox("Auto-apply##fwbp", S_AutoApplyFreeWaterBlocksPatch);
@@ -639,7 +639,7 @@ class CustomCursorTab : EffectTab {
         UI::SameLine();
         bool reset_radius = UI::Button(Icons::Refresh + "##fb-snap-rst", vec2(btnWidth, 0)); //  || UI::IsItemClicked()
         UI::SameLine();
-        UI::Text("Free Block Snap Radius" + NewIndicator);
+        UI::Text("Free Block Snap Radius");
         if (decr_radius) {
             CustomCursor::StepFreeBlockSnapRadius(false);
         } else if (incr_radius) {
@@ -653,9 +653,9 @@ class CustomCursorTab : EffectTab {
             CustomCursor::ResetSnapRadius();
         }
 
-        S_DrawFreeBlockClips = UI::Checkbox("Draw Block Clip Helpers" + NewIndicator, S_DrawFreeBlockClips);
-        S_DrawAnySnapRadiusOnHelpers = UI::Checkbox("Draw Snap Radius on Helpers" + NewIndicator, S_DrawAnySnapRadiusOnHelpers);
-        S_DrawFreeBlockClipsOnNearbyBlocks = UI::Checkbox("Draw Block Clip Helpers on Nearby Blocks" + NewIndicator, S_DrawFreeBlockClipsOnNearbyBlocks);
+        S_DrawFreeBlockClips = UI::Checkbox("Draw Block Clip Helpers", S_DrawFreeBlockClips);
+        S_DrawAnySnapRadiusOnHelpers = UI::Checkbox("Draw Snap Radius on Helpers", S_DrawAnySnapRadiusOnHelpers);
+        S_DrawFreeBlockClipsOnNearbyBlocks = UI::Checkbox("Draw Block Clip Helpers on Nearby Blocks", S_DrawFreeBlockClipsOnNearbyBlocks);
         DrawFreeBlockOffsetForm();
 
         UI::Unindent();

@@ -299,7 +299,7 @@ class MapEditPropsTab : Tab {
             UI::Unindent();
         }
 
-        UI::SeparatorText("Color Palette " + NewIndicator);
+        UI::SeparatorText("Color Palette ");
 
         editor.PluginMapType.MapElemColorPalette = DrawComboEMapElemColorPalette("Color Palette", editor.PluginMapType.MapElemColorPalette);
 

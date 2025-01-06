@@ -66,8 +66,11 @@ void Main() {
 
     startnew(RegisterEditorLeaveUndoStandingRespawnCheck);
 
+    startnew(Loop_RunCtx_AfterMainLoop).WithRunContext(Meta::RunContext::AfterMainLoop);
+
     yield(2);
     startnew(ColorSelectionHook::SetupHooks);
+    startnew(Gizmo::SetupGizmoHotkeysOnPluginStart);
 
     yield(2);
     Editor::SetInvPatchTy(S_InvPatchTy);
@@ -83,6 +86,15 @@ void Main() {
     // runGbxTest();
     // runZipTest();
 #endif
+}
+
+void Loop_RunCtx_AfterMainLoop() {
+    while (true) {
+        if (IsInEditor) {
+            UpdateAnimAndCamera();
+        }
+        yield();
+    }
 }
 
 void OnEnabled() {
@@ -358,8 +370,6 @@ void UpdateScrollCache() {
 float g_FrameTime = 10.;
 float g_AvgFrameTime = 10.;
 void Update(float dt) {
-    UpdateAnimAndCamera();
-
     g_FrameTime = dt;
     g_AvgFrameTime = g_AvgFrameTime * .9 + dt * .1;
 }

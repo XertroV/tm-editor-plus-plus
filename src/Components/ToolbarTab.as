@@ -1,9 +1,10 @@
 
 class ToolbarTab : Tab {
-    ToolbarTab(TabGroup@ parent, const string &in name, const string &in icon) {
+    ToolbarTab(TabGroup@ parent, const string &in name, const string &in icon, const string &in idNonce) {
         super(parent, name, icon);
+        // don't forget window position; needs to be singleton instance
+        this.idNonce = idNonce;
     }
-
 
     bool BtnToolbar(const string &in label, const string &in desc, BtnStatus status, vec2 size = vec2()) {
         if (size.LengthSquared() == 0) size = d_ToolbarBtnSize * g_scale;

@@ -156,6 +156,12 @@ namespace UX {
     bool Toggler(const string &in id, bool state) {
         return UI::Button((state ? Icons::ToggleOn : Icons::ToggleOff) + "##" + id);
     }
+
+    bool ButtonSameLine(const string &in label) {
+        bool ret = UI::Button(label);
+        UI::SameLine();
+        return ret;
+    }
 }
 
 
