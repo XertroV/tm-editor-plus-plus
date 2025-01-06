@@ -144,7 +144,8 @@ namespace UX {
     void CloseCurrentPopupIfMouseFarAway(bool closeAnyway = false) {
         auto wPos = UI::GetWindowPos();
         auto wSize = UI::GetWindowSize();
-        auto showBoundsRect = vec4(wPos + vec2(-50), wSize + vec2(100));
+        vec2 areaPad = vec2(g_screen.y / 10.);
+        auto showBoundsRect = vec4(wPos - areaPad, wSize + (areaPad * 2.));
 
         closeAnyway = closeAnyway || !MathX::Within(UI::GetMousePos(), showBoundsRect);
         // trace(UI::GetMousePos().ToString() + " " + showBoundsRect.ToString());
@@ -155,4 +156,15 @@ namespace UX {
     bool Toggler(const string &in id, bool state) {
         return UI::Button((state ? Icons::ToggleOn : Icons::ToggleOff) + "##" + id);
     }
+}
+
+
+void TextSameLine(const string &in text) {
+    UI::Text(text);
+    UI::SameLine();
+}
+
+void SameLineText(const string &in text) {
+    UI::SameLine();
+    UI::Text(text);
 }

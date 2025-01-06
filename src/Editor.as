@@ -101,6 +101,14 @@ namespace Editor {
         return Dev::GetOffsetUint32(cursor, O_CURSOR_BLOCK_VARIANT);
     }
 
+    void SetCurrentBlockVariant(CGameCursorBlock@ cursor, uint variant) {
+        Dev::SetOffset(cursor, O_CURSOR_BLOCK_VARIANT, variant);
+    }
+
+    uint GetCurrentItemVariant(CGameCtnEditorFree@ editor) {
+        return editor.CurrentItemModel.DefaultPlacementParam_Content.PlacementClass.CurVariant;
+    }
+
     enum ItemMode {
         None = 0,
         Normal = 1,

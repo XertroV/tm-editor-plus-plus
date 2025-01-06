@@ -158,7 +158,10 @@ class RotationTranslationGizmo {
     //     return this;
     // }
 
+    float tmpRotationAngle = 0.;
+
     RotationTranslationGizmo@ AddTmpRotation(Axis axis, float delta_theta, bool rotateToLocal = true) {
+        tmpRotationAngle += delta_theta;
         // tmpRot = mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * tmpRot;
         // accounting for pivotPoint:
         if (rotateToLocal) {
@@ -183,6 +186,7 @@ class RotationTranslationGizmo {
     }
 
     RotationTranslationGizmo@ SetTmpRotation(Axis axis, float theta) {
+        tmpRotationAngle = theta;
         tmpRot = mat4::Inverse(mat4::Rotate(theta, AxisToVecForRot(axis)));
         return this;
     }
@@ -195,6 +199,7 @@ class RotationTranslationGizmo {
     RotationTranslationGizmo@ ApplyTmpRotation() {
         rot = tmpRot * rot;
         tmpRot = mat4::Identity();
+        tmpRotationAngle = 0.;
         ApplyTmpTranslation();
         return this;
     }
@@ -243,6 +248,7 @@ class RotationTranslationGizmo {
             if (anim.IsDone) break;
             yield();
         }
+        SetPivotPoint(toPos, false);
         // dev_trace("Gizmo: pivotAnimator done? " + anim.IsDone + " / progress: " + anim.Progress);
         if (anim is pivotAnimator) {
             @pivotAnimator = null;
@@ -467,7 +473,9 @@ class RotationTranslationGizmo {
                     if (!Math::IsNaN(mag)) {
                         if (isRotMode) {
                             d = mag;
-                            if (_isCtrlDown) d = d - d % stepRot;
+                            if (_isCtrlDown) {
+                                d = LockToAngles(tmpRotationAngle + d, stepRot) - tmpRotationAngle;
+                            }
                             if (d == 0.) skipSetLastDD = true;
                             else AddTmpRotation(lastClosestAxis, d, !useGlobal);
                         } else {
@@ -671,9 +679,45 @@ class RotationTranslationGizmo {
         }
 
         if (UI::BeginPopup("gizmo-toolbar-edit-pivot")) {
-            UI::Text("Edit Pivot");
-            UI::SeparatorText("Edit Pivot");
-            UI::Text("\\$iTodo");
+            /*
+            [L][M][R]
+            [B][M][T]
+            [B][M][F]
+             */
+            UI::SeparatorText("Corners etc.");
+            TextSameLine("X");
+            SetPivotAxisButton(Axis::X, "L##gzPvX", 0.);
+            SetPivotAxisButton(Axis::X, "M##gzPvX", .5);
+            SetPivotAxisButton(Axis::X, "R##gzPvX", 1., true);
+            TextSameLine("Y");
+            SetPivotAxisButton(Axis::Y, "B##gzPvY", 0.);
+            SetPivotAxisButton(Axis::Y, "M##gzPvY", .5);
+            SetPivotAxisButton(Axis::Y, "T##gzPvY", 1., true);
+            TextSameLine("Z");
+            SetPivotAxisButton(Axis::Z, "B##gzPvZ", 0.);
+            SetPivotAxisButton(Axis::Z, "M##gzPvZ", .5);
+            SetPivotAxisButton(Axis::Z, "F##gzPvZ", 1., true);
+
+            // for slope platform, pivot should be 2/3 up, maybe + 2m, and normal height is 3*8.
+            UI::SeparatorText("Slopes & Curves");
+            SetPivotAxisButtonAbs(Axis::Y, "Y=8", 8.);
+            AddSimpleTooltip("BiSlope");
+            SetPivotAxisButtonAbs(Axis::Y, "Y=16", 16.);
+            AddSimpleTooltip("Slope");
+            SetPivotAxisButtonAbs(Axis::Y, "Y=18", 18.);
+            AddSimpleTooltip("Slope + 2m");
+            SetPivotAxisButtonAbs(Axis::Y, "Y=24", 24., true);
+
+            UI::SeparatorText("Edit Directly");
+            vec3 newPivot = UI::InputFloat3("##gizmo-pivot", pivotPoint);
+            if (newPivot != pivotPoint) {
+                SetPivotPoint(newPivot, false);
+                FocusCameraOn(pos + newPivot, false);
+            }
+            // SetPivotButton("")
+            // UI::Text("Edit Pivot");
+            // UI::SeparatorText("Edit Pivot");
+            // UI::Text("\\$iTodo");
             // UI::Text("Pivot: " + pos.ToString());
             // UI::Text("Scale: " + scale);
             // UI::Separator();
@@ -696,7 +740,6 @@ class RotationTranslationGizmo {
             UI::EndPopup();
         }
 
-
         if (UI::BeginPopup("gizmo-toolbar-settings")) {
             // UI::Text("Gizmo Settings");
             UI::SeparatorText("Gizmo Startup Settings");
@@ -715,6 +758,12 @@ class RotationTranslationGizmo {
             UI::Text("Hold Alt: Move camera.");
             UI::Text("Right click (on gizmo): Cycle between Translate and Rotate.");
             UI::Text("Right click (while dragging): Reset.");
+
+            UI::SeparatorText("Help");
+            UI::Text("Problem: \\$iBlocks appear 25cm too high");
+            UI::Indent();
+            UI::TextWrapped("Solution: Set \"FreeBlock Vertical Offset\" under *Custom Cursor* tab to 0. Then select a new block to refresh cursor and try again.");
+            UI::Unindent();
 
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();
@@ -751,19 +800,65 @@ class RotationTranslationGizmo {
 
     float d;
 
-    void FocusCameraOn(vec3 p) {
+    void FocusCameraOn(vec3 p, bool setDist = true) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto camState = Editor::GetCurrentCamState(editor);
         camState.Pos = p;
-        camState.TargetDist = this.scale * 4.5;
+        if (setDist) camState.TargetDist = this.scale * 4.5;
         Editor::SetCamAnimationGoTo(camState);
+    }
+
+    void SetPivotAxisButton(Axis axis, string label, float relPos, bool isLast = false) {
+        if (UI::Button(label)) {
+            SetPivotPoint(AxisToVec(axis) * relPos * bbHalfDiag * 2. + AxisToAntiVec(axis) * pivotPoint);
+        }
+        if (!isLast) UI::SameLine();
+    }
+
+    void SetPivotAxisButtonAbs(Axis axis, string label, float absPos, bool isLast = false) {
+        if (UI::Button(label)) {
+            SetPivotPoint(AxisToVec(axis) * absPos + AxisToAntiVec(axis) * pivotPoint);
+        }
+        if (!isLast) UI::SameLine();
     }
 }
 
 const quat ROT_Q_AROUND_UP = quat(UP, HALF_PI);
 const quat ROT_Q_AROUND_FWD = quat(BACKWARD, HALF_PI);
 
+// atan(4/32);
+const double ANGLE_HALF_BI_SLOPE = 0.12435499454676;
+// atan(8/32);
+const double ANGLE_BI_SLOPE = 0.24497866312686;
+// atan(16/32);
+const double ANGLE_SLOPE2 = 0.4636476090008;
+// atan(24/32);
+const double ANGLE_SLOPE3 = 0.6435011087933;
 
+
+float LockToAngles(float rad, float step) {
+    float sign = rad < 0. ? -1. : 1.;
+    rad = Math::Abs(rad);
+    float dToStep = rad % step;
+    float closest = rad - dToStep;
+    if (dToStep > step * .5) {
+        closest += step;
+    }
+    if (IsCloserToAThanB(rad, ANGLE_HALF_BI_SLOPE, closest)) {
+        return ANGLE_HALF_BI_SLOPE * sign;
+    } else if (IsCloserToAThanB(rad, ANGLE_BI_SLOPE, closest)) {
+        return ANGLE_BI_SLOPE * sign;
+    } else if (IsCloserToAThanB(rad, ANGLE_SLOPE2, closest)) {
+        return ANGLE_SLOPE2 * sign;
+    } else if (IsCloserToAThanB(rad, ANGLE_SLOPE3, closest)) {
+        return ANGLE_SLOPE3 * sign;
+    }
+    return closest * sign;
+}
+
+bool IsCloserToAThanB(float val, float a, float b) {
+    return Math::Abs(val - a) < Math::Abs(val - b);
+}
 
 namespace UX {
     void PushInvisibleWindowStyle() {

@@ -378,6 +378,7 @@ namespace Editor {
                 name = BlockInfo.IdName;
                 author = BlockInfo.Author.GetName();
                 BlockInfo.MwAddRef();
+                EnsureValidVariant();
             }
         }
 
@@ -560,6 +561,40 @@ namespace Editor {
                 flags == other.flags &&
                 AnglesVeryClose(pyr, other.pyr)
                 ;
+        }
+
+        ItemSpec@ ToItemSpec(CGameItemModel@ itemModel, vec3 &in pivotPos = vec3(0), uint16 variantIx = 0) override {
+            auto spec = ItemSpecPriv(itemModel, pos, pyr);
+            // spec.variantIx
+            spec.color = CGameCtnAnchoredObject::EMapElemColor(int(this.color));
+            spec.lmQual = CGameCtnAnchoredObject::EMapElemLightmapQuality(int(this.lmQual));
+            spec.isFlying = 1;
+            spec.pivotPos = pivotPos;
+            spec.variantIx = variantIx;
+            if (this.waypoint !is null) {
+                @spec.waypoint = WaypointSpec(waypoint.tag, waypoint.order);
+            }
+            @spec.waypoint = waypoint;
+            return spec;
+        }
+
+        bool EnsureValidVariant() override {
+            if (BlockInfo !is null) {
+                auto origVar = variant;
+                auto origGround = isGround;
+                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                    variant = 0;
+                }
+                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                    isGround = !isGround;
+                }
+                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                    variant = origVar;
+                    isGround = origGround;
+                    return false;
+                }
+            }
+            return true;
         }
     }
 
@@ -818,6 +853,21 @@ namespace Editor {
                 }
             }
             return null;
+        }
+
+        BlockSpec@ ToBlockSpec(CGameCtnBlockInfo@ model, uint blockVariant = 0, bool isGround = false) override {
+            auto spec = BlockSpecPriv(model, pos, pyr);
+            spec.color = CGameCtnBlock::EMapElemColor(int(color));
+            spec.lmQual = CGameCtnBlock::EMapElemLightmapQuality(int(lmQual));
+            spec.isFree = true;
+            spec.isGhost = false;
+            spec.isGround = isGround;
+            spec.variant = blockVariant;
+            if (!spec.EnsureValidVariant()) warn("Failed to find valid block variant for " + model.IdName);
+            if (waypoint !is null) {
+                @spec.waypoint = WaypointSpec(waypoint.tag, waypoint.order);
+            }
+            return spec;
         }
     }
 

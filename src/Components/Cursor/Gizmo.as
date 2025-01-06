@@ -12,6 +12,17 @@ const vec3& AxisToVec(Axis a) {
     return UP;
 }
 
+// returns vec3(1) - AxisToVec(a); so the axis is zeroed but other axes aren't.
+const vec3 AxisToAntiVec(Axis a) {
+    switch (a) {
+        case Axis::X: return vec3(1) - RIGHT;
+        case Axis::Y: return vec3(1) - UP;
+        case Axis::Z: return vec3(1) - FORWARD;
+    }
+    throw("unknown axis: " + tostring(a));
+    return vec3(1) - UP;
+}
+
 const vec3& AxisToVecForRot(Axis a) {
     switch (a) {
         case Axis::X: return LEFT;
@@ -98,9 +109,10 @@ namespace Gizmo {
     }
 
     // will enter gizmo mode if conditions are met. returns whether to block click, always false
-    bool CheckEnterGizmoMode(CGameCtnEditorFree@ editor) {
+    bool CheckEnterGizmoMode(CGameCtnEditorFree@ editor, bool lmb, bool rmb) {
         if (editor is null) return false;
         if (IsActive) return false;
+        if (!lmb && !rmb) return false;
         if (!CursorControl::IsExclusiveControlAvailable()) return false;
         // true while ctrl is down
         if (Editor::GetEditMode(editor) != CGameEditorPluginMap::EditMode::Pick) return false;
@@ -116,11 +128,16 @@ namespace Gizmo {
         origItemPlacementMode = Editor::GetItemPlacementMode(false);
         origModeWasItem = Editor::IsInAnyItemPlacementMode(editor, false);
         origModeWasBlock = Editor::IsInBlockPlacementMode(editor, false);
-        if (origModeWasItem) dev_trace("Item placement mode: " + tostring(origItemPlacementMode));
+        origModeType = origModeWasItem ? BlockOrItem::Item : BlockOrItem::Block;
+        if (origModeWasItem) {
+            dev_trace("Item placement mode: " + tostring(origItemPlacementMode));
+        }
 
+        shouldReplaceTarget = lmb;
         IsActive = true;
-        // don't block click => ctrl+click will select the block/item for us
-        return false;
+        // LMB: don't block click => ctrl+click will select the block/item for us
+        if (lmb) return false;
+        return true;
     }
 
     CGameEditorPluginMap::EditMode origEditMode;
@@ -131,7 +148,12 @@ namespace Gizmo {
     bool wasInFreeBlockMode = false;
     bool origModeWasItem = false;
     bool origModeWasBlock = false;
+    BlockOrItem origModeType = BlockOrItem::Block;
     EditorRotation@ origCursor;
+
+    // LMB: remove target and select it
+    // RMB: keep target, use current block/item
+    bool shouldReplaceTarget = false;
 
     void GizmoLoop() {
         auto app = GetApp();
@@ -139,7 +161,7 @@ namespace Gizmo {
         Gizmo_Setup(editor);
         CustomCursorRotations::CustomYawActive = false;
         yield();
-        bool isItem = modeTargetType == BlockOrItem::Item;
+        bool isItem = modePlacingType == BlockOrItem::Item;
         CustomCursor::NoSetCursorVisFlagPatchActive = !isItem;
         if (isItem) CustomCursor::NoHideCursorItemModelsPatchActive = true;
         CustomCursor::NoShowCursorItemModelsPatchActive = !isItem;
@@ -188,6 +210,8 @@ namespace Gizmo {
     RotationTranslationGizmo@ gizmo;
     Editor::ItemSpecPriv@ itemSpec;
     Editor::BlockSpecPriv@ blockSpec;
+    // separate picked target from thing we'll place (supports 'duplication' and 'place at' via RMB)
+    BlockOrItem modePlacingType = BlockOrItem::Block;
 
     // just used to track item initial pivot
     vec3 lastAppliedPivot;
@@ -226,11 +250,13 @@ namespace Gizmo {
             return;
         }
         _OnActive_UpdatePMT(editor.PluginMapType);
+
         modeTargetType = lastPickedType;
+        modePlacingType =  shouldReplaceTarget ? lastPickedType : origModeType;
         @itemSpec = null;
         @blockSpec = null;
         lastAppliedPivot = vec3();
-        bool applyingItem = modeTargetType == BlockOrItem::Item;
+        bool applyingItem = modePlacingType == BlockOrItem::Item;
         bool modeMismatch = applyingItem != origModeWasItem;
         // fix mode mismatch, otherwise we place blocks when gizmoing an item from block mode
         if (modeMismatch) {
@@ -241,22 +267,36 @@ namespace Gizmo {
             }
         }
 
+        // problem: we need to separate getting the spec from the edit mode setup.
+        // We might have picked a block, but want to place an item there (if RMB), and not delete the original block.
+        // so we need to get the blockspec, but turn it into an item spec with the relevant itemModel.
+        // or vice versa, place a block at some location.
+
+
+
+        CGameCtnBlock@ b;
+        CGameCtnAnchoredObject@ item;
+        vec3 targetPos;
+        mat4 targetRot;
+        vec3 targetSize;
+        uint targetVariant;
+        mat4 itemMat;
+        CGameCtnBlockInfo@ placingBlockModel;
+        CGameItemModel@ placingItemModel;
+
         if (modeTargetType == BlockOrItem::Block) {
             yield();
-            CGameCtnBlock@ b;
             if (lastPickedBlock is null || (@b = lastPickedBlock.AsBlock()) is null) {
                 warn("no last picked block");
                 IsActive = false;
                 return;
             }
-            auto size = Editor::GetBlockSize(b);
-            @bb = Editor::AABB(mat4::Translate(Editor::GetBlockLocation(b)) * mat4::Inverse(Editor::GetBlockRotationMatrix(b)), size/2., size/2.);
-            if (!wasInFreeBlockMode) {
-                editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
-            }
             @blockSpec = Editor::BlockSpecPriv(b);
-            Editor::SetSelectedBlockInfo(editor, blockSpec.BlockInfo);
-            yield();
+            @placingBlockModel = b.BlockModel;
+            targetPos = Editor::GetBlockLocation(b);
+            targetRot = Editor::GetBlockRotationMatrix(b);
+            targetSize = Editor::GetBlockSize(b);
+            targetVariant = blockSpec.variant;
         } else {
             CGameCtnAnchoredObject@ item;
             if (lastPickedItem is null || (@item = lastPickedItem.AsItem()) is null) {
@@ -264,33 +304,82 @@ namespace Gizmo {
                 IsActive = false;
                 return;
             }
+            @itemSpec = Editor::ItemSpecPriv(item);
+            @placingItemModel = item.ItemModel;
+            targetPos = lastPickedItemPos;
+            targetRot = lastPickedItemRot.GetMatrix();
+            itemMat = Editor::GetItemMatrix(item);
+            // @bb = Editor::GetItemAABB(placingItemModel);
+        }
 
+        if (!shouldReplaceTarget) {
+            if (modePlacingType == BlockOrItem::Block) {
+                targetVariant = Editor::GetCurrentBlockVariant(editor.Cursor);
+                @placingBlockModel = Editor::GetSelectedBlockInfo(editor);
+                targetSize = Editor::GetBlockSize(placingBlockModel);
+            }
+
+            if (modePlacingType != modeTargetType) {
+                if (modePlacingType == BlockOrItem::Block) {
+                    @blockSpec = cast<Editor::BlockSpecPriv>(itemSpec.ToBlockSpec(placingBlockModel, targetVariant, false));
+                } else if (selectedItemModel !is null) {
+                    @placingItemModel = selectedItemModel.AsItemModel();
+                    @itemSpec = cast<Editor::ItemSpecPriv>(blockSpec.ToItemSpec(placingItemModel, Editor::GetCurrentPivot(editor), Editor::GetCurrentItemVariant(editor)));
+                    itemMat = Editor::GetBlockMatrix(b);
+                }
+            } else {
+                if (modePlacingType == BlockOrItem::Block) {
+                    blockSpec.SetBlockInfo(placingBlockModel);
+                    blockSpec.variant = targetVariant;
+                    blockSpec.EnsureValidVariant();
+                } else {
+                    @placingItemModel = editor.CurrentItemModel;
+                    itemSpec.SetModel(placingItemModel);
+                    itemSpec.variantIx = Editor::GetCurrentItemVariant(editor);
+                    auto pp = placingItemModel.DefaultPlacementParam_Content;
+                    itemSpec.pivotPos = pp.PivotPositions.Length == 0 ? vec3() : pp.PivotPositions[Editor::GetCurrentPivot(editor) % pp.PivotPositions.Length];
+                }
+            }
+        }
+
+        editor.PluginMapType.EditMode = CGameEditorPluginMap::EditMode::Place;
+
+        if (modePlacingType == BlockOrItem::Block) {
+            @bb = Editor::AABB(mat4::Translate(targetPos) * mat4::Inverse(targetRot), targetSize/2., targetSize/2.);
+            if (!wasInFreeBlockMode) {
+                editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
+            }
+            Editor::SetSelectedBlockInfo(editor, blockSpec.BlockInfo);
+            yield();
+            // testing
+            Editor::SetCurrentBlockVariant(editor.Cursor, targetVariant);
+        } else if (modePlacingType == BlockOrItem::Item) {
             editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
             Editor::SetCurrentPivot(editor, 0);
-            CustomCursorRotations::SetCustomPYRAndCursor(lastPickedItemRot.Euler, editor.Cursor);
-            @itemSpec = Editor::ItemSpecPriv(item);
+            CustomCursorRotations::SetCustomPYRAndCursor(itemSpec.pyr, editor.Cursor);
             yield(2);
-            Editor::SetAllCursorPos(lastPickedItemPos);
+            Editor::SetAllCursorPos(targetPos);
             @bb = Editor::GetSelectedItemAABB();
             if (bb is null) {
                 warn("no selected item BB");
             } else {
                 dev_trace("bb.pos before: " + bb.pos.ToString());
-                auto im = item.ItemModel;
                 // we need to account for the items pivot and default pivot
-                lastAppliedPivot = Editor::GetItemPivot(item);
+                lastAppliedPivot = itemSpec.pivotPos;
                 lastAppliedPivotIx = 0;
-                if (im.DefaultPlacementParam_Content.PivotPositions.Length > 0) {
-                    lastAppliedPivot = im.DefaultPlacementParam_Content.PivotPositions[0];
+                auto pickedModel = itemSpec.Model;
+                // ? why did we default to the first pivot? we had the pivot above.
+                if (pickedModel.DefaultPlacementParam_Content.PivotPositions.Length > 0) {
+                    lastAppliedPivot = pickedModel.DefaultPlacementParam_Content.PivotPositions[0];
                 }
 
-                auto itemMat = Editor::GetItemMatrix(item);
-                auto itemPos = item.AbsolutePositionInMap;
+                itemSpec.Model.DefaultPlacementParam_Content.PlacementClass.CurVariant = itemSpec.variantIx;
+
                 // main bb to use to set cursor // mat4::Inverse
-                auto rot = (mat4::Translate(itemPos * -1.) * itemMat);
+                auto rot = (mat4::Translate(targetPos * -1.) * itemMat);
                 auto relPivot = mat4::Translate(lastPickedItemPivot + lastAppliedPivot);
                 bb.mat = rot * relPivot;
-                bb.mat = mat4::Translate(itemPos) * (bb.mat);
+                bb.mat = mat4::Translate(targetPos) * (bb.mat);
                 bb.InvertRotation();
                 // dev_trace("bb.pos mid: " + bb.pos.ToString());
                 // // bb is not always accurate -- will use last cursor pos which only showed before user pressed ctrl
@@ -304,41 +393,42 @@ namespace Gizmo {
             }
             lastPickedItemRot.SetCursor(editor.Cursor);
         }
+
         if (bb is null) {
             IsActive = false;
             return;
         }
-        editor.PluginMapType.AutoSave();
-        if (modeTargetType == BlockOrItem::Block) {
-            // origPlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
-            if (blockSpec.isFree) {
-                Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
-                Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
-                Editor::SetEditorPickedBlock(editor, null);
-                Editor::DeleteFreeblocks(array<CGameCtnBlock@> = {lastPickedBlock.AsBlock()});
-                // Editor::QueueFreeBlockDeletion(blockSpec);
-                // Editor::RunDeleteFreeBlockDetection();
-                // startnew(Editor::RunDeleteFreeBlockDetection).WithRunContext(Meta::RunContext::GameLoop);
-                // yield(3);
-                Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
-                Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+
+        if (shouldReplaceTarget) {
+            editor.PluginMapType.AutoSave();
+            if (modeTargetType == BlockOrItem::Block) {
+                // origPlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
+                if (blockSpec.isFree) {
+                    Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
+                    Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+                    Editor::SetEditorPickedBlock(editor, null);
+                    Editor::DeleteFreeblocks(array<CGameCtnBlock@> = {lastPickedBlock.AsBlock()});
+                    Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
+                    Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+                } else {
+                    Editor::DeleteBlocksAndItems({blockSpec}, {});
+                }
+                yield();
             } else {
-                Editor::DeleteBlocksAndItems({blockSpec}, {});
+                Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Item);
+                Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+                Editor::DeleteBlocksAndItems({}, {itemSpec});
             }
-            yield();
-        } else {
-            Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Item);
-            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
-            Editor::DeleteBlocksAndItems({}, {itemSpec});
         }
+
         Editor::SetAllCursorPos(bb.pos);
         @gizmo = RotationTranslationGizmo("gizmo").WithBoundingBox(bb)
             .WithOnApplyF(_GizmoOnApply).WithOnExitF(_GizmoOnCancel);
 
-        if (modeTargetType == BlockOrItem::Item) {
-            gizmo.WithPlacementParams(lastPickedItem.AsItem().ItemModel.DefaultPlacementParam_Content);
+        if (modePlacingType == BlockOrItem::Item) {
+            gizmo.WithPlacementParams(placingItemModel.DefaultPlacementParam_Content);
             // gizmo.pivotPoint = lastAppliedPivot;
-        } else if (modeTargetType == BlockOrItem::Block) {
+        } else if (modePlacingType == BlockOrItem::Block) {
             // blocks are offset by 0.25 in the local y axis for the free-block cursor.
             // sometimes this is not necessary. IDK :/
             // if (S_Gizmo_ApplyBlockOffset && wasInFreeBlockMode) {
@@ -351,7 +441,7 @@ namespace Gizmo {
         // auto lookUv = Editor::DirToLookUvFromCamera(bb.pos);
         auto lookUv = Editor::GetCurrentCamState(editor).LookUV;
         if (S_Gizmo_MoveCameraOnStart) {
-            Editor::SetCamAnimationGoTo(lookUv, bb.pos, bb.halfDiag.Length() * 6.);
+            Editor::SetCamAnimationGoTo(lookUv, bb.pos, bb.halfDiag.Length() * 4.);
         }
 
         yield();
@@ -367,7 +457,7 @@ namespace Gizmo {
     void _GizmoOnApply() {
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
         CustomCursor::NoShowCursorItemModelsPatchActive = false;
-        if (modeTargetType == BlockOrItem::Item) {
+        if (modePlacingType == BlockOrItem::Item) {
             dev_trace("Applying gizmo item: ");
             dev_trace("   lastAppliedPivot: " + lastAppliedPivot.ToString());
             dev_trace("   gizmo.placementParamOffset: " + gizmo.placementParamOffset.ToString());
@@ -405,7 +495,7 @@ namespace Gizmo {
     void _GizmoOnCancel() {
         if (!IsActive) return;
         bool hadGizmo = gizmo !is null;
-        if (hadGizmo) {
+        if (hadGizmo && shouldReplaceTarget) {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             editor.PluginMapType.Undo();
         }

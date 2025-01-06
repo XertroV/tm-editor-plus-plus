@@ -125,16 +125,20 @@ namespace Editor {
 
 
 
-AnimMgr@ CameraAnimMgr = AnimMgr(true);
+AnimMgr@ CameraAnimMgr = null;
 
 Editor::CamState@ g_startCamState = Editor::CamState();
 Editor::CamState@ g_endCamState = Editor::CamState();
 
 
 void UpdateAnimAndCamera() {
-    if (IsInEditor && CameraAnimMgr !is null && !CameraAnimMgr.IsDone && CameraAnimMgr.Update(true)) {
+    if (!IsInEditor || CameraAnimMgr is null) return;
+    if (!CameraAnimMgr.IsDone) {
+        CameraAnimMgr.Update(true);
         UpdateCameraProgress(CameraAnimMgr.Progress);
-        if (CameraAnimMgr.IsDone) Editor::DisableCustomCameraInputs();
+    } else {
+        @CameraAnimMgr = null;
+        Editor::DisableCustomCameraInputs();
     }
 }
 
@@ -170,6 +174,7 @@ class AnimMgr {
 
     // return true if open
     bool Update(bool growing, float clampMax = 1.0) {
+        bool wasDone = IsDone;
         if (lastGrowingChange == 0) lastGrowingChange = Time::Now;
         if (lastGrowingCheck == 0) lastGrowingCheck = Time::Now;
 
@@ -187,7 +192,7 @@ class AnimMgr {
         // QuadOut
         animOut = -(t * (t - 2.));
         animOut = Math::Min(clampMax, animOut);
-        return !IsDone;
+        return !wasDone;
     }
 
     float Progress {

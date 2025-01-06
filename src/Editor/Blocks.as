@@ -120,6 +120,11 @@ namespace Editor {
         return GetBlockCoordSize(block) * vec3(32, 8, 32);
     }
 
+    vec3 GetBlockSize(CGameCtnBlockInfo@ bi) {
+        auto biv = GetBlockVariantAny(bi);
+        return Nat3ToVec3(biv !is null ? biv.Size : nat3(1)) * vec3(32, 8, 32);
+    }
+
     // coord size as vec3 (not distance, so <1, 1, 1> is a 1x1x1 block)
     vec3 GetBlockCoordSize(CGameCtnBlock@ block) {
         auto @biv = GetBlockInfoVariant(block);
@@ -135,6 +140,12 @@ namespace Editor {
     CGameCtnBlockInfoVariant@ GetBlockInfoVariant(CGameCtnBlock@ block) {
         // auto bivIx = block.BlockInfoVariantIndex;
         return GetBlockInfoVariant(block.BlockInfo, block.BlockInfoVariantIndex, block.IsGround);
+    }
+
+    CGameCtnBlockInfoVariant@ GetBlockVariantAny(CGameCtnBlockInfo@ bi) {
+        auto biv = GetBlockInfoVariant(bi, 0, false);
+        if (biv !is null) return biv;
+        return GetBlockInfoVariant(bi, 0, true);
     }
 
     CGameCtnBlockInfoVariant@ GetBlockInfoVariant(CGameCtnBlockInfo@ bi, uint bivIx, bool isGround) {

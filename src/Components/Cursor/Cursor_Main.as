@@ -1083,7 +1083,8 @@ namespace CustomCursorRotations {
         if (nextUseSnapPos > 0) return;
     }
 
-    void SetCustomPYRAndCursor(vec3 pyr, CGameCursorBlock@ cursor) {
+    // sets PYR on custom cursor + actual cursor
+    void SetCustomPYRAndCursor(const vec3 &in pyr, CGameCursorBlock@ cursor) {
         cursorCustomPYR = pyr;
         auto rots = EditorRotation(cursorCustomPYR);
         cursor.Pitch = rots.Pitch;

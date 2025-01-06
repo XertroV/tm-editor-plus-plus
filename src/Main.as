@@ -305,6 +305,7 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     if (!IsInEditor) return UI::InputBlocking::DoNothing;
     if (IsInCurrentPlayground) return UI::InputBlocking::DoNothing;
     bool lmbDown = down && button == 0;
+    bool rmbDown = down && button == 1;
     bool block = false;
     if (lmbDown && g_CoordPathDrawingTool.ShouldBlockLMB()) {
         block = true;
@@ -313,7 +314,7 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
         block = (lmbDown && FarlandsHelper::FH_CheckPlacing()) || block;
         block = (lmbDown && CheckPlaceMacroblockAirMode()) || block;
         block = (lmbDown && CheckPlacingItemFreeMode()) || block;
-        block = (lmbDown && Gizmo::CheckEnterGizmoMode(editor)) || block;
+        block = (down && Gizmo::CheckEnterGizmoMode(editor, lmbDown, rmbDown)) || block;
     }
 
     g_LastMouseBDown = down;
