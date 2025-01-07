@@ -107,9 +107,20 @@ namespace Gizmo {
     }
 
     void _OnInactive_UpdatePMT(CGameEditorPluginMapMapType@ pmt) {
-        pmt.EnableEditorInputsCustomProcessing = false;
+        startnew(SetCustomInputsProcessingFalseWhenSpaceReleased);
         pmt.HideEditorInterface = false;
         pmt.NextMapElemColor = origCursorColor;
+    }
+
+    void SetCustomInputsProcessingFalseWhenSpaceReleased() {
+        while (true) {
+            if (UI::IsKeyDown(UI::Key::Space)) yield();
+            else break;
+        }
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
+        pmt.EnableEditorInputsCustomProcessing = false;
     }
 
     void Render() {
@@ -171,15 +182,6 @@ namespace Gizmo {
     // LMB: remove target and select it
     // RMB: keep target, use current block/item
     bool shouldReplaceTarget = false;
-
-    void BeforeCursorUpdate() {
-        if (!IsActive) return;
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return;
-        // ! TESTING
-        Dev::SetOffset(editor, O_EDITOR_SPACEHELD, uint(0));
-        Dev::SetOffset(editor, O_EDITOR_SPACEHELD2, uint(0));
-    }
 
     // MARK: Gizmo Loop
 
@@ -667,8 +669,6 @@ namespace Gizmo {
             } else {
                 _GizmoOnApply();
             }
-            // can sometimes trigger editor placement, so block
-            return UI::InputBlocking::Block;
         }
         return UI::InputBlocking::DoNothing;
     }

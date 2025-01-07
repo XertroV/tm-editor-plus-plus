@@ -16,7 +16,7 @@ class Hotkey {
     string formatted;
     string keyStr = "";
 
-    Hotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name, bool anyModifier = false) {
+    Hotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name, bool anyModifier = false, bool editorOnly = true) {
         this.key = key;
         this.ctrl = ctrl;
         this.alt = alt;
@@ -24,8 +24,27 @@ class Hotkey {
         @this.f = f;
         this.name = name;
         this.anyModifier = anyModifier;
+        this.editorOnly = editorOnly;
         _id = tostring(Math::Rand(-2000000, 20000000));
         GenKeyStr();
+    }
+
+    bool isDown = false;
+    UI::InputBlocking onDownResp;
+    bool allowRepeat = false;
+
+    UI::InputBlocking Signal(bool down) {
+        if (down and isDown) {
+            return onDownResp;
+        }
+        if (down && (allowRepeat || !isDown)) {
+            isDown = true;
+            onDownResp = f();
+            return onDownResp;
+        } else if (!down) {
+            isDown = false;
+        }
+        return UI::InputBlocking::DoNothing;
     }
 
     void GenKeyStr() {
@@ -146,7 +165,7 @@ class Hotkey {
     }
 }
 
-UI::InputBlocking CheckHotkey(VirtualKey key, bool isEditor = true) {
+UI::InputBlocking CheckHotkey(bool down, VirtualKey key, bool isEditor = true) {
     bool ctrlDown = IsCtrlDown();
     bool altDown = IsAltDown();
     bool shiftDown = IsShiftDown();
@@ -162,8 +181,8 @@ UI::InputBlocking CheckHotkey(VirtualKey key, bool isEditor = true) {
 
     if (h is null || h.disabled) return UI::InputBlocking::DoNothing;
     if (h.editorOnly && !isEditor) return UI::InputBlocking::DoNothing;
-    trace('running hotkey: ' + h.name);
-    return h.f();
+    // trace('running hotkey: ' + h.name);
+    return h.Signal(down);
 }
 
 dictionary@ hotkeys = dictionary();
@@ -196,8 +215,8 @@ string HotkeyKey(VirtualKey key, bool ctrl, bool alt, bool shift) {
 }
 
 // register hotkey in the dict
-Hotkey@ AddHotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name, bool anyModifier = false) {
-    auto @h = Hotkey(key, ctrl, alt, shift, f, name, anyModifier);
+Hotkey@ AddHotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name, bool anyModifier = false, bool editorOnly = true) {
+    auto @h = Hotkey(key, ctrl, alt, shift, f, name, anyModifier, editorOnly);
     hotkeyList.InsertLast(h);
     @hotkeys[h.keyStr] = h;
     hotkeysFlags[int(key)] = true;

@@ -71,7 +71,6 @@ void Main() {
     yield(2);
     startnew(ColorSelectionHook::SetupHooks);
     startnew(Gizmo::SetupGizmoHotkeysOnPluginStart);
-    RegisterNewBeforeCursorUpdateCallback(Gizmo::BeforeCursorUpdate, "Gizmo::BeforeCursorUpdate");
 
     yield(2);
     Editor::SetInvPatchTy(S_InvPatchTy);
@@ -410,9 +409,9 @@ UI::InputBlocking OnKeyPress_Inner(bool down, VirtualKey key) {
     block = customSelectionMgr.CheckCancel(down, key) || block;
     block = FillBlocks::CheckDismissPromptHotkeys(down, key) || block;
     // trace('key down: ' + tostring(key));
-    if (down && hotkeysFlags[key]) {
+    if (hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
-        block = CheckHotkey(key) == UI::InputBlocking::Block || block;
+        block = CheckHotkey(down, key) == UI::InputBlocking::Block || block;
     }
     if ((Time::Now - _hotkeysLastVisible) < 500 && down) {
         _ShowLastKeyPressed(key);
@@ -435,9 +434,9 @@ UI::InputBlocking OnKeyPressInPlayground(CGameCtnApp@ app, CGameCtnEditorFree@ e
     // only test mode
     if (!Editor::IsInTestMode(editor)) return UI::InputBlocking::DoNothing;
     bool block = false;
-    if (down && hotkeysFlags[key]) {
+    if (hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
-        block = CheckHotkey(key, false) == UI::InputBlocking::Block || block;
+        block = CheckHotkey(down, key, false) == UI::InputBlocking::Block || block;
     }
 
     // if (down && key == S_SetRespawnPosTestModeHotkey) {
