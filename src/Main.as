@@ -71,6 +71,7 @@ void Main() {
     yield(2);
     startnew(ColorSelectionHook::SetupHooks);
     startnew(Gizmo::SetupGizmoHotkeysOnPluginStart);
+    RegisterNewBeforeCursorUpdateCallback(Gizmo::BeforeCursorUpdate, "Gizmo::BeforeCursorUpdate");
 
     yield(2);
     Editor::SetInvPatchTy(S_InvPatchTy);

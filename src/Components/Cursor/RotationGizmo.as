@@ -147,7 +147,6 @@ class RotationTranslationGizmo {
 
     void CleanUp() {
         if (placementParams !is null) {
-            placementParams.AsPlacementParam().SwitchPivotManually = origPlacementSwitchPivotManually;
             @placementParams = null;
         }
     }
@@ -196,7 +195,6 @@ class RotationTranslationGizmo {
     }
 
     ReferencedNod@ placementParams;
-    bool origPlacementSwitchPivotManually = false;
     CGameItemPlacementParam@ get_PlacementParams() {
         if (placementParams !is null && placementParams.AsPlacementParam() !is null) {
             return placementParams.AsPlacementParam();
@@ -207,7 +205,6 @@ class RotationTranslationGizmo {
     RotationTranslationGizmo@ WithPlacementParams(CGameItemPlacementParam@ pp) {
         placementParamOffset = vec3(pp.GridSnap_HOffset, pp.GridSnap_VOffset, pp.GridSnap_HOffset);
         @placementParams = ReferencedNod(pp);
-        origPlacementSwitchPivotManually = pp.SwitchPivotManually;
         pp.SwitchPivotManually = true;
         CopyPivotPositions(pp);
         return this;
@@ -219,6 +216,11 @@ class RotationTranslationGizmo {
         for (uint i = 0; i < pp.PivotPositions.Length; i++) {
             itemPivots.InsertLast(pp.PivotPositions[i]);
         }
+    }
+
+    vec3 GetPivot(int ix) {
+        if (ix < 0 || ix > itemPivots.Length) return vec3();
+        return itemPivots[ix];
     }
 
     bool blockOffsetApplied = false;
@@ -785,8 +787,6 @@ class RotationTranslationGizmo {
 
     bool useGlobal = false;
 
-    // vec3 lastAppliedPivot;
-
     void DrawWindow() {
         bool isRotMode = mode == Gizmo::Mode::Rotation;
         auto btnSize = Math::Max(64.0, g_screen.y * .05) * g_scale;
@@ -979,11 +979,11 @@ class RotationTranslationGizmo {
     void DrawBoundingBox() {
         if (!D_Gizmo_DrawBoundingBox) return;
         nvg::StrokeWidth(2);
-        vec3 p1 = pos + bbMidPoint;
-        nvgDrawPointRing(p1, 5., cBlack75);
-        vec3 p2 = p1 + bbHalfDiag;
-        nvgDrawPointRing(p2, 5., cBlack75);
-        nvgDrawPath({p1, p2}, cMagenta);
+        // vec3 p1 = pos + bbMidPoint;
+        // nvgDrawPointRing(p1, 5., cBlack75);
+        // vec3 p2 = p1 + bbHalfDiag;
+        // nvgDrawPointRing(p2, 5., cBlack75);
+        // nvgDrawPath({p1, p2}, cMagenta);
         nvgDrawBlockBox(GetMatrix(), bbHalfDiag*2, cSkyBlue);
         // nvgDrawBlockBox(GetCursorMat(), bbHalfDiag*2, cLimeGreen50);
     }
@@ -1013,9 +1013,10 @@ class RotationTranslationGizmo {
     }
 
 
-    void MovePivotTo(Axis axis, float uvAmt) {
+    void MovePivotTo(Axis axis, float uvAmt, bool animate = true, bool addToUndo = true) {
         SetPivotPoint(
-            AxisToVec(axis) * (uvAmt * bbHalfDiag + bbMidPoint - GetItemCursorPivot()) + AxisToAntiVec(axis) * PivotPointOrDest
+            AxisToVec(axis) * (uvAmt * bbHalfDiag + bbMidPoint - GetItemCursorPivot()) + AxisToAntiVec(axis) * PivotPointOrDest,
+            animate, addToUndo
         );
     }
 

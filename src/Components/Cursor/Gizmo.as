@@ -80,6 +80,10 @@ namespace Gizmo {
         if (gizmo !is null) gizmo.CleanUp();
         @gizmo = null;
 
+        if (itemSpec !is null) {
+            itemSpec.Model.DefaultPlacementParam_Content.SwitchPivotManually = origPlacementSwitchPivotManually;
+        }
+
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         origCursor.SetCursor(editor.Cursor);
         // CustomCursorRotations::SetCustomPYRAndCursor
@@ -141,6 +145,7 @@ namespace Gizmo {
         if (origModeWasItem) {
             dev_trace("Item placement mode: " + tostring(origItemPlacementMode));
         }
+        Editor::SetCurrentPivot(editor, 0);
 
         shouldReplaceTarget = lmb;
         IsActive = true;
@@ -161,10 +166,20 @@ namespace Gizmo {
     BlockOrItem origModeType = BlockOrItem::Block;
     EditorRotation@ origCursor;
     CGameEditorPluginMap::EMapElemColor placingColor;
+    bool origPlacementSwitchPivotManually = false;
 
     // LMB: remove target and select it
     // RMB: keep target, use current block/item
     bool shouldReplaceTarget = false;
+
+    void BeforeCursorUpdate() {
+        if (!IsActive) return;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        // ! TESTING
+        Dev::SetOffset(editor, O_EDITOR_SPACEHELD, uint(0));
+        Dev::SetOffset(editor, O_EDITOR_SPACEHELD2, uint(0));
+    }
 
     // MARK: Gizmo Loop
 
@@ -218,6 +233,9 @@ namespace Gizmo {
                 dev_warn("Gizmo updated color to " + tostring(placingColor));
                 CustomCursor::TriggerUpdateCursorItemModels(editor);
             }
+            if (Editor::GetCurrentPivot(editor) != 0) {
+                Editor::SetCurrentPivot(editor, 0);
+            }
             Editor::SetAllCursorMat(gizmo.GetCursorMat());
             yield();
         }
@@ -261,9 +279,30 @@ namespace Gizmo {
         }
     }
 
+    float[] pivotYs = {0, 2, 8, 10, 16, 18, 24, 26, 32};
+
+    void CycleYPivot() {
+        auto pp = gizmo.PivotPointOrDest;
+        float currPivotY = pp.y;
+        for (uint i = 0; i < pivotYs.Length; i++) {
+            if (currPivotY < pivotYs[i]) {
+                ApplyPivot(vec3(pp.x, pivotYs[i], pp.z));
+                return;
+            }
+        }
+        ApplyPivot(vec3(pp.x, pivotYs[0], pp.z));
+    }
+
+    void CenterPivot() {
+        gizmo.MovePivotTo(Axis::X, 0, true, false);
+        gizmo.MovePivotTo(Axis::Y, 0, true, false);
+        gizmo.MovePivotTo(Axis::Z, 0);
+    }
+
     void ApplyPivot(vec3 newPivot) {
         gizmo.SetPivotPoint(newPivot);
     }
+
 
     // MARK: Setup
 
@@ -392,8 +431,10 @@ namespace Gizmo {
             // testing
             Editor::SetCurrentBlockVariant(editor.Cursor, targetVariant);
         } else if (modePlacingType == BlockOrItem::Item) {
+            origPlacementSwitchPivotManually = itemSpec.Model.DefaultPlacementParam_Content.SwitchPivotManually;
+            itemSpec.Model.DefaultPlacementParam_Content.SwitchPivotManually = true;
+
             editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
-            Editor::SetCurrentPivot(editor, 0);
             CustomCursorRotations::SetCustomPYRAndCursor(itemSpec.pyr, editor.Cursor);
             yield(2);
             Editor::SetAllCursorPos(targetPos);
@@ -408,7 +449,7 @@ namespace Gizmo {
                 auto pickedModel = itemSpec.Model;
                 // ? why did we default to the first pivot? we had the pivot above.
                 if (pickedModel.DefaultPlacementParam_Content.PivotPositions.Length > 0) {
-                    lastAppliedPivot = pickedModel.DefaultPlacementParam_Content.PivotPositions[0];
+                    lastAppliedPivot = pickedModel.DefaultPlacementParam_Content.PivotPositions[Editor::GetCurrentPivot(editor)];
                 }
 
                 itemSpec.Model.DefaultPlacementParam_Content.PlacementClass.CurVariant = itemSpec.variantIx;
@@ -511,7 +552,9 @@ namespace Gizmo {
             dev_trace("   lastAppliedPivot: " + lastAppliedPivot.ToString());
             dev_trace("   gizmo.placementParamOffset: " + gizmo.placementParamOffset.ToString());
             dev_trace("   gizmo.pivotPoint: " + gizmo.pivotPoint.ToString());
-            itemSpec.pivotPos = (lastAppliedPivot * -1.); // - gizmo.placementParamOffset * 2.;
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            itemSpec.isFlying = 1;
+            itemSpec.pivotPos = gizmo.GetPivot(Editor::GetCurrentPivot(editor)) * -1.; // - gizmo.placementParamOffset * 2.;
             itemSpec.pos = gizmo.pos + vec3(0, 56, 0) + gizmo.GetRotatedPivotPoint();
             itemSpec.coord = Int3ToNat3(PosToCoordDist(itemSpec.pos));
             itemSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
@@ -570,6 +613,7 @@ namespace Gizmo {
             DrawHotkeyRow("Undo", hk_Undo);
             DrawHotkeyRow("Set Camera to Pivot", hk_ResetCam);
             DrawHotkeyRow("Cycle Pivot", hk_CyclePivot);
+            DrawHotkeyRow("Cycle Y Pivot", hk_CycleYPivot);
             DrawHotkeyRow("Move Pivot to Bottom", hk_MovePivotBot);
             DrawHotkeyRow("Move Pivot to Top", hk_MovePivotTop);
             DrawHotkeyRow("Move Pivot to Back", hk_MovePivotZFwd);
@@ -598,11 +642,14 @@ namespace Gizmo {
     Hotkey@ hk_MovePivotLeft;
     Hotkey@ hk_MovePivotRight;
     Hotkey@ hk_Undo;
+    Hotkey@ hk_CycleYPivot;
+    Hotkey@ hk_CenterPivot;
 
     void SetupGizmoHotkeysOnPluginStart() {
-        @hk_Apply = AddHotkey(VirtualKey::Space, false, false, false, Gizmo::Hotkey_Apply, "Gizmo: Apply / Place");
+        @hk_Apply = AddHotkey(VirtualKey::Space, false, false, false, Gizmo::Hotkey_Apply, "Gizmo: Apply / Place", true);
         @hk_ResetCam = AddHotkey(VirtualKey::C, false, false, false, Gizmo::Hotkey_ResetCam, "Gizmo: Set Camera to Pivot");
         @hk_CyclePivot = AddHotkey(VirtualKey::Tab, false, false, false, Gizmo::Hotkey_CyclePivot, "Gizmo: Cycle Pivot");
+        @hk_CycleYPivot = AddHotkey(VirtualKey::Y, false, false, false, Gizmo::Hotkey_CycleYPivot, "Gizmo: Cycle Y Pivot");
         @hk_MovePivotBot = AddHotkey(VirtualKey::Q, false, false, false, Gizmo::Hotkey_MovePivotBot, "Gizmo: Move Pivot to Bottom");
         @hk_MovePivotTop = AddHotkey(VirtualKey::E, false, false, false, Gizmo::Hotkey_MovePivotTop, "Gizmo: Move Pivot to Top");
         @hk_MovePivotZFwd = AddHotkey(VirtualKey::W, false, false, false, Gizmo::Hotkey_MovePivotZFwd, "Gizmo: Move Pivot to ZFwd");
@@ -610,6 +657,7 @@ namespace Gizmo {
         @hk_MovePivotLeft = AddHotkey(VirtualKey::A, false, false, false, Gizmo::Hotkey_MovePivotLeft, "Gizmo: Move Pivot to Left");
         @hk_MovePivotRight = AddHotkey(VirtualKey::D, false, false, false, Gizmo::Hotkey_MovePivotRight, "Gizmo: Move Pivot to Right");
         @hk_Undo = AddHotkey(VirtualKey::U, false, false, false, Gizmo::Hotkey_Undo, "Gizmo: Undo");
+        @hk_CenterPivot = AddHotkey(VirtualKey::R, false, false, false, Gizmo::Hotkey_CenterPivot, "Gizmo: Center Pivot");
     }
 
     UI::InputBlocking Hotkey_Apply() {
@@ -619,6 +667,8 @@ namespace Gizmo {
             } else {
                 _GizmoOnApply();
             }
+            // can sometimes trigger editor placement, so block
+            return UI::InputBlocking::Block;
         }
         return UI::InputBlocking::DoNothing;
     }
@@ -633,6 +683,16 @@ namespace Gizmo {
 
     UI::InputBlocking Hotkey_CyclePivot() {
         if (IsActive) CyclePivot();
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_CycleYPivot() {
+        if (IsActive) CycleYPivot();
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_CenterPivot() {
+        if (IsActive) CenterPivot();
         return UI::InputBlocking::DoNothing;
     }
 

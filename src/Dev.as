@@ -517,6 +517,7 @@ const uint16 O_EDITOR_CopyPasteMacroBlockInfo = GetOffset("CGameCtnEditorFree", 
 // 0x558, can place?
 // can be used to place items by setting to 0 or 1 on alternatine frames
 const uint16 O_EDITOR_SPACEHELD = O_EDITOR_CopyPasteMacroBlockInfo + 0x54; // 0x574 - 0x520
+const uint16 O_EDITOR_SPACEHELD2 = O_EDITOR_GridColor - (0xC10 - 0xC04);
 
 const uint16 O_EDITOR_LAST_LMB_PRESSED = O_EDITOR_UndergroundBox + 0xF0; // 0xBB0 - 0xAC0;
 const uint16 O_EDITOR_LAST_RMB_PRESSED = O_EDITOR_LAST_LMB_PRESSED + 0x4; // 0xBB4

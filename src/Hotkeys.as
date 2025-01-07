@@ -9,19 +9,21 @@ class Hotkey {
     string name;
     string _id;
     bool editorOnly = true;
+    bool anyModifier = false;
 
     bool disabled = false;
 
     string formatted;
     string keyStr = "";
 
-    Hotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name) {
+    Hotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name, bool anyModifier = false) {
         this.key = key;
         this.ctrl = ctrl;
         this.alt = alt;
         this.shift = shift;
         @this.f = f;
         this.name = name;
+        this.anyModifier = anyModifier;
         _id = tostring(Math::Rand(-2000000, 20000000));
         GenKeyStr();
     }
@@ -150,6 +152,14 @@ UI::InputBlocking CheckHotkey(VirtualKey key, bool isEditor = true) {
     bool shiftDown = IsShiftDown();
     dev_trace('ctrl: ' + ctrlDown + ", alt: " + altDown + ", shift: " + shiftDown);
     auto h = GetHotkey(key, ctrlDown, altDown, shiftDown);
+    // if no hotkey + shift down, check for anyModifer
+    if (h is null && shiftDown) {
+        @h = GetHotkey(key, ctrlDown, altDown, false);
+        if (h !is null && !h.anyModifier) {
+            return UI::InputBlocking::DoNothing;
+        }
+    }
+
     if (h is null || h.disabled) return UI::InputBlocking::DoNothing;
     if (h.editorOnly && !isEditor) return UI::InputBlocking::DoNothing;
     trace('running hotkey: ' + h.name);
@@ -186,8 +196,8 @@ string HotkeyKey(VirtualKey key, bool ctrl, bool alt, bool shift) {
 }
 
 // register hotkey in the dict
-Hotkey@ AddHotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name) {
-    auto @h = Hotkey(key, ctrl, alt, shift, f, name);
+Hotkey@ AddHotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name, bool anyModifier = false) {
+    auto @h = Hotkey(key, ctrl, alt, shift, f, name, anyModifier);
     hotkeyList.InsertLast(h);
     @hotkeys[h.keyStr] = h;
     hotkeysFlags[int(key)] = true;
