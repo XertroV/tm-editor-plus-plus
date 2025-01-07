@@ -251,7 +251,9 @@ class RotationTranslationGizmo {
         // tmpRot = mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * tmpRot;
         // accounting for pivotPoint:
         if (rotateToLocal) {
-            tmpRot = mat4::Translate(pivotPoint * -1.) * mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * mat4::Translate(pivotPoint) * tmpRot;
+            auto rp = EulerToMat(rotPivot);
+            tmpRot = mat4::Translate(pivotPoint * -1.) * mat4::Inverse(rp) * mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * rp * mat4::Translate(pivotPoint) * tmpRot;
+
         } else {
             // rotate about global axes
             tmpRot = tmpRot * mat4::Translate(pivotPoint * -1.) * mat4::Rotate(delta_theta * -1., ((tmpRot * rot) * AxisToVecForRot(axis)).xyz) * mat4::Translate(pivotPoint);
@@ -411,7 +413,7 @@ class RotationTranslationGizmo {
         // objOriginPos -= pivotPoint;
         _closestMouseDist = 1000000.;
         // withTmpRot = (tmpRot * rot);
-        withTmpRot = useGlobal ? mat4::Identity() : mat4::Inverse(tmpRot * rot);
+        withTmpRot = useGlobal ? mat4::Identity() : mat4::Inverse(EulerToMat(rotPivot) * tmpRot * rot);
         shouldDrawGizmo = true || Camera::IsBehind(objOriginPos) || c2pLen < _scale;
         if (!shouldDrawGizmo) {
             if (c2pLen < _scale) trace('c2pLen < scale');
@@ -752,6 +754,8 @@ class RotationTranslationGizmo {
     mat4 camProj;
 
     vec3 pivotPoint;
+    // euler angles of rotation to apply to local coords
+    vec3 rotPivot;
 
     vec3 get_PivotPointOrDest() {
         return pivotAnimator !is null ? destinationPivotPoint : pivotPoint;
@@ -887,15 +891,27 @@ class RotationTranslationGizmo {
             SetPivotAxisButtonAbs(Axis::Y, "Y=24", 24., true);
             AddSimpleTooltip("Slope3");
 
-            UI::SeparatorText("Edit Directly");
+            UI::SeparatorText("Pivot Point");
             vec3 newPivot = UI::InputFloat3("##gizmo-pivot", pivotPoint);
             if (newPivot != pivotPoint) {
                 SetPivotPoint(newPivot, false);
                 FocusCameraOn(pos, false);
             }
 
+            UI::SeparatorText("Rotation Pivot");
+
+            if (UI::Button("Yaw 45°")) {
+                rotPivot.y = Math::ToRad(45.);
+            }
+
+            vec3 newRotPivot = UX::InputAngles3("##gizmo-rot-pivot", rotPivot);
+            if (newRotPivot != rotPivot) {
+                rotPivot = newRotPivot;
+            }
+
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();
+
         }
 
         if (UI::BeginPopup("gizmo-toolbar-settings")) {
