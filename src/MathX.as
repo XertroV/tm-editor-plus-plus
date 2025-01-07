@@ -129,4 +129,9 @@ namespace MathX {
     shared vec2 Floor(vec2 &in val) {
         return vec2(Math::Floor(val.x), Math::Floor(val.y));
     }
+
+    bool IsNanInf(const vec3 &in v) {
+        return Math::IsNaN(v.x) || Math::IsNaN(v.y) || Math::IsNaN(v.z) ||
+            Math::IsInf(v.x) || Math::IsInf(v.y) || Math::IsInf(v.z);
+    }
 }

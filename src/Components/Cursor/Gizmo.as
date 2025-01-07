@@ -100,6 +100,7 @@ namespace Gizmo {
     void _OnInactive_UpdatePMT(CGameEditorPluginMapMapType@ pmt) {
         pmt.EnableEditorInputsCustomProcessing = false;
         pmt.HideEditorInterface = false;
+        pmt.NextMapElemColor = origCursorColor;
     }
 
     void Render() {
@@ -130,6 +131,7 @@ namespace Gizmo {
         origItemPlacementMode = Editor::GetItemPlacementMode(false);
         origModeWasItem = Editor::IsInAnyItemPlacementMode(editor, false);
         origModeWasBlock = Editor::IsInBlockPlacementMode(editor, false);
+        origCursorColor = editor.PluginMapType.NextMapElemColor;
         origModeType = origModeWasItem ? BlockOrItem::Item : BlockOrItem::Block;
         if (origModeWasItem) {
             dev_trace("Item placement mode: " + tostring(origItemPlacementMode));
@@ -145,6 +147,7 @@ namespace Gizmo {
     CGameEditorPluginMap::EditMode origEditMode;
     CGameEditorPluginMap::EPlaceMode origPlaceMode;
     CGameEditorPluginMap::EPlaceMode desiredGizmoPlaceMode;
+    CGameEditorPluginMap::EMapElemColor origCursorColor;
     Editor::ItemMode origItemPlacementMode;
     bool origCustomYawActive;
     bool wasInFreeBlockMode = false;
@@ -152,6 +155,7 @@ namespace Gizmo {
     bool origModeWasBlock = false;
     BlockOrItem origModeType = BlockOrItem::Block;
     EditorRotation@ origCursor;
+    CGameEditorPluginMap::EMapElemColor placingColor;
 
     // LMB: remove target and select it
     // RMB: keep target, use current block/item
@@ -202,6 +206,12 @@ namespace Gizmo {
             editor.Cursor.UseSnappedLoc = true;
             if (CustomCursorRotations::CustomYawActive) {
                 CustomCursorRotations::CustomYawActive = false;
+            }
+            if (pmt.NextMapElemColor != placingColor) {
+                placingColor = pmt.NextMapElemColor;
+                origCursorColor = placingColor;
+                dev_warn("Gizmo updated color to " + tostring(placingColor));
+                CustomCursor::TriggerUpdateCursorItemModels(editor);
             }
             Editor::SetAllCursorMat(gizmo.GetCursorMat());
             yield();
@@ -264,6 +274,7 @@ namespace Gizmo {
         lastAppliedPivot = vec3();
         bool applyingItem = modePlacingType == BlockOrItem::Item;
         bool modeMismatch = applyingItem != origModeWasItem;
+
         // fix mode mismatch, otherwise we place blocks when gizmoing an item from block mode
         if (modeMismatch) {
             if (applyingItem) {
@@ -303,6 +314,7 @@ namespace Gizmo {
             targetRot = Editor::GetBlockRotationMatrix(b);
             targetSize = Editor::GetBlockSize(b);
             targetVariant = blockSpec.variant;
+            placingColor = CGameEditorPluginMap::EMapElemColor(int(b.MapElemColor));
         } else {
             CGameCtnAnchoredObject@ item;
             if (lastPickedItem is null || (@item = lastPickedItem.AsItem()) is null) {
@@ -316,15 +328,21 @@ namespace Gizmo {
             targetRot = lastPickedItemRot.GetMatrix();
             itemMat = Editor::GetItemMatrix(item);
             // @bb = Editor::GetItemAABB(placingItemModel);
+            placingColor = CGameEditorPluginMap::EMapElemColor(int(item.MapElemColor));
         }
 
         if (!shouldReplaceTarget) {
+            // color = users current
+            placingColor = origCursorColor;
+
+            // we always do this for blocks
             if (modePlacingType == BlockOrItem::Block) {
                 targetVariant = Editor::GetCurrentBlockVariant(editor.Cursor);
                 @placingBlockModel = Editor::GetSelectedBlockInfo(editor);
                 targetSize = Editor::GetBlockSize(placingBlockModel);
             }
 
+            // depending on whether the picked object is of the same type or not.
             if (modePlacingType != modeTargetType) {
                 if (modePlacingType == BlockOrItem::Block) {
                     @blockSpec = cast<Editor::BlockSpecPriv>(itemSpec.ToBlockSpec(placingBlockModel, targetVariant, false));
@@ -345,6 +363,12 @@ namespace Gizmo {
                     auto pp = placingItemModel.DefaultPlacementParam_Content;
                     itemSpec.pivotPos = pp.PivotPositions.Length == 0 ? vec3() : pp.PivotPositions[Editor::GetCurrentPivot(editor) % pp.PivotPositions.Length];
                 }
+            }
+
+            if (modePlacingType == BlockOrItem::Block) {
+                blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
+            } else {
+                itemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(placingColor));
             }
         }
 
@@ -442,6 +466,7 @@ namespace Gizmo {
             // }
         }
 
+        editor.PluginMapType.NextMapElemColor = placingColor;
         Editor::SetAllCursorMat(gizmo.GetCursorMat());
         IsActive = true;
         // auto lookUv = Editor::DirToLookUvFromCamera(bb.pos);
@@ -471,8 +496,6 @@ namespace Gizmo {
     }
 
     void _GizmoOnApply_Params(bool setInactiveAfter = true) {
-        CustomCursor::NoHideCursorItemModelsPatchActive = false;
-        CustomCursor::NoShowCursorItemModelsPatchActive = false;
         if (modePlacingType == BlockOrItem::Item) {
             dev_trace("Applying gizmo item: ");
             dev_trace("   lastAppliedPivot: " + lastAppliedPivot.ToString());
@@ -482,6 +505,7 @@ namespace Gizmo {
             itemSpec.pos = gizmo.pos + vec3(0, 56, 0) + gizmo.GetRotatedPivotPoint();
             itemSpec.coord = Int3ToNat3(PosToCoordDist(itemSpec.pos));
             itemSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
+            itemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(placingColor));
             Editor::PlaceItems({itemSpec}, true);
         } else {
             // this will only unapply if it was applied earlier
@@ -489,6 +513,7 @@ namespace Gizmo {
             blockSpec.flags = uint8(Editor::BlockFlags::Free);
             blockSpec.pos = gizmo.pos + vec3(0, 56, 0) + gizmo.GetRotatedPivotPoint();
             blockSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
+            blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
             Editor::PlaceBlocks({blockSpec}, true);
             startnew(_AfterApply_SetBlockSkin);
         }
@@ -632,3 +657,9 @@ namespace Gizmo {
 
 [Setting hidden]
 bool S_Gizmo_MoveCameraOnStart = true;
+
+#if DEV
+bool D_Gizmo_DrawBoundingBox = true;
+#else
+bool D_Gizmo_DrawBoundingBox = false;
+#endif

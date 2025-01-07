@@ -41,12 +41,51 @@ namespace Picker {
         return camPos - pickDirection * (camPos.y - height) / pickDirection.y;
     }
 
-    vec3 GetMouseToWorldOnPlane(vec3 planeNormal, vec3 planePos) {
+    vec2 lastMouseToWorldOnPlaneQuantizedUV;
+
+    vec3 GetMouseToWorldOnPlane(vec3 planeNormal, vec3 planePos, float quantize = 0) {
         auto d = Math::Dot(pickDirection, planeNormal);
         if (Math::Abs(d) < 1e-5) return vec3(0);
         auto t = Math::Dot((camPos-planePos), planeNormal) / d;
-        auto r = camPos - pickDirection * t;
-        return r;
+        auto mouseWorldPosOnPlane = camPos - pickDirection * t;
+
+        float u, v;
+        vec3 uDir, vDir;
+        // calculate UV and update lastMouseToWorldOnPlaneQuantizedUV. Not technically required if quantize = 0.
+        {
+            // Find two directions that are not parallel to the plane normal:
+            vec3 anyVecNotParallel = Math::Abs(planeNormal.x) < 0.9 ? RIGHT : UP;
+
+            // Construct a vector that’s guaranteed to be on the plane:
+            uDir = Math::Cross(planeNormal, anyVecNotParallel).Normalized();
+
+            // Construct the second direction vector in the plane:
+            vDir = Math::Cross(planeNormal, uDir).Normalized();
+
+            // Project the point onto the plane:
+            vec3 planeVector = (mouseWorldPosOnPlane - planePos);
+            u = Math::Dot(planeVector, uDir);
+            v = Math::Dot(planeVector, vDir);
+
+            lastMouseToWorldOnPlaneQuantizedUV.x = u;
+            lastMouseToWorldOnPlaneQuantizedUV.y = v;
+        }
+
+        // return now if not quantized
+        if (Math::Abs(quantize) < 1e-5) {
+            return mouseWorldPosOnPlane;
+        }
+
+        // quantize
+        u = Math::Round(u / quantize) * quantize;
+        v = Math::Round(v / quantize) * quantize;
+
+        lastMouseToWorldOnPlaneQuantizedUV.x = u;
+        lastMouseToWorldOnPlaneQuantizedUV.y = v;
+
+        // uv back to 3d space
+        mouseWorldPosOnPlane = planePos + uDir*u + vDir*v;
+        return mouseWorldPosOnPlane;
     }
 
     void DrawDebugWindow() {

@@ -86,10 +86,12 @@ class RotationTranslationGizmo {
     mat4 tmpRot = mat4::Identity();
     string name;
     Gizmo::Mode mode = Gizmo::Mode::Rotation;
+    // UV for moving object on plane
+    vec2 altMoveUV;
 
     float stepRot = PI/32.;
 
-    // roughly: size in meters of target object. set via WithBoundingBox
+    // roughly: size in meters of target object. set via WithBoundingBox. used to scale gizmo
     float scale = 1.0;
     // increase scale by this ratio so it's a bit bigger than the target
     float scaleExtraCoef = 1.2;
@@ -119,6 +121,10 @@ class RotationTranslationGizmo {
         // rot = mat4::Inverse(mat4::Translate(pos * -1.) * m);
         rot = (mat4::Translate(pos * -1.) * m);
         return this;
+    }
+
+    mat4 GetMatrix() {
+        return mat4::Translate(pos - pivotPoint) * mat4::Inverse(rot);
     }
 
     vec3 bbHalfDiag;
@@ -301,6 +307,7 @@ class RotationTranslationGizmo {
     bool _hoveringAlt;
 
     void DrawCirclesManual(vec3 objOriginPos, float _scale = 2.0) {
+        if (MathX::IsNanInf(objOriginPos)) return;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cam = Camera::GetCurrent();
         auto camState = Editor::GetCurrentCamState(editor);
@@ -462,8 +469,14 @@ class RotationTranslationGizmo {
                         ResetGizmoRMB();
                     } else {
                         auto normal = (withTmpRot * AxisToVec(lastClosestAxis)).xyz;
-                        auto pickedPos = Picker::GetMouseToWorldOnPlane(normal, planePos);
-                        SetTmpTranslation(pickedPos - planePos);
+                        float quantize = _isCtrlDown ? S_Gizmo_TranslateCtrlStepDist : 0.0;
+
+                        auto pickedPos = Picker::GetMouseToWorldOnPlane(normal, planePos, quantize);
+                        altMoveUV = Picker::lastMouseToWorldOnPlaneQuantizedUV;
+
+                        vec3 d = pickedPos - planePos;
+                        if (IsShiftDown()) d *= 0.1;
+                        SetTmpTranslation(d);
                     }
                 } else {
                     // we drag along axis
@@ -501,8 +514,8 @@ class RotationTranslationGizmo {
             }
             if (!hoveringAlt) {
                 DrawRadialLine();
-                DrawAmountText();
             }
+            DrawAmountText();
             if (!skipSetLastDD) lastDragDelta = dragDelta;
         }
     }
@@ -582,18 +595,27 @@ class RotationTranslationGizmo {
 
     void DrawAmountText() {
         vec2 bottomLeft = mouseDownPos; // mousePos + vec2(25, -25) * g_scale;
+        float fontSize = 36.0 * g_stdPxToScreenPx * g_scale;
         nvg::Reset();
-        nvg::FontSize(36.0 * g_scale);
+        nvg::FontSize(fontSize);
         vec4 color = cWhite;
         if (_isCtrlDown && IsCloseToSpecialAngle(tmpRotationAngle)) {
             color = cLimeGreen;
         } else if (_isCtrlDown) {
             // color = cCyan;
         }
-        nvgDrawTextWithStroke(bottomLeft, GetCurrentTmpAmountStr(), color);
+        nvgDrawTextWithStroke(bottomLeft, GetCurrentTmpAmountStr(0), color);
+        // draw above because axes uv are reversed from normal order
+        if (hoveringAlt) {
+            nvgDrawTextWithStroke(bottomLeft - vec2(0, fontSize*1.2), GetCurrentTmpAmountStr(1), color);
+        }
     }
 
-    string GetCurrentTmpAmountStr() {
+    // componentIx = 0 mostly, except for alt move line 2, where it =1
+    string GetCurrentTmpAmountStr(int componentIx = 0) {
+        if (!hoveringAlt && componentIx != 0) {
+            return "UNKNOWN componentIx == " + componentIx;
+        }
         if (mode == Gizmo::Mode::Rotation) {
             bool veryCloseToSteppedRotation = ((Math::Abs(tmpRotationAngle) + 0.005) % stepRot) < 0.01;
             string ret = tostring(Math::Round(Math::ToDeg(tmpRotationAngle), 1)) + " °";
@@ -606,12 +628,25 @@ class RotationTranslationGizmo {
                 ret += " = " + GetSpecialAngleName(tmpRotationAngle);
             }
             return ret;
+        } else if (hoveringAlt){
+            auto uv = this.altMoveUV * -1;
+            auto bd1 = lastClosestAxis == Axis::Z ? 8. : 32.;
+            auto bd2 = lastClosestAxis == Axis::X ? 8. : 32.;
+            string ax1 = lastClosestAxis != Axis::Z ? "Z" : "Y";
+            string ax2 = lastClosestAxis != Axis::X ? "X" : "Y";
+            if (componentIx == 0) return ax1 + ": " + FmtMoveMeters((uv.x), bd1);
+            else if (componentIx == 1) return ax2 + ": " + FmtMoveMeters((uv.y), bd2);
+            return "UNKNOWN componentIx == " + componentIx;
         }
         auto len = tmpPos.Length();
-        string ret = tostring(Math::Round(len, 2)) + " m";
         auto blockDimension = lastClosestAxis == Axis::Y ? 8. : 32.;
-        if (len >= blockDimension - 0.001) {
-            ret += " = " + tostring(Math::Round(len / blockDimension, 3)) + " blocks";
+        return FmtMoveMeters(len, blockDimension);
+    }
+
+    string FmtMoveMeters(float dist, float blockDim) {
+        string ret = tostring(Math::Round(dist, 2)) + " m";
+        if (Math::Abs(dist) >= blockDim - 0.0001) {
+            ret += " = " + tostring(Math::Round(dist / blockDim, 3)) + " blocks";
         }
         return ret;
     }
@@ -642,9 +677,10 @@ class RotationTranslationGizmo {
         // don't draw if behind camera, or gizmo outside screen bounds
         auto posToScreen = Camera::ToScreen(pos);
         if (posToScreen.z >= 0) return;
-        if (posToScreen.x < -3.1 || posToScreen.x > g_screen.x + 3.1 || posToScreen.y < -3.1 || posToScreen.y > g_screen.y + 3.1) return;
+        if (posToScreen.x < 20 || posToScreen.x > g_screen.x - 20 || posToScreen.y < 20 || posToScreen.y > g_screen.y - 20) return;
 
         DrawCirclesManual(pos, scale * scaleExtraCoef);
+        DrawBoundingBox();
     }
 
     void Render() {
@@ -770,6 +806,11 @@ class RotationTranslationGizmo {
             // AddSimpleTooltip("The cursor for freeblocks is raised up 0.25, so this will apply a -0.25 offset when starting the gizmo. \\$<\\$i\\$f80HOWEVER,\\$> this is somewhat inconsistent. This setting allows you to disable the feature.");
             S_Gizmo_MoveCameraOnStart = UI::Checkbox("Move Camera when Starting Gizmo", S_Gizmo_MoveCameraOnStart);
 
+#if DEV
+            UI::SeparatorText("Debug");
+            D_Gizmo_DrawBoundingBox = UI::Checkbox("Draw Bounding Box", D_Gizmo_DrawBoundingBox);
+#endif
+
             UI::SeparatorText("Translate");
             UI::SetNextItemWidth(100);
             S_Gizmo_TranslateCtrlStepDist = UI::InputFloat("Step Size (Holding Ctrl)", S_Gizmo_TranslateCtrlStepDist, 0.25);
@@ -832,6 +873,17 @@ class RotationTranslationGizmo {
         // }
         // UI::End();
         // // UX::PopInvisibleWindowStyle();
+    }
+
+    void DrawBoundingBox() {
+        if (!D_Gizmo_DrawBoundingBox) return;
+        nvg::StrokeWidth(2);
+        vec3 p1 = pos + bbMidPoint;
+        nvgDrawPointRing(bbMidPoint, 5., cBlack75);
+        vec3 p2 = p1 + bbHalfDiag;
+        nvgDrawPointRing(p2, 5., cBlack75);
+        nvgDrawPath({bbMidPoint, p2}, cMagenta);
+        nvgDrawBlockBox(GetMatrix(), bbHalfDiag*2, cSkyBlue);
     }
 
     float d;

@@ -87,6 +87,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
     }
 
     void DrawInner() override {
+        if (Gizmo::IsActive) return;
         auto pp = GetCurrPlacementParams();
         if (pp is null) {
             UI::Text("Select an item.");

@@ -1333,4 +1333,35 @@ namespace CustomCursor {
         dev_trace("Updated float offset by " + offsetDelta + ". Getting radius...");
         dev_trace("Snap radius: " + GetCurrentSnapRadius());
     }
+
+
+    void TriggerUpdateCursorItemModels(CGameCtnEditorFree@ editor) {
+        // cache and deactivate patches -- there's a visual bug where models aren't cleared (but no block/item exists)
+        bool nhcimp = CustomCursor::NoHideCursorItemModelsPatchActive;
+        bool nscimp = CustomCursor::NoShowCursorItemModelsPatchActive;
+        bool nscvfp = CustomCursor::NoSetCursorVisFlagPatchActive;
+        CustomCursor::NoHideCursorItemModelsPatchActive = false;
+        CustomCursor::NoShowCursorItemModelsPatchActive = false;
+        CustomCursor::NoSetCursorVisFlagPatchActive = false;
+        // cache state
+        auto origItemMode = Editor::GetItemPlacementMode();
+        auto origPlacement = Editor::GetPlacementMode(editor);
+        auto origEditMode = Editor::GetEditMode(editor);
+        // trigger update via changing placement mode
+        if (origPlacement != CGameEditorPluginMap::EPlaceMode::FreeBlock) {
+            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+            Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
+        } else {
+            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+            Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::GhostBlock);
+        }
+        // done, return to original state
+        Editor::SetEditMode(editor, origEditMode);
+        Editor::SetItemPlacementMode(origItemMode);
+        Editor::SetPlacementMode(editor, origPlacement);
+        // restore patches
+        CustomCursor::NoHideCursorItemModelsPatchActive = nhcimp;
+        CustomCursor::NoShowCursorItemModelsPatchActive = nscimp;
+        CustomCursor::NoSetCursorVisFlagPatchActive = nscvfp;
+    }
 }

@@ -134,6 +134,8 @@ uint g_PriorRenderEarlyTime;
 uint g_ThisRenderEarlyTime;
 vec2 g_screen;
 float g_scale = UI::GetScale();
+// e.g., 1080/1440 for showing on 1080p
+float g_stdPxToScreenPx = 1.;
 
 void RenderEarly() {
     g_PriorRenderEarlyTime = g_ThisRenderEarlyTime;
@@ -143,6 +145,7 @@ void RenderEarly() {
     if (!GameVersionSafe) return;
 
     g_screen = vec2(Draw::GetWidth(), Draw::GetHeight());
+    g_stdPxToScreenPx = g_screen.y / 1440.;
     Picker::RenderEarly();
 
     auto switcher = GetApp().Switcher;
