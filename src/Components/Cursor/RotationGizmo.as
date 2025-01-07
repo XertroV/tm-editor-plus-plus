@@ -71,6 +71,24 @@ float S_GizmoClickSensitivity = 400.;
 
 const float GIZMO_MAX_SCALE_COEF = .45;
 
+
+class GizmoState {
+    vec3 pos;
+    mat4 rot;
+    vec3 pivotPoint;
+    GizmoState(const vec3 &in pos, const mat4 &in rot, const vec3 &in pivotPoint) {
+        this.pos = pos;
+        this.rot = rot;
+        this.pivotPoint = pivotPoint;
+    }
+    GizmoState() {}
+
+    string ToString() {
+        return "GizmoState(pos: " + pos.ToString() + "rot: mat4, " + " pivot: " + pivotPoint.ToString() + ")";
+    }
+}
+
+
 class RotationTranslationGizmo {
     // drawing gizmo
     // click detection
@@ -88,6 +106,8 @@ class RotationTranslationGizmo {
     Gizmo::Mode mode = Gizmo::Mode::Rotation;
     // UV for moving object on plane
     vec2 altMoveUV;
+
+    GizmoState[] history;
 
     float stepRot = PI/32.;
 
@@ -130,6 +150,20 @@ class RotationTranslationGizmo {
             placementParams.AsPlacementParam().SwitchPivotManually = origPlacementSwitchPivotManually;
             @placementParams = null;
         }
+    }
+
+    void Undo() {
+        if (history.Length == 0) {
+            dev_trace("Gizmo: no history to undo");
+            return;
+        }
+        auto last = history[history.Length - 1];
+        pos = last.pos;
+        rot = last.rot;
+        pivotPoint = last.pivotPoint;
+        FocusCameraOn(pos, false);
+        dev_trace("Gizmo: undo: " + last.ToString());
+        history.RemoveLast();
     }
 
     mat4 GetMatrix() {
@@ -247,6 +281,7 @@ class RotationTranslationGizmo {
     }
 
     RotationTranslationGizmo@ ApplyTmpRotation() {
+        if (tmpRotationAngle != 0.) history.InsertLast(GetState());
         rot = tmpRot * rot;
         tmpRot = mat4::Identity();
         tmpRotationAngle = 0.;
@@ -254,10 +289,15 @@ class RotationTranslationGizmo {
         return this;
     }
 
-    RotationTranslationGizmo@ ApplyTmpTranslation() {
+    RotationTranslationGizmo@ ApplyTmpTranslation(bool addUndoState = true) {
+        if (addUndoState && tmpPos.LengthSquared() > 0) history.InsertLast(GetState());
         pos = pos + tmpPos;
         tmpPos = vec3();
         return this;
+    }
+
+    GizmoState GetState() {
+        return GizmoState(pos, rot, PivotPointOrDest);
     }
 
     void CyclePivot() {
@@ -266,7 +306,8 @@ class RotationTranslationGizmo {
 
     AnimMgr@ pivotAnimator;
 
-    void SetPivotPoint(vec3 newPivot, bool animate = true) {
+    void SetPivotPoint(vec3 newPivot, bool animate = true, bool addToUndo = true) {
+        if (addToUndo) history.InsertLast(GetState());
         auto dist = newPivot - pivotPoint;
         if (animate) {
             destinationPivotPoint = newPivot;
@@ -283,7 +324,7 @@ class RotationTranslationGizmo {
         }
         // dev_trace("Gizmo: set pivot point: " + newPivot.ToString());
         AddTmpTranslation(dist, true);
-        ApplyTmpTranslation();
+        ApplyTmpTranslation(false);
         pivotPoint = newPivot;
     }
 
@@ -295,11 +336,11 @@ class RotationTranslationGizmo {
         // dev_trace("[Before] Gizmo: pivotAnimator done? " + anim.IsDone + " / progress: " + anim.Progress);
         while (anim.Update(true)) {
             // dev_trace("[Update] Gizmo: pivotAnimator done? " + anim.IsDone + " / progress: " + anim.Progress);
-            SetPivotPoint(Math::Lerp(fromPos, toPos, anim.Progress), false);
+            SetPivotPoint(Math::Lerp(fromPos, toPos, anim.Progress), false, false);
             if (anim.IsDone) break;
             yield();
         }
-        SetPivotPoint(toPos, false);
+        SetPivotPoint(toPos, false, false);
         // dev_trace("Gizmo: pivotAnimator done? " + anim.IsDone + " / progress: " + anim.Progress);
         if (anim is pivotAnimator) {
             @pivotAnimator = null;
@@ -710,7 +751,7 @@ class RotationTranslationGizmo {
 
     vec3 pivotPoint;
 
-    vec3 get_PivotPointOrDestPP() {
+    vec3 get_PivotPointOrDest() {
         return pivotAnimator !is null ? destinationPivotPoint : pivotPoint;
     }
 
@@ -892,6 +933,8 @@ class RotationTranslationGizmo {
             UI::Text("Right click Pivot button: Edit pivot." + NewIndicator);
 
             UI::SeparatorText("Hotkeys" + NewIndicator);
+            S_Gizmo_InvertApplyModifier = UI::Checkbox("Invert Apply Modifier", S_Gizmo_InvertApplyModifier);
+            AddSimpleTooltip("When true: pressing Apply hotkey (default Space) will Apply and Continue; and holding shift will Apply and exit gizmo.");
             Gizmo::DrawHotkeysTable();
 
             UI::SeparatorText("Help");
@@ -964,7 +1007,7 @@ class RotationTranslationGizmo {
 
     void SetPivotAxisButtonAbs(Axis axis, string label, float absPos, bool isLast = false) {
         if (UI::Button(label)) {
-            SetPivotPoint(AxisToVec(axis) * absPos + AxisToAntiVec(axis) * PivotPointOrDestPP);
+            SetPivotPoint(AxisToVec(axis) * absPos + AxisToAntiVec(axis) * PivotPointOrDest);
         }
         if (!isLast) UI::SameLine();
     }
@@ -972,7 +1015,7 @@ class RotationTranslationGizmo {
 
     void MovePivotTo(Axis axis, float uvAmt) {
         SetPivotPoint(
-            AxisToVec(axis) * (uvAmt * bbHalfDiag + bbMidPoint - GetItemCursorPivot()) + AxisToAntiVec(axis) * PivotPointOrDestPP
+            AxisToVec(axis) * (uvAmt * bbHalfDiag + bbMidPoint - GetItemCursorPivot()) + AxisToAntiVec(axis) * PivotPointOrDest
         );
     }
 

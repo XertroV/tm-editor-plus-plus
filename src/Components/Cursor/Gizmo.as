@@ -37,6 +37,9 @@ const vec3& AxisToVecForRot(Axis a) {
 [Setting hidden]
 bool S_Gizmo_ApplyBlockOffset = true;
 
+[Setting hidden]
+bool S_Gizmo_InvertApplyModifier = false;
+
 namespace Gizmo {
     enum Mode {
         Rotation,
@@ -563,8 +566,8 @@ namespace Gizmo {
             UI::TableSetupColumn("Hotkey", UI::TableColumnFlags::WidthStretch, .25);
             UI::TableSetupColumn("Action", UI::TableColumnFlags::WidthStretch, .75);
             // UI::TableHeadersRow();
-            DrawHotkeyRow("Apply / Place", hk_Apply);
-            DrawHotkeyRow("Place & Continue", hk_ApplyAndContinue);
+            DrawHotkeyRow("Apply / Place (w/ Shift: and Continue)", hk_Apply);
+            DrawHotkeyRow("Undo", hk_Undo);
             DrawHotkeyRow("Set Camera to Pivot", hk_ResetCam);
             DrawHotkeyRow("Cycle Pivot", hk_CyclePivot);
             DrawHotkeyRow("Move Pivot to Bottom", hk_MovePivotBot);
@@ -586,7 +589,6 @@ namespace Gizmo {
     }
 
     Hotkey@ hk_Apply;
-    Hotkey@ hk_ApplyAndContinue;
     Hotkey@ hk_ResetCam;
     Hotkey@ hk_CyclePivot;
     Hotkey@ hk_MovePivotBot;
@@ -595,10 +597,10 @@ namespace Gizmo {
     Hotkey@ hk_MovePivotZBack;
     Hotkey@ hk_MovePivotLeft;
     Hotkey@ hk_MovePivotRight;
+    Hotkey@ hk_Undo;
 
     void SetupGizmoHotkeysOnPluginStart() {
         @hk_Apply = AddHotkey(VirtualKey::Space, false, false, false, Gizmo::Hotkey_Apply, "Gizmo: Apply / Place");
-        @hk_ApplyAndContinue = AddHotkey(VirtualKey::Space, false, false, true, Gizmo::Hotkey_ApplyAndContinue, "Gizmo: Place & Continue");
         @hk_ResetCam = AddHotkey(VirtualKey::C, false, false, false, Gizmo::Hotkey_ResetCam, "Gizmo: Set Camera to Pivot");
         @hk_CyclePivot = AddHotkey(VirtualKey::Tab, false, false, false, Gizmo::Hotkey_CyclePivot, "Gizmo: Cycle Pivot");
         @hk_MovePivotBot = AddHotkey(VirtualKey::Q, false, false, false, Gizmo::Hotkey_MovePivotBot, "Gizmo: Move Pivot to Bottom");
@@ -607,15 +609,17 @@ namespace Gizmo {
         @hk_MovePivotZBack = AddHotkey(VirtualKey::S, false, false, false, Gizmo::Hotkey_MovePivotZBack, "Gizmo: Move Pivot to ZBack");
         @hk_MovePivotLeft = AddHotkey(VirtualKey::A, false, false, false, Gizmo::Hotkey_MovePivotLeft, "Gizmo: Move Pivot to Left");
         @hk_MovePivotRight = AddHotkey(VirtualKey::D, false, false, false, Gizmo::Hotkey_MovePivotRight, "Gizmo: Move Pivot to Right");
+        @hk_Undo = AddHotkey(VirtualKey::U, false, false, false, Gizmo::Hotkey_Undo, "Gizmo: Undo");
     }
 
     UI::InputBlocking Hotkey_Apply() {
-        if (IsActive) _GizmoOnApply();
-        return UI::InputBlocking::DoNothing;
-    }
-
-    UI::InputBlocking Hotkey_ApplyAndContinue() {
-        if (IsActive) _GizmoOnApplyAndContinue();
+        if (IsActive) {
+            if (IsShiftDown() ^^ S_Gizmo_InvertApplyModifier) {
+                _GizmoOnApplyAndContinue();
+            } else {
+                _GizmoOnApply();
+            }
+        }
         return UI::InputBlocking::DoNothing;
     }
 
@@ -659,6 +663,11 @@ namespace Gizmo {
 
     UI::InputBlocking Hotkey_MovePivotRight() {
         if (IsActive) gizmo.MovePivotToVisual(Axis::X, 1);
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_Undo() {
+        if (IsActive) gizmo.Undo();
         return UI::InputBlocking::DoNothing;
     }
 }
