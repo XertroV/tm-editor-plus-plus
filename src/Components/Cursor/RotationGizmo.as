@@ -700,6 +700,7 @@ class RotationTranslationGizmo {
     vec2 lastDragDelta;
 
     vec3 camPos;
+    mat4 camLoc;
     vec4 pwrPos;
     mat4 camTranslate;
     mat4 camRotation;
@@ -709,15 +710,24 @@ class RotationTranslationGizmo {
 
     vec3 pivotPoint;
 
+    vec3 get_PivotPointOrDestPP() {
+        return pivotAnimator !is null ? destinationPivotPoint : pivotPoint;
+    }
+
     // MARK: Draw All
 
     void DrawAll() {
         auto cam = Camera::GetCurrent();
         if (cam is null) return;
-        auto camLoc = mat4(cam.Location);
+        camLoc = mat4(cam.Location);
         camPos = vec3(camLoc.tx, camLoc.ty, camLoc.tz);
+        camRotation = mat4::Translate(camPos * -1.) * camLoc;
+        camRotation = mat4::Inverse(camRotation);
 
         DrawWindow();
+#if DEV
+        DrawDebugWindow();
+#endif
 
         // don't draw if behind camera, or gizmo outside screen bounds
         auto posToScreen = Camera::ToScreen(pos);
@@ -784,7 +794,7 @@ class RotationTranslationGizmo {
             if (UI::Button(Icons::Cog, btnSize2)) {
                 UI::OpenPopup("gizmo-toolbar-settings");
             }
-            AddSimpleTooltip("Settings");
+            AddSimpleTooltip("Settings" + NewIndicator);
 
             UI::SameLine();
             if (UI::Button(Icons::Check, btnSize2)) {
@@ -808,17 +818,20 @@ class RotationTranslationGizmo {
             [B][M][F]
              */
             UI::SeparatorText("Corners etc.");
+            UI::AlignTextToFramePadding();
             TextSameLine("X");
-            SetPivotAxisButton(Axis::X, "L##gzPvX", 0.);
-            SetPivotAxisButton(Axis::X, "M##gzPvX", .5);
+            SetPivotAxisButton(Axis::X, "L##gzPvX", -1.);
+            SetPivotAxisButton(Axis::X, "M##gzPvX", 0.);
             SetPivotAxisButton(Axis::X, "R##gzPvX", 1., true);
+            UI::AlignTextToFramePadding();
             TextSameLine("Y");
-            SetPivotAxisButton(Axis::Y, "B##gzPvY", 0.);
-            SetPivotAxisButton(Axis::Y, "M##gzPvY", .5);
+            SetPivotAxisButton(Axis::Y, "B##gzPvY", -1.);
+            SetPivotAxisButton(Axis::Y, "M##gzPvY", 0.);
             SetPivotAxisButton(Axis::Y, "T##gzPvY", 1., true);
+            UI::AlignTextToFramePadding();
             TextSameLine("Z");
-            SetPivotAxisButton(Axis::Z, "B##gzPvZ", 0.);
-            SetPivotAxisButton(Axis::Z, "M##gzPvZ", .5);
+            SetPivotAxisButton(Axis::Z, "B##gzPvZ", -1.);
+            SetPivotAxisButton(Axis::Z, "M##gzPvZ", 0.);
             SetPivotAxisButton(Axis::Z, "F##gzPvZ", 1., true);
 
             // for slope platform, pivot should be 2/3 up, maybe + 2m, and normal height is 3*8.
@@ -944,21 +957,152 @@ class RotationTranslationGizmo {
 
     void SetPivotAxisButton(Axis axis, string label, float relPos, bool isLast = false) {
         if (UI::Button(label)) {
-            SetPivotPoint(AxisToVec(axis) * relPos * bbHalfDiag * 2. + AxisToAntiVec(axis) * pivotPoint);
+            MovePivotTo(axis, relPos);
         }
         if (!isLast) UI::SameLine();
     }
 
     void SetPivotAxisButtonAbs(Axis axis, string label, float absPos, bool isLast = false) {
         if (UI::Button(label)) {
-            SetPivotPoint(AxisToVec(axis) * absPos + AxisToAntiVec(axis) * pivotPoint);
+            SetPivotPoint(AxisToVec(axis) * absPos + AxisToAntiVec(axis) * PivotPointOrDestPP);
         }
         if (!isLast) UI::SameLine();
     }
 
+
     void MovePivotTo(Axis axis, float uvAmt) {
-        SetPivotPoint(AxisToVec(axis) * uvAmt * bbHalfDiag * 2. + AxisToAntiVec(axis) * pivotPoint);
+        SetPivotPoint(
+            AxisToVec(axis) * (uvAmt * bbHalfDiag + bbMidPoint - GetItemCursorPivot()) + AxisToAntiVec(axis) * PivotPointOrDestPP
+        );
     }
+
+    void MovePivotToVisual(Axis axis, float uvAmt) {
+        // based on camera, find closest local axis, and move pivot in that direction
+        auto m = GetMatrix();
+        auto axisSign = ClosestMatchingAxesRelativeToCamera()[axis];
+        MovePivotTo(Axis(axisSign.x), uvAmt * float(axisSign.y));
+    }
+
+    vec2[][] _camLocAngleSign_Last;
+
+    // returns (localAxis, sign)[] where the index is a camera's axis
+    int3[] ClosestMatchingAxesRelativeToCamera() {
+        auto m = mat4::Inverse(rot);
+        // for each camera axis:
+        //   for each local axis:
+        //     find the angle between the two
+        // for each output axis:
+        //   find the local axis with the smallest angle
+        //   store the local axis and the sign of the angle
+        //   set the angel in all axes so it won't be chosen again
+        // return the array
+
+        // camLocAngleSign[camAxis][localAxis] = vec2(angle, sign)
+        vec2[][] camLocAngleSign;
+        camLocAngleSign.Resize(3);
+        for (uint i = 0; i < 3; i++) {
+            camLocAngleSign[i].Resize(3);
+        }
+        for (uint i = 0; i < 3; i++) {
+            vec3 v1 = (m * AxisToVec(Axis(i))).xyz; // - (m * vec3()).xyz;
+            for (uint j = 0; j < 3; j++) {
+                auto dot = Math::Dot(v1, (camRotation * AxisToVec(Axis(j)) * (j == 0 ? -1. : 1.)).xyz);
+                camLocAngleSign[j][i] = vec2(Math::Abs(dot), Sign(dot));
+            }
+        }
+        _camLocAngleSign_Last = camLocAngleSign;
+
+        int3[] ret;
+        ret.Resize(3);
+        int[] remaining = {0, 1, 2};
+        while (remaining.Length > 0) {
+            float maxDot = 0.;
+            int bestLocAxis = -1;
+            int bestCamAxis = -1;
+            for (uint i = 0; i < 3; i++) {
+                for (uint j = 0; j < 3; j++) {
+                    if (camLocAngleSign[i][j].x > maxDot) {
+                        maxDot = camLocAngleSign[i][j].x;
+                        bestLocAxis = j;
+                        bestCamAxis = i;
+                    }
+                }
+            }
+            // ret[i] = int2(minAxis, int(camLocAngleSign[i][minAxis].y));
+            // for (uint j = 0; j < 3; j++) {
+            //     camLocAngleSign[j][minAxis].x = -1.;
+            // }
+            ret[bestCamAxis] = int3(bestLocAxis, int(camLocAngleSign[bestCamAxis][bestLocAxis].y), int(camLocAngleSign[bestCamAxis][bestLocAxis].x * 10000));
+            // camLocAngleSign[bestOutAxis][bestInAxes].x = -1.;
+            for (uint j = 0; j < 3; j++) {
+                camLocAngleSign[bestCamAxis][j].x = -1.;
+                camLocAngleSign[j][bestLocAxis].x = -1.;
+            }
+            remaining.RemoveAt(remaining.Find(bestCamAxis));
+        }
+
+
+        return ret;
+    }
+
+    void DrawDebugClosestMatchingAxes() {
+        auto axesSign = ClosestMatchingAxesRelativeToCamera();
+        for (uint i = 0; i < 3; i++) {
+            UI::Text(tostring(Axis(i)) + " -> " + tostring(Axis(axesSign[i].x)) + " * " + axesSign[i].y + " (dot: " + (float(axesSign[i].z) / 10000.0 * axesSign[i].y) + ")");
+        }
+
+        // _camLocAngleSign_Last
+        for (uint i = 0; i < 3; i++) {
+            for (uint j = 0; j < 3; j++) {
+                UI::Text(tostring(Axis(i)) + " -> " + tostring(Axis(j)) + " = " + _camLocAngleSign_Last[i][j].x + " * " + _camLocAngleSign_Last[i][j].y);
+            }
+        }
+
+        if (UI::Button("Update Cam")) {
+            _camRotation = camRotation;
+        }
+        mat4 camHelperMat = mat4::Translate(pos) * _camRotation;
+        nvg::StrokeWidth(2);
+        nvgDrawCoordHelpers(camHelperMat, 5.0);
+    }
+
+    mat4 _camRotation;
+
+    float Sign(float v) {
+        return v < 0. ? -1. : 1.;
+    }
+
+#if DEV
+    void DrawDebugWindow() {
+        if (UI::Begin("Gizmo Debug", UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
+            UI::Text("Gizmo Debug");
+            UI::SeparatorText("Data");
+            UI::Text("Rot: ");
+            UX::DrawMat4SameLine(rot);
+            UI::Text("Pos: " + pos.ToString());
+            UI::Text("tmpPos: " + tmpPos.ToString());
+            UI::Text("tmpRot: ");
+            UX::DrawMat4SameLine(tmpRot);
+            UI::Text("Pivot: " + pivotPoint.ToString());
+
+
+            UI::SeparatorText("Camera");
+            UI::Text("CamLoc: ");
+            UX::DrawMat4SameLine(camLoc);
+
+            // DrawDebugClosestMatchingAxes();
+
+            UI::SeparatorText("BB");
+            UI::Text("bbMidPoint: " + bbMidPoint.ToString());
+            UI::Text("bbHalfDiag: " + bbHalfDiag.ToString());
+            UI::Text("modelOffset: " + modelOffset.ToString());
+
+            UI::SeparatorText("Rendering");
+            UI::Text("scale: " + scale);
+        }
+        UI::End();
+    }
+#endif
 }
 
 const quat ROT_Q_AROUND_UP = quat(UP, HALF_PI);

@@ -162,6 +162,39 @@ namespace UX {
         UI::SameLine();
         return ret;
     }
+
+    void DrawMat4SameLine(const mat4 &in mat) {
+        UI::PushFont(g_MonoFont);
+        auto posInit = UI::GetCursorPos();
+        UI::SameLine();
+        auto posStart = UI::GetCursorPos();
+        // UI::Text("[");
+        // UI::SameLine();
+        auto posMatStart = UI::GetCursorPos();
+        float lineHeight = posMatStart.y - posInit.y;
+        UI::Text("[ " + Text::Format("%3.2f", mat.xx)
+            + ", " + Text::Format("%3.2f", mat.xy)
+            + ", " + Text::Format("%3.2f", mat.xz)
+            + ", " + Text::Format("%3.2f", mat.xw) + "");
+        UI::SetCursorPos(vec2(posMatStart.x, UI::GetCursorPos().y));
+        UI::Text(", " + Text::Format("%3.2f", mat.yx)
+            + ", " + Text::Format("%3.2f", mat.yy)
+            + ", " + Text::Format("%3.2f", mat.yz)
+            + ", " + Text::Format("%3.2f", mat.yw) + "");
+        UI::SetCursorPos(vec2(posMatStart.x, UI::GetCursorPos().y));
+        UI::Text(", " + Text::Format("%3.2f", mat.zx)
+            + ", " + Text::Format("%3.2f", mat.zy)
+            + ", " + Text::Format("%3.2f", mat.zz)
+            + ", " + Text::Format("%3.2f", mat.zw) + "");
+        UI::SetCursorPos(vec2(posMatStart.x, UI::GetCursorPos().y));
+        UI::Text(", " + Text::Format("%3.2f", mat.tx)
+            + ", " + Text::Format("%3.2f", mat.ty)
+            + ", " + Text::Format("%3.2f", mat.tz)
+            + ", " + Text::Format("%3.2f", mat.tw) + " ]");
+        // UI::SameLine();
+        // UI::Text("]");
+        UI::PopFont();
+    }
 }
 
 
