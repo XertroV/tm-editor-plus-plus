@@ -123,24 +123,68 @@ class RotationTranslationGizmo {
         return this;
     }
 
+    ~RotationTranslationGizmo() {}
+
+    void CleanUp() {
+        if (placementParams !is null) {
+            placementParams.AsPlacementParam().SwitchPivotManually = origPlacementSwitchPivotManually;
+            @placementParams = null;
+        }
+    }
+
     mat4 GetMatrix() {
-        return mat4::Translate(pos - pivotPoint) * mat4::Inverse(rot);
+        // return mat4::Translate(pos + tmpPos + GetRotatedPivotPoint(-1.)) * mat4::Inverse(tmpRot * rot)
+        //     * mat4::Translate(pivotPoint * -1.);
+        return mat4::Translate(pos + tmpPos) * mat4::Inverse(tmpRot * rot)
+            * mat4::Translate(pivotPoint * -1.
+                + modelOffset
+                - GetItemCursorPivot()
+            );
+    }
+
+    vec3 GetItemCursorPivot() {
+        if (itemPivots.Length == 0) return vec3();
+        auto cur = Editor::GetCurrentPivot(cast<CGameCtnEditorFree>(GetApp().Editor));
+        return itemPivots[cur % itemPivots.Length];
     }
 
     vec3 bbHalfDiag;
     vec3 bbMidPoint;
+    vec3 modelOffset;
 
     RotationTranslationGizmo@ WithBoundingBox(Editor::AABB@ bb) {
         WithMatrix(bb.mat);
         scale = bb.halfDiag.Length() * 1.333;
         bbHalfDiag = bb.halfDiag;
         bbMidPoint = bb.midPoint;
+        this.modelOffset = bbMidPoint - bbHalfDiag; // + pivot;
         return this;
+    }
+
+    ReferencedNod@ placementParams;
+    bool origPlacementSwitchPivotManually = false;
+    CGameItemPlacementParam@ get_PlacementParams() {
+        if (placementParams !is null && placementParams.AsPlacementParam() !is null) {
+            return placementParams.AsPlacementParam();
+        }
+        return null;
     }
 
     RotationTranslationGizmo@ WithPlacementParams(CGameItemPlacementParam@ pp) {
         placementParamOffset = vec3(pp.GridSnap_HOffset, pp.GridSnap_VOffset, pp.GridSnap_HOffset);
+        @placementParams = ReferencedNod(pp);
+        origPlacementSwitchPivotManually = pp.SwitchPivotManually;
+        pp.SwitchPivotManually = true;
+        CopyPivotPositions(pp);
         return this;
+    }
+
+    vec3[] itemPivots;
+    void CopyPivotPositions(CGameItemPlacementParam@ pp) {
+        itemPivots.RemoveRange(0, itemPivots.Length);
+        for (uint i = 0; i < pp.PivotPositions.Length; i++) {
+            itemPivots.InsertLast(pp.PivotPositions[i]);
+        }
     }
 
     bool blockOffsetApplied = false;
@@ -223,6 +267,7 @@ class RotationTranslationGizmo {
     AnimMgr@ pivotAnimator;
 
     void SetPivotPoint(vec3 newPivot, bool animate = true) {
+        auto dist = newPivot - pivotPoint;
         if (animate) {
             destinationPivotPoint = newPivot;
             if (pivotAnimator !is null) {
@@ -231,13 +276,13 @@ class RotationTranslationGizmo {
             }
             @pivotAnimator = AnimMgr(false, S_AnimationDuration);
             startnew(CoroutineFunc(RunPivotAnim)).WithRunContext(Meta::RunContext::AfterMainLoop);
-            AddTmpTranslation(newPivot - pivotPoint, true);
+            AddTmpTranslation(dist, true);
             FocusCameraOn(pos + tmpPos, false);
-            AddTmpTranslation(pivotPoint - newPivot, true);
+            AddTmpTranslation(dist * -1., true);
             return;
         }
         // dev_trace("Gizmo: set pivot point: " + newPivot.ToString());
-        AddTmpTranslation(newPivot - pivotPoint, true);
+        AddTmpTranslation(dist, true);
         ApplyTmpTranslation();
         pivotPoint = newPivot;
     }
@@ -269,8 +314,8 @@ class RotationTranslationGizmo {
         return mat4::Translate(pos + tmpPos + pivotRotated) * xyz_rot;
     }
 
-    vec3 GetRotatedPivotPoint() {
-        return (mat4::Inverse(tmpRot * rot) * (pivotPoint * -1.)).xyz;
+    vec3 GetRotatedPivotPoint(float pivotCoef = -1.) {
+        return (mat4::Inverse(tmpRot * rot) * (pivotPoint * pivotCoef)).xyz;
     }
 
     vec3 placementParamOffset = vec3();
@@ -879,11 +924,12 @@ class RotationTranslationGizmo {
         if (!D_Gizmo_DrawBoundingBox) return;
         nvg::StrokeWidth(2);
         vec3 p1 = pos + bbMidPoint;
-        nvgDrawPointRing(bbMidPoint, 5., cBlack75);
+        nvgDrawPointRing(p1, 5., cBlack75);
         vec3 p2 = p1 + bbHalfDiag;
         nvgDrawPointRing(p2, 5., cBlack75);
-        nvgDrawPath({bbMidPoint, p2}, cMagenta);
+        nvgDrawPath({p1, p2}, cMagenta);
         nvgDrawBlockBox(GetMatrix(), bbHalfDiag*2, cSkyBlue);
+        // nvgDrawBlockBox(GetCursorMat(), bbHalfDiag*2, cLimeGreen50);
     }
 
     float d;

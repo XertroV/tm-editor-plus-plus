@@ -73,6 +73,7 @@ namespace Gizmo {
         CustomCursor::NoSetCursorVisFlagPatchActive = false;
         CustomCursorRotations::CustomYawActive = origCustomYawActive;
         CursorControl::ReleaseExclusiveControl(gizmoControlName);
+        if (gizmo !is null) gizmo.CleanUp();
         @gizmo = null;
 
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -226,6 +227,8 @@ namespace Gizmo {
     Editor::BlockSpecPriv@ blockSpec;
     // separate picked target from thing we'll place (supports 'duplication' and 'place at' via RMB)
     BlockOrItem modePlacingType = BlockOrItem::Block;
+    // when we get an item bounding box, it will be offset from the item location by some amount
+    // vec3 modelOffset;
 
     // just used to track item initial pivot
     vec3 lastAppliedPivot;
@@ -274,6 +277,7 @@ namespace Gizmo {
         lastAppliedPivot = vec3();
         bool applyingItem = modePlacingType == BlockOrItem::Item;
         bool modeMismatch = applyingItem != origModeWasItem;
+        // modelOffset = vec3();
 
         // fix mode mismatch, otherwise we place blocks when gizmoing an item from block mode
         if (modeMismatch) {
@@ -395,7 +399,7 @@ namespace Gizmo {
             } else {
                 dev_trace("bb.pos before: " + bb.pos.ToString());
                 // we need to account for the items pivot and default pivot
-                lastAppliedPivot = itemSpec.pivotPos;
+                lastAppliedPivot = itemSpec.pivotPos * -1;
                 lastAppliedPivotIx = 0;
                 auto pickedModel = itemSpec.Model;
                 // ? why did we default to the first pivot? we had the pivot above.
@@ -405,12 +409,14 @@ namespace Gizmo {
 
                 itemSpec.Model.DefaultPlacementParam_Content.PlacementClass.CurVariant = itemSpec.variantIx;
 
+                auto bbOrigPos = bb.pos;
                 // main bb to use to set cursor // mat4::Inverse
                 auto rot = (mat4::Translate(targetPos * -1.) * itemMat);
-                auto relPivot = mat4::Translate(lastPickedItemPivot + lastAppliedPivot);
+                auto relPivot = mat4::Translate((lastPickedItemPivot + lastAppliedPivot) * 1.);
                 bb.mat = rot * relPivot;
                 bb.mat = mat4::Translate(targetPos) * (bb.mat);
                 bb.InvertRotation();
+                // modelOffset = bb.pos - bbOrigPos;
                 // dev_trace("bb.pos mid: " + bb.pos.ToString());
                 // // bb is not always accurate -- will use last cursor pos which only showed before user pressed ctrl
                 // bb.pos = lastPickedItemPos;
@@ -614,6 +620,9 @@ namespace Gizmo {
 
     UI::InputBlocking Hotkey_ResetCam() {
         if (IsActive) gizmo.FocusCameraOn(gizmo.pos);
+        // block b/c 'C' can do something in editor to change item cursor stuff
+        // might been because of auto pivot
+        // return UI::InputBlocking::Block;
         return UI::InputBlocking::DoNothing;
     }
 

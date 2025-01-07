@@ -130,4 +130,10 @@ namespace Editor {
     // 0xf8 -> bool HasBoundingBox (or HasMesh or something)
     // 0xfc -> vec3 midPoint
     // 0x108 -> vec3 halfDiagonal
+    // 0x118 -> CPlugPrefab
+
+
+
+
+    // 0x48: buffer of indexes?
 }
