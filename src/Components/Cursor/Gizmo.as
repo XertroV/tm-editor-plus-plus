@@ -592,10 +592,11 @@ namespace Gizmo {
     void _GizmoOnCancel() {
         if (!IsActive) return;
         bool hadGizmo = gizmo !is null;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (hadGizmo && shouldReplaceTarget) {
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             editor.PluginMapType.Undo();
         }
+        if (editor !is null) editor.PluginMapType.EnableEditorInputsCustomProcessing = false;
         IsActive = false;
     }
 

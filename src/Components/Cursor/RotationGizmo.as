@@ -219,7 +219,7 @@ class RotationTranslationGizmo {
     }
 
     vec3 GetPivot(int ix) {
-        if (ix < 0 || ix > itemPivots.Length) return vec3();
+        if (ix < 0 || ix >= itemPivots.Length) return vec3();
         return itemPivots[ix];
     }
 
