@@ -546,6 +546,7 @@ namespace Gizmo {
 
     void _GizmoOnApplyAndContinue() {
         _GizmoOnApply_Params(false);
+        shouldReplaceTarget = false;
     }
 
     void _GizmoOnApply_Params(bool setInactiveAfter = true) {
