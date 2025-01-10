@@ -144,7 +144,7 @@ namespace UX {
     void CloseCurrentPopupIfMouseFarAway(bool closeAnyway = false) {
         auto wPos = UI::GetWindowPos();
         auto wSize = UI::GetWindowSize();
-        vec2 areaPad = vec2(g_screen.y / 10.);
+        vec2 areaPad = vec2(g_screen.y * .2);
         auto showBoundsRect = vec4(wPos - areaPad, wSize + (areaPad * 2.));
 
         closeAnyway = closeAnyway || !MathX::Within(UI::GetMousePos(), showBoundsRect);

@@ -75,6 +75,7 @@ namespace Gizmo {
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
         CustomCursor::NoShowCursorItemModelsPatchActive = false;
         CustomCursor::NoSetCursorVisFlagPatchActive = false;
+        CustomCursor::DoNotOffsetBlockInCursorPreview_Active = was_DoNotOffsetBlockInCursorPreview_Active;
         CustomCursorRotations::CustomYawActive = origCustomYawActive;
         CursorControl::ReleaseExclusiveControl(gizmoControlName);
         if (gizmo !is null) gizmo.CleanUp();
@@ -157,6 +158,8 @@ namespace Gizmo {
             dev_trace("Item placement mode: " + tostring(origItemPlacementMode));
         }
         Editor::SetCurrentPivot(editor, 0);
+        bool was_DoNotOffsetBlockInCursorPreview_Active = CustomCursor::DoNotOffsetBlockInCursorPreview_Active;
+        CustomCursor::DoNotOffsetBlockInCursorPreview_Active = true;
 
         shouldReplaceTarget = lmb;
         IsActive = true;
@@ -178,6 +181,7 @@ namespace Gizmo {
     EditorRotation@ origCursor;
     CGameEditorPluginMap::EMapElemColor placingColor;
     bool origPlacementSwitchPivotManually = false;
+    bool was_DoNotOffsetBlockInCursorPreview_Active = false;
 
     // LMB: remove target and select it
     // RMB: keep target, use current block/item
@@ -506,7 +510,8 @@ namespace Gizmo {
 
         Editor::SetAllCursorPos(bb.pos);
         @gizmo = RotationTranslationGizmo("gizmo").WithBoundingBox(bb)
-            .WithOnApplyF(_GizmoOnApply).WithOnExitF(_GizmoOnCancel);
+            .WithOnApplyF(_GizmoOnApply).WithOnExitF(_GizmoOnCancel)
+            .WithOnApplyAndContinueF(_GizmoOnApplyAndContinue);
 
         if (modePlacingType == BlockOrItem::Item) {
             gizmo.WithPlacementParams(placingItemModel.DefaultPlacementParam_Content);
@@ -517,6 +522,10 @@ namespace Gizmo {
             // if (S_Gizmo_ApplyBlockOffset && wasInFreeBlockMode) {
             //     gizmo.OffsetBlockOnStart();
             // }
+        }
+
+        if (!shouldReplaceTarget) {
+            gizmo.SaveAppliedPosition();
         }
 
         editor.PluginMapType.NextMapElemColor = placingColor;
@@ -618,12 +627,15 @@ namespace Gizmo {
             DrawHotkeyRow("Set Camera to Pivot", hk_ResetCam);
             DrawHotkeyRow("Cycle Pivot", hk_CyclePivot);
             DrawHotkeyRow("Cycle Y Pivot", hk_CycleYPivot);
+            DrawHotkeyRow("Move Pivot to Middle", hk_CenterPivot);
             DrawHotkeyRow("Move Pivot to Bottom", hk_MovePivotBot);
             DrawHotkeyRow("Move Pivot to Top", hk_MovePivotTop);
             DrawHotkeyRow("Move Pivot to Back", hk_MovePivotZFwd);
             DrawHotkeyRow("Move Pivot to Front", hk_MovePivotZBack);
             DrawHotkeyRow("Move Pivot to Left", hk_MovePivotLeft);
             DrawHotkeyRow("Move Pivot to Right", hk_MovePivotRight);
+            DrawHotkeyRow("Increase Step", hk_IncrStep);
+            DrawHotkeyRow("Decrease Step", hk_DecrStep);
             UI::EndTable();
         }
     }
@@ -648,6 +660,8 @@ namespace Gizmo {
     Hotkey@ hk_Undo;
     Hotkey@ hk_CycleYPivot;
     Hotkey@ hk_CenterPivot;
+    Hotkey@ hk_IncrStep;
+    Hotkey@ hk_DecrStep;
 
     void SetupGizmoHotkeysOnPluginStart() {
         @hk_Apply = AddHotkey(VirtualKey::Space, false, false, false, Gizmo::Hotkey_Apply, "Gizmo: Apply / Place", true);
@@ -661,16 +675,15 @@ namespace Gizmo {
         @hk_MovePivotLeft = AddHotkey(VirtualKey::A, false, false, false, Gizmo::Hotkey_MovePivotLeft, "Gizmo: Move Pivot to Left");
         @hk_MovePivotRight = AddHotkey(VirtualKey::D, false, false, false, Gizmo::Hotkey_MovePivotRight, "Gizmo: Move Pivot to Right");
         @hk_Undo = AddHotkey(VirtualKey::U, false, false, false, Gizmo::Hotkey_Undo, "Gizmo: Undo");
-        @hk_CenterPivot = AddHotkey(VirtualKey::R, false, false, false, Gizmo::Hotkey_CenterPivot, "Gizmo: Center Pivot");
+        @hk_CenterPivot = AddHotkey(VirtualKey::F, false, false, false, Gizmo::Hotkey_CenterPivot, "Gizmo: Center Pivot");
+        @hk_IncrStep = AddHotkey(VirtualKey::OemPlus, false, false, false, Gizmo::Hotkey_IncrStep, "Gizmo: Increase Step");
+        @hk_DecrStep = AddHotkey(VirtualKey::OemMinus, false, false, false, Gizmo::Hotkey_DecrStep, "Gizmo: Decrease Step");
     }
 
     UI::InputBlocking Hotkey_Apply() {
         if (IsActive) {
-            if (IsShiftDown() ^^ S_Gizmo_InvertApplyModifier) {
-                _GizmoOnApplyAndContinue();
-            } else {
-                _GizmoOnApply();
-            }
+            bool andCont = IsShiftDown() ^^ S_Gizmo_InvertApplyModifier;
+            gizmo.RunApply(andCont);
         }
         return UI::InputBlocking::DoNothing;
     }
@@ -732,6 +745,16 @@ namespace Gizmo {
         if (IsActive) gizmo.Undo();
         return UI::InputBlocking::DoNothing;
     }
+
+    UI::InputBlocking Hotkey_IncrStep() {
+        if (IsActive) gizmo.IncrStep();
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_DecrStep() {
+        if (IsActive) gizmo.DecrStep();
+        return UI::InputBlocking::DoNothing;
+    }
 }
 
 // MARK: Settings
@@ -740,7 +763,7 @@ namespace Gizmo {
 bool S_Gizmo_MoveCameraOnStart = true;
 
 #if DEV
-bool D_Gizmo_DrawBoundingBox = true;
+bool D_Gizmo_DrawBoundingBox = false;
 #else
 bool D_Gizmo_DrawBoundingBox = false;
 #endif

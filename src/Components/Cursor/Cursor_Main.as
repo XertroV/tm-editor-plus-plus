@@ -62,6 +62,7 @@ class CursorPosition : Tab {
         if (S_AutoActivateCustomRotations) CustomCursorRotations::Active = true;
         if (S_AutoActivateCustomYaw) CustomCursorRotations::CustomYawActive = true;
         if (S_AutoApplyFreeWaterBlocksPatch) CustomCursor::AllowFreeWaterBlocksPatchActive = true;
+        if (S_DoNotOffsetBlockInCursorPreview) CustomCursor::DoNotOffsetBlockInCursorPreview_Active = true;
     }
 
     bool get_windowOpen() override property {
@@ -579,6 +580,12 @@ class CustomCursorTab : EffectTab {
             CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
         }
 
+        wasActive = CustomCursor::DoNotOffsetBlockInCursorPreview_Active;
+        CustomCursor::DoNotOffsetBlockInCursorPreview_Active = UI::Checkbox("Do Not Offset Block in Cursor Preview", CustomCursor::DoNotOffsetBlockInCursorPreview_Active);
+        if (wasActive != CustomCursor::DoNotOffsetBlockInCursorPreview_Active) {
+            S_DoNotOffsetBlockInCursorPreview = CustomCursor::DoNotOffsetBlockInCursorPreview_Active;
+        }
+
         // -----------------
         UI::SeparatorText("Free Blocks");
 
@@ -762,6 +769,9 @@ bool S_BlockCursorShowQuads = true;
 
 [Setting hidden]
 bool S_BlockCursorShowLines = true;
+
+[Setting hidden]
+bool S_DoNotOffsetBlockInCursorPreview = false;
 
 
 namespace CustomCursorRotations {
@@ -1194,6 +1204,21 @@ namespace CustomCursor {
         set {
             Patch_AllowFreeWaterBlocks.IsApplied = value;
             Patch_AllowFreeWaterMacroBlocks.IsApplied = value;
+        }
+    }
+
+    MemPatcher@ Patch_DoNotOffsetBlockInCursorPreview = MemPatcher(
+        // mov eax,[rdx+108]; movss xmm0,[rdx+f8] -- only 1 instance in TM
+        "8B 82 08 01 00 00 F3 0F 10 82 F8 00 00 00",
+        {6}, {"0F 57 C0 90 90 90 90 90"}
+    );
+
+    bool DoNotOffsetBlockInCursorPreview_Active {
+        get {
+            return Patch_DoNotOffsetBlockInCursorPreview.IsApplied;
+        }
+        set {
+            Patch_DoNotOffsetBlockInCursorPreview.IsApplied = value;
         }
     }
 

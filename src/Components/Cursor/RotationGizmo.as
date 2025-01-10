@@ -76,6 +76,7 @@ class GizmoState {
     vec3 pos;
     mat4 rot;
     vec3 pivotPoint;
+    uint nbPlaced = 0;
     GizmoState(const vec3 &in pos, const mat4 &in rot, const vec3 &in pivotPoint) {
         this.pos = pos;
         this.rot = rot;
@@ -86,8 +87,14 @@ class GizmoState {
     string ToString() {
         return "GizmoState(pos: " + pos.ToString() + "rot: mat4, " + " pivot: " + pivotPoint.ToString() + ")";
     }
+
+    mat4 GetMatrix() {
+        return mat4::Translate(pos) * mat4::Inverse(rot) * mat4::Translate(pivotPoint * -1.);
+    }
 }
 
+[Setting hidden]
+float S_Gizmo_StepRot = PI/48.;
 
 class RotationTranslationGizmo {
     // drawing gizmo
@@ -109,8 +116,6 @@ class RotationTranslationGizmo {
 
     GizmoState[] history;
 
-    float stepRot = PI/32.;
-
     // roughly: size in meters of target object. set via WithBoundingBox. used to scale gizmo
     float scale = 1.0;
     // increase scale by this ratio so it's a bit bigger than the target
@@ -118,6 +123,7 @@ class RotationTranslationGizmo {
 
     CoroutineFunc@ onExit = function() {};
     CoroutineFunc@ onApply = function() {};
+    CoroutineFunc@ onApplyAndCont = function() {};
 
     RotationTranslationGizmo(const string &in name) {
         this.name = name;
@@ -128,6 +134,11 @@ class RotationTranslationGizmo {
 
     RotationTranslationGizmo@ WithOnApplyF(CoroutineFunc@ f) {
         @onApply = f;
+        return this;
+    }
+
+    RotationTranslationGizmo@ WithOnApplyAndContinueF(CoroutineFunc@ f) {
+        @onApplyAndCont = f;
         return this;
     }
 
@@ -157,6 +168,10 @@ class RotationTranslationGizmo {
             return;
         }
         auto last = history[history.Length - 1];
+        while (last.nbPlaced > 0) {
+            cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType.Undo();
+            last.nbPlaced--;
+        }
         pos = last.pos;
         rot = last.rot;
         pivotPoint = last.pivotPoint;
@@ -264,6 +279,11 @@ class RotationTranslationGizmo {
         return this;
     }
 
+    RotationTranslationGizmo@ AddTmpRotation(const mat4 &in m) {
+        tmpRot = m * tmpRot;
+        return this;
+    }
+
     RotationTranslationGizmo@ AddTmpTranslation(const vec3 &in t, bool rotateToLocal = false) {
         if (rotateToLocal) {
             tmpPos += (mat4::Inverse(rot) * t).xyz;
@@ -284,8 +304,8 @@ class RotationTranslationGizmo {
         return this;
     }
 
-    RotationTranslationGizmo@ ApplyTmpRotation() {
-        if (tmpRotationAngle != 0.) history.InsertLast(GetState());
+    RotationTranslationGizmo@ ApplyTmpRotation(bool addUndoState = true) {
+        if (addUndoState && tmpRotationAngle != 0.) history.InsertLast(GetState());
         rot = tmpRot * rot;
         tmpRot = mat4::Identity();
         tmpRotationAngle = 0.;
@@ -577,7 +597,7 @@ class RotationTranslationGizmo {
                         if (isRotMode) {
                             d = mag;
                             if (_isCtrlDown) {
-                                d = LockToAngles(tmpRotationAngle + d, stepRot) - tmpRotationAngle;
+                                d = LockToAngles(tmpRotationAngle + d, S_Gizmo_StepRot) - tmpRotationAngle;
                             }
                             if (d == 0.) skipSetLastDD = true;
                             else AddTmpRotation(lastClosestAxis, d, !useGlobal);
@@ -707,11 +727,11 @@ class RotationTranslationGizmo {
             return "UNKNOWN componentIx == " + componentIx;
         }
         if (mode == Gizmo::Mode::Rotation) {
-            bool veryCloseToSteppedRotation = ((Math::Abs(tmpRotationAngle) + 0.005) % stepRot) < 0.01;
+            bool veryCloseToSteppedRotation = ((Math::Abs(tmpRotationAngle) + 0.005) % S_Gizmo_StepRot) < 0.01;
             string ret = tostring(Math::Round(Math::ToDeg(tmpRotationAngle), 1)) + " °";
             if (_isCtrlDown && veryCloseToSteppedRotation) {
-                auto revolutionParts = int(Math::Round(TAU / stepRot));
-                auto part = int(Math::Round(tmpRotationAngle / stepRot));
+                auto revolutionParts = int(Math::Round(TAU / S_Gizmo_StepRot));
+                auto part = int(Math::Round(tmpRotationAngle / S_Gizmo_StepRot));
                 int2 frac = SimplifyFraction(part, revolutionParts);
                 ret += " = " + part + " / " + revolutionParts + " revs = " + frac.x + " / " + frac.y;
             } else if (_isCtrlDown && IsCloseToSpecialAngle(tmpRotationAngle)) {
@@ -761,6 +781,46 @@ class RotationTranslationGizmo {
         return pivotAnimator !is null ? destinationPivotPoint : pivotPoint;
     }
 
+
+    void IncrStep() {
+        if (mode == Gizmo::Mode::Rotation) {
+            if (S_Gizmo_StepRot > PI / 49.) return;
+            S_Gizmo_StepRot *= 2.0;
+            ShowRotStepStatusMsg();
+        } else if (mode == Gizmo::Mode::Translation) {
+            if (S_Gizmo_TranslateCtrlStepDist > 33) return;
+            S_Gizmo_TranslateCtrlStepDist *= 2.0;
+            ShowMoveStepStatusMsg();
+        }
+    }
+
+    void DecrStep() {
+        if (mode == Gizmo::Mode::Rotation) {
+            if (S_Gizmo_StepRot < PI / 1000.) return;
+            S_Gizmo_StepRot /= 2.0;
+            ShowRotStepStatusMsg();
+        } else if (mode == Gizmo::Mode::Translation) {
+            if (S_Gizmo_TranslateCtrlStepDist < 0.05) return;
+            S_Gizmo_TranslateCtrlStepDist /= 2.0;
+            ShowMoveStepStatusMsg();
+        }
+    }
+
+    void ShowRotStepStatusMsg() {
+        ShowStatusMsg("Rot Step: " + Math::Round(Math::ToDeg(S_Gizmo_StepRot), 2) + " °");
+    }
+
+    void ShowMoveStepStatusMsg() {
+        ShowStatusMsg("Move Step: " + Math::Round(S_Gizmo_TranslateCtrlStepDist, 2) + " m");
+    }
+
+    TempNvgText@ statusMsg;
+
+    void ShowStatusMsg(const string &in msg) {
+        if (statusMsg !is null) statusMsg.Destroy();
+        @statusMsg = TempNvgText(msg);
+    }
+
     // MARK: Draw All
 
     void DrawAll() {
@@ -782,7 +842,10 @@ class RotationTranslationGizmo {
         if (posToScreen.x < 20 || posToScreen.x > g_screen.x - 20 || posToScreen.y < 20 || posToScreen.y > g_screen.y - 20) return;
 
         DrawCirclesManual(pos, scale * scaleExtraCoef);
+#if DEV
         DrawBoundingBox();
+        DrawNextApplicationPreview();
+#endif
     }
 
     void Render() {
@@ -795,7 +858,8 @@ class RotationTranslationGizmo {
         bool isRotMode = mode == Gizmo::Mode::Rotation;
         auto btnSize = Math::Max(64.0, g_screen.y * .05) * g_scale;
         auto btnSize2 = vec2(btnSize);
-        auto nbBtns = 7.;
+        auto btnSize2Thinner = btnSize2 * vec2(0.75, 1.);
+        auto nbBtns = 8.5;
         auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
 
@@ -822,12 +886,12 @@ class RotationTranslationGizmo {
 
             UI::SameLine();
             if (UI::Button("Pivot\n   "+Icons::Refresh, btnSize2)) {
-                CyclePivot();
-            }
-            if (UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Right)) {
                 UI::OpenPopup("gizmo-toolbar-edit-pivot");
             }
-            AddSimpleTooltip("Cycle Pivot (RMB to edit)" + NewIndicator);
+            if (UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Right)) {
+                CyclePivot();
+            }
+            AddSimpleTooltip("Edit Pivot (RMB to cycle)" + NewIndicator);
 
             UI::SameLine();
             if (UI::Button(Icons::Camera, btnSize2)) {
@@ -836,14 +900,28 @@ class RotationTranslationGizmo {
             AddSimpleTooltip("Reset Camera");
 
             UI::SameLine();
+            UI::BeginDisabled(!CanRepeatAppDiff);
+            if (UI::Button(Icons::Repeat, btnSize2Thinner)) {
+                RepeatLastApplicationDiff();
+            }
+            AddSimpleTooltip("Repeat Last Difference" + NewIndicator);
+            UI::EndDisabled();
+
+            UI::SameLine();
             if (UI::Button(Icons::Cog, btnSize2)) {
                 UI::OpenPopup("gizmo-toolbar-settings");
             }
             AddSimpleTooltip("Settings" + NewIndicator);
 
             UI::SameLine();
+            if (UI::Button(Icons::Undo, btnSize2Thinner)) {
+                Undo();
+            }
+            AddSimpleTooltip("Undo");
+
+            UI::SameLine();
             if (UI::Button(Icons::Check, btnSize2)) {
-                onApply();
+                RunApply(false);
             }
             AddSimpleTooltip("Apply");
 
@@ -933,7 +1011,25 @@ class RotationTranslationGizmo {
             if (UX::ButtonSameLine("0.25##gzts")) S_Gizmo_TranslateCtrlStepDist = 0.25;
             if (UX::ButtonSameLine("1.0##gzts")) S_Gizmo_TranslateCtrlStepDist = 1.0;
             if (UX::ButtonSameLine("2.0##gzts")) S_Gizmo_TranslateCtrlStepDist = 2.0;
+            if (UX::ButtonSameLine("4.0##gzts")) S_Gizmo_TranslateCtrlStepDist = 4.0;
             if (UI::Button("8.0##gzts")) S_Gizmo_TranslateCtrlStepDist = 8.0;
+
+            UI::SeparatorText("Rotate");
+            UI::Text("Current Rotation Step: " + Text::Format("%.2f", Math::ToDeg(S_Gizmo_StepRot)) + " ° (" + (Math::Round(TAU  / S_Gizmo_StepRot, 1)) + " steps per revolution)");
+
+            UI::BeginDisabled(S_Gizmo_StepRot > PI / 49.);
+            if (UX::ButtonSameLine("Increase Step Size")) {
+                IncrStep();
+            }
+            UI::EndDisabled();
+            UI::BeginDisabled(S_Gizmo_StepRot < PI / 1000.);
+            if (UX::ButtonSameLine("Decrease Step Size")) {
+                DecrStep();
+            }
+            UI::EndDisabled();
+            if (UI::Button("Reset##stepRot")) {
+                S_Gizmo_StepRot = PI / 48.;
+            }
 
             UI::SeparatorText("Initialization");
             UI::Text("Ctrl + Shift + LMB: Edit picked block/item.");
@@ -956,7 +1052,7 @@ class RotationTranslationGizmo {
             UI::SeparatorText("Help");
             UI::Text("Problem: \\$iBlocks appear 25cm too high");
             UI::Indent();
-            UI::TextWrapped("Solution: Set \"FreeBlock Vertical Offset\" under *Custom Cursor* tab to 0. Then select a new block to refresh cursor and try again.");
+            UI::TextWrapped("Solution: Exit gizmo. Under the \\$<\\$8f8Custom Cursor\\$> tab: Enable \"Do Not Offset Block in Cursor Preview\" (might reset if done from gizmo mode), and set \"FreeBlock Vertical Offset\" to 0. Then select a new block in ghost mode to refresh cursor and try again.");
             UI::Unindent();
 
             UX::CloseCurrentPopupIfMouseFarAway();
@@ -1132,6 +1228,86 @@ class RotationTranslationGizmo {
         return v < 0. ? -1. : 1.;
     }
 
+    // MARK: $store Macros
+
+    GizmoState@ appliedL;
+    GizmoState@ appliedL2;
+
+    void SaveAppliedPosition() {
+        if (appliedL2 is null) {
+            @appliedL2 = GetState();
+        } else if (appliedL is null) {
+            @appliedL = GetState();
+        } else {
+            @appliedL2 = appliedL;
+            @appliedL = GetState();
+        }
+    }
+
+    bool get_CanRepeatAppDiff() {
+        return appliedL !is null && appliedL2 !is null;
+    }
+
+    void RepeatLastApplicationDiff() {
+        if (!CanRepeatAppDiff) return;
+        auto next = GetNextApplicationMat();
+        auto unPivoted = next * mat4::Translate(pivotPoint);
+        auto newPos = vec3(unPivoted.tx, unPivoted.ty, unPivoted.tz);
+        auto newRot = mat4::Inverse(mat4::Translate(newPos * -1.) * unPivoted);
+        pos = newPos;
+        rot = newRot;
+        history.InsertLast(GetState());
+        RunApply(true);
+        FocusCameraOn(pos, false);
+    }
+
+    mat4 GetNextApplicationMat() {
+        if (!CanRepeatAppDiff) return mat4::Identity();
+        // each matrix is made up of a translation, a rotation, and a pivot point
+        // note: we need to rotate the change in position by the rotation so twisting repetitions work.
+        // get lPos relative to l2Pos in local space
+        auto aLMat = appliedL.GetMatrix();
+        // return (aLMat * mat4::Inverse(appliedL2.GetMatrix())) * aLMat;
+        return aLMat * mat4::Inverse(appliedL2.GetMatrix()) * aLMat;
+    }
+
+    void DrawNextApplicationPreview() {
+        if (!D_Gizmo_DrawBoundingBox) return;
+        if (appliedL2 is null) return;
+        nvgDrawBlockBox(appliedL2.GetMatrix(), bbHalfDiag*2, cLimeGreen50);
+        if (appliedL is null) return;
+        nvgDrawBlockBox(appliedL.GetMatrix(), bbHalfDiag*2, cOrange);
+        auto mDelta = appliedL.GetMatrix() * mat4::Inverse(appliedL2.GetMatrix());
+
+        auto next1 = mDelta * appliedL.GetMatrix();
+        nvgDrawBlockBox(next1, bbHalfDiag*2, cRed);
+        auto next2 = mDelta * next1;
+        nvgDrawBlockBox(next2, bbHalfDiag*2, cBlue);
+        nvgDrawBlockBox(GetNextApplicationMat() * mat4::Translate(-1.), bbHalfDiag*2, cYellow);
+
+        auto n1Pos = vec3(next1.tx, next1.ty, next1.tz);
+        auto unPivoted = next1 * mat4::Translate(pivotPoint);
+        auto newPos = vec3(unPivoted.tx, unPivoted.ty, unPivoted.tz);
+        nvgDrawPointRing(n1Pos, 5., cRed);
+        nvgDrawPointRing(newPos, 5., cYellow);
+        auto newRot = (mat4::Translate(newPos * -1.) * unPivoted);
+
+    }
+
+    void RunApply(bool andCont = false) {
+        ApplyTmpRotation();
+        ApplyTmpTranslation();
+        SaveAppliedPosition();
+        if (history.Length > 0) {
+            history[history.Length - 1].nbPlaced++;
+        }
+        if (andCont) {
+            onApplyAndCont();
+        } else {
+            onApply();
+        }
+    }
+
 #if DEV
     void DrawDebugWindow() {
         if (UI::Begin("Gizmo Debug", UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
@@ -1159,6 +1335,10 @@ class RotationTranslationGizmo {
 
             UI::SeparatorText("Rendering");
             UI::Text("scale: " + scale);
+
+            UI::SeparatorText("Repeat");
+            UI::Text(appliedL !is null ? "AppliedL: " + appliedL.ToString() : "AppliedL: null");
+            UI::Text(appliedL2 !is null ? "AppliedL2: " + appliedL2.ToString() : "AppliedL2: null");
         }
         UI::End();
     }

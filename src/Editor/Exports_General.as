@@ -58,4 +58,6 @@ namespace Editor {
     // pivot
     import uint GetCurrentPivot(CGameCtnEditorFree@ editor) from "Editor";
     import void SetCurrentPivot(CGameCtnEditorFree@ editor, uint pivot) from "Editor";
+
+    import bool IsGizmoActive() from "Editor";
 }

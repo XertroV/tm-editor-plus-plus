@@ -172,8 +172,8 @@ UI::InputBlocking CheckHotkey(bool down, VirtualKey key, bool isEditor = true) {
     dev_trace('ctrl: ' + ctrlDown + ", alt: " + altDown + ", shift: " + shiftDown);
     auto h = GetHotkey(key, ctrlDown, altDown, shiftDown);
     // if no hotkey + shift down, check for anyModifer
-    if (h is null && shiftDown) {
-        @h = GetHotkey(key, ctrlDown, altDown, false);
+    if (h is null && (shiftDown || altDown || ctrlDown)) {
+        @h = GetHotkey(key, false, false, false);
         if (h !is null && !h.anyModifier) {
             return UI::InputBlocking::DoNothing;
         }
@@ -217,6 +217,9 @@ string HotkeyKey(VirtualKey key, bool ctrl, bool alt, bool shift) {
 // register hotkey in the dict
 Hotkey@ AddHotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name, bool anyModifier = false, bool editorOnly = true) {
     auto @h = Hotkey(key, ctrl, alt, shift, f, name, anyModifier, editorOnly);
+    if (hotkeys.Exists(h.keyStr)) {
+        NotifyWarning("Hotkey already exists; might clobber: " + h.keyStr);
+    }
     hotkeyList.InsertLast(h);
     @hotkeys[h.keyStr] = h;
     hotkeysFlags[int(key)] = true;
@@ -224,6 +227,9 @@ Hotkey@ AddHotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunctio
 }
 
 void UpdateHotkey(Hotkey@ h) {
+    if (hotkeys.Exists(h.keyStr)) {
+        NotifyWarning("Hotkey already exists; might clobber: " + h.keyStr);
+    }
     @hotkeys[h.keyStr] = h;
     hotkeysFlags[int(h.key)] = true;
 }
