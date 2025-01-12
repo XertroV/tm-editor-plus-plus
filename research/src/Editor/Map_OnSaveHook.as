@@ -1,19 +1,36 @@
-// namespace HookOnMapSave {
-//     const string SAVE_MAP_PATTERN = "48 8B D7 49 8B CF E8 ?? ?? ?? ?? 44 8B F8 85 C0 75";
-//     FunctionHookHelper@ saveMapHook = FunctionHookHelper(
-//         SAVE_MAP_PATTERN,
-//         6, 0, "HookOnMapSave::_Before_OnMapSave",
-//         Dev::PushRegisters::Basic
-//     );
+namespace HookOnMapSave {
+    // ! not sure what I was hooking here. Isn't triggered in latest game ver.
+    // const string SAVE_MAP_PATTERN = "48 8B D7 49 8B CF E8 ?? ?? ?? ?? 44 8B F8 85 C0 75";
+    // FunctionHookHelper@ saveMapHook = FunctionHookHelper(
+    //     SAVE_MAP_PATTERN,
+    //     6, 0, "HookOnMapSave::_Before_OnMapSave",
+    //     Dev::PushRegisters::Basic
+    // );
 
-//     HookHelper@ afterSaveMapHook = HookHelper(
-//         SAVE_MAP_PATTERN,
-//         11, 0, "HookOnMapSave::_After_OnMapSave",
-//         Dev::PushRegisters::Basic
-//     );
+    // HookHelper@ afterSaveMapHook = HookHelper(
+    //     SAVE_MAP_PATTERN,
+    //     11, 0, "HookOnMapSave::_After_OnMapSave",
+    //     Dev::PushRegisters::Basic
+    // );
 
-//     // void _Before_OnMapSave()
-// }
+    void _Before_OnMapSave() {
+        dev_trace("HookOnMapSave::_Before_OnMapSave");
+    }
+
+    void _After_OnMapSave() {
+        dev_trace("HookOnMapSave::_After_OnMapSave");
+    }
+
+    void OnEnterEditor() {
+        // saveMapHook.Apply();
+        // afterSaveMapHook.Apply();
+    }
+
+    void OnEditorLeave() {
+        // saveMapHook.Unapply();
+        // afterSaveMapHook.Unapply();
+    }
+}
 
 
 /*

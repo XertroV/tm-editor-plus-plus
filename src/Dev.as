@@ -1424,12 +1424,15 @@ class HookHelper {
     }
 
     void FindPatternPtr() {
-        if (patternPtr == 0) patternPtr = Dev::FindPattern(pattern);
+        if (patternPtr == 0) {
+            patternPtr = Dev::FindPattern(pattern);
+            dev_trace("Found pattern ( "+pattern+" ) for " + functionName + ": " + Text::FormatPointer(patternPtr));
+        }
     }
 
     bool Apply() {
         if (hookInfo !is null) return false;
-        if (patternPtr == 0) patternPtr = Dev::FindPattern(pattern);
+        if (patternPtr == 0) FindPatternPtr();
         if (patternPtr == 0) {
             warn_every_60_s("Failed to apply hook for " + functionName + " (pattern ptr == 0)");
             return false;
@@ -1474,8 +1477,8 @@ class FunctionHookHelper : HookHelper {
     protected int32 origCallRelOffset;
     protected uint64 cavePtr;
 
-    FunctionHookHelper(const string &in pattern, uint offset, uint padding, const string &in functionName, Dev::PushRegisters pushRegs = Dev::PushRegisters::SSE) {
-        super(pattern, offset, padding, functionName, pushRegs);
+    FunctionHookHelper(const string &in pattern, uint offset, uint padding, const string &in functionName, Dev::PushRegisters pushRegs = Dev::PushRegisters::SSE, bool findPtrEarly = false) {
+        super(pattern, offset, padding, functionName, pushRegs, findPtrEarly);
     }
 
     bool Apply() override {

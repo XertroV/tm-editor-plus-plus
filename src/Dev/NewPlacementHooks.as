@@ -16,6 +16,7 @@ namespace PlacementHooks {
         0, 0, "PlacementHooks::OnItemDeleted_Rdx", Dev::PushRegisters(0)
     );
 
+    // rbp: map
     HookHelper@ OnBlockPlacedHook = HookHelper(
         "E8 ?? ?? ?? ?? 48 8B 9C 24 ?? ?? 00 00 C7 85 ?? ?? 00 00 01 00 00 00 48 85 DB",
         // E8 02 11 64 FF 48 8B 9C 24 28 01 00 00 C7 85 00 06 00 00 01 00 00 00 48 85 DB
@@ -260,7 +261,11 @@ namespace PlacementHooks {
         dev_trace("OnAddBlockHook! rdx : " + Text::FormatPointer(rdx));
 #endif
 #if WINDOWS_WINE
-        trace("OnAddBlockHook, wine detected.");
+        // trace("OnAddBlockHook, wine detected.");
+        if (rdx < 0xffffff) {
+            // pointer looks bad
+            return;
+        }
 #else
         if (rdx < 0x1000FFFF || rdx > 0xFFF0000FFFF) {
             // pointer looks bad
@@ -289,6 +294,21 @@ namespace PlacementHooks {
             return;
         }
         Event::OnNewBlock(block);
+    }
+
+
+
+
+
+    bool Debug_OnBlockPlaced(CGameCtnBlock@ b) {
+        if (b is null) {
+            warn("Debug_OnBlockPlaced: block is null");
+        } else if (b.BlockModel is null) {
+            warn("Debug_OnBlockPlaced: block.BlockModel is null");
+        } else {
+            dev_trace("Debug_OnBlockPlaced: block.BlockModel: " + b.BlockModel.NameE);
+        }
+        return false;
     }
 }
 
@@ -402,5 +422,75 @@ Trackmania.exe.text+12D263D - CC                    - int 3
     Trackmania.exe.text+F8B449 - 74 0A                 - je Trackmania.exe.text+F8B455
     Trackmania.exe.text+F8B44B - C7 80 98000000 04000000 - mov [rax+00000098],00000004 { 4 }
     Trackmania.exe.text+F8B455 - 85 ED                 - test ebp,ebp
+
+
+
+--- grass
+
+function that adds baked blocks for grass to map:
+
+Trackmania.exe.text+B1F421 - 48 8D 15 00E40D01     - lea rdx,[Trackmania.exe.rdata+2C0828] { ("CGameCtnChallenge::UpdateBakedBlockList") }
+
+--
+
+Trackmania.exe.text+BA4440 - 83 BF 64020000 00     - cmp dword ptr [rdi+00000264],00 { 0 }
+Trackmania.exe.text+BA4447 - 0F10 00               - movups xmm0,[rax]
+Trackmania.exe.text+BA444A - 0F11 87 50080000      - movups [rdi+00000850],xmm0
+Trackmania.exe.text+BA4451 - 74 08                 - je Trackmania.exe.text+BA445B
+Trackmania.exe.text+BA4453 - 48 8B CF              - mov rcx,rdi
+Trackmania.exe.text+BA4456 - E8 95AFF7FF           - call Trackmania.exe.text+B1F3F0 { calls UpdateBakedBlocks
+ }
+Trackmania.exe.text+BA445B - 48 8B CF              - mov rcx,rdi
+Trackmania.exe.text+BA445E - E8 CDB3F7FF           - call Trackmania.exe.text+B1F830
+Trackmania.exe.text+BA4463 - 41 8B D6              - mov edx,r14d
+Trackmania.exe.text+BA4466 - 48 8B CF              - mov rcx,rdi
+Trackmania.exe.text+BA4469 - E8 428DFFFF           - call Trackmania.exe.text+B9D1B0
+Trackmania.exe.text+BA446E - 45 85 F6              - test r14d,r14d
+Trackmania.exe.text+BA4471 - 75 0A                 - jne Trackmania.exe.text+BA447D
+Trackmania.exe.text+BA4473 - C7 87 64020000 01000000 - mov [rdi+00000264],00000001 { 1 }
+Trackmania.exe.text+BA447D - 8B 54 24 50           - mov edx,[rsp+50]
+
+--
+
+in UpdateBakedBlocksList
+
+Trackmania.exe.text+B1F49E - 48 8B D3              - mov rdx,rbx
+Trackmania.exe.text+B1F4A1 - E8 9AFEFFFF           - call Trackmania.exe.text+B1F340
+Trackmania.exe.text+B1F4A6 - 85 C0                 - test eax,eax
+Trackmania.exe.text+B1F4A8 - 0F85 5F010000         - jne Trackmania.exe.text+B1F60D
+Trackmania.exe.text+B1F4AE - 48 8B D3              - mov rdx,rbx
+Trackmania.exe.text+B1F4B1 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+B1F4B4 - E8 475864FF           - call Trackmania.exe.text+164D00 { adds the thing to array
+ }
+Trackmania.exe.text+B1F4B9 - 48 8B CB              - mov rcx,rbx
+Trackmania.exe.text+B1F4BC - E8 5FC51900           - call Trackmania.exe.text+CBBA20
+Trackmania.exe.text+B1F4C1 - 85 C0                 - test eax,eax
+Trackmania.exe.text+B1F4C3 - 0F84 44010000         - je Trackmania.exe.text+B1F60D
+Trackmania.exe.text+B1F4C9 - 48 8B CB              - mov rcx,rbx
+
+---------
+
+update baked blocks when loading map
+
+Trackmania.exe.text+B1D300 - C7 44 24 40 06000000  - mov [rsp+40],00000006 { 6 }
+Trackmania.exe.text+B1D308 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+B1D30B - E8 F0BC60FF           - call Trackmania.exe.text+129000
+Trackmania.exe.text+B1D310 - 8B 1D B69B3101        - mov ebx,[Trackmania.exe.data+CECC] { (2.00) }
+Trackmania.exe.text+B1D316 - 39 7E 10              - cmp [rsi+10],edi
+Trackmania.exe.text+B1D319 - 74 6B                 - je Trackmania.exe.text+B1D386
+Trackmania.exe.text+B1D31B - 41 83 BE 74020000 02  - cmp dword ptr [r14+00000274],02 { 2 }
+Trackmania.exe.text+B1D323 - 75 08                 - jne Trackmania.exe.text+B1D32D
+Trackmania.exe.text+B1D325 - 49 8B CE              - mov rcx,r14
+Trackmania.exe.text+B1D328 - E8 C3200000           - call Trackmania.exe.text+B1F3F0 { calls UpdateBakedBlocksList
+ }
+Trackmania.exe.text+B1D32D - 41 8B 86 90020000     - mov eax,[r14+00000290]
+Trackmania.exe.text+B1D334 - 48 8D 54 24 30        - lea rdx,[rsp+30]
+Trackmania.exe.text+B1D339 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe.text+B1D33C - 89 44 24 30           - mov [rsp+30],eax
+Trackmania.exe.text+B1D340 - E8 BBBC60FF           - call Trackmania.exe.text+129000
+Trackmania.exe.text+B1D345 - 44 8B FF              - mov r15d,edi
+Trackmania.exe.text+B1D348 - 39 7C 24 30           - cmp [rsp+30],edi
+Trackmania.exe.text+B1D34C - 0F86 1E010000         - jbe Trackmania.exe.text+B1D470
+Trackmania.exe.text+B1D352 - 49 8B 8E 88020000     - mov rcx,[r14+00000288]
 
 */

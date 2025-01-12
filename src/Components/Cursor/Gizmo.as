@@ -662,6 +662,7 @@ namespace Gizmo {
     Hotkey@ hk_CenterPivot;
     Hotkey@ hk_IncrStep;
     Hotkey@ hk_DecrStep;
+    Hotkey@ hk_SwapMode;
 
     void SetupGizmoHotkeysOnPluginStart() {
         @hk_Apply = AddHotkey(VirtualKey::Space, false, false, false, Gizmo::Hotkey_Apply, "Gizmo: Apply / Place", true);
@@ -678,6 +679,7 @@ namespace Gizmo {
         @hk_CenterPivot = AddHotkey(VirtualKey::F, false, false, false, Gizmo::Hotkey_CenterPivot, "Gizmo: Center Pivot");
         @hk_IncrStep = AddHotkey(VirtualKey::OemPlus, false, false, false, Gizmo::Hotkey_IncrStep, "Gizmo: Increase Step");
         @hk_DecrStep = AddHotkey(VirtualKey::OemMinus, false, false, false, Gizmo::Hotkey_DecrStep, "Gizmo: Decrease Step");
+        @hk_SwapMode = AddHotkey(VirtualKey::R, false, false, false, Gizmo::Hotkey_SwapMode, "Gizmo: Swap Rot/Move Mode");
     }
 
     UI::InputBlocking Hotkey_Apply() {
@@ -753,6 +755,11 @@ namespace Gizmo {
 
     UI::InputBlocking Hotkey_DecrStep() {
         if (IsActive) gizmo.DecrStep();
+        return UI::InputBlocking::DoNothing;
+    }
+
+    UI::InputBlocking Hotkey_SwapMode() {
+        if (IsActive) gizmo.SwapMode();
         return UI::InputBlocking::DoNothing;
     }
 }

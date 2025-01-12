@@ -556,8 +556,7 @@ class RotationTranslationGizmo {
                 mouseDownPos = mousePos;
                 ResetTmp();
             } else if (UI::IsMouseClicked(UI::MouseButton::Right) && mouseInClickRange && !IsAltDown()) {
-                mode = isRotMode ? Gizmo::Mode::Translation : Gizmo::Mode::Rotation;
-                ResetTmp();
+                SwapMode(); // calls ResetTmp()
             }
         } else if (!IsLMBPressed()) {
             isMouseDown = false;
@@ -821,6 +820,13 @@ class RotationTranslationGizmo {
         @statusMsg = TempNvgText(msg);
     }
 
+
+    void SwapMode() {
+        mode = mode == Gizmo::Mode::Rotation ? Gizmo::Mode::Translation : Gizmo::Mode::Rotation;
+        ResetTmp();
+    }
+
+
     // MARK: Draw All
 
     void DrawAll() {
@@ -869,7 +875,7 @@ class RotationTranslationGizmo {
             // UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(g_screen.y * 0.005));
             UI::PushFont(g_BigFont);
             if (UI::Button(isRotMode ? Icons::Dribbble : Icons::ArrowsAlt, btnSize2)) {
-                mode = isRotMode ? Gizmo::Mode::Translation : Gizmo::Mode::Rotation;
+                SwapMode();
             }
             AddSimpleTooltip("Rotation or Translation?");
 
@@ -1110,14 +1116,14 @@ class RotationTranslationGizmo {
         Editor::SetCamAnimationGoTo(camState);
     }
 
-    void SetPivotAxisButton(Axis axis, string label, float relPos, bool isLast = false) {
+    void SetPivotAxisButton(Axis axis, const string &in label, float relPos, bool isLast = false) {
         if (UI::Button(label)) {
             MovePivotTo(axis, relPos);
         }
         if (!isLast) UI::SameLine();
     }
 
-    void SetPivotAxisButtonAbs(Axis axis, string label, float absPos, bool isLast = false) {
+    void SetPivotAxisButtonAbs(Axis axis, const string &in label, float absPos, bool isLast = false) {
         if (UI::Button(label)) {
             SetPivotPoint(AxisToVec(axis) * absPos + AxisToAntiVec(axis) * PivotPointOrDest);
         }
