@@ -25,7 +25,9 @@ namespace Editor {
     }
 
     void SetCamTargetedPosition(vec3 pos) {
-        cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType.CameraTargetPosition = pos;
+        // cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType.CameraTargetPosition = pos;
+        cast<CGameCtnEditorFree>(GetApp().Editor).OrbitalCameraControl.Pos = pos;
+
         // if (MathX::Within(pos, vec3(0), g_MapBounds)) {
         // } else {
         //     cast<CGameCtnEditorFree>(GetApp().Editor).OrbitalCameraControl.m_TargetedPosition = pos;
