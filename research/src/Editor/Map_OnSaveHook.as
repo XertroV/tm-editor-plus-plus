@@ -13,23 +13,23 @@ namespace HookOnMapSave {
     //     Dev::PushRegisters::Basic
     // );
 
-    void _Before_OnMapSave() {
-        dev_trace("HookOnMapSave::_Before_OnMapSave");
-    }
+    // void _Before_OnMapSave() {
+    //     dev_trace("HookOnMapSave::_Before_OnMapSave");
+    // }
 
-    void _After_OnMapSave() {
-        dev_trace("HookOnMapSave::_After_OnMapSave");
-    }
+    // void _After_OnMapSave() {
+    //     dev_trace("HookOnMapSave::_After_OnMapSave");
+    // }
 
-    void OnEnterEditor() {
-        // saveMapHook.Apply();
-        // afterSaveMapHook.Apply();
-    }
+    // void OnEnterEditor() {
+    //     // saveMapHook.Apply();
+    //     // afterSaveMapHook.Apply();
+    // }
 
-    void OnEditorLeave() {
-        // saveMapHook.Unapply();
-        // afterSaveMapHook.Unapply();
-    }
+    // void OnEditorLeave() {
+    //     // saveMapHook.Unapply();
+    //     // afterSaveMapHook.Unapply();
+    // }
 }
 
 

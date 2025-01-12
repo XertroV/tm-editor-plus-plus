@@ -538,6 +538,8 @@ TabGroup@ CreateToolsTabGroup() {
     @g_CursorPositionWindow = CursorPosition(tools);
     @g_CoordPathDrawingTool = CoordPathDrawingTab(tools);
     @g_ItemPlacementToolbar = CurrentItem_PlacementToolbar(tools);
+    @g_BlockPlacementToolbar = CurrentBlock_PlacementToolbar(tools);
+    @g_MbPlacementToolbar = CurrentMacroblock_PlacementToolbar(tools);
     // @g_MapBaseSizeChanger = MapBaseSizeChangerTab(tools);
     return tools;
 }
@@ -587,6 +589,8 @@ BI_MainTab@ g_BlocksItemsTab;
 InventorySearchTab@ g_InvSearchTab;
 NG::GraphTab@ g_GraphTab;
 CurrentItem_PlacementToolbar@ g_ItemPlacementToolbar;
+CurrentBlock_PlacementToolbar@ g_BlockPlacementToolbar;
+CurrentMacroblock_PlacementToolbar@ g_MbPlacementToolbar;
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();

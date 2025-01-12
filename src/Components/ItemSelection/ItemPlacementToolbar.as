@@ -67,32 +67,11 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
         @currItemModel = null;
     }
 
-    int get_WindowFlags() override {
-        return UI::WindowFlags::AlwaysAutoResize | UI::WindowFlags::NoCollapse | UI::WindowFlags::NoTitleBar;
+    bool ShouldShowWindow(CGameCtnEditorFree@ editor) override {
+        return S_ShowItemPlacementToolbar && Editor::IsInAnyItemPlacementMode(editor);
     }
 
-    bool get_windowOpen() override property {
-        auto app = GetApp();
-        auto editor = cast<CGameCtnEditorFree>(app.Editor);
-        return S_ShowItemPlacementToolbar
-            && editor !is null
-            && Editor::IsInAnyItemPlacementMode(editor)
-            && app.CurrentPlayground is null
-            && Tab::get_windowOpen();
-    }
-
-    void _BeforeBeginWindow() override {
-        UI::SetNextWindowPos(0, 400, UI::Cond::FirstUseEver);
-        UI::SetNextWindowSize(d_ToolbarBtnSize.x, d_ToolbarBtnSize.y, UI::Cond::Appearing);
-    }
-
-    void DrawInner() override {
-        UI::BeginDisabled(Gizmo::IsActive);
-        DrawInnerMain();
-        UI::EndDisabled();
-    }
-
-    void DrawInnerMain() {
+    void DrawInner_MainToolbar() override {
         auto pp = GetCurrPlacementParams();
         if (pp is null) {
             UI::Text("Select an item.");

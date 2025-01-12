@@ -12,23 +12,23 @@ namespace HookOnMapSave {
     //     Dev::PushRegisters::Basic, true
     // );
 
-    // void _Before_OnMapSave() {
-    //     dev_trace("HookOnMapSave::_Before_OnMapSave");
-    // }
+    void _Before_OnMapSave() {
+        dev_trace("HookOnMapSave::_Before_OnMapSave");
+    }
 
-    // void _After_OnMapSave() {
-    //     dev_trace("HookOnMapSave::_After_OnMapSave");
-    // }
+    void _After_OnMapSave() {
+        dev_trace("HookOnMapSave::_After_OnMapSave");
+    }
 
-    // void OnEnterEditor() {
+    void OnEnterEditor() {
     //     saveMapHook.Apply();
     //     afterSaveMapHook.Apply();
-    // }
+    }
 
-    // void OnEditorLeave() {
+    void OnEditorLeave() {
     //     saveMapHook.Unapply();
     //     afterSaveMapHook.Unapply();
-    // }
+    }
 
 
     /*

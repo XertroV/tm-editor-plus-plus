@@ -1,6 +1,9 @@
 funcdef bool ProcessItem(CGameCtnAnchoredObject@ item);
 funcdef bool ProcessBlock(CGameCtnBlock@ block);
 funcdef bool ProcessNewSelectedItem(CGameItemModel@ itemModel);
+funcdef void ProcessNewSelectedBlock(CGameCtnBlockInfo@ blockInfo);
+funcdef void ProcessNewSelectedMacroblock(CGameCtnMacroBlockInfo@ mbInfo);
+
 funcdef void OnEditorStartingFunc(bool editingElseNew);
 
 CoroutineFunc@[] onEditorLoadCbs;
@@ -27,6 +30,10 @@ ProcessBlock@[] blockDelCallbacks;
 string[] blockDelCallbackNames;
 ProcessNewSelectedItem@[] selectedItemChangedCbs;
 string[] selectedItemChangedCbNames;
+ProcessNewSelectedBlock@[] selectedBlockChangedCbs;
+string[] selectedBlockChangedCbNames;
+ProcessNewSelectedMacroblock@[] selectedMacroblockChangedCbs;
+string[] selectedMacroblockChangedCbNames;
 CoroutineFunc@[] onLeavingPlaygroundCbs;
 string[] onLeavingPlaygroundCbNames;
 CoroutineFunc@[] onEnteringPlaygroundCbs;
@@ -158,6 +165,21 @@ void RegisterItemChangedCallback(ProcessNewSelectedItem@ f, const string &in nam
         selectedItemChangedCbNames.InsertLast(name);
     }
 }
+
+void RegisterSelectedBlockChangedCallback(ProcessNewSelectedBlock@ f, const string &in name) {
+    if (f !is null) {
+        selectedBlockChangedCbs.InsertLast(f);
+        selectedBlockChangedCbNames.InsertLast(name);
+    }
+}
+
+void RegisterSelectedMacroblockChangedCallback(ProcessNewSelectedMacroblock@ f, const string &in name) {
+    if (f !is null) {
+        selectedMacroblockChangedCbs.InsertLast(f);
+        selectedMacroblockChangedCbNames.InsertLast(name);
+    }
+}
+
 
 void RegisterOnLeavingPlaygroundCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
@@ -374,6 +396,22 @@ namespace Event {
         Editor::Callbacks::Exts::Run_OnNewSelectedItem(itemModel);
         Log::Trace("Finished OnSelectedItemChanged");
     }
+    void OnSelectedBlockChanged(CGameCtnBlockInfo@ blockModel) {
+        Log::Trace("Running OnSelectedBlockChanged");
+        for (uint i = 0; i < selectedBlockChangedCbs.Length; i++) {
+            selectedBlockChangedCbs[i](blockModel);
+        }
+        // Editor::Callbacks::Exts::Run_OnNewSelectedBlock(blockModel);
+        Log::Trace("Finished OnSelectedBlockChanged");
+    }
+    void OnSelectedMacroblockChanged(CGameCtnMacroBlockInfo@ mbInfo) {
+        Log::Trace("Running OnSelectedMacroblockChanged");
+        for (uint i = 0; i < selectedMacroblockChangedCbs.Length; i++) {
+            selectedMacroblockChangedCbs[i](mbInfo);
+        }
+        // Editor::Callbacks::Exts::Run_OnNewSelectedMacroblock(mbInfo);
+        Log::Trace("Finished OnSelectedMacroblockChanged");
+    }
     void RunOnLeavingPlaygroundCbs() {
         Log::Trace("Running OnLeavingPlayground callbacks");
         for (uint i = 0; i < onLeavingPlaygroundCbs.Length; i++) {
@@ -504,6 +542,8 @@ uint m_LastNbItems = 0;
 
 
 uint _lastSelectedBlockInfoId = 0;
+uint _lastSelectedGhostBlockInfoId = 0;
+uint _lastSelectedMacroBlockInfoId = 0;
 uint _lastSelectedItemModelId = 0;
 
 void CheckForNewSelectedItem(CGameCtnEditorFree@ editor) {
@@ -513,5 +553,35 @@ void CheckForNewSelectedItem(CGameCtnEditorFree@ editor) {
     if (im.Id.Value != _lastSelectedItemModelId) {
         _lastSelectedItemModelId = im.Id.Value;
         Event::OnSelectedItemChanged(im);
+    }
+}
+
+void CheckForNewSelectedBlock(CGameCtnEditorFree@ editor) {
+    if (editor is null) return;
+    if (editor.CurrentBlockInfo is null) return;
+    auto bi = editor.CurrentBlockInfo;
+    if (bi.Id.Value != _lastSelectedBlockInfoId) {
+        _lastSelectedBlockInfoId = bi.Id.Value;
+        Event::OnSelectedBlockChanged(bi);
+    }
+}
+
+void CheckForNewSelectedGhostBlock(CGameCtnEditorFree@ editor) {
+    if (editor is null) return;
+    if (editor.CurrentGhostBlockInfo is null) return;
+    auto bi = editor.CurrentGhostBlockInfo;
+    if (bi.Id.Value != _lastSelectedGhostBlockInfoId) {
+        _lastSelectedGhostBlockInfoId = bi.Id.Value;
+        Event::OnSelectedBlockChanged(bi);
+    }
+}
+
+void CheckForNewSelectedMacroblock(CGameCtnEditorFree@ editor) {
+    if (editor is null) return;
+    if (editor.CurrentMacroBlockInfo is null) return;
+    auto mb = editor.CurrentMacroBlockInfo;
+    if (mb.Id.Value != _lastSelectedMacroBlockInfoId) {
+        _lastSelectedMacroBlockInfoId = mb.Id.Value;
+        Event::OnSelectedMacroblockChanged(mb);
     }
 }

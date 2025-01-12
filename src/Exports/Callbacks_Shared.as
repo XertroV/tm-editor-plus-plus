@@ -3,6 +3,8 @@ namespace Editor {
         shared funcdef bool ProcessItem(CGameCtnAnchoredObject@ item);
         shared funcdef bool ProcessBlock(CGameCtnBlock@ block);
         shared funcdef bool ProcessNewSelectedItem(CGameItemModel@ itemModel);
+        shared funcdef void ProcessNewSelectedBlock(CGameCtnBlockInfo@ blockInfo);
+        shared funcdef void ProcessNewSelectedMacroBlock(CGameCtnMacroBlockInfo@ mbInfo);
 
 #if FALSE
         // for vscode extension completion

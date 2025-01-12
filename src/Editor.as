@@ -8,6 +8,10 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     UpdateSelectedBlockItem(editor);
 
     CheckForNewSelectedItem(editor);
+    CheckForNewSelectedBlock(editor);
+    CheckForNewSelectedGhostBlock(editor);
+    CheckForNewSelectedMacroblock(editor);
+
     //! No need to check for items/blocks anymore after new hooks. These hooks also work before the block/item is rendered, so no refresh needed
     // bool update = false;
     // update = CheckForNewBlocks_Deprecated(editor) || update;
