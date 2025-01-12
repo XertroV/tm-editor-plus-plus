@@ -25,8 +25,9 @@ namespace Editor {
     }
 
     void SetCamTargetedPosition(vec3 pos) {
-        // cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType.CameraTargetPosition = pos;
-        cast<CGameCtnEditorFree>(GetApp().Editor).OrbitalCameraControl.Pos = pos;
+        cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType.CameraTargetPosition = pos;
+        // set m_TargetedPosition 2nd so the camera will update and we can go out of bounds.
+        cast<CGameCtnEditorFree>(GetApp().Editor).OrbitalCameraControl.m_TargetedPosition = pos;
 
         // if (MathX::Within(pos, vec3(0), g_MapBounds)) {
         // } else {
