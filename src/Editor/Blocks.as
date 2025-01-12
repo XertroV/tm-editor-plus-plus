@@ -137,6 +137,22 @@ namespace Editor {
         return Nat3ToVec3(biv.Size);
     }
 
+    int GetNbBlockVariants(CGameCtnBlockInfo@ bi, bool isGround) {
+        if (bi is null) throw("block info is null");
+        auto baseVar = GetBlockBaseVariant(bi, isGround);
+        int nbBase = baseVar !is null ? 1 : 0;
+        return (isGround ? bi.AdditionalVariantsGround.Length : bi.AdditionalVariantsAir.Length) + nbBase;
+    }
+
+    CGameCtnBlockInfoVariant@ GetBlockBaseVariant(CGameCtnBlockInfo@ bi, bool isGround) {
+        auto r = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantBaseGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantBaseAir);
+        if (r is null) {
+            @r = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
+        }
+        return r;
+    }
+
+
     CGameCtnBlockInfoVariant@ GetBlockInfoVariant(CGameCtnBlock@ block) {
         // auto bivIx = block.BlockInfoVariantIndex;
         return GetBlockInfoVariant(block.BlockInfo, block.BlockInfoVariantIndex, block.IsGround);

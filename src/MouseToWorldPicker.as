@@ -41,6 +41,10 @@ namespace Picker {
         return camPos - pickDirection * (camPos.y - height) / pickDirection.y;
     }
 
+    vec3 GetMouseToWorldAtDist(float dist) {
+        return camPos - pickDirection * dist;
+    }
+
     vec2 lastMouseToWorldOnPlaneQuantizedUV;
 
     vec3 GetMouseToWorldOnPlane(vec3 planeNormal, vec3 planePos, float quantize = 0) {
@@ -86,6 +90,17 @@ namespace Picker {
         // uv back to 3d space
         mouseWorldPosOnPlane = planePos + uDir*u + vDir*v;
         return mouseWorldPosOnPlane;
+    }
+
+    vec3 QuantizePointInGrid(vec3 targetPoint, vec3 eulerAngles, float quantize) {
+        auto gridMat = (EulerToMat(eulerAngles));
+        vec3 pos = (mat4::Inverse(gridMat) * targetPoint).xyz;
+        pos.x = Math::Round(pos.x / quantize) * quantize;
+        pos.y = Math::Round(pos.y / quantize) * quantize;
+        pos.z = Math::Round(pos.z / quantize) * quantize;
+        pos = ((gridMat) * pos).xyz;
+        return GetMouseToWorldOnPlane((gridMat * UP).xyz, pos, quantize);
+        return pos;
     }
 
     void DrawDebugWindow() {

@@ -77,8 +77,20 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
             UI::Text("Select an item.");
             return;
         }
-        bool toggleAutoRotate = BtnToolbar(Icons::Kenney::StickMoveLr + "##ar", "Auto Rotate", ActiveToBtnStatus(pp.AutoRotation));
+
+        isFree = Editor::GetItemPlacementMode(true, true) == Editor::ItemMode::Free;
+
+        DrawCopyRotsBtn();
         bool toggleItemToBlockSnapping = BtnToolbarHalfV(Icons::Magnet + Icons::Cube + "##itbs", "Item-to-Block Snapping", ActiveToBtnStatus(CustomCursorRotations::ItemSnappingEnabled));
+        // bool toggleInfPrec = this.BtnToolbarHalfV("∞" + Icons::MousePointer, "Place Anywhere / Infinite Precision", ActiveFreeToBtnStatus(S_EnableInfinitePrecisionFreeBlocks));
+
+        UI::Separator();
+
+        DrawItemModeButtons();
+
+        UI::Separator();
+
+        bool toggleAutoRotate = BtnToolbar(Icons::Kenney::StickMoveLr + "##ar", "Auto Rotate", ActiveToBtnStatus(pp.AutoRotation));
         bool toggleAutoPivot = BtnToolbarHalfV("AP##ap", "Auto-Pivot: Automatically choose item pivot point", ActiveToBtnStatus(!pp.SwitchPivotManually));
 
         bool toggleGridDisable = BtnToolbarHalfV(Icons::Th + "##gd", "Grid Snap (RMB: Set Grid)" + RMBIcon, GridDisabledStatus(pp));
@@ -98,6 +110,11 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
         bool toggleFlying = BtnToolbarHalfV((pp.FlyStep > 0 ? Icons::Plane : Icons::Tree) + "###flyTog", "Toggle Flying / Lock to Ground", ActiveToBtnStatus(pp.FlyStep > 0));
 
+        UI::Separator();
+
+        DrawInfPrecisionButtons();
+        DrawLocalRotateButtons();
+
         // bool flyingStepUp = BtnToolbarHalfH(Icons::AngleUp + "##flyUp", "Increase Flying Step", ActiveToBtnStatus(pp.FlyStep > 0));
 
         DrawGridOptsPopup(pp);
@@ -110,6 +127,23 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
         if (toggleAutoRotate) ToggleAutoRotate(pp);
         if (toggleAutoPivot) ToggleAutoPivot(pp);
         if (toggleItemToBlockSnapping) CustomCursorRotations::ItemSnappingEnabled = !CustomCursorRotations::ItemSnappingEnabled;
+        // if (toggleInfPrec) S_EnableInfinitePrecisionFreeBlocks = !S_EnableInfinitePrecisionFreeBlocks;
+    }
+
+    bool isFreeGround, isNormal;
+
+    void DrawItemModeButtons() {
+        auto itemMode = Editor::GetItemPlacementMode(false, false);
+        isFreeGround = itemMode == Editor::ItemMode::FreeGround;
+        isNormal = itemMode == Editor::ItemMode::Normal;
+
+        bool cNorm = this.BtnToolbarHalfV(Icons::Cube, "Normal Item Mode", ActiveToBtnStatus(isNormal));
+        bool cGround = this.BtnToolbarHalfV(Icons::Download, "Free Ground Item Mode", ActiveToBtnStatus(isFreeGround));
+        bool cFree = this.BtnToolbarHalfV(Icons::Refresh, "Free Item Mode", ActiveToBtnStatus(isFree));
+
+        if (cNorm) Editor::SetItemPlacementMode(Editor::ItemMode::Normal);
+        if (cGround) Editor::SetItemPlacementMode(Editor::ItemMode::FreeGround);
+        if (cFree) Editor::SetItemPlacementMode(Editor::ItemMode::Free);
     }
 
     void DrawGridOptions_OnRMB(CGameItemPlacementParam@ pp) {
@@ -160,6 +194,10 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
     BtnStatus ActiveToBtnStatus(bool active) {
         return active ? BtnStatus::FeatureActive : BtnStatus::Default;
+    }
+
+    BtnStatus ActiveFreeToBtnStatus(bool active) {
+        return isFree ? (active ? BtnStatus::FeatureActive : BtnStatus::Default) : BtnStatus::Disabled;
     }
 
     bool _isFlyingDisabled = false;
@@ -242,5 +280,20 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
     void ToggleAutoPivot(CGameItemPlacementParam@ pp) {
         pp.SwitchPivotManually = !pp.SwitchPivotManually;
+    }
+
+    void DrawLocalRotateButtons() {
+        auto btnStatus = ActiveFreeToBtnStatus(S_CursorSmartRotate);
+        bool toggleSmartRot = this.BtnToolbarHalfV("S 90" + DEGREES_CHAR, "Cursor Smart Rotate.\n Rotations are applied locally to current axes (like gizmo).\n Note: these need to fit into the existing cursor rotations, so aren't perfect.", btnStatus);
+        if (toggleSmartRot) {
+            S_CursorSmartRotate = !S_CursorSmartRotate;
+        }
+    }
+
+    void DrawCopyRotsBtn() {
+        bool toggleCopyRot = this.BtnToolbarHalfV(Icons::FilesO + Icons::Dribbble, "Copy rotations from picked blocks to the cursor", ActiveToBtnStatus(S_CopyPickedItemRotation));
+        if (toggleCopyRot) {
+            S_CopyPickedBlockRotation = !S_CopyPickedItemRotation;
+        }
     }
 }

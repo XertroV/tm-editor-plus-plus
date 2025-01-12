@@ -3,6 +3,7 @@ funcdef bool ProcessBlock(CGameCtnBlock@ block);
 funcdef bool ProcessNewSelectedItem(CGameItemModel@ itemModel);
 funcdef void ProcessNewSelectedBlock(CGameCtnBlockInfo@ blockInfo);
 funcdef void ProcessNewSelectedMacroblock(CGameCtnMacroBlockInfo@ mbInfo);
+funcdef void ProcessNewPlacementMode(CGameEditorPluginMap::EPlaceMode newMode);
 
 funcdef void OnEditorStartingFunc(bool editingElseNew);
 
@@ -34,6 +35,8 @@ ProcessNewSelectedBlock@[] selectedBlockChangedCbs;
 string[] selectedBlockChangedCbNames;
 ProcessNewSelectedMacroblock@[] selectedMacroblockChangedCbs;
 string[] selectedMacroblockChangedCbNames;
+ProcessNewPlacementMode@[] placementModeChangedCbs;
+string[] placementModeChangedCbNames;
 CoroutineFunc@[] onLeavingPlaygroundCbs;
 string[] onLeavingPlaygroundCbNames;
 CoroutineFunc@[] onEnteringPlaygroundCbs;
@@ -48,7 +51,6 @@ CoroutineFunc@[] onBeforeCursorUpdateCbs;
 string[] onBeforeCursorUpdateCbNames;
 CoroutineFuncUserdataInt64@[] onApplyColorToSelectionCbs;
 string[] onApplyColorToSelectionCbNames;
-// CoroutineFunc@[] selectedBlockChangedCbs;
 
 // CoroutineFunc@[] onEditorSaveMapCbs;
 // string[] onEditorSaveMapCbNames;
@@ -180,6 +182,12 @@ void RegisterSelectedMacroblockChangedCallback(ProcessNewSelectedMacroblock@ f, 
     }
 }
 
+void RegisterPlacementModeChangedCallback(ProcessNewPlacementMode@ f, const string &in name) {
+    if (f !is null) {
+        placementModeChangedCbs.InsertLast(f);
+        placementModeChangedCbNames.InsertLast(name);
+    }
+}
 
 void RegisterOnLeavingPlaygroundCallback(CoroutineFunc@ f, const string &in name) {
     if (f !is null) {
@@ -412,6 +420,14 @@ namespace Event {
         // Editor::Callbacks::Exts::Run_OnNewSelectedMacroblock(mbInfo);
         Log::Trace("Finished OnSelectedMacroblockChanged");
     }
+    void OnPlacementModeChanged(CGameEditorPluginMap::EPlaceMode newMode) {
+        Log::Trace("Running OnPlacementModeChanged");
+        for (uint i = 0; i < placementModeChangedCbs.Length; i++) {
+            placementModeChangedCbs[i](newMode);
+        }
+        // Editor::Callbacks::Exts::Run_OnNewPlacementMode(newMode);
+        Log::Trace("Finished OnPlacementModeChanged");
+    }
     void RunOnLeavingPlaygroundCbs() {
         Log::Trace("Running OnLeavingPlayground callbacks");
         for (uint i = 0; i < onLeavingPlaygroundCbs.Length; i++) {
@@ -545,6 +561,7 @@ uint _lastSelectedBlockInfoId = 0;
 uint _lastSelectedGhostBlockInfoId = 0;
 uint _lastSelectedMacroBlockInfoId = 0;
 uint _lastSelectedItemModelId = 0;
+CGameEditorPluginMap::EPlaceMode _lastPlacementMode = CGameEditorPluginMap::EPlaceMode::Unknown;
 
 void CheckForNewSelectedItem(CGameCtnEditorFree@ editor) {
     if (editor is null) return;
@@ -583,5 +600,14 @@ void CheckForNewSelectedMacroblock(CGameCtnEditorFree@ editor) {
     if (mb.Id.Value != _lastSelectedMacroBlockInfoId) {
         _lastSelectedMacroBlockInfoId = mb.Id.Value;
         Event::OnSelectedMacroblockChanged(mb);
+    }
+}
+
+void CheckPlacementMode(CGameCtnEditorFree@ editor) {
+    if (editor is null) return;
+    auto mode = editor.PluginMapType.PlaceMode;
+    if (mode != _lastPlacementMode) {
+        _lastPlacementMode = mode;
+        Event::OnPlacementModeChanged(mode);
     }
 }

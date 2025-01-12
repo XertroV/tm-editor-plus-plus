@@ -60,6 +60,18 @@ bool S_BlockEscape = false;
 bool S_EnableInfinitePrecisionFreeBlocks = false;
 
 [Setting hidden]
+bool S_EnableFreeGrid = false;
+
+[Setting hidden]
+float S_FreeGridSize = 8.0;
+
+[Setting hidden]
+bool S_FreeGridLocal = true;
+
+[Setting hidden]
+bool S_CursorSmartRotate = false;
+
+[Setting hidden]
 bool S_ShowVehicleTestWindow = true;
 
 [Setting hidden]

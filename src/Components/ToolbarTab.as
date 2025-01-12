@@ -41,8 +41,17 @@ class ToolbarTab : Tab {
 
     bool BtnToolbar(const string &in label, const string &in desc, BtnStatus status, vec2 size = vec2()) {
         if (size.LengthSquared() == 0) size = d_ToolbarBtnSize * g_scale;
-        auto hue = BtnStatusHue(status);
-        auto click = UI::ButtonColored(label, hue, .6, .6, size);
+        auto fp = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
+
+        UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(1, fp.y));
+        bool click = false;
+        bool disabled = status == BtnStatus::Disabled;
+        float hue = BtnStatusHue(status);
+        float sat = disabled ? 0.0 : .6;
+        float lightness = disabled ? 0.3 : .6;
+        click = UI::ButtonColored(label, hue, sat, lightness, size) && !disabled;
+        UI::PopStyleVar();
+
         if (desc.Length > 0) AddSimpleTooltip(desc, true);
         return click;
     }
@@ -56,9 +65,72 @@ class ToolbarTab : Tab {
         return BtnToolbar(label, desc, status, vec2(d_ToolbarBtnSize.x, d_ToolbarBtnSize.y * .5) * g_scale);
     }
 
-    bool BtnToolbarQ(const string &in label, const string &in desc, BtnStatus status) {
+    bool BtnToolbarQ(const string &in label, const string &in desc, BtnStatus status, bool isLast = false) {
         float framePad = UI::GetStyleVarVec2(UI::StyleVar::FramePadding).x;
-        return BtnToolbar(label, desc, status, d_ToolbarBtnSize * .5 * g_scale - vec2(framePad, 0));
+        auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
+        UI::PushStyleVar(UI::StyleVar::ItemSpacing, vec2(0, itemSpacing.y));
+        auto r = BtnToolbar(label, desc, status, d_ToolbarBtnSize * .5 * g_scale); //  - vec2(framePad, 0)
+        if (!isLast) UI::SameLine();
+        UI::PopStyleVar();
+        return r;
+
+    }
+
+    string BtnNameDynamic(const string &in icon, const string &in id) {
+        return icon + "###" + id;
+    }
+
+    bool isFree;
+
+    void DrawInfPrecisionButtons() {
+        bool active = S_EnableInfinitePrecisionFreeBlocks;
+        bool toggleInfPrec = this.BtnToolbarHalfV("∞" + Icons::MousePointer, "Place Anywhere / Infinite Precision", isFree ? (active ? BtnStatus::FeatureActive : BtnStatus::Default) : BtnStatus::Disabled);
+        if (toggleInfPrec) {
+            S_EnableInfinitePrecisionFreeBlocks = !active;
+            if (!S_EnableInfinitePrecisionFreeBlocks) {
+                S_EnableFreeGrid = false;
+            }
+        }
+        string gridLabel = !S_EnableFreeGrid ? "Grid" : S_FreeGridLocal ? "Local" : "Global";
+        bool toggleFreeGrid = this.BtnToolbarHalfV(gridLabel + "###grid-cycle", "Free Grid.\n Local = Rotate grid to match cursor rotations.\n Global = axis aligned." + RMBIcon, isFree ? (S_EnableFreeGrid ? BtnStatus::FeatureActive : BtnStatus::Default) : BtnStatus::Disabled);
+        bool freeGridRMB = UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Right);
+        if (freeGridRMB) {
+            UI::OpenPopup("FreeGridOpts");
+        }
+
+        if (toggleFreeGrid) {
+            if (!S_EnableInfinitePrecisionFreeBlocks) S_EnableInfinitePrecisionFreeBlocks = true;
+            if (!S_EnableFreeGrid) {
+                S_EnableFreeGrid = true;
+                S_FreeGridLocal = true;
+            }
+            else if (S_FreeGridLocal) S_FreeGridLocal = !S_FreeGridLocal;
+            else S_EnableFreeGrid = false;
+        }
+
+        DrawFreeGridPopup();
+    }
+
+    void DrawFreeGridPopup() {
+        bool closePopup = false;
+        UI::PushFont(g_NormFont);
+        if (UI::BeginPopup("FreeGridOpts")) {
+            UI::SetNextItemWidth(100.0);
+            auto newSize = UI::InputFloat("Grid Size", S_FreeGridSize, 1.0);
+            bool sizeChanged = newSize != S_FreeGridSize;
+            bool sizeIncr = newSize > S_FreeGridSize;
+            if (sizeChanged) {
+                if (sizeIncr) {
+                    S_FreeGridSize *= 2.;
+                } else {
+                    S_FreeGridSize /= 2.;
+                }
+                S_FreeGridSize = Math::Clamp(S_FreeGridSize, 0.03125, 64.0);
+            }
+            UX::CloseCurrentPopupIfMouseFarAway(closePopup);
+            UI::EndPopup();
+        }
+        UI::PopFont();
     }
 }
 
@@ -68,10 +140,12 @@ enum BtnStatus {
     Default,
     FeatureActive,
     FeatureBlocked,
+    Disabled,
 }
 
 float BtnStatusHue(BtnStatus status) {
     switch (status) {
+        case BtnStatus::Disabled:
         case BtnStatus::Default: {
             auto d = UI::GetStyleColor(UI::Col::Button);
             return UI::ToHSV(d.x, d.y, d.z).x;

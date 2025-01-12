@@ -11,6 +11,7 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     CheckForNewSelectedBlock(editor);
     CheckForNewSelectedGhostBlock(editor);
     CheckForNewSelectedMacroblock(editor);
+    CheckPlacementMode(editor);
 
     //! No need to check for items/blocks anymore after new hooks. These hooks also work before the block/item is rendered, so no refresh needed
     // bool update = false;
@@ -210,6 +211,16 @@ namespace Editor {
     void SetPlacementMode(CGameCtnEditorFree@ editor, CGameEditorPluginMap::EPlaceMode mode) {
         if (editor.PluginMapType.PlaceMode == mode) return;
         editor.PluginMapType.PlaceMode = mode;
+        if (editor.PluginMapType.PlaceMode != mode) {
+            bool failedTwice = false;
+            editor.PluginMapType.PlaceMode = mode;
+            failedTwice = editor.PluginMapType.PlaceMode != mode;
+            if (failedTwice) {
+                warn("Failed twice to set placement mode to " + tostring(mode));
+            } else {
+                trace("Failed once then succeeded to set placement mode to " + tostring(mode));
+            }
+        }
     }
 
     CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) {

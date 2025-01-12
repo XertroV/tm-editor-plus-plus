@@ -72,20 +72,51 @@ namespace FarlandsHelper {
             // auto occ = editor.OrbitalCameraControl;
             auto camTarget = editor.PluginMapType.CameraTargetPosition;
             lastCursorPos = Picker::GetMouseToWorldAtHeight(camTarget.y);
-            cursor.FreePosInMap = lastCursorPos;
-            if (isPlacingItem) {
-                Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, lastCursorPos);
-            }
-            if (CustomCursorRotations::CustomYawActive &&
-                CustomCursorRotations::HasCustomCursorSnappedPos &&
-                cursor.UseSnappedLoc
-            ) {
-                cursor.SnappedLocInMap_Trans = lastCursorPos;
+            SetCursorPos(editor, lastCursorPos, isPlacingItem);
+            // cursor.FreePosInMap = lastCursorPos;
+            // if (isPlacingItem) {
+            //     Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, lastCursorPos);
+            // }
+            // if (CustomCursorRotations::CustomYawActive &&
+            //     CustomCursorRotations::HasCustomCursorSnappedPos &&
+            //     cursor.UseSnappedLoc
+            // ) {
+            //     cursor.SnappedLocInMap_Trans = lastCursorPos;
+            // }
+
+            if (S_EnableFreeGrid) {
+                ApplyGridToCursor(editor, isPlacingItem);
             }
 
             CursorControl::ReleaseExclusiveControl(farlandsHelperCursorControlName);
         }
     }
+
+    void SetCursorPos(CGameCtnEditorFree@ editor, vec3 pos, bool alsoUpdateItem = false) {
+        auto cursor = editor.Cursor;
+        cursor.FreePosInMap = pos;
+        if (alsoUpdateItem) {
+            Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, pos);
+        }
+        if (CustomCursorRotations::CustomYawActive &&
+            CustomCursorRotations::HasCustomCursorSnappedPos &&
+            cursor.UseSnappedLoc
+        ) {
+            cursor.SnappedLocInMap_Trans = pos;
+        }
+    }
+
+    void ApplyGridToCursor(CGameCtnEditorFree@ editor, bool isPlacingItem = false) {
+        auto cursor = editor.Cursor;
+        // auto itemCursor = DGameCursorItem(editor.ItemCursor);
+        auto cursorRot = CustomCursorRotations::GetEditorCursorRotations(cursor);
+        auto targetPos = editor.OrbitalCameraControl.m_TargetedPosition;
+        auto newPoint = Picker::QuantizePointInGrid(cursor.FreePosInMap, S_FreeGridLocal ? cursorRot.Euler : vec3(), S_FreeGridSize);
+        SetCursorPos(editor, newPoint, isPlacingItem);
+        // dev_trace("Set cursor pos to grid: " + newPoint.ToString());
+    }
+
+
 
     const string farlandsHelperCursorControlName = "FarlandsHelper::CursorLoop";
 

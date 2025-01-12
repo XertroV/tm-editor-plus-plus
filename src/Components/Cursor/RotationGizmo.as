@@ -1,5 +1,7 @@
 RotationTranslationGizmo@ testGizmo;
 
+const string DEGREES_CHAR = "°";
+
 array<vec3>@[] axisDragArrows = {
     {vec3(.3, 0, 0), vec3(1, 0, 0), vec3(0.9, 0, 0.1), vec3(0.9, 0, -0.1), vec3(1, 0, 0), vec3(0.9, 0.1, 0), vec3(0.9, -0.1, 0), vec3(1, 0, 0)},
     {vec3(0, .3, 0), vec3(0, 1, 0), vec3(0.1, 0.9, 0), vec3(-0.1, 0.9, 0), vec3(0, 1, 0), vec3(0, 0.9, 0.1), vec3(0, 0.9, -0.1), vec3(0, 1, 0)},
