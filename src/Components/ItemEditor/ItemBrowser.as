@@ -583,6 +583,14 @@ class ItemModelTreeElement {
                     }
                     auto pp = cast<CPlugPlacementPatch>(Dev_GetNodFromPointer(buf[i].Ptr));
                     UI::Text("PlacementPatch["+i+"]: " + pp.Params.GroupId.GetName() + " / LeftVerts: " + pp.LeftVerts.Length + " / CenterVerts: " + pp.CenterVerts.Length + " / RightVerts: " + pp.RightVerts.Length);
+                    // UI::Indent();
+                    // if (StartTreeNode("Verts", true)) {
+                    //     UI::Text("LeftVerts: " + pp.LeftVerts.Length);
+                    //     UI::Text("CenterVerts: " + pp.CenterVerts.Length);
+                    //     UI::Text("RightVerts: " + pp.RightVerts.Length);
+                    //     EndTreeNode();
+                    // }
+                    // UI::Unindent();
 #if SIG_DEVELOPER
                     UI::SameLine();
                     if (UX::SmallButton(Icons::Cube + "##"+i)) {

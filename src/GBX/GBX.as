@@ -1,7 +1,3 @@
-
-// ptr to write to for getting hex
-// uint64 tempWrite_128b = 0;
-
 shared enum GBX_CHUNK_IDS {
     CGameItemModel_Icon = 0x2E001004,
 }

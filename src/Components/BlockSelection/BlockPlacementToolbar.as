@@ -132,6 +132,7 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
     }
 
     void SelectCurrentBlock(CGameCtnEditorFree@ editor) {
+        if (BlockInfo is null) return;
         dev_trace("Setting selected block to " + BlockInfo.Name);
         auto inv = Editor::GetInventoryCache();
         auto article = inv.GetBlockByName(BlockInfo.IdName);
@@ -141,6 +142,7 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
     }
 
     void SetForcedVar(CGameCtnEditorFree@ editor, bool ground, int index) {
+        if (BlockInfo is null) return;
         auto bi = BlockInfo;
         auto nbVars = Editor::GetNbBlockVariants(bi, ground);
         if (nbVars <= 0) {
