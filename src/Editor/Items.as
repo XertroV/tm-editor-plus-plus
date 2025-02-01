@@ -67,9 +67,13 @@ namespace Editor {
         Dev::SetOffset(item, LinkedBlockEntryOffset, uint64(0));
         auto block = cast<CGameCtnBlock>(Dev::GetOffsetNod(linkedListEntry, 0x0));
         if (block !is null && setBlockUintCoord) {
-            item.BlockUnitCoord = setCoordFromBlockElseItemPos
+            // x and z both way off for free blocks; assume its enough to check x only
+            bool blocksCoordIsOkay = block.Coord.x < 1000000 && block.Coord.x >= 0;
+            item.BlockUnitCoord = setCoordFromBlockElseItemPos && blocksCoordIsOkay
                 ? block.Coord
                 : PosToCoord(item.AbsolutePositionInMap);
+        } else {
+            item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
         }
         item.IsFlying = true;
         return true;

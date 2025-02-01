@@ -107,8 +107,10 @@ mixin class NudgeItemBlock {
         if (itemPosMod.LengthSquared() > 0 || itemRotMod.LengthSquared() > 0 || blockCoordMod.x != 0 || blockCoordMod.y != 0 || blockCoordMod.z != 0 || (block !is null && m_dir != int(block.Direction))) {
             if (item !is null) {
                 // ! this works now but it does not repick a picked item
+                auto itemSpecOrig = Editor::ItemSpecPriv(item);
+                item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
                 auto newItemSpec = Editor::ItemSpecPriv(item);
-                if (!Editor::DeleteBlocksAndItems({}, {Editor::ItemSpecPriv(item)})) {
+                if (!Editor::DeleteBlocksAndItems({}, {itemSpecOrig})) {
                     warn("Failed to delete item for nudge");
                 }
                 newItemSpec.pos += itemPosMod;
