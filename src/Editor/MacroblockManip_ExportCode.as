@@ -90,13 +90,13 @@ namespace Editor {
     import void ReloadItemsAsync(string[]@ paths) from "Editor";
 }
 
-// namespace Editor {
+namespace Editor {
     import bool IsCtrlDown() from "Editor";
     import bool IsAltDown() from "Editor";
     import bool IsShiftDown() from "Editor";
 
 
-    import vec3 PitchYawRollFromRotationMatrix(mat4 m) from "Editor";
+    import vec3 PitchYawRollFromRotationMatrix(const mat4 &in m) from "Editor";
     import mat4 EulerToMat(vec3 euler) from "Editor";
 
     import vec3 CoordDistToPos(int3 coord) from "Editor";
@@ -116,4 +116,4 @@ namespace Editor {
     import vec3 MTCoordToPos(int3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
     import vec3 MTCoordToPos(nat3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
     import vec3 MTCoordToPos(vec3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
-// }
+}
