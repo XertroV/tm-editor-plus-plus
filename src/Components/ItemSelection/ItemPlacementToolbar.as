@@ -291,9 +291,9 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
     }
 
     void DrawCopyRotsBtn() {
-        bool toggleCopyRot = this.BtnToolbarHalfV(Icons::FilesO + Icons::Dribbble, "Copy rotations from picked blocks to the cursor", ActiveToBtnStatus(S_CopyPickedItemRotation));
+        bool toggleCopyRot = this.BtnToolbarHalfV(Icons::FilesO + Icons::Dribbble, "Copy rotations from picked items to the cursor", ActiveToBtnStatus(S_CopyPickedItemRotation));
         if (toggleCopyRot) {
-            S_CopyPickedBlockRotation = !S_CopyPickedItemRotation;
+            S_CopyPickedItemRotation = !S_CopyPickedItemRotation;
         }
     }
 }
