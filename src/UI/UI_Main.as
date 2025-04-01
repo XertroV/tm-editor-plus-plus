@@ -294,7 +294,7 @@ namespace MenuBar {
 
             // (hasDupes ? WARNING_TRIANGLE_START : "") +
             if (UI::BeginMenu(cachesMenuLabel)) {
-                if (UI::MenuItem("Refresh Map Block/Item Cache", mapCache.IsStale ? "(Stale)" : "")) {
+                if (UI::MenuItem("Refresh Map Block/Item Cache", mapCache._IsStale ? "(Stale)" : "")) {
                     mapCache.RefreshCacheSoon();
                 }
                 UI::AlignTextToFramePadding();

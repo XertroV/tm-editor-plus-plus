@@ -2,10 +2,6 @@ enum BIListTabType {
     Blocks, BakedBlocks, Items
 }
 
-enum BlockPlacementType {
-    Normal, Ghost, Free
-}
-
 const string BI_LIST_COLS_SETTINGS_WINDOW_ID = "bi-list-cols";
 
 const string cpYesMark = "\\$88f" + Icons::Check + " CP";

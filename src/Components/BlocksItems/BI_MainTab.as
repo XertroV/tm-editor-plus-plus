@@ -478,7 +478,7 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
 
     void RunAutodeletion() {
         auto mapCache = Editor::GetMapCache();
-        if (mapCache.IsStale) {
+        if (mapCache._IsStale) {
             Notify("[Autodel Dups] 0. Map cache stale, refreshing.");
             mapCache.RefreshCache();
             // Notify("[Autodel Dups] 0. Map cache refreshed.");
@@ -669,7 +669,7 @@ class ViewDuplicateItemsTab : ViewAllItemsTab {
 
 void BI_DrawCacheRefreshMsg() {
     auto cache = Editor::GetMapCache();
-    UI::BeginDisabled(!cache.IsStale);
+    UI::BeginDisabled(!cache._IsStale);
     if (UX::SmallButton("Refresh Cache##refresh-cache-wp")) {
         cache.RefreshCacheSoon();
     }
@@ -835,7 +835,7 @@ class MacroblocksBITab : Tab {
                 if (objs !is null) {
                     if (objs.Length > 0) {
                         if (UX::SmallButton(Icons::Eye + "##" + mb.InstId)) {
-                            Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(objs[0].pos), objs[0].pos, 120.);
+                            Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(objs[0]._pos), objs[0]._pos, 120.);
                         }
                         UI::SameLine();
                     }
@@ -845,9 +845,9 @@ class MacroblocksBITab : Tab {
                             auto item = cast<Editor::ItemInMap>(objs[j]);
                             auto block = cast<Editor::BlockInMap>(objs[j]);
                             if (item !is null) {
-                                UI::Text("Item: " + item.IdName);
+                                UI::Text("Item: " + item._IdName);
                             } else if (block !is null) {
-                                UI::Text("Block: " + block.IdName);
+                                UI::Text("Block: " + block._IdName);
                             } else {
                                 UI::Text("Unknown object");
                             }

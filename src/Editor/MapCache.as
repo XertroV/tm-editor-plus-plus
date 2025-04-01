@@ -1,21 +1,15 @@
-enum WaypointType {
-    Start = 0,
-    Finish,
-    Checkpoint,
-    None,
-    StartFinish,
-    Dispenser,
-}
-
 namespace Editor {
 
     MapCache@ _MapCache = MapCache();
     MapCache@ GetMapCache() {
         return _MapCache;
     }
+    IMapCache@ GetIMapCache() {
+        return _MapCache;
+    }
 
     bool IsMapCacheStale() {
-        return _MapCache.IsStale && !_MapCache.isRefreshing;
+        return _MapCache._IsStale && !_MapCache.isRefreshing;
     }
 
     void RefreshMapCacheSoon() {
@@ -26,17 +20,17 @@ namespace Editor {
 
     class ObjInMap {
         uint ix;
-        vec3 pos;
-        vec3 rot;
-        int color;
+        vec3 _pos;
+        vec3 _rot;
+        int _color;
         bool Exists = true;
         bool _hasSkin;
-        WaypointType WaypointTy = WaypointType::None;
-        uint Id;
-        string IdName;
-        mat4 mat;
-        int mbInstId = -1;
-        string mbInstIdStr = "-1";
+        WaypointType _WaypointTy = WaypointType::None;
+        uint _Id;
+        string _IdName;
+        mat4 _mat;
+        int _mbInstId = -1;
+        string _mbInstIdStr = "-1";
 
         ObjInMap(uint index) {
             ix = index;
@@ -53,33 +47,48 @@ namespace Editor {
             return _hasSkin;
         }
         bool get_IsWaypoint() {
-            return WaypointTy != WaypointType::None;
+            return _WaypointTy != WaypointType::None;
+        }
+        uint get_Ix() {
+            return ix;
         }
     }
 
-    class ItemInMap : ObjInMap {
-        ItemSpec@ spec;
-        string hashStr;
+    class ItemInMap : ObjInMap, IItemInMap {
+        ItemSpec@ _spec;
+        string _hashStr;
 
         ItemInMap(uint i, CGameCtnAnchoredObject@ item) {
             super(i);
-            @spec = MakeItemSpec(item);
-            pos = item.AbsolutePositionInMap;
-            rot = Editor::GetItemRotation(item);
-            color = int(item.MapElemColor);
+            @_spec = MakeItemSpec(item);
+            _pos = item.AbsolutePositionInMap;
+            _rot = Editor::GetItemRotation(item);
+            _color = int(item.MapElemColor);
             if (item.ItemModel is null) {
                 NotifyError('MapCache: Item model is null!');
                 return;
             }
-            Id = item.ItemModel.Id.Value;
-            IdName = item.ItemModel.IdName;
-            mat = mat4::Translate(pos) * EulerToMat(rot);
+            _Id = item.ItemModel.Id.Value;
+            _IdName = item.ItemModel.IdName;
+            _mat = mat4::Translate(_pos) * EulerToMat(_rot);
             _hasSkin = Editor::GetItemBGSkin(item) !is null || Editor::GetItemFGSkin(item) !is null;
-            WaypointTy = WaypointType(item.ItemModel.WaypointType);
-            mbInstId = Editor::GetItemMbInstId(item);
-            mbInstIdStr = tostring(mbInstId);
-            hashStr = GetItemHash(pos, rot, IdName, item.IVariant);
+            _WaypointTy = WaypointType(item.ItemModel.WaypointType);
+            _mbInstId = Editor::GetItemMbInstId(item);
+            _mbInstIdStr = tostring(_mbInstId);
+            _hashStr = GetItemHash(_pos, _rot, _IdName, item.IVariant);
         }
+
+        vec3 get_pos() { return _pos; }
+        vec3 get_rot() { return _rot; }
+        uint get_Id() { return _Id; }
+        string get_IdName() { return _IdName; }
+        mat4 get_mat() { return _mat; }
+        WaypointType get_WaypointTy() { return _WaypointTy; }
+        int get_mbInstId() { return _mbInstId; }
+        string get_mbInstIdStr() { return _mbInstIdStr; }
+        int get_color() { return _color; }
+        string get_hashStr() { return _hashStr; }
+        ItemSpec@ get_spec() { return _spec; }
 
         // if any of these differ, it's a different item
         string GetItemHash(vec3 &in pos, vec3 &in rot, const string &in id, uint varIx) {
@@ -114,10 +123,10 @@ namespace Editor {
         }
 
         bool Matches(CGameCtnAnchoredObject@ item) {
-            return Id == item.ItemModel.Id.Value
-                && color == int(item.MapElemColor)
-                && MathX::Vec3Eq(pos, item.AbsolutePositionInMap)
-                && MathX::Vec3Eq(rot, Editor::GetItemRotation(item))
+            return _Id == item.ItemModel.Id.Value
+                && _color == int(item.MapElemColor)
+                && MathX::Vec3Eq(_pos, item.AbsolutePositionInMap)
+                && MathX::Vec3Eq(_rot, Editor::GetItemRotation(item))
                 ;
         }
 
@@ -129,49 +138,65 @@ namespace Editor {
         }
 
         string ToString() {
-            return IdName + " " + pos.ToString() + " " + rot.ToString();
+            return _IdName + " " + _pos.ToString() + " " + _rot.ToString();
         }
     }
 
     uint64 SwapMem100 = 0;
 
-    class BlockInMap : ObjInMap {
-        bool IsClassicElseGhost;
-        bool IsFree;
-        BlockPlacementType PlacementTy;
-        vec3 size;
-        int dir;
-        uint64 hash;
-        string hashStr;
-        BlockSpec@ spec;
+    class BlockInMap : ObjInMap, IBlockInMap {
+        bool _IsClassicElseGhost;
+        bool _IsFree;
+        BlockPlacementType _PlacementTy;
+        vec3 _size;
+        int _dir;
+        uint64 _hash;
+        string _hashStr;
+        BlockSpec@ _spec;
 
         BlockInMap(uint i, CGameCtnBlock@ block) {
             // dev_trace("Adding block: " + block.BlockInfo.Name);
             super(i);
-            @spec = MakeBlockSpec(block);
-            pos = Editor::GetBlockLocation(block);
-            rot = Editor::GetBlockRotation(block);
+            @_spec = MakeBlockSpec(block);
+            _pos = Editor::GetBlockLocation(block);
+            _rot = Editor::GetBlockRotation(block);
             // for duplicate detection, we need to hash pos + rot + info.Id / info.IdName
             // that would be 4*3*2+4 bytes = 28 bytes
-            IsFree = Editor::IsBlockFree(block);
-            IsClassicElseGhost = !block.IsGhostBlock();
-            PlacementTy = !IsClassicElseGhost ? BlockPlacementType::Ghost : IsFree ? BlockPlacementType::Free : BlockPlacementType::Normal;
+            _IsFree = Editor::IsBlockFree(block);
+            _IsClassicElseGhost = !block.IsGhostBlock();
+            _PlacementTy = !_IsClassicElseGhost ? BlockPlacementType::Ghost : _IsFree ? BlockPlacementType::Free : BlockPlacementType::Normal;
             //
-            hashStr = GetBlockHash(pos, rot, block.BlockInfo.Name, block.BlockInfoVariantIndex, block.MobilVariantIndex);
+            _hashStr = GetBlockHash(_pos, _rot, block.BlockInfo.Name, block.BlockInfoVariantIndex, block.MobilVariantIndex);
             // dev_trace("Block hash: " + hashStr);
-            color = int(block.MapElemColor);
-            Id = block.BlockInfo.Id.Value;
-            IdName = block.BlockInfo.IdName;
-            size = Editor::GetBlockSize(block);
-            mat = mat4::Translate(pos) * EulerToMat(rot);
+            _color = int(block.MapElemColor);
+            _Id = block.BlockInfo.Id.Value;
+            _IdName = block.BlockInfo.IdName;
+            _size = Editor::GetBlockSize(block);
+            _mat = mat4::Translate(_pos) * EulerToMat(_rot);
             _hasSkin = block.Skin !is null;
-            WaypointTy = WaypointType(block.BlockInfo.WaypointType);
-            mbInstId = Editor::GetBlockMbInstId(block);
-            mbInstIdStr = tostring(mbInstId);
+            _WaypointTy = WaypointType(block.BlockInfo.WaypointType);
+            _mbInstId = Editor::GetBlockMbInstId(block);
+            _mbInstIdStr = tostring(_mbInstId);
         }
 
+        uint get_Id() { return _Id; }
+        string get_IdName() { return _IdName; }
+        mat4 get_mat() { return _mat; }
+        WaypointType get_WaypointTy() { return _WaypointTy; }
+        int get_mbInstId() { return _mbInstId; }
+        string get_mbInstIdStr() { return _mbInstIdStr; }
+        int get_color() { return _color; }
+        bool get_IsFree() { return _IsFree; }
+        bool get_IsClassicElseGhost() { return _IsClassicElseGhost; }
+        BlockPlacementType get_PlacementTy() { return _PlacementTy; }
+        vec3 get_size() { return _size; }
+        int get_dir() { return _dir; }
+        uint64 get_hash() { return _hash; }
+        string get_hashStr() { return _hashStr; }
+        BlockSpec@ get_spec() { return _spec; }
+
         string ToString() {
-            return IdName + " " + pos.ToString() + " " + rot.ToString() + " ("+(IsFree ? "Free" : IsClassicElseGhost ? "Normal" : "Ghost")+")";
+            return _IdName + " " + _pos.ToString() + " " + _rot.ToString() + " ("+(_IsFree ? "Free" : _IsClassicElseGhost ? "Normal" : "Ghost")+")";
         }
 
         // if any of these differ, it's a different block
@@ -185,10 +210,10 @@ namespace Editor {
         }
 
         protected uint NbPmtBlocks(CGameEditorPluginMap@ pmt) {
-            return IsClassicElseGhost ? pmt.ClassicBlocks.Length : pmt.GhostBlocks.Length;
+            return _IsClassicElseGhost ? pmt.ClassicBlocks.Length : pmt.GhostBlocks.Length;
         }
         protected CGameCtnBlock@ GetPmtBlock(CGameEditorPluginMap@ pmt, uint i) {
-            return IsClassicElseGhost ? pmt.ClassicBlocks[i] : pmt.GhostBlocks[i];
+            return _IsClassicElseGhost ? pmt.ClassicBlocks[i] : pmt.GhostBlocks[i];
         }
 
         bool ReFindObj(CGameEditorPluginMap@ pmt) override {
@@ -212,10 +237,10 @@ namespace Editor {
         }
 
         bool Matches(CGameCtnBlock@ block) {
-            return Id == block.BlockInfo.Id.Value
-                && color == int(block.MapElemColor)
-                && MathX::Vec3Eq(pos, Editor::GetBlockLocation(block))
-                && MathX::Vec3Eq(rot, Editor::GetBlockRotation(block))
+            return _Id == block.BlockInfo.Id.Value
+                && _color == int(block.MapElemColor)
+                && MathX::Vec3Eq(_pos, Editor::GetBlockLocation(block))
+                && MathX::Vec3Eq(_rot, Editor::GetBlockRotation(block))
                 ;
         }
 
@@ -227,7 +252,7 @@ namespace Editor {
         }
     }
 
-    class MapCache {
+    class MapCache : IMapCache {
         OctTreeNode@ objsRoot;
 
         MapCache() {
@@ -239,10 +264,10 @@ namespace Editor {
             RegisterItemDeletedCallback(ProcessItem(this.OnDelItem), "MapCache del item");
         }
         bool isRefreshing = false;
-        bool IsStale = false;
+        bool _IsStale = false;
 
         bool OnNewBlock(CGameCtnBlock@ block) {
-            this.IsStale = true;
+            this._IsStale = true;
             if (isRefreshing || objsRoot is null) return false;
             // todo: update cache instead of marking stale
             objsRoot.Insert(MakeBlockSpec(block));
@@ -250,7 +275,7 @@ namespace Editor {
             return false;
         }
         bool OnDelBlock(CGameCtnBlock@ block) {
-            this.IsStale = true;
+            this._IsStale = true;
             if (isRefreshing || objsRoot is null) return false;
             // todo: update cache instead of marking stale
             if (!objsRoot.Remove(MakeBlockSpec(block))) {
@@ -259,7 +284,7 @@ namespace Editor {
             return false;
         }
         bool OnNewItem(CGameCtnAnchoredObject@ item) {
-            this.IsStale = true;
+            this._IsStale = true;
             if (isRefreshing || objsRoot is null) return false;
             // todo: update cache instead of marking stale
             // ! item models can be null sometimes? leaving editor after editing custom item no save
@@ -270,7 +295,7 @@ namespace Editor {
             return false;
         }
         bool OnDelItem(CGameCtnAnchoredObject@ item) {
-            this.IsStale = true;
+            this._IsStale = true;
             if (isRefreshing || objsRoot is null) return false;
             // todo: update cache instead of marking stale
             if (!objsRoot.Remove(MakeItemSpec(item))) {
@@ -300,6 +325,27 @@ namespace Editor {
         protected ItemInMap@[] _WaypointItems;
         const ItemInMap@[]@ get_WaypointItems() { return _WaypointItems; }
 
+
+        IBlockInMapIter@ get_BlocksIter() {
+            return BlockInMapIter(_Blocks);
+        }
+        IBlockInMapIter@ get_SkinnedBlocksIter() {
+            return BlockInMapIter(_SkinnedBlocks);
+        }
+        IItemInMapIter@ get_ItemsIter() {
+            return ItemInMapIter(_Items);
+        }
+        IItemInMapIter@ get_SkinnedItemsIter() {
+            return ItemInMapIter(_SkinnedItems);
+        }
+        IBlockInMapIter@ get_WaypointBlocksIter() {
+            return BlockInMapIter(_WaypointBlocks);
+        }
+        IItemInMapIter@ get_WaypointItemsIter() {
+            return ItemInMapIter(_WaypointItems);
+        }
+
+
         dictionary Macroblocks;
 
         uint lastRefreshNonce = 0;
@@ -313,7 +359,7 @@ namespace Editor {
             loadTotal = 0;
             @objsRoot = OctTreeNode(map.Size);
             auto myNonce = ++lastRefreshNonce;
-            IsStale = false;
+            _IsStale = false;
             isRefreshing = true;
             _ItemIdNameMap.DeleteAll();
             _BlockIdNameMap.DeleteAll();
@@ -405,7 +451,7 @@ namespace Editor {
             BlockTypesLower.SortAsc();
             lastRefreshNonce++;
             isRefreshing = false;
-            IsStale = false;
+            _IsStale = false;
         }
 
         bool HasDuplicateBlocks() {
@@ -440,45 +486,45 @@ namespace Editor {
             AddToOctTree(b);
             if (b.IsWaypoint) _WaypointBlocks.InsertLast(b);
             if (b.HasSkin) _SkinnedBlocks.InsertLast(b);
-            if (!_BlockIdNameMap.Exists(b.IdName)) {
-                @_BlockIdNameMap[b.IdName] = array<BlockInMap@>();
-                BlockTypes.InsertLast(b.IdName);
-                BlockTypesLower.InsertLast(b.IdName.ToLower());
+            if (!_BlockIdNameMap.Exists(b._IdName)) {
+                @_BlockIdNameMap[b._IdName] = array<BlockInMap@>();
+                BlockTypes.InsertLast(b._IdName);
+                BlockTypesLower.InsertLast(b._IdName.ToLower());
             }
 
-            if (_BlocksByHash.Exists(b.hashStr)) {
-                auto dupes = cast<BlockInMap@[]>(_BlocksByHash[b.hashStr]);
+            if (_BlocksByHash.Exists(b._hashStr)) {
+                auto dupes = cast<BlockInMap@[]>(_BlocksByHash[b._hashStr]);
                 dupes.InsertLast(b);
                 DuplicateBlocks.InsertLast(b);
                 NbDuplicateFreeBlocks++;
                 if (dupes.Length == 2) {
-                    DuplicateBlockKeys.InsertLast(b.hashStr);
+                    DuplicateBlockKeys.InsertLast(b._hashStr);
                     // don't ~~count the first block as a duplicate too~~
                     // NbDuplicateFreeBlocks++;
                 }
             } else {
                 array<BlockInMap@>@ arr = {b};
-                _BlocksByHash[b.hashStr] = arr;
+                _BlocksByHash[b._hashStr] = arr;
             }
 
-            GetBlocksByType(b.IdName).InsertLast(b);
+            GetBlocksByType(b._IdName).InsertLast(b);
         }
 
         void RemoveBlock(BlockInMap@ b) {
             RemoveBlockFromArray(b, _Blocks);
             if (b.HasSkin) RemoveBlockFromArray(b, _SkinnedBlocks);
             if (b.IsWaypoint) RemoveBlockFromArray(b, _WaypointBlocks);
-            auto @blocks = cast<array<BlockInMap@>>(_BlockIdNameMap[b.IdName]);
+            auto @blocks = cast<array<BlockInMap@>>(_BlockIdNameMap[b._IdName]);
             RemoveBlockFromArray(b, blocks);
             if (blocks.Length == 0) {
-                auto idIx = BlockTypes.Find(b.IdName);
+                auto idIx = BlockTypes.Find(b._IdName);
                 if (idIx != -1) BlockTypes.RemoveAt(idIx);
-                idIx = BlockTypesLower.Find(b.IdName.ToLower());
+                idIx = BlockTypesLower.Find(b._IdName.ToLower());
                 if (idIx != -1) BlockTypesLower.RemoveAt(idIx);
-                _BlockIdNameMap.Delete(b.IdName);
+                _BlockIdNameMap.Delete(b._IdName);
             }
-            if (_BlocksByHash.Exists(b.hashStr)) {
-                auto dupes = cast<BlockInMap@[]>(_BlocksByHash[b.hashStr]);
+            if (_BlocksByHash.Exists(b._hashStr)) {
+                auto dupes = cast<BlockInMap@[]>(_BlocksByHash[b._hashStr]);
                 auto ix = dupes.FindByRef(b);
                 if (ix != -1) {
                     dupes.RemoveAt(ix);
@@ -505,11 +551,11 @@ namespace Editor {
 
         void AddToOctTree(BlockInMap@ b) {
             // don't add grass
-            if (b.IdName == "Grass") return;
-            objsRoot.Insert(b.spec);
+            if (b._IdName == "Grass") return;
+            objsRoot.Insert(b._spec);
         }
         void AddToOctTree(ItemInMap@ b) {
-            objsRoot.Insert(b.spec);
+            objsRoot.Insert(b._spec);
         }
 
         BlockInMap@[]@ GetBlocksByHash(const string &in blockHash) {
@@ -533,24 +579,24 @@ namespace Editor {
             AddToOctTree(b);
             if (b.IsWaypoint) _WaypointItems.InsertLast(b);
             if (b.HasSkin) _SkinnedItems.InsertLast(b);
-            if (!_ItemIdNameMap.Exists(b.IdName)) {
-                @_ItemIdNameMap[b.IdName] = array<ItemInMap@>();
-                ItemTypes.InsertLast(b.IdName);
-                ItemTypesLower.InsertLast(b.IdName.ToLower());
+            if (!_ItemIdNameMap.Exists(b._IdName)) {
+                @_ItemIdNameMap[b._IdName] = array<ItemInMap@>();
+                ItemTypes.InsertLast(b._IdName);
+                ItemTypesLower.InsertLast(b._IdName.ToLower());
             }
-            GetItemsByType(b.IdName).InsertLast(b);
+            GetItemsByType(b._IdName).InsertLast(b);
 
-            if (_ItemsByHash.Exists(b.hashStr)) {
-                auto dupes = cast<ItemInMap@[]>(_ItemsByHash[b.hashStr]);
+            if (_ItemsByHash.Exists(b._hashStr)) {
+                auto dupes = cast<ItemInMap@[]>(_ItemsByHash[b._hashStr]);
                 dupes.InsertLast(b);
                 DuplicateItems.InsertLast(b);
                 NbDuplicateItems++;
                 if (dupes.Length == 2) {
-                    DuplicateItemKeys.InsertLast(b.hashStr);
+                    DuplicateItemKeys.InsertLast(b._hashStr);
                 }
             } else {
                 array<ItemInMap@>@ arr = {b};
-                _ItemsByHash[b.hashStr] = arr;
+                _ItemsByHash[b._hashStr] = arr;
             }
         }
 
@@ -558,14 +604,14 @@ namespace Editor {
             RemoveItemFromArray(b, _Items);
             if (b.HasSkin) RemoveItemFromArray(b, _SkinnedItems);
             if (b.IsWaypoint) RemoveItemFromArray(b, _WaypointItems);
-            auto @items = cast<array<ItemInMap@>>(_ItemIdNameMap[b.IdName]);
+            auto @items = cast<array<ItemInMap@>>(_ItemIdNameMap[b._IdName]);
             RemoveItemFromArray(b, items);
             if (items.Length == 0) {
-                auto idIx = ItemTypes.Find(b.IdName);
+                auto idIx = ItemTypes.Find(b._IdName);
                 if (idIx != -1) ItemTypes.RemoveAt(idIx);
-                idIx = ItemTypesLower.Find(b.IdName.ToLower());
+                idIx = ItemTypesLower.Find(b._IdName.ToLower());
                 if (idIx != -1) ItemTypesLower.RemoveAt(idIx);
-                _ItemIdNameMap.Delete(b.IdName);
+                _ItemIdNameMap.Delete(b._IdName);
             }
             // todo: remove from duplicates
         }
@@ -580,11 +626,11 @@ namespace Editor {
         }
 
         protected void AddToMacroblock(ObjInMap@ b) {
-            if (b.mbInstId < 0) return;
-            if (!Macroblocks.Exists(b.mbInstIdStr)) {
-                @Macroblocks[b.mbInstIdStr] = array<ObjInMap@>();
+            if (b._mbInstId < 0) return;
+            if (!Macroblocks.Exists(b._mbInstIdStr)) {
+                @Macroblocks[b._mbInstIdStr] = array<ObjInMap@>();
             }
-            auto @objs = cast<array<ObjInMap@>>(Macroblocks[b.mbInstIdStr]);
+            auto @objs = cast<array<ObjInMap@>>(Macroblocks[b._mbInstIdStr]);
             objs.InsertLast(b);
         }
 
@@ -611,82 +657,42 @@ namespace Editor {
         uint get_NbBlocks() {
             return _Blocks.Length;
         }
+
+        bool IsStale() {
+            return _IsStale;
+        }
+
+        uint get_LoadProgress() {
+            return loadProgress;
+        }
+
+        uint get_LoadTotal() {
+            return loadTotal;
+        }
     }
 
-    // todo: does not work
-    // void FixDuplicateBlocks() {
-    //     return;
-    //     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-    //     if (editor is null) {
-    //         NotifyWarning("Cannot fix duplicate blocks when editor is null.");
-    //         return;
-    //     }
-    //     auto mapCache = GetMapCache();
-    //     auto @dupKeys = mapCache.DuplicateBlockKeys;
-    //     uint[] moveIxs = {};
-    //     for (uint i = 0; i < dupKeys.Length; i++) {
-    //         auto dupBlocks = mapCache.GetBlocksByHash(dupKeys[i]);
-    //         for (uint j = 1; j < dupBlocks.Length; j++) {
-    //             moveIxs.InsertLast(dupBlocks[j].ix);
-    //             if (j < 5)
-    //                 print(dupBlocks[j].IdName + ", " + dupBlocks[j].pos.ToString() + ", " + dupBlocks[j].rot.ToString());
-    //         }
-    //         yield();
-    //     }
-    //     auto map = editor.Challenge;
-    //     int nbBlocks = map.Blocks.Length;
-    //     int nbToDel = moveIxs.Length;
+    class BlockInMapIter : IBlockInMapIter {
+        BlockInMap@[]@ arr;
+        uint ix = 0;
+        BlockInMapIter(BlockInMap@[]@ a) {
+            @arr = a;
+        }
+        IBlockInMap@ Next() {
+            if (ix >= arr.Length) return null;
+            return arr[ix++];
+        }
+    }
 
-    //     int[] fakeBlocks = {};
-    //     for (uint i = 0; i < nbBlocks; i++) {
-    //         fakeBlocks.InsertLast(i);
-    //     }
-
-    //     NotifyWarning("About to delete " + nbToDel + " blocks");
-    //     moveIxs.SortAsc();
-
-    //     auto o_map_blocks = GetOffset(map, "Blocks");
-    //     auto mapBlocksBufFakeNod = Dev::GetOffsetNod(map, o_map_blocks);
-    //     uint32 mapBlocksBufLen = Dev::GetOffsetUint32(map, o_map_blocks + 0x8);
-    //     if (mapBlocksBufLen != nbBlocks) throw("map blocks buf length != .Blocks.Length");
-
-    //     for (int i = nbBlocks - 1; nbToDel > 0; i--) {
-    //         nbToDel--;
-    //         auto badIx = moveIxs[nbToDel];
-    //         auto goodBlock = map.Blocks[i];
-    //         auto badBlock = map.Blocks[badIx];
-    //         // auto goodBlock = fakeBlocks[i];
-    //         // auto badBlock = fakeBlocks[badIx];
-
-    //         // swap
-    //         Dev::SetOffset(mapBlocksBufFakeNod, 0x8 * i, badBlock);
-    //         Dev::SetOffset(mapBlocksBufFakeNod, 0x8 * badIx, goodBlock);
-
-    //         // fakeBlocks[i] = badBlock;
-    //         // fakeBlocks[badIx] = goodBlock;
-
-    //     }
-
-    //     Dev::SetOffset(map, o_map_blocks + 0x8, uint(nbBlocks - nbToDel));
-
-    //     SaveAndReloadMap();
-
-    //     // string[] newOrder = {};
-    //     // for (uint i = 0; i < fakeBlocks.Length; i++) {
-    //     //     newOrder.InsertLast(tostring(fakeBlocks[i]));
-    //     // }
-    //     // yield();
-    //     // string msg = "";
-    //     // print("new block order: ");
-    //     // for (uint i = 0; i < newOrder.Length; i++) {
-    //     //     if (i % 100 == 99) {
-    //     //         print(msg);
-    //     //         msg = "";
-    //     //         yield();
-    //     //     }
-    //     //     msg += newOrder[i] + ", ";
-    //     // }
-    //     // print(msg);
-    // }
+    class ItemInMapIter : IItemInMapIter {
+        ItemInMap@[]@ arr;
+        uint ix = 0;
+        ItemInMapIter(ItemInMap@[]@ a) {
+            @arr = a;
+        }
+        IItemInMap@ Next() {
+            if (ix >= arr.Length) return null;
+            return arr[ix++];
+        }
+    }
 
 }
