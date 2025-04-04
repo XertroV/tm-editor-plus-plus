@@ -67,9 +67,13 @@ namespace Editor {
         Dev::SetOffset(item, LinkedBlockEntryOffset, uint64(0));
         auto block = cast<CGameCtnBlock>(Dev::GetOffsetNod(linkedListEntry, 0x0));
         if (block !is null && setBlockUintCoord) {
-            item.BlockUnitCoord = setCoordFromBlockElseItemPos
+            // x and z both way off for free blocks; assume its enough to check x only
+            bool blocksCoordIsOkay = block.Coord.x < 1000000 && block.Coord.x >= 0;
+            item.BlockUnitCoord = setCoordFromBlockElseItemPos && blocksCoordIsOkay
                 ? block.Coord
                 : PosToCoord(item.AbsolutePositionInMap);
+        } else {
+            item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
         }
         item.IsFlying = true;
         return true;
@@ -159,6 +163,10 @@ namespace Editor {
         ao.ItemModel.MwAddRef();
         SetAO_ItemModelMwId(ao, 0);
         SetAO_ItemModelAuthorMwId(ao, 0);
+    }
+
+    void Set_ItemModel_MwId(CGameItemModel@ itemModel, uint mwIdValue) {
+        Dev::SetOffset(itemModel, O_ITEM_MODEL_Id, mwIdValue);
     }
 
     // when there are duplicate blockIds this is may not save and occasionally results in crash-on-saves (but not autosaves)

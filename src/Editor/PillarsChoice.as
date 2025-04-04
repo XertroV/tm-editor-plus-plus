@@ -391,7 +391,7 @@ The types are:
 
     bool IsPillarReplacement(CGameCtnBlock@ priorBlock, CGameCtnBlock@ thisBlock) {
         auto replacement = GetPillarReplacement(thisBlock.BlockModel.Id.Value, PillarsType::None, false);
-        string name = priorBlock.BlockModel.Id.GetName();
+        string name = priorBlock.BlockModel.IdName;
         if (name.StartsWith(replacement)) {
             return true;
         }

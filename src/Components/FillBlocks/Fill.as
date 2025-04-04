@@ -108,11 +108,13 @@ namespace FillBlocks {
             this.max = CoordToPos(max + nat3(1, 1, 1));
             this.coordMin = min;
             this.coordMax = max;
+            this.coordMaxP1 = max + nat3(1, 1, 1);
             return this;
         }
 
         nat3 coordMin;
         nat3 coordMax;
+        nat3 coordMaxP1;
 
         // min of selection in world space
         vec3 min;
@@ -208,6 +210,10 @@ namespace FillBlocks {
             for (uint x = coordMin.x; x <= coordMax.x; x += size.x) {
                 for (uint y = coordMin.y; y <= coordMax.y; y += size.y) {
                     for (uint z = coordMin.z; z <= coordMax.z; z += size.z) {
+                        // if not enough X or Z space, don't place it (but not enough Y is fine)
+                        if (x + size.x > coordMaxP1.x || z + size.z > coordMaxP1.z) {
+                            continue;
+                        }
                         locs.InsertLast(CoordToPos(nat3(x, y, z)));
                     }
                 }
@@ -337,8 +343,9 @@ namespace FillBlocks {
             // SortLocationsByHeightDescending(locs, 0, topLayerStartIx - 1);
             bool ghost = IsModeGhost();
             bool free = IsModeFree();
-            bool isNormBlock = IsModeAnyBlock() && !ghost && !free;
-            auto groundCoordY = Editor::GetGroundCoordY(editor.Challenge);
+            bool mightBeGround = IsModeAnyBlock() && !free;
+            // y coord of blocks on the ground; note -1 for macroblock placement.
+            auto groundCoordY = Editor::GetGroundCoordY(editor.Challenge) - 1;
             bool airMode = IsModeAir();
             // for water blocks mostly,
 
@@ -351,10 +358,17 @@ namespace FillBlocks {
                     // set ghost/free if needed
                     if (ghost) b.isGhost = true;
                     else if (free) b.isFree = true;
-                    // only set ground if not ghost or free
-                    if (isNormBlock) b.isGround = b.coord.y == groundCoordY;
-                    // set the variant to 1 if it's not a top-layer block
+                    // only set ground if block not free
+                    if (mightBeGround) b.isGround = b.coord.y == groundCoordY;
+                    // FOR ALT VARIANT BLOCKS: set the variant to 1 if it's not a top-layer block
                     b.variant = setAltVar && i < topLayerStartIx ? 1 : objVariant;
+                    if (Editor::GetBlockSpecVariant(b) is null) {
+                        b.variant = 0;
+                        dev_warn("Failed to get block variant for " + block.IdName + "; resetting variant to 0");
+                        if (Editor::GetBlockSpecVariant(b) is null) {
+                            dev_warn("Failed to get 0th block variant for " + block.IdName + "!!!!");
+                        }
+                    }
                     b.color = CGameCtnBlock::EMapElemColor(int(currColor));
                     mb.AddBlock(b);
                 }

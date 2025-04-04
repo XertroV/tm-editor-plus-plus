@@ -633,6 +633,35 @@ shared class OctTreeNode : OctTreeRegion {
         return sum;
     }
 
+    vec3[]@ GetPointsMinMax() const {
+        vec3 pmin = vec3(999999999.0), pmax = vec3(-999999999.0);
+        if (this.children.Length == 0) {
+            if (points.Length == 0) return {pmin, pmax};
+            pmin = points[0].point;
+            pmax = points[0].point;
+            for (uint i = 1; i < points.Length; i++) {
+                pmin.x = Math::Min(pmin.x, points[i].point.x);
+                pmin.y = Math::Min(pmin.y, points[i].point.y);
+                pmin.z = Math::Min(pmin.z, points[i].point.z);
+                pmax.x = Math::Max(pmax.x, points[i].point.x);
+                pmax.y = Math::Max(pmax.y, points[i].point.y);
+                pmax.z = Math::Max(pmax.z, points[i].point.z);
+            }
+        } else {
+            // otherwise we have children
+            for (uint i = 0; i < children.Length; i++) {
+                vec3[]@ c = children[i].GetPointsMinMax();
+                pmin.x = Math::Min(pmin.x, c[0].x);
+                pmin.y = Math::Min(pmin.y, c[0].y);
+                pmin.z = Math::Min(pmin.z, c[0].z);
+                pmax.x = Math::Max(pmax.x, c[1].x);
+                pmax.y = Math::Max(pmax.y, c[1].y);
+                pmax.z = Math::Max(pmax.z, c[1].z);
+            }
+        }
+        return {pmin, pmax};
+    }
+
     OctTreeNode@ Subtract(const OctTreeNode@ other) const {
         OctTreeNode@ node = OctTreeNode(parent, depth, min, max);
         OctTreePoint@ p;

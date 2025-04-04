@@ -86,7 +86,7 @@ class MacroblockSelectionTab : Tab {
                     Editor::SetItemMbInstId(map.AnchoredObjects[i], -1);
                 }
                 for (uint i = 0; i < map.Blocks.Length; i++) {
-                    if (map.Blocks[i].DescId.GetName() == "Grass") continue;
+                    if (map.Blocks[i].BlockInfo.IdName == "Grass") continue;
                     blocks.InsertLast(map.Blocks[i]);
                     Editor::SetBlockMbInstId(map.Blocks[i], -1);
                 }

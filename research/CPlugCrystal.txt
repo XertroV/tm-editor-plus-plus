@@ -60,14 +60,14 @@ edges?
 
 CPlugCrystal.Layers @ 0xF0
 ptr -> GeometryLayer
-  0x30: bool collidable? geom version?
+  0x30: bool visible/enabled
   0x38: ptr -> Crystal
   0x40: buffer: GroupIDs<>
-  0x50: 1, 1 (collidable? geom version? visible?)
+  0x50: 1, 1 (geom visibility, collidable)
   missing: (crystalenabeld / isenabled / layerid / layername / ver)
 
 GeometryLayer.Crystal
-    ? AnchorInfos
+    ? 0x18 AnchorInfos
     ? Edges
     ? Faces
     ? Groups
@@ -80,3 +80,5 @@ GeometryLayer.Crystal
     0x8: Groups: Part[]
     ?0x28: Positions: vec3[]
     ?0x58: Faces: Face[]
+
+    0xA8 max len?

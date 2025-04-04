@@ -206,7 +206,7 @@ namespace MediatrackerSaver {
         UI::PopFont();
     }
 
-    void DrawIgnoreOrRestoreFor(MTClipTy ty, string name, CGameCtnChallenge@ map) {
+    void DrawIgnoreOrRestoreFor(MTClipTy ty, const string &in name, CGameCtnChallenge@ map) {
         if (!HasClip(ty)) return;
         if (!IsClipChanged(ty, map)) return;
         UI::TableNextRow();

@@ -78,17 +78,18 @@ class ItemModel {
     }
 
     void DrawEMEdition() {
+        if (isEditable) {
+            if (UX::SmallButton("Nullify EntityModelEdition")) {
+                Dev::SetOffset(item, O_ITEM_MODEL_EntityModelEdition, uint64(0));
+                trace('Nullified itemModel.EME');
+            }
+            AddSimpleTooltip("After nullifying, the item will fail to save if any CPlugSurfaces have materials -- to fix click TransformMaterialsToMatIds.");
+        }
+
         auto eme = item.EntityModelEdition;
         if (eme is null) {
             UI::Text("No EntityModelEdition");
             return;
-        }
-
-        if (isEditable) {
-            if (UX::SmallButton("Nullify EntityModelEdition")) {
-                @item.EntityModelEdition = null;
-            }
-            AddSimpleTooltip("After nullifying, the item will fail to save if any CPlugSurfaces have materials -- to fix click TransformMaterialsToMatIds.");
         }
 
         auto emeCommon = cast<CGameCommonItemEntityModelEdition>(eme);
@@ -582,6 +583,14 @@ class ItemModelTreeElement {
                     }
                     auto pp = cast<CPlugPlacementPatch>(Dev_GetNodFromPointer(buf[i].Ptr));
                     UI::Text("PlacementPatch["+i+"]: " + pp.Params.GroupId.GetName() + " / LeftVerts: " + pp.LeftVerts.Length + " / CenterVerts: " + pp.CenterVerts.Length + " / RightVerts: " + pp.RightVerts.Length);
+                    // UI::Indent();
+                    // if (StartTreeNode("Verts", true)) {
+                    //     UI::Text("LeftVerts: " + pp.LeftVerts.Length);
+                    //     UI::Text("CenterVerts: " + pp.CenterVerts.Length);
+                    //     UI::Text("RightVerts: " + pp.RightVerts.Length);
+                    //     EndTreeNode();
+                    // }
+                    // UI::Unindent();
 #if SIG_DEVELOPER
                     UI::SameLine();
                     if (UX::SmallButton(Icons::Cube + "##"+i)) {
@@ -1373,6 +1382,11 @@ class ItemModelTreeElement {
                 DrawMaterialsAt("nbMaterials: " + surf.Materials.Length, surf, GetOffset(surf, "Materials"));
                 DrawMaterialIdsAt("nbMaterialIds: " + surf.MaterialIds.Length, surf, GetOffset(surf, "MaterialIds"));
                 if (isEditable) {
+                    UI::BeginDisabled(surf.Materials.Length == 0);
+                    if (UI::Button("TransformMaterialsToMatIds")) {
+                        Editor::TransformMaterialsToMatIds(surf);
+                    }
+                    UI::EndDisabled();
                     if (UI::Button("UpdateSurfMaterialIdsFromMaterialIndexs")) {
                         surf.UpdateSurfMaterialIdsFromMaterialIndexs();
                     }

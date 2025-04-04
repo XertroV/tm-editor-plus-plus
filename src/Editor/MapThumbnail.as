@@ -60,6 +60,63 @@ namespace Editor {
     void _OnEditorSaveMapAfterThumbnailWritten() {
         dev_trace("Thumbnail hook: thumbnail written");
     }
+
+    void ImproveDefaultThumbnailLocation_OnReturnFromPg() {
+        dev_trace("ImproveDefaultThumbnailLocation_OnReturnFromPg called");
+        startnew(ImproveDefaultThumbnailLocation_AfterPgAsync);
+    }
+
+    void ImproveDefaultThumbnailLocation_AfterPgAsync() {
+        yield();
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        if (editor.PluginMapType.ValidationStatus == CGameEditorPluginMapMapType::EValidationStatus::Validated) {
+            ImproveDefaultThumbnailLocation();
+        } else {
+            dev_trace("Map not validated, skipping thumbnail location improvement");
+        }
+    }
+
+    void ImproveDefaultThumbnailLocation(bool force = false) {
+        dev_trace("ImproveDefaultThumbnailLocation called");
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
+        bool isDefaultThumbnailLoc = pmt.ThumbnailCameraFovY == 90.0
+            && pmt.ThumbnailCameraRoll == 0.0
+            && 0.785 == Math::Round(pmt.ThumbnailCameraHAngle, 3)
+            && 0.785 == Math::Round(pmt.ThumbnailCameraVAngle, 3);
+        // if it's the default location, let's pick a better location
+        if (!isDefaultThumbnailLoc && !force) return;
+        // some nice angles with sun behind us
+        float newCamHAngle = 1.235;
+        float newCamVAngle = 0.666;
+        auto cache = GetMapCache();
+        auto mapObjsMinMax = cache.objsRoot.GetPointsMinMax();
+        if (mapObjsMinMax is null) return;
+        auto mapMin = mapObjsMinMax[0];
+        auto mapMax = mapObjsMinMax[1];
+        if (mapMin.x > mapMax.x) {
+            // no objects?!
+            dev_warn("No objects in map to set thumbnail location");
+            return;
+        }
+        auto mapCenter = (mapMin + mapMax + vec3(32, 8, 32)) / 2;
+        auto mapSize = mapMax - mapMin;
+        auto mapDiag = mapSize.Length();
+        // this is inspired but SetEditorOrbitalTarget but I just stuck some constants
+        // in during debug and it worked out so whatever. Probably a bad idea to copy this code.
+        auto camMat = mat4::Translate(mapCenter)
+            * mat4::Rotate(newCamHAngle - HALF_PI + .5, DOWN)
+            * mat4::Rotate(HALF_PI - newCamVAngle - .5, BACKWARD)
+            * mat4::Translate(vec3(mapDiag * -.8, 0.0f, 0.0f))
+            ;
+        pmt.ThumbnailCameraPosition = (camMat * vec3(0.0f)).xyz;
+        pmt.ThumbnailCameraHAngle = newCamHAngle;
+        pmt.ThumbnailCameraVAngle = newCamVAngle;
+        pmt.ThumbnailCameraFovY = 90.0;
+        pmt.ThumbnailCameraRoll = 0.0;
+    }
 }
 
 

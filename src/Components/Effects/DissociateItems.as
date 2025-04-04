@@ -9,7 +9,7 @@ class DissociateItemsTab : EffectTab {
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
         if (!_IsActive) return false;
-        Editor::DissociateItem(item);
+        Editor::DissociateItem(item, S_SetBlockLocationOnDissociation);
         // return false: no need to refresh
         return false;
     }

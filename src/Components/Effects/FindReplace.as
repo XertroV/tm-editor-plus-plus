@@ -4,7 +4,8 @@ class FindReplaceTab : GenericApplyTab {
     ReferencedNod@ sourceBlockModel;
     CGameCtnAnchoredObject::EMapElemColor sourceItemColor;
     CGameCtnBlock::EMapElemColor sourceBlockColor;
-    int sourceBlockVariant;
+    uint sourceBlockVarIx;
+
     bool applyToItems = true;
     bool applyToBlocks = true;
     bool awaitingPickedItem = false;
@@ -32,7 +33,6 @@ class FindReplaceTab : GenericApplyTab {
         @sourceItemModel = null;
         sourceBlockColor = CGameCtnBlock::EMapElemColor::Default;
         sourceItemColor = CGameCtnAnchoredObject::EMapElemColor::Default;
-        sourceBlockVariant = 0;
     }
 
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
@@ -116,26 +116,43 @@ class FindReplaceTab : GenericApplyTab {
                 newblockSpec.color = CGameCtnBlock::EMapElemColor(int(block.MapElemColor));
             }
             if (KeepSourceVariant) {
-                newblockSpec.variant = sourceBlockVariant;
+                newblockSpec.variant = sourceBlockVarIx;
             } else {
-                newblockSpec.variant = block.BlockInfoVariantIndex;
+                newblockSpec.variant = Editor::GetBlockInfoVariantIndex(block);
             }
             newblockSpecs.InsertLast(newblockSpec);
         } else {
             auto origModel = block.BlockInfo;
+            // set blockinfo handle
             Dev::SetOffset(block, GetOffset(block, "BlockInfo"), sourceBlockModel.AsBlockInfo());
+            // set blockinfo MwId
             Dev::SetOffset(block, 0x18, sourceBlockModel.AsBlockInfo().Id.Value);
             if (KeepSourceColor) {
                 block.MapElemColor = sourceBlockColor;
             }
-            // if (KeepSourceVariant) {
-            //     // This isn't possible (except by removing and re-placing the block)
-            // }
+            if (KeepSourceVariant) {
+                // Can cause crashes if the variant doesn't exist, but that's warned in the setting
+                Editor::SetBlockInfoVariantIndex(block, sourceBlockVarIx);
+            }
             block.BlockInfo.MwAddRef();
             origModel.MwRelease();
         }
+        
         return true;
     }
+
+    void CheckBlockVariant(CGameCtnBlock@ block) {
+        auto variant = Editor::GetBlockInfoVariant(block);
+        if (variant is null) {
+            // block.BlockInfoVariantIndex = 0;
+            // todo
+            @variant = Editor::GetBlockInfoVariant(block);
+            if (variant is null) {
+                NotifyWarning("Find/Replace: Block variant does not seem to exist for the new block model.");
+            }
+        }
+    }
+
 
     void ApplyTo(CGameCtnBlock@ block) override {
         RunReplace(block);
@@ -161,8 +178,7 @@ class FindReplaceTab : GenericApplyTab {
     bool ClearAfterRun = true;
     bool AddWithoutReplace = false;
     bool KeepSourceColor = false;
-    bool KeepSourceVariant = false;
-
+    bool KeepSourceVariant = true;
 
     void DrawInner() override {
         UI::TextWrapped("Find all instances of an item or block and replace it with a source item/block.");
@@ -172,11 +188,7 @@ class FindReplaceTab : GenericApplyTab {
         ClearAfterRun = UI::Checkbox("Auto-clear sources and filter after apply", ClearAfterRun);
         AddWithoutReplace = UI::Checkbox("Add new blocks/items without replacing the original", AddWithoutReplace);
         KeepSourceColor = UI::Checkbox("Use color from source block/item instead of targets", KeepSourceColor);
-        if (AddWithoutReplace) {
-            KeepSourceVariant = UI::Checkbox("Use variant from source block/item instead of targets", KeepSourceVariant);
-        } else {
-            KeepSourceVariant = UI::Checkbox("Use variant from source item instead of targets (blocks not supported in replace mode)", KeepSourceVariant);
-        }
+        KeepSourceVariant = !UI::Checkbox("Keep variant from target block (may cause crashes if the source block does not have the variant)", !KeepSourceVariant);
 
         UI::AlignTextToFramePadding();
         if (sourceItemModel is null) {
@@ -193,7 +205,6 @@ class FindReplaceTab : GenericApplyTab {
             UI::SameLine();
             if (UI::Button("Reset Source Item")) {
                 @sourceItemModel = null;
-                sourceItemColor = CGameCtnAnchoredObject::EMapElemColor::Default;
             }
         }
 
@@ -212,8 +223,6 @@ class FindReplaceTab : GenericApplyTab {
             UI::SameLine();
             if (UI::Button("Reset Source Block")) {
                 @sourceBlockModel = null;
-                sourceBlockColor = CGameCtnBlock::EMapElemColor::Default;
-                sourceBlockVariant = 0;
             }
         }
 
@@ -248,7 +257,7 @@ class FindReplaceTab : GenericApplyTab {
             if (editor.PickedBlock !is null) {
                 @sourceBlockModel = ReferencedNod(editor.PickedBlock.BlockInfo);
                 sourceBlockColor = editor.PickedBlock.MapElemColor;
-                sourceBlockVariant = editor.PickedBlock.BlockInfoVariantIndex;
+                sourceBlockVarIx = Editor::GetBlockInfoVariantIndex(editor.PickedBlock);
                 break;
             }
         }

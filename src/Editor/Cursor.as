@@ -107,6 +107,10 @@ namespace Editor {
         dir = dir % 4;
         return dir == 1 || dir == 3;
     }
+
+    bool IsGizmoActive() {
+        return Gizmo::IsActive;
+    }
 }
 
 

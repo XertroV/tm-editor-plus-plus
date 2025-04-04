@@ -144,10 +144,66 @@ namespace UX {
     void CloseCurrentPopupIfMouseFarAway(bool closeAnyway = false) {
         auto wPos = UI::GetWindowPos();
         auto wSize = UI::GetWindowSize();
-        auto showBoundsRect = vec4(wPos + vec2(-50), wSize + vec2(100));
+        vec2 areaPad = vec2(g_screen.y * .2);
+        auto showBoundsRect = vec4(wPos - areaPad, wSize + (areaPad * 2.));
 
         closeAnyway = closeAnyway || !MathX::Within(UI::GetMousePos(), showBoundsRect);
         // trace(UI::GetMousePos().ToString() + " " + showBoundsRect.ToString());
         if (closeAnyway) UI::CloseCurrentPopup();
     }
+
+    // returns true if pressed; i.e., true => toggled
+    bool Toggler(const string &in id, bool state) {
+        return UI::Button((state ? Icons::ToggleOn : Icons::ToggleOff) + "##" + id);
+    }
+
+    bool ButtonSameLine(const string &in label) {
+        bool ret = UI::Button(label);
+        UI::SameLine();
+        return ret;
+    }
+
+    void DrawMat4SameLine(const mat4 &in mat) {
+        UI::PushFont(g_MonoFont);
+        auto posInit = UI::GetCursorPos();
+        UI::SameLine();
+        auto posStart = UI::GetCursorPos();
+        // UI::Text("[");
+        // UI::SameLine();
+        auto posMatStart = UI::GetCursorPos();
+        float lineHeight = posMatStart.y - posInit.y;
+        UI::Text("[ " + Text::Format("%3.2f", mat.xx)
+            + ", " + Text::Format("%3.2f", mat.xy)
+            + ", " + Text::Format("%3.2f", mat.xz)
+            + ", " + Text::Format("%3.2f", mat.xw) + "");
+        UI::SetCursorPos(vec2(posMatStart.x, UI::GetCursorPos().y));
+        UI::Text(", " + Text::Format("%3.2f", mat.yx)
+            + ", " + Text::Format("%3.2f", mat.yy)
+            + ", " + Text::Format("%3.2f", mat.yz)
+            + ", " + Text::Format("%3.2f", mat.yw) + "");
+        UI::SetCursorPos(vec2(posMatStart.x, UI::GetCursorPos().y));
+        UI::Text(", " + Text::Format("%3.2f", mat.zx)
+            + ", " + Text::Format("%3.2f", mat.zy)
+            + ", " + Text::Format("%3.2f", mat.zz)
+            + ", " + Text::Format("%3.2f", mat.zw) + "");
+        UI::SetCursorPos(vec2(posMatStart.x, UI::GetCursorPos().y));
+        UI::Text(", " + Text::Format("%3.2f", mat.tx)
+            + ", " + Text::Format("%3.2f", mat.ty)
+            + ", " + Text::Format("%3.2f", mat.tz)
+            + ", " + Text::Format("%3.2f", mat.tw) + " ]");
+        // UI::SameLine();
+        // UI::Text("]");
+        UI::PopFont();
+    }
+}
+
+
+void TextSameLine(const string &in text) {
+    UI::Text(text);
+    UI::SameLine();
+}
+
+void SameLineText(const string &in text) {
+    UI::SameLine();
+    UI::Text(text);
 }

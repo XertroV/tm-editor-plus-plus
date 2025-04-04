@@ -2,9 +2,7 @@ enum BIListTabType {
     Blocks, BakedBlocks, Items
 }
 
-enum BlockPlacementType {
-    Normal, Ghost, Free
-}
+const string BI_LIST_COLS_SETTINGS_WINDOW_ID = "bi-list-cols";
 
 const string cpYesMark = "\\$88f" + Icons::Check + " CP";
 const string cpNoMark = "\\$b86" + Icons::Times;
@@ -19,6 +17,40 @@ const string GetCpMark(int wpType) {
     if (wpType == 3) return cpNoMark;
     if (wpType == 4) return cpMultilapMark;
     return "\\$ccf??";
+}
+
+namespace BIL_Settings {
+    [Setting hidden]
+    bool Col_Type = true;
+    [Setting hidden]
+    bool Col_Pos = true;
+    [Setting hidden]
+    bool Col_Rot = true;
+    [Setting hidden]
+    bool Col_Coord = true;
+    [Setting hidden]
+    bool Col_Dir = true;
+    [Setting hidden]
+    bool Col_Color = true;
+    [Setting hidden]
+    bool Col_LM = false;
+    [Setting hidden]
+    bool Col_IsCP = true;
+    [Setting hidden]
+    bool Col_Size = true;
+
+    void DrawSettings() {
+        UI::SeparatorText("Columns Visibility");
+        Col_Type = UI::Checkbox("Type", Col_Type);
+        Col_Pos = UI::Checkbox("Position", Col_Pos);
+        Col_Rot = UI::Checkbox("Rotation", Col_Rot);
+        Col_Coord = UI::Checkbox("Coord", Col_Coord);
+        Col_Dir = UI::Checkbox("Dir", Col_Dir);
+        Col_Color = UI::Checkbox("Color", Col_Color);
+        Col_LM = UI::Checkbox("LM Quality", Col_LM);
+        Col_IsCP = UI::Checkbox("Is CP", Col_IsCP);
+        Col_Size = UI::Checkbox("Size", Col_Size);
+    }
 }
 
 class BlockItemListTab : Tab {
@@ -83,6 +115,7 @@ class BlockItemListTab : Tab {
         return null;
     }
 
+    // empty for overriding
     void DrawInnerEarly() {}
 
     CGameCtnChallenge@ GetMap() {
@@ -90,15 +123,43 @@ class BlockItemListTab : Tab {
         return editor.Challenge;
     }
 
+    // Should be overridden
+    void UpdateNbCols() {
+        nbCols = 9;
+    }
+
+    void CopyCSV(CGameCtnChallenge@ map, uint nbBlocks) {
+        string csv = "";
+        CGameCtnBlock@ block;
+        CGameCtnAnchoredObject@ item;
+        for (uint i = 0; i < nbBlocks; i++) {
+            if (IsAnyBlocksTab) {
+                @block = GetBlock(map, i);
+                if (block.BlockInfo.Name == "Grass") {
+                    continue;
+                }
+                csv += GetBlockCsvLine(block);
+            } else {
+                @item = GetItem(map, i);
+                csv += GetItemCsvLine(item);
+            }
+        }
+        SetClipboard(csv);
+    }
+
     bool wholeListShown = false;
     bool autoscroll = false;
     bool skipXZStarting = true;
     protected int nbCols = 9;
+
     void DrawInner() override {
+        DrawSettingsPopup();
+
         auto map = GetMap();
         auto sizeXZ = map.Size.x * map.Size.z - 4;
         auto nbBlocks = GetNbObjects(map);
         uint nbBlocksToSkip = Math::Min(nbBlocks - 4, sizeXZ);
+        UpdateNbCols();
 
         DrawInnerEarly();
 
@@ -113,7 +174,7 @@ class BlockItemListTab : Tab {
             if (recheckSkip) {
                 recheckSkip = false;
                 auto block = map !is null ? GetBlock(map, 0) : null;
-                skipXZStarting = block !is null && block.DescId.GetName() == "Grass";
+                skipXZStarting = block !is null && block.BlockInfo.IdName == "Grass";
             }
             skipXZStarting = UI::Checkbox("Skip first " + sizeXZ + " blocks", skipXZStarting);
             if (!skipXZStarting) {
@@ -125,22 +186,12 @@ class BlockItemListTab : Tab {
 
         UI::SameLine();
         if (UI::Button("Copy CSV (excl grass)")) {
-            string csv = "";
-            CGameCtnBlock@ block;
-            CGameCtnAnchoredObject@ item;
-            for (uint i = 0; i < nbBlocks; i++) {
-                if (IsAnyBlocksTab) {
-                    @block = GetBlock(map, i);
-                    if (block.BlockInfo.Name == "Grass") {
-                        continue;
-                    }
-                    csv += GetBlockCsvLine(block);
-                } else {
-                    @item = GetItem(map, i);
-                    csv += GetItemCsvLine(item);
-                }
-            }
-            SetClipboard(csv);
+            CopyCSV(map, nbBlocks);
+        }
+
+        UI::SameLine();
+        if (UI::Button("Columns " + Icons::Cogs)) {
+            UI::OpenPopup(BI_LIST_COLS_SETTINGS_WINDOW_ID);
         }
 
         int nbBlocksToDraw = nbBlocks - nbBlocksToSkip;
@@ -204,6 +255,14 @@ class BlockItemListTab : Tab {
         throw('override me');
         auto block = GetBlock(map, i);
         auto item = GetItem(map, i);
+    }
+
+    void DrawSettingsPopup() {
+        if (UI::BeginPopup(BI_LIST_COLS_SETTINGS_WINDOW_ID)) {
+            BIL_Settings::DrawSettings();
+            UX::CloseCurrentPopupIfMouseFarAway(false);
+            UI::EndPopup();
+        }
     }
 }
 

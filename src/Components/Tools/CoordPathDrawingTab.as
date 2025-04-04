@@ -189,7 +189,7 @@ class CoordPathDrawingTab : EffectTab {
         }
         UI::Text("Paths: " + paths.Length);
         UI::Indent();
-        for (uint i = 0; i < paths.Length; i++) {
+        for (int i = 0; i < int(paths.Length); i++) {
             UI::SetNextItemOpen(true, UI::Cond::Appearing);
             UI::PushID(tostring(i));
             if (UI::CollapsingHeader(paths[i].name)) {
@@ -198,10 +198,7 @@ class CoordPathDrawingTab : EffectTab {
                     @currentPath = paths[i];
                 }
                 UI::SameLine();
-                if (UI::Button("Delete")) {
-                    paths.RemoveAt(i);
-                    i--;
-                }
+                bool deleteMe = UI::Button("Delete");
                 UI::SameLine();
                 if (UI::Button("View")) {
                     Editor::SetCamAnimationGoTo(vec2(.7), paths[i].points[0], 120);
@@ -215,6 +212,10 @@ class CoordPathDrawingTab : EffectTab {
                 CopiableLabeledValue("BB Min", FormatX::Vec3_AsCode(min));
                 CopiableLabeledValue("BB Max", FormatX::Vec3_AsCode(max));
                 UI::Unindent();
+                if (deleteMe) {
+                    paths.RemoveAt(i);
+                    i--;
+                }
             }
             UI::PopID();
         }

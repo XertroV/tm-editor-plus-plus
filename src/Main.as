@@ -31,6 +31,13 @@ void Main() {
     RegisterOnItemEditorLoadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
     RegisterOnEditorUnloadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
 
+    RegisterOnEditorLoadCallback(HookOnMapSave::OnEnterEditor, "HookOnMapSave::OnEnterEditor");
+    RegisterOnEditorUnloadCallback(HookOnMapSave::OnEditorLeave, "HookOnMapSave::OnEditorLeave");
+#if DEV
+    // testing grass stuff
+    // PlacementHooks::SetupHooks();
+    // RegisterNewBlockCallback_Private(PlacementHooks::Debug_OnBlockPlaced, "PlacementHooks::Debug_OnBlockPlaced", 0);
+#endif
     RegisterOnEditorLoadCallback(PlacementHooks::SetupHooks, "PlacementHooks::SetupHooks");
     RegisterOnEditorUnloadCallback(PlacementHooks::UnloadHooks, "PlacementHooks::UnloadHooks");
 
@@ -40,6 +47,8 @@ void Main() {
     RegisterOnEditorLoadCallback(PillarsChoice::OnEditorLoad, "PillarsChoice::OnEditorLoad");
     RegisterOnEditorUnloadCallback(PillarsChoice::OnEditorUnload, "PillarsChoice::OnEditorUnload");
     // RegisterNewBlockCallback_Private(PillarsChoice::OnBlockPlaced, "PillarsChoice::OnBlockPlaced", 0);
+
+    RegisterOnLeavingPlaygroundCallback(Editor::ImproveDefaultThumbnailLocation_OnReturnFromPg, "Editor::ImproveDefaultThumbnailLocation_OnReturnFromPg");
 
     MediatrackerSaver::RegisterCallbacks();
 
@@ -64,8 +73,11 @@ void Main() {
 
     startnew(RegisterEditorLeaveUndoStandingRespawnCheck);
 
+    startnew(Loop_RunCtx_AfterMainLoop).WithRunContext(Meta::RunContext::AfterMainLoop);
+
     yield(2);
     startnew(ColorSelectionHook::SetupHooks);
+    startnew(Gizmo::SetupGizmoHotkeysOnPluginStart);
 
     yield(2);
     Editor::SetInvPatchTy(S_InvPatchTy);
@@ -73,12 +85,23 @@ void Main() {
     sleep(400);
     CallbacksEnabledPostInit = true;
 
+    startnew(LoadHotkeyDb);
+
     // auto fid = Fids::GetGame("GameData/Stadium/GameCtnDecoration/Map/DecoNoStadium48x48.Map.Gbx");
 
 #if DEV
     // runGbxTest();
     // runZipTest();
 #endif
+}
+
+void Loop_RunCtx_AfterMainLoop() {
+    while (true) {
+        if (IsInEditor) {
+            UpdateAnimAndCamera();
+        }
+        yield();
+    }
 }
 
 void OnEnabled() {
@@ -97,6 +120,7 @@ void Unload(bool freeMem = true) {
     Gizmo::_GizmoOnCancel();
     UnloadIntercepts();
     Editor::EnableMapThumbnailUpdate();
+    HookOnMapSave::OnEditorLeave();
     Editor::OffzonePatch::Unapply();
     CheckUnhookAllRegisteredHooks();
     CustomCursor::ResetSnapRadius();
@@ -118,6 +142,8 @@ uint g_PriorRenderEarlyTime;
 uint g_ThisRenderEarlyTime;
 vec2 g_screen;
 float g_scale = UI::GetScale();
+// e.g., 1080/1440 for showing on 1080p
+float g_stdPxToScreenPx = 1.;
 
 void RenderEarly() {
     g_PriorRenderEarlyTime = g_ThisRenderEarlyTime;
@@ -127,6 +153,7 @@ void RenderEarly() {
     if (!GameVersionSafe) return;
 
     g_screen = vec2(Draw::GetWidth(), Draw::GetHeight());
+    g_stdPxToScreenPx = g_screen.y / 1440.;
     Picker::RenderEarly();
 
     auto switcher = GetApp().Switcher;
@@ -167,6 +194,7 @@ void RenderEarly() {
     // we didn't fire this on being in the item editor, but we sorta do need it to refresh the caches.
     EnteringEditor = EnteringEditor && IsInEditor;
     IsLeavingPlayground = !IsInCurrentPlayground && WasInPlayground;
+    IsEnteringPlayground = IsInCurrentPlayground && !WasInPlayground;
         // && (!everEnteredEditor || (Time::Now - lastInItemEditor) > 1000);
     EditorWasStillOnStack = EditorStillOnStack;
     EditorStillOnStack = !IsInEditor && IsInAnyEditor && switcher.ModuleStack.Length > 1 && cast<CGameCtnEditorFree>(switcher.ModuleStack[0]) !is null;
@@ -197,6 +225,9 @@ void RenderEarly() {
         Event::RunOnMTEditorUnloadCbs();
     }
 
+    if (IsEnteringPlayground && IsInEditor) {
+        Event::RunOnEnteringPlaygroundCbs();
+    }
     if (IsLeavingPlayground && IsInEditor) {
         Event::RunOnLeavingPlaygroundCbs();
     }
@@ -229,9 +260,11 @@ void Render() {
     PillarsChoice::Render();
     if (IsInEditor) {
         Gizmo::Render();
-        ToolsTG.DrawWindows();
         FillBlocks::RenderFillPrompt();
         MediatrackerSaver::RenderWindow();
+    }
+    if (IsInAnyEditor) {
+        ToolsTG.DrawWindows();
     }
 
 }
@@ -295,6 +328,7 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     if (!IsInEditor) return UI::InputBlocking::DoNothing;
     if (IsInCurrentPlayground) return UI::InputBlocking::DoNothing;
     bool lmbDown = down && button == 0;
+    bool rmbDown = down && button == 1;
     bool block = false;
     if (lmbDown && g_CoordPathDrawingTool.ShouldBlockLMB()) {
         block = true;
@@ -303,7 +337,7 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
         block = (lmbDown && FarlandsHelper::FH_CheckPlacing()) || block;
         block = (lmbDown && CheckPlaceMacroblockAirMode()) || block;
         block = (lmbDown && CheckPlacingItemFreeMode()) || block;
-        block = (lmbDown && Gizmo::CheckEnterGizmoMode(editor)) || block;
+        block = (down && Gizmo::CheckEnterGizmoMode(editor, lmbDown, rmbDown)) || block;
     }
 
     g_LastMouseBDown = down;
@@ -347,8 +381,6 @@ void UpdateScrollCache() {
 float g_FrameTime = 10.;
 float g_AvgFrameTime = 10.;
 void Update(float dt) {
-    UpdateAnimAndCamera();
-
     g_FrameTime = dt;
     g_AvgFrameTime = g_AvgFrameTime * .9 + dt * .1;
 }
@@ -385,9 +417,12 @@ UI::InputBlocking OnKeyPress_Inner(bool down, VirtualKey key) {
     block = customSelectionMgr.CheckCancel(down, key) || block;
     block = FillBlocks::CheckDismissPromptHotkeys(down, key) || block;
     // trace('key down: ' + tostring(key));
-    if (down && hotkeysFlags[key]) {
+    if (hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
-        block = CheckHotkey(key) == UI::InputBlocking::Block || block;
+        block = CheckHotkey(down, key) == UI::InputBlocking::Block || block;
+    }
+    if ((Time::Now - _hotkeysLastVisible) < 500 && down) {
+        _ShowLastKeyPressed(key);
     }
 
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
@@ -407,9 +442,9 @@ UI::InputBlocking OnKeyPressInPlayground(CGameCtnApp@ app, CGameCtnEditorFree@ e
     // only test mode
     if (!Editor::IsInTestMode(editor)) return UI::InputBlocking::DoNothing;
     bool block = false;
-    if (down && hotkeysFlags[key]) {
+    if (hotkeysFlags[key]) {
         // trace('checking hotkey: ' + tostring(key));
-        block = CheckHotkey(key, false) == UI::InputBlocking::Block || block;
+        block = CheckHotkey(down, key, false) == UI::InputBlocking::Block || block;
     }
 
     // if (down && key == S_SetRespawnPosTestModeHotkey) {

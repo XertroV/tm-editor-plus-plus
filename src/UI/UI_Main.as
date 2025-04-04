@@ -97,6 +97,7 @@ void UI_Main_Render() {
         }
     }
 
+    // called in Main.as Render()
     // ToolsTG.DrawWindows();
 
     if (!Editor::IsRefreshSafe()) {
@@ -230,17 +231,17 @@ namespace MenuBar {
                 UI::EndMenu();
             }
 
-            auto eggLabel = SF_EggRun ? "Egg" : ("Egg" + NewIndicator);
-            if (UI::BeginMenu(eggLabel + "###Egg")) {
-                UI::SeparatorTextOpenplanet("Egg");
-                if (UI::Button("Hello Openplanet (Clears after 70s)")) {
-                    SF_EggRun = true;
-                    startnew(DemoRunVisLines_Main);
-                    Editor::SetCamAnimationGoTo(vec2(-.8, 0.12) * Math::PI, vec3(875.341, 142.509, 763.686), 250);
-                    Notify("Try placing some blocks over it.");
-                }
-                UI::EndMenu();
-            }
+            // auto eggLabel = SF_EggRun ? "Egg" : ("Egg");
+            // if (UI::BeginMenu(eggLabel + "###Egg")) {
+            //     UI::SeparatorTextOpenplanet("Egg");
+            //     if (UI::Button("Hello Openplanet (Clears after 70s)")) {
+            //         SF_EggRun = true;
+            //         startnew(DemoRunVisLines_Main);
+            //         Editor::SetCamAnimationGoTo(vec2(-.8, 0.12) * Math::PI, vec3(875.341, 142.509, 763.686), 250);
+            //         Notify("Try placing some blocks over it.");
+            //     }
+            //     UI::EndMenu();
+            // }
 
             if (UI::BeginMenu("Advanced")) {
                 UI::SeparatorText("\\$i\\$bbbReload or Change Base/Mood");
@@ -293,7 +294,7 @@ namespace MenuBar {
 
             // (hasDupes ? WARNING_TRIANGLE_START : "") +
             if (UI::BeginMenu(cachesMenuLabel)) {
-                if (UI::MenuItem("Refresh Map Block/Item Cache", mapCache.IsStale ? "(Stale)" : "")) {
+                if (UI::MenuItem("Refresh Map Block/Item Cache", mapCache._IsStale ? "(Stale)" : "")) {
                     mapCache.RefreshCacheSoon();
                 }
                 UI::AlignTextToFramePadding();
@@ -403,6 +404,9 @@ namespace MenuBar {
                         ExploreNod(editor.Challenge);
                     if (UI::MenuItem(Icons::FloppyO + " PMT.Autosave()"))
                         editor.PluginMapType.AutoSave();
+                    if (UI::MenuItem("Improve Default Thumbnail")) {
+                        Editor::ImproveDefaultThumbnailLocation(true);
+                    }
                 }
                 UI::EndMenu();
             }
@@ -534,6 +538,8 @@ TabGroup@ CreateToolsTabGroup() {
     @g_CursorPositionWindow = CursorPosition(tools);
     @g_CoordPathDrawingTool = CoordPathDrawingTab(tools);
     @g_ItemPlacementToolbar = CurrentItem_PlacementToolbar(tools);
+    @g_BlockPlacementToolbar = CurrentBlock_PlacementToolbar(tools);
+    @g_MbPlacementToolbar = CurrentMacroblock_PlacementToolbar(tools);
     // @g_MapBaseSizeChanger = MapBaseSizeChangerTab(tools);
     return tools;
 }
@@ -583,6 +589,8 @@ BI_MainTab@ g_BlocksItemsTab;
 InventorySearchTab@ g_InvSearchTab;
 NG::GraphTab@ g_GraphTab;
 CurrentItem_PlacementToolbar@ g_ItemPlacementToolbar;
+CurrentBlock_PlacementToolbar@ g_BlockPlacementToolbar;
+CurrentMacroblock_PlacementToolbar@ g_MbPlacementToolbar;
 
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
@@ -628,6 +636,7 @@ TabGroup@ CreateRootTabGroup() {
     ColorApplyTab(root);
     PhaseOffsetApplyTab(root);
     FindReplaceTab(root);
+    MassDeleteTab(root);
     ApplyTranslationTab(root);
     // ApplyRotationTab(root);
 

@@ -137,7 +137,7 @@ class EditorMiscTab : Tab {
 
         auto occ_MinXZ = Dev::GetOffsetVec2(occ, GetOffset(occ, "m_TargetedPosition") + 0x18);
         auto occ_MaxXZ = Dev::GetOffsetVec2(occ, GetOffset(occ, "m_TargetedPosition") + 0x20);
-        auto occ_YBounds = Dev::GetOffsetVec2(occ, GetOffset(occ, "m_TargetedPosition") + 0x28);
+        auto occ_YBounds = Editor::GetCamCtrlOrbital_YBounds(occ);
 
         UI::AlignTextToFramePadding();
         if (!_cameraUnlocked) {
@@ -152,6 +152,18 @@ class EditorMiscTab : Tab {
         }
         UI::SameLine();
         S_AutoUnlockCamera = UI::Checkbox("Autounlock?##occ", S_AutoUnlockCamera);
+        if (_cameraUnlocked) {
+            UI::SameLine();
+            UI::Text("\\$i\\$aaaCamera Bounds: " + FormatX::Vec3(vec3(occ_MinXZ.x, occ_YBounds.x, occ_MinXZ.y)) + " to " + FormatX::Vec3(vec3(occ_MaxXZ.x, occ_YBounds.y, occ_MaxXZ.y)));
+        }
+
+        if (_cameraUnlocked) {
+            auto occ_YBounds = vec2(occ_YBounds.x, occ_YBounds.y);
+            auto occ_NewYBounds = UI::InputFloat2("Y Bounds", occ_YBounds);
+            if (occ_YBounds != occ_NewYBounds) {
+                Editor::SetCamCtrlOrbital_YBounds(occ, occ_NewYBounds);
+            }
+        }
 
         auto pmt = editor.PluginMapType;
         occ.m_ParamFov = UI::SliderFloat("FoV", occ.m_ParamFov, 5.0, 180, "%.1f");
@@ -204,7 +216,8 @@ class EditorMiscTab : Tab {
         CheckSetHideBlockHelpers(app, editor);
         editor.HideBlockHelpers = UI::Checkbox("Hide Block Helpers", editor.HideBlockHelpers);
 
-        S_ControlBlockHelpers = UI::Checkbox("Save and persist Hide Block Helpers", S_ControlBlockHelpers);
+        S_ControlBlockHelpers = UI::Checkbox("Hide Block Helpers: Save and persist setting", S_ControlBlockHelpers);
+        AddSimpleTooltip("Otherwise it resets after test mode, etc.");
         if (S_ControlBlockHelpers) {
             S_HideBlockHelpers = editor.HideBlockHelpers;
         }

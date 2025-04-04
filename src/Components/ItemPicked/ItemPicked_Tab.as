@@ -137,7 +137,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         } else {
             if (UI::CollapsingHeader("Associated Block")) {
                 UI::Indent();
-                CopiableLabeledValue("Name", assocBlock.DescId.GetName());
+                CopiableLabeledValue("Name", assocBlock.BlockInfo.IdName);
                 CopiableLabeledValue("Coord", assocBlock.Coord.ToString());
                 if (UI::Button("Remove Association")) {
                     Editor::DissociateItem(item);

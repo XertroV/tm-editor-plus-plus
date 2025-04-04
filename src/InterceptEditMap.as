@@ -146,23 +146,23 @@ bool _EditMap5(CMwStack &in stack, CMwNod@ nod) {
 bool S_AllowNonCarSportPlayerModelsEditingMap = true;
 
 namespace EditMapIntercept {
-    void EditMap5(CGameManiaTitleControlScriptAPI@ titleApi, string map, string decoration, string modNameOrUrl, string playerModel, MwFastBuffer<wstring> &in pluginScripts, MwFastBuffer<wstring> &in pluginArgs, bool upgradeAdv, bool onlyForced) {
+    void EditMap5(CGameManiaTitleControlScriptAPI@ titleApi, const string &in map, const string &in decoration, const string &in modNameOrUrl, string _playerModel, MwFastBuffer<wstring> &in pluginScripts, MwFastBuffer<wstring> &in pluginArgs, bool upgradeAdv, bool onlyForced) {
         dev_trace("map: " + map);
         dev_trace("decoration: " + decoration);
         dev_trace("modNameOrUrl: " + modNameOrUrl);
-        dev_trace("playerModel: " + playerModel);
+        dev_trace("playerModel: " + _playerModel);
         dev_trace("pluginScripts: " + MwBufWstrToString(pluginScripts));
         dev_trace("pluginArgs: " + MwBufWstrToString(pluginArgs));
         dev_trace("upgradeAdv: " + upgradeAdv);
         dev_trace("onlyForced: " + onlyForced);
 
-        if (S_AllowNonCarSportPlayerModelsEditingMap && playerModel == "CarSport") {
+        if (S_AllowNonCarSportPlayerModelsEditingMap && _playerModel == "CarSport") {
             trace("Allowing any player/car model for editing map");
-            playerModel = "";
+            _playerModel = "";
         }
 
         _EditMap5_Passthrough = true;
-        titleApi.EditMap5(map, decoration, modNameOrUrl, playerModel, pluginScripts, pluginArgs, upgradeAdv, onlyForced);
+        titleApi.EditMap5(map, decoration, modNameOrUrl, _playerModel, pluginScripts, pluginArgs, upgradeAdv, onlyForced);
         _EditMap5_Passthrough = false;
     }
 
