@@ -5,8 +5,6 @@ class HotkeysTab : Tab {
 
     void DrawInner() override {
         UI::AlignTextToFramePadding();
-        UI::TextWrapped("\\$fa6Note: under editor plugins, enable the EditorPlusPlus plugin to update the custom selection box.");
-        UI::AlignTextToFramePadding();
         UI_DrawHotkeyList();
     }
 }

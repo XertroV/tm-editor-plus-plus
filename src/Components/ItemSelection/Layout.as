@@ -69,9 +69,11 @@ class ItemLayoutTab : Tab {
         UI::Separator();
         UI::AlignTextToFramePadding();
         UI::Text("All Layouts: \\$888Some of these are likely inaccessible.");
+        UI::PushID("all-pls");
         for (uint i = 0; i < pc.PatchLayouts.Length; i++) {
             DrawLayoutOpts(pc.PatchLayouts[i], i);
         }
+        UI::PopID();
     }
 
     void DrawLayoutOpts(NPlugItemPlacement_SPatchLayout@ layout, uint i, bool skipHeader = false) {

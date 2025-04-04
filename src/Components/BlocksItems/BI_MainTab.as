@@ -66,7 +66,6 @@ class ViewSkinnedBlocksTab : ViewAllBlocksTab {
         nbCols = 9;
     }
 
-
     void DrawInnerEarly() override {
         BI_DrawCacheRefreshMsg();
     }
@@ -94,6 +93,18 @@ class ViewAllBlocksTab : BlockItemListTab {
         nbCols = 9;
     }
 
+    void UpdateNbCols() override {
+        nbCols = 2;
+        if (BIL_Settings::Col_Type) nbCols++;
+        if (BIL_Settings::Col_Pos) nbCols++;
+        if (BIL_Settings::Col_Coord) nbCols++;
+        if (BIL_Settings::Col_Dir) nbCols++;
+        if (BIL_Settings::Col_Color) nbCols++;
+        if (BIL_Settings::Col_LM) nbCols++;
+        if (BIL_Settings::Col_IsCP) nbCols++;
+        if (BIL_Settings::Col_Size) nbCols++;
+    }
+
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
         float idColWidth = UI::GetScale() * 50.0;
         float bigNumberColWidth = UI::GetScale() * 110.0;
@@ -101,13 +112,14 @@ class ViewAllBlocksTab : BlockItemListTab {
         float smlNumberColWidth = UI::GetScale() * 70.0;
         float exploreColWidth = numberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
         UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, idColWidth);
-        UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
-        UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
-        UI::TableSetupColumn("Coord", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
-        UI::TableSetupColumn("Dir", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-        UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-        UI::TableSetupColumn("LM", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-        UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        if (BIL_Settings::Col_Type) UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
+        if (BIL_Settings::Col_Pos) UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
+        if (BIL_Settings::Col_Coord) UI::TableSetupColumn("Coord", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
+        if (BIL_Settings::Col_Dir) UI::TableSetupColumn("Dir", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        if (BIL_Settings::Col_Color) UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        if (BIL_Settings::Col_LM) UI::TableSetupColumn("LM", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        if (BIL_Settings::Col_IsCP) UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, numberColWidth);
+        if (BIL_Settings::Col_Size) UI::TableSetupColumn("Size", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Tools", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
@@ -125,31 +137,51 @@ class ViewAllBlocksTab : BlockItemListTab {
 
         UI::TableNextColumn();
         UI::Text(tostring(i));
-
-        UI::TableNextColumn();
-        UI::Text(block.DescId.GetName());
         auto rowHovered = UI::IsItemHovered();
 
-        UI::TableNextColumn();
-        UI::Text(FormatX::Vec3(Editor::GetBlockLocation(block)));
+        if (BIL_Settings::Col_Type) {
+            UI::TableNextColumn();
+            UI::Text(block.BlockInfo.IdName);
+            rowHovered = rowHovered || UI::IsItemHovered();
+        }
 
-        UI::TableNextColumn();
-        UI::Text(FormatX::Nat3(block.Coord));
+        if (BIL_Settings::Col_Pos) {
+            UI::TableNextColumn();
+            UI::Text(FormatX::Vec3(Editor::GetBlockLocation(block)));
+        }
 
-        UI::TableNextColumn();
-        UI::Text(tostring(block.BlockDir));
+        if (BIL_Settings::Col_Coord) {
+            UI::TableNextColumn();
+            UI::Text(FormatX::Nat3(Editor::GetBlockCoord(block)));
+        }
 
-        UI::TableNextColumn();
-        UI::Text(tostring(block.MapElemColor));
+        if (BIL_Settings::Col_Dir) {
+            UI::TableNextColumn();
+            UI::Text(tostring(block.Dir));
+        }
 
-        UI::TableNextColumn();
-        UI::Text(tostring(block.MapElemLmQuality));
+        if (BIL_Settings::Col_Color) {
+            UI::TableNextColumn();
+            UI::Text(tostring(block.MapElemColor));
+        }
 
-        UI::TableNextColumn();
-        UI::Text(GetCpMark(block.BlockInfo.WaypointType));
-        if (block.WaypointSpecialProperty !is null) {
-            UI::SameLine();
-            UI::Text("("+block.WaypointSpecialProperty.Order+")");
+        if (BIL_Settings::Col_LM) {
+            UI::TableNextColumn();
+            UI::Text(tostring(block.MapElemLmQuality));
+        }
+
+        if (BIL_Settings::Col_IsCP) {
+            UI::TableNextColumn();
+            UI::Text(GetCpMark(block.BlockInfo.WaypointType));
+            if (block.WaypointSpecialProperty !is null) {
+                UI::SameLine();
+                UI::Text("("+block.WaypointSpecialProperty.Order+")");
+            }
+        }
+
+        if (BIL_Settings::Col_Size) {
+            UI::TableNextColumn();
+            UI::Text("Size TODO");
         }
 
         UI::TableNextColumn();
@@ -196,7 +228,7 @@ class ViewAllBlocksTab : BlockItemListTab {
         // editor.PluginMapType.AutoSave();
         // if (block.IsGhostBlock()) {
         //     if (!editor.PluginMapType.RemoveGhostBlock(block.BlockInfo, Nat3ToInt3(block.Coord), block.Dir)) {
-        //         NotifyWarning("Unable to remove ghost block:\n Coord: " + block.Coord.ToString() + "\n Type: " + block.DescId.GetName() + "\n: Dir: " + tostring(block.Dir));
+        //         NotifyWarning("Unable to remove ghost block:\n Coord: " + block.Coord.ToString() + "\n Type: " + block.BlockInfo.IdName + "\n: Dir: " + tostring(block.Dir));
         //     }
         // } else {
         //     if (!editor.PluginMapType.RemoveBlock(Nat3ToInt3(block.Coord))) {
@@ -218,6 +250,17 @@ class ViewAllItemsTab : BlockItemListTab {
         nbCols = 8;
     }
 
+    void UpdateNbCols() override {
+        nbCols = 2;
+        if (BIL_Settings::Col_Type) nbCols++;
+        if (BIL_Settings::Col_Pos) nbCols++;
+        if (BIL_Settings::Col_Rot) nbCols++;
+        if (BIL_Settings::Col_Color) nbCols++;
+        if (BIL_Settings::Col_LM) nbCols++;
+        if (BIL_Settings::Col_IsCP) nbCols++;
+        if (BIL_Settings::Col_Size) nbCols++;
+    }
+
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
         float idColWidth = UI::GetScale() * 50.0;
         float bigNumberColWidth = UI::GetScale() * 110.0;
@@ -225,12 +268,13 @@ class ViewAllItemsTab : BlockItemListTab {
         float smlNumberColWidth = UI::GetScale() * 70.0;
         float exploreColWidth = stdNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
         UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, idColWidth);
-        UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
-        UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
-        UI::TableSetupColumn("Rot", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
-        UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-        UI::TableSetupColumn("LM", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
-        UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, stdNumberColWidth);
+        if (BIL_Settings::Col_Type) UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
+        if (BIL_Settings::Col_Pos) UI::TableSetupColumn("Pos", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
+        if (BIL_Settings::Col_Rot) UI::TableSetupColumn("Rot", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
+        if (BIL_Settings::Col_Color) UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        if (BIL_Settings::Col_LM) UI::TableSetupColumn("LM", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
+        if (BIL_Settings::Col_IsCP) UI::TableSetupColumn("Is CP", UI::TableColumnFlags::WidthFixed, stdNumberColWidth);
+        if (BIL_Settings::Col_Size) UI::TableSetupColumn("Size", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);
         UI::TableSetupColumn("Tools", UI::TableColumnFlags::WidthFixed, exploreColWidth);
     }
 
@@ -248,28 +292,46 @@ class ViewAllItemsTab : BlockItemListTab {
 
         UI::TableNextColumn();
         UI::Text(tostring(i));
-
-        UI::TableNextColumn();
-        UI::Text(item.ItemModel.IdName);
         bool rowHovered = UI::IsItemHovered();
 
-        UI::TableNextColumn();
-        UI::Text(FormatX::Vec3(item.AbsolutePositionInMap));
+        if (BIL_Settings::Col_Type) {
+            UI::TableNextColumn();
+            UI::Text(item.ItemModel.IdName);
+            rowHovered = rowHovered || UI::IsItemHovered();
+        }
 
-        UI::TableNextColumn();
-        UI::Text(FormatX::Vec3(MathX::ToDeg(Editor::GetItemRotation(item))));
+        if (BIL_Settings::Col_Pos) {
+            UI::TableNextColumn();
+            UI::Text(FormatX::Vec3(item.AbsolutePositionInMap));
+        }
 
-        UI::TableNextColumn();
-        UI::Text(tostring(item.MapElemColor));
+        if (BIL_Settings::Col_Rot) {
+            UI::TableNextColumn();
+            UI::Text(FormatX::Vec3(MathX::ToDeg(Editor::GetItemRotation(item))));
+        }
 
-        UI::TableNextColumn();
-        UI::Text(tostring(item.MapElemLmQuality));
+        if (BIL_Settings::Col_Color) {
+            UI::TableNextColumn();
+            UI::Text(tostring(item.MapElemColor));
+        }
 
-        UI::TableNextColumn();
-        UI::Text(GetCpMark(item.ItemModel.WaypointType));
-        if (item.WaypointSpecialProperty !is null) {
-            UI::SameLine();
-            UI::Text("("+item.WaypointSpecialProperty.Order+")");
+        if (BIL_Settings::Col_LM) {
+            UI::TableNextColumn();
+            UI::Text(tostring(item.MapElemLmQuality));
+        }
+
+        if (BIL_Settings::Col_IsCP) {
+            UI::TableNextColumn();
+            UI::Text(GetCpMark(item.ItemModel.WaypointType));
+            if (item.WaypointSpecialProperty !is null) {
+                UI::SameLine();
+                UI::Text("("+item.WaypointSpecialProperty.Order+")");
+            }
+        }
+
+        if (BIL_Settings::Col_Size) {
+            UI::TableNextColumn();
+            UI::Text("Size TODO");
         }
 
         UI::TableNextColumn();
@@ -416,7 +478,7 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
 
     void RunAutodeletion() {
         auto mapCache = Editor::GetMapCache();
-        if (mapCache.IsStale) {
+        if (mapCache._IsStale) {
             Notify("[Autodel Dups] 0. Map cache stale, refreshing.");
             mapCache.RefreshCache();
             // Notify("[Autodel Dups] 0. Map cache refreshed.");
@@ -607,7 +669,7 @@ class ViewDuplicateItemsTab : ViewAllItemsTab {
 
 void BI_DrawCacheRefreshMsg() {
     auto cache = Editor::GetMapCache();
-    UI::BeginDisabled(!cache.IsStale);
+    UI::BeginDisabled(!cache._IsStale);
     if (UX::SmallButton("Refresh Cache##refresh-cache-wp")) {
         cache.RefreshCacheSoon();
     }
@@ -773,7 +835,7 @@ class MacroblocksBITab : Tab {
                 if (objs !is null) {
                     if (objs.Length > 0) {
                         if (UX::SmallButton(Icons::Eye + "##" + mb.InstId)) {
-                            Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(objs[0].pos), objs[0].pos, 120.);
+                            Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(objs[0]._pos), objs[0]._pos, 120.);
                         }
                         UI::SameLine();
                     }
@@ -783,9 +845,9 @@ class MacroblocksBITab : Tab {
                             auto item = cast<Editor::ItemInMap>(objs[j]);
                             auto block = cast<Editor::BlockInMap>(objs[j]);
                             if (item !is null) {
-                                UI::Text("Item: " + item.IdName);
+                                UI::Text("Item: " + item._IdName);
                             } else if (block !is null) {
-                                UI::Text("Block: " + block.IdName);
+                                UI::Text("Block: " + block._IdName);
                             } else {
                                 UI::Text("Unknown object");
                             }

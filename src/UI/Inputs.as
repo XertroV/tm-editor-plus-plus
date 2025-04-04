@@ -114,7 +114,27 @@ namespace UX {
     }
 
     nat3 InputNat3(const string &in label, nat3 val) {
-        auto ret = Vec3ToNat3(UI::InputFloat3(label, Nat3ToVec3(val)));
+        auto availR = UI::GetContentRegionAvail();
+        auto cur = UI::GetCursorPos();
+
+        auto w = (availR.x + cur.x) * 0.715 / 3.0;
+        UI::PushItemWidth(w);
+        UI::PushID(label);
+        auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
+        UI::PushStyleVar(UI::StyleVar::ItemSpacing, vec2(3));
+
+        auto ret = val;
+
+        // auto ret = Vec3ToNat3(UI::InputFloat3(label, Nat3ToVec3(val)));
+        ret.x = UI::InputInt("##x", val.x, -1);
+        UI::SameLine();
+        ret.y = UI::InputInt("##y", val.y, -1);
+        UI::SameLine();
+        ret.z = UI::InputInt(label + "##z", val.z, -1);
+
+        UI::PopStyleVar();
+        UI::PopID();
+        UI::PopItemWidth();
 
         ret = cbNat3.With(ret).DrawClipboard(label).GetNat3();
 

@@ -1,5 +1,7 @@
 RotationTranslationGizmo@ testGizmo;
 
+const string DEGREES_CHAR = "°";
+
 array<vec3>@[] axisDragArrows = {
     {vec3(.3, 0, 0), vec3(1, 0, 0), vec3(0.9, 0, 0.1), vec3(0.9, 0, -0.1), vec3(1, 0, 0), vec3(0.9, 0.1, 0), vec3(0.9, -0.1, 0), vec3(1, 0, 0)},
     {vec3(0, .3, 0), vec3(0, 1, 0), vec3(0.1, 0.9, 0), vec3(-0.1, 0.9, 0), vec3(0, 1, 0), vec3(0, 0.9, 0.1), vec3(0, 0.9, -0.1), vec3(0, 1, 0)},
@@ -71,6 +73,31 @@ float S_GizmoClickSensitivity = 400.;
 
 const float GIZMO_MAX_SCALE_COEF = .45;
 
+
+class GizmoState {
+    vec3 pos;
+    mat4 rot;
+    vec3 pivotPoint;
+    uint nbPlaced = 0;
+    GizmoState(const vec3 &in pos, const mat4 &in rot, const vec3 &in pivotPoint) {
+        this.pos = pos;
+        this.rot = rot;
+        this.pivotPoint = pivotPoint;
+    }
+    GizmoState() {}
+
+    string ToString() {
+        return "GizmoState(pos: " + pos.ToString() + "rot: mat4, " + " pivot: " + pivotPoint.ToString() + ")";
+    }
+
+    mat4 GetMatrix() {
+        return mat4::Translate(pos) * mat4::Inverse(rot) * mat4::Translate(pivotPoint * -1.);
+    }
+}
+
+[Setting hidden]
+float S_Gizmo_StepRot = PI/48.;
+
 class RotationTranslationGizmo {
     // drawing gizmo
     // click detection
@@ -86,16 +113,19 @@ class RotationTranslationGizmo {
     mat4 tmpRot = mat4::Identity();
     string name;
     Gizmo::Mode mode = Gizmo::Mode::Rotation;
+    // UV for moving object on plane
+    vec2 altMoveUV;
 
-    float stepRot = PI/32.;
+    GizmoState[] history;
 
-    // roughly: size in meters of target object. set via WithBoundingBox
+    // roughly: size in meters of target object. set via WithBoundingBox. used to scale gizmo
     float scale = 1.0;
     // increase scale by this ratio so it's a bit bigger than the target
     float scaleExtraCoef = 1.2;
 
     CoroutineFunc@ onExit = function() {};
     CoroutineFunc@ onApply = function() {};
+    CoroutineFunc@ onApplyAndCont = function() {};
 
     RotationTranslationGizmo(const string &in name) {
         this.name = name;
@@ -106,6 +136,11 @@ class RotationTranslationGizmo {
 
     RotationTranslationGizmo@ WithOnApplyF(CoroutineFunc@ f) {
         @onApply = f;
+        return this;
+    }
+
+    RotationTranslationGizmo@ WithOnApplyAndContinueF(CoroutineFunc@ f) {
+        @onApplyAndCont = f;
         return this;
     }
 
@@ -121,20 +156,88 @@ class RotationTranslationGizmo {
         return this;
     }
 
+    ~RotationTranslationGizmo() {}
+
+    void CleanUp() {
+        if (placementParams !is null) {
+            @placementParams = null;
+        }
+    }
+
+    void Undo() {
+        if (history.Length == 0) {
+            dev_trace("Gizmo: no history to undo");
+            return;
+        }
+        auto last = history[history.Length - 1];
+        while (last.nbPlaced > 0) {
+            cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType.Undo();
+            last.nbPlaced--;
+        }
+        pos = last.pos;
+        rot = last.rot;
+        pivotPoint = last.pivotPoint;
+        FocusCameraOn(pos, false);
+        dev_trace("Gizmo: undo: " + last.ToString());
+        history.RemoveLast();
+    }
+
+    mat4 GetMatrix() {
+        // return mat4::Translate(pos + tmpPos + GetRotatedPivotPoint(-1.)) * mat4::Inverse(tmpRot * rot)
+        //     * mat4::Translate(pivotPoint * -1.);
+        return mat4::Translate(pos + tmpPos) * mat4::Inverse(tmpRot * rot)
+            * mat4::Translate(pivotPoint * -1.
+                + modelOffset
+                - GetItemCursorPivot()
+            );
+    }
+
+    vec3 GetItemCursorPivot() {
+        if (itemPivots.Length == 0) return vec3();
+        auto cur = Editor::GetCurrentPivot(cast<CGameCtnEditorFree>(GetApp().Editor));
+        return itemPivots[cur % itemPivots.Length];
+    }
+
     vec3 bbHalfDiag;
     vec3 bbMidPoint;
+    vec3 modelOffset;
 
     RotationTranslationGizmo@ WithBoundingBox(Editor::AABB@ bb) {
         WithMatrix(bb.mat);
         scale = bb.halfDiag.Length() * 1.333;
         bbHalfDiag = bb.halfDiag;
         bbMidPoint = bb.midPoint;
+        this.modelOffset = bbMidPoint - bbHalfDiag; // + pivot;
         return this;
+    }
+
+    ReferencedNod@ placementParams;
+    CGameItemPlacementParam@ get_PlacementParams() {
+        if (placementParams !is null && placementParams.AsPlacementParam() !is null) {
+            return placementParams.AsPlacementParam();
+        }
+        return null;
     }
 
     RotationTranslationGizmo@ WithPlacementParams(CGameItemPlacementParam@ pp) {
         placementParamOffset = vec3(pp.GridSnap_HOffset, pp.GridSnap_VOffset, pp.GridSnap_HOffset);
+        @placementParams = ReferencedNod(pp);
+        pp.SwitchPivotManually = true;
+        CopyPivotPositions(pp);
         return this;
+    }
+
+    vec3[] itemPivots;
+    void CopyPivotPositions(CGameItemPlacementParam@ pp) {
+        itemPivots.RemoveRange(0, itemPivots.Length);
+        for (uint i = 0; i < pp.PivotPositions.Length; i++) {
+            itemPivots.InsertLast(pp.PivotPositions[i]);
+        }
+    }
+
+    vec3 GetPivot(int ix) {
+        if (ix < 0 || ix >= itemPivots.Length) return vec3();
+        return itemPivots[ix];
     }
 
     bool blockOffsetApplied = false;
@@ -158,11 +261,16 @@ class RotationTranslationGizmo {
     //     return this;
     // }
 
+    float tmpRotationAngle = 0.;
+
     RotationTranslationGizmo@ AddTmpRotation(Axis axis, float delta_theta, bool rotateToLocal = true) {
+        tmpRotationAngle += delta_theta;
         // tmpRot = mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * tmpRot;
         // accounting for pivotPoint:
         if (rotateToLocal) {
-            tmpRot = mat4::Translate(pivotPoint * -1.) * mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * mat4::Translate(pivotPoint) * tmpRot;
+            auto rp = EulerToMat(rotPivot);
+            tmpRot = mat4::Translate(pivotPoint * -1.) * mat4::Inverse(rp) * mat4::Inverse(mat4::Rotate(delta_theta, AxisToVecForRot(axis))) * rp * mat4::Translate(pivotPoint) * tmpRot;
+
         } else {
             // rotate about global axes
             tmpRot = tmpRot * mat4::Translate(pivotPoint * -1.) * mat4::Rotate(delta_theta * -1., ((tmpRot * rot) * AxisToVecForRot(axis)).xyz) * mat4::Translate(pivotPoint);
@@ -170,6 +278,11 @@ class RotationTranslationGizmo {
         auto p = vec3(tmpRot.tx, tmpRot.ty, tmpRot.tz);
         tmpRot = mat4::Translate(p * -1) * tmpRot;
         // tmpPos -= p;
+        return this;
+    }
+
+    RotationTranslationGizmo@ AddTmpRotation(const mat4 &in m) {
+        tmpRot = m * tmpRot;
         return this;
     }
 
@@ -183,6 +296,7 @@ class RotationTranslationGizmo {
     }
 
     RotationTranslationGizmo@ SetTmpRotation(Axis axis, float theta) {
+        tmpRotationAngle = theta;
         tmpRot = mat4::Inverse(mat4::Rotate(theta, AxisToVecForRot(axis)));
         return this;
     }
@@ -192,17 +306,24 @@ class RotationTranslationGizmo {
         return this;
     }
 
-    RotationTranslationGizmo@ ApplyTmpRotation() {
+    RotationTranslationGizmo@ ApplyTmpRotation(bool addUndoState = true) {
+        if (addUndoState && tmpRotationAngle != 0.) history.InsertLast(GetState());
         rot = tmpRot * rot;
         tmpRot = mat4::Identity();
+        tmpRotationAngle = 0.;
         ApplyTmpTranslation();
         return this;
     }
 
-    RotationTranslationGizmo@ ApplyTmpTranslation() {
+    RotationTranslationGizmo@ ApplyTmpTranslation(bool addUndoState = true) {
+        if (addUndoState && tmpPos.LengthSquared() > 0) history.InsertLast(GetState());
         pos = pos + tmpPos;
         tmpPos = vec3();
         return this;
+    }
+
+    GizmoState GetState() {
+        return GizmoState(pos, rot, PivotPointOrDest);
     }
 
     void CyclePivot() {
@@ -211,7 +332,9 @@ class RotationTranslationGizmo {
 
     AnimMgr@ pivotAnimator;
 
-    void SetPivotPoint(vec3 newPivot, bool animate = true) {
+    void SetPivotPoint(vec3 newPivot, bool animate = true, bool addToUndo = true) {
+        if (addToUndo) history.InsertLast(GetState());
+        auto dist = newPivot - pivotPoint;
         if (animate) {
             destinationPivotPoint = newPivot;
             if (pivotAnimator !is null) {
@@ -219,15 +342,15 @@ class RotationTranslationGizmo {
                 // pivotAnimator.SetAt(1.0);
             }
             @pivotAnimator = AnimMgr(false, S_AnimationDuration);
-            startnew(CoroutineFunc(RunPivotAnim));
-            AddTmpTranslation(newPivot - pivotPoint, true);
-            FocusCameraOn(pos + tmpPos);
-            AddTmpTranslation(pivotPoint - newPivot, true);
+            startnew(CoroutineFunc(RunPivotAnim)).WithRunContext(Meta::RunContext::AfterMainLoop);
+            AddTmpTranslation(dist, true);
+            FocusCameraOn(pos + tmpPos, false);
+            AddTmpTranslation(dist * -1., true);
             return;
         }
         // dev_trace("Gizmo: set pivot point: " + newPivot.ToString());
-        AddTmpTranslation(newPivot - pivotPoint, true);
-        ApplyTmpTranslation();
+        AddTmpTranslation(dist, true);
+        ApplyTmpTranslation(false);
         pivotPoint = newPivot;
     }
 
@@ -239,10 +362,11 @@ class RotationTranslationGizmo {
         // dev_trace("[Before] Gizmo: pivotAnimator done? " + anim.IsDone + " / progress: " + anim.Progress);
         while (anim.Update(true)) {
             // dev_trace("[Update] Gizmo: pivotAnimator done? " + anim.IsDone + " / progress: " + anim.Progress);
-            SetPivotPoint(Math::Lerp(fromPos, toPos, anim.Progress), false);
+            SetPivotPoint(Math::Lerp(fromPos, toPos, anim.Progress), false, false);
             if (anim.IsDone) break;
             yield();
         }
+        SetPivotPoint(toPos, false, false);
         // dev_trace("Gizmo: pivotAnimator done? " + anim.IsDone + " / progress: " + anim.Progress);
         if (anim is pivotAnimator) {
             @pivotAnimator = null;
@@ -257,8 +381,8 @@ class RotationTranslationGizmo {
         return mat4::Translate(pos + tmpPos + pivotRotated) * xyz_rot;
     }
 
-    vec3 GetRotatedPivotPoint() {
-        return (mat4::Inverse(tmpRot * rot) * (pivotPoint * -1.)).xyz;
+    vec3 GetRotatedPivotPoint(float pivotCoef = -1.) {
+        return (mat4::Inverse(tmpRot * rot) * (pivotPoint * pivotCoef)).xyz;
     }
 
     vec3 placementParamOffset = vec3();
@@ -295,6 +419,7 @@ class RotationTranslationGizmo {
     bool _hoveringAlt;
 
     void DrawCirclesManual(vec3 objOriginPos, float _scale = 2.0) {
+        if (MathX::IsNanInf(objOriginPos)) return;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cam = Camera::GetCurrent();
         auto camState = Editor::GetCurrentCamState(editor);
@@ -310,7 +435,7 @@ class RotationTranslationGizmo {
         // objOriginPos -= pivotPoint;
         _closestMouseDist = 1000000.;
         // withTmpRot = (tmpRot * rot);
-        withTmpRot = useGlobal ? mat4::Identity() : mat4::Inverse(tmpRot * rot);
+        withTmpRot = useGlobal ? mat4::Identity() : mat4::Inverse(EulerToMat(rotPivot) * tmpRot * rot);
         shouldDrawGizmo = true || Camera::IsBehind(objOriginPos) || c2pLen < _scale;
         if (!shouldDrawGizmo) {
             if (c2pLen < _scale) trace('c2pLen < scale');
@@ -433,8 +558,7 @@ class RotationTranslationGizmo {
                 mouseDownPos = mousePos;
                 ResetTmp();
             } else if (UI::IsMouseClicked(UI::MouseButton::Right) && mouseInClickRange && !IsAltDown()) {
-                mode = isRotMode ? Gizmo::Mode::Translation : Gizmo::Mode::Rotation;
-                ResetTmp();
+                SwapMode(); // calls ResetTmp()
             }
         } else if (!IsLMBPressed()) {
             isMouseDown = false;
@@ -456,8 +580,14 @@ class RotationTranslationGizmo {
                         ResetGizmoRMB();
                     } else {
                         auto normal = (withTmpRot * AxisToVec(lastClosestAxis)).xyz;
-                        auto pickedPos = Picker::GetMouseToWorldOnPlane(normal, planePos);
-                        SetTmpTranslation(pickedPos - planePos);
+                        float quantize = _isCtrlDown ? S_Gizmo_TranslateCtrlStepDist : 0.0;
+
+                        auto pickedPos = Picker::GetMouseToWorldOnPlane(normal, planePos, quantize);
+                        altMoveUV = Picker::lastMouseToWorldOnPlaneQuantizedUV;
+
+                        vec3 d = pickedPos - planePos;
+                        if (IsShiftDown()) d *= 0.1;
+                        SetTmpTranslation(d);
                     }
                 } else {
                     // we drag along axis
@@ -467,7 +597,9 @@ class RotationTranslationGizmo {
                     if (!Math::IsNaN(mag)) {
                         if (isRotMode) {
                             d = mag;
-                            if (_isCtrlDown) d = d - d % stepRot;
+                            if (_isCtrlDown) {
+                                d = LockToAngles(tmpRotationAngle + d, S_Gizmo_StepRot) - tmpRotationAngle;
+                            }
                             if (d == 0.) skipSetLastDD = true;
                             else AddTmpRotation(lastClosestAxis, d, !useGlobal);
                         } else {
@@ -491,7 +623,10 @@ class RotationTranslationGizmo {
                     }
                 }
             }
-            if (!hoveringAlt) DrawRadialLine();
+            if (!hoveringAlt) {
+                DrawRadialLine();
+            }
+            DrawAmountText();
             if (!skipSetLastDD) lastDragDelta = dragDelta;
         }
     }
@@ -544,6 +679,7 @@ class RotationTranslationGizmo {
 
     void ResetTmp() {
         tmpRot = mat4::Identity();
+        tmpRotationAngle = 0.;
         tmpPos = vec3();
         lastDragDelta = vec2();
     }
@@ -568,10 +704,69 @@ class RotationTranslationGizmo {
         nvg::ClosePath();
     }
 
+    void DrawAmountText() {
+        vec2 bottomLeft = mouseDownPos; // mousePos + vec2(25, -25) * g_scale;
+        float fontSize = 36.0 * g_stdPxToScreenPx * g_scale;
+        nvg::Reset();
+        nvg::FontSize(fontSize);
+        vec4 color = cWhite;
+        if (_isCtrlDown && IsCloseToSpecialAngle(tmpRotationAngle)) {
+            color = cLimeGreen;
+        } else if (_isCtrlDown) {
+            // color = cCyan;
+        }
+        nvgDrawTextWithStroke(bottomLeft, GetCurrentTmpAmountStr(0), color);
+        // draw above because axes uv are reversed from normal order
+        if (hoveringAlt) {
+            nvgDrawTextWithStroke(bottomLeft - vec2(0, fontSize*1.2), GetCurrentTmpAmountStr(1), color);
+        }
+    }
+
+    // componentIx = 0 mostly, except for alt move line 2, where it =1
+    string GetCurrentTmpAmountStr(int componentIx = 0) {
+        if (!hoveringAlt && componentIx != 0) {
+            return "UNKNOWN componentIx == " + componentIx;
+        }
+        if (mode == Gizmo::Mode::Rotation) {
+            bool veryCloseToSteppedRotation = ((Math::Abs(tmpRotationAngle) + 0.005) % S_Gizmo_StepRot) < 0.01;
+            string ret = tostring(Math::Round(Math::ToDeg(tmpRotationAngle), 1)) + " °";
+            if (_isCtrlDown && veryCloseToSteppedRotation) {
+                auto revolutionParts = int(Math::Round(TAU / S_Gizmo_StepRot));
+                auto part = int(Math::Round(tmpRotationAngle / S_Gizmo_StepRot));
+                int2 frac = SimplifyFraction(part, revolutionParts);
+                ret += " = " + part + " / " + revolutionParts + " revs = " + frac.x + " / " + frac.y;
+            } else if (_isCtrlDown && IsCloseToSpecialAngle(tmpRotationAngle)) {
+                ret += " = " + GetSpecialAngleName(tmpRotationAngle);
+            }
+            return ret;
+        } else if (hoveringAlt){
+            auto uv = this.altMoveUV * -1;
+            auto bd1 = lastClosestAxis == Axis::Z ? 8. : 32.;
+            auto bd2 = lastClosestAxis == Axis::X ? 8. : 32.;
+            string ax1 = lastClosestAxis != Axis::Z ? "Z" : "Y";
+            string ax2 = lastClosestAxis != Axis::X ? "X" : "Y";
+            if (componentIx == 0) return ax1 + ": " + FmtMoveMeters((uv.x), bd1);
+            else if (componentIx == 1) return ax2 + ": " + FmtMoveMeters((uv.y), bd2);
+            return "UNKNOWN componentIx == " + componentIx;
+        }
+        auto len = tmpPos.Length();
+        auto blockDimension = lastClosestAxis == Axis::Y ? 8. : 32.;
+        return FmtMoveMeters(len, blockDimension);
+    }
+
+    string FmtMoveMeters(float dist, float blockDim) {
+        string ret = tostring(Math::Round(dist, 2)) + " m";
+        if (Math::Abs(dist) >= blockDim - 0.0001) {
+            ret += " = " + tostring(Math::Round(dist / blockDim, 3)) + " blocks";
+        }
+        return ret;
+    }
+
     vec2 dragDelta;
     vec2 lastDragDelta;
 
     vec3 camPos;
+    mat4 camLoc;
     vec4 pwrPos;
     mat4 camTranslate;
     mat4 camRotation;
@@ -580,21 +775,85 @@ class RotationTranslationGizmo {
     mat4 camProj;
 
     vec3 pivotPoint;
+    // euler angles of rotation to apply to local coords
+    vec3 rotPivot;
+
+    vec3 get_PivotPointOrDest() {
+        return pivotAnimator !is null ? destinationPivotPoint : pivotPoint;
+    }
+
+
+    void IncrStep() {
+        if (mode == Gizmo::Mode::Rotation) {
+            if (S_Gizmo_StepRot > PI / 49.) return;
+            S_Gizmo_StepRot *= 2.0;
+            ShowRotStepStatusMsg();
+        } else if (mode == Gizmo::Mode::Translation) {
+            if (S_Gizmo_TranslateCtrlStepDist > 33) return;
+            S_Gizmo_TranslateCtrlStepDist *= 2.0;
+            ShowMoveStepStatusMsg();
+        }
+    }
+
+    void DecrStep() {
+        if (mode == Gizmo::Mode::Rotation) {
+            if (S_Gizmo_StepRot < PI / 1000.) return;
+            S_Gizmo_StepRot /= 2.0;
+            ShowRotStepStatusMsg();
+        } else if (mode == Gizmo::Mode::Translation) {
+            if (S_Gizmo_TranslateCtrlStepDist < 0.05) return;
+            S_Gizmo_TranslateCtrlStepDist /= 2.0;
+            ShowMoveStepStatusMsg();
+        }
+    }
+
+    void ShowRotStepStatusMsg() {
+        ShowStatusMsg("Rot Step: " + Math::Round(Math::ToDeg(S_Gizmo_StepRot), 2) + " °");
+    }
+
+    void ShowMoveStepStatusMsg() {
+        ShowStatusMsg("Move Step: " + Math::Round(S_Gizmo_TranslateCtrlStepDist, 2) + " m");
+    }
+
+    TempNvgText@ statusMsg;
+
+    void ShowStatusMsg(const string &in msg) {
+        if (statusMsg !is null) statusMsg.Destroy();
+        @statusMsg = TempNvgText(msg);
+    }
+
+
+    void SwapMode() {
+        mode = mode == Gizmo::Mode::Rotation ? Gizmo::Mode::Translation : Gizmo::Mode::Rotation;
+        ResetTmp();
+    }
+
+
+    // MARK: Draw All
 
     void DrawAll() {
         auto cam = Camera::GetCurrent();
         if (cam is null) return;
-        auto camLoc = mat4(cam.Location);
+        camLoc = mat4(cam.Location);
         camPos = vec3(camLoc.tx, camLoc.ty, camLoc.tz);
+        camRotation = mat4::Translate(camPos * -1.) * camLoc;
+        camRotation = mat4::Inverse(camRotation);
 
         DrawWindow();
+#if DEV
+        DrawDebugWindow();
+#endif
 
         // don't draw if behind camera, or gizmo outside screen bounds
         auto posToScreen = Camera::ToScreen(pos);
         if (posToScreen.z >= 0) return;
-        if (posToScreen.x < -3.1 || posToScreen.x > g_screen.x + 3.1 || posToScreen.y < -3.1 || posToScreen.y > g_screen.y + 3.1) return;
+        if (posToScreen.x < 20 || posToScreen.x > g_screen.x - 20 || posToScreen.y < 20 || posToScreen.y > g_screen.y - 20) return;
 
         DrawCirclesManual(pos, scale * scaleExtraCoef);
+#if DEV
+        DrawBoundingBox();
+        DrawNextApplicationPreview();
+#endif
     }
 
     void Render() {
@@ -603,13 +862,12 @@ class RotationTranslationGizmo {
 
     bool useGlobal = false;
 
-    // vec3 lastAppliedPivot;
-
     void DrawWindow() {
         bool isRotMode = mode == Gizmo::Mode::Rotation;
         auto btnSize = Math::Max(64.0, g_screen.y * .05) * g_scale;
         auto btnSize2 = vec2(btnSize);
-        auto nbBtns = 7.;
+        auto btnSize2Thinner = btnSize2 * vec2(0.75, 1.);
+        auto nbBtns = 8.5;
         auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
 
@@ -619,7 +877,7 @@ class RotationTranslationGizmo {
             // UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(g_screen.y * 0.005));
             UI::PushFont(g_BigFont);
             if (UI::Button(isRotMode ? Icons::Dribbble : Icons::ArrowsAlt, btnSize2)) {
-                mode = isRotMode ? Gizmo::Mode::Translation : Gizmo::Mode::Rotation;
+                SwapMode();
             }
             AddSimpleTooltip("Rotation or Translation?");
 
@@ -636,12 +894,12 @@ class RotationTranslationGizmo {
 
             UI::SameLine();
             if (UI::Button("Pivot\n   "+Icons::Refresh, btnSize2)) {
-                CyclePivot();
-            }
-            if (UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Right)) {
                 UI::OpenPopup("gizmo-toolbar-edit-pivot");
             }
-            AddSimpleTooltip("Cycle Pivot (RMB to edit)");
+            if (UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Right)) {
+                CyclePivot();
+            }
+            AddSimpleTooltip("Edit Pivot (RMB to cycle)" + NewIndicator);
 
             UI::SameLine();
             if (UI::Button(Icons::Camera, btnSize2)) {
@@ -650,14 +908,28 @@ class RotationTranslationGizmo {
             AddSimpleTooltip("Reset Camera");
 
             UI::SameLine();
+            UI::BeginDisabled(!CanRepeatAppDiff);
+            if (UI::Button(Icons::Repeat, btnSize2Thinner)) {
+                RepeatLastApplicationDiff();
+            }
+            AddSimpleTooltip("Repeat Last Difference" + NewIndicator);
+            UI::EndDisabled();
+
+            UI::SameLine();
             if (UI::Button(Icons::Cog, btnSize2)) {
                 UI::OpenPopup("gizmo-toolbar-settings");
             }
-            AddSimpleTooltip("Settings");
+            AddSimpleTooltip("Settings" + NewIndicator);
+
+            UI::SameLine();
+            if (UI::Button(Icons::Undo, btnSize2Thinner)) {
+                Undo();
+            }
+            AddSimpleTooltip("Undo");
 
             UI::SameLine();
             if (UI::Button(Icons::Check, btnSize2)) {
-                onApply();
+                RunApply(false);
             }
             AddSimpleTooltip("Apply");
 
@@ -671,31 +943,62 @@ class RotationTranslationGizmo {
         }
 
         if (UI::BeginPopup("gizmo-toolbar-edit-pivot")) {
-            UI::Text("Edit Pivot");
-            UI::SeparatorText("Edit Pivot");
-            UI::Text("\\$iTodo");
-            // UI::Text("Pivot: " + pos.ToString());
-            // UI::Text("Scale: " + scale);
-            // UI::Separator();
-            // UI::Text("Set Pivot to:");
-            // UI::PushItemWidth(100);
-            // UI::InputFloat3("##gizmo-pivot", pos);
-            // UI::InputFloat("##gizmo-pivot-scale", scale);
-            // UI::PopItemWidth();
-            // UI::Separator();
-            // if (UI::Button("Apply")) {
-            //     onApply();
-            //     UI::CloseCurrentPopup();
-            // }
-            // UI::SameLine();
-            // if (UI::Button("Cancel")) {
-            //     UI::CloseCurrentPopup();
-            // }
+            /*
+            [L][M][R]
+            [B][M][T]
+            [B][M][F]
+             */
+            UI::SeparatorText("Corners etc.");
+            UI::AlignTextToFramePadding();
+            TextSameLine("X");
+            SetPivotAxisButton(Axis::X, "L##gzPvX", -1.);
+            SetPivotAxisButton(Axis::X, "M##gzPvX", 0.);
+            SetPivotAxisButton(Axis::X, "R##gzPvX", 1., true);
+            UI::AlignTextToFramePadding();
+            TextSameLine("Y");
+            SetPivotAxisButton(Axis::Y, "B##gzPvY", -1.);
+            SetPivotAxisButton(Axis::Y, "M##gzPvY", 0.);
+            SetPivotAxisButton(Axis::Y, "T##gzPvY", 1., true);
+            UI::AlignTextToFramePadding();
+            TextSameLine("Z");
+            SetPivotAxisButton(Axis::Z, "B##gzPvZ", -1.);
+            SetPivotAxisButton(Axis::Z, "M##gzPvZ", 0.);
+            SetPivotAxisButton(Axis::Z, "F##gzPvZ", 1., true);
+
+            // for slope platform, pivot should be 2/3 up, maybe + 2m, and normal height is 3*8.
+            UI::SeparatorText("Slopes & Curves");
+            SetPivotAxisButtonAbs(Axis::Y, "Y=2", 2.);
+            SetPivotAxisButtonAbs(Axis::Y, "Y=8", 8.);
+            AddSimpleTooltip("BiSlope");
+            SetPivotAxisButtonAbs(Axis::Y, "Y=16", 16.);
+            AddSimpleTooltip("Slope2");
+            SetPivotAxisButtonAbs(Axis::Y, "Y=18", 18.);
+            AddSimpleTooltip("Slope2 + 2m");
+            SetPivotAxisButtonAbs(Axis::Y, "Y=24", 24., true);
+            AddSimpleTooltip("Slope3");
+
+            UI::SeparatorText("Pivot Point");
+            vec3 newPivot = UI::InputFloat3("##gizmo-pivot", pivotPoint);
+            if (newPivot != pivotPoint) {
+                SetPivotPoint(newPivot, false);
+                FocusCameraOn(pos, false);
+            }
+
+            UI::SeparatorText("Rotation Pivot");
+
+            if (UI::Button("Yaw 45°")) {
+                rotPivot.y = Math::ToRad(45.);
+            }
+
+            vec3 newRotPivot = UX::InputAngles3("##gizmo-rot-pivot", rotPivot);
+            if (newRotPivot != rotPivot) {
+                rotPivot = newRotPivot;
+            }
 
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();
-        }
 
+        }
 
         if (UI::BeginPopup("gizmo-toolbar-settings")) {
             // UI::Text("Gizmo Settings");
@@ -704,17 +1007,61 @@ class RotationTranslationGizmo {
             // AddSimpleTooltip("The cursor for freeblocks is raised up 0.25, so this will apply a -0.25 offset when starting the gizmo. \\$<\\$i\\$f80HOWEVER,\\$> this is somewhat inconsistent. This setting allows you to disable the feature.");
             S_Gizmo_MoveCameraOnStart = UI::Checkbox("Move Camera when Starting Gizmo", S_Gizmo_MoveCameraOnStart);
 
+#if DEV
+            UI::SeparatorText("Debug");
+            D_Gizmo_DrawBoundingBox = UI::Checkbox("Draw Bounding Box", D_Gizmo_DrawBoundingBox);
+#endif
+
             UI::SeparatorText("Translate");
+            UI::SetNextItemWidth(100);
             S_Gizmo_TranslateCtrlStepDist = UI::InputFloat("Step Size (Holding Ctrl)", S_Gizmo_TranslateCtrlStepDist, 0.25);
             AddSimpleTooltip("Default: 0.25.\nHow much to move (step size) when holding Ctrl while dragging (translation).");
+            if (UX::ButtonSameLine("0.25##gzts")) S_Gizmo_TranslateCtrlStepDist = 0.25;
+            if (UX::ButtonSameLine("1.0##gzts")) S_Gizmo_TranslateCtrlStepDist = 1.0;
+            if (UX::ButtonSameLine("2.0##gzts")) S_Gizmo_TranslateCtrlStepDist = 2.0;
+            if (UX::ButtonSameLine("4.0##gzts")) S_Gizmo_TranslateCtrlStepDist = 4.0;
+            if (UI::Button("8.0##gzts")) S_Gizmo_TranslateCtrlStepDist = 8.0;
+
+            UI::SeparatorText("Rotate");
+            UI::Text("Current Rotation Step: " + Text::Format("%.2f", Math::ToDeg(S_Gizmo_StepRot)) + " ° (" + (Math::Round(TAU  / S_Gizmo_StepRot, 1)) + " steps per revolution)");
+
+            UI::BeginDisabled(S_Gizmo_StepRot > PI / 49.);
+            if (UX::ButtonSameLine("Increase Step Size")) {
+                IncrStep();
+            }
+            UI::EndDisabled();
+            UI::BeginDisabled(S_Gizmo_StepRot < PI / 1000.);
+            if (UX::ButtonSameLine("Decrease Step Size")) {
+                DecrStep();
+            }
+            UI::EndDisabled();
+            if (UI::Button("Reset##stepRot")) {
+                S_Gizmo_StepRot = PI / 48.;
+            }
+
+            UI::SeparatorText("Initialization");
+            UI::Text("Ctrl + Shift + LMB: Edit picked block/item.");
+            UI::TextWrapped("Ctrl + Shift + RMB: Place current block/item at picked block/item in gizmo." + NewIndicator);
 
             UI::SeparatorText("Controls");
             UI::Text("Escape: cancel and exit gizmo.");
             UI::Text("Hold Shift to slow down rotation speed.");
-            UI::Text("Hold Ctrl: Limit step size.");
+            UI::Text("Hold Ctrl: Snap translation and rotation.");
             UI::Text("Hold Alt: Move camera.");
             UI::Text("Right click (on gizmo): Cycle between Translate and Rotate.");
             UI::Text("Right click (while dragging): Reset.");
+            UI::Text("Right click Pivot button: Edit pivot." + NewIndicator);
+
+            UI::SeparatorText("Hotkeys" + NewIndicator);
+            S_Gizmo_InvertApplyModifier = UI::Checkbox("Invert Apply Modifier", S_Gizmo_InvertApplyModifier);
+            AddSimpleTooltip("When true: pressing Apply hotkey (default Space) will Apply and Continue; and holding shift will Apply and exit gizmo.");
+            Gizmo::DrawHotkeysTable();
+
+            UI::SeparatorText("Help");
+            UI::Text("Problem: \\$iBlocks appear 25cm too high");
+            UI::Indent();
+            UI::TextWrapped("Solution: Exit gizmo. Under the \\$<\\$8f8Custom Cursor\\$> tab: Enable \"Do Not Offset Block in Cursor Preview\" (might reset if done from gizmo mode), and set \"FreeBlock Vertical Offset\" to 0. Then select a new block in ghost mode to refresh cursor and try again.");
+            UI::Unindent();
 
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();
@@ -749,21 +1096,313 @@ class RotationTranslationGizmo {
         // // UX::PopInvisibleWindowStyle();
     }
 
+    void DrawBoundingBox() {
+        if (!D_Gizmo_DrawBoundingBox) return;
+        nvg::StrokeWidth(2);
+        // vec3 p1 = pos + bbMidPoint;
+        // nvgDrawPointRing(p1, 5., cBlack75);
+        // vec3 p2 = p1 + bbHalfDiag;
+        // nvgDrawPointRing(p2, 5., cBlack75);
+        // nvgDrawPath({p1, p2}, cMagenta);
+        nvgDrawBlockBox(GetMatrix(), bbHalfDiag*2, cSkyBlue);
+        // nvgDrawBlockBox(GetCursorMat(), bbHalfDiag*2, cLimeGreen50);
+    }
+
     float d;
 
-    void FocusCameraOn(vec3 p) {
+    void FocusCameraOn(vec3 p, bool setDist = true) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto camState = Editor::GetCurrentCamState(editor);
         camState.Pos = p;
-        camState.TargetDist = this.scale * 4.5;
+        if (setDist) camState.TargetDist = this.scale * 4.5;
         Editor::SetCamAnimationGoTo(camState);
     }
+
+    void SetPivotAxisButton(Axis axis, const string &in label, float relPos, bool isLast = false) {
+        if (UI::Button(label)) {
+            MovePivotTo(axis, relPos);
+        }
+        if (!isLast) UI::SameLine();
+    }
+
+    void SetPivotAxisButtonAbs(Axis axis, const string &in label, float absPos, bool isLast = false) {
+        if (UI::Button(label)) {
+            SetPivotPoint(AxisToVec(axis) * absPos + AxisToAntiVec(axis) * PivotPointOrDest);
+        }
+        if (!isLast) UI::SameLine();
+    }
+
+
+    void MovePivotTo(Axis axis, float uvAmt, bool animate = true, bool addToUndo = true) {
+        SetPivotPoint(
+            AxisToVec(axis) * (uvAmt * bbHalfDiag + bbMidPoint - GetItemCursorPivot()) + AxisToAntiVec(axis) * PivotPointOrDest,
+            animate, addToUndo
+        );
+    }
+
+    void MovePivotToVisual(Axis axis, float uvAmt) {
+        // based on camera, find closest local axis, and move pivot in that direction
+        auto m = GetMatrix();
+        auto axisSign = ClosestMatchingAxesRelativeToCamera()[axis];
+        MovePivotTo(Axis(axisSign.x), uvAmt * float(axisSign.y));
+    }
+
+    vec2[][] _camLocAngleSign_Last;
+
+    // returns (localAxis, sign)[] where the index is a camera's axis
+    int3[] ClosestMatchingAxesRelativeToCamera() {
+        auto m = mat4::Inverse(rot);
+        // for each camera axis:
+        //   for each local axis:
+        //     find the angle between the two
+        // for each output axis:
+        //   find the local axis with the smallest angle
+        //   store the local axis and the sign of the angle
+        //   set the angel in all axes so it won't be chosen again
+        // return the array
+
+        // camLocAngleSign[camAxis][localAxis] = vec2(angle, sign)
+        vec2[][] camLocAngleSign;
+        camLocAngleSign.Resize(3);
+        for (uint i = 0; i < 3; i++) {
+            camLocAngleSign[i].Resize(3);
+        }
+        for (uint i = 0; i < 3; i++) {
+            vec3 v1 = (m * AxisToVec(Axis(i))).xyz; // - (m * vec3()).xyz;
+            for (uint j = 0; j < 3; j++) {
+                auto dot = Math::Dot(v1, (camRotation * AxisToVec(Axis(j)) * (j == 0 ? -1. : 1.)).xyz);
+                camLocAngleSign[j][i] = vec2(Math::Abs(dot), Sign(dot));
+            }
+        }
+        _camLocAngleSign_Last = camLocAngleSign;
+
+        int3[] ret;
+        ret.Resize(3);
+        int[] remaining = {0, 1, 2};
+        while (remaining.Length > 0) {
+            float maxDot = 0.;
+            int bestLocAxis = -1;
+            int bestCamAxis = -1;
+            for (uint i = 0; i < 3; i++) {
+                for (uint j = 0; j < 3; j++) {
+                    if (camLocAngleSign[i][j].x > maxDot) {
+                        maxDot = camLocAngleSign[i][j].x;
+                        bestLocAxis = j;
+                        bestCamAxis = i;
+                    }
+                }
+            }
+            // ret[i] = int2(minAxis, int(camLocAngleSign[i][minAxis].y));
+            // for (uint j = 0; j < 3; j++) {
+            //     camLocAngleSign[j][minAxis].x = -1.;
+            // }
+            ret[bestCamAxis] = int3(bestLocAxis, int(camLocAngleSign[bestCamAxis][bestLocAxis].y), int(camLocAngleSign[bestCamAxis][bestLocAxis].x * 10000));
+            // camLocAngleSign[bestOutAxis][bestInAxes].x = -1.;
+            for (uint j = 0; j < 3; j++) {
+                camLocAngleSign[bestCamAxis][j].x = -1.;
+                camLocAngleSign[j][bestLocAxis].x = -1.;
+            }
+            remaining.RemoveAt(remaining.Find(bestCamAxis));
+        }
+
+
+        return ret;
+    }
+
+    void DrawDebugClosestMatchingAxes() {
+        auto axesSign = ClosestMatchingAxesRelativeToCamera();
+        for (uint i = 0; i < 3; i++) {
+            UI::Text(tostring(Axis(i)) + " -> " + tostring(Axis(axesSign[i].x)) + " * " + axesSign[i].y + " (dot: " + (float(axesSign[i].z) / 10000.0 * axesSign[i].y) + ")");
+        }
+
+        // _camLocAngleSign_Last
+        for (uint i = 0; i < 3; i++) {
+            for (uint j = 0; j < 3; j++) {
+                UI::Text(tostring(Axis(i)) + " -> " + tostring(Axis(j)) + " = " + _camLocAngleSign_Last[i][j].x + " * " + _camLocAngleSign_Last[i][j].y);
+            }
+        }
+
+        if (UI::Button("Update Cam")) {
+            _camRotation = camRotation;
+        }
+        mat4 camHelperMat = mat4::Translate(pos) * _camRotation;
+        nvg::StrokeWidth(2);
+        nvgDrawCoordHelpers(camHelperMat, 5.0);
+    }
+
+    mat4 _camRotation;
+
+    float Sign(float v) {
+        return v < 0. ? -1. : 1.;
+    }
+
+    // MARK: $store Macros
+
+    GizmoState@ appliedL;
+    GizmoState@ appliedL2;
+
+    void SaveAppliedPosition() {
+        if (appliedL2 is null) {
+            @appliedL2 = GetState();
+        } else if (appliedL is null) {
+            @appliedL = GetState();
+        } else {
+            @appliedL2 = appliedL;
+            @appliedL = GetState();
+        }
+    }
+
+    bool get_CanRepeatAppDiff() {
+        return appliedL !is null && appliedL2 !is null;
+    }
+
+    void RepeatLastApplicationDiff() {
+        if (!CanRepeatAppDiff) return;
+        auto next = GetNextApplicationMat();
+        auto unPivoted = next * mat4::Translate(pivotPoint);
+        auto newPos = vec3(unPivoted.tx, unPivoted.ty, unPivoted.tz);
+        auto newRot = mat4::Inverse(mat4::Translate(newPos * -1.) * unPivoted);
+        pos = newPos;
+        rot = newRot;
+        history.InsertLast(GetState());
+        RunApply(true);
+        FocusCameraOn(pos, false);
+    }
+
+    mat4 GetNextApplicationMat() {
+        if (!CanRepeatAppDiff) return mat4::Identity();
+        // each matrix is made up of a translation, a rotation, and a pivot point
+        // note: we need to rotate the change in position by the rotation so twisting repetitions work.
+        // get lPos relative to l2Pos in local space
+        auto aLMat = appliedL.GetMatrix();
+        // return (aLMat * mat4::Inverse(appliedL2.GetMatrix())) * aLMat;
+        return aLMat * mat4::Inverse(appliedL2.GetMatrix()) * aLMat;
+    }
+
+    void DrawNextApplicationPreview() {
+        if (!D_Gizmo_DrawBoundingBox) return;
+        if (appliedL2 is null) return;
+        nvgDrawBlockBox(appliedL2.GetMatrix(), bbHalfDiag*2, cLimeGreen50);
+        if (appliedL is null) return;
+        nvgDrawBlockBox(appliedL.GetMatrix(), bbHalfDiag*2, cOrange);
+        auto mDelta = appliedL.GetMatrix() * mat4::Inverse(appliedL2.GetMatrix());
+
+        auto next1 = mDelta * appliedL.GetMatrix();
+        nvgDrawBlockBox(next1, bbHalfDiag*2, cRed);
+        auto next2 = mDelta * next1;
+        nvgDrawBlockBox(next2, bbHalfDiag*2, cBlue);
+        nvgDrawBlockBox(GetNextApplicationMat() * mat4::Translate(-1.), bbHalfDiag*2, cYellow);
+
+        auto n1Pos = vec3(next1.tx, next1.ty, next1.tz);
+        auto unPivoted = next1 * mat4::Translate(pivotPoint);
+        auto newPos = vec3(unPivoted.tx, unPivoted.ty, unPivoted.tz);
+        nvgDrawPointRing(n1Pos, 5., cRed);
+        nvgDrawPointRing(newPos, 5., cYellow);
+        auto newRot = (mat4::Translate(newPos * -1.) * unPivoted);
+
+    }
+
+    void RunApply(bool andCont = false) {
+        ApplyTmpRotation();
+        ApplyTmpTranslation();
+        SaveAppliedPosition();
+        if (history.Length > 0) {
+            history[history.Length - 1].nbPlaced++;
+        }
+        if (andCont) {
+            onApplyAndCont();
+        } else {
+            onApply();
+        }
+    }
+
+#if DEV
+    void DrawDebugWindow() {
+        if (UI::Begin("Gizmo Debug", UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
+            UI::Text("Gizmo Debug");
+            UI::SeparatorText("Data");
+            UI::Text("Rot: ");
+            UX::DrawMat4SameLine(rot);
+            UI::Text("Pos: " + pos.ToString());
+            UI::Text("tmpPos: " + tmpPos.ToString());
+            UI::Text("tmpRot: ");
+            UX::DrawMat4SameLine(tmpRot);
+            UI::Text("Pivot: " + pivotPoint.ToString());
+
+
+            UI::SeparatorText("Camera");
+            UI::Text("CamLoc: ");
+            UX::DrawMat4SameLine(camLoc);
+
+            // DrawDebugClosestMatchingAxes();
+
+            UI::SeparatorText("BB");
+            UI::Text("bbMidPoint: " + bbMidPoint.ToString());
+            UI::Text("bbHalfDiag: " + bbHalfDiag.ToString());
+            UI::Text("modelOffset: " + modelOffset.ToString());
+
+            UI::SeparatorText("Rendering");
+            UI::Text("scale: " + scale);
+
+            UI::SeparatorText("Repeat");
+            UI::Text(appliedL !is null ? "AppliedL: " + appliedL.ToString() : "AppliedL: null");
+            UI::Text(appliedL2 !is null ? "AppliedL2: " + appliedL2.ToString() : "AppliedL2: null");
+        }
+        UI::End();
+    }
+#endif
 }
 
 const quat ROT_Q_AROUND_UP = quat(UP, HALF_PI);
 const quat ROT_Q_AROUND_FWD = quat(BACKWARD, HALF_PI);
 
+// atan(4/32);
+const double ANGLE_HALF_BI_SLOPE = 0.12435499454676;
+// atan(8/32);
+const double ANGLE_BI_SLOPE = 0.24497866312686;
+// atan(16/32);
+const double ANGLE_SLOPE2 = 0.4636476090008;
+// atan(24/32);
+const double ANGLE_SLOPE3 = 0.6435011087933;
 
+bool IsCloseToSpecialAngle(float rad) {
+    float tolerance = 0.00001;
+    rad = Math::Abs(rad);
+    return Math::Abs(rad - ANGLE_HALF_BI_SLOPE) < tolerance || Math::Abs(rad - ANGLE_BI_SLOPE) < tolerance || Math::Abs(rad - ANGLE_SLOPE2) < tolerance || Math::Abs(rad - ANGLE_SLOPE3) < tolerance;
+}
+
+string GetSpecialAngleName(float rad) {
+    rad = Math::Abs(rad);
+    if (Math::Abs(rad - ANGLE_HALF_BI_SLOPE) < 0.00001) return "Half Bi-Slope";
+    if (Math::Abs(rad - ANGLE_BI_SLOPE) < 0.00001) return "Bi-Slope";
+    if (Math::Abs(rad - ANGLE_SLOPE2) < 0.00001) return "Slope2";
+    if (Math::Abs(rad - ANGLE_SLOPE3) < 0.00001) return "Slope3";
+    return "Unknown";
+}
+
+float LockToAngles(float rad, float step) {
+    float sign = rad < 0. ? -1. : 1.;
+    rad = Math::Abs(rad);
+    float dToStep = rad % step;
+    float closest = rad - dToStep;
+    if (dToStep > step * .5) {
+        closest += step;
+    }
+    if (IsCloserToAThanB(rad, ANGLE_HALF_BI_SLOPE, closest)) {
+        return ANGLE_HALF_BI_SLOPE * sign;
+    } else if (IsCloserToAThanB(rad, ANGLE_BI_SLOPE, closest)) {
+        return ANGLE_BI_SLOPE * sign;
+    } else if (IsCloserToAThanB(rad, ANGLE_SLOPE2, closest)) {
+        return ANGLE_SLOPE2 * sign;
+    } else if (IsCloserToAThanB(rad, ANGLE_SLOPE3, closest)) {
+        return ANGLE_SLOPE3 * sign;
+    }
+    return closest * sign;
+}
+
+bool IsCloserToAThanB(float val, float a, float b) {
+    return Math::Abs(val - a) < Math::Abs(val - b);
+}
 
 namespace UX {
     void PushInvisibleWindowStyle() {
@@ -776,4 +1415,19 @@ namespace UX {
     void PopInvisibleWindowStyle() {
         UI::PopStyleColor(4);
     }
+}
+
+int2 SimplifyFraction(int num, int denom) {
+    // int sign = (num >= 0 ? 1 : -1) * (denom >= 0 ? 1 : -1);
+    int gcd = GCD(Math::Abs(num), Math::Abs(denom));
+    return int2(num / gcd, denom / gcd);
+}
+
+int GCD(int a, int b) {
+    while (b != 0) {
+        int t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
 }

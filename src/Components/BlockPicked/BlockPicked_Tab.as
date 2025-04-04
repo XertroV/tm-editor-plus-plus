@@ -94,7 +94,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
         UI::Columns(2);
 
-        CopiableLabeledValue("Type", block.DescId.GetName());
+        CopiableLabeledValue("Type", block.BlockInfo.IdName);
         CopiableLabeledValue("Coord", block.Coord.ToString());
         CopiableLabeledValue("Pos", preDesc.Pos.ToString());
         CopiableLabeledValue("Rot", MathX::ToDeg(preDesc.Rot).ToString());
@@ -106,7 +106,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
 #if SIG_DEVELOPER
         if (UX::SmallButton(Icons::Cube + "Explore Block")) {
-            ExploreNod(block.DescId.GetName(), block);
+            ExploreNod(block.BlockInfo.IdName, block);
         }
         UI::SameLine();
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(block)));
@@ -145,7 +145,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
 
 #if SIG_DEVELOPER
         if (UI::Button(Icons::Cube + " BlockInfo")) {
-            ExploreNod("Info: " + block.DescId.GetName(), block.BlockInfo);
+            ExploreNod("Info: " + block.BlockInfo.IdName, block.BlockInfo);
         }
         UI::SameLine();
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(block.BlockInfo)));

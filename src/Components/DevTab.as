@@ -286,7 +286,7 @@ class DevBlockTab : BlockItemListTab {
         UI::Text(tostring(Reflection::GetRefCount(block)));
 
         UI::TableNextColumn();
-        UI::Text(block.DescId.GetName());
+        UI::Text(block.BlockInfo.IdName);
 
         UI::TableNextColumn();
         if (UX::SmallButton(Icons::Cube + "##" + blockId)) {

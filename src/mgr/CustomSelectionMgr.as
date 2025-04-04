@@ -20,7 +20,7 @@ class CustomSelectionMgr {
 
     void HideCustomSelection() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return;
+        if (editor is null || editor.PluginMapType is null || editor.PluginMapType.CustomSelectionCoords.Length == 0) return;
         editor.PluginMapType.CustomSelectionCoords.RemoveRange(0, editor.PluginMapType.CustomSelectionCoords.Length);
         editor.PluginMapType.HideCustomSelection();
     }
@@ -301,7 +301,7 @@ namespace CustomSelection {
     nat3 minCoord;
     nat3 maxCoord;
 
-    void SetCoords(nat3 min, nat3 max, vec4 color = vec4(1)) {
+    void SetCoords(nat3 min, nat3 max, vec4 color = vec4(.3)) {
         // dev_trace('SetCoords: ' + min.ToString() + ' to ' + max.ToString());
         // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         // if (editor is null) return;

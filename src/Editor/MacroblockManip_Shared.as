@@ -174,7 +174,7 @@ namespace Editor {
         }
         void AddSkins(CGameCtnBlock@[]@ blocks) {
             for (uint i = 0; i < blocks.Length; i++) {
-                if (blocks[i].Skin != null) {
+                if (blocks[i].Skin !is null) {
                     AddSkin(blocks[i].Skin, i);
                 }
             }
@@ -507,6 +507,17 @@ namespace Editor {
         mat4 GetTransform() {
             return mat4::Translate(pos) * EulerToMat_Shared(pyr);
         }
+
+        ItemSpec@ ToItemSpec(CGameItemModel@ itemModel, vec3 &in pivotPos = vec3(0), uint16 variantIx = 0) {
+            throw("implemented elsewhere");
+            return null;
+        }
+
+        // call this to ensure the variant is valid. If it can't be found, different parameters will be tried. If not found, first set variant to 0. if still not found, swap isGround. otherwise return false.
+        bool EnsureValidVariant() {
+            throw("implemented elsewhere");
+            return true;
+        }
     }
 
     shared class WaypointSpec : NetworkSerializable {
@@ -782,6 +793,11 @@ namespace Editor {
 
         mat4 GetTransform() {
             return mat4::Translate(pos) * EulerToMat_Shared(pyr);
+        }
+
+        BlockSpec@ ToBlockSpec(CGameCtnBlockInfo@ model, uint blockVariant = 0, bool isGround = false) {
+            throw("implemented elsewhere");
+            return null;
         }
     }
 }

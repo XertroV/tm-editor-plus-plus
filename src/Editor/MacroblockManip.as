@@ -322,6 +322,7 @@ namespace Editor {
             ObjPtr = Dev_GetPointerForNod(block);
             name = block.BlockInfo.IdName;
             // collection = blah
+            // author = GetMwIdName(block.BlockInfo.Author);
             author = block.BlockInfo.Author.GetName();
             coord = block.Coord;
             // correct for mb offset at min location 0,1,0
@@ -377,6 +378,7 @@ namespace Editor {
                 name = BlockInfo.IdName;
                 author = BlockInfo.Author.GetName();
                 BlockInfo.MwAddRef();
+                EnsureValidVariant();
             }
         }
 
@@ -495,7 +497,7 @@ namespace Editor {
         }
 
         bool MatchesBlock(CGameCtnBlock@ block) const override {
-            // if (block.DescId.GetName() == "Grass") return false;
+            // if (block.BlockInfo.IdName == "Grass") return false;
             // debug failed match
             // trace('name match: ' + (name == block.BlockInfo.IdName));
             // trace('collection match: ' + (collection == 26));
@@ -512,7 +514,7 @@ namespace Editor {
             // trace('variant match: ' + (variant == block.BlockInfoVariantIndex) + ' ' + variant + ' / ' + block.BlockInfoVariantIndex);
             // trace('flags match: ' + (flags == (block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None)));
 
-            return name == block.DescId.GetName() && collection == 26 && author == block.BlockInfo.Author.GetName() &&
+            return name == block.BlockInfo.IdName && collection == 26 && author == block.BlockInfo.Author.GetName() &&
                 ((isFree && Editor::IsBlockFree(block)) || MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0))) &&
                 dir == block.Direction && dir2 == block.Direction &&
                 MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)) &&
@@ -559,6 +561,40 @@ namespace Editor {
                 flags == other.flags &&
                 AnglesVeryClose(pyr, other.pyr)
                 ;
+        }
+
+        ItemSpec@ ToItemSpec(CGameItemModel@ itemModel, vec3 &in pivotPos = vec3(0), uint16 variantIx = 0) override {
+            auto spec = ItemSpecPriv(itemModel, pos, pyr);
+            // spec.variantIx
+            spec.color = CGameCtnAnchoredObject::EMapElemColor(int(this.color));
+            spec.lmQual = CGameCtnAnchoredObject::EMapElemLightmapQuality(int(this.lmQual));
+            spec.isFlying = 1;
+            spec.pivotPos = pivotPos;
+            spec.variantIx = variantIx;
+            if (this.waypoint !is null) {
+                @spec.waypoint = WaypointSpec(waypoint.tag, waypoint.order);
+            }
+            @spec.waypoint = waypoint;
+            return spec;
+        }
+
+        bool EnsureValidVariant() override {
+            if (BlockInfo !is null) {
+                auto origVar = variant;
+                auto origGround = isGround;
+                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                    variant = 0;
+                }
+                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                    isGround = !isGround;
+                }
+                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                    variant = origVar;
+                    isGround = origGround;
+                    return false;
+                }
+            }
+            return true;
         }
     }
 
@@ -817,6 +853,21 @@ namespace Editor {
                 }
             }
             return null;
+        }
+
+        BlockSpec@ ToBlockSpec(CGameCtnBlockInfo@ model, uint blockVariant = 0, bool isGround = false) override {
+            auto spec = BlockSpecPriv(model, pos, pyr);
+            spec.color = CGameCtnBlock::EMapElemColor(int(color));
+            spec.lmQual = CGameCtnBlock::EMapElemLightmapQuality(int(lmQual));
+            spec.isFree = true;
+            spec.isGhost = false;
+            spec.isGround = isGround;
+            spec.variant = blockVariant;
+            if (!spec.EnsureValidVariant()) warn("Failed to find valid block variant for " + model.IdName);
+            if (waypoint !is null) {
+                @spec.waypoint = WaypointSpec(waypoint.tag, waypoint.order);
+            }
+            return spec;
         }
     }
 

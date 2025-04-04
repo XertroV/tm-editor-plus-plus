@@ -219,9 +219,9 @@ class EditorRotation : SEditorRotation {
         UpdateDirFromPry();
     }
 
-    EditorRotation(CGameCursorBlock@ cursor) {
+    EditorRotation(CGameCursorBlock@ cursor, bool useSnapped = true) {
         super();
-        if (cursor.UseSnappedLoc) {
+        if (useSnapped && cursor.UseSnappedLoc) {
             euler.x = cursor.SnappedLocInMap_Pitch;
             euler.y = cursor.SnappedLocInMap_Yaw;
             euler.z = cursor.SnappedLocInMap_Roll;
@@ -237,6 +237,16 @@ class EditorRotation : SEditorRotation {
     EditorRotation(float pitch, float roll, CGameCursorBlock::ECardinalDirEnum dir, CGameCursorBlock::EAdditionalDirEnum additionalDir) {
         super();
         SetFromCursorProps(pitch, roll, dir, additionalDir);
+    }
+
+    EditorRotation(mat4 rot) {
+        super();
+        auto p = vec3(rot.tx, rot.ty, rot.tz);
+        if (p.LengthSquared() > 0.0) {
+            rot = mat4::Translate(p * -1.) * rot;
+        }
+        euler = PitchYawRollFromRotationMatrix(rot);
+        UpdateDirFromPry();
     }
 
     EditorRotation@ WithCardinalOnly(bool cardinalOnly) {
@@ -315,7 +325,9 @@ class EditorRotation : SEditorRotation {
         dir = CGameCursorBlock::ECardinalDirEnum(YawToCardinalDirection(yaw));
         yaw -= CardinalDirectionToYaw(dir);
         // this can happen transitioning directions sometimes.
-        if (yaw >= PI) yaw -= TAU;
+        // if (yaw >= PI) yaw -= TAU;
+        // can also happen with snapping; just mod it here.
+        yaw = (yaw + PI) % TAU - PI;
         // trace('yaw: ' + yaw);
         if (-0.0001 > yaw || yaw > HALF_PI) {
             warn('yaw out of bounds: ' + yaw);
@@ -396,5 +408,9 @@ class EditorRotation : SEditorRotation {
         if (invert) mat = mat4::Inverse(mat);
         if (worldPos.LengthSquared() == 0) return mat;
         return mat4::Translate(worldPos) * mat;
+    }
+
+    bool opEquals(const EditorRotation &in other) const {
+        return MathX::Vec3Eq(euler, other.euler);
     }
 }

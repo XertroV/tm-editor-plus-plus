@@ -62,6 +62,11 @@ class CursorPosition : Tab {
         if (S_AutoActivateCustomRotations) CustomCursorRotations::Active = true;
         if (S_AutoActivateCustomYaw) CustomCursorRotations::CustomYawActive = true;
         if (S_AutoApplyFreeWaterBlocksPatch) CustomCursor::AllowFreeWaterBlocksPatchActive = true;
+        if (S_DoNotOffsetBlockInCursorPreview) {
+            CustomCursor::DoNotOffsetBlockInCursorPreview_Active = true;
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            Editor::SetCursorFreeBlockOffset(editor.Cursor, 0.0);
+        }
     }
 
     bool get_windowOpen() override property {
@@ -562,7 +567,7 @@ class CustomCursorTab : EffectTab {
         CustomCursorRotations::ItemSnappingEnabled = UI::Checkbox("Item-to-Block Snapping Enabled (Default: On)", CustomCursorRotations::ItemSnappingEnabled);
         AddSimpleTooltip("Use this to disable default game item-to-block snapping (mostly). Normal game behavior is when this is *true*.");
 
-        CustomCursor::AllowFreeWaterBlocksPatchActive = UI::Checkbox("Allow Placing Rotated Free Water Blocks" + NewIndicator, CustomCursor::AllowFreeWaterBlocksPatchActive);
+        CustomCursor::AllowFreeWaterBlocksPatchActive = UI::Checkbox("Allow Placing Rotated Free Water Blocks", CustomCursor::AllowFreeWaterBlocksPatchActive);
         AddSimpleTooltip("Allows placing water blocks with pitch and roll in free block and free macroblock mode.");
         UI::SameLine();
         S_AutoApplyFreeWaterBlocksPatch = UI::Checkbox("Auto-apply##fwbp", S_AutoApplyFreeWaterBlocksPatch);
@@ -577,6 +582,12 @@ class CustomCursorTab : EffectTab {
         AddSimpleTooltip("Items that snap to blocks will be less picky about which blocks they snap to. Example: trees will now snap to all terrain.\n\nNOTE: If you toggle this, it will only take effect for newly placed blocks, or when you reload the map.");
         if (wasActive != S_EnablePromiscuousItemSnapping) {
             CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
+        }
+
+        wasActive = CustomCursor::DoNotOffsetBlockInCursorPreview_Active;
+        CustomCursor::DoNotOffsetBlockInCursorPreview_Active = UI::Checkbox("Do Not Offset Block in Cursor Preview", CustomCursor::DoNotOffsetBlockInCursorPreview_Active);
+        if (wasActive != CustomCursor::DoNotOffsetBlockInCursorPreview_Active) {
+            S_DoNotOffsetBlockInCursorPreview = CustomCursor::DoNotOffsetBlockInCursorPreview_Active;
         }
 
         // -----------------
@@ -639,7 +650,7 @@ class CustomCursorTab : EffectTab {
         UI::SameLine();
         bool reset_radius = UI::Button(Icons::Refresh + "##fb-snap-rst", vec2(btnWidth, 0)); //  || UI::IsItemClicked()
         UI::SameLine();
-        UI::Text("Free Block Snap Radius" + NewIndicator);
+        UI::Text("Free Block Snap Radius");
         if (decr_radius) {
             CustomCursor::StepFreeBlockSnapRadius(false);
         } else if (incr_radius) {
@@ -653,9 +664,9 @@ class CustomCursorTab : EffectTab {
             CustomCursor::ResetSnapRadius();
         }
 
-        S_DrawFreeBlockClips = UI::Checkbox("Draw Block Clip Helpers" + NewIndicator, S_DrawFreeBlockClips);
-        S_DrawAnySnapRadiusOnHelpers = UI::Checkbox("Draw Snap Radius on Helpers" + NewIndicator, S_DrawAnySnapRadiusOnHelpers);
-        S_DrawFreeBlockClipsOnNearbyBlocks = UI::Checkbox("Draw Block Clip Helpers on Nearby Blocks" + NewIndicator, S_DrawFreeBlockClipsOnNearbyBlocks);
+        S_DrawFreeBlockClips = UI::Checkbox("Draw Block Clip Helpers", S_DrawFreeBlockClips);
+        S_DrawAnySnapRadiusOnHelpers = UI::Checkbox("Draw Snap Radius on Helpers", S_DrawAnySnapRadiusOnHelpers);
+        S_DrawFreeBlockClipsOnNearbyBlocks = UI::Checkbox("Draw Block Clip Helpers on Nearby Blocks", S_DrawFreeBlockClipsOnNearbyBlocks);
         DrawFreeBlockOffsetForm();
 
         UI::Unindent();
@@ -763,6 +774,9 @@ bool S_BlockCursorShowQuads = true;
 [Setting hidden]
 bool S_BlockCursorShowLines = true;
 
+[Setting hidden]
+bool S_DoNotOffsetBlockInCursorPreview = false;
+
 
 namespace CustomCursorRotations {
     [Setting hidden]
@@ -795,8 +809,8 @@ namespace CustomCursorRotations {
     }
 
     // Compatible with custom yaw
-    EditorRotation@ GetEditorCursorRotations(CGameCursorBlock@ cursor) {
-        auto rot = EditorRotation(cursor);
+    EditorRotation@ GetEditorCursorRotations(CGameCursorBlock@ cursor, bool useSnapped = true) {
+        auto rot = EditorRotation(cursor, useSnapped);
         if (Active) {
             rot.Pitch = cursorCustomPYR.x;
             rot.Roll = cursorCustomPYR.z;
@@ -901,13 +915,40 @@ namespace CustomCursorRotations {
         cursorCustomPYR.z = UpdateInferCustomRot(rbx, 0x94);
     }
 
+    EditorRotation@ _smartRotLastCursor;
     void BeforeCursorUpdate() {
         Event::OnBeforeCursorUpdate();
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (S_CursorSmartRotate && editor !is null && !editor.Cursor.UseSnappedLoc) {
+            @_smartRotLastCursor = CustomCursorRotations::GetEditorCursorRotations(editor.Cursor, false);
+            // dev_trace("Before Cursor Update: " + _smartRotLastCursor.ToString());
+        }
     }
 
     // overwrite cursor properties here if we want, after the whole cursor has been updated
+    // Note: only called on free block stuff?
     void AfterCursorUpdate() {
         Event::OnAfterCursorUpdate();
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (S_CursorSmartRotate && editor !is null && !editor.Cursor.UseSnappedLoc) {
+            if (_smartRotLastCursor is null) return;
+            if (!Editor::IsInAnyFreePlacementMode(editor, true)) return;
+            auto curCursorRot = CustomCursorRotations::GetEditorCursorRotations(editor.Cursor, false);
+            if (curCursorRot != _smartRotLastCursor) {
+                // some rotation happened in global space. we want the same PYR difference to be in local space instead.
+                auto curMat = curCursorRot.GetMatrix();
+                auto lastMat = _smartRotLastCursor.GetMatrix();
+                auto nextMat = curMat * mat4::Inverse(lastMat);
+                nextMat = lastMat * nextMat;
+                CustomCursorRotations::SetCustomPYRAndCursor(PitchYawRollFromRotationMatrix(nextMat), editor.Cursor);
+                // dev_trace("After Cursor Update Start: " + curCursorRot.ToString());
+                auto itemCursor = DGameCursorItem(editor.ItemCursor);
+                auto pos = itemCursor.pos;
+                itemCursor.mat = iso4(mat4::Inverse(nextMat));
+                itemCursor.pos = pos;
+            }
+        }
+        // dev_trace("After Cursor Update End: " + CustomCursorRotations::GetEditorCursorRotations(editor.Cursor, false).ToString());
     }
 
     void CustomYaw_AfterCursorUpdate() {
@@ -995,6 +1036,11 @@ namespace CustomCursorRotations {
         return new;
     }
 
+    namespace RotUpdate {
+        int lastDir, nextDir, lastAddDir, nextAddDir;
+        bool dirChanged, addDirChanged, addDirIncr, addDirDecr, dirIncr, dirDecr;
+        bool rmbPressed;
+    }
 
     // after direction or additional dir is changed. rbx = editor, rdi = stack
     // we use this to keep the cursor in sync and read the new direction
@@ -1010,14 +1056,14 @@ namespace CustomCursorRotations {
         auto cursor = editor.Cursor;
 
         // infer direction
-        auto lastDir = Dev::ReadInt32(rdi + 0x78);
-        auto nextDir = Dev::ReadInt32(rdi + 0x7C);
-        auto lastAddDir = Dev::ReadInt32(rdi + 0x80);
-        auto nextAddDir = Dev::ReadInt32(rdi + 0x84);
+        RotUpdate::lastDir = Dev::ReadInt32(rdi + 0x78);
+        RotUpdate::nextDir = Dev::ReadInt32(rdi + 0x7C);
+        RotUpdate::lastAddDir = Dev::ReadInt32(rdi + 0x80);
+        RotUpdate::nextAddDir = Dev::ReadInt32(rdi + 0x84);
         // dev_trace("lastDir: " + lastDir + ", nextDir: " + nextDir);
         // dev_trace("lastAddDir: " + lastAddDir + ", nextAddDir: " + nextAddDir);
-        auto dirChanged = lastDir != nextDir;
-        auto addDirChanged = lastAddDir != nextAddDir;
+        RotUpdate::dirChanged = RotUpdate::lastDir != RotUpdate::nextDir;
+        RotUpdate::addDirChanged = RotUpdate::lastAddDir != RotUpdate::nextAddDir;
         // rmb with nonzero addDir: reset addDir
         // rmb with no addDir: +1 to dir
         // pg up with addDir < 5: +1 to addDir
@@ -1034,11 +1080,11 @@ namespace CustomCursorRotations {
         Dev::Write(rdi + 0xBC, 0); // force no use snaped loc (we set it later if needed)
 
         // do nothing if rotation wasn't changed.
-        if (!dirChanged && !addDirChanged) {
+        if (!RotUpdate::dirChanged && !RotUpdate::addDirChanged) {
             return;
         }
 
-        bool rmbPressed = Dev::ReadUInt8(rbx + O_EDITOR_RMB_PRESSED1) != 0;
+        RotUpdate::rmbPressed = Dev::ReadUInt8(rbx + O_EDITOR_RMB_PRESSED1) != 0;
         // dev_trace("rmbPressed: " + rmbPressed);
         // if (dirChanged) {
         //     dev_trace("Direction changed: " + lastDir + " -> " + nextDir);
@@ -1047,43 +1093,44 @@ namespace CustomCursorRotations {
         //     dev_trace("Additional direction changed: " + lastAddDir + " -> " + nextAddDir);
         // }
 
-        if (rmbPressed) {
+        if (RotUpdate::rmbPressed) {
             bool yawWasNonzero = cursorCustomPYR.y != 0.0;
             // dev_trace("RMB pressed, resetting custom yaw. yaw was nonZero: " + yawWasNonzero);
             cursorCustomPYR.y = 0;
             if (yawWasNonzero) {
                 // need to undo cursor rotation b/c we might have been at 0 additional dir
-                cursor.Dir = CGameCursorBlock::ECardinalDirEnum(lastDir);
+                cursor.Dir = CGameCursorBlock::ECardinalDirEnum(RotUpdate::lastDir);
             }
             return;
         }
 
-        bool dirDecr = lastAddDir == 5 && nextAddDir == 0;
-        bool dirIncr = lastAddDir == 0 && nextAddDir == 5;
-        bool addDirIncr = (lastAddDir < nextAddDir && !dirIncr) || dirDecr;
-        bool addDirDecr = (lastAddDir > nextAddDir && !dirDecr) || dirIncr;
+        RotUpdate::dirDecr = RotUpdate::lastAddDir == 5 && RotUpdate::nextAddDir == 0;
+        RotUpdate::dirIncr = RotUpdate::lastAddDir == 0 && RotUpdate::nextAddDir == 5;
+        RotUpdate::addDirIncr = (RotUpdate::lastAddDir < RotUpdate::nextAddDir && !RotUpdate::dirIncr) || RotUpdate::dirDecr;
+        RotUpdate::addDirDecr = (RotUpdate::lastAddDir > RotUpdate::nextAddDir && !RotUpdate::dirDecr) || RotUpdate::dirIncr;
         // dev_trace("dirIncr: " + dirDecr + ", dirDecr: " + dirIncr);
         // dev_trace("addDirIncr: " + addDirIncr + ", addDirDecr: " + addDirDecr);
 
         // reset direction change because we adjust it later if needed
-        cursor.Dir = CGameCursorBlock::ECardinalDirEnum(lastDir);
+        cursor.Dir = CGameCursorBlock::ECardinalDirEnum(RotUpdate::lastDir);
 
         // dev_trace("1. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
-        if (addDirIncr) {
+        if (RotUpdate::addDirIncr) {
             cursorCustomPYR.y += customRot;
 
-        } else if (addDirDecr) {
+        } else if (RotUpdate::addDirDecr) {
             cursorCustomPYR.y -= customRot;
         }
         // dev_trace("2. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
-        NormalizeCustomYaw(cursor, lastDir);
+        NormalizeCustomYaw(cursor, RotUpdate::lastDir);
         // dev_trace("3. Custom Yaw: " + cursorCustomPYR.y + " (Dir: " + cursor.Dir + ")");
         cursor.AdditionalDir = YawToAdditionalDir(cursorCustomPYR.y);
         // dev_trace("UseSnappedLoc: " + nextUseSnapPos + " (return early if true)");
         if (nextUseSnapPos > 0) return;
     }
 
-    void SetCustomPYRAndCursor(vec3 pyr, CGameCursorBlock@ cursor) {
+    // sets PYR on custom cursor + actual cursor
+    void SetCustomPYRAndCursor(const vec3 &in pyr, CGameCursorBlock@ cursor) {
         cursorCustomPYR = pyr;
         auto rots = EditorRotation(cursorCustomPYR);
         cursor.Pitch = rots.Pitch;
@@ -1196,6 +1243,21 @@ namespace CustomCursor {
         }
     }
 
+    MemPatcher@ Patch_DoNotOffsetBlockInCursorPreview = MemPatcher(
+        // mov eax,[rdx+108]; movss xmm0,[rdx+f8] -- only 1 instance in TM
+        "8B 82 08 01 00 00 F3 0F 10 82 F8 00 00 00",
+        {6}, {"0F 57 C0 90 90 90 90 90"}
+    );
+
+    bool DoNotOffsetBlockInCursorPreview_Active {
+        get {
+            return Patch_DoNotOffsetBlockInCursorPreview.IsApplied;
+        }
+        set {
+            Patch_DoNotOffsetBlockInCursorPreview.IsApplied = value;
+        }
+    }
+
     MemPatcher@ Patch_DoNotSetCursorVisibleFlag = MemPatcher(
         // [rdx] to xmm0 to [rcx+1f8], then next 16 bytes
         // v      v                    v           v
@@ -1289,9 +1351,10 @@ namespace CustomCursor {
         return multPtr + 4 + offset;
     }
 
-    void StepFreeBlockSnapRadius(bool increment) {
+    void StepFreeBlockSnapRadius(bool increment, bool bigStep = false) {
         dev_trace("Stepping free block snap radius");
         int step = increment ? 4 : -4;
+        if (bigStep) step *= 5;
         auto floatPtr = GetFloatPtr();
         dev_trace("Current float ptr: " + Text::FormatPointer(floatPtr));
         float mult = Dev::ReadFloat(floatPtr);
@@ -1331,5 +1394,36 @@ namespace CustomCursor {
         // Dev::Write(multPtr, offset + offsetDelta);
         dev_trace("Updated float offset by " + offsetDelta + ". Getting radius...");
         dev_trace("Snap radius: " + GetCurrentSnapRadius());
+    }
+
+
+    void TriggerUpdateCursorItemModels(CGameCtnEditorFree@ editor) {
+        // cache and deactivate patches -- there's a visual bug where models aren't cleared (but no block/item exists)
+        bool nhcimp = CustomCursor::NoHideCursorItemModelsPatchActive;
+        bool nscimp = CustomCursor::NoShowCursorItemModelsPatchActive;
+        bool nscvfp = CustomCursor::NoSetCursorVisFlagPatchActive;
+        CustomCursor::NoHideCursorItemModelsPatchActive = false;
+        CustomCursor::NoShowCursorItemModelsPatchActive = false;
+        CustomCursor::NoSetCursorVisFlagPatchActive = false;
+        // cache state
+        auto origItemMode = Editor::GetItemPlacementMode();
+        auto origPlacement = Editor::GetPlacementMode(editor);
+        auto origEditMode = Editor::GetEditMode(editor);
+        // trigger update via changing placement mode
+        if (origPlacement != CGameEditorPluginMap::EPlaceMode::FreeBlock) {
+            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+            Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
+        } else {
+            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+            Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::GhostBlock);
+        }
+        // done, return to original state
+        Editor::SetEditMode(editor, origEditMode);
+        Editor::SetItemPlacementMode(origItemMode);
+        Editor::SetPlacementMode(editor, origPlacement);
+        // restore patches
+        CustomCursor::NoHideCursorItemModelsPatchActive = nhcimp;
+        CustomCursor::NoShowCursorItemModelsPatchActive = nscimp;
+        CustomCursor::NoSetCursorVisFlagPatchActive = nscvfp;
     }
 }

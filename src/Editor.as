@@ -8,6 +8,11 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     UpdateSelectedBlockItem(editor);
 
     CheckForNewSelectedItem(editor);
+    CheckForNewSelectedBlock(editor);
+    CheckForNewSelectedGhostBlock(editor);
+    CheckForNewSelectedMacroblock(editor);
+    CheckPlacementMode(editor);
+
     //! No need to check for items/blocks anymore after new hooks. These hooks also work before the block/item is rendered, so no refresh needed
     // bool update = false;
     // update = CheckForNewBlocks_Deprecated(editor) || update;
@@ -101,6 +106,14 @@ namespace Editor {
         return Dev::GetOffsetUint32(cursor, O_CURSOR_BLOCK_VARIANT);
     }
 
+    void SetCurrentBlockVariant(CGameCursorBlock@ cursor, uint variant) {
+        Dev::SetOffset(cursor, O_CURSOR_BLOCK_VARIANT, variant);
+    }
+
+    uint GetCurrentItemVariant(CGameCtnEditorFree@ editor) {
+        return editor.CurrentItemModel.DefaultPlacementParam_Content.PlacementClass.CurVariant;
+    }
+
     enum ItemMode {
         None = 0,
         Normal = 1,
@@ -113,6 +126,10 @@ namespace Editor {
     ItemMode GetItemPlacementMode_Raw(CGameCtnEditorFree@ editor) {
         if (!IsInAnyItemPlacementMode(editor, true)) return ItemMode::None;
         return ItemMode(Dev::GetOffsetUint32(editor, O_EDITOR_ITEM_PLACEMENT_OFFSET) + 1);
+    }
+
+    int GetItemPlacementModeInt(bool checkEditMode = true, bool checkPlacementMode = true) {
+        return int(GetItemPlacementMode(checkEditMode, checkPlacementMode));
     }
 
     ItemMode GetItemPlacementMode(bool checkEditMode = true, bool checkPlacementMode = true) {
@@ -136,6 +153,11 @@ namespace Editor {
             NotifyWarning("Exception getting item placement mode: " + getExceptionInfo());
         }
         return ItemMode::None;
+    }
+
+    void SetItemPlacementModeInt(int mode) {
+        if (mode < 0 || mode > 3) throw("Invalid item placement mode: " + mode + ", must be 0-3 (none, normal, free ground, free)");
+        SetItemPlacementMode(ItemMode(mode));
     }
 
     void SetItemPlacementMode(ItemMode mode) {
@@ -189,9 +211,20 @@ namespace Editor {
     void SetPlacementMode(CGameCtnEditorFree@ editor, CGameEditorPluginMap::EPlaceMode mode) {
         if (editor.PluginMapType.PlaceMode == mode) return;
         editor.PluginMapType.PlaceMode = mode;
+        if (editor.PluginMapType.PlaceMode != mode) {
+            bool failedTwice = false;
+            editor.PluginMapType.PlaceMode = mode;
+            failedTwice = editor.PluginMapType.PlaceMode != mode;
+            if (failedTwice) {
+                warn("Failed twice to set placement mode to " + tostring(mode));
+            } else {
+                trace("Failed once then succeeded to set placement mode to " + tostring(mode));
+            }
+        }
     }
 
     CGameEditorPluginMap::EditMode GetEditMode(CGameCtnEditorFree@ editor) {
+        if (editor is null) return CGameEditorPluginMap::EditMode::Unknown;
         return editor.PluginMapType.EditMode;
     }
 
@@ -246,6 +279,7 @@ namespace Editor {
 
     // checks placement mode, with optional edit mode checking
     bool IsInAnyItemPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (editor is null) return false;
         return (!checkEditMode || IsInPlacementMode(editor))
             && GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Item;
     }

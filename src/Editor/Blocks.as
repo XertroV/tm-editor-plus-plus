@@ -120,6 +120,11 @@ namespace Editor {
         return GetBlockCoordSize(block) * vec3(32, 8, 32);
     }
 
+    vec3 GetBlockSize(CGameCtnBlockInfo@ bi) {
+        auto biv = GetBlockVariantAny(bi);
+        return Nat3ToVec3(biv !is null ? biv.Size : nat3(1)) * vec3(32, 8, 32);
+    }
+
     // coord size as vec3 (not distance, so <1, 1, 1> is a 1x1x1 block)
     vec3 GetBlockCoordSize(CGameCtnBlock@ block) {
         auto @biv = GetBlockInfoVariant(block);
@@ -132,9 +137,31 @@ namespace Editor {
         return Nat3ToVec3(biv.Size);
     }
 
+    int GetNbBlockVariants(CGameCtnBlockInfo@ bi, bool isGround) {
+        if (bi is null) throw("block info is null");
+        auto baseVar = GetBlockBaseVariant(bi, isGround);
+        int nbBase = baseVar !is null ? 1 : 0;
+        return (isGround ? bi.AdditionalVariantsGround.Length : bi.AdditionalVariantsAir.Length) + nbBase;
+    }
+
+    CGameCtnBlockInfoVariant@ GetBlockBaseVariant(CGameCtnBlockInfo@ bi, bool isGround) {
+        auto r = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantBaseGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantBaseAir);
+        if (r is null) {
+            @r = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
+        }
+        return r;
+    }
+
+
     CGameCtnBlockInfoVariant@ GetBlockInfoVariant(CGameCtnBlock@ block) {
-        auto bivIx = block.BlockInfoVariantIndex;
+        // auto bivIx = block.BlockInfoVariantIndex;
         return GetBlockInfoVariant(block.BlockInfo, block.BlockInfoVariantIndex, block.IsGround);
+    }
+
+    CGameCtnBlockInfoVariant@ GetBlockVariantAny(CGameCtnBlockInfo@ bi) {
+        auto biv = GetBlockInfoVariant(bi, 0, false);
+        if (biv !is null) return biv;
+        return GetBlockInfoVariant(bi, 0, true);
     }
 
     CGameCtnBlockInfoVariant@ GetBlockInfoVariant(CGameCtnBlockInfo@ bi, uint bivIx, bool isGround) {
@@ -154,10 +181,7 @@ namespace Editor {
             }
             @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsGround[bivIx - 1]) : cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsAir[bivIx - 1]);
         } else {
-            @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
-            if (biv is null) {
-                @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantBaseGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantBaseAir);
-            }
+            @biv = GetBlockInfo0thVariant(bi, isGround);
         }
         return biv;
     }
@@ -167,14 +191,38 @@ namespace Editor {
         auto bi = block.BlockInfo;
         if (bivIx > 0) {
             auto maxIx = block.isGround ? bi.AdditionalVariantsGround.Length : bi.AdditionalVariantsAir.Length;
-            if (bivIx - 1 >= maxIx) {
+            if (bivIx > maxIx) {
                 warn("bivIx out of range: " + bivIx + " / " + bi.AdditionalVariantsGround.Length);
                 return null;
             }
             return block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsGround[bivIx - 1]) : cast<CGameCtnBlockInfoVariant>(bi.AdditionalVariantsAir[bivIx - 1]);
         } else {
-            return block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
+            return GetBlockInfo0thVariant(bi, block.isGround); // block.isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
         }
+    }
+
+    CGameCtnBlockInfoVariant@ GetBlockInfo0thVariant(CGameCtnBlockInfo@ bi, bool isGround) {
+        auto @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
+        if (biv is null) {
+            @biv = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantBaseGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantBaseAir);
+        }
+        return biv;
+    }
+
+    // shifted by 5 bits, limited to 0b111111 (6 bits)
+    uint8 GetBlockInfoVariantIndex(CGameCtnBlock@ block) {
+        return uint8(Dev::GetOffsetUint16(block, O_CTNBLOCK_VARIANT) >> 5) & 63;
+    }
+
+    /*
+    WARNING: will crash the game if this is out of bounds (except 63, which is a special case that might cause it to be updated)
+    range: 0-63
+    */
+    void SetBlockInfoVariantIndex(CGameCtnBlock@ block, uint8 index) {
+        auto val = Dev::GetOffsetUint16(block, O_CTNBLOCK_VARIANT);
+        val &= 0b1111100000011111;
+        val |= uint16(index & 63) << 5;
+        Dev::SetOffset(block, O_CTNBLOCK_VARIANT, val);
     }
 
     vec3 GetCtnBlockMidpoint(CGameCtnBlock@ block) {

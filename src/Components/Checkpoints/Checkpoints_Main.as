@@ -70,6 +70,14 @@ class AutolinkCpsTab : EffectTab {
                 }
             }
         }
+
+        for (int i = closeBlockCps.Length - 1; i >= 0; i--) {
+            if (closeBlockCps[i] is null || closeBlockCps[i].WaypointSpecialProperty is null) {
+                closeBlockCps.RemoveAt(i);
+                dev_trace("Removed null closeBlockCps[" + i + "]");
+            }
+        }
+
         int linkOrder = -1;
         for (uint i = 0; i < closeBlockCps.Length; i++) {
             if (closeBlockCps[i].WaypointSpecialProperty.Tag == "LinkedCheckpoint") {
