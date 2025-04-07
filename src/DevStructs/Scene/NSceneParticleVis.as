@@ -14,7 +14,9 @@ class D_NSceneParticleVis_SMgr : RawBufferElem {
 	// GameScene = ISceneVis, 0x0, G
 	uint64 get_GameScene() { return (this.GetUint64(0)); }
 	CHmsZone@ get_Zone() { return cast<CHmsZone>(this.GetNod(0x8)); }
-	NSceneSound_SMgr@ get_SoundMgr() { return cast<NSceneSound_SMgr>(this.GetNod(0x10)); }
+	// cannot cast to this
+	// SoundMgr = NSceneSound_SMgr, 0x10, G
+	uint64 get_SoundMgrPtr() { return (this.GetUint64(0x10)); }
 	uint64 get_Unk1() { return (this.GetUint64(0x18)); }
 	CHmsMgrVisDynaDecal2d@ get_mgrVisDynaDecal2d() { return cast<CHmsMgrVisDynaDecal2d>(this.GetNod(0x20)); }
 	// has some refrences to Clouds_v.hlsli and common shaders

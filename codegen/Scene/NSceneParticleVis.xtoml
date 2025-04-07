@@ -3,7 +3,9 @@
 #GameScene = ISceneVis, 0x0, G
 GameScene = uint64, 0, G
 Zone = CHmsZone, 0x8, G
-SoundMgr = NSceneSound_SMgr, 0x10, G
+# cannot cast to this
+# SoundMgr = NSceneSound_SMgr, 0x10, G
+SoundMgrPtr = uint64, 0x10, G
 Unk1 = uint64, 0x18, G
 mgrVisDynaDecal2d = CHmsMgrVisDynaDecal2d, 0x20, G
 # has some refrences to Clouds_v.hlsli and common shaders

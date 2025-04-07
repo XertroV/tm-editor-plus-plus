@@ -32,9 +32,19 @@ class D_NSceneKinematicVis_SConstraint : RawBufferElem {
 		super(ptr, 0x58);
 	}
 
-	// 0x0: pointer to some struct with state
+	// 0x0: pointer to NSceneKinematicVis_SSharedSignal
 	// -> 0x0 pointer to NPlugDyna_SKinematicConstraint
 	// > 0x8 quaternion stuff or maybe matrix
+	D_NSceneKinematicVis_SSharedSignal@ get_Signal() { auto _ptr = this.GetUint64(0x0); if (_ptr == 0) return null; return D_NSceneKinematicVis_SSharedSignal(_ptr); }
+	// 0x8: 0, -1, 0, 0
+	// 0x18: class ID: SHmsInstDyna, then 0x1 byte which is size of SHmsInstDyna (=7)
+	uint32 get_hms_class_id() { return (this.GetUint32(0x18)); }
+	// 1 byte: https://xertrov.github.io/op-tm-api-docs/next/SHmsInstDyna
+	uint8 get_hms_instance() { return (this.GetUint8(0x1C)); }
+	uint32 get_some_id() { return (this.GetUint32(0x20)); }
+	// 
+	iso4 get_Loc() { return (this.GetIso4(0x28)); }
+	void set_Loc(iso4 value) { this.SetIso4(0x28, value); }
 	// 0x4C: base position of the visible mesh (does not change collisions)
 	vec3 get_Pos() { return (this.GetVec3(0x4C)); }
 	void set_Pos(vec3 value) { this.SetVec3(0x4C, value); }
@@ -44,6 +54,20 @@ class D_NSceneKinematicVis_SConstraint : RawBufferElem {
 	void set_PosY(float value) { this.SetFloat(0x50, value); }
 	float get_PosZ() { return (this.GetFloat(0x54)); }
 	void set_PosZ(float value) { this.SetFloat(0x54, value); }
+}
+
+
+class D_NSceneKinematicVis_SSharedSignal : RawBufferElem {
+	D_NSceneKinematicVis_SSharedSignal(RawBufferElem@ el) {
+		if (el.ElSize != 0x40) throw("invalid size for D_NSceneKinematicVis_SSharedSignal");
+		super(el.Ptr, el.ElSize);
+	}
+	D_NSceneKinematicVis_SSharedSignal(uint64 ptr) {
+		super(ptr, 0x40);
+	}
+
+	NPlugDyna_SKinematicConstraint@ get_Model() { return cast<NPlugDyna_SKinematicConstraint>(this.GetNod(0x0)); }
+	uint64 get_ModelPtr() { return (this.GetUint64(0x0)); }
 }
 
 
