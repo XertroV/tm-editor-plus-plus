@@ -1,0 +1,14 @@
+[D_NSceneKinematicVis_SMgr: 0x78]
+# This is exposed normally, but has no properties
+Buffer: Constraints = D_NSceneKinematicVis_SConstraints, 0x8, 0x58, false
+
+
+[D_NSceneKinematicVis_SConstraint: 0x58]
+# 0x0: pointer to some struct with state
+# -> 0x0 pointer to NPlugDyna_SKinematicConstraint
+#  > 0x8 quaternion stuff or maybe matrix
+# 0x4C: base position of the visible mesh (does not change collisions)
+Pos = vec3, 0x4C, GS
+PosX = float, 0x4C, GS
+PosY = float, 0x50, GS
+PosZ = float, 0x54, GS
