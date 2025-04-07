@@ -171,7 +171,8 @@ main() {
 	}
 
 	declare Boolean ResetCustomSelectionCoords = True;
-	InitializeCustomSelectionCoords();
+	// don't initialize, can show up persistently and is annoying
+	//InitializeCustomSelectionCoords();
 	yield;
 
 	// outer loop: used to re-init metadata after clear
