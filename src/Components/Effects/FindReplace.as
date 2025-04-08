@@ -35,17 +35,20 @@ class FindReplaceTab : GenericApplyTab {
         sourceItemColor = CGameCtnAnchoredObject::EMapElemColor::Default;
     }
 
+    private void ClearSpecs() {
+        newblockSpecs.RemoveRange(0, newblockSpecs.Length);
+        newitemSpecs.RemoveRange(0, newitemSpecs.Length);
+    }
+
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
         if (!_IsActive) return false;
         bool success = RunReplace(item);
         if (success && AddWithoutReplace) {
-            if (filteredObjectNames.Length > 0 && filteredObjectNames.Find(sourceItemModel.AsItemModel().IdName) < 0) {
-                // check the source block isn't a valid target before placing to avoid repeating until script timeout
-                Editor::PlaceMacroblock(Editor::MakeMacroblockSpec(newblockSpecs, newitemSpecs));
-            }
-            newblockSpecs = {};
-            newitemSpecs ={};
+            // check the source item isn't one we're placing to avoid repeating until script timeout
+            bool isValidTarget = filteredObjectNames.Length > 0 && filteredObjectNames.Find(sourceItemModel.AsItemModel().IdName) < 0;
+            if (isValidTarget) Editor::PlaceMacroblock(Editor::MakeMacroblockSpec(newblockSpecs, newitemSpecs));
         }
+        ClearSpecs();
         return success;
     }
 
@@ -53,13 +56,11 @@ class FindReplaceTab : GenericApplyTab {
         if (!_IsActive) return false;
         bool success = RunReplace(block);
         if (success && AddWithoutReplace) {
-            if (filteredObjectNames.Length > 0 && filteredObjectNames.Find(sourceBlockModel.AsBlockInfo().IdName) < 0) {
-                // check the source block isn't a valid target before placing to avoid repeating until script timeout
-                Editor::PlaceMacroblock(Editor::MakeMacroblockSpec(newblockSpecs, newitemSpecs));
-            }
-            newblockSpecs = {};
-            newitemSpecs ={};
+            // check the source block isn't one we're placing to avoid repeating until script timeout
+            bool isValidTarget = filteredObjectNames.Length > 0 && filteredObjectNames.Find(sourceBlockModel.AsBlockInfo().IdName) < 0;
+            if (isValidTarget) Editor::PlaceMacroblock(Editor::MakeMacroblockSpec(newblockSpecs, newitemSpecs));
         }
+        ClearSpecs();
         return success;
     }
 
@@ -72,29 +73,16 @@ class FindReplaceTab : GenericApplyTab {
             newitemSpec.pivotPos = Editor::GetItemPivot(item);
             newitemSpec.coord = Editor::GetItemCoord(item);
             newitemSpec.isFlying = item.IsFlying ? 1 : 0;
-            if (KeepSourceColor) {
-                newitemSpec.color = sourceItemColor;
-            } else {
-                newitemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(item.MapElemColor));
-            }
-            if (KeepSourceVariant) {
-                newitemSpec.variantIx = sourceModel.DefaultPlacementParam_Content.PlacementClass.CurVariant;
-            } else {
-                newitemSpec.variantIx = item.ItemModel.DefaultPlacementParam_Content.PlacementClass.CurVariant;
-            }
+            newitemSpec.color = KeepSourceColor ? sourceItemColor : item.MapElemColor;
+            newitemSpec.variantIx = KeepSourceVariant
+                ? sourceModel.DefaultPlacementParam_Content.PlacementClass.CurVariant
+                : item.ItemModel.DefaultPlacementParam_Content.PlacementClass.CurVariant;
             newitemSpecs.InsertLast(newitemSpec);
         } else {
-            auto origModel = item.ItemModel;
+            // this handles mw refs, model id, and author id
             Editor::SetAO_ItemModel(item, sourceModel);
-            Dev::SetOffset(item, 0x18, sourceModel.Id.Value);
-            if (KeepSourceColor) {
-                item.MapElemColor = sourceItemColor;
-            }
-            if (KeepSourceVariant) {
-                item.ItemModel.DefaultPlacementParam_Content.PlacementClass.CurVariant = sourceModel.DefaultPlacementParam_Content.PlacementClass.CurVariant;
-            }
-            item.ItemModel.MwAddRef();
-            origModel.MwRelease();
+            if (KeepSourceColor) item.MapElemColor = sourceItemColor;
+            if (KeepSourceVariant) item.ItemModel.DefaultPlacementParam_Content.PlacementClass.CurVariant = sourceModel.DefaultPlacementParam_Content.PlacementClass.CurVariant;
         }
         return true;
     }
@@ -103,49 +91,31 @@ class FindReplaceTab : GenericApplyTab {
         if (sourceBlockModel is null || !applyToBlocks) return false;
         if (!MatchesConditions(block)) return false;
         if (AddWithoutReplace) {
-            Editor::BlockSpec@ newblockSpec;
-            if (Editor::IsBlockFree(block)) {
-                @newblockSpec = Editor::MakeBlockSpec(sourceBlockModel.AsBlockInfo(), Editor::GetBlockLocation(block), Editor::GetBlockRotation(block));
-            } else {
-                @newblockSpec = Editor::MakeBlockSpec(sourceBlockModel.AsBlockInfo(), block.Coord, block.Dir);
-                newblockSpec.isGhost = true; // always overlays in ghost even if original was normal
-            }
-            if (KeepSourceColor) {
-                newblockSpec.color = sourceBlockColor;
-            } else {
-                newblockSpec.color = CGameCtnBlock::EMapElemColor(int(block.MapElemColor));
-            }
-            if (KeepSourceVariant) {
-                newblockSpec.variant = sourceBlockVarIx;
-            } else {
-                newblockSpec.variant = Editor::GetBlockInfoVariantIndex(block);
-            }
+            bool isFree = Editor::IsBlockFree(block);
+            Editor::BlockSpec@ newblockSpec = isFree
+                ? Editor::MakeBlockSpec(sourceBlockModel.AsBlockInfo(), Editor::GetBlockLocation(block), Editor::GetBlockRotation(block))
+                : Editor::MakeBlockSpec(sourceBlockModel.AsBlockInfo(), block.Coord, block.Dir);
+            if (!isFree) newblockSpec.isGhost = true; // cannot place 2 normal blocks in the same spot, so make it a ghost block.
+
+            newblockSpec.color = KeepSourceColor ? sourceBlockColor : block.MapElemColor;
+            newblockSpec.variant = KeepSourceVariant ? sourceBlockVarIx : Editor::GetBlockInfoVariantIndex(block);
             newblockSpecs.InsertLast(newblockSpec);
         } else {
-            auto origModel = block.BlockInfo;
             // set blockinfo handle
-            Dev::SetOffset(block, GetOffset(block, "BlockInfo"), sourceBlockModel.AsBlockInfo());
-            // set blockinfo MwId
-            Dev::SetOffset(block, 0x18, sourceBlockModel.AsBlockInfo().Id.Value);
-            if (KeepSourceColor) {
-                block.MapElemColor = sourceBlockColor;
-            }
+            Editor::SetBlock_BlockInfo(block, sourceBlockModel.AsBlockInfo());
+            if (KeepSourceColor) block.MapElemColor = sourceBlockColor;
             if (KeepSourceVariant) {
-                // Can cause crashes if the variant doesn't exist, but that's warned in the setting
-                Editor::SetBlockInfoVariantIndex(block, sourceBlockVarIx);
+                // Can cause crashes if the variant doesn't exist
+                Editor::SetBlockInfoVariantIndex(block, sourceBlockVarIx, true);
             }
-            block.BlockInfo.MwAddRef();
-            origModel.MwRelease();
         }
-        
+
         return true;
     }
 
     void CheckBlockVariant(CGameCtnBlock@ block) {
         auto variant = Editor::GetBlockInfoVariant(block);
         if (variant is null) {
-            // block.BlockInfoVariantIndex = 0;
-            // todo
             @variant = Editor::GetBlockInfoVariant(block);
             if (variant is null) {
                 NotifyWarning("Find/Replace: Block variant does not seem to exist for the new block model.");
@@ -165,9 +135,8 @@ class FindReplaceTab : GenericApplyTab {
     void AfterApply() override {
         if (AddWithoutReplace) {
             Editor::PlaceMacroblock(Editor::MakeMacroblockSpec(newblockSpecs, newitemSpecs), true);
-            newblockSpecs = {};
-            newitemSpecs = {};
         }
+        ClearSpecs();
         if (ClearAfterRun) {
             @sourceItemModel = null;
             @sourceBlockModel = null;
@@ -188,7 +157,7 @@ class FindReplaceTab : GenericApplyTab {
         ClearAfterRun = UI::Checkbox("Auto-clear sources and filter after apply", ClearAfterRun);
         AddWithoutReplace = UI::Checkbox("Add new blocks/items without replacing the original", AddWithoutReplace);
         KeepSourceColor = UI::Checkbox("Use color from source block/item instead of targets", KeepSourceColor);
-        KeepSourceVariant = !UI::Checkbox("Keep variant from target block (may cause crashes if the source block does not have the variant)", !KeepSourceVariant);
+        KeepSourceVariant = UI::Checkbox("Use variant from source block (disabling might cause a crash in some cases)", KeepSourceVariant);
 
         UI::AlignTextToFramePadding();
         if (sourceItemModel is null) {

@@ -218,12 +218,36 @@ namespace Editor {
     WARNING: will crash the game if this is out of bounds (except 63, which is a special case that might cause it to be updated)
     range: 0-63
     */
-    void SetBlockInfoVariantIndex(CGameCtnBlock@ block, uint8 index) {
+    void SetBlockInfoVariantIndex(CGameCtnBlock@ block, uint8 index, bool safer = false) {
+        if (safer) {
+            auto biv = GetBlockInfoVariant(block.BlockInfo, index, block.IsGround);
+            if (biv is null) {
+                NotifyWarning("Block variant index out of range: " + index);
+                index = 0;
+            }
+        }
         auto val = Dev::GetOffsetUint16(block, O_CTNBLOCK_VARIANT);
         val &= 0b1111100000011111;
         val |= uint16(index & 63) << 5;
         Dev::SetOffset(block, O_CTNBLOCK_VARIANT, val);
     }
+
+
+    void SetBlock_BlockInfo(CGameCtnBlock@ block, CGameCtnBlockInfo@ bi) {
+        if (bi is null) throw("refusing to set null block info");
+        // todo: handle refcounting
+        if (block.BlockInfo !is null) {
+            block.BlockInfo.MwRelease();
+        }
+        bi.MwAddRef();
+        Dev::SetOffset(block, GetOffset(block, "BlockInfo"), bi);
+        SetBlock_BlockInfoMwId(block, bi.Id.Value);
+    }
+
+    void SetBlock_BlockInfoMwId(CGameCtnBlock@ block, uint mwId) {
+        Dev::SetOffset(block, 0x18, mwId);
+    }
+
 
     vec3 GetCtnBlockMidpoint(CGameCtnBlock@ block) {
         return (GetBlockMatrix(block) * (GetBlockSize(block) / 2.)).xyz;

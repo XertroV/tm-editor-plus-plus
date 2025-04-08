@@ -161,8 +161,8 @@ namespace Editor {
         }
         Dev::SetOffset(ao, O_ANCHOREDOBJ_ITEMMODEL, itemModel);
         ao.ItemModel.MwAddRef();
-        SetAO_ItemModelMwId(ao, 0);
-        SetAO_ItemModelAuthorMwId(ao, 0);
+        SetAO_ItemModelMwId(ao, itemModel.Id.Value);
+        SetAO_ItemModelAuthorMwId(ao, itemModel.Author.Value);
     }
 
     void Set_ItemModel_MwId(CGameItemModel@ itemModel, uint mwIdValue) {
