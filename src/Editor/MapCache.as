@@ -384,8 +384,6 @@ namespace Editor {
             NbDuplicateItems = 0;
             yield();
             if (myNonce != lastRefreshNonce) return;
-            yield();
-            if (myNonce != lastRefreshNonce) return;
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             if (editor is null) return;
             auto pmt = editor.PluginMapType;

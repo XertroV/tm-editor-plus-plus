@@ -279,6 +279,7 @@ class ReferencedNod {
     CMwNod@ nod;
     uint ClassId = 0;
     string TypeName;
+    uint64 ptr;
 
     ReferencedNod(CMwNod@ _nod) {
         @nod = _nod;
@@ -287,6 +288,7 @@ class ReferencedNod {
             auto ty = Reflection::TypeOf(nod);
             ClassId = ty.ID;
             TypeName = ty.Name;
+            ptr = Dev_GetPointerForNod(nod);
         }
     }
 
