@@ -51,6 +51,11 @@ class GenericApplyTab : EffectTab {
     bool showCachedHelpers = false;
     bool showRegionHelpers = true;
 
+    void RefreshCache() {
+        Editor::GetMapCache().RefreshCache();
+        f_isStale = true;
+    }
+
     void DrawInner() override {
         bool nameFilterEnter = false;
         // UI::SetNextItemWidth(UI::GetContentRegionAvail().x * .5);
@@ -64,7 +69,7 @@ class GenericApplyTab : EffectTab {
 
         // UI::SameLine();
         if (UI::Button("Refresh Cache##" + idNonce)) {
-            Editor::GetMapCache().RefreshCacheSoon();
+            startnew(CoroutineFunc(this.RefreshCache));
         }
         // UI::TextDisabled("Use `Caches > Refresh Map Block/Item Cache` to refresh.");
 
