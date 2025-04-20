@@ -10,9 +10,14 @@ namespace ItemEditor {
         if (frame is null) {
             auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
             Editor::DoItemEditorAction(ieditor, Editor::ItemEditorAction::SaveItem);
+            auto count = 0;
             yield();
-            yield();
-            @frame = GetDialogSaveAs();
+            while (count < 10) {
+                count++;
+                @frame = GetDialogSaveAs();
+                if (frame !is null) break;
+                yield();
+            }
         }
         if (frame is null) {
             // todo: check french or things
