@@ -291,6 +291,8 @@ class ItemEmbedTab : Tab {
 
     void ResetState() {
         step = 1;
+        Reloading_IsSaving = ShowReloadingWindow = false;
+        Reloading_Done = Reloading_Total = 0;
         @step3Req = null;
         missingItems.RemoveRange(0, missingItems.Length);
         // cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
