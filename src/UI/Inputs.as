@@ -147,12 +147,14 @@ namespace UX {
         UI::SameLine();
         UI::SetNextItemWidth(100.);
         auto newY = UI::InputText(label + "##n2y", tostring(val.y));
-        try {
-            val.x = Text::ParseUInt(newX);
-        } catch {}
-        try {
-            val.y = Text::ParseUInt(newY);
-        } catch {}
+        Text::TryParseUInt(newX, val.x);
+        Text::TryParseUInt(newY, val.y);
+        // try {
+        //     val.x = Text::ParseUInt(newX);
+        // } catch {}
+        // try {
+        //     val.y = Text::ParseUInt(newY);
+        // } catch {}
         return val;
     }
 
