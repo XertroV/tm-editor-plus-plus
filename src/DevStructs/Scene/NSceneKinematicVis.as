@@ -36,7 +36,8 @@ class D_NSceneKinematicVis_SConstraint : RawBufferElem {
 	// -> 0x0 pointer to NPlugDyna_SKinematicConstraint
 	// > 0x8 quaternion stuff or maybe matrix
 	D_NSceneKinematicVis_SSharedSignal@ get_Signal() { auto _ptr = this.GetUint64(0x0); if (_ptr == 0) return null; return D_NSceneKinematicVis_SSharedSignal(_ptr); }
-	// 0x8: 0, -1, 0, 0
+	// 0x8: 0, -1,
+	// 0x10: 0, 0
 	// 0x18: class ID: SHmsInstDyna, then 0x1 byte which is size of SHmsInstDyna (=7)
 	uint32 get_hms_class_id() { return (this.GetUint32(0x18)); }
 	// 1 byte: https://xertrov.github.io/op-tm-api-docs/next/SHmsInstDyna
@@ -68,6 +69,19 @@ class D_NSceneKinematicVis_SSharedSignal : RawBufferElem {
 
 	NPlugDyna_SKinematicConstraint@ get_Model() { return cast<NPlugDyna_SKinematicConstraint>(this.GetNod(0x0)); }
 	uint64 get_ModelPtr() { return (this.GetUint64(0x0)); }
+	float get_Phase() { return (this.GetFloat(0x8)); }
+	void set_Phase(float value) { this.SetFloat(0x8, value); }
+	// PosY or translation offset?
+	vec3 get_PosOff() { return (this.GetVec3(0x30)); }
+	void set_PosOff(vec3 value) { this.SetVec3(0x30, value); }
+	float get_PosX() { return (this.GetFloat(0x30)); }
+	void set_PosX(float value) { this.SetFloat(0x30, value); }
+	float get_PosY() { return (this.GetFloat(0x34)); }
+	void set_PosY(float value) { this.SetFloat(0x34, value); }
+	float get_PosZ() { return (this.GetFloat(0x38)); }
+	void set_PosZ(float value) { this.SetFloat(0x38, value); }
+	uint get_cRef() { return (this.GetUint32(0x3c)); }
+	void set_cRef(uint value) { this.SetUint32(0x3c, value); }
 }
 
 

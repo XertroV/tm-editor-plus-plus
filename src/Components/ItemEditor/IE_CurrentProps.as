@@ -278,7 +278,7 @@ void DrawSAnimFunc(const string &in label, NPlugDyna_SKinematicConstraint@ model
 
 SubFuncEasings DrawComboSubFuncEasings(const string &in label, SubFuncEasings val) {
     return SubFuncEasings(
-        DrawArbitraryEnum(label, int(val), 11, function(int v) {
+        DrawArbitraryEnum(label, int(val), 5, function(int v) {
             return tostring(SubFuncEasings(v));
         })
     );

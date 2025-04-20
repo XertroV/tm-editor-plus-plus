@@ -8,12 +8,14 @@ Buffer: Constraints = D_NSceneKinematicVis_SConstraints, 0x8, 0x58, false
 # -> 0x0 pointer to NPlugDyna_SKinematicConstraint
 #  > 0x8 quaternion stuff or maybe matrix
 Struct: Signal = D_NSceneKinematicVis_SSharedSignal, 0x0, G
-# 0x8: 0, -1, 0, 0
+# 0x8: 0, -1,
+# 0x10: 0, 0
 # 0x18: class ID: SHmsInstDyna, then 0x1 byte which is size of SHmsInstDyna (=7)
 hms_class_id = uint32, 0x18, G
 # 1 byte: https://xertrov.github.io/op-tm-api-docs/next/SHmsInstDyna
 hms_instance = uint8, 0x1C, G
 some_id = uint32, 0x20, G
+
 #
 Loc = iso4, 0x28, GS
 # 0x4C: base position of the visible mesh (does not change collisions)
@@ -26,3 +28,10 @@ PosZ = float, 0x54, GS
 [D_NSceneKinematicVis_SSharedSignal: 0x40]
 Model = NPlugDyna_SKinematicConstraint, 0x0, G
 ModelPtr = uint64, 0x0, G
+Phase = float, 0x8, GS
+# PosY or translation offset?
+PosOff = vec3, 0x30, GS
+PosX = float, 0x30, GS
+PosY = float, 0x34, GS
+PosZ = float, 0x38, GS
+cRef = uint, 0x3c, GS
