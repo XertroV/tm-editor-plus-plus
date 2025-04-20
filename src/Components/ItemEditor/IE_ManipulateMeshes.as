@@ -381,6 +381,11 @@ class IE_ManipulateMeshesTab : Tab {
             AppendRunMsg("\\$f80Error: not sure how to process source type of " + tostring(source.ty));
         }
 
+        if (selectedFileSource !is null) {
+            // this nod can still have an FID
+            MeshDuplication::ZeroFidsUnknownModelNod(selectedFileSource);
+        }
+
         auto destModel = GetItemModel();
         if (destModel.EntityModelEdition !is null) {
             @destModel.EntityModelEdition = null;
