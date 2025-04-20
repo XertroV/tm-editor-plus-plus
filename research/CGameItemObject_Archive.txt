@@ -1,0 +1,618 @@
+call [[FID]+F8]?
+
+
+fid +A8 -> list of chunks and sizes? (size, chunkId)
+
+
+fid+b0 -> ptr -> ptr -> fn
+passed to LoaderFile::Open
+
+
+ArchiveNod struct:
+vtable
+0, 2
+0, 0
+0x1ac4
+string: temp file
+string: dest file
+
+
+
+modifying the FID FileName at this point can produce .json or .gbx.xml files
+
+{
+    Trackmania.exe+8AC347 - E8 E4EE99FF           - call Trackmania.exe.text+24A230 { ->Trackmania.exe+24B230 }
+    Trackmania.exe+8AC34C - 48 8B C8              - mov rcx,rax
+    Trackmania.exe+8AC34F - 8B D7                 - mov edx,edi
+    Trackmania.exe+8AC351 - E8 DA7BFFFF           - call Trackmania.exe.text+8A2F30 { ->Trackmania.exe+8A3F30 }
+    Trackmania.exe+8AC356 - 85 C0                 - test eax,eax
+    Trackmania.exe+8AC358 - 0F84 3B020000         - je Trackmania.exe.text+8AB599 { ->Trackmania.exe+8AC599 }
+    Trackmania.exe+8AC35E - 0F10 86 D0000000      - movups xmm0,[rsi+000000D0] { get file name
+    }
+    Trackmania.exe+8AC365 - 48 8D 8D F0000000     - lea rcx,[rbp+000000F0] { abs folder path
+    }
+    Trackmania.exe+8AC36C - 0F29 85 F0000000      - movaps [rbp+000000F0],xmm0
+    Trackmania.exe+8AC373 - E8 3891FFFF           - call Trackmania.exe.text+8A44B0 { ->Trackmania.exe+8A54B0 }
+    Trackmania.exe+8AC378 - 49 8B CE              - mov rcx,r14
+    Trackmania.exe+8AC37B - 85 C0                 - test eax,eax
+    Trackmania.exe+8AC37D - 0F85 43020000         - jne Trackmania.exe.text+8AB5C6 { hmmmm save other things?
+    }
+    Trackmania.exe+8AC383 - 49 8B 06              - mov rax,[r14]
+    Trackmania.exe+8AC386 - BA 00000209           - mov edx,09020000 { 151126016 }
+    Trackmania.exe+8AC38B - FF 50 20              - call qword ptr [rax+20]
+    Trackmania.exe+8AC38E - 0F10 8E D0000000      - movups xmm1,[rsi+000000D0]
+    Trackmania.exe+8AC395 - C7 85 F8000000 08000000 - mov [rbp+000000F8],00000008 { 8 }
+    Trackmania.exe+8AC39F - 48 8D 05 F2483201     - lea rax,[Trackmania.exe.rdata+292C98] { (".gbx.xml") }
+    Trackmania.exe+8AC3A6 - 48 89 85 F0000000     - mov [rbp+000000F0],rax
+    Trackmania.exe+8AC3AD - 48 8D 95 F0000000     - lea rdx,[rbp+000000F0]
+}
+
+
+
+early entrypoint for saving called from EditorItem (from memory)
+
+{
+    Trackmania.exe+10097FA - 48 8B 06              - mov rax,[rsi]
+    Trackmania.exe+10097FD - 48 8B 48 70           - mov rcx,[rax+70]
+    Trackmania.exe+1009801 - 48 8B 85 28010000     - mov rax,[rbp+00000128] { called before archive stuff
+    }
+    Trackmania.exe+1009808 - 48 85 C0              - test rax,rax
+    Trackmania.exe+100980B - 74 0E                 - je Trackmania.exe.text+100881B { ->Trackmania.exe+100981B }
+    Trackmania.exe+100980D - 4C 8B 45 B8           - mov r8,[rbp-48]
+    Trackmania.exe+1009811 - 48 8B D1              - mov rdx,rcx
+    Trackmania.exe+1009814 - 49 8B CD              - mov rcx,r13
+    Trackmania.exe+1009817 - FF D0                 - call rax
+    Trackmania.exe+1009819 - EB 0E                 - jmp Trackmania.exe.text+1008829 { ->Trackmania.exe+1009829 }
+    Trackmania.exe+100981B - 41 B8 0A000000        - mov r8d,0000000A { 10 }
+    Trackmania.exe+1009821 - 49 8B D5              - mov rdx,r13
+    Trackmania.exe+1009824 - E8 673C8AFF           - call Trackmania.exe.text+8AC490 { ->Trackmania.exe+8AD490 }
+    Trackmania.exe+1009829 - 48 8B 4D A8           - mov rcx,[rbp-58]
+    Trackmania.exe+100982D - 89 01                 - mov [rcx],eax
+    Trackmania.exe+100982F - 85 C0                 - test eax,eax
+    Trackmania.exe+1009831 - 0F85 3FF9FFFF         - jne Trackmania.exe.text+1008176 { ->Trackmania.exe+1009176 }
+    Trackmania.exe+1009837 - 48 8B 06              - mov rax,[rsi]
+    Trackmania.exe+100983A - 80 78 43 00           - cmp byte ptr [rax+43],00 { 0 }
+    Trackmania.exe+100983E - 48 8D 78 50           - lea rdi,[rax+50]
+    Trackmania.exe+1009842 - 74 06                 - je Trackmania.exe.text+100884A { ->Trackmania.exe+100984A }
+    Trackmania.exe+1009844 - 48 8B 48 38           - mov rcx,[rax+38]
+    Trackmania.exe+1009848 - EB 04                 - jmp Trackmania.exe.text+100884E { ->Trackmania.exe+100984E }
+    Trackmania.exe+100984A - 48 8D 48 38           - lea rcx,[rax+38]
+    Trackmania.exe+100984E - 8B 40 44              - mov eax,[rax+44]
+    Trackmania.exe+1009851 - 4C 8D 85 C0000000     - lea r8,[rbp+000000C0]
+    Trackmania.exe+1009858 - 89 85 D8000000        - mov [rbp+000000D8],eax
+    Trackmania.exe+100985E - 48 8D 95 A0010000     - lea rdx,[rbp+000001A0]
+    Trackmania.exe+1009865 - 48 89 8D D0000000     - mov [rbp+000000D0],rcx
+    Trackmania.exe+100986C - 33 C0                 - xor eax,eax
+    Trackmania.exe+100986E - 48 8D 0D CB74C700     - lea rcx,[Trackmania.exe.rdata+342D40] { ("Error: Could not save the file "$<%1$>"") }
+    Trackmania.exe+1009875 - 89 85 DC000000        - mov [rbp+000000DC],eax
+
+}
+
+
+
+
+
+fid save file at +f8 in vtable?
+
+{
+    Trackmania.exe+8AC43B - 83 FA FD              - cmp edx,-03 { 253 }
+    Trackmania.exe+8AC43E - 77 12                 - ja Trackmania.exe.text+8AB452 { ->Trackmania.exe+8AC452 }
+    Trackmania.exe+8AC440 - BA 0070010B           - mov edx,0B017000 { 184643584 }
+    Trackmania.exe+8AC445 - E8 A6169EFF           - call Trackmania.exe.text+28CAF0 { ->Trackmania.exe+28DAF0 }
+    Trackmania.exe+8AC44A - 85 C0                 - test eax,eax
+    Trackmania.exe+8AC44C - 0F85 47010000         - jne Trackmania.exe.text+8AB599 { ->Trackmania.exe+8AC599 }
+    Trackmania.exe+8AC452 - 48 8B 06              - mov rax,[rsi]
+    Trackmania.exe+8AC455 - 48 8B CE              - mov rcx,rsi
+    Trackmania.exe+8AC458 - FF 90 F8000000        - call qword ptr [rax+000000F8] { maybe a call to fid save file?
+    }
+    Trackmania.exe+8AC45E - 85 C0                 - test eax,eax
+    Trackmania.exe+8AC460 - 0F85 95000000         - jne Trackmania.exe.text+8AB4FB { ->Trackmania.exe+8AC4FB }
+    Trackmania.exe+8AC466 - 33 DB                 - xor ebx,ebx
+    Trackmania.exe+8AC468 - 48 8D 95 F0000000     - lea rdx,[rbp+000000F0]
+    Trackmania.exe+8AC46F - 44 8B CF              - mov r9d,edi
+    Trackmania.exe+8AC472 - 48 89 9D F0000000     - mov [rbp+000000F0],rbx
+    Trackmania.exe+8AC479 - 44 8B C7              - mov r8d,edi
+
+}
+
+
+
+ArSave
+
+{
+    Trackmania.exe+8AD585 - 48 8B 47 08           - mov rax,[rdi+08] { load fid
+    }
+    Trackmania.exe+8AD589 - 48 8D 54 24 68        - lea rdx,[rsp+68]
+    Trackmania.exe+8AD58E - 48 89 81 90000000     - mov [rcx+00000090],rax
+    Trackmania.exe+8AD595 - 48 8B CF              - mov rcx,rdi
+    Trackmania.exe+8AD598 - 48 8B 07              - mov rax,[rdi]
+    Trackmania.exe+8AD59B - FF 50 18              - call qword ptr [rax+18] { first vtable access?
+    }
+    Trackmania.exe+8AD59E - 8B 08                 - mov ecx,[rax]
+    Trackmania.exe+8AD5A0 - E8 8BB2FFFF           - call Trackmania.exe.text+8A7830 { ->Trackmania.exe+8A8830 }
+    Trackmania.exe+8AD5A5 - 85 C0                 - test eax,eax
+    Trackmania.exe+8AD5A7 - 75 23                 - jne Trackmania.exe.text+8AC5CC { ->Trackmania.exe+8AD5CC }
+    Trackmania.exe+8AD5A9 - 48 8B 0D A82B6D01     - mov rcx,[Trackmania.exe+1F80158] { (23CAE9F2E00) }
+    Trackmania.exe+8AD5B0 - E8 CBC3FEFF           - call Trackmania.exe.text+898980 { get system drive?
+    }
+    Trackmania.exe+8AD5B5 - 4C 8B 83 90000000     - mov r8,[rbx+00000090]
+    Trackmania.exe+8AD5BC - 48 8B C8              - mov rcx,rax
+    Trackmania.exe+8AD5BF - 49 8B 50 18           - mov rdx,[r8+18]
+    Trackmania.exe+8AD5C3 - E8 E864FFFF           - call Trackmania.exe.text+8A2AB0 { ->Trackmania.exe+8A3AB0 }
+    Trackmania.exe+8AD5C8 - 85 C0                 - test eax,eax
+    Trackmania.exe+8AD5CA - 74 0C                 - je Trackmania.exe.text+8AC5D8 { ->Trackmania.exe+8AD5D8 }
+    Trackmania.exe+8AD5CC - 4C 8B 83 90000000     - mov r8,[rbx+00000090]
+    Trackmania.exe+8AD5D3 - B8 01000000           - mov eax,00000001 { 1 }
+    Trackmania.exe+8AD5D8 - 89 43 18              - mov [rbx+18],eax
+    Trackmania.exe+8AD5DB - 4D 85 C0              - test r8,r8
+    Trackmania.exe+8AD5DE - 0F84 F9000000         - je Trackmania.exe.text+8AC6DD { ->Trackmania.exe+8AD6DD }
+    Trackmania.exe+8AD5E4 - 48 8D 15 B53B3201     - lea rdx,[Trackmania.exe.rdata+2931A0] { ("NSys::ArSave") }
+}
+
+
+
+
+
+
+
+Trackmania.exe+10948D5 - 74 3A                 - je Trackmania.exe.text+1093911 { ->Trackmania.exe+1094911 }
+Trackmania.exe+10948D7 - 8B 8E 14010000        - mov ecx,[rsi+00000114]
+Trackmania.exe+10948DD - E8 FE52F7FF           - call Trackmania.exe.text+1008BE0 { ->Trackmania.exe+1009BE0 }
+Trackmania.exe+10948E2 - 4C 8B 86 40010000     - mov r8,[rsi+00000140]
+Trackmania.exe+10948E9 - 44 8B C8              - mov r9d,eax
+Trackmania.exe+10948EC - 48 8B 96 F8080000     - mov rdx,[rsi+000008F8]
+Trackmania.exe+10948F3 - 49 8B CF              - mov rcx,r15
+Trackmania.exe+10948F6 - E8 753DF7FF           - call Trackmania.exe.text+1007670 { presumably something to do with saving, EditorItem.ItemModel above
+ }
+Trackmania.exe+10948FB - 85 C0                 - test eax,eax
+Trackmania.exe+10948FD - 75 0D                 - jne Trackmania.exe.text+109390C { ->Trackmania.exe+109490C }
+Trackmania.exe+10948FF - 48 85 FF              - test rdi,rdi
+Trackmania.exe+1094902 - 74 0D                 - je Trackmania.exe.text+1093911 { ->Trackmania.exe+1094911 }
+Trackmania.exe+1094904 - C7 07 01000000        - mov [rdi],00000001 { 1 }
+Trackmania.exe+109490A - EB 05                 - jmp Trackmania.exe.text+1093911 { ->Trackmania.exe+1094911 }
+Trackmania.exe+109490C - BD 01000000           - mov ebp,00000001 { 1 }
+Trackmania.exe+1094911 - 4D 85 F6              - test r14,r14
+
+
+
+
+
+Trackmania.exe+109F961 - 75 08                 - jne Trackmania.exe.text+109E96B { ->Trackmania.exe+109F96B }
+Trackmania.exe+109F963 - 48 8B CB              - mov rcx,rbx
+Trackmania.exe+109F966 - E8 D5E9FFFF           - call Trackmania.exe.text+109D340 { ->Trackmania.exe+109E340 }
+Trackmania.exe+109F96B - 48 8B 83 F8080000     - mov rax,[rbx+000008F8] { EditorItem::ItemModel
+ }
+Trackmania.exe+109F972 - 48 8B 88 80020000     - mov rcx,[rax+00000280] { EntityModel
+ }
+Trackmania.exe+109F979 - 48 85 C9              - test rcx,rcx
+Trackmania.exe+109F97C - 75 0A                 - jne Trackmania.exe.text+109E988 { ->Trackmania.exe+109F988 }
+Trackmania.exe+109F97E - 48 8B C8              - mov rcx,rax
+Trackmania.exe+109F981 - E8 8AB49BFF           - call Trackmania.exe.text+A59E10 { ->Trackmania.exe+A5AE10 }
+Trackmania.exe+109F986 - EB 0B                 - jmp Trackmania.exe.text+109E993 { ->Trackmania.exe+109F993 }
+Trackmania.exe+109F988 - 48 8B 01              - mov rax,[rcx]
+Trackmania.exe+109F98B - BA 0060022E           - mov edx,2E026000 { CGameCommonItemEntityModelEdition
+ }
+Trackmania.exe+109F990 - FF 50 20              - call qword ptr [rax+20]
+Trackmania.exe+109F993 - 48 8B BB F8080000     - mov rdi,[rbx+000008F8]
+Trackmania.exe+109F99A - 48 8B 8F A0010000     - mov rcx,[rdi+000001A0]
+Trackmania.exe+109F9A1 - 48 85 C9              - test rcx,rcx
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+directory stuff?
+
+Trackmania.exe+8A1A70 - 48 89 5C 24 18        - mov [rsp+18],rbx { function: maybe update path or something? get path?
+ }
+Trackmania.exe+8A1A75 - 48 89 74 24 20        - mov [rsp+20],rsi
+Trackmania.exe+8A1A7A - 55                    - push rbp
+Trackmania.exe+8A1A7B - 57                    - push rdi
+Trackmania.exe+8A1A7C - 41 56                 - push r14
+Trackmania.exe+8A1A7E - 48 8D AC 24 70FEFFFF  - lea rbp,[rsp-00000190]
+Trackmania.exe+8A1A86 - 48 81 EC 90020000     - sub rsp,00000290 { 656 }
+Trackmania.exe+8A1A8D - 48 8B 05 CC955801     - mov rax,[Trackmania.exe.data+60] { (194) }
+Trackmania.exe+8A1A94 - 48 33 C4              - xor rax,rsp
+Trackmania.exe+8A1A97 - 48 89 85 80010000     - mov [rbp+00000180],rax
+Trackmania.exe+8A1A9E - 45 33 F6              - xor r14d,r14d
+Trackmania.exe+8A1AA1 - 49 8B F8              - mov rdi,r8
+Trackmania.exe+8A1AA4 - 48 8B F2              - mov rsi,rdx
+Trackmania.exe+8A1AA7 - 48 8B D9              - mov rbx,rcx
+Trackmania.exe+8A1AAA - 4D 85 C0              - test r8,r8
+Trackmania.exe+8A1AAD - 0F84 24010000         - je Trackmania.exe.text+8A0BD7 { ->Trackmania.exe+8A1BD7 }
+Trackmania.exe+8A1AB3 - 4D 8B 40 18           - mov r8,[r8+18] { loads a fid folder (parent?)
+
+ }
+Trackmania.exe+8A1AB7 - 4D 85 C0              - test r8,r8
+Trackmania.exe+8A1ABA - 0F84 17010000         - je Trackmania.exe.text+8A0BD7 { ->Trackmania.exe+8A1BD7 }
+Trackmania.exe+8A1AC0 - 48 8D 44 24 78        - lea rax,[rsp+78]
+Trackmania.exe+8A1AC5 - 44 89 74 24 68        - mov [rsp+68],r14d
+Trackmania.exe+8A1ACA - B9 20000000           - mov ecx,00000020 { 32 }
+Trackmania.exe+8A1ACF - 48 89 44 24 60        - mov [rsp+60],rax
+Trackmania.exe+8A1AD4 - 48 8D 45 84           - lea rax,[rbp-7C]
+Trackmania.exe+8A1AD8 - 89 4C 24 70           - mov [rsp+70],ecx
+Trackmania.exe+8A1ADC - 0F1F 40 00            - nop dword ptr [rax+00] { clear some stack stuff
+ }
+Trackmania.exe+8A1AE0 - 4C 89 70 F4           - mov [rax-0C],r14
+Trackmania.exe+8A1AE4 - 4C 89 70 FC           - mov [rax-04],r14
+Trackmania.exe+8A1AE8 - 48 8D 40 10           - lea rax,[rax+10]
+Trackmania.exe+8A1AEC - 48 83 E9 01           - sub rcx,01 { 1 }
+Trackmania.exe+8A1AF0 - 75 EE                 - jne Trackmania.exe.text+8A0AE0 { ->Trackmania.exe+8A1AE0 }
+Trackmania.exe+8A1AF2 - 45 85 C9              - test r9d,r9d
+Trackmania.exe+8A1AF5 - 74 09                 - je Trackmania.exe.text+8A0B00 { ->Trackmania.exe+8A1B00 }
+Trackmania.exe+8A1AF7 - 44 39 B5 D0010000     - cmp [rbp+000001D0],r14d
+Trackmania.exe+8A1AFE - 75 53                 - jne Trackmania.exe.text+8A0B53 { ->Trackmania.exe+8A1B53 }
+Trackmania.exe+8A1B00 - 48 8B CF              - mov rcx,rdi { fid
+ }
+Trackmania.exe+8A1B03 - E8 F88B0100           - call Trackmania.exe.text+8B9700 { ->Trackmania.exe+8BA700 }
+Trackmania.exe+8A1B08 - 48 8D 0D 09635901     - lea rcx,[Trackmania.exe.data+CE18] { (7FF7A72E1A50) }
+Trackmania.exe+8A1B0F - 48 39 88 B0000000     - cmp [rax+000000B0],rcx { tests to 00007FF7A7547E18 -- determines if virtual?
+ }
+Trackmania.exe+8A1B16 - 74 3B                 - je Trackmania.exe.text+8A0B53 { ->Trackmania.exe+8A1B53 }
+Trackmania.exe+8A1B18 - 48 8D 05 21F03201     - lea rax,[Trackmania.exe.rdata+292B40] { ("<virtual>") }
+Trackmania.exe+8A1B1F - 48 C7 44 24 38 09000000 - mov qword ptr [rsp+38],00000009 { 9 }
+Trackmania.exe+8A1B28 - 48 89 44 24 30        - mov [rsp+30],rax
+Trackmania.exe+8A1B2D - 8B 44 24 68           - mov eax,[rsp+68]
+Trackmania.exe+8A1B31 - 3B 44 24 70           - cmp eax,[rsp+70]
+Trackmania.exe+8A1B35 - 72 02                 - jb Trackmania.exe.text+8A0B39 { ->Trackmania.exe+8A1B39 }
+Trackmania.exe+8A1B37 - 0F0B                  - ud2
+Trackmania.exe+8A1B39 - 0F10 44 24 30         - movups xmm0,[rsp+30]
+Trackmania.exe+8A1B3E - FF C0                 - inc eax
+Trackmania.exe+8A1B40 - 89 44 24 68           - mov [rsp+68],eax
+Trackmania.exe+8A1B44 - 8D 48 FF              - lea ecx,[rax-01]
+Trackmania.exe+8A1B47 - 48 8B 44 24 60        - mov rax,[rsp+60]
+Trackmania.exe+8A1B4C - 48 03 C9              - add rcx,rcx
+Trackmania.exe+8A1B4F - 0F11 04 C8            - movups [rax+rcx*8],xmm0
+Trackmania.exe+8A1B53 - 48 8D 44 24 60        - lea rax,[rsp+60]
+Trackmania.exe+8A1B58 - 33 D2                 - xor edx,edx
+Trackmania.exe+8A1B5A - 49 8B C8              - mov rcx,r8 { parent folder
+ }
+Trackmania.exe+8A1B5D - 48 89 44 24 20        - mov [rsp+20],rax
+Trackmania.exe+8A1B62 - E8 49FDFFFF           - call Trackmania.exe.text+8A08B0 { ->Trackmania.exe+8A18B0 }
+Trackmania.exe+8A1B67 - 85 C0                 - test eax,eax { test,no jump for directory that exists
+ }
+Trackmania.exe+8A1B69 - 74 6C                 - je Trackmania.exe.text+8A0BD7 { ->Trackmania.exe+8A1BD7 }
+Trackmania.exe+8A1B6B - 8B 44 24 68           - mov eax,[rsp+68] { was 4?
+ }
+Trackmania.exe+8A1B6F - 3B 44 24 70           - cmp eax,[rsp+70] { 4 cmp to 20
+ }
+Trackmania.exe+8A1B73 - 73 62                 - jae Trackmania.exe.text+8A0BD7 { ->Trackmania.exe+8A1BD7 }
+Trackmania.exe+8A1B75 - 0F10 87 D0000000      - movups xmm0,[rdi+000000D0] { Load file name
+ }
+Trackmania.exe+8A1B7C - FF C0                 - inc eax { maybe tracking depth?
+ }
+Trackmania.exe+8A1B7E - 48 8B CE              - mov rcx,rsi
+Trackmania.exe+8A1B81 - 89 44 24 68           - mov [rsp+68],eax
+Trackmania.exe+8A1B85 - 8D 50 FF              - lea edx,[rax-01]
+Trackmania.exe+8A1B88 - 48 8B 44 24 60        - mov rax,[rsp+60]
+Trackmania.exe+8A1B8D - 48 03 D2              - add rdx,rdx
+Trackmania.exe+8A1B90 - 0F11 04 D0            - movups [rax+rdx*8],xmm0 { file name string 0x10 bytes
+ }
+Trackmania.exe+8A1B94 - 48 8B 44 24 60        - mov rax,[rsp+60]
+Trackmania.exe+8A1B99 - 8B 54 24 68           - mov edx,[rsp+68]
+Trackmania.exe+8A1B9D - 89 54 24 38           - mov [rsp+38],edx
+
+
+
+
+
+
+
+
+
+
+
+set file size of fid after loading
+
+Trackmania.exe+8BAD00 - 48 89 5C 24 08        - mov [rsp+08],rbx
+Trackmania.exe+8BAD05 - 57                    - push rdi
+Trackmania.exe+8BAD06 - 48 83 EC 60           - sub rsp,60 { 96 }
+Trackmania.exe+8BAD0A - 65 48 8B 04 25 58000000  - mov rax,gs:[00000058] { 88 }
+Trackmania.exe+8BAD13 - 48 8B FA              - mov rdi,rdx
+Trackmania.exe+8BAD16 - 48 8B 18              - mov rbx,[rax]
+Trackmania.exe+8BAD19 - B8 10000000           - mov eax,00000010 { 16 }
+Trackmania.exe+8BAD1E - 80 3C 18  00          - cmp byte ptr [rax+rbx],00 { 0 }
+Trackmania.exe+8BAD22 - 75 05                 - jne Trackmania.exe.text+8B9D29 { ->Trackmania.exe+8BAD29 }
+Trackmania.exe+8BAD24 - E8 A787C300           - call Trackmania.exe.text+14F24D0 { ->Trackmania.exe+14F34D0 }
+Trackmania.exe+8BAD29 - BA 60010000           - mov edx,00000160 { 352 }
+Trackmania.exe+8BAD2E - 48 8D 4C 24 40        - lea rcx,[rsp+40]
+Trackmania.exe+8BAD33 - 48 03 D3              - add rdx,rbx { wide string of item path
+ }
+Trackmania.exe+8BAD36 - E8 D51686FF           - call Trackmania.exe.text+11B410 { some string move operation or get one of the string sfrom the struct
+ }
+Trackmania.exe+8BAD3B - 45 33 C9              - xor r9d,r9d
+Trackmania.exe+8BAD3E - C7 44 24 20 00000000  - mov [rsp+20],00000000 { 0 }
+Trackmania.exe+8BAD46 - 4C 8B C7              - mov r8,rdi
+Trackmania.exe+8BAD49 - 48 8D 54 24 40        - lea rdx,[rsp+40]
+Trackmania.exe+8BAD4E - 48 8D 4C 24 30        - lea rcx,[rsp+30]
+Trackmania.exe+8BAD53 - E8 186DFEFF           - call Trackmania.exe.text+8A0A70 { directory path thing
+ }
+Trackmania.exe+8BAD58 - 0F28 44 24 30         - movaps xmm0,[rsp+30]
+Trackmania.exe+8BAD5D - 48 8D 54 24 30        - lea rdx,[rsp+30]
+Trackmania.exe+8BAD62 - 48 8B 07              - mov rax,[rdi]
+Trackmania.exe+8BAD65 - 48 8B CF              - mov rcx,rdi
+Trackmania.exe+8BAD68 - 66 0F7F 44 24 30      - movdqa [rsp+30],xmm0
+Trackmania.exe+8BAD6E - FF 90 00010000        - call qword ptr [rax+00000100] { calls [fid]+100 - populate file size?
+
+ }
+Trackmania.exe+8BAD74 - 48 8D 4C 24 40        - lea rcx,[rsp+40]
+Trackmania.exe+8BAD79 - E8 B21686FF           - call Trackmania.exe.text+11B430 { ->Trackmania.exe+11C430 }
+Trackmania.exe+8BAD7E - 48 8B 5C 24 70        - mov rbx,[rsp+70]
+Trackmania.exe+8BAD83 - 48 83 C4 60           - add rsp,60 { 96 }
+Trackmania.exe+8BAD87 - 5F                    - pop rdi
+Trackmania.exe+8BAD88 - C3                    - ret
+
+
+
+
+
+
+
+
+
+
+
+Trackmania.exe+8AC75C - 38 9D FB000000        - cmp [rbp+000000FB],bl
+Trackmania.exe+8AC762 - 74 0C                 - je Trackmania.exe.text+8AB770 { ->Trackmania.exe+8AC770 }
+Trackmania.exe+8AC764 - 48 8D 8D F0000000     - lea rcx,[rbp+000000F0]
+Trackmania.exe+8AC76B - E8 F0E785FF           - call Trackmania.exe.text+109F60 { ->Trackmania.exe+10AF60 }
+Trackmania.exe+8AC770 - 49 8B D5              - mov rdx,r13 { load fid
+ }
+Trackmania.exe+8AC773 - 49 8B CE              - mov rcx,r14 { load item ptr
+ }
+Trackmania.exe+8AC776 - E8 F5C1FFFF           - call Trackmania.exe.text+8A7970 { args: fid, item ptr
+ }
+Trackmania.exe+8AC77B - 48 8B 8E B0000000     - mov rcx,[rsi+000000B0] { check fid for ptr at B0
+ }
+Trackmania.exe+8AC782 - 45 33 C9              - xor r9d,r9d { clear r9
+ }
+Trackmania.exe+8AC785 - 48 8B D6              - mov rdx,rsi { fid in rdx
+ }
+Trackmania.exe+8AC788 - 48 8B 01              - mov rax,[rcx] { load function ptr at [fid+b0]
+ }
+Trackmania.exe+8AC78B - 45 8D 41 02           - lea r8d,[r9+02] { set r8 to 2
+ }
+Trackmania.exe+8AC78F - FF 10                 - call qword ptr [rax] { LoaderFile::Open -- prepares files
+
+ }
+Trackmania.exe+8AC791 - 49 89 47 08           - mov [r15+08],rax { LoaderFile or ArchiveNod
+ }
+Trackmania.exe+8AC795 - 48 8B C8              - mov rcx,rax
+Trackmania.exe+8AC798 - 48 85 C0              - test rax,rax
+Trackmania.exe+8AC79B - 75 1F                 - jne Trackmania.exe.text+8AB7BC { jmp if not null
+ }
+Trackmania.exe+8AC79D - 49 8B D5              - mov rdx,r13
+Trackmania.exe+8AC7A0 - 49 8B CE              - mov rcx,r14
+Trackmania.exe+8AC7A3 - E8 D873FFFF           - call Trackmania.exe.text+8A2B80 { ->Trackmania.exe+8A3B80 }
+Trackmania.exe+8AC7A8 - 8B FB                 - mov edi,ebx
+Trackmania.exe+8AC7AA - EB 52                 - jmp Trackmania.exe.text+8AB7FE { ->Trackmania.exe+8AC7FE }
+Trackmania.exe+8AC7AC - 49 8B 87 80000000     - mov rax,[r15+00000080]
+Trackmania.exe+8AC7B3 - 48 85 C0              - test rax,rax
+Trackmania.exe+8AC7B6 - 74 B8                 - je Trackmania.exe.text+8AB770 { ->Trackmania.exe+8AC770 }
+Trackmania.exe+8AC7B8 - 89 38                 - mov [rax],edi
+Trackmania.exe+8AC7BA - EB 42                 - jmp Trackmania.exe.text+8AB7FE { ->Trackmania.exe+8AC7FE }
+Trackmania.exe+8AC7BC - 48 8B 00              - mov rax,[rax] { LoaderFile/ArchiveNod vtable
+ }
+Trackmania.exe+8AC7BF - 45 8B C4              - mov r8d,r12d { size?
+ }
+Trackmania.exe+8AC7C2 - 48 8B 54 24 40        - mov rdx,[rsp+40] { get buffer? starts with GBX BUCR. Len 3f0
+ }
+Trackmania.exe+8AC7C7 - FF 50 10              - call qword ptr [rax+10] { actually copy to file?
+ }
+Trackmania.exe+8AC7CA - 48 8B 8E B0000000     - mov rcx,[rsi+000000B0]
+Trackmania.exe+8AC7D1 - 48 8B D6              - mov rdx,rsi
+Trackmania.exe+8AC7D4 - 4D 8B 47 08           - mov r8,[r15+08]
+Trackmania.exe+8AC7D8 - 48 8B 01              - mov rax,[rcx]
+Trackmania.exe+8AC7DB - FF 50 08              - call qword ptr [rax+08] { populates and copies files, r8 is loader struct
+ }
+Trackmania.exe+8AC7DE - 48 8B CE              - mov rcx,rsi
+Trackmania.exe+8AC7E1 - 49 89 5F 08           - mov [r15+08],rbx
+Trackmania.exe+8AC7E5 - E8 D6DC0000           - call Trackmania.exe.text+8B94C0 { updates fid file size maybe?
+ }
+Trackmania.exe+8AC7EA - 49 8B 06              - mov rax,[r14]
+Trackmania.exe+8AC7ED - 48 8D 54 24 20        - lea rdx,[rsp+20]
+Trackmania.exe+8AC7F2 - 49 8B CE              - mov rcx,r14
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Trackmania.exe+8AB53F - C3                    - ret
+Trackmania.exe+8AB540 - 81 F9 00100109        - cmp ecx,09011000 { 151064576 }
+Trackmania.exe+8AB546 - 77 4A                 - ja Trackmania.exe.text+8AA592 { ->Trackmania.exe+8AB592 }
+Trackmania.exe+8AB548 - 74 40                 - je Trackmania.exe.text+8AA58A { ->Trackmania.exe+8AB58A }
+Trackmania.exe+8AB54A - 81 F9 00300403        - cmp ecx,03043000 { 50606080 }
+Trackmania.exe+8AB550 - 74 30                 - je Trackmania.exe.text+8AA582 { ->Trackmania.exe+8AB582 }
+Trackmania.exe+8AB552 - 81 F9 00300903        - cmp ecx,03093000 { 50933760 }
+Trackmania.exe+8AB558 - 74 20                 - je Trackmania.exe.text+8AA57A { ->Trackmania.exe+8AB57A }
+Trackmania.exe+8AB55A - 81 F9 00A00903        - cmp ecx,0309A000 { 50962432 }
+Trackmania.exe+8AB560 - 74 10                 - je Trackmania.exe.text+8AA572 { ->Trackmania.exe+8AB572 }
+Trackmania.exe+8AB562 - 81 F9 00500009        - cmp ecx,09005000 { 151015424 }
+Trackmania.exe+8AB568 - 75 40                 - jne Trackmania.exe.text+8AA5AA { ->Trackmania.exe+8AB5AA }
+Trackmania.exe+8AB56A - 48 8D 05 1F593201     - lea rax,[Trackmania.exe.rdata+292E90] { ("ArchiveNod::LoadGbx_Body(Solid1)") }
+Trackmania.exe+8AB571 - C3                    - ret
+Trackmania.exe+8AB572 - 48 8D 05 575A3201     - lea rax,[Trackmania.exe.rdata+292FD0] { ("ArchiveNod::LoadGbx_Body(ControlCard)") }
+Trackmania.exe+8AB579 - C3                    - ret
+Trackmania.exe+8AB57A - 48 8D 05 FF593201     - lea rax,[Trackmania.exe.rdata+292F80] { ("ArchiveNod::LoadGbx_Body(ReplayRecord)") }
+Trackmania.exe+8AB581 - C3                    - ret
+Trackmania.exe+8AB582 - 48 8D 05 CF593201     - lea rax,[Trackmania.exe.rdata+292F58] { ("ArchiveNod::LoadGbx_Body(Challenge)") }
+Trackmania.exe+8AB589 - C3                    - ret
+Trackmania.exe+8AB58A - 48 8D 05 175A3201     - lea rax,[Trackmania.exe.rdata+292FA8] { ("ArchiveNod::LoadGbx_Body(Bitmap)") }
+Trackmania.exe+8AB591 - C3                    - ret
+Trackmania.exe+8AB592 - 81 F9 00600209        - cmp ecx,09026000 { 151150592 }
+Trackmania.exe+8AB598 - 74 28                 - je Trackmania.exe.text+8AA5C2 { ->Trackmania.exe+8AB5C2 }
+Trackmania.exe+8AB59A - 81 F9 00300509        - cmp ecx,09053000 { 151334912 }
+Trackmania.exe+8AB5A0 - 74 18                 - je Trackmania.exe.text+8AA5BA { ->Trackmania.exe+8AB5BA }
+Trackmania.exe+8AB5A2 - 81 F9 00B00B09        - cmp ecx,090BB000 { 151760896 }
+Trackmania.exe+8AB5A8 - 74 08                 - je Trackmania.exe.text+8AA5B2 { ->Trackmania.exe+8AB5B2 }
+Trackmania.exe+8AB5AA - 48 8D 05 77593201     - lea rax,[Trackmania.exe.rdata+292F28] { ("ArchiveNod::LoadGbx_Body(Other)") }
+Trackmania.exe+8AB5B1 - C3                    - ret
+Trackmania.exe+8AB5B2 - 48 8D 05 FF583201     - lea rax,[Trackmania.exe.rdata+292EB8] { ("ArchiveNod::LoadGbx_Body(Solid2)") }
+Trackmania.exe+8AB5B9 - C3                    - ret
+Trackmania.exe+8AB5BA - 48 8D 05 9F583201     - lea rax,[Trackmania.exe.rdata+292E60] { ("ArchiveNod::LoadGbx_Body(GpuCompileCache)") }
+Trackmania.exe+8AB5C1 - C3                    - ret
+Trackmania.exe+8AB5C2 - 48 8D 05 6F583201     - lea rax,[Trackmania.exe.rdata+292E38] { ("ArchiveNod::LoadGbx_Body(ShaderApply)") }
+Trackmania.exe+8AB5C9 - C3                    - ret
+
+
+
+
+
+
+Trackmania.exe+8ADB40 - 48 89 5C 24 10        - mov [rsp+10],rbx
+Trackmania.exe+8ADB45 - 48 89 74 24 18        - mov [rsp+18],rsi
+Trackmania.exe+8ADB4A - 57                    - push rdi
+Trackmania.exe+8ADB4B - 48 83 EC 20           - sub rsp,20 { 32 }
+Trackmania.exe+8ADB4F - 48 8B FA              - mov rdi,rdx
+Trackmania.exe+8ADB52 - 49 8B F0              - mov rsi,r8
+Trackmania.exe+8ADB55 - 41 8B D1              - mov edx,r9d
+Trackmania.exe+8ADB58 - 48 8B D9              - mov rbx,rcx
+Trackmania.exe+8ADB5B - E8 80B5FFFF           - call Trackmania.exe.text+8A80E0 { ->Trackmania.exe+8A90E0 }
+Trackmania.exe+8ADB60 - 83 79 74 00           - cmp dword ptr [rcx+74],00 { 0 }
+Trackmania.exe+8ADB64 - 48 89 B9 30010000     - mov [rcx+00000130],rdi
+Trackmania.exe+8ADB6B - 74 08                 - je Trackmania.exe.text+8ACB75 { ->Trackmania.exe+8ADB75 }
+Trackmania.exe+8ADB6D - 48 8B CF              - mov rcx,rdi
+Trackmania.exe+8ADB70 - E8 BB4E87FF           - call Trackmania.exe.text+121A30 { ->Trackmania.exe+122A30 }
+Trackmania.exe+8ADB75 - BA 01000000           - mov edx,00000001 { 1 }
+Trackmania.exe+8ADB7A - 48 8B CB              - mov rcx,rbx
+Trackmania.exe+8ADB7D - E8 FEBA87FF           - call Trackmania.exe.text+128680 { ->Trackmania.exe+129680 }
+Trackmania.exe+8ADB82 - 49 8B 00              - mov rax,[r8]
+Trackmania.exe+8ADB85 - 48 8D 54 24 30        - lea rdx,[rsp+30]
+Trackmania.exe+8ADB8A - 48 8B CE              - mov rcx,rsi
+Trackmania.exe+8ADB8D - FF 50 18              - call qword ptr [rax+18]
+Trackmania.exe+8ADB90 - 48 8B D6              - mov rdx,rsi
+Trackmania.exe+8ADB93 - 8B 08                 - mov ecx,[rax]
+Trackmania.exe+8ADB95 - 89 8B A0000000        - mov [rbx+000000A0],ecx
+Trackmania.exe+8ADB9B - 48 8B CB              - mov rcx,rbx
+Trackmania.exe+8ADB9E - E8 7DD8FFFF           - call Trackmania.exe.text+8AA420 { SaveBodyMemory
+ }
+Trackmania.exe+8ADBA3 - 85 C0                 - test eax,eax
+Trackmania.exe+8ADBA5 - 74 19                 - je Trackmania.exe.text+8ACBC0 { ->Trackmania.exe+8ADBC0 }
+Trackmania.exe+8ADBA7 - 48 8B D6              - mov rdx,rsi
+Trackmania.exe+8ADBAA - 48 89 7B 08           - mov [rbx+08],rdi
+Trackmania.exe+8ADBAE - 48 8B CB              - mov rcx,rbx
+Trackmania.exe+8ADBB1 - E8 7ADDFFFF           - call Trackmania.exe.text+8AA930 { Load body mem? wrapped?
+ }
+Trackmania.exe+8ADBB6 - 33 FF                 - xor edi,edi
+Trackmania.exe+8ADBB8 - 8B F0                 - mov esi,eax
+Trackmania.exe+8ADBBA - 48 89 7B 08           - mov [rbx+08],rdi
+Trackmania.exe+8ADBBE - EB 04                 - jmp Trackmania.exe.text+8ACBC4 { ->Trackmania.exe+8ADBC4 }
+Trackmania.exe+8ADBC0 - 33 FF                 - xor edi,edi
+Trackmania.exe+8ADBC2 - 8B F7                 - mov esi,edi
+Trackmania.exe+8ADBC4 - 48 8B 8B 38010000     - mov rcx,[rbx+00000138]
+Trackmania.exe+8ADBCB - 48 89 BB 30010000     - mov [rbx+00000130],rdi
+Trackmania.exe+8ADBD2 - 48 83 F9 01           - cmp rcx,01 { 1 }
+Trackmania.exe+8ADBD6 - 76 05                 - jna Trackmania.exe.text+8ACBDD { ->Trackmania.exe+8ADBDD }
+Trackmania.exe+8ADBD8 - E8 8358C400           - call Trackmania.exe.text+14F2460 { free??
+ }
+Trackmania.exe+8ADBDD - 8B C6                 - mov eax,esi
+Trackmania.exe+8ADBDF - 48 89 BB 38010000     - mov [rbx+00000138],rdi
+Trackmania.exe+8ADBE6 - 48 8B 5C 24 38        - mov rbx,[rsp+38]
+Trackmania.exe+8ADBEB - 48 8B 74 24 40        - mov rsi,[rsp+40]
+
+
+
+
+
+
+
+Trackmania.exe+8AC61C - 89 44 24 78           - mov [rsp+78],eax { new file but existing item, file not yet created
+ }
+Trackmania.exe+8AC620 - 4D 8B C6              - mov r8,r14
+Trackmania.exe+8AC623 - 48 8D 54 24 28        - lea rdx,[rsp+28]
+Trackmania.exe+8AC628 - 48 8D 4C 24 60        - lea rcx,[rsp+60]
+Trackmania.exe+8AC62D - E8 0E150000           - call Trackmania.exe.text+8ACB40 { Calls SaveBodyMemory, encodes obj into buffer, or at least puts buffer on stack
+ }
+Trackmania.exe+8AC632 - 44 8B 64 24 48        - mov r12d,[rsp+48] { bytes to write?
+ }
+Trackmania.exe+8AC637 - 85 C0                 - test eax,eax
+Trackmania.exe+8AC639 - 0F84 C1010000         - je Trackmania.exe.text+8AB800 { ->Trackmania.exe+8AC800 }
+Trackmania.exe+8AC63F - 49 8B D5              - mov rdx,r13 { r13 = fid
+ }
+Trackmania.exe+8AC642 - 4D 89 AF 90000000     - mov [r15+00000090],r13
+Trackmania.exe+8AC649 - 49 8B CE              - mov rcx,r14 { r14 = item model
+ }
+Trackmania.exe+8AC64C - E8 9F75FFFF           - call Trackmania.exe.text+8A2BF0 { sets FID for item model and vice versa
+ }
+Trackmania.exe+8AC651 - 48 8B CE              - mov rcx,rsi
+Trackmania.exe+8AC654 - E8 37D60000           - call Trackmania.exe.text+8B8C90 { some test on the fid?
+ }
+Trackmania.exe+8AC659 - 85 C0                 - test eax,eax
+Trackmania.exe+8AC65B - 0F84 4B010000         - je Trackmania.exe.text+8AB7AC { branch taken after setting fid
+ }
+Trackmania.exe+8AC661 - 45 33 C9              - xor r9d,r9d
+Trackmania.exe+8AC664 - 48 89 9D F0000000     - mov [rbp+000000F0],rbx { already sz
+ }
+
+
+fids have pointers to LoaderFile::Open and LoaderFile::Zip
+
+map:
+F0 59 23 A7 F7 7F 00 00
+F0 11 2E A7 F7 7F 00 00
+
+mt clip:
+F0 59 23 A7 F7 7F 00 00
+F0 11 2E A7 F7 7F 00 00
+
+
+
+Trackmania.exe+BA3C86 - FF 50 18              - call qword ptr [rax+18]
+Trackmania.exe+BA3C89 - 48 8B 0F              - mov rcx,[rdi]
+Trackmania.exe+BA3C8C - 41 B8 0A000000        - mov r8d,0000000A { 10 }
+Trackmania.exe+BA3C92 - 8B 00                 - mov eax,[rax]
+Trackmania.exe+BA3C94 - 48 8B 51 78           - mov rdx,[rcx+78]
+Trackmania.exe+BA3C98 - 89 42 78              - mov [rdx+78],eax
+Trackmania.exe+BA3C9B - 49 8B D6              - mov rdx,r14
+Trackmania.exe+BA3C9E - 48 8B 0F              - mov rcx,[rdi]
+Trackmania.exe+BA3CA1 - 48 8B 49 78           - mov rcx,[rcx+78]
+Trackmania.exe+BA3CA5 - E8 E697D0FF           - call Trackmania.exe.text+8AC490 { saves clip }
+Trackmania.exe+BA3CAA - 83 7D 78 00           - cmp dword ptr [rbp+78],00 { 0 }
+Trackmania.exe+BA3CAE - 48 8B 0F              - mov rcx,[rdi]
+Trackmania.exe+BA3CB1 - 89 41 1C              - mov [rcx+1C],eax
+Trackmania.exe+BA3CB4 - 0F85 97050000         - jne Trackmania.exe.text+BA3251 { ->Trackmania.exe+BA4251 }
+Trackmania.exe+BA3CBA - E8 3102D0FF           - call Trackmania.exe.text+8A2EF0 { ->Trackmania.exe+8A3EF0 }
+Trackmania.exe+BA3CBF - 48 8D 0D 1A860501     - lea rcx,[Trackmania.exe.rdata+2BE2E0] { ("MediaTrackerCache\") }
+
+
+
+call Trackmania.exe.text+8AC490
+rcx: FID
+rdx: nod?
+r8: 8 (not A)
+r9: 0
+
+
+
+
+
+
+FID: 0x98: original FID if this one is `?nonce` type
