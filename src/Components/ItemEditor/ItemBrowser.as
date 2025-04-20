@@ -101,7 +101,7 @@ class ItemModel {
             if (isEditable && isCrystal) {
                 UI::SameLine();
                 if (UX::SmallButton("Nullify")) {
-                    @emeCommon.MeshCrystal = null;
+                    Dev::SetOffset(emeCommon, GetOffset(emeCommon, "MeshCrystal"), uint64(0));
                 }
             }
         }
