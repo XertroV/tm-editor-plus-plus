@@ -13,7 +13,10 @@ namespace VehicleVOffset {
         set { patcher.IsApplied = value; }
     }
 
+    bool registeredCB = false;
     void RegisterCB() {
+        if (registeredCB) return;
+        registeredCB = true;
         RegisterNewAfterCursorUpdateCallback(AfterCursor, "VehicleVOffset");
     }
 
@@ -32,6 +35,7 @@ namespace VehicleVOffset {
         vehicleVOffset = UI::InputFloat("Vehicle Height Offset", vehicleVOffset, 0.05, 0.25);
         UI::EndDisabled();
         UI::Unindent();
+        if (setCustom && !registeredCB) RegisterCB();
     }
 
     void AfterCursor() {

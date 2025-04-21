@@ -56,7 +56,6 @@ void Main() {
 
     // need to start this on load so that it's active when we enter the editor
     CustomCursorRotations::PromiscuousItemToBlockSnapping.IsApplied = S_EnablePromiscuousItemSnapping;
-    VehicleVOffset::RegisterCB();
     ExtraUndoFix::OnLoad();
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
