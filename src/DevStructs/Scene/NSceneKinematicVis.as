@@ -38,7 +38,7 @@ class D_NSceneKinematicVis_SConstraint : RawBufferElem {
 	D_NSceneKinematicVis_SSharedSignal@ get_Signal() { auto _ptr = this.GetUint64(0x0); if (_ptr == 0) return null; return D_NSceneKinematicVis_SSharedSignal(_ptr); }
 	// 0x8: 0, -1,
 	// 0x10: 0, 0
-	// 0x18: class ID: SHmsInstDyna, then 0x1 byte which is size of SHmsInstDyna (=7)
+	// 0x18: class ID: SHmsInstDyna, then 0x1 byte which is size of SHmsInstDyna (value=7)
 	uint32 get_hms_class_id() { return (this.GetUint32(0x18)); }
 	// 1 byte: https://xertrov.github.io/op-tm-api-docs/next/SHmsInstDyna
 	uint8 get_hms_instance() { return (this.GetUint8(0x1C)); }

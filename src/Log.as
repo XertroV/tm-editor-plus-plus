@@ -14,7 +14,7 @@ LogLevel S_LogLevel = LogLevel::TRACE;
 LogLevel S_LogLevel = LogLevel::INFO;
 #endif
 
-namespace Log {
+namespace _Log {
     void Trace(const string &in msg) {
         if (S_LogLevel <= LogLevel::TRACE) {
             trace('[' + Time::Now + '] ' + msg);

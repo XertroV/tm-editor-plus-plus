@@ -19,9 +19,9 @@ namespace Editor {
 
     // works for Y only!! will crash otherwise
     void _SetMapSize(CGameCtnChallenge@ map, nat3 &in newSize) {
-        Log::Trace('Setting map newsize: ' + newSize.ToString());
+        _Log::Trace('Setting map newsize: ' + newSize.ToString());
         Dev::SetOffset(map, ChallengeSizeOffset, newSize);
-        Log::Trace('set offset');
+        _Log::Trace('set offset');
         CacheMapBounds();
     }
 
@@ -81,7 +81,7 @@ namespace Editor {
         }
         editor.PluginMapType.SaveMap(fileName);
         startnew(_RestoreMapName);
-        Log::Trace('saved map');
+        _Log::Trace('saved map');
         return true;
     }
 
@@ -92,7 +92,7 @@ namespace Editor {
         if (_restoreMapName.Length == 0) return;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         editor.Challenge.MapName = _restoreMapName;
-        Log::Trace('restored map name: ' + _restoreMapName);
+        _Log::Trace('restored map name: ' + _restoreMapName);
     }
 
     void NoSaveAndReloadMap() {
@@ -107,7 +107,7 @@ namespace Editor {
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
         @editor = null;
         app.BackToMainMenu();
-        Log::Trace('back to menu');
+        _Log::Trace('back to menu');
         AwaitReturnToMenu();
         sleep(100);
         app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
@@ -123,7 +123,7 @@ namespace Editor {
 
     // provide a mood or a full deco name (which overwrites mood)
     void SaveAndReloadMap_(Mood mood = Mood::Whatever, string _decoName = "") {
-        Log::Trace('save and reload map');
+        _Log::Trace('save and reload map');
         auto app = cast<CTrackMania>(GetApp());
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         if (!SaveMapSameName(editor)) {
@@ -137,7 +137,7 @@ namespace Editor {
         // if (decoName.StartsWith("Base")) decoName = decoName.SubStr(4);
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
         app.BackToMainMenu();
-        Log::Trace('back to menu');
+        _Log::Trace('back to menu');
         AwaitReturnToMenu();
         dev_trace("edit map: " + fileName);
         app.ManiaTitleControlScriptAPI.EditMap(fileName, "", "");
@@ -160,13 +160,13 @@ namespace Editor {
         }
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
         app.BackToMainMenu();
-        Log::Trace('back to menu');
+        _Log::Trace('back to menu');
         AwaitReturnToMenu();
     }
 
     /// unused and unmaintained
     void SaveAndReloadMapWithRefreshMap(const string &in refreshMapName) {
-        Log::Trace('save and reload map');
+        _Log::Trace('save and reload map');
         auto app = cast<CTrackMania>(GetApp());
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         string fileName = editor.Challenge.MapInfo.FileName;
@@ -177,16 +177,16 @@ namespace Editor {
         auto currCam = GetCurrentCamState(editor);
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
         app.BackToMainMenu();
-        Log::Trace('back to menu');
+        _Log::Trace('back to menu');
         AwaitReturnToMenu();
-        Log::Trace("edit map 2");
+        _Log::Trace("edit map 2");
         sleep(1000);
         app.ManiaTitleControlScriptAPI.EditMap(refreshMapName, "", "");
         while (app.Editor is null) yield();
         @editor = cast<CGameCtnEditorFree>(app.Editor);
         while (!editor.PluginMapType.IsEditorReadyForRequest) yield();
         sleep(1000);
-        Log::Trace('back to menu');
+        _Log::Trace('back to menu');
 
         app.BackToMainMenu();
         sleep(1000);

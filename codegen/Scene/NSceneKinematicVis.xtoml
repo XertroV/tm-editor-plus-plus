@@ -10,7 +10,7 @@ Buffer: Constraints = D_NSceneKinematicVis_SConstraints, 0x8, 0x58, false
 Struct: Signal = D_NSceneKinematicVis_SSharedSignal, 0x0, G
 # 0x8: 0, -1,
 # 0x10: 0, 0
-# 0x18: class ID: SHmsInstDyna, then 0x1 byte which is size of SHmsInstDyna (=7)
+# 0x18: class ID: SHmsInstDyna, then 0x1 byte which is size of SHmsInstDyna (value=7)
 hms_class_id = uint32, 0x18, G
 # 1 byte: https://xertrov.github.io/op-tm-api-docs/next/SHmsInstDyna
 hms_instance = uint8, 0x1C, G

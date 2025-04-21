@@ -267,61 +267,61 @@ namespace Event {
         TMP_DISABLE_ONBlockItem_CB = false;
     }
     void RunOnEditorLoadCbs() {
-        Log::Trace("Running OnEditorLoad callbacks");
+        _Log::Trace("Running OnEditorLoad callbacks");
         for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
             trace("Running OnEditorLoad callback: " + onEditorLoadCbNames[i]);
             onEditorLoadCbs[i]();
         }
         Editor::Callbacks::Exts::Run_OnEditorLoad();
-        Log::Trace("Finished OnEditorLoad callbacks");
+        _Log::Trace("Finished OnEditorLoad callbacks");
     }
     void RunOnEditorStartingUpCbs(bool editingElseNew) {
-        Log::Trace("Running OnEditorStartingUp callbacks");
+        _Log::Trace("Running OnEditorStartingUp callbacks");
         for (uint i = 0; i < onEditorStartingUp.Length; i++) {
             onEditorStartingUp[i](editingElseNew);
         }
         Editor::Callbacks::Exts::Run_OnEditorStartingUp();
-        Log::Trace("Finished OnEditorStartingUp callbacks");
+        _Log::Trace("Finished OnEditorStartingUp callbacks");
     }
     void RunOnItemEditorLoadCbs() {
-        Log::Trace("Running OnItemEditorLoad callbacks");
+        _Log::Trace("Running OnItemEditorLoad callbacks");
         for (uint i = 0; i < onItemEditorLoadCbs.Length; i++) {
             onItemEditorLoadCbs[i]();
         }
         Editor::Callbacks::Exts::Run_OnItemEditorLoad();
-        Log::Trace("Finished OnItemEditorLoad callbacks");
+        _Log::Trace("Finished OnItemEditorLoad callbacks");
     }
     void RunOnMTEditorLoadCbs() {
-        Log::Trace("Running OnMTEditorLoad callbacks");
+        _Log::Trace("Running OnMTEditorLoad callbacks");
         for (uint i = 0; i < onMTEditorLoadCbs.Length; i++) {
             onMTEditorLoadCbs[i]();
         }
         Editor::Callbacks::Exts::Run_OnMTEditorLoad();
-        Log::Trace("Finished OnMTEditorLoad callbacks");
+        _Log::Trace("Finished OnMTEditorLoad callbacks");
     }
     void RunOnMTEditorUnloadCbs() {
-        Log::Trace("Running OnMTEditorUnload callbacks");
+        _Log::Trace("Running OnMTEditorUnload callbacks");
         for (uint i = 0; i < onMTEditorUnloadCbs.Length; i++) {
             onMTEditorUnloadCbs[i]();
         }
         Editor::Callbacks::Exts::Run_OnMTEditorUnload();
-        Log::Trace("Finished OnMTEditorLoad callbacks");
+        _Log::Trace("Finished OnMTEditorLoad callbacks");
     }
     void RunOnEditorUnloadCbs() {
-        Log::Trace("Running OnEditorUnload callbacks");
+        _Log::Trace("Running OnEditorUnload callbacks");
         for (uint i = 0; i < onEditorUnloadCbs.Length; i++) {
             onEditorUnloadCbs[i]();
         }
         Editor::Callbacks::Exts::Run_OnEditorUnload();
-        Log::Trace("Finished OnEditorUnload callbacks");
+        _Log::Trace("Finished OnEditorUnload callbacks");
     }
     void RunOnEditorGoneNullCbs() {
-        Log::Trace("Running OnEditorGoneNull callbacks");
+        _Log::Trace("Running OnEditorGoneNull callbacks");
         for (uint i = 0; i < onEditorGoneNullCbs.Length; i++) {
             onEditorGoneNullCbs[i]();
         }
         Editor::Callbacks::Exts::Run_OnEditorGoneNull();
-        Log::Trace("Finished OnEditorGoneNull callbacks");
+        _Log::Trace("Finished OnEditorGoneNull callbacks");
     }
     bool OnNewBlock(CGameCtnBlock@ block) {
         if (TMP_DISABLE_ONBlockItem_CB) return false;
@@ -329,7 +329,7 @@ namespace Event {
         bool lastUpdated = false;
         for (uint i = 0; i < blockCallbacks.Length; i++) {
             updated = blockCallbacks[i](block) || updated;
-            if (updated && !lastUpdated) Log::Trace("NewBlock Callback triggered update: " + blockCallbackNames[i]);
+            if (updated && !lastUpdated) _Log::Trace("NewBlock Callback triggered update: " + blockCallbackNames[i]);
             lastUpdated = updated;
         }
         Editor::Callbacks::Exts::Run_OnPlaceBlock(block);
@@ -342,7 +342,7 @@ namespace Event {
         bool lastUpdated = false;
         for (uint i = 0; i < blockDelCallbacks.Length; i++) {
             updated = blockDelCallbacks[i](block) || updated;
-            if (updated && !lastUpdated) Log::Trace("DelBlock Callback triggered update: " + blockCallbackNames[i]);
+            if (updated && !lastUpdated) _Log::Trace("DelBlock Callback triggered update: " + blockCallbackNames[i]);
             lastUpdated = updated;
         }
         Editor::Callbacks::Exts::Run_OnDeleteBlock(block);
@@ -351,27 +351,27 @@ namespace Event {
     }
     bool OnNewItem(CGameCtnAnchoredObject@ item) {
         if (TMP_DISABLE_ONBlockItem_CB) return false;
-        Log::Trace("Running OnNewItem");
+        _Log::Trace("Running OnNewItem");
         bool updated = false;
         bool lastUpdated = false;
         for (uint i = 0; i < itemCallbacks.Length; i++) {
             updated = itemCallbacks[i](item) || updated;
-            if (updated && !lastUpdated) Log::Trace("NewItem Callback triggered update: " + itemCallbackNames[i]);
+            if (updated && !lastUpdated) _Log::Trace("NewItem Callback triggered update: " + itemCallbackNames[i]);
             lastUpdated = updated;
         }
         Editor::Callbacks::Exts::Run_OnPlaceItem(item);
-        Log::Trace("Finished OnNewItem");
+        _Log::Trace("Finished OnNewItem");
         Editor::TrackMap_OnAddItem(item);
         return updated;
     }
     bool OnItemDeleted(CGameCtnAnchoredObject@ item) {
         if (TMP_DISABLE_ONBlockItem_CB) return false;
-        Log::Trace("Running OnItemDeleted");
+        _Log::Trace("Running OnItemDeleted");
         bool updated = false;
         bool lastUpdated = false;
         for (uint i = 0; i < itemDelCallbacks.Length; i++) {
             updated = itemDelCallbacks[i](item) || updated;
-            if (updated && !lastUpdated) Log::Trace("DelItem Callback triggered update: " + itemCallbackNames[i]);
+            if (updated && !lastUpdated) _Log::Trace("DelItem Callback triggered update: " + itemCallbackNames[i]);
             lastUpdated = updated;
         }
         Editor::Callbacks::Exts::Run_OnDeleteItem(item);
@@ -380,86 +380,86 @@ namespace Event {
     }
     bool OnSetItemBgSkin(CGameCtnAnchoredObject@ item) {
         if (TMP_DISABLE_ONBlockItem_CB) return false;
-        Log::Trace("Running OnSetItemBgSkin");
+        _Log::Trace("Running OnSetItemBgSkin");
         Editor::TrackMap_OnSetSkin(GetSkinPath(Editor::GetItemFGSkin(item)), GetSkinPath(Editor::GetItemBGSkin(item)), null, item);
         return false;
     }
     bool OnSetItemFgSkin(CGameCtnAnchoredObject@ item) {
         if (TMP_DISABLE_ONBlockItem_CB) return false;
-        Log::Trace("Running OnSetItemFgSkin");
+        _Log::Trace("Running OnSetItemFgSkin");
         Editor::TrackMap_OnSetSkin(GetSkinPath(Editor::GetItemFGSkin(item)), GetSkinPath(Editor::GetItemBGSkin(item)), null, item);
         return false;
     }
     bool OnSetBlockSkin(CGameCtnBlock@ block) {
         if (TMP_DISABLE_ONBlockItem_CB) return false;
-        Log::Trace("Running OnSetBlockSkin");
+        _Log::Trace("Running OnSetBlockSkin");
         Editor::TrackMap_OnSetSkin(GetSkinPath(block.Skin.ForegroundPackDesc), GetSkinPath(block.Skin.PackDesc), block, null);
         return false;
     }
     void OnSelectedItemChanged(CGameItemModel@ itemModel) {
-        Log::Trace("Running OnSelectedItemChanged");
+        _Log::Trace("Running OnSelectedItemChanged");
         for (uint i = 0; i < selectedItemChangedCbs.Length; i++) {
             selectedItemChangedCbs[i](itemModel);
         }
         Editor::Callbacks::Exts::Run_OnNewSelectedItem(itemModel);
-        Log::Trace("Finished OnSelectedItemChanged");
+        _Log::Trace("Finished OnSelectedItemChanged");
     }
     void OnSelectedBlockChanged(CGameCtnBlockInfo@ blockModel) {
-        Log::Trace("Running OnSelectedBlockChanged");
+        _Log::Trace("Running OnSelectedBlockChanged");
         for (uint i = 0; i < selectedBlockChangedCbs.Length; i++) {
             selectedBlockChangedCbs[i](blockModel);
         }
         // Editor::Callbacks::Exts::Run_OnNewSelectedBlock(blockModel);
-        Log::Trace("Finished OnSelectedBlockChanged");
+        _Log::Trace("Finished OnSelectedBlockChanged");
     }
     void OnSelectedMacroblockChanged(CGameCtnMacroBlockInfo@ mbInfo) {
-        Log::Trace("Running OnSelectedMacroblockChanged");
+        _Log::Trace("Running OnSelectedMacroblockChanged");
         for (uint i = 0; i < selectedMacroblockChangedCbs.Length; i++) {
             selectedMacroblockChangedCbs[i](mbInfo);
         }
         // Editor::Callbacks::Exts::Run_OnNewSelectedMacroblock(mbInfo);
-        Log::Trace("Finished OnSelectedMacroblockChanged");
+        _Log::Trace("Finished OnSelectedMacroblockChanged");
     }
     void OnPlacementModeChanged(CGameEditorPluginMap::EPlaceMode newMode) {
-        Log::Trace("Running OnPlacementModeChanged");
+        _Log::Trace("Running OnPlacementModeChanged");
         for (uint i = 0; i < placementModeChangedCbs.Length; i++) {
             placementModeChangedCbs[i](newMode);
         }
         // Editor::Callbacks::Exts::Run_OnNewPlacementMode(newMode);
-        Log::Trace("Finished OnPlacementModeChanged");
+        _Log::Trace("Finished OnPlacementModeChanged");
     }
     void RunOnLeavingPlaygroundCbs() {
-        Log::Trace("Running OnLeavingPlayground callbacks");
+        _Log::Trace("Running OnLeavingPlayground callbacks");
         for (uint i = 0; i < onLeavingPlaygroundCbs.Length; i++) {
             onLeavingPlaygroundCbs[i]();
         }
         Editor::Callbacks::Exts::Run_OnLeavingPlayground();
-        Log::Trace("Finished OnLeavingPlayground callbacks");
+        _Log::Trace("Finished OnLeavingPlayground callbacks");
     }
     void RunOnEnteringPlaygroundCbs() {
-        Log::Trace("Running OnEnteringPlayground callbacks");
+        _Log::Trace("Running OnEnteringPlayground callbacks");
         for (uint i = 0; i < onEnteringPlaygroundCbs.Length; i++) {
             onEnteringPlaygroundCbs[i]();
         }
         Editor::Callbacks::Exts::Run_OnEnteringPlayground();
-        Log::Trace("Finished OnEnteringPlayground callbacks");
+        _Log::Trace("Finished OnEnteringPlayground callbacks");
     }
     void OnMapTypeUpdate() {
         // don't log these, 2 every frame :/
-        // Log::Trace("Running OnMapTypeUpdate");
+        // _Log::Trace("Running OnMapTypeUpdate");
         for (uint i = 0; i < onMapTypeUpdateCbs.Length; i++) {
             onMapTypeUpdateCbs[i]();
         }
-        // Log::Trace("Finished OnMapTypeUpdate");
+        // _Log::Trace("Finished OnMapTypeUpdate");
         Editor::Callbacks::Exts::Run_OnMapTypeUpdate();
     }
     void AfterMapTypeUpdate() {
         // don't log these, 2 every frame :/
-        // Log::Trace("Running AfterMapTypeUpdate");
+        // _Log::Trace("Running AfterMapTypeUpdate");
         for (uint i = 0; i < afterMapTypeUpdateCbs.Length; i++) {
             afterMapTypeUpdateCbs[i]();
         }
-        // Log::Trace("Finished AfterMapTypeUpdate");
+        // _Log::Trace("Finished AfterMapTypeUpdate");
         Editor::Callbacks::Exts::Run_AfterMapTypeUpdate();
     }
     void OnAfterCursorUpdate() {
@@ -488,19 +488,19 @@ namespace Event {
     }
     void RunOnEditorSaveMapCbs() {
         throw("not enabled");
-        // Log::Trace("Running OnEditorSaveMap callbacks");
+        // _Log::Trace("Running OnEditorSaveMap callbacks");
         // for (uint i = 0; i < onEditorSaveMapCbs.Length; i++) {
         //     onEditorSaveMapCbs[i]();
         // }
-        // Log::Trace("Finished OnEditorSaveMap callbacks");
+        // _Log::Trace("Finished OnEditorSaveMap callbacks");
     }
     void RunAfterEditorSaveMapCbs() {
         throw("not enabled");
-        // Log::Trace("Running AfterEditorSaveMap callbacks");
+        // _Log::Trace("Running AfterEditorSaveMap callbacks");
         // for (uint i = 0; i < afterEditorSaveMapCbs.Length; i++) {
         //     afterEditorSaveMapCbs[i]();
         // }
-        // Log::Trace("Finished AfterEditorSaveMap callbacks");
+        // _Log::Trace("Finished AfterEditorSaveMap callbacks");
     }
 }
 

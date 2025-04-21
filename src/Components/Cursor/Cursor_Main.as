@@ -622,6 +622,8 @@ class CustomCursorTab : EffectTab {
         S_BlockCursorShowQuads = UI::Checkbox("Show Cursor Quads", S_BlockCursorShowQuads);
         S_BlockCursorShowLines = UI::Checkbox("Show Cursor Lines", S_BlockCursorShowLines);
 
+        VehicleHOffset::Draw_ControlVehicleHOffset();
+
         UpdateCursorOptions();
     }
 

@@ -57,7 +57,7 @@ namespace Editor {
             }
         }
         auto end = Time::Now;
-        Log::Trace("GetExistingPackDescs took " + (end - start) + " ms");
+        _Log::Trace("GetExistingPackDescs took " + (end - start) + " ms");
         return packDescs;
     }
 
@@ -72,7 +72,7 @@ namespace Editor {
             auto inv = Editor::GetInventoryCache();
             auto invBI = inv.GetBlockByName("TechnicsScreen1x1Straight");
             if (invBI is null) {
-                Log::Debug("GetPackDesc: invBI is null");
+                _Log::Debug("GetPackDesc: invBI is null");
                 return null;
             }
             auto blockInfo = cast<CGameCtnBlockInfo>(invBI.GetCollectorNod());
@@ -84,7 +84,7 @@ namespace Editor {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         editor.PluginMapType.SetBlockSkin(_tmp_block_getPackDesc, fileOrUrl);
         if (_tmp_block_getPackDesc.Skin is null) {
-            Log::Warn("GetPackDesc: skin is null");
+            _Log::Warn("GetPackDesc: skin is null");
             return null;
         }
         if (_tmp_block_getPackDesc.Skin.PackDesc !is null) {
