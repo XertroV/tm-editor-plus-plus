@@ -387,7 +387,7 @@ namespace RandomizeVegitationLayouts {
 
         int lastSetPlacementIxRanomized = -1;
         void RandomizePlacement(int zoneIx) {
-            if (zoneIx > 0) {
+            if (zoneIx >= 0) {
                 auto zone = Zones.GetSZone(zoneIx);
                 auto lastSetIx = lastSetPlacementIxRanomized;
                 auto nbPlacements = zone.PlacementNb;
