@@ -1,0 +1,35 @@
+pointer path:
+- ScenePhy
+- +0x90 (NSceneItemPlacement_SMgr)
+- struct
+    - +0x8 (instance array)
+    - +0x18 (array of IDs corresponding to index of above)
+
+Item Cursor
++ 0x88 - ID of block we're hovering
+  > this ID corresponds to an ID in the +0x18 array above.
+  > the index of that ID corresponds to the index of the block instance.
+
+so:
+- id = itemCursor+0x88
+- blockIx = ItemPlacement_SMgr.array<0x18>.Find(id);
+- block = ItemPlacement_SMgr.array<0x8> + 0xb0 * blockIx;
+- block is likely NSceneItemPlacement_SZone (whihc is the right size)
+NSceneItemPlacement_SZone
+- quat
+- pos: origin corner
+- pos: midpoint
+- vec3: ?? eg: (19.78,5,19.37) -- halfdiag
+- 0x34: ffffffff
+- 0x38: ffffffff, junk
+- -> 0x40 - CGameCtnBlock (for this square)
+- 0, 0
+- ix in block, ? (sometimes has menaing?)
+- 0, -1 // clsid (30c5 SBlockInst), x17 (~~size of SBlockInst is 0x18~~ 0x270)
+- -> 0x60 - ptr to NGameMgrMap_SBlockInstance?
+- -> 0x68 = ix of Placement; 0x6c = nb of placements
+
+- > 0x80 - optional CPlugPlacementPatch
+- > 0x88 - optional buffer to ?? ids and lists and things (when placement patch null)
+- > 0x98 - optional buffer to ?? seems connected to 0x88 (when placement patch null)
+- > 0xA8 - ?? ?? (always 0,0 ?)

@@ -25,6 +25,7 @@ namespace VehicleVOffset {
 
     void Draw_ControlVehicleHOffset() {
         DisabledAddingOffset = UI::Checkbox("Test Placement: Disable Vehicle Height Offset", DisabledAddingOffset);
+        UI::BeginDisabled(DisabledAddingOffset);
         UI::Indent();
         UI::Text("Or custom:");
         UI::SameLine();
@@ -35,6 +36,7 @@ namespace VehicleVOffset {
         vehicleVOffset = UI::InputFloat("Vehicle Height Offset", vehicleVOffset, 0.05, 0.25);
         UI::EndDisabled();
         UI::Unindent();
+        UI::EndDisabled();
         if (setCustom && !registeredCB) RegisterCB();
     }
 

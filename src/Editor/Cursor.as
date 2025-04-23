@@ -60,6 +60,10 @@ namespace Editor {
         return itemCursor.CurrentPos;
     }
 
+    int GetItemCursorSnappedBlockPlacementZoneId(CGameCursorItem@ itemCursor) {
+        return Dev::GetOffsetInt32(itemCursor, O_ITEMCURSOR_SnappedBlockPlacementZoneId);
+    }
+
     vec3 GetCursorPos(CGameCtnEditorFree@ editor) {
         if (Editor::IsInAnyItemPlacementMode(editor)) {
             return GetItemCursorPos(editor.ItemCursor);

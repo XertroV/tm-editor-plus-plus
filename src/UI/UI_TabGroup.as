@@ -49,6 +49,23 @@ class TabGroup {
         else warn("Could not find child: " + child.fullName);
     }
 
+    bool HasTabNamed(const string &in name) {
+        for (uint i = 0; i < tabs.Length; i++) {
+            if (tabs[i].tabName == name) return true;
+        }
+        return false;
+    }
+
+    void FocusTab(const string &in name) {
+        for (uint i = 0; i < tabs.Length; i++) {
+            if (tabs[i].tabName == name) {
+                tabs[i].SetSelectedTab();
+                return;
+            }
+        }
+        NotifyWarning("Could not find tab: " + name);
+    }
+
     void AddTab(Tab@ t) {
         if (t.Parent !is null) {
             throw('tried to add a tab that already has a parent group.');

@@ -13,6 +13,7 @@ class DevMainTab : Tab {
         DevMiscTab(Children);
         MapChangesFrameTab(Children);
         SelectionBoxTab(Children);
+        ItemPlacementMgrTab(Children);
     }
 
     void DrawInner() override {
@@ -489,6 +490,27 @@ class SelectionBoxTab : Tab {
 
     void test_print(const string &in msg) {
         print("\\$af1\\$i" + msg);
+    }
+}
+
+
+
+class ItemPlacementMgrTab : Tab {
+    ItemPlacementMgrTab(TabGroup@ p) {
+        super(p, "Item Placement Mgr", "");
+    }
+
+    void DrawInner() override {
+        auto app = GetApp();
+        auto editor = cast<CGameCtnEditorFree>(app.Editor);
+        if (editor is null) return;
+        auto sbpZoneId = Editor::GetItemCursorSnappedBlockPlacementZoneId(editor.ItemCursor);
+        UI::Text("Snapped Block Placement Zone ID: " + tostring(sbpZoneId));
+        auto itemPlacementMgr = RandomizeVegitationLayouts::GetItemPlacementMgr(app);
+        UI::SeparatorText("Item Placement Mgr");
+        UI::AlignTextToFramePadding();
+        CopiableLabeledPtr(itemPlacementMgr.Ptr);
+        itemPlacementMgr.DrawResearchView();
     }
 }
 

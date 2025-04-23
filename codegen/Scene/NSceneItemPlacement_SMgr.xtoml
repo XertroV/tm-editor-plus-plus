@@ -1,0 +1,33 @@
+[DSceneItemPlacement_SMgr : 0x80]
+# The zone IDs should be dealt with manually because the length is at +0xC instead of +0x8
+# Buffer: ZoneIDs = D_ZoneIds, 0x18, 0x4, false
+Buffer: Zones = DSceneItemPlacement_SZones, 0x8, 0xb0, false
+
+[DSceneItemPlacement_SZone: 0xb0]
+Rot = quat, 0x0, G
+Pos = vec3, 0x10, G
+MidpointAbs = vec3, 0x1C, G
+HalfDiag = vec3, 0x28, G
+# 0x34: -1
+# 0x38: -1, junk
+Block = CGameCtnBlock, 0x40, G
+# 0x48: 0, 0
+# If the block has more than one placement zone, this is 0, 1, 2, etc for each.
+ixInBlock = uint, 0x50, G
+# 0x54: ?
+clsIdMb = uint, 0x58, G
+clsUnk5c = uint, 0x5c, G
+Struct: BlockInstance = DGameMgrMap_SBlockInstance, 0x60, G
+PlacementIx = int, 0x68, GS
+PlacementNb = int, 0x6c, G
+# 0x70?
+# 0x78?
+PlacementPatch = CPlugPlacementPatch, 0x80, G
+# 0x88: buf of ?? ids and things (when placement patch null)
+# 0x98: buf of ids or something, connected to above? (when placement patch null)
+last = vec2, 0xA8, G
+
+[D_ZoneId: 0x4]
+val = uint, 0x0, GS
+
+[DGameMgrMap_SBlockInstance: 0x270]

@@ -400,6 +400,10 @@ class ReferencedNod {
 
 // MARK: Offsets & size
 
+const uint16 O_APP_GAMESCENE = GetOffset("CGameCtnApp", "GameScene");
+const uint16 O_ISCENEVIS_METAMGR = GetOffset("ISceneVis", "MgrMetaPtrs");
+const uint32 CLSID_NSceneItemPlacement_SMgr = Reflection::GetType("NSceneItemPlacement_SMgr").ID;
+
 // MARK: O Map
 
 const uint16 SZ_PACKDESC = 0xB0;
@@ -711,8 +715,16 @@ const uint16 O_BLOCKCURSOR_DrawCursor = O_BLOCKCURSOR_SnappedLocInMap_Roll + (0x
 const uint16 O_BLOCKCURSOR_FreeBlockCursorOffset = GetOffset("CGameCursorBlock", "SubdivFactors") - 0xC; // 0x11C - 0x110 = 0xC
 
 
-const uint16 O_ITEMCURSOR_CurrentPos = GetOffset("CGameCursorItem", "MagnetSnapping_LocalRotation_Deg") + 0x40;
-const uint16 O_ITEMCURSOR_CurrentModelsBuf = GetOffset("CGameCursorItem", "HelperMobil") + 0x8;
+
+// 0x1c
+const uint16 O_ITEMCURSOR_MagnetSnapLocalRotDeg = GetOffset("CGameCursorItem", "MagnetSnapping_LocalRotation_Deg");
+// 0xb0
+const uint16 O_ITEMCURSOR_Helper = GetOffset("CGameCursorItem", "HelperMobil");
+
+const uint16 O_ITEMCURSOR_CurrentPos = O_ITEMCURSOR_MagnetSnapLocalRotDeg + 0x40;
+const uint16 O_ITEMCURSOR_CurrentModelsBuf = O_ITEMCURSOR_Helper + 0x8;
+// snapped block ID under NSceneItemPlacement_SMgr
+const uint16 O_ITEMCURSOR_SnappedBlockPlacementZoneId = O_ITEMCURSOR_Helper - (0xB0 - 0x88);
 // const uint16 O_ITEMCURSOR_VariantOrNbMaybe = 0xC0;
 // const uint16 O_ITEMCURSOR_MaxVariantMaybe = 0xC4;
 
@@ -1093,6 +1105,14 @@ class RawBufferElem {
     void SetVec4(uint o, const vec4 &in value) {
         CheckOffset(o, 16);
         Dev::Write(ptr + o, value);
+    }
+    quat GetQuat(uint o) {
+        CheckOffset(o, 16);
+        return Vec4ToQuat(Dev::ReadVec4(ptr + o));
+    }
+    void SetQuat(uint o, const quat &in value) {
+        CheckOffset(o, 16);
+        Dev::Write(ptr + o, QuatToVec4(value));
     }
     mat3 GetMat3(uint o) {
         CheckOffset(o, 36);
