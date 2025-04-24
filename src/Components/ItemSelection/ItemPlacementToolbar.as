@@ -395,10 +395,10 @@ namespace RandomizeVegitationLayouts {
                     auto ixWas = zone.PlacementIx;
                     auto newIx = Math::Rand(0, nbPlacements);
                     auto count = 0;
-                    while (count < 10 && (ixWas == newIx || (newIx == lastSetIx && nbPlacements > 2))) {
+                    while (count++ < 10 && (ixWas == newIx || (newIx == lastSetIx && count < 4))) {
                         newIx = Math::Rand(0, nbPlacements);
                     }
-                    if (count == 0) newIx = (ixWas + 1) % nbPlacements;
+                    if (count == 10) newIx = (ixWas + 1) % nbPlacements;
                     zone.PlacementIx = newIx;
                     lastSetPlacementIxRanomized = newIx;
                     dev_trace('AfterItemCursorPlacementZoneIdUpdated block #'+GetZoneCtnBlockMwId(zone)+' : zoneIx: ' + zoneIx + ' zone.PlacementIx: ' + ixWas + ' -> ' + zone.PlacementIx);
