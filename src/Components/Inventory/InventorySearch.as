@@ -48,7 +48,7 @@ class InventorySearchTab : Tab {
         promptCursorPos = UI::GetCursorPos();
         AddMarkdownTooltip("### Search the inventory for items, blocks, and macroblocks.\n"
             "Use \\<space\\> or '*' to indicate wildcards.<br>"
-            "Backslash to quicksearch.\n"
+            "Backslash (default) to quicksearch.\n"
             "Escape to close the window.<br>"
             "Unless the search term is prefixed with '=', a wildcard is automatically inserted before the search term.<br>"
             // todo: filter on types (blocks, items, macroblocks, folders)

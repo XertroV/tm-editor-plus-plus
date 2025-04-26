@@ -119,14 +119,19 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		bool toggleGhost = BtnToolbarHalfV((pp.GhostMode ? Icons::SnapchatGhost : Icons::User) + "###ghoTog", "Toggle Ghost Mode (Places on other items or goes through them)", ActiveToBtnStatus(pp.GhostMode));
 		bool toggleFlying = BtnToolbarHalfV((pp.FlyStep > 0 ? Icons::Plane : Icons::Tree) + "###flyTog", "Toggle Flying / Lock to Ground", ActiveToBtnStatus(pp.FlyStep > 0));
 
-		string cycleVarLabel = "V:" + curVar + "/" + varNb + "###cy-var";
-		bool cycleVariant = BtnToolbarHalfV(cycleVarLabel, "Cycle Variant", ActiveOrDisabledToBtnStatus(hasVariants));
+		string currVarProgressStr = (curVar + 1) + "/" + varNb;
+		string cycleVarLabel = "V:" + currVarProgressStr + "###cy-var";
+		bool cycleVariant = BtnToolbarHalfV(cycleVarLabel, "Cycle Variant\nCurrently " + currVarProgressStr + "\nRMB: Cycle backwards", DefaultOrDisabledToBtnStatus(hasVariants));
+		bool cycleVariantAlt = UX::IsItemRightClicked();
+
+		UI::Separator();
+
+		bool toggleFixTrees = BtnToolbarHalfV(Icons::Tree + Icons::ArrowUp, "Auto-Fix Rotated Trees\n(e.g., placed on Free Blocks)", ActiveToBtnStatus(VegetRandomYaw::IsActive));
 
 		// in normal mode
 		UI::Separator();
 
-		bool toggleRandomizeVeg = BtnToolbarHalfV(Icons::Random + Icons::Leaf, "Randomize Vegetation Layouts", ActiveNormalToBtnStatus(RandomizeVegitationLayouts::IsActive));
-		bool toggleFixTrees = BtnToolbarHalfV(Icons::Tree + Icons::ArrowUp, "Auto-Fix Trees on Free Blocks", ActiveNormalToBtnStatus(VegetRandomYaw::IsActive));
+		bool toggleRandomizeVeg = BtnToolbarHalfV(Icons::Random + Icons::Leaf, "Randomize Vegetation Layouts\n(When placing trees on terrain)", ActiveNormalToBtnStatus(RandomizeVegitationLayouts::IsActive));
 
 		UI::Separator();
 
@@ -141,7 +146,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		if (toggleGhost) pp.GhostMode = !pp.GhostMode;
 		if (toggleRandomizeVeg) RandomizeVegitationLayouts::Toggle();
 		if (toggleFixTrees) VegetRandomYaw::Toggle();
-		if (cycleVariant) pp.PlacementClass.CurVariant = (curVar + 1) % varNb;
+		if (cycleVariant) pp.PlacementClass.CurVariant = (curVar + (int(varNb) + int(cycleVariantAlt ? -1 : 1))) % varNb;
 
 		if (toggleGridDisable) ToggleGridDisabled(pp);
 		if (decrGridSize && !_isGridDisabled) GridDecrease(pp, 1);
@@ -216,6 +221,10 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
 	BtnStatus ActiveToBtnStatus(bool active) {
 		return active ? BtnStatus::FeatureActive : BtnStatus::Default;
+	}
+
+	BtnStatus DefaultOrDisabledToBtnStatus(bool active) {
+		return active ? BtnStatus::Default : BtnStatus::Disabled;
 	}
 
 	BtnStatus ActiveOrDisabledToBtnStatus(bool active) {

@@ -32,6 +32,7 @@ void AddSimpleTooltip(const string &in msg, bool pushFont = false) {
     if (UI::IsItemHovered()) {
         if (pushFont) UI::PushFont(g_NormFont);
         UI::SetNextWindowSize(400, 0, UI::Cond::Appearing);
+        UI::SetNextWindowPos(g_lastMousePos.x + 8, g_lastMousePos.y + 8);
         UI::BeginTooltip();
         UI::TextWrapped(msg);
         UI::EndTooltip();
@@ -140,6 +141,9 @@ float G_GetSmallerInputWidth() {
 
 
 namespace UX {
+    bool IsItemRightClicked() {
+        return UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Right);
+    }
     // call this before you end the popup
     void CloseCurrentPopupIfMouseFarAway(bool closeAnyway = false) {
         auto wPos = UI::GetWindowPos();

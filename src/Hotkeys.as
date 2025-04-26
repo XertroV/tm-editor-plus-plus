@@ -30,7 +30,7 @@ class Hotkey {
     }
 
     bool isDown = false;
-    UI::InputBlocking onDownResp;
+    UI::InputBlocking onDownResp = UI::InputBlocking::DoNothing;
     bool allowRepeat = false;
 
     UI::InputBlocking Signal(bool down) {
@@ -69,33 +69,33 @@ class Hotkey {
         if (andSave) SaveHotkeyDb();
     }
 
-    void UpdateDisabled(bool disabled) {
+    void UpdateDisabled(bool disabled, bool andSave = true) {
         this.disabled = disabled;
-        SaveHotkeyDb();
+        if (andSave) SaveHotkeyDb();
     }
 
-    void UpdateCtrl(bool ctrl) {
+    void UpdateCtrl(bool ctrl, bool andSave = true) {
         UnregisterBeforeChange();
         this.ctrl = ctrl;
         GenKeyStr();
         UpdateHotkey(this);
-        SaveHotkeyDb();
+        if (andSave) SaveHotkeyDb();
     }
 
-    void UpdateAlt(bool alt) {
+    void UpdateAlt(bool alt, bool andSave = true) {
         UnregisterBeforeChange();
         this.alt = alt;
         GenKeyStr();
         UpdateHotkey(this);
-        SaveHotkeyDb();
+        if (andSave) SaveHotkeyDb();
     }
 
-    void UpdateShift(bool shift) {
+    void UpdateShift(bool shift, bool andSave = true) {
         UnregisterBeforeChange();
         this.shift = shift;
         GenKeyStr();
         UpdateHotkey(this);
-        SaveHotkeyDb();
+        if (andSave) SaveHotkeyDb();
     }
 
     void StartRebind() {
@@ -115,17 +115,18 @@ class Hotkey {
     }
 
     void LoadFromJsonObj(Json::Value@ j) {
+        if (!j.HasKey(name)) return;
         Json::Value@ jk = j[name];
         if (jk is null || jk.GetType() != Json::Type::Object) {
             warn("Failed to load hotkey: " + name + " from json: " + (jk is null ? "<null>" : Json::Write(jk)));
             return;
         }
         UpdateKey(VirtualKey(int(jk["key"])), false);
-        disabled = jk.Get("disabled", false);
+        UpdateDisabled(jk.Get("disabled", false), false);
         editorOnly = jk.Get("editorOnly", true);
-        ctrl = jk.Get("ctrl", false);
-        alt = jk.Get("alt", false);
-        shift = jk.Get("shift", false);
+        UpdateCtrl(jk.Get("ctrl", false), false);
+        UpdateAlt(jk.Get("alt", false), false);
+        UpdateShift(jk.Get("shift", false), false);
 
         // key = VirtualKey(int(jk["key"]));
         // ctrl = bool(jk["ctrl"]);
@@ -218,7 +219,8 @@ string HotkeyKey(VirtualKey key, bool ctrl, bool alt, bool shift) {
 Hotkey@ AddHotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunction@ f, const string &in name, bool anyModifier = false, bool editorOnly = true) {
     auto @h = Hotkey(key, ctrl, alt, shift, f, name, anyModifier, editorOnly);
     if (hotkeys.Exists(h.keyStr)) {
-        NotifyWarning("Hotkey already exists; might clobber: " + h.keyStr);
+        auto h2 = GetHotkey(h.keyStr);
+        NotifyWarning("Hotkey already exists; might clobber: " + h.keyStr + " | h2: " + h2.name);
     }
     hotkeyList.InsertLast(h);
     @hotkeys[h.keyStr] = h;
@@ -228,7 +230,8 @@ Hotkey@ AddHotkey(VirtualKey key, bool ctrl, bool alt, bool shift, HotkeyFunctio
 
 void UpdateHotkey(Hotkey@ h) {
     if (hotkeys.Exists(h.keyStr)) {
-        NotifyWarning("Hotkey already exists; might clobber: " + h.keyStr);
+        auto h2 = GetHotkey(h.keyStr);
+        NotifyWarning("Hotkey already exists; might clobber: " + h.keyStr + " | h2: " + h2.name);
     }
     @hotkeys[h.keyStr] = h;
     hotkeysFlags[int(h.key)] = true;
@@ -358,6 +361,7 @@ UI::InputBlocking _SetEditorTestModeRespawnHotkeyF() {
 
 // note: not all hotkeys are added here, just general ones
 void _InitAddHotkeys() {
+    yield(5);
     auto @setTestResapwnHK = AddHotkey(VirtualKey::Home, false, false, false, _SetEditorTestModeRespawnHotkeyF, "[TestMode] Set Respawn Position");
     setTestResapwnHK.editorOnly = false;
     // gets called in Main() after initialization of things that add hotkeys.
