@@ -261,7 +261,7 @@ namespace PlacementHooks {
         dev_trace("OnAddBlockHook! rdx : " + Text::FormatPointer(rdx));
 #endif
 #if WINDOWS_WINE
-        // trace("OnAddBlockHook, wine detected.");
+        trace("OnAddBlockHook, wine detected.");
         if (rdx < 0xffffff) {
             // pointer looks bad
             return;
@@ -274,22 +274,22 @@ namespace PlacementHooks {
 #endif
         auto vtablePtr = Dev::ReadUInt64(rdx);
         if (!VTables::CheckVTable(vtablePtr, VTables::CGameCtnBlock)) {
-            dev_trace("Got bad vtable ptr: " + Text::FormatPointer(vtablePtr));
+            _Log::Trace("Got bad vtable ptr: " + Text::FormatPointer(vtablePtr));
             return;
         }
-        dev_trace("VTable Addr: " + Text::FormatPointer(Dev::ReadUInt64(rdx)));
+        _Log::Debug("VTable Addr: " + Text::FormatPointer(Dev::ReadUInt64(rdx)));
         auto nod = Dev_GetNodFromPointer(rdx);
-        dev_trace("got nod.");
+        _Log::Debug("OnAddBlockHook_RdxRdi got nod.");
 
         if (nod is null) {
-            dev_trace("OnAddBlockHook_RdxRdi rdx nod null");
+            _Log::Debug("OnAddBlockHook_RdxRdi rdx nod null");
             warn_every_60_s("OnAddBlockHook_RdxRdi rdx nod null");
             return;
         }
         auto block = cast<CGameCtnBlock>(nod);
         if (block is null) {
-            dev_trace("rdx block null, checking type...");
-            dev_trace("rdx block type: " + Reflection::TypeOf(nod).Name);
+            _Log::Trace("rdx block null, checking type...");
+            _Log::Trace("rdx block type: " + Reflection::TypeOf(nod).Name);
             warn_every_60_s("rdx block type: " + Reflection::TypeOf(nod).Name);
             return;
         }

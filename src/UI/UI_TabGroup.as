@@ -82,8 +82,10 @@ class TabGroup {
         }
     }
 
+    int tabBarFlags = UI::TabBarFlags::None;
+
     void DrawTabs() {
-        UI::BeginTabBar(groupName);
+        UI::BeginTabBar(groupName, tabBarFlags);
 
         for (uint i = 0; i < tabs.Length; i++) {
             tabs[i].DrawTab();

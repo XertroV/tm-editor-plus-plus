@@ -5,6 +5,7 @@ class DevMainTab : Tab {
 
     DevMainTab(TabGroup@ p) {
         super(p, "Dev Info", Icons::ExclamationTriangle);
+        Children.tabBarFlags = UI::TabBarFlags::FittingPolicyResizeDown;
         canPopOut = false;
         DevBlockTab(Children);
         DevBlockTab(Children, true);
@@ -13,6 +14,8 @@ class DevMainTab : Tab {
         DevMiscTab(Children);
         MapChangesFrameTab(Children);
         SelectionBoxTab(Children);
+        VegetRotTab(Children);
+        ForestMgrTab(Children);
         ItemMgrTab(Children);
         ItemPlacementMgrTab(Children);
     }

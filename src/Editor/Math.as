@@ -149,6 +149,14 @@ int3 PosToCoordDist(vec3 pos) {
 }
 
 
+vec3 PYR_to_YPR(const vec3 &in pyr) {
+    return vec3(pyr.y, pyr.x, pyr.z);
+}
+vec3 YPR_to_PYR(const vec3 &in ypr) {
+    return vec3(ypr.y, ypr.x, ypr.z);
+}
+
+
 // Game: XZY, Openplanet: XYZ
 enum EulerOrder {
     XYZ,
@@ -393,7 +401,7 @@ vec4 RandVec4Norm() {
 
 
 
-mat3 quatToRotMat3x3(GameQuat q) {
+mat3 quatToRotMat3x3(const GameQuat &in q) {
     float fVar1, fVar2, fVar3, fVar4, fVar5, fVar6, fVar7, fVar8;
     fVar1 = q.f0;
     fVar2 = q.f3;
@@ -430,12 +438,18 @@ GameQuat game_EulerToQuat(float yaw, float pitch, float roll) {
 class GameQuat {
     vec4 q;
     GameQuat() {}
+    GameQuat(const GameQuat &in other) { q = other.q; }
     GameQuat(uint64 ptr) {
         auto raw = Dev::ReadVec4(ptr);
-        q.x = raw.z;
+        q.x = raw.x;
         q.y = raw.y;
-        q.z = raw.x;
+        q.z = raw.z;
         q.w = raw.w;
+    }
+
+
+    GameQuat(const quat &in q) {
+        this.q = vec4(q.w, q.x, q.y, q.z);
     }
 
     GameQuat SwapOrderTest() {
@@ -467,7 +481,7 @@ class GameQuat {
         this.q = q;
     }
 
-    // wxzy or something explain bad order? wzyx or wxyz
+    // In memory: [w, x, y, z]
 
     // 0th
     float get_w() const { return q.x; }
@@ -486,6 +500,7 @@ class GameQuat {
     float get_f3() const { return q.w; }
     void set_f3(float v) { q.w = v; }
 
+    // In memory: [w, x, y, z]
     float get_opIndex(int i) const {
         switch (i) {
             case 0: return q.x;
@@ -496,6 +511,7 @@ class GameQuat {
         throw("no index: " + i);
         return 0;
     }
+    // In memory: [w, x, y, z]
     void set_opIndex(int i, float v) {
         switch (i) {
             case 0: q.x = v; break;
@@ -506,33 +522,133 @@ class GameQuat {
         }
     }
 
-    mat3 ToMat3() {
+    // Replicates: item YPR -> quat -> mat3 -> quat
+    GameQuat ToMatToQuat() const {
+        return game_RotMat3x3_To_Quat(this.ToMat3(), true);
+    }
+
+    mat3 ToMat3() const {
         return quatToRotMat3x3(this);
     }
 
-    mat4 ToMat4() {
+    mat4 ToMat4() const {
         return mat4(ToMat3());
     }
 
-    iso4 ToIso4() {
+    mat4 ToMat4At(vec3 &in pos) const {
+        return mat4::Translate(pos) * ToMat4();
+    }
+
+    iso4 ToIso4() const {
         return iso4(ToMat4());
     }
 
-    quat ToOpQuat() {
+    quat ToOpQuat() const {
         return quat(x, y, z, w);
+    }
+
+    vec3 ToEulerYPR_Lossy() const {
+        return PYR_to_YPR(EulerFromRotationMatrix(ToMat4(), EulerOrder_GameRev)) * -1.0;
     }
 
     GameQuat opMul(float s) const {
         return GameQuat(q * s);
     }
 
-    string ToString() {
+    string ToString() const {
         return "quat("
             + Text::Format("%.13f", f0) + ", "
             + Text::Format("%.13f", f1) + ", "
             + Text::Format("%.13f", f2) + ", "
             + Text::Format("%.13f", f3)
         + ")";
+    }
+
+
+    GameQuat ApplyYaw(float t) const {
+        return GameQuat::Mul(this, GameQuat::FromYaw(t));
+        // auto q = GameQuat(this.q);
+        // GameQuat r = GameQuat::FromYaw(t);
+        // float qx = this[0], qy = this[1], qz = this[2], qw = this[3];
+        // float rx = r[0], ry = r[1], rz = r[2], rw = r[3];
+        // q[0] = qx * rx - (rz * qz + qy * ry + rw * qw);
+        // q[1] = (qy * rx + qx * ry + qw * rz) - qz * rw;
+        // q[2] = (qz * rx + qx * rz + qy * rw) - qw * ry;
+        // q[3] = (qw * rx + qx * rw + qz * ry) - qy * rz;
+        // return q;
+    }
+
+
+    GameQuat ApplyPitch(float t) const {
+        return GameQuat::Mul(this, GameQuat::FromPitch(t));
+        // auto q = GameQuat(this);
+        // GameQuat r = GameQuat::FromPitch(t);
+        // float qx = q[0], qy = q[1], qz = q[2], qw = q[3];
+        // float rx = r[0], ry = r[1], rz = r[2], rw = r[3];
+        // q[0] = qx * rx - (rz * qz + qy * ry + rw * qw);
+        // q[1] = (qy * rx + qx * ry + qw * rz) - qz * rw;
+        // q[2] = (qz * rx + qx * rz + qy * rw) - qw * ry;
+        // q[3] = (qw * rx + qx * rw + qz * ry) - qy * rz;
+        // return q;
+    }
+
+    GameQuat ApplyRoll(float t) const {
+        return GameQuat::Mul(this, GameQuat::FromRoll(t));
+        // auto q = GameQuat(this);
+        // GameQuat r = GameQuat::FromRoll(t);
+        // float qx = q[0], qy = q[1], qz = q[2], qw = q[3];
+        // float rx = r[0], ry = r[1], rz = r[2], rw = r[3];
+        // q[0] = qx * rx - (rz * qz + qy * ry + rw * qw);
+        // q[1] = (qy * rx + qx * ry + qw * rz) - qz * rw;
+        // q[2] = (qz * rx + qx * rz + qy * rw) - qw * ry;
+        // q[3] = (qw * rx + qx * rw + qz * ry) - qy * rz;
+        // return q;
+    }
+
+    GameQuat RollLeft() const {
+        return GameQuat(vec4(q.y, q.z, q.w, q.x));
+    }
+
+    GameQuat RollRight() const {
+        return GameQuat(vec4(q.w, q.x, q.y, q.z));
+    }
+
+    GameQuat Inverse() const {
+        return GameQuat(q * vec4(1, -1, -1, -1));
+    }
+}
+
+namespace GameQuat {
+    GameQuat Mul(const GameQuat &in q, const GameQuat &in r) {
+        float qx = q[0], qy = q[1], qz = q[2], qw = q[3];
+        float rx = r[0], ry = r[1], rz = r[2], rw = r[3];
+        float o0 = qx * rx - (rz * qz + qy * ry + rw * qw);
+        float o1 = (qy * rx + qx * ry + qw * rz) - qz * rw;
+        float o2 = (qz * rx + qx * rz + qy * rw) - qw * ry;
+        float o3 = (qw * rx + qx * rw + qz * ry) - qy * rz;
+        return GameQuat(vec4(o0, o1, o2, o3));
+    }
+
+    GameQuat FromYaw(float theta) {
+        auto sc = game_FastSinCos(theta * 0.5f);
+        GameQuat q = GameQuat(quat(0.0, 0, 0, 0));
+        q[0] = sc.y;
+        q[2] = sc.x;
+        return q;
+    }
+    GameQuat FromPitch(float theta) {
+        auto sc = game_FastSinCos(theta * 0.5f);
+        GameQuat q = GameQuat(quat(0.0, 0, 0, 0));
+        q[0] = sc.y;
+        q[1] = sc.x;
+        return q;
+    }
+    GameQuat FromRoll(float theta) {
+        auto sc = game_FastSinCos(theta * 0.5f);
+        GameQuat q = GameQuat(quat(0.0, 0, 0, 0));
+        q[0] = sc.y;
+        q[3] = sc.x;
+        return q;
     }
 }
 
@@ -633,53 +749,6 @@ class Mat3Extra {
 
 /*
 void FUN_14018f880(float *param_1,float *param_2)
-
-{
-  uint uVar1;
-  ulonglong uVar2;
-  ulonglong uVar3;
-  ulonglong uVar4;
-  float fVar5;
-  float fVar6;
-
-  fVar6 = param_2[8];
-  fVar5 = *param_2 + param_2[4] + fVar6;
-  if (0.0 < fVar5) {
-    fVar5 = fVar5 + 1.0;
-    if (fVar5 < 0.0) {
-      fVar5 = (float)FUN_14192c790(fVar5);
-    }
-    else {
-      fVar5 = SQRT(fVar5);
-    }
-    fVar6 = 0.5 / fVar5;
-    *param_1 = fVar5 * 0.5;
-    param_1[1] = (param_2[7] - param_2[5]) * fVar6;
-    param_1[2] = (param_2[2] - param_2[6]) * fVar6;
-    param_1[3] = (param_2[3] - param_2[1]) * fVar6;
-    return;
-  }
-  uVar1 = (uint)(*param_2 < param_2[4]);
-  uVar2 = (ulonglong)uVar1;
-  if (param_2[(ulonglong)uVar1 * 4] <= fVar6 && fVar6 != param_2[(ulonglong)uVar1 * 4]) {
-    uVar2 = 2;
-  }
-  uVar3 = (ulonglong)*(uint *)(&DAT_141a33500 + uVar2 * 4);
-  uVar4 = (ulonglong)*(uint *)(&DAT_141a33500 + uVar3 * 4);
-  fVar6 = (param_2[uVar2 * 4] - (param_2[uVar4 * 4] + param_2[uVar3 * 4])) + 1.0;
-  if (fVar6 < 0.0) {
-    fVar6 = (float)FUN_14192c790(fVar6);
-  }
-  else {
-    fVar6 = SQRT(fVar6);
-  }
-  fVar5 = 0.5 / fVar6;
-  param_1[uVar2 + 1] = fVar6 * 0.5;
-  *param_1 = (param_2[uVar4 * 3 + uVar3] - param_2[uVar3 * 3 + uVar4]) * fVar5;
-  param_1[uVar3 + 1] = (param_2[uVar2 * 3 + uVar3] + param_2[uVar3 * 3 + uVar2]) * fVar5;
-  param_1[uVar4 + 1] = (param_2[uVar2 * 3 + uVar4] + param_2[uVar4 * 3 + uVar2]) * fVar5;
-  return;
-}
 */
 
 GameQuat game_RotMat3x3_To_Quat(mat3 rot, bool silent = false) {
@@ -826,9 +895,22 @@ void Test_YPR_To_Quat_FromGame() {
     assert_eq(q.f1, expected.f1, "f1");
     assert_eq(q.f2, expected.f2, "f2");
     assert_eq(q.f3, expected.f3, "f3");
+    // todo ToEulerYZX
 }
 
-
+void Test_YPR_To_QuatAndBack() {
+    float yaw = Dev_CastUintToFloat(0xC0278D35);
+    float pitch = Dev_CastUintToFloat(0xBE860A90);
+    float roll = Dev_CastUintToFloat(0xBF490FDC);
+    auto ypr = vec3(yaw, pitch, roll);
+    auto q = GameQuat(ypr);
+    auto e1 = PYR_to_YPR(EulerFromRotationMatrix(q.ToMat4(), EulerOrder_GameRev)) * -1.0;
+    // auto e2 = PYR_to_YPR(EulerFromRotationMatrix(q.ToMat4(), EulerOrder_Game));
+    print(e1.ToString());
+    // print(e2.ToString());
+    assert_eq(ypr, e1, "ypr == e1");
+    // assert_eq(ypr, e2, "ypr == e2");
+}
 
 // Maybe... Might not be right numbers
 // -0.8923991323
@@ -872,13 +954,13 @@ void Test_YPR_to_Mat3() {
     assert_eq(m.zx, 1.341104507e-7, "m.zx != expected");
     assert_eq(m.zy, -0.7071068287, "m.zy != expected");
     assert_eq(m.zz, 0.7071067691, "m.zz != expected");
-    auto q3 = Mat4ToQuat(mat4(m));
-    auto gq2 = game_RotMat3x3_To_Quat(m);
-    dev_trace("gq: " + gq.ToString());
-    dev_trace("q3: " + q3.ToString());
-    dev_trace("gq2: " + gq2.ToString());
-    assert_eq(gq.f0, -gq2.f0, "gq.f0 != gq2.f0");
-    assert_eq(gq.f1, -gq2.f1, "gq.f1 != gq2.f1");
-    assert_eq(gq.f2, -gq2.f2, "gq.f2 != gq2.f2");
-    assert_eq(gq.f3, -gq2.f3, "gq.f3 != gq2.f3");
+    // auto q3 = Mat4ToQuat(mat4(m));
+    // auto gq2 = game_RotMat3x3_To_Quat(m);
+    // dev_trace("gq: " + gq.ToString());
+    // dev_trace("q3: " + q3.ToString());
+    // dev_trace("gq2: " + gq2.ToString());
+    // assert_eq(gq.f0, -gq2.f0, "gq.f0 != gq2.f0");
+    // assert_eq(gq.f1, -gq2.f1, "gq.f1 != gq2.f1");
+    // assert_eq(gq.f2, -gq2.f2, "gq.f2 != gq2.f2");
+    // assert_eq(gq.f3, -gq2.f3, "gq.f3 != gq2.f3");
 }

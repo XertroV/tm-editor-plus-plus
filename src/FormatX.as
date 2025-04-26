@@ -41,6 +41,11 @@ namespace FormatX {
             + Text::Format("%.4f, ", v.y)
             + Text::Format("%.4f>", v.z);
     }
+    shared string Vec3_9DPS(vec3 &in v) {
+        return Text::Format("<%.9f, ", v.x)
+            + Text::Format("%.9f, ", v.y)
+            + Text::Format("%.9f>", v.z);
+    }
     shared string Nat3(nat3 &in v) {
         return Text::Format("<%d, ", int(v.x))
             + Text::Format("%d, ", int(v.y))

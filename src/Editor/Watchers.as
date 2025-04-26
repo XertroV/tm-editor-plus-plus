@@ -205,13 +205,17 @@ class SEditorRotation {
 }
 
 class EditorRotation : SEditorRotation {
+    string dbg_ConstructorMethod;
+
     EditorRotation(vec3 euler) {
+        dbg_ConstructorMethod = "euler";
         super();
         this.euler = euler;
         UpdateDirFromPry();
     }
 
     EditorRotation(float pitch, float yaw, float roll) {
+        dbg_ConstructorMethod = "p,y,r";
         super();
         euler.x = pitch;
         euler.y = yaw;
@@ -220,13 +224,16 @@ class EditorRotation : SEditorRotation {
     }
 
     EditorRotation(CGameCursorBlock@ cursor, bool useSnapped = true) {
+        dbg_ConstructorMethod = "cursor:";
         super();
         if (useSnapped && cursor.UseSnappedLoc) {
+            dbg_ConstructorMethod += "snapped";
             euler.x = cursor.SnappedLocInMap_Pitch;
             euler.y = cursor.SnappedLocInMap_Yaw;
             euler.z = cursor.SnappedLocInMap_Roll;
             UpdateDirFromPry();
         } else {
+            dbg_ConstructorMethod += "cursor";
             SetFromCursorProps(cursor.Pitch, cursor.Roll, cursor.Dir, cursor.AdditionalDir);
         }
     }
@@ -235,11 +242,13 @@ class EditorRotation : SEditorRotation {
     // }
 
     EditorRotation(float pitch, float roll, CGameCursorBlock::ECardinalDirEnum dir, CGameCursorBlock::EAdditionalDirEnum additionalDir) {
+        dbg_ConstructorMethod = "pitch,roll,dir,additionalDir";
         super();
         SetFromCursorProps(pitch, roll, dir, additionalDir);
     }
 
     EditorRotation(mat4 rot) {
+        dbg_ConstructorMethod = "mat4";
         super();
         auto p = vec3(rot.tx, rot.ty, rot.tz);
         if (p.LengthSquared() > 0.0) {

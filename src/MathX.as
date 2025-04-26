@@ -15,6 +15,9 @@ namespace MathX {
         return vec3(Math::ToRad(degs.x), Math::ToRad(degs.y), Math::ToRad(degs.z));
     }
 
+    shared float Max(uint a, uint b) {
+        return a > b ? a : b;
+    }
     shared float Max(const vec3 &in a) {
         return Math::Max(Math::Max(a.x, a.y), a.z);
     }

@@ -4,7 +4,7 @@ namespace Editor {
 
     NGameItem_SMgr@ GetNGameItem_SMgr() {
         throw("Unused atm. Remove this line to enable.");
-        auto mgr = FindManager(Reflection::GetType("NGameItem_SMgr").ID);
+        auto mgr = FindManager(CLSID_NGameItem_SMgr);
         if (mgr is null) return null;
         if (mgr.ptr == 0) return null;
         auto mgrNwp = NodWithPtr(Dev_GetNodFromPointer(mgr.ptr));
@@ -16,7 +16,7 @@ namespace Editor {
     uint64 GetNGameItem_SMgr_Ptr(ISceneVis@ scene) {
         if (scene is null) return 0;
         // We don't actually use the scene in this case. Maybe should refactor.
-        auto mgr = FindManager(Reflection::GetType("NGameItem_SMgr").ID);
+        auto mgr = FindManager(CLSID_NGameItem_SMgr);
         if (mgr is null) return 0;
         return mgr.ptr;
     }

@@ -58,8 +58,10 @@ class QuatPosF : RawBufferElem {
 		super(ptr, 0x20);
 	}
 
-	quat get_rot() { return (this.GetQuat(0x0)); }
-	void set_rot(quat value) { this.SetQuat(0x0, value); }
+	vec4 get_rotAsV4() { return (this.GetVec4(0x0)); }
+	void set_rotAsV4(vec4 value) { this.SetVec4(0x0, value); }
+	quat get_rotAsOpQuat() { return (this.GetQuat(0x0)); }
+	void set_rotAsOpQuat(quat value) { this.SetQuat(0x0, value); }
 	vec3 get_pos() { return (this.GetVec3(0x10)); }
 	void set_pos(vec3 value) { this.SetVec3(0x10, value); }
 	float get_f1c() { return (this.GetFloat(0x1c)); }

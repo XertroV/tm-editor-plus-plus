@@ -427,6 +427,8 @@ class ReferencedNod {
 const uint16 O_APP_GAMESCENE = GetOffset("CGameCtnApp", "GameScene");
 const uint16 O_ISCENEVIS_METAMGR = GetOffset("ISceneVis", "MgrMetaPtrs");
 const uint32 CLSID_NSceneItemPlacement_SMgr = Reflection::GetType("NSceneItemPlacement_SMgr").ID;
+const uint32 CLSID_NGameItem_SMgr = Reflection::GetType("NGameItem_SMgr").ID;
+const uint32 CLSID_NHmsForestVis_SMgr = Reflection::GetType("NHmsForestVis_SMgr").ID;
 
 
 const uint32 CLSID_NPlugItemPlacement_SPlacement = Reflection::GetType("NPlugItemPlacement_SPlacement").ID;

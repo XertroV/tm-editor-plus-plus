@@ -78,6 +78,10 @@ TestCase@[]@ generateMathTests() {
     ret.InsertLast(TestCase("euler -> quat", math_test_euler_to_quat));
     ret.InsertLast(TestCase("euler -> mat -> quat", math_test_euler_to_mat_to_quat));
     ret.InsertLast(TestCase("quat / mat4", math_test_quat_mat4));
+    ret.InsertLast(TestCase("Test_YPR_To_Quat_FromGame", Test_YPR_To_Quat_FromGame));
+    ret.InsertLast(TestCase("Test_YPR_to_Mat3", Test_YPR_to_Mat3));
+    ret.InsertLast(TestCase("Test_YPR_To_Quat", Test_YPR_To_Quat));
+    ret.InsertLast(TestCase("Test_YPR_To_QuatAndBack", Test_YPR_To_QuatAndBack));
     ret.InsertLast(TestCase("game: Euler / Quat / Mat functions", Test_game_EulerQuatMatFunctions));
     return ret;
 }
@@ -216,6 +220,11 @@ void assert_eq(float a, float b, const string &in msg = "") {
 void assert_eq(vec2 a, vec2 b, const string &in msg = "") {
     if (a != b) {
         throw("assertion failed: " + FormatX::Vec2_9DPS(a) + " != " + FormatX::Vec2_9DPS(b) + (msg != "" ? ", " + msg : ""));
+    }
+}
+void assert_eq(vec3 a, vec3 b, const string &in msg = "") {
+    if (a != b) {
+        throw("assertion failed: " + FormatX::Vec3_9DPS(a) + " != " + FormatX::Vec3_9DPS(b) + (msg != "" ? ", " + msg : ""));
     }
 }
 void assert_nearly_eq(float a, float b, float tolerence, const string &in msg = "") {
