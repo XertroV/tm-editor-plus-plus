@@ -113,11 +113,11 @@ namespace UX {
         return ret;
     }
 
-    nat3 InputNat3(const string &in label, nat3 val) {
+    nat3 InputNat3(const string &in label, nat3 val, float width = -1.0) {
         auto availR = UI::GetContentRegionAvail();
         auto cur = UI::GetCursorPos();
 
-        auto w = (availR.x + cur.x) * 0.715 / 3.0;
+        auto w = (width <= 0.0 ? (availR.x + cur.x) * 0.715 : width) / 3.0;
         UI::PushItemWidth(w);
         UI::PushID(label);
         auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);

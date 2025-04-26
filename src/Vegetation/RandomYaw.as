@@ -120,21 +120,22 @@ namespace VegetRandomYaw {
 		bool skipRandYaw = !enableRandRot_Y && ampRad == 0.0;
 		if (skipRandYaw) dev_warn('VegetRandomYaw::CalcNext called when enable=false');
 
-		dbg_CN_LastInput = GameQuat(q);
+		// dbg_CN_LastInput = GameQuat(q);
 		auto lcg = MurmurHash2QuatPos(q, pos);
-		dbg_CN_LastInitState = lcg.state;
+		// dbg_CN_LastInitState = lcg.state;
+
 		// the game does this but we don't really care cause it goes in the 0x1c position (after quat, pos)
 		auto randScaleFactor = lcg.RandomScaleFactor(reductionRatio);
 
 		float yaw   = lcg.RandFloat(0.0f, 2.0f * 3.1415927f);
 		float pitch = lcg.RandFloat(-ampRad, ampRad);
 		float roll  = lcg.RandFloat(-ampRad, ampRad);
-		dbg_CN_LastRandYPR = vec3(yaw, pitch, roll);
+		// dbg_CN_LastRandYPR = vec3(yaw, pitch, roll);
 
-		dbg_CN_Last_GQ0 = GameQuat(q);
-		dbg_CN_Last_GQ1 = dbg_CN_Last_GQ0.ApplyYaw(yaw);
-		dbg_CN_Last_GQ2 = dbg_CN_Last_GQ1.ApplyPitch(pitch);
-		dbg_CN_Last_GQ3 = dbg_CN_Last_GQ2.ApplyRoll(roll);
+		// dbg_CN_Last_GQ0 = GameQuat(q);
+		// dbg_CN_Last_GQ1 = dbg_CN_Last_GQ0.ApplyYaw(yaw);
+		// dbg_CN_Last_GQ2 = dbg_CN_Last_GQ1.ApplyPitch(pitch);
+		// dbg_CN_Last_GQ3 = dbg_CN_Last_GQ2.ApplyRoll(roll);
 
 		dbg_CN_LastNextGQ = GameQuat(q).ApplyYaw(yaw).ApplyPitch(pitch).ApplyRoll(roll); // .RollLeft();
 		return dbg_CN_LastNextGQ.ToOpQuat();

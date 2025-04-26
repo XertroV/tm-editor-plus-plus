@@ -61,6 +61,7 @@ namespace Editor {
     }
 
     int GetItemCursorSnappedBlockPlacementZoneId(CGameCursorItem@ itemCursor) {
+        if (itemCursor is null) return -1;
         return Dev::GetOffsetInt32(itemCursor, O_ITEMCURSOR_SnappedBlockPlacementZoneId);
     }
 

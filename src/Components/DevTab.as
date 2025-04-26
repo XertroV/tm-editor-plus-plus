@@ -550,7 +550,7 @@ class ItemPlacementMgrTab : Tab {
     void DrawInner() override {
         auto app = GetApp();
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
-        if (editor is null) return;
+        if (editor is null || editor.ItemCursor is null) return;
         auto sbpZoneId = Editor::GetItemCursorSnappedBlockPlacementZoneId(editor.ItemCursor);
         UI::Text("Snapped Block Placement Zone ID: " + tostring(sbpZoneId));
         auto itemPlacementMgr = RandomizeVegitationLayouts::GetItemPlacementMgr(app);

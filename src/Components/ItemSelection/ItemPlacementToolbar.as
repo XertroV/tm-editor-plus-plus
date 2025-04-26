@@ -116,6 +116,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		UI::AlignTextToFramePadding();
 		UI::Text(Text::Format("%.1f", pp.GridSnap_HStep) + ", " + Text::Format("%.1f", pp.GridSnap_VStep));
 
+		bool toggleGhost = BtnToolbarHalfV((pp.GhostMode ? Icons::SnapchatGhost : Icons::User) + "###ghoTog", "Toggle Ghost Mode (Places on other items or goes through them)", ActiveToBtnStatus(pp.GhostMode));
 		bool toggleFlying = BtnToolbarHalfV((pp.FlyStep > 0 ? Icons::Plane : Icons::Tree) + "###flyTog", "Toggle Flying / Lock to Ground", ActiveToBtnStatus(pp.FlyStep > 0));
 
 		string cycleVarLabel = "V:" + curVar + "/" + varNb + "###cy-var";
@@ -137,6 +138,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		DrawGridOptsPopup(pp);
 
 		if (toggleFlying) ToggleFlying(pp);
+		if (toggleGhost) pp.GhostMode = !pp.GhostMode;
 		if (toggleRandomizeVeg) RandomizeVegitationLayouts::Toggle();
 		if (toggleFixTrees) VegetRandomYaw::Toggle();
 		if (cycleVariant) pp.PlacementClass.CurVariant = (curVar + 1) % varNb;
@@ -620,9 +622,6 @@ namespace VegetRandomYaw {
 		return false;
 	}
 
-	// fix trees epislon
-	const float ftEpsilon = 0.000002;
-
 	// fParams = vec2(ReductionRatio01, RotXZ_AngleMax)
 	void FixItemRotationsForTrees(CGameCtnAnchoredObject@ item, vec2 fParams, bool enableRandYaw) {
 		auto origPos = item.AbsolutePositionInMap;
@@ -631,29 +630,44 @@ namespace VegetRandomYaw {
 		if (ypr.yz.LengthSquared() == 0) return;
 		auto gq = GameQuat(ypr);
 		auto itemQuat = gq.ToMatToQuat().ToOpQuat();
-		quat rQuat;
+		quat rQuat, lastQuat;
 		auto pos = origPos;
 		auto bestPos = pos;
-		auto bestQuatErr = 4.0f, currErr;
+		auto bestQuatErr = 400.0f, currErr;
 		// ! preprocessor DEV method
-		auto start = GetSystemTimeAsFileTime();
+		auto start = Time::Now;
+		// fix trees epislon
+		float ftEpsilon = 0.00001;
 		auto count = 0;
-		float dx = -0.0001;
-		for (dx = -0.0001; dx < 0.0001; dx += ftEpsilon) {
-			pos.x += ftEpsilon;
-			rQuat = CalcNext(itemQuat, pos, fParams.x, fParams.y, enableRandYaw).Inverse();
-			currErr = QuatAngle(itemQuat, rQuat);
+		float dxRange = 0.002, dx;
+		pos.y -= dxRange;
+		for (dx = -dxRange; dx < dxRange; dx += ftEpsilon) {
+			pos.y += ftEpsilon;
+			rQuat = CalcNext(itemQuat, pos, fParams.x, fParams.y, enableRandYaw); //.Inverse();
+			currErr = QuatErrorAngle(itemQuat, rQuat);
 			if (currErr < bestQuatErr) {
-				dev_trace("Improved err: " + currErr + " / pos: " + pos.ToString());
+				dev_warn("Improved err: " + currErr + " / pos: " + pos.ToString() + " / count: " + count);
 				bestQuatErr = currErr;
 				bestPos = pos;
-				if (currErr < 0.001) break;
+				if (currErr < 0.01) break;
+			} else {
+				// dev_trace('err: ' + currErr);
 			}
+			if (rQuat == lastQuat) {
+				dev_warn("Got identical quats / loop count: " + count);
+				if (ftEpsilon < 0.001) {
+					ftEpsilon *= 1.971313; // avoid hitting the same numbers e.g., if we *= 2.0
+					dxRange *= 1.971313;
+					dx = -dxRange;
+					pos.y = origPos.y - dxRange;
+				}
+			}
+			lastQuat = rQuat;
 			count += 1;
 		}
-		auto end = GetSystemTimeAsFileTime();
-		dev_trace("FixItemRotationsForTrees took " + (end-start) + " us; loop count: " + count);
-		item.AbsolutePositionInMap = pos;
+		auto end = Time::Now;
+		dev_warn("FixItemRotationsForTrees took " + (end-start) + " ms; loop count: " + count);
+		item.AbsolutePositionInMap = bestPos;
 	}
 
 	bool OnNewItemPlaced(CGameCtnAnchoredObject@ item) {

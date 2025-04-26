@@ -107,38 +107,47 @@ mixin class NudgeItemBlock {
         if (itemPosMod.LengthSquared() > 0 || itemRotMod.LengthSquared() > 0 || blockCoordMod.x != 0 || blockCoordMod.y != 0 || blockCoordMod.z != 0 || (block !is null && m_dir != int(block.Direction))) {
             if (item !is null) {
                 // ! this works now but it does not repick a picked item
-                auto itemSpecOrig = Editor::ItemSpecPriv(item);
+                // auto itemSpecOrig = Editor::ItemSpecPriv(item);
                 item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
+                item.AbsolutePositionInMap += itemPosMod;
+                item.Pitch += itemRotMod.x;
+                item.Yaw += itemRotMod.y;
+                item.Roll += itemRotMod.z;
                 auto newItemSpec = Editor::ItemSpecPriv(item);
-                if (!Editor::DeleteBlocksAndItems({}, {itemSpecOrig})) {
+                // if (!Editor::DeleteBlocksAndItems({}, {itemSpecOrig})) {
+                if (!Editor::DeleteBlocksAndItems({}, {newItemSpec})) {
                     warn("Failed to delete item for nudge");
                 }
-                newItemSpec.pos += itemPosMod;
-                newItemSpec.pyr += itemRotMod;
+                // newItemSpec.pos += itemPosMod;
+                // newItemSpec.pyr += itemRotMod;
                 if (!Editor::PlaceBlocksAndItems({}, {newItemSpec}, true)) {
                     warn("Failed to place item for nudge");
                 }
-
-                // item.AbsolutePositionInMap += itemPosMod;
-                // item.Pitch += itemRotMod.x;
-                // item.Yaw += itemRotMod.y;
-                // item.Roll += itemRotMod.z;
             } else if (block !is null) {
+                block.MwAddRef();
                 auto blockSpec = Editor::MakeBlockSpec(block);
                 Editor::DeleteBlocks({block});
+                // we want to update the block as well as the spec so that we can re-find it again after refreshing.
                 if (blockSpec.isFree) {
                     blockSpec.pos += itemPosMod;
                     blockSpec.pyr += itemRotMod;
+                    Editor::SetBlockLocation(block, blockSpec.pos);
+                    Editor::SetBlockRotation(block, blockSpec.pyr);
                 } else {
                     blockSpec.pos += CoordDistToPos(blockCoordMod);
                     blockSpec.coord.x += blockCoordMod.x;
                     blockSpec.coord.y += blockCoordMod.y;
                     blockSpec.coord.z += blockCoordMod.z;
+                    block.CoordX = blockSpec.coord.x;
+                    block.CoordY = blockSpec.coord.y;
+                    block.CoordZ = blockSpec.coord.z;
                     blockSpec.dir = CGameCtnBlock::ECardinalDirections(m_dir);
+                    block.BlockDir = blockSpec.dir;
                 }
                 if (!Editor::PlaceBlocksAndItems({blockSpec}, {}, !blockSpec.isFree)) {
                     warn("Failed to place block for nudge");
                 }
+                block.MwRelease();
             } else {
                 warn("Unhandled nod type to nudge!!!");
                 if (nod !is null) {

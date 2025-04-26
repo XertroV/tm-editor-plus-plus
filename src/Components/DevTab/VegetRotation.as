@@ -4,8 +4,8 @@ class VegetRotTab : Tab {
     }
 
     bool drawItemHelper = true, checkVegetForRandYaw = false;
-    int drawVegetFutureIters = 0;
-    bool[] drawQ = {true, true, true, true, true, true, true, true};
+    int drawVegetFutureIters = 1;
+    bool[] drawQ = {false, false, false, true, false, false, false, false};
 
     void DrawInner() override {
         UI::SeparatorText("Last Picked Item");
@@ -33,13 +33,13 @@ class VegetRotTab : Tab {
         }
 
 
-        CopiableLabeledValue("dbg_CN_LastInitState", FmtUintHex(VegetRandomYaw::dbg_CN_LastInitState));
-        CopiableLabeledValue("dbg_CN_LastRandYPR", VegetRandomYaw::dbg_CN_LastRandYPR.ToString());
-        CopiableLabeledValue("dbg_CN_Last_GQ0", VegetRandomYaw::dbg_CN_Last_GQ0.ToString());
-        UI::SameLine(); CopiableLabeledValue("GQ0.Len", "" + VegetRandomYaw::dbg_CN_Last_GQ0.q.Length());
-        CopiableLabeledValue("dbg_CN_Last_GQ1", VegetRandomYaw::dbg_CN_Last_GQ1.ToString());
-        CopiableLabeledValue("dbg_CN_Last_GQ2", VegetRandomYaw::dbg_CN_Last_GQ2.ToString());
-        CopiableLabeledValue("dbg_CN_Last_GQ3", VegetRandomYaw::dbg_CN_Last_GQ3.ToString());
+        // CopiableLabeledValue("dbg_CN_LastInitState", FmtUintHex(VegetRandomYaw::dbg_CN_LastInitState));
+        // CopiableLabeledValue("dbg_CN_LastRandYPR", VegetRandomYaw::dbg_CN_LastRandYPR.ToString());
+        // CopiableLabeledValue("dbg_CN_Last_GQ0", VegetRandomYaw::dbg_CN_Last_GQ0.ToString());
+        // UI::SameLine(); CopiableLabeledValue("GQ0.Len", "" + VegetRandomYaw::dbg_CN_Last_GQ0.q.Length());
+        // CopiableLabeledValue("dbg_CN_Last_GQ1", VegetRandomYaw::dbg_CN_Last_GQ1.ToString());
+        // CopiableLabeledValue("dbg_CN_Last_GQ2", VegetRandomYaw::dbg_CN_Last_GQ2.ToString());
+        // CopiableLabeledValue("dbg_CN_Last_GQ3", VegetRandomYaw::dbg_CN_Last_GQ3.ToString());
         CopiableLabeledValue("dbg_CN_LastNextGQ", VegetRandomYaw::dbg_CN_LastNextGQ.ToString());
         CopiableLabeledValue("dbg_CN_LastNextGQ.Len", "" + VegetRandomYaw::dbg_CN_LastNextGQ.q.Length());
         CopiableLabeledValue("dbg_CN_LastNextGQ.q.Norm", VegetRandomYaw::dbg_CN_LastNextGQ.q.Normalized().ToString());

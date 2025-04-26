@@ -161,7 +161,8 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
         UI::Separator();
 
-        UI::PushItemWidth(G_GetSmallerInputWidth());
+        float inputWidth = G_GetSmallerInputWidth();
+        UI::PushItemWidth(inputWidth);
 
         if (ShowHelpers) {
             nvgCircleWorldPos(item.AbsolutePositionInMap);
@@ -187,7 +188,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         UI::Text("Edit Picked Item Properties (Helper dot shows position)");
 
         item.AbsolutePositionInMap = UX::InputFloat3("Pos.##picked-item-pos", item.AbsolutePositionInMap);
-        item.BlockUnitCoord = UX::InputNat3("Block Coord.##picked-item-coord", item.BlockUnitCoord);
+        item.BlockUnitCoord = UX::InputNat3("Block Coord.##picked-item-coord", item.BlockUnitCoord, inputWidth);
 
         vec3 outRot = UX::InputAngles3("Rot (Deg)##picked-item-rot", initRot);
         Editor::SetItemRotation(item, outRot);
@@ -199,6 +200,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         item.IsFlying = UI::Checkbox("Is Flying", item.IsFlying);
         DrawEditVariants(item);
 
+        // if the item was changed and we refresh, do we skip forcing a refresh? (yes if color, pos, or rot was changed)
         auto skipForceRefresh = initColor != item.MapElemColor
             || !MathX::Vec3Eq(initPos, item.AbsolutePositionInMap)
             || !MathX::Vec3Eq(initRot, outRot);
@@ -221,10 +223,13 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
         if (changed) {
             trace('Updating modified item');
-            // @FocusedItem = ReferencedNod(Editor::RefreshSingleItemAfterModified(editor, item, !skipForceRefresh));
-            @FocusedItem = ReferencedNod(editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1]);
+            @FocusedItem = ReferencedNod(Editor::RefreshSingleItemAfterModified(editor, item, !skipForceRefresh));
+            // @FocusedItem = ReferencedNod(editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1]);
             @item = FocusedItem.AsItem();
-            if (item is null) return;
+            if (item is null) {
+                UI::PopItemWidth();
+                return;
+            }
         }
 
         UI::Separator();
