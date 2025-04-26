@@ -11,6 +11,7 @@ namespace VegetRandomYaw {
 		return MurmurHash2(data, seed);
 	}
 
+	const uint HASH_SEED = 0x57489862;
 
 	/* converted from decompilation */
 	uint MurmurHash2(const uint8[] &in data, uint seed) {
@@ -49,8 +50,6 @@ namespace VegetRandomYaw {
 		return uVar2 >> 15 ^ uVar2;
 	}
 
-	uint lcgState;
-
 	class LCG {
 		uint state, savedState;
 		LCG(uint seed) {
@@ -81,12 +80,6 @@ namespace VegetRandomYaw {
 	}
 
 	// returns the angle between quaternions.
-	float QuatAngle(const quat &in a, const quat &in b) {
-		float d = Math::Abs(a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w);
-		d = Math::Clamp(d, 0.0, 1.0);
-		return 2.0 * Math::Acos(d);
-	}
-
 	float QuatErrorAngle(const quat &in a, const quat &in b) {
 		float dotVal = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 		// Handle the fact that q and -q represent the same rotation
@@ -141,29 +134,6 @@ namespace VegetRandomYaw {
 		return dbg_CN_LastNextGQ.ToOpQuat();
 	}
 
-
-
-	// ╭───────────────────────────────────────────────────────────╮
-	// │           FIXED‑POINT ITERATION (core algorithm)          │
-	// ╰───────────────────────────────────────────────────────────╯
-
-	const uint HASH_SEED = 0x57489862;
-
-	class TestQuatCase {
-		quat input;
-		vec3 inputPos;
-		float amp;
-		quat gameResult;
-
-		TestQuatCase(const quat &in i, const vec3 &in p, float a, const quat &in g)
-		{
-			input = i;
-			inputPos = p;
-			amp   = a;
-			gameResult = g;
-		}
-	}
-
 	LCG@ MurmurHash2QuatPos(const quat &in q, const vec3 &in pos)
 	{
 		array<uint8> arr(28);
@@ -179,6 +149,23 @@ namespace VegetRandomYaw {
 		}
 		uint seed   = MurmurHash2(arr, HASH_SEED);
 		return LCG(seed);
+	}
+
+
+
+	class TestQuatCase {
+		quat input;
+		vec3 inputPos;
+		float amp;
+		quat gameResult;
+
+		TestQuatCase(const quat &in i, const vec3 &in p, float a, const quat &in g)
+		{
+			input = i;
+			inputPos = p;
+			amp   = a;
+			gameResult = g;
+		}
 	}
 
 	// void RunQuatRandGameTests() {
@@ -301,17 +288,289 @@ array<uint8> FloatArrToBytes(const float[] &in floatArr) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+// MARK: RandomYaw glue
+
+[Setting hidden]
+bool S_CounterbalanceTreeRandomYaw = false;
+
+namespace VegetRandomYaw {
+	void SetupCallbacks() {
+		RegisterNewItemCallback(OnNewItemPlaced, "VegetRandomYaw");
+	}
+
+	bool IsActive {
+		get { return S_CounterbalanceTreeRandomYaw; }
+		set { S_CounterbalanceTreeRandomYaw = value; }
+	}
+
+	void Toggle() {
+		IsActive = !IsActive;
+	}
+
+	vec2 GetItemModelVeget_ReductionRatio_AngleMax(CPlugPrefab@ prefab) {
+		vec2 ret = vec2();
+		for (uint i = 0; i < prefab.Ents.Length; i++) {
+			auto treeModel = cast<CPlugVegetTreeModel>(prefab.Ents[i].Model);
+			if (treeModel is null) continue;
+			ret.x = treeModel.Data.ReductionRatio01;
+			ret.y = treeModel.Data.Params_AngleMax_RotXZ_Deg;
+			if (treeModel.Data.Params_EnableRandomRotationY) break;
+		}
+		return ret;
+	}
+
+	// returns ReductionRatio01, Params_AngleMax_RotXZ_Deg
+	vec2 GetItemModelVeget_ReductionRatio_AngleMax(NPlugItem_SVariantList@ varList, int variant = -1) {
+		if (varList is null) return 0.0;
+		int minVar = Math::Max(variant, 0);
+		int maxVar = MathX::Max(uint(variant + 1), varList.Variants.Length);
+		for (int i = minVar; i < maxVar; i++) {
+			auto em = varList.Variants[i].EntityModel;
+			auto treeModel = cast<CPlugVegetTreeModel>(em);
+			// if we can, return the value
+			if (treeModel !is null) return vec2(
+				treeModel.Data.ReductionRatio01,
+				treeModel.Data.Params_AngleMax_RotXZ_Deg
+			);
+			auto prefab = cast<CPlugPrefab>(em);
+			if (prefab !is null) return GetItemModelVeget_ReductionRatio_AngleMax(prefab);
+		}
+		return 0.0;
+	}
+
+	bool DoesItemModelHaveVeget(NPlugItem_SVariantList@ varList, bool randYawMustBeTrue, int variant = -1) {
+		if (varList is null) return false;
+		int minVar = Math::Max(variant, 0);
+		int maxVar = MathX::Max(uint(variant + 1), varList.Variants.Length);
+		// for (uint i = 0; i < varList.Variants.Length; i++) {
+		for (int i = minVar; i < maxVar; i++) {
+			auto em = varList.Variants[i].EntityModel;
+			auto treeModel = cast<CPlugVegetTreeModel>(em);
+			if (treeModel is null) continue;
+			if (randYawMustBeTrue && !treeModel.Data.Params_EnableRandomRotationY) continue;
+			return true;
+		}
+		return false;
+	}
+
+	bool DoesItemModelHaveVeget(CGameItemModel@ model, bool randYawMustBeTrue, int variant = -1) {
+		if (model is null) return false;
+		auto varList = cast<NPlugItem_SVariantList>(model.EntityModel);
+		if (varList !is null) return DoesItemModelHaveVeget(varList, randYawMustBeTrue, variant);
+		// could do prefabs here too
+		return false;
+	}
+
+	// fParams = vec2(ReductionRatio01, RotXZ_AngleMax)
+	void FixItemRotationsForTrees(CGameCtnAnchoredObject@ item, vec2 fParams, bool enableRandYaw) {
+		auto origPos = item.AbsolutePositionInMap;
+		auto ypr = PYR_to_YPR(Editor::GetItemRotation(item));
+		// if we have no pitch or roll, then the tree will be appear in the right spot.
+		if (ypr.yz.LengthSquared() == 0) return;
+		auto gq = GameQuat(ypr);
+		auto itemQuat = gq.ToMatToQuat().ToOpQuat();
+		quat rQuat, lastQuat;
+		auto pos = origPos;
+		auto bestPos = pos;
+		auto bestQuatErr = 400.0f, currErr;
+		// ! preprocessor DEV method
+		auto start = Time::Now;
+		// fix trees epislon
+		float ftEpsilon = 0.00001;
+		auto count = 0;
+		float dxRange = 0.002, dx;
+		pos.y -= dxRange;
+		for (dx = -dxRange; dx < dxRange; dx += ftEpsilon) {
+			pos.y += ftEpsilon;
+			rQuat = CalcNext(itemQuat, pos, fParams.x, fParams.y, enableRandYaw); //.Inverse();
+			currErr = QuatErrorAngle(itemQuat, rQuat);
+			if (currErr < bestQuatErr) {
+				dev_warn("Improved err: " + currErr + " / pos: " + pos.ToString() + " / count: " + count);
+				bestQuatErr = currErr;
+				bestPos = pos;
+				if (currErr < 0.01) break;
+			} else {
+				// dev_trace('err: ' + currErr);
+			}
+			if (rQuat == lastQuat) {
+				dev_warn("Got identical quats / loop count: " + count);
+				if (ftEpsilon < 0.001) {
+					ftEpsilon *= 1.971313; // avoid hitting the same numbers e.g., if we *= 2.0
+					dxRange *= 1.971313;
+					dx = -dxRange;
+					pos.y = origPos.y - dxRange;
+				}
+			}
+			lastQuat = rQuat;
+			count += 1;
+		}
+		auto end = Time::Now;
+		dev_warn("FixItemRotationsForTrees took " + (end-start) + " ms; loop count: " + count);
+		item.AbsolutePositionInMap = bestPos;
+	}
+
+	bool OnNewItemPlaced(CGameCtnAnchoredObject@ item) {
+		if (!IsActive || item is null) return false;
+		auto variant = item.IVariant;
+		auto varList = cast<NPlugItem_SVariantList>(item.ItemModel.EntityModel);
+		if (varList !is null) {
+			if (variant >= varList.Variants.Length) {
+				dev_warn("VegetRandomYaw::OnNewItemPlaced: variant out of range: " + variant + " >= " + varList.Variants.Length);
+			} else {
+				auto treeModel = cast<CPlugVegetTreeModel>(varList.Variants[variant].EntityModel);
+				if (treeModel !is null && treeModel.Data.Params_EnableRandomRotationY) {
+					auto ampDeg = treeModel.Data.Params_AngleMax_RotXZ_Deg;
+
+					// 1. read the editor PYR  (pitch to terrain, yaw user, roll user)
+					vec3 pos   = item.AbsolutePositionInMap;
+					vec3 pyr = Editor::GetItemRotation(item);
+					vec3 ypr = PYR_to_YPR(pyr);
+
+					// auto rot = mat3(EulerToRotationMatrix(pyr * -1, EulerOrder_GameRev));
+					// auto gq0 = game_RotMat3x3_To_Quat(rot);
+					// dev_trace('ypr: ' + ypr.ToString());
+					// dev_trace('gq0: ' + gq0.ToString());
+
+					dev_trace("orig YPR: " + ypr.ToString());
+					auto gq = GameQuat(ypr);
+					dev_trace('gq-pre: ' + gq.ToString());
+					gq = game_RotMat3x3_To_Quat(gq.ToMat3());
+					dev_trace('gq: ' + gq.ToString());
+					quat qEngine = gq.ToOpQuat();
+
+					auto n = CalcNext(qEngine, pos, treeModel.Data.ReductionRatio01, treeModel.Data.Params_AngleMax_RotXZ_Deg, treeModel.Data.Params_EnableRandomRotationY);
+					dev_trace('calc next (op quat): ' + n.ToString());
+
+					FixItemRotationsForTrees(item, vec2(treeModel.Data.ReductionRatio01, treeModel.Data.Params_AngleMax_RotXZ_Deg), treeModel.Data.Params_EnableRandomRotationY);
+
+
+					// local-up axis is qTerrain * (0,1,0)
+					// vec3 localUp = (qEngine * vec3(0,1,0)).Normalized();
+
+					// auto yprFinal = SelfCancellingQuat(ypr, pos, ampDeg);
+					// GameQuat resQ2 = GameQuat(resQ) * -1.0;
+					// resQ = resQ2.ToOpQuat();
+					// float ampRad = Math::ToRad(ampDeg);
+
+					// // 3. build the Δ-quaternion that cancels the engine’s random yaw
+					// auto rng  = MurmurHash2QuatPos(qEngine, pos);  // y-z-w-x order
+					// // float yawRnd = (rng.RandFloat01()*2.0f - 1.0f) * ampRad;
+					// float yawRnd = rng.RandSym(ampRad);
+
+					// quat qDelta = quat(localUp, yawRnd);  // engine’s Δ
+					// quat qCancel = qDelta.Inverse();                 // our undo
+
+					// quat qFinal  = qCancel * qEngine;               // what we write back
+
+					// vec3 yprFinal = ToEulerYZX(resQ2);              // our final euler angles
+					// Editor::SetItemRotation(item, YPR_to_PYR(yprFinal));
+					// auto resQ = YPR_to_PYR(yprFinal);
+
+					// dev_trace("Result Q2: " + resQ2.ToString());
+					// dev_trace("Result Q: " + resQ.ToString());
+					// dev_trace("YPR output: " + yprFinal.ToString());
+
+					// check it
+					// quat qRe = GameQuat(yprFinal);   // our final quat
+					// auto lcg = MurmurHash2QuatPos(qRe, pos);
+					// float yawRnd2 = (lcg.RandFloat01()*2-1) * ampRad;
+					// quat d2 = quat(localUp, yawRnd2);
+					// trace("Very end: err = " + QuatErrorAngle(d2 * qRe, qEngine));  // prints 0
+
+					// float errA = QuatErrorAngle((resQ * d2),    qEngine); // post‐multiply
+					// float errB = QuatErrorAngle((d2 * resQ),    qEngine); // pre‐multiply
+					// trace("multOrder errA=" + errA + "  errB=" + errB);
+
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+
+	void DebugDumpBlock(quat qEngine, vec3 pos)
+	{
+		// Build the 28-byte block exactly as you're doing:
+		float[] floats = {
+			qEngine.w, qEngine.x, qEngine.y, qEngine.z,
+			pos.x, pos.y, pos.z
+		};
+		auto block = FloatArrToBytes(floats);
+		auto mb = MemoryBuffer(block.Length);
+		for (uint i = 0; i < block.Length; ++i)
+			mb.Write(block[i]);
+		mb.Seek(0);
+		auto bytes = mb.ReadToHex(0x1c);
+
+		trace("  DebugDumpBlock: " + bytes);
+	}
+
+
+	/*  Engine order:  Ry(yaw) · Rz(roll) · Rx(pitch)
+	Return yaw, pitch, roll
+	*/
+	quat FromEulerYZX(const vec3 &in pyr) {
+		quat qYaw   = quat(vec3(0,        pyr.y, 0));  // Ry
+		quat qRoll  = quat(vec3(0,        0,     pyr.z)); // Rz
+		quat qPitch = quat(vec3(pyr.x,    0,     0));  // Rx
+		return qYaw * qRoll * qPitch;                  // Ry · Rz · Rx
+	}
+
+	vec3 ToEulerYZX(const GameQuat &in q) {
+		return PYR_to_YPR(EulerFromRotationMatrix(q.ToMat4(), EulerOrder_GameRev)) * -1.0;
+	}
+
+	// build quaternion from axis‐angle using engine’s routines
+	quat QuatFromAxisHalfPoly(const vec3 &in axis, float angle) {
+		float h = angle * 0.5f;
+		auto sc = game_FastSinCos(h);
+		return quat(sc.y, axis.x*sc.x, axis.y*sc.x, axis.z*sc.x);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #if DEV
 
 const string Pattern_Murmur32 = "BA 1C 00 00 00 48 8B CB e8 66 a7 ef ff f3 41 0f 10 43 18 8b d0 89 84 24 98 00 00 00";
 namespace Murmur32 {
 	void Hook() {
-		h_beforeHash.Apply();
-		h_afterHash.Apply();
+		// h_beforeHash.Apply();
+		// h_afterHash.Apply();
 	}
 	void Unhook() {
-		h_beforeHash.Unapply();
-		h_afterHash.Unapply();
+		// h_beforeHash.Unapply();
+		// h_afterHash.Unapply();
 	}
 
 	HookHelper@ h_beforeHash = HookHelper(

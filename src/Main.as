@@ -246,6 +246,11 @@ void RenderEarly() {
     g_LmbDown = IsLMBPressed();
 
     UpdateScrollCache();
+    if (g_toolbarExtras is null) {
+        Dev_NotifyWarning("g_toolbarExtras is nulL!");
+        return;
+    }
+    g_toolbarExtras.Draw();
 }
 
 void Render() {
