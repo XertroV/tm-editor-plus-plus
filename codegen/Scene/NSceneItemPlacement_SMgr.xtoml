@@ -31,3 +31,19 @@ last = vec2, 0xA8, G
 val = uint, 0x0, GS
 
 [DGameMgrMap_SBlockInstance: 0x270]
+
+
+# This is a params class under prefab ents
+[DPlugItemPlacement_SPlacement: 0x18]
+iLayout = uint, 0x0, GS
+Buffer: Options = DPlugItemPlacement_SPlacementOptions, 0x8, 0x10, false
+
+[DPlugItemPlacement_SPlacementOption: 0x10]
+Buffer: RequiredTags = DRequiredTags, 0x0, 0x8, false
+
+[DRequiredTag: 0x8]
+x = uint, 0x0, GS
+y = uint, 0x4, GS
+xy = nat2, 0x0, GS
+# get_type crashes???
+# Inline: string get_Type() { return string(Dev::ForceCast<NPlugItemPlacement_STag>(GetThisAsNod()).Get().Type); }

@@ -191,6 +191,7 @@ namespace Editor {
         Event::OnNewItem(item);
 
         // this is some other ID, but gets set when you click 'save' and IDK what it does or matters for
+        // it looks like an ID -- related to NGameItem_SMgr
         // Dev::SetOffset(item, 0x168, Dev::GetOffsetUint32(lastItem, 0x168) + diff);
 
         if (updateItemsAfter) {

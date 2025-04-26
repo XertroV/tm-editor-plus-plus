@@ -13,6 +13,7 @@ class DevMainTab : Tab {
         DevMiscTab(Children);
         MapChangesFrameTab(Children);
         SelectionBoxTab(Children);
+        ItemMgrTab(Children);
         ItemPlacementMgrTab(Children);
     }
 
@@ -494,6 +495,49 @@ class SelectionBoxTab : Tab {
 }
 
 
+class ItemMgrTab : Tab {
+    ItemMgrTab(TabGroup@ p) {
+        super(p, "ItemMgr", "");
+    }
+
+
+    void DrawInner() override {
+        auto itemMgrPtr = Editor::GetNGameItem_SMgr_Ptr(GetApp().GameScene);
+        auto itemsBuf = Editor::Get_NGameItem_SMgr_Buffer();
+        auto nbItems = itemsBuf.Length;
+        CopiableLabeledPtr(itemMgrPtr);
+        UI::Text("Nb Items: " + nbItems);
+        for (uint i = 0; i < nbItems; i++) {
+            auto item = itemsBuf.GetElement(i);
+            auto model = cast<CGameItemModel>(item.GetNod(0));
+            auto name = model is null ? "no model" : model.IdName;
+            if (UI::TreeNode(tostring(i + 1) + ". " + name)) {
+                auto m = item.GetIso4(8);
+                UI::Text("Loc: " + FormatX::Iso4a(m));
+                auto m3 = Mat3Extra(m);
+                UI::Text("Rot: " + m3.ToString());
+                auto q = game_RotMat3x3_To_Quat(m3.m, true);
+                UI::Text("Q: " + q.ToString());
+                auto pyr = PitchYawRollFromRotationMatrix(mat4(m));
+                UI::Text("Yaw: " + pyr.y);
+                UI::Text("Pitch: " + pyr.x);
+                UI::Text("Roll: " + pyr.z);
+                auto m4Q = Mat4ToQuat(mat4(m));
+                UI::Text("M4Q: " + m4Q.ToString());
+                auto e2Q = EulerToQuat(pyr);
+                UI::Text("e2Q: " + e2Q.ToString());
+                // YZX determined by inspection
+                auto eFromRotM = EulerFromRotationMatrix(mat4(m), EulerOrder_GameRev) * -1.0;
+                UI::Text("eFromRotM: " + eFromRotM.ToString());
+                auto ypr = vec3(eFromRotM.y, eFromRotM.x, eFromRotM.z);
+                auto q2 = GameQuat(ypr);
+                UI::Text("Q2: " + q2.ToString());
+                UI::TreePop();
+            }
+        }
+    }
+}
+
 
 class ItemPlacementMgrTab : Tab {
     ItemPlacementMgrTab(TabGroup@ p) {
@@ -510,7 +554,17 @@ class ItemPlacementMgrTab : Tab {
         UI::SeparatorText("Item Placement Mgr");
         UI::AlignTextToFramePadding();
         CopiableLabeledPtr(itemPlacementMgr.Ptr);
-        itemPlacementMgr.DrawResearchView();
+        if (UI::CollapsingHeader("Research View")) {
+            UI::Indent();
+            itemPlacementMgr.DrawResearchView();
+            UI::Unindent();
+        }
+        if (UI::CollapsingHeader("Placement Label Struct Array")) {
+            UI::Indent();
+            LabeledValue("ptr: ", Text::FormatPointer(ItemPlace_StringConsts::LabelStructArrayPtr), true);
+            ItemPlace_StringConsts::DrawLabelStructArray();
+            UI::Unindent();
+        }
     }
 }
 

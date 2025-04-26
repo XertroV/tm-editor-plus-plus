@@ -67,6 +67,9 @@ void Main() {
     CustomSelection::OnPluginLoad();
     FillBlocks::OnPluginLoad();
 
+    Blocks::RegisterCallbacks(); // mostly to do with item SPlacements
+    VegetRandomYaw::SetupCallbacks(); // for fixing trees on free blocks
+
     startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
     startnew(Editor::ResetTrackMapChanges_Loop).WithRunContext(Meta::RunContext::BeforeScripts);
@@ -92,6 +95,8 @@ void Main() {
 #if DEV
     // runGbxTest();
     // runZipTest();
+    Murmur32::Hook();
+    Test_Euler::Hook();
 #endif
 }
 
@@ -131,6 +136,9 @@ void Unload(bool freeMem = true) {
     Gizmo::IsActive = false;
     NodPtrs::Cleanup();
     FreeAllAllocated();
+#if DEV
+    Murmur32::Unhook();
+#endif
 }
 
 uint lastInItemEditor = 0;

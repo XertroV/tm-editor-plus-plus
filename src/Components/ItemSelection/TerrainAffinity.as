@@ -99,6 +99,10 @@ class TerrainAffinityTab : Tab {
             for (uint t = 0; t < nbTags; t++) {
                 auto tag = Dev::ReadNat2(tagsPtr + 0x8 * t);
                 Dev::Write(tagsPtr + 0x8 * t, UX::InputNat2("Tag " + t, tag));
+                UI::SameLine();
+                UI::Text(ItemPlace_StringConsts::LookupName(tag.x) + ":");
+                UI::SameLine();
+                UI::Text(ItemPlace_StringConsts::Lookup(tag));
             }
             UI::PopID();
         }

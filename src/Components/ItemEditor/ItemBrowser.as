@@ -436,15 +436,16 @@ class ItemModelTreeElement {
             MkAndDrawChildNode(blockInfo.MaterialModifier, O_BLOCKINFO_MATERIALMOD, "MaterialModifier");
             auto mmOffset = GetOffset(blockInfo, "MatModifierPlacementTag");
             auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
+            string mmPlacementTagsStr = ItemPlace_StringConsts::LookupJoined(mmPlacementTag);
             CopiableLabeledValue("Name MwID", toHex(blockInfo.Id.Value));
             if (isEditable) {
                 Dev::SetOffset(blockInfo, mmOffset, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
             } else {
                 CopiableLabeledValue("PageName", blockInfo.PageName);
                 CopiableLabeledValue("CatalogPosition", tostring(blockInfo.CatalogPosition));
-                string extra = "-";
-                try { extra = string(blockInfo.MatModifierPlacementTag.Type); } catch {}
-                UI::Text("MatModiferPlacementTag: " + mmPlacementTag.ToString() + " / " + extra);
+                // works, but only returns the first type of label
+                // try { extra = string(blockInfo.MatModifierPlacementTag.Type); } catch {}
+                UI::Text("MatModiferPlacementTag: " + mmPlacementTag.ToString() + " / " + mmPlacementTagsStr);
             }
             MkAndDrawChildNode(blockInfo.VariantBaseGround, "VariantBaseGround");
             MkAndDrawChildNode(blockInfo.VariantBaseAir, "VariantBaseAir");
@@ -639,53 +640,74 @@ class ItemModelTreeElement {
     void Draw(CPlugPrefab@ prefab) {
         hasElements = true;
         if (StartTreeNode(name + " :: \\$f8fCPlugPrefab", DEFAULT_OPEN)) {
-            UI::Text("nbEnts: " + prefab.Ents.Length);
-            if (isEditable) {
-                UI::SameLine();
-                UI::SetNextItemWidth(UI::GetWindowContentRegionWidth() * 0.3);
-                g_NewNbEnts = UI::InputInt("New Capacity", g_NewNbEnts);
-                UI::SameLine();
-                if (UI::Button("Update")) {
-                    auto editor = cast<CGameCtnEditorFree>(GetApp().Switcher.ModuleStack[0]);
-                    // left or right shift key held
-                    bool fromFront = editor !is null && (editor.PluginMapType.Input.IsKeyPressed(68) || editor.PluginMapType.Input.IsKeyPressed(112));
-                    Dev_UpdateMwSArrayCapacity(Dev_GetPointerForNod(prefab) + O_PREFAB_ENTS, g_NewNbEnts, SZ_ENT_REF, fromFront);
-                    ManipPtrs::AddSignalEntry();
+            if (parent !is null && parent.parent !is null) {
+                // for BIMobil, parent is CGameCtnBlockInfoMobil::PrefabFid
+                auto pp = parent.parent;
+                auto biMobil = cast<CGameCtnBlockInfoMobil>(pp.nod);
+                if (biMobil !is null) {
+                    auto biExtra = Blocks::GetPrefabSPlacements(biMobil);
+                    auto nbSPlacements = biExtra.SPlacements.Length;
+                    if (StartTreeNode("SPlacements ("+nbSPlacements+")", true, UI::TreeNodeFlags::DefaultOpen)) {
+                        for (uint i = 0; i < nbSPlacements; i++) {
+                            LabeledValue("SPlacement " + i, biExtra.SPlacements[i].ToString());
+                        }
+                        EndTreeNode();
+                    }
                 }
             }
-#if SIG_DEVELOPER
-            UI::SameLine();
-            UI::TextDisabled(Text::Format("0x%03x", GetOffset("CPlugPrefab", "Ents")));
-#endif
-            UI::TreeNodeFlags entFlags = prefab.Ents.Length < 50 ? DEFAULT_OPEN : UI::TreeNodeFlags::None;
-            auto entsBuf = Dev::GetOffsetNod(prefab, GetOffset(prefab, "Ents"));
-            auto elSize = 0x50;
-            for (uint i = 0; i < prefab.Ents.Length; i++) {
-                currentIndex = i;
-                if (StartTreeNode(".Ents["+i+"]:", true, entFlags)) {
-                    if (drawProperties) {
-                        auto nameNod = Dev::GetOffsetNod(entsBuf, elSize * i + 0x40);
-                        string nameBytes = ""; // nameNod is null ? "<null>" : Dev::GetOffsetString(nameNod, 0x0);
-                        auto nameLen = Dev::GetOffsetUint32(entsBuf, elSize * i + 0x48);
-                        if (isEditable) {
-                            prefab.Ents[i].Location.Quat = UX::InputQuat(".Location.Quat", prefab.Ents[i].Location.Quat);
-                            prefab.Ents[i].Location.Trans = UI::InputFloat3(".Location.Trans", prefab.Ents[i].Location.Trans);
-                            prefab.Ents[i].LodGroupId = UI::InputInt(".LodGroupId", prefab.Ents[i].LodGroupId);
-                        } else {
-                            CopiableLabeledValue(".Location.Quat", prefab.Ents[i].Location.Quat.ToString());
-                            CopiableLabeledValue(".Location.Trans", prefab.Ents[i].Location.Trans.ToString());
-                            CopiableLabeledValue(".LodGroupId", tostring(prefab.Ents[i].LodGroupId));
-                        }
-                        // name always len 0?
-                        // CopiableLabeledValue(".Name.Length / bytes", tostring(nameLen) + " / " + nameBytes);
-                        DrawPrefabEntParams(prefab, i);
+
+            auto nbEnts = prefab.Ents.Length;
+            if (StartTreeNode("Ents ("+nbEnts+")", true, UI::TreeNodeFlags::DefaultOpen)) {
+                UI::Text("nbEnts: " + prefab.Ents.Length);
+                if (isEditable) {
+                    UI::SameLine();
+                    UI::SetNextItemWidth(UI::GetWindowContentRegionWidth() * 0.3);
+                    g_NewNbEnts = UI::InputInt("New Capacity", g_NewNbEnts);
+                    UI::SameLine();
+                    if (UI::Button("Update")) {
+                        auto editor = cast<CGameCtnEditorFree>(GetApp().Switcher.ModuleStack[0]);
+                        // left or right shift key held
+                        bool fromFront = editor !is null && (editor.PluginMapType.Input.IsKeyPressed(68) || editor.PluginMapType.Input.IsKeyPressed(112));
+                        Dev_UpdateMwSArrayCapacity(Dev_GetPointerForNod(prefab) + O_PREFAB_ENTS, g_NewNbEnts, SZ_ENT_REF, fromFront);
+                        ManipPtrs::AddSignalEntry();
                     }
-                    MkAndDrawChildNode(prefab.Ents[i].Model, "Model");
-                    if (prefab.Ents[i].Model is null && prefab.Ents[i].ModelFid !is null) {
-                        UI::Text("\\$f80ModelFid without a Model: " + prefab.Ents[i].ModelFid.FileName);
-                    }
-                    EndTreeNode();
                 }
+#if SIG_DEVELOPER
+                UI::SameLine();
+                UI::TextDisabled(Text::Format("0x%03x", GetOffset("CPlugPrefab", "Ents")));
+#endif
+                UI::TreeNodeFlags entFlags = prefab.Ents.Length < 50 ? DEFAULT_OPEN : UI::TreeNodeFlags::None;
+                auto entsBuf = Dev::GetOffsetNod(prefab, GetOffset(prefab, "Ents"));
+                auto elSize = 0x50;
+                for (uint i = 0; i < prefab.Ents.Length; i++) {
+                    currentIndex = i;
+                    if (StartTreeNode(".Ents["+i+"]:", true, entFlags)) {
+                        if (drawProperties) {
+                            auto nameNod = Dev::GetOffsetNod(entsBuf, elSize * i + 0x40);
+                            string nameBytes = ""; // nameNod is null ? "<null>" : Dev::GetOffsetString(nameNod, 0x0);
+                            auto nameLen = Dev::GetOffsetUint32(entsBuf, elSize * i + 0x48);
+                            CopiableLabeledValue(".Name", string(prefab.Ents[i].Name));
+                            if (isEditable) {
+                                prefab.Ents[i].Location.Quat = UX::InputQuat(".Location.Quat", prefab.Ents[i].Location.Quat);
+                                prefab.Ents[i].Location.Trans = UI::InputFloat3(".Location.Trans", prefab.Ents[i].Location.Trans);
+                                prefab.Ents[i].LodGroupId = UI::InputInt(".LodGroupId", prefab.Ents[i].LodGroupId);
+                            } else {
+                                CopiableLabeledValue(".Location.Quat", prefab.Ents[i].Location.Quat.ToString());
+                                CopiableLabeledValue(".Location.Trans", prefab.Ents[i].Location.Trans.ToString());
+                                CopiableLabeledValue(".LodGroupId", tostring(prefab.Ents[i].LodGroupId));
+                            }
+                            // name always len 0?
+                            // CopiableLabeledValue(".Name.Length / bytes", tostring(nameLen) + " / " + nameBytes);
+                            DrawPrefabEntParams(prefab, i);
+                        }
+                        MkAndDrawChildNode(prefab.Ents[i].Model, "Model");
+                        if (prefab.Ents[i].Model is null && prefab.Ents[i].ModelFid !is null) {
+                            UI::Text("\\$f80ModelFid without a Model: " + prefab.Ents[i].ModelFid.FileName);
+                        }
+                        EndTreeNode();
+                    }
+                }
+                EndTreeNode();
             }
             EndTreeNode();
         }
@@ -1815,10 +1837,10 @@ class ItemModelTreeElement {
 
 
     void DrawPrefabEntParams(CPlugPrefab@ prefab, uint i) {
-        auto ents = Dev::GetOffsetNod(prefab, GetOffset("CPlugPrefab", "Ents"));
+        auto ents = Dev::GetOffsetNod(prefab, O_PREFAB_ENTS);
         // size: NPlugPrefab_SEntRef: 0x50
-        auto ptr1 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * i + GetOffset("NPlugPrefab_SEntRef", "Params"));
-        auto ptr2 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * i + GetOffset("NPlugPrefab_SEntRef", "Params") + 0x8);
+        auto ptr1 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * i + O_ENTREF_PARAMS);
+        auto ptr2 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * i + O_ENTREF_PARAMS + 0x8);
         string type = "Unknown";
         uint32 paramsClsId;
         if (ptr2 > 0 && ptr2 % 8 == 0) {
@@ -1847,8 +1869,7 @@ string GetVariantTagsStr(NPlugItem_SVariantList@ varList, uint i) {
     auto tagsPtr = Dev::GetOffsetUint64(vars, 0x28 * i + GetOffset("NPlugItem_SVariant", "Tags"));
     for (uint t = 0; t < varList.Variants[i].Tags.Length; t++) {
         if (t > 0) ret += ", ";
-        ret += "<" + tostring(Dev::ReadUInt32(tagsPtr + 0x8 * t))
-            + ", " + tostring(Dev::ReadUInt32(tagsPtr + 0x8 * t + 0x4)) + ">";
+        ret += ItemPlace_StringConsts::LookupJoined(Dev::ReadNat2(tagsPtr + 0x8 * t));
     }
     return ret;
 }
@@ -1913,6 +1934,40 @@ void DrawSMetaPtr(uint64 ptr, uint32 clsId, const string &in type, bool isEditab
         DrawSPlacementGroup(ptr, isEditable);
     } else if (clsId == 0x2f0c8000 || type == "NPlugDyna::SPrefabConstraintParams") {
         Draw_SPrefabConstraintParams(ptr, isEditable);
+    } else if (clsId == CLSID_NPlugItemPlacement_SPlacement || type == "NPlugItemPlacement::SPlacement") {
+        Draw_SPlacement(ptr, isEditable);
+    }
+}
+
+void Draw_SPlacement(uint64 ptr, bool isEditable) {
+    auto placement = DPlugItemPlacement_SPlacement(ptr);
+    if (isEditable && false) {
+
+    } else {
+        LabeledValue("iLayout", placement.iLayout);
+        auto opts = placement.Options;
+        auto nbOpts = opts.Length;
+        if (UI::TreeNode("Options (" + nbOpts + ")##" + ptr, UI::TreeNodeFlags::DefaultOpen)) {
+            for (uint i = 0; i < nbOpts; i++) {
+                auto opt = opts.GetSPlacementOption(i);
+                if (opt is null) continue;
+                auto optPtr = opt.Ptr;
+                auto reqTags = opt.RequiredTags;
+                auto nbReqTags = reqTags.Length;
+                if (UI::TreeNode("RequiredTags (" + nbReqTags + ")##" + optPtr, UI::TreeNodeFlags::DefaultOpen)) {
+                    for (uint j = 0; j < nbReqTags; j++) {
+                        auto tag = reqTags.GetDRequiredTag(j);
+                        if (tag is null) continue;
+                        auto tagPtr = tag.Ptr;
+                        LabeledValue("Tag["+j+"]", Text::FormatPointer(tagPtr));
+                        LabeledValue("Tag["+j+"]<x, y>", "" + tag.x + ", " + tag.y);
+                        // LabeledValue("TagType##" + j, tag.Type);
+                    }
+                    UI::TreePop();
+                }
+            }
+            UI::TreePop();
+        }
     }
 }
 

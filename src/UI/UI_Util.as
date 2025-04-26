@@ -91,34 +91,34 @@ bool CopiableValue(const string &in value) {
 }
 
 
-void LabeledValue(const string &in label, bool value) {
-    ClickableLabel(label, tostring(value));
+void LabeledValue(const string &in label, bool value, bool clickToCopy = true) {
+    (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, tostring(value));
 }
-void LabeledValue(const string &in label, uint value) {
-    ClickableLabel(label, tostring(value));
+void LabeledValue(const string &in label, uint value, bool clickToCopy = true) {
+    (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, tostring(value));
 }
-void LabeledValue(const string &in label, float value) {
-    ClickableLabel(label, tostring(value));
+void LabeledValue(const string &in label, float value, bool clickToCopy = true) {
+    (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, tostring(value));
 }
-void LabeledValue(const string &in label, int value) {
-    ClickableLabel(label, tostring(value));
+void LabeledValue(const string &in label, int value, bool clickToCopy = true) {
+    (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, tostring(value));
 }
-void LabeledValue(const string &in label, const string &in value) {
-    ClickableLabel(label, value);
+void LabeledValue(const string &in label, const string &in value, bool clickToCopy = true) {
+    (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, value);
 }
-void LabeledValue(const string &in label, vec2 &in value, bool clickToCopy = false) {
+void LabeledValue(const string &in label, vec2 &in value, bool clickToCopy = true) {
     (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Vec2(value));
 }
-void LabeledValue(const string &in label, nat3 &in value, bool clickToCopy = false) {
+void LabeledValue(const string &in label, nat3 &in value, bool clickToCopy = true) {
     (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Nat3(value));
 }
-void LabeledValue(const string &in label, vec3 &in value, bool clickToCopy = false) {
+void LabeledValue(const string &in label, vec3 &in value, bool clickToCopy = true) {
     (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Vec3(value));
 }
-void LabeledValue(const string &in label, vec4 &in value, bool clickToCopy = false) {
+void LabeledValue(const string &in label, vec4 &in value, bool clickToCopy = true) {
     (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, value.ToString());
 }
-void LabeledValue(const string &in label, int3 &in value, bool clickToCopy = false) {
+void LabeledValue(const string &in label, int3 &in value, bool clickToCopy = true) {
     (clickToCopy ? (CopiableLabeledValue) : LabeledValueF(ClickableLabel))(label, FormatX::Int3(value));
 }
 

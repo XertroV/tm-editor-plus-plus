@@ -8,7 +8,7 @@ namespace FormatX {
             + Text::Format("%.0f, ", v.y)
             + Text::Format("%.0f>", v.z);
     }
-    string Vec3_AsCode(vec3 &in v) {
+    shared string Vec3_AsCode(vec3 &in v) {
         return Text::Format("vec3(%.3f, ", v.x)
             + Text::Format("%.3f, ", v.y)
             + Text::Format("%.3f)", v.z);
@@ -32,6 +32,15 @@ namespace FormatX {
         return Text::Format("<%.4f, ", v.x)
             + Text::Format("%.4f>", v.y);
     }
+    shared string Vec2_9DPS(vec2 &in v) {
+        return Text::Format("<%.9f, ", v.x)
+            + Text::Format("%.9f>", v.y);
+    }
+    shared string Vec3_4DPS(vec3 &in v) {
+        return Text::Format("<%.4f, ", v.x)
+            + Text::Format("%.4f, ", v.y)
+            + Text::Format("%.4f>", v.z);
+    }
     shared string Nat3(nat3 &in v) {
         return Text::Format("<%d, ", int(v.x))
             + Text::Format("%d, ", int(v.y))
@@ -40,10 +49,28 @@ namespace FormatX {
     shared string Int3(int3 &in v) {
         return v.ToString();
     }
-    shared string Iso4(iso4 &in v) {
-        return "< " + Vec3(vec3(v.xx, v.xy, v.xz)) + "\n"
-            + "  " + Vec3(vec3(v.yx, v.yy, v.yz)) + "\n"
-            + "  " + Vec3(vec3(v.zx, v.zy, v.zz)) + "\n"
-            + "  " + Vec3(vec3(v.tx, v.ty, v.tz)) + " >";
+    shared string Mat3(mat3 &in v) {
+        return "< " + Vec3_4DPS(vec3(v.xx, v.xy, v.xz)) + "\n"
+            + "  " + Vec3_4DPS(vec3(v.yx, v.yy, v.yz)) + "\n"
+            + "  " + Vec3_4DPS(vec3(v.zx, v.zy, v.zz)) + " >";
     }
+    shared string Iso4(iso4 &in v) {
+        return "< " + Vec3_4DPS(vec3(v.xx, v.xy, v.xz)) + "\n"
+            + "  " + Vec3_4DPS(vec3(v.yx, v.yy, v.yz)) + "\n"
+            + "  " + Vec3_4DPS(vec3(v.zx, v.zy, v.zz)) + "\n"
+            + "  " + Vec3_4DPS(vec3(v.tx, v.ty, v.tz)) + " >";
+    }
+    // tmp
+    string Iso4a(iso4 &in v) {
+        return "< " + Vec3_4DPS(vec3(v.xx, v.xy, v.xz)) + "\n"
+            + "  " + Vec3_4DPS(vec3(v.yx, v.yy, v.yz)) + "\n"
+            + "  " + Vec3_4DPS(vec3(v.zx, v.zy, v.zz)) + "\n"
+            + "  " + Vec3_4DPS(vec3(v.tx, v.ty, v.tz)) + " >";
+    }
+}
+
+
+
+string FmtUintHex(uint x) {
+    return Text::Format("0x%08x", x);
 }

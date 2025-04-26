@@ -1,0 +1,39 @@
+[DHmsForestVis_SMgr: 0x1d8]
+# 0x0: buf of ?
+# 0x10: buf of ?
+# 0x20: buf to all zeros mostly?
+# 0x30: buf of ?
+# 0x40: buf of ?
+# 0x50: buf of ?
+# 0x60: buf of ?
+# 0x70: buf of ?
+# 0x80: vec4 unknown
+# 0x88: material
+# vfx file
+# particle emitter
+# 0xA8: buf of floats? 50, 100, 50, 100, 50, 100...
+# 0xB8: buf of (visual indexed triangles, int(-1), bool? ) 0x10 wide
+# 0xC8: buf of (visual indexed triangles, int(-1), u16?, u16?) 0x10 wide
+# 0xD8: 0, 0, 0, 0
+# 0xE8: buf of CHmsItem
+# 0xF8: buf of FFFF
+# 0x108: buf of nat2?
+# 0x128 to 0x180: floats, 0 or 1 (mostly 1)
+
+
+# 0x188: buf of QuatPosFloat
+Buffer: TreeLocations = QuatPosFs, 0x188, 0x20, false
+# 0x198: buf of 2 byte things, updated when QP updated
+# 0x1A8: buf of 1 byte flags? 0 or 1, maybe for whether it's placed / drawn?
+
+# 0x1B8:
+
+# 0x1CC: uint frame counter
+# 0x1D0: CHmsZone
+
+FrameCount = uint, 0x1cc, G
+
+[QuatPosF: 0x20]
+rot = quat, 0x0, GS
+pos = vec3, 0x10, GS
+f1c = float, 0x1c, GS

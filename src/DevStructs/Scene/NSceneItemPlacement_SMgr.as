@@ -85,3 +85,66 @@ class DGameMgrMap_SBlockInstance : RawBufferElem {
 }
 
 
+// This is a params class under prefab ents
+class DPlugItemPlacement_SPlacement : RawBufferElem {
+	DPlugItemPlacement_SPlacement(RawBufferElem@ el) {
+		if (el.ElSize != 0x18) throw("invalid size for DPlugItemPlacement_SPlacement");
+		super(el.Ptr, el.ElSize);
+	}
+	DPlugItemPlacement_SPlacement(uint64 ptr) {
+		super(ptr, 0x18);
+	}
+
+	uint get_iLayout() { return (this.GetUint32(0x0)); }
+	void set_iLayout(uint value) { this.SetUint32(0x0, value); }
+	DPlugItemPlacement_SPlacementOptions@ get_Options() { return DPlugItemPlacement_SPlacementOptions(this.GetBuffer(0x8, 0x10, false)); }
+}
+
+class DPlugItemPlacement_SPlacementOptions : RawBuffer {
+	DPlugItemPlacement_SPlacementOptions(RawBuffer@ buf) {
+		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
+	}
+	DPlugItemPlacement_SPlacementOption@ GetSPlacementOption(uint i) {
+		return DPlugItemPlacement_SPlacementOption(this[i]);
+	}
+}
+
+class DPlugItemPlacement_SPlacementOption : RawBufferElem {
+	DPlugItemPlacement_SPlacementOption(RawBufferElem@ el) {
+		if (el.ElSize != 0x10) throw("invalid size for DPlugItemPlacement_SPlacementOption");
+		super(el.Ptr, el.ElSize);
+	}
+	DPlugItemPlacement_SPlacementOption(uint64 ptr) {
+		super(ptr, 0x10);
+	}
+
+	DRequiredTags@ get_RequiredTags() { return DRequiredTags(this.GetBuffer(0x0, 0x8, false)); }
+}
+
+class DRequiredTags : RawBuffer {
+	DRequiredTags(RawBuffer@ buf) {
+		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
+	}
+	DRequiredTag@ GetDRequiredTag(uint i) {
+		return DRequiredTag(this[i]);
+	}
+}
+
+class DRequiredTag : RawBufferElem {
+	DRequiredTag(RawBufferElem@ el) {
+		if (el.ElSize != 0x8) throw("invalid size for DRequiredTag");
+		super(el.Ptr, el.ElSize);
+	}
+	DRequiredTag(uint64 ptr) {
+		super(ptr, 0x8);
+	}
+
+	uint get_x() { return (this.GetUint32(0x0)); }
+	void set_x(uint value) { this.SetUint32(0x0, value); }
+	uint get_y() { return (this.GetUint32(0x4)); }
+	void set_y(uint value) { this.SetUint32(0x4, value); }
+	nat2 get_xy() { return (this.GetNat2(0x0)); }
+	void set_xy(nat2 value) { this.SetNat2(0x0, value); }
+}
+
+

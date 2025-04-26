@@ -190,6 +190,30 @@ namespace NodPtrs {
     }
 }
 
+uint Dev_CastFloatToUint(float f) {
+    if (NodPtrs::g_TmpPtrSpace == 0) NodPtrs::InitializeTmpPointer();
+    Dev::Write(NodPtrs::g_TmpPtrSpace, f);
+    auto r = Dev::ReadUInt32(NodPtrs::g_TmpPtrSpace);
+    Dev::Write(NodPtrs::g_TmpPtrSpace, uint64(0));
+    return r;
+}
+
+uint Dev_CastFloatToInt(float f) {
+    if (NodPtrs::g_TmpPtrSpace == 0) NodPtrs::InitializeTmpPointer();
+    Dev::Write(NodPtrs::g_TmpPtrSpace, f);
+    auto r = Dev::ReadInt32(NodPtrs::g_TmpPtrSpace);
+    Dev::Write(NodPtrs::g_TmpPtrSpace, uint64(0));
+    return r;
+}
+
+float Dev_CastUintToFloat(uint x) {
+    if (NodPtrs::g_TmpPtrSpace == 0) NodPtrs::InitializeTmpPointer();
+    Dev::Write(NodPtrs::g_TmpPtrSpace, x);
+    auto r = Dev::ReadFloat(NodPtrs::g_TmpPtrSpace);
+    Dev::Write(NodPtrs::g_TmpPtrSpace, uint64(0));
+    return r;
+}
+
 CMwNod@ Dev_GetArbitraryNodAt(uint64 ptr) {
     if (NodPtrs::g_TmpPtrSpace == 0) {
         NodPtrs::InitializeTmpPointer();
@@ -403,6 +427,9 @@ class ReferencedNod {
 const uint16 O_APP_GAMESCENE = GetOffset("CGameCtnApp", "GameScene");
 const uint16 O_ISCENEVIS_METAMGR = GetOffset("ISceneVis", "MgrMetaPtrs");
 const uint32 CLSID_NSceneItemPlacement_SMgr = Reflection::GetType("NSceneItemPlacement_SMgr").ID;
+
+
+const uint32 CLSID_NPlugItemPlacement_SPlacement = Reflection::GetType("NPlugItemPlacement_SPlacement").ID;
 
 // MARK: O Map
 
@@ -664,6 +691,7 @@ const uint16 O_MATMOD_REMAPFOLDER = GetOffset("CPlugGameSkinAndFolder", "RemapFo
 const uint16 O_ANCHOREDOBJ_SKIN_SCALE = GetOffset("CGameCtnAnchoredObject", "Scale");
 const uint16 O_ANCHOREDOBJ_BGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x18; // 0x98
 const uint16 O_ANCHOREDOBJ_FGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x20;
+// c8
 const uint16 O_ANCHOREDOBJ_WAYPOINTPROP = GetOffset("CGameCtnAnchoredObject", "WaypointSpecialProperty");
 const uint16 O_ANCHOREDOBJ_MACROBLOCKINSTID = O_ANCHOREDOBJ_WAYPOINTPROP - 0x4;
 
@@ -691,6 +719,7 @@ const uint16 O_BLOCKVAR_WATER_BUF = 0x1B0;
 const uint16 O_PREFAB_ENTS = GetOffset("CPlugPrefab", "Ents");
 const uint32 SZ_ENT_REF = 0x50;
 const uint16 O_ENTREF_MODELFID = GetOffset("NPlugPrefab_SEntRef", "ModelFid");
+const uint16 O_ENTREF_PARAMS = GetOffset("NPlugPrefab_SEntRef", "Params");
 
 const uint16 O_VARLIST_VARIANTS = GetOffset("NPlugItem_SVariantList", "Variants");
 const uint32 SZ_VARLIST_VARIANT = 0x28;
@@ -973,6 +1002,10 @@ class RawBufferElem {
 
     uint64 get_Ptr() { return ptr; }
     uint64 get_ElSize() { return size; }
+    CMwNod@ GetThisAsNod() {
+        if (ptr == 0) return null;
+        return Dev_GetNodFromPointer(ptr);
+    }
 
     void CheckOffset(uint o, uint len) {
         if (o+len > size) throw("index out of range: " + o + " + " + len);
@@ -986,6 +1019,15 @@ class RawBufferElem {
     RawBuffer@ GetBuffer(uint o, uint size, bool behindPointer = false) {
         CheckOffset(o, 16);
         return RawBuffer(ptr + o, size, behindPointer);
+    }
+
+    // In memory: [ptr, len] (12 bytes)
+    string GetCStringWithLen(uint o) {
+        CheckOffset(o, 12);
+        auto strPtr = Dev::ReadUInt64(ptr + o);
+        auto strLen = Dev::ReadUInt32(ptr + o + 8);
+        if (strPtr == 0 || strLen == 0) return "";
+        return Dev::ReadCString(strPtr, strLen);
     }
 
     string GetString(uint o) {
@@ -1064,6 +1106,22 @@ class RawBufferElem {
     }
     void SetInt32(uint o, int value) {
         CheckOffset(o, 4);
+        Dev::Write(ptr + o, value);
+    }
+    int2 GetInt2(uint o) {
+        CheckOffset(o, 8);
+        return Dev::ReadInt2(ptr + o);
+    }
+    void SetInt2(uint o, int2 value) {
+        CheckOffset(o, 8);
+        Dev::Write(ptr + o, value);
+    }
+    nat2 GetNat2(uint o) {
+        CheckOffset(o, 8);
+        return Dev::ReadNat2(ptr + o);
+    }
+    void SetNat2(uint o, nat2 value) {
+        CheckOffset(o, 8);
         Dev::Write(ptr + o, value);
     }
     nat3 GetNat3(uint o) {
