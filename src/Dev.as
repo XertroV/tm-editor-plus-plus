@@ -715,7 +715,11 @@ const uint16 O_USERMATINST_PARAM_LEN = 0x158; // 3 for color
 const uint32 SZ_SPLACEMENTOPTION = 0x18;
 const uint32 SZ_GMQUATTRANS = 0x1C;
 
-const uint16 O_BLOCKVAR_WATER_BUF = 0x1B0;
+
+// 0x180
+const uint16 O_BLOCKVAR_COMPOUNDLOC = GetOffset("CGameCtnBlockInfoVariant", "CompoundLoc");
+// 0x1B0
+const uint16 O_BLOCKVAR_WATER_BUF = O_BLOCKVAR_COMPOUNDLOC + 0x30;
 
 
 const uint16 O_PREFAB_ENTS = GetOffset("CPlugPrefab", "Ents");

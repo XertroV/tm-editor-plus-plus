@@ -95,8 +95,8 @@ void Main() {
 #if DEV
     // runGbxTest();
     // runZipTest();
-    Murmur32::Hook();
-    Test_Euler::Hook();
+    // Murmur32::Hook();
+    // Test_Euler::Hook();
 #endif
 }
 

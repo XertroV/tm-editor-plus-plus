@@ -106,26 +106,27 @@ mixin class NudgeItemBlock {
 
         if (itemPosMod.LengthSquared() > 0 || itemRotMod.LengthSquared() > 0 || blockCoordMod.x != 0 || blockCoordMod.y != 0 || blockCoordMod.z != 0 || (block !is null && m_dir != int(block.Direction))) {
             if (item !is null) {
+                item.MwAddRef();
                 // ! this works now but it does not repick a picked item
-                // auto itemSpecOrig = Editor::ItemSpecPriv(item);
+                auto itemSpecOrig = Editor::ItemSpecPriv(item);
+                // we need to delete it first so that track map changes stays accurate.
+                if (!Editor::DeleteBlocksAndItems({}, {newItemSpec})) {
+                    warn("Failed to delete item for nudge");
+                }
                 item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
                 item.AbsolutePositionInMap += itemPosMod;
                 item.Pitch += itemRotMod.x;
                 item.Yaw += itemRotMod.y;
                 item.Roll += itemRotMod.z;
                 auto newItemSpec = Editor::ItemSpecPriv(item);
-                // if (!Editor::DeleteBlocksAndItems({}, {itemSpecOrig})) {
-                if (!Editor::DeleteBlocksAndItems({}, {newItemSpec})) {
-                    warn("Failed to delete item for nudge");
-                }
-                // newItemSpec.pos += itemPosMod;
-                // newItemSpec.pyr += itemRotMod;
                 if (!Editor::PlaceBlocksAndItems({}, {newItemSpec}, true)) {
                     warn("Failed to place item for nudge");
                 }
+                item.MwRelease();
             } else if (block !is null) {
                 block.MwAddRef();
                 auto blockSpec = Editor::MakeBlockSpec(block);
+                // we need to delete it first so that track map changes stays accurate.
                 Editor::DeleteBlocks({block});
                 // we want to update the block as well as the spec so that we can re-find it again after refreshing.
                 if (blockSpec.isFree) {

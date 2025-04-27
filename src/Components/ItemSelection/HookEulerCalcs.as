@@ -1,3 +1,5 @@
+#if FALSE
+
 namespace Test_Euler {
     const string patternEulerToQuat = "F3 0F 10 49 0C 48 8D 4C 24 20 E8 57 A8 46 FF 0F 28 44 24 20";
     HookHelper@ before_e2q = HookHelper(patternEulerToQuat, 0, 0, "Test_Euler::beforeE2Q", Dev::PushRegisters::SSE, true);
@@ -48,3 +50,6 @@ Trackmania.exe+D23ED4 - E8 57A846FF           - call Trackmania.exe.text+18D730 
 Trackmania.exe+D23ED9 - 0F28 44 24 20         - movaps xmm0,[rsp+20]
 48 8D 4C 24 20 E8 57 A8 46 FF 0F 28 44 24 20
  */
+
+
+#endif
