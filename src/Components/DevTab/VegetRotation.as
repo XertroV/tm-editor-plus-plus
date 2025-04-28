@@ -64,9 +64,9 @@ class VegetRotTab : Tab {
         auto itemVar = pickedItem.IVariant;
         auto model = pickedItem.ItemModel;
         if (model is null) return;
-        bool hasVeget = VegetRandomYaw::DoesItemModelHaveVeget(model, false, itemVar);
+        bool hasVeget = Veget::DoesItemModelHaveVeget(model, false, itemVar);
         // if check veget for rand yaw && no rand yaw -> return;
-        if (checkVegetForRandYaw && !VegetRandomYaw::DoesItemModelHaveVeget(model, true, itemVar)) return;
+        if (checkVegetForRandYaw && !Veget::DoesItemModelHaveVeget(model, true, itemVar)) return;
 
         if (hasVeget) {
             auto varList = cast<NPlugItem_SVariantList>(model.EntityModel);

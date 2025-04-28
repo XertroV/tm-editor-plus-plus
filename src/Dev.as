@@ -701,6 +701,7 @@ const uint16 O_ANCHOREDOBJ_MACROBLOCKINSTID = O_ANCHOREDOBJ_WAYPOINTPROP - 0x4;
 
 const uint16 O_MATERIAL_PHYSICS_ID = 0x28;
 const uint16 O_MATERIAL_GAMEPLAY_ID = 0x29;
+// material - 0xf0, 0x12c
 
 
 const uint16 O_USERMATINST_PHYSID = 0x148;
@@ -756,12 +757,14 @@ const uint16 O_ITEMCURSOR_MagnetSnapLocalRotDeg = GetOffset("CGameCursorItem", "
 // 0xb0
 const uint16 O_ITEMCURSOR_Helper = GetOffset("CGameCursorItem", "HelperMobil");
 
+// full matrix I think; 0x5c
 const uint16 O_ITEMCURSOR_CurrentPos = O_ITEMCURSOR_MagnetSnapLocalRotDeg + 0x40;
 const uint16 O_ITEMCURSOR_CurrentModelsBuf = O_ITEMCURSOR_Helper + 0x8;
-// snapped block ID under NSceneItemPlacement_SMgr
+// 0x88, snapped block ID under NSceneItemPlacement_SMgr
 const uint16 O_ITEMCURSOR_SnappedBlockPlacementZoneId = O_ITEMCURSOR_Helper - (0xB0 - 0x88);
 // const uint16 O_ITEMCURSOR_VariantOrNbMaybe = 0xC0;
 // const uint16 O_ITEMCURSOR_MaxVariantMaybe = 0xC4;
+
 
 const uint16 O_CGAMEOUTLINEBOX_QUADS_TREE = 0x18;
 const uint16 O_CGAMEOUTLINEBOX_LINES_TREE = 0x28;

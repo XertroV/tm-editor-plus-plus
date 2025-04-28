@@ -157,7 +157,11 @@ namespace RandomizeVegitationLayouts {
 		}
 
 		auto app = GetApp();
-		// auto editor = cast<CGameCtnEditorFree>(app.Editor);
+		auto editor = cast<CGameCtnEditorFree>(app.Editor);
+        if (editor is null) return;
+        if (editor.CurrentItemModel is null) return;
+        if (!Veget::DoesItemModelHaveVeget(editor.CurrentItemModel, false)) return;
+
 		// auto sbpZoneId = Editor::GetItemCursorSnappedBlockPlacementZoneId(editor.ItemCursor);
 		auto sbpZoneId = Dev::ReadInt32(rdi + O_ITEMCURSOR_SnappedBlockPlacementZoneId);
 		if (sbpZoneId >= 0 && sbpZoneId != lastSbpZoneId) {

@@ -110,7 +110,7 @@ mixin class NudgeItemBlock {
                 // ! this works now but it does not repick a picked item
                 auto itemSpecOrig = Editor::ItemSpecPriv(item);
                 // we need to delete it first so that track map changes stays accurate.
-                if (!Editor::DeleteBlocksAndItems({}, {newItemSpec})) {
+                if (!Editor::DeleteBlocksAndItems({}, {itemSpecOrig})) {
                     warn("Failed to delete item for nudge");
                 }
                 item.BlockUnitCoord = PosToCoord(item.AbsolutePositionInMap);
