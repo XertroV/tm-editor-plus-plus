@@ -532,26 +532,28 @@ namespace Editor {
         // 0x11c0: ptr to orig item model (seems like a duplicate is created in item editor)
         // 0x648: ptr to picked item; 0x628 item cursor
         // 0xA28: nat3 coords of picked item
-        auto o1138 = GetOffset("CGameCtnEditorFree", "ColoredCopperPrice");
-        auto o1150 = o1138 + 0x18;
-        auto o1158 = o1138 + 0x20;
-        auto o1160 = o1138 + 0x28;
-        auto o1190 = o1138 + 0x58;
-        auto o1198 = o1138 + 0x60;
+
+        // 1138 -> 0x1140 at some point
+        auto oColCopPrice = GetOffset("CGameCtnEditorFree", "ColoredCopperPrice");
+        auto o1150 = oColCopPrice + 0x18; // 0x1158
+        auto oEditCtnAnchObj = oColCopPrice + 0x20; // 0x1160
+        auto o1160 = oColCopPrice + 0x28; // 0x1168
+        auto o1190 = oColCopPrice + 0x58; // 0x1198
+        auto oEditCtnBlock = oColCopPrice + 0x60; // 0x11A0
     }
 
     // CGameCtnAnchoredObject
     void OpenItemEditor(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ nodToEdit) {
         if (editor is null) return;
         Dev::SetOffset(editor,  OpenIEOffsets::o1150, uint8(1));
-        Dev::SetOffset(editor, OpenIEOffsets::o1158, nodToEdit);
+        Dev::SetOffset(editor, OpenIEOffsets::oEditCtnAnchObj, nodToEdit);
     }
 
     void OpenItemEditor(CGameCtnEditorFree@ editor, CGameCtnBlock@ nodToEdit) {
         bool blockEditor = true;
         if (editor is null) return;
         Dev::SetOffset(editor,  OpenIEOffsets::o1150, uint8(1));
-        Dev::SetOffset(editor, OpenIEOffsets::o1198, nodToEdit);
+        Dev::SetOffset(editor, OpenIEOffsets::oEditCtnBlock, nodToEdit);
         Dev::SetOffset(editor,  OpenIEOffsets::o1160, uint8(blockEditor ? 1 : 0));
     }
 

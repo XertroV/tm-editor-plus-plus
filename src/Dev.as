@@ -480,7 +480,8 @@ const uint16 O_MAP_CLIPPODIUM = O_MAP_CLIPAMBIANCE - 0x8;
 const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8;
 const uint16 O_MAP_LAUNCHEDCPS = O_MAP_CLIPAMBIANCE + 0x28; // 0x200 - 0x1D8;
 
-// 0x258
+// 0x264 (Size-4): dirty flag (set to 1 to recalc baked blocks?)
+// 0x258 -> 0x268
 const uint16 O_MAP_SIZE = GetOffset("CGameCtnChallenge", "Size");
 
 // ptr at 0x0 of this struct: CHmsLightMapCache
@@ -496,11 +497,11 @@ const uint16 O_LIGHTMAPCACHE_PIMP = GetOffset("CHmsLightMap", "m_PImp");
 
 // 0x488 -- possible flag for lightmap invalidation
 
-// 0x298
+// 0x2a8
 const uint16 O_MAP_ANCHOREDOBJS = GetOffset("CGameCtnChallenge", "AnchoredObjects");
-const uint16 O_MAP_MACROBLOCK_INFOS = O_MAP_ANCHOREDOBJS + 0x20;
+const uint16 O_MAP_MACROBLOCK_INFOS = O_MAP_ANCHOREDOBJS + 0x20; // 0x2c8
 
-// 0x2E0
+// 0x2f0
 const uint16 O_MAP_CHALLENGEPARAMS = GetOffset("CGameCtnChallenge", "ChallengeParameters");
 const uint16 O_MAP_FLAGS = O_MAP_CHALLENGEPARAMS + 0x8; // also -0x4 from DecoBaseHeightOffset
 
@@ -573,6 +574,9 @@ const uint16 O_EDITOR_RMB_PRESSED1 = O_EDITOR_LMB_PRESSED1 + 0x4; // 0xBBC
 const uint16 O_EDITOR_LMB_PRESSED2 = O_EDITOR_RMB_PRESSED1 + 0x4; // 0xBC0
 // 1 when freelook, 2 when deleting block, 3 when picking block, 4 in copy mode add, 5 copy sub, 8 in block props, 11 in plugin, 13 offzone
 const uint16 O_EDITOR_EDIT_MODE = O_EDITOR_GridColor - (0xC10 - 0xBF8); // 0xBF8
+
+// For opening item editor; offsets around 0x1160 - 0x11A0, see OpenIEOffsets NS
+const uint16 O_EDITOR_OPEN_IE_EDIT_CTN_BLOCK = Editor::OpenIEOffsets::oEditCtnBlock;
 
 
 const uint16 O_EDITORCAMERACTRLORBITAL_TARGETED_POS = GetOffset("CGameControlCameraEditorOrbital", "m_TargetedPosition");
@@ -695,7 +699,7 @@ const uint16 O_ANCHOREDOBJ_BGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x18; //
 const uint16 O_ANCHOREDOBJ_FGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x20;
 // c8
 const uint16 O_ANCHOREDOBJ_WAYPOINTPROP = GetOffset("CGameCtnAnchoredObject", "WaypointSpecialProperty");
-const uint16 O_ANCHOREDOBJ_MACROBLOCKINSTID = O_ANCHOREDOBJ_WAYPOINTPROP - 0x4;
+const uint16 O_ANCHOREDOBJ_MACROBLOCKINSTID = O_ANCHOREDOBJ_WAYPOINTPROP - 0x4; // 0xC4
 
 // CGameCtnBlock offsets in src/Editor/Blocks.as
 

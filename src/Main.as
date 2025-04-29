@@ -359,6 +359,7 @@ UI::InputBlocking OnMouseButton(bool down, int button, int x, int y) {
     // dev_trace('LastMouseButton: ' + down + ", " + button + ", " + g_LastMouseButtonPos.ToString());
 
     block = block || g_IsDragging || g_WasDragging;
+    if (block) dev_trace(" >> Blocking LMB: " + block);
     return block ? UI::InputBlocking::Block : UI::InputBlocking::DoNothing;
 }
 

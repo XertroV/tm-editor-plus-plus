@@ -656,6 +656,7 @@ TabGroup@ CreateRootTabGroup() {
 
     HotkeysTab(root);
     EditorControlsDocsTab(root);
+    FixesTab(root);
 
 #if SIG_DEVELOPER
     DevMainTab(root);

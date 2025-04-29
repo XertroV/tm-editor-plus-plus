@@ -1959,8 +1959,9 @@ void Draw_SPlacement(uint64 ptr, bool isEditable) {
                         auto tag = reqTags.GetDRequiredTag(j);
                         if (tag is null) continue;
                         auto tagPtr = tag.Ptr;
-                        LabeledValue("Tag["+j+"]", Text::FormatPointer(tagPtr));
-                        LabeledValue("Tag["+j+"]<x, y>", "" + tag.x + ", " + tag.y);
+                        UI::Text(ItemPlace_StringConsts::LookupJoined(tag.xy));
+                        // LabeledValue("Tag["+j+"]", Text::FormatPointer(tagPtr));
+                        // LabeledValue("Tag["+j+"]<x, y>", "" + tag.x + ", " + tag.y);
                         // LabeledValue("TagType##" + j, tag.Type);
                     }
                     UI::TreePop();
