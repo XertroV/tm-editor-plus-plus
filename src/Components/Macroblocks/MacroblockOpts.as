@@ -41,6 +41,36 @@ class MacroblockOptsTab : Tab {
             }
         }
         UI::TextWrapped("If it seems to do nothing, select a different macroblock then select this one again.");
+
+        UI::SeparatorText("Macroblock Recorder");
+
+        bool mbRecActive = MacroblockRecorder::IsActive;
+        UI::AlignTextToFramePadding();
+        UI::Text("Active: " + BoolIcon(mbRecActive));
+        if (!mbRecActive && UI::Button("Start Recording Macroblock")) {
+            MacroblockRecorder::StartRecording();
+        } else if (mbRecActive) {
+            UI::Text("# Blocks: " + MacroblockRecorder::recordingMB.blocks.Length);
+            UI::Text("# Items: " + MacroblockRecorder::recordingMB.items.Length);
+#if DEV
+            UI::Text("# Skins: " + MacroblockRecorder::recordingMB.skins.Length);
+#endif
+            UI::AlignTextToFramePadding();
+            if (UI::Button("Stop & Save Recording")) {
+                MacroblockRecorder::StopRecording(false);
+            }
+            UI::SameLine();
+            UI::Text("|");
+            UI::SameLine();
+            if (UI::ButtonColored("Cancel", .1)) {
+                MacroblockRecorder::StopRecording(true);
+            }
+        }
+
+        MacroblockRecorder::S_RecordMB_ForceAir = UI::Checkbox("Force Air", MacroblockRecorder::S_RecordMB_ForceAir);
+        MacroblockRecorder::S_RecordMB_ForceFree = UI::Checkbox("Force Free", MacroblockRecorder::S_RecordMB_ForceFree);
+        MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction = UI::Checkbox("Save Macroblock after Construction", MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction);
+        MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave = UI::Checkbox("Automate Save (to _epp_tmp.Macroblock.Gbx)", MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave);
     }
 }
 

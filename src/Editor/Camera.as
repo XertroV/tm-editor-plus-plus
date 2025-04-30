@@ -124,6 +124,18 @@ namespace Editor {
         Dev::SetOffset(orbital, 0x44, newCameraPos);
 #endif
     }
+
+
+
+    // Snap camera stuff (thumbanil for macroblocks)
+    void SetSnapCameraPosition(CGameCtnEditorFree@ editor, vec3 pos) {
+        auto snapStruct = Dev::GetOffsetNod(editor.EditorInterface, O_EDITORINTERFACE_SNAPSTRUCT);
+        Dev::SetOffset(snapStruct, O_EI_SNAPSTRUCT_CAMPOS_VEC3, pos);
+    }
+    void SetSnapCameraLocation(CGameCtnEditorFree@ editor, const iso4 &in loc) {
+        auto snapStruct = Dev::GetOffsetNod(editor.EditorInterface, O_EDITORINTERFACE_SNAPSTRUCT);
+        Dev::SetOffset(snapStruct, O_EI_SNAPSTRUCT_CAMLOC_ISO4, loc);
+    }
 }
 
 

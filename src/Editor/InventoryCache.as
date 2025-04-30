@@ -234,6 +234,7 @@ namespace Editor {
                 CheckPause();
                 // if (GetEditor(GetApp()) is null) return;
                 if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 3"); return; }
+                if (i >= node.ChildNodes.Length) { Dev_NotifyWarning('exiting i >= node.ChildNodes.Length: ' + i + " / " + node.ChildNodes.Length); return; }
                 CacheInvNode(node.ChildNodes[i], nonce);
                 if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 3"); return; }
             }

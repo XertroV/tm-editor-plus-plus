@@ -467,6 +467,26 @@ namespace Editor {
         return CoordDistToPos(MathX::Max(gbi.VariantBaseAir.Size, gbi.VariantBaseGround.Size));
     }
 
+    nat3 GetMacroblockCoordSize(CGameCtnMacroBlockInfo@ mb) {
+        if (mb is null) return nat3(0);
+        if (mb.GeneratedBlockInfo is null) return nat3(0);
+        if (mb.GeneratedBlockInfo.VariantGround !is null) return mb.GeneratedBlockInfo.VariantGround.Size;
+        if (mb.GeneratedBlockInfo.VariantAir !is null) return mb.GeneratedBlockInfo.VariantAir.Size;
+        warn("GetMacroblockCoordSize: no block info variant found for macroblock " + mb.IdName);
+        return nat3(0);
+    }
+
+    void SetMacroblockCoordSize(CGameCtnMacroBlockInfo@ mb, nat3 size) {
+        if (mb is null) return;
+        if (mb.GeneratedBlockInfo is null) return;
+        auto bi = mb.GeneratedBlockInfo;
+        if (bi.VariantGround !is null) Dev::SetOffset(bi.VariantGround, O_BLOCKINFOVAR_Size, size);
+        if (bi.VariantAir !is null) Dev::SetOffset(bi.VariantAir, O_BLOCKINFOVAR_Size, size);
+    }
+
+    void SetMacroblockGround(CGameCtnMacroBlockInfo@ mb, bool isGround) {
+        Dev::SetOffset(mb, O_MACROBLOCKINFO_IsGround, isGround ? uint8(1) : uint8(0));
+    }
 
 
     // ! does not work

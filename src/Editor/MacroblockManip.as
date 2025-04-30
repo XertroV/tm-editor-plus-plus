@@ -1,5 +1,7 @@
 namespace Editor {
 
+    // MARK: Macroblock
+
     class MacroblockSpecPriv : MacroblockSpec {
         MacroblockSpecPriv() {
             super({}, {});
@@ -138,19 +140,23 @@ namespace Editor {
             tmpMacroblockSkinsBufLenCap = Dev::ReadUInt64(mbSkins.Ptr + 0x8);
 
             _AllocAndWriteMemory(true);
-
         }
 
         CustomBuffer@ tmpWriteBuf;
 
-        void _AllocAndWriteMemory(bool writeToMb = false) {
-            @tmpWriteBuf = CustomBuffer(CalcRequiredMbBufSize());
+        void _AllocAndWriteMemory(bool writeToMb = false, CustomBuffer@ tmpWriteBuf = null) {
+            // allow passing in a buffer for flexibility
+            if (tmpWriteBuf is null) {
+                @tmpWriteBuf = CustomBuffer(CalcRequiredMbBufSize());
+            }
+            // for each: get a window to a section of the memory, then write to it.
             auto blocksPtrs = tmpWriteBuf.GetPtrVAlloc(0x8 * blocks.Length);
             for (uint i = 0; i < blocks.Length; i++) {
                 auto blockEl = tmpWriteBuf.GetPtrVAlloc(SZ_MACROBLOCK_BLOCKSBUFEL);
                 blocksPtrs.Write(blockEl.ptr);
                 cast<BlockSpecPriv>(blocks[i]).WriteToMemory(blockEl);
             }
+
             auto skinsPtrs = tmpWriteBuf.GetPtrVAlloc(0x8 * skins.Length);
             for (uint i = 0; i < skins.Length; i++) {
                 auto skinEl = tmpWriteBuf.GetPtrVAlloc(SZ_MACROBLOCK_SKINSBUFEL);
@@ -188,6 +194,26 @@ namespace Editor {
             return size;
         }
 
+
+        // will throw if the macroblock does not have sufficient capcaity.
+        void _WriteDirectlyToMacroblock(CGameCtnMacroBlockInfo@ macroblock) {
+            auto @tmpMb = DGameCtnMacroBlockInfo(macroblock);
+            if (tmpMb.Blocks.Length < blocks.Length) throw(".Blocks too small");
+            if (tmpMb.Items.Length < items.Length) throw(".Items too small");
+            if (tmpMb.Skins.Length < skins.Length) throw(".Skins too small");
+            auto destBlocks = tmpMb.Blocks;
+            auto destItems = tmpMb.Items;
+            auto destSkins = tmpMb.Skins;
+            for (uint i = 0; i < blocks.Length; i++) cast<BlockSpecPriv>(blocks[i]).WriteToMemory(CustomBuffer(destBlocks.GetBlock(i).Ptr, SZ_MACROBLOCK_BLOCKSBUFEL));
+            for (uint i = 0; i < items.Length; i++) cast<ItemSpecPriv>(items[i]).WriteToMemory(CustomBuffer(destItems.GetItem(i).Ptr, SZ_MACROBLOCK_ITEMSBUFEL));
+            for (uint i = 0; i < skins.Length; i++) cast<SkinSpecPriv>(skins[i]).WriteToMemory(CustomBuffer(destSkins.GetSkin(i).Ptr, SZ_MACROBLOCK_SKINSBUFEL));
+            destBlocks.Length = blocks.Length;
+            destItems.Length = items.Length;
+            destSkins.Length = skins.Length;
+            macroblock.Initialized = false;
+        }
+
+
         void _UnallocMemory() {
             @tmpWriteBuf = null;
         }
@@ -213,6 +239,26 @@ namespace Editor {
             releaseTmpMacroblock = false;
         }
 
+
+        uint missingMBCapacityBlocks = 0, missingMBCapacityItems = 0;
+        // true if this macroblock spec could fit in the provided mbInfo.
+        // .missingMBCapacityBlocks and .missingMBCapacityItems record the amount short you are.
+        bool MacroblockHasSufficientCapacity(CGameCtnMacroBlockInfo@ mbInfo) {
+            if (mbInfo is null) return false;
+            auto dest = DGameCtnMacroBlockInfo(mbInfo);
+            missingMBCapacityBlocks = 0;
+            missingMBCapacityItems = 0;
+            if (dest.Blocks.Length < blocks.Length) missingMBCapacityBlocks = blocks.Length - dest.Blocks.Length;
+            if (dest.Items.Length < items.Length) missingMBCapacityItems = items.Length - dest.Items.Length;
+            if (missingMBCapacityBlocks > 0 || missingMBCapacityItems > 0) {
+                dev_trace("Missing Blocks: " + missingMBCapacityBlocks + " | Items: " + missingMBCapacityItems);
+                return false;
+            }
+            return missingMBCapacityBlocks == 0 && missingMBCapacityItems == 0;
+        }
+
+        // MARK: MBSpec::Chunking
+
         array<MacroblockSpec@>@ CreateChunks(int chunkSize) override {
             MacroblockSpec@[] chunks;
             auto chunk = MacroblockSpecPriv();
@@ -237,11 +283,127 @@ namespace Editor {
             }
             return chunks;
         }
+
+        // todo: move to MacroblockSpec
+        int3 GetMinBlockCoords() {
+            int3 minCoord = int3(2147483647);
+            for (uint i = 0; i < blocks.Length; i++) {
+                auto @block = blocks[i];
+                int3 coord = Nat3ToInt3(block.coord);
+                if (block.isFree) coord = Nat3ToInt3(PosToCoord(block.pos));
+                if (coord.x < minCoord.x) minCoord.x = coord.x;
+                if (coord.y < minCoord.y) minCoord.y = coord.y;
+                if (coord.z < minCoord.z) minCoord.z = coord.z;
+            }
+            for (uint i = 0; i < items.Length; i++) {
+                auto @item = items[i];
+                int3 coord = Nat3ToInt3(PosToCoord(item.pos));
+                if (coord.x < minCoord.x) minCoord.x = coord.x;
+                if (coord.y < minCoord.y) minCoord.y = coord.y;
+                if (coord.z < minCoord.z) minCoord.z = coord.z;
+            }
+            return minCoord;
+        }
+
+        // todo: move to MacroblockSpec
+        int3 GetMaxBlockCoords() {
+            int3 maxCoord = int3(-2147483647);
+            for (uint i = 0; i < blocks.Length; i++) {
+                auto @block = blocks[i];
+                int3 coord = Nat3ToInt3(block.coord);
+                if (block.isFree) coord = Nat3ToInt3(PosToCoord(block.pos));
+                if (coord.x > maxCoord.x) maxCoord.x = coord.x;
+                if (coord.y > maxCoord.y) maxCoord.y = coord.y;
+                if (coord.z > maxCoord.z) maxCoord.z = coord.z;
+            }
+            for (uint i = 0; i < items.Length; i++) {
+                auto @item = items[i];
+                int3 coord = Nat3ToInt3(PosToCoord(item.pos));
+                if (coord.x > maxCoord.x) maxCoord.x = coord.x;
+                if (coord.y > maxCoord.y) maxCoord.y = coord.y;
+                if (coord.z > maxCoord.z) maxCoord.z = coord.z;
+            }
+            return maxCoord;
+        }
+
+        // todo: move to MacroblockSpec
+        nat3 GetCoordSize() {
+            if (blocks.Length == 0 && items.Length == 0) return nat3(0);
+            auto min = GetMinBlockCoords();
+            auto max = GetMaxBlockCoords();
+            auto size = max - min + 1;
+            if (size.x < 0 || size.y < 0 || size.z < 0) {
+                Dev_NotifyWarning("Negative coord size for macroblock");
+            }
+            return Int3ToNat3(size);
+        }
+
+        // todo: move to MacroblockSpec
+        bool HasGround() {
+            for (uint i = 0; i < blocks.Length; i++) {
+                if (blocks[i].isGround) return true;
+            }
+            return false;
+        }
+
+        // todo: move to MacroblockSpec
+        void SetAllBlocksFree() {
+            for (uint i = 0; i < blocks.Length; i++) {
+                blocks[i].isFree = true;
+            }
+        }
+
+        // todo: move to MacroblockSpec
+        void SetAllItemsFlying() {
+            for (uint i = 0; i < items.Length; i++) {
+                items[i].isFlying = 1;
+            }
+        }
+
+        // todo: move to MacroblockSpec
+        // This will cut out dead space below, behind, and to the right of the macroblock (in TM, +X is left, -X is right).
+        void MoveAllToOrigin() {
+            auto minCoord = this.GetMinBlockCoords();
+            for (uint i = 0; i < blocks.Length; i++) {
+                cast<BlockSpecPriv>(blocks[i]).TranslateCoords(minCoord * -1);
+            }
+            for (uint i = 0; i < items.Length; i++) {
+                cast<ItemSpecPriv>(items[i]).TranslateCoords(minCoord * -1);
+            }
+        }
+
+        // todo: move to MacroblockSpec
+        // We always offset y positions by 56 to fit with placing macroblocks at coord <0,1,0> (below the ground)
+        // But if we want everything nicely under the cursor, we want to undo this.
+        void UndoMacroblockHeightOffset() {
+            for (uint i = 0; i < blocks.Length; i++) {
+                if (blocks[i].isFree) {
+                    auto block = blocks[i];
+                    block.SetPosRot_AlsoCoordDir(block.pos - vec3(0, 56, 0), block.pyr);
+                }
+            }
+            for (uint i = 0; i < items.Length; i++) {
+                auto item = cast<ItemSpecPriv>(items[i]);
+                // item.pos = item.pos - vec3(0, 56, 0);
+                item.coord = PosToCoord(item.pos);
+                // when ctrl clicking items in copy paste mode, the block coord is 7 units too high
+                item.coord.y = Math::Min(Math::Max(item.coord.y, 7) - 7, 0);
+            }
+        }
+
+        // todo: move to MacroblockSpec
+        // Within the block coords bounding box, move blocks and items so that they are most left / middle / top / whatever that they can be.
+        void AlignAll(Editor::AlignWithinBlock) {
+            warn("todo: AlignAllImpl");
+        }
+
     }
 
     const uint32 MAGIC_BLOCKS = 0x734b4c42;
     const uint32 MAGIC_SKINS = 0x734e4b53;
     const uint32 MAGIC_ITEMS = 0x734d5449;
+
+    // MARK: BlockSpec
 
     class BlockSpecPriv : BlockSpec {
         uint64 ObjPtr;
@@ -461,6 +623,10 @@ namespace Editor {
                     NotifyWarning("Failed to load block article for " + name);
                 }
             }
+            // 2025-04-30 do we need to add a ref here?
+            // if (block.BlockInfo !is null) {
+            //     block.BlockInfo.MwAddRef();
+            // }
         }
 
         CGameCtnBlockInfo@ TryLoadingModelFromFid() {
@@ -596,8 +762,16 @@ namespace Editor {
             }
             return true;
         }
+
+        // todo: move to BlockSpec
+        void TranslateCoords(int3 coordDist) {
+            vec3 posDiff = CoordDistToPos(coordDist);
+            pos += posDiff;
+            coord = Int3ToNat3(Nat3ToInt3(coord) + coordDist);
+        }
     }
 
+    // MARK: SkinSpec
 
     class SkinSpecPriv : SkinSpec {
         SkinSpecPriv(CGameCtnBlockSkin@ skin, uint blockIx) {
@@ -617,6 +791,7 @@ namespace Editor {
         }
     }
 
+    // MARK: ItemSpec
 
     class ItemSpecPriv : ItemSpec {
         uint64 ObjPtr;
@@ -869,7 +1044,16 @@ namespace Editor {
             }
             return spec;
         }
+
+        // todo: move to BlockSpec
+        void TranslateCoords(int3 coordDist) {
+            vec3 posDiff = CoordDistToPos(coordDist);
+            pos += posDiff;
+            coord = Int3ToNat3(Nat3ToInt3(coord) + coordDist);
+        }
     }
+
+    // MARK: SetSkinSpec
 
     class SetSkinSpecPriv : SetSkinSpec {
         SetSkinSpecPriv(BlockSpec@ block, const string &in fgSkin, const string &in bgSkin) {
@@ -893,6 +1077,8 @@ namespace Editor {
         }
     }
 }
+
+// MARK: CustomBuffer
 
 class CustomBuffer {
     uint32 allocSize;

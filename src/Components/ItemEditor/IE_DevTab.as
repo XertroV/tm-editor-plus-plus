@@ -38,7 +38,7 @@ class IE_DevTab : Tab {
             ItemEditor::SaveAsDialogSetPath(itemNamePath);
         }
         if (UI::Button("Test - save item")) {
-            ItemEditor::ClickConfirmOpenOrSave();
+            ClickConfirmOpenOrSaveDialog();
         }
 
         if (UI::CollapsingHeader("Inputs")) {

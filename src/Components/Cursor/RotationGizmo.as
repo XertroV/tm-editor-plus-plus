@@ -389,6 +389,7 @@ class RotationTranslationGizmo {
 
     Axis lastClosestAxis = Axis::X;
     float lastClosestMouseDist = 1000000.;
+    // are we hovering the alternate (2d) gizmo controls
     bool hoveringAlt = false;
 
     bool isMouseDown = false;
@@ -550,7 +551,7 @@ class RotationTranslationGizmo {
             lastClosestAxis = _closestAxis;
             lastClosestMouseDist = _closestMouseDist;
             hoveringAlt = _hoveringAlt;
-            if (IsAltDown() || Editor::IsInFreeLookMode(cast<CGameCtnEditorFree>(GetApp().Editor))) {
+            if (IsAltDown() || Editor::IsInFreeLookMode(editor)) {
                 // do nothing: camera inputs
             } if (UI::IsMouseClicked(UI::MouseButton::Left)) {
                 isMouseDown = true;
@@ -564,8 +565,9 @@ class RotationTranslationGizmo {
             isMouseDown = false;
             ApplyTmpRotation();
             ApplyTmpTranslation();
-        } else if (UI::IsMouseClicked(UI::MouseButton::Right)) {
+        } else if (UI::IsMouseClicked(UI::MouseButton::Right) || IsAltDown() || Editor::IsInFreeLookMode(editor)) {
             // RMB while mouse is down -> reset and disable mouse down mode
+            // also reset if we go into free look mode
             ResetGizmoRMB();
         } else if (mouseInClickRange) {
             bool skipSetLastDD = false;

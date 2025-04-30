@@ -123,6 +123,18 @@ void Dev_CopyArrayStruct(uint64 sBufPtr, int sIx, uint64 dBufPtr, int dIx, uint1
     trace("Copied bytes: " + bytes.Length + 0x8);
 }
 
+void Dev_SwapUint64At(CMwNod@ a, CMwNod@ b, uint16 offset) {
+    auto aPtr = Dev::GetOffsetUint64(a, offset);
+    auto bPtr = Dev::GetOffsetUint64(b, offset);
+#if DEV
+    trace("Swapping +" + offset + " under " + Text::FormatPointer(Dev_GetPointerForNod(a)) + " and " + Text::FormatPointer(Dev_GetPointerForNod(b)));
+    trace("a_val: " + Text::FormatPointer(aPtr) + " <-> b_val: " + Text::FormatPointer(bPtr));
+#endif
+    Dev::SetOffset(a, offset, bPtr);
+    Dev::SetOffset(b, offset, aPtr);
+}
+
+
 const uint64 BASE_ADDR_END = Dev::BaseAddressEnd();
 
 const bool HAS_Z_DRIVE_WINE_INDICATOR = IO::FolderExists("Z:\\etc\\");
@@ -430,14 +442,16 @@ const uint32 CLSID_NSceneItemPlacement_SMgr = Reflection::GetType("NSceneItemPla
 const uint32 CLSID_NGameItem_SMgr = Reflection::GetType("NGameItem_SMgr").ID;
 const uint32 CLSID_NHmsForestVis_SMgr = Reflection::GetType("NHmsForestVis_SMgr").ID;
 
-
 const uint32 CLSID_NPlugItemPlacement_SPlacement = Reflection::GetType("NPlugItemPlacement_SPlacement").ID;
+
+// 0x80
+const uint16 O_FID_Nod = GetOffset("CSystemFidFile", "Nod");
 
 // MARK: O Map
 
 const uint16 SZ_PACKDESC = 0xB0;
 
-const uint16 SZ_CTNCHALLENGE = 0x870;
+const uint16 SZ_CTNCHALLENGE = 0x880;
 // map.TitleId
 const uint16 O_MAP_TITLEID = GetOffset("CGameCtnChallenge", "TitleId");
 const uint16 O_MAP_UID_MWID = O_MAP_TITLEID - (0x74 - 0x50);
@@ -475,10 +489,11 @@ const uint16 O_MAP_ObjectiveTextAuthor = GetOffset("CGameCtnChallenge", "Objecti
 const uint16 O_MAP_THUMBNAIL_BUF = O_MAP_ObjectiveTextAuthor - 0x10;
 
 // 0x1d8
+// before 2024-12 -> 1e8
 const uint16 O_MAP_CLIPAMBIANCE = GetOffset("CGameCtnChallenge", "ClipAmbiance");
 const uint16 O_MAP_CLIPPODIUM = O_MAP_CLIPAMBIANCE - 0x8;
-const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8;
-const uint16 O_MAP_LAUNCHEDCPS = O_MAP_CLIPAMBIANCE + 0x28; // 0x200 - 0x1D8;
+const uint16 O_MAP_MTSIZE_OFFSET = O_MAP_CLIPAMBIANCE + 0x18; // 0x1F0 - 0x1D8; // now 0x200
+const uint16 O_MAP_LAUNCHEDCPS = O_MAP_CLIPAMBIANCE + 0x28; // 0x200 - 0x1D8; // now 0x210
 
 // 0x264 (Size-4): dirty flag (set to 1 to recalc baked blocks?)
 // 0x258 -> 0x268
@@ -505,12 +520,16 @@ const uint16 O_MAP_MACROBLOCK_INFOS = O_MAP_ANCHOREDOBJS + 0x20; // 0x2c8
 const uint16 O_MAP_CHALLENGEPARAMS = GetOffset("CGameCtnChallenge", "ChallengeParameters");
 const uint16 O_MAP_FLAGS = O_MAP_CHALLENGEPARAMS + 0x8; // also -0x4 from DecoBaseHeightOffset
 
-
+// what is at 0x368?
+// len = number of x,z coords
+// 0x388: buf of CGameCtnZoneGenealogy
+// todo
 
 // const uint16 O_MAP_NBITEMS = 0x4c4 or something; // used in a map syncro function called every frame, maybe to check for updates. ` >-> ` in label next to it in asm.
 
 // 2023-11-20: 0x668
 // 2024-01-09: 0x658
+// 2024-12: 0x670
 const uint16 O_MAP_SCRIPTMETADATA = GetOffset("CGameCtnChallenge", "ScriptMetadata");
 const uint16 O_MAP_OFFZONE_SIZE_OFFSET = O_MAP_SCRIPTMETADATA + (0x6A0 - 0x668);
 const uint16 O_MAP_OFFZONE_BUF_OFFSET = O_MAP_SCRIPTMETADATA + (0x6B0 - 0x668);
@@ -557,9 +576,10 @@ const uint16 O_EDITOR_LAUNCHEDCPS = GetOffset("CGameCtnEditorFree", "Radius") + 
 const uint16 O_EDITORFREE_Offset = GetOffset("CGameCtnEditorFree", "Offset");
 const uint16 O_EDITOR_SELECTION_COORDS = O_EDITOR_UndergroundBox + (0xB30 - 0xAC0);
 
-// 0xAC0 originally
+// 0xAC0 originally (2024-12: 0xac8)
 const uint16 O_EDITOR_UndergroundBox = GetOffset("CGameCtnEditorFree", "UndergroundBox");
 const uint16 O_EDITOR_GridColor = GetOffset("CGameCtnEditorFree", "GridColor");
+const uint16 O_EDITOR_CurrentMacroBlockInfo = GetOffset("CGameCtnEditorFree", "CurrentMacroBlockInfo");
 const uint16 O_EDITOR_CopyPasteMacroBlockInfo = GetOffset("CGameCtnEditorFree", "CopyPasteMacroBlockInfo");
 
 // 0x558, can place?
@@ -587,6 +607,13 @@ const uint16 O_EDITORCAMERACTRLORBITAL_occ_MaxXZ = O_EDITORCAMERACTRLORBITAL_TAR
 // vec2
 const uint16 O_EDITORCAMERACTRLORBITAL_occ_YBounds = O_EDITORCAMERACTRLORBITAL_TARGETED_POS + 0x28;
 
+
+
+const uint16 SZ_EDITORINTERFACE = Reflection::GetType("CGameCtnEditorCommonInterface").Size;
+const uint16 O_EDITORINTERFACE_SNAPSTRUCT = SZ_EDITORINTERFACE - 0x20;
+const uint16 O_EI_SNAPSTRUCT_HSMLIGHT = 0xB8;
+const uint16 O_EI_SNAPSTRUCT_CAMLOC_ISO4 = 0xC0;
+const uint16 O_EI_SNAPSTRUCT_CAMPOS_VEC3 = 0xE4;
 
 
 const uint16 SZ_CGAMECURSORITEM = 0xE8;
@@ -631,7 +658,7 @@ const uint16 SZ_SOLID2MODEL = 0x390; // 912;
 
 // MARK: O Blocks
 
-// more block offsets in Editor/Blocks.as
+// ! more block offsets in Editor/Blocks.as
 // 0x28
 const uint16 O_CTNBLOCK_BlockModel = GetOffset("CGameCtnBlock", "BlockModel");
 // 0x38
@@ -650,19 +677,21 @@ const uint16 O_CTNBLOCK_PLACEMODE_FLAG = O_CTNBLOCK_DIR + (0x8F - 0x6C);
 // originally 0xA8 -- is FFFFFFFF when not in a macroblock
 const uint16 O_CTNBLOCK_MACROBLOCK_INST_NB = O_CTNBLOCK_DIR + 0x3C;
 
+
 // CGameCtnBlockInfo
 const uint16 SZ_CTNBLOCKINFO = 0x250;
 const uint16 O_BLOCKINFO_MATERIALMOD = GetOffset("CGameCtnBlockInfo", "MaterialModifier");
 const uint16 O_BLOCKINFO_MATERIALMOD2 = GetOffset("CGameCtnBlockInfo", "MaterialModifier2");
 
 
-
 // CGameCtnBlockInfoVariant, 0x250
 const uint16 SZ_BLOCKINFOVAR = 0x250;
 const uint16 O_BLOCKINFOVAR_SPAWNMODEL = GetOffset("CGameCtnBlockInfoVariant", "SpawnModel");
 const uint16 O_BLOCKINFOVAR_NOPILLARBELOWIX = GetOffset("CGameCtnBlockInfoVariant", "NoPillarBelowIndex");
+// 0x160
 const uint16 O_BLOCKINFOVAR_PILLARSArray = O_BLOCKINFOVAR_NOPILLARBELOWIX + (0x160-0x148);
-
+// 0x200
+const uint16 O_BLOCKINFOVAR_Size = GetOffset("CGameCtnBlockInfoVariant", "Size");
 
 // CGameCtnBlockInfoMobil, 0x190
 const uint16 SZ_BLOCKINFOMOBIL = 0x190;
@@ -775,15 +804,21 @@ const uint16 O_CGAMEOUTLINEBOX_LINES_TREE = 0x28;
 
 // MARK: O MB
 
-const uint16 O_MACROBLOCK_BLOCKSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x8; // 0x148 + 8 = 0x150
-const uint16 O_MACROBLOCK_SKINSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x18; // 0x148 + 0x18 = 0x160
-const uint16 O_MACROBLOCK_ITEMSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x28; // 0x148 + 0x28 = 0x170
+// 0x148 + 8 = 0x150
+const uint16 O_MACROBLOCK_BLOCKSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x8;
+// 0x148 + 0x18 = 0x160
+const uint16 O_MACROBLOCK_SKINSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x18;
+// 0x148 + 0x28 = 0x170
+const uint16 O_MACROBLOCK_ITEMSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0x28;
+// 0x130
+const uint16 O_MACROBLOCKINFO_GeneratedBlockInfo = GetOffset("CGameCtnMacroBlockInfo", "GeneratedBlockInfo");
+// 0x138
+const uint16 O_MACROBLOCKINFO_IsGround = GetOffset("CGameCtnMacroBlockInfo", "IsGround");
 
 const uint16 SZ_MACROBLOCK_BLOCKSBUFEL = 0x70;
 const uint16 SZ_MACROBLOCK_ITEMSBUFEL = 0xC0;
 const uint16 SZ_MACROBLOCK_SKINSBUFEL = 0x18;
 const uint16 SZ_CTNMACROBLOCK = 0x248;
-
 
 
 const uint16 SZ_CPlugVisualIndexedTriangles = 0x190; // 400

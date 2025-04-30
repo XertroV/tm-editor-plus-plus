@@ -248,6 +248,21 @@ namespace Editor {
         }
     }
 
+    // 2 bits for each axis: 0=None, 1=Left, 2=Mid, 3=Right
+    shared enum AlignWithinBlock {
+        None = 0,
+        X_Left = 1,
+        X_Mid = 2,
+        X_Right = 3,
+        Y_Bottom = 4,// 1 << 2,
+        Y_Mid = 8,// 2 << 2,
+        Y_Top = 12,// 3 << 2,
+        Z_Back = 16,// 1 << 4,
+        Z_Mid = 32,// 2 << 4,
+        Z_Forward = 48,// 3 << 4,
+        Center = 42, // 2 + 8 + 32
+    }
+
     shared class NewMbParts {
         BlockSpec@[] blocks;
         ItemSpec@[] items;

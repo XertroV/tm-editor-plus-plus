@@ -125,6 +125,17 @@ namespace CursorControl {
     bool _ExclusiveControl = false;
     string _ExclusiveControlName = "";
 
+    string get_CurrentOwner() {
+        if (!_ExclusiveControl) return "";
+        return _ExclusiveControlName;
+    }
+
+    // throws if exclusive control is not held by this name
+    void EnsureExclusiveOwnedBy(const string &in name) {
+        if (!_ExclusiveControl) throw("Nothing has exclusive control of the cursor");
+        if (_ExclusiveControlName != name) throw("Exclusive control of the cursor is held by " + CurrentOwner + ", not " + name);
+    }
+
     bool RequestExclusiveControl(const string &in name) {
         if (IsExclusiveControlAvailable()) {
             _ExclusiveControl = true;

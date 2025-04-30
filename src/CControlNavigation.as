@@ -46,4 +46,48 @@ namespace CControl {
             {"FrameMain", "FrameInventories", "FrameInventoryArticlesPlugins", "ListCardArticles"}
         ));
     }
+
+    CControlButton@ get_Editor_FrameCopyPaste_SaveMacroblock() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return null;
+        return cast<CControlButton>(FollowIdPath(editor.EditorInterface.InterfaceRoot,
+            {"FrameMain", "FrameCopyPasteTools", "FrameMacroblock", "ButtonSelectionBoxSaveNew"}
+        ));
+    }
+
+    CControlButton@ get_Editor_FrameEditSnap_SaveMacroblock() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return null;
+        return cast<CControlButton>(FollowIdPath(editor.EditorInterface.InterfaceRoot,
+            {"FrameEditSnapCamera", "ButtonOk"}
+        ));
+    }
+
+
+}
+
+
+CGameMenuFrame@ GetDialogSaveAs() {
+    auto cf = GetApp().BasicDialogs.Dialogs.CurrentFrame;
+    if (cf !is null && cf.IdName == "FrameDialogSaveAs") {
+        return cf;
+    }
+    return null;
+}
+
+bool SetSaveAsDialogEntryPath(const string &in path) {
+    auto frame = GetDialogSaveAs();
+    if (frame is null) return false;
+    auto entryPath = cast<CControlEntry>(CControl::FollowIdPath(frame, {"FrameContent", "FrameSave", "EntryFileName"}));
+    if (entryPath is null) return false;
+    auto d = cast<CGameDialogs>(entryPath.Nod);
+    if (d is null) return false;
+    d.String = path;
+    return true;
+}
+
+void ClickConfirmOpenOrSaveDialog() {
+    auto frame = GetDialogSaveAs();
+    if (frame is null) return;
+    GetApp().BasicDialogs.DialogSaveAs_OnValidate();
 }

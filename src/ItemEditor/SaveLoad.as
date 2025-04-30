@@ -30,7 +30,7 @@ namespace ItemEditor {
         yield();
         yield();
         trace('saving');
-        ClickConfirmOpenOrSave();
+        ClickConfirmOpenOrSaveDialog();
         yield();
         yield();
         trace('check for overwrite');
@@ -105,7 +105,7 @@ namespace ItemEditor {
         yield();
         SaveAsGoToRoot();
         SaveAsDialogSetPath(path);
-        ClickConfirmOpenOrSave();
+        ClickConfirmOpenOrSaveDialog();
         yield();
     }
 
@@ -148,16 +148,6 @@ namespace ItemEditor {
         return null;
     }
 
-    CGameMenuFrame@ GetDialogSaveAs() {
-        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
-        if (ieditor is null) return null;
-        auto cf = GetApp().BasicDialogs.Dialogs.CurrentFrame;
-        if (cf !is null && cf.IdName == "FrameDialogSaveAs") {
-            return cf;
-        }
-        return null;
-    }
-
     void SaveAsGoToRoot() {
         auto frame = GetDialogSaveAs();
         if (frame is null) return;
@@ -187,12 +177,6 @@ namespace ItemEditor {
         if (frame is null) return;
         auto entryPath = cast<CControlEntry>(GetFrameChildFromChain(frame, {0, 1, 0}));
         cast<CGameDialogs>(entryPath.Nod).String = savePath;
-    }
-
-    void ClickConfirmOpenOrSave() {
-        auto frame = GetDialogSaveAs();
-        if (frame is null) return;
-        GetApp().BasicDialogs.DialogSaveAs_OnValidate();
     }
 
     void ClickOpenItem() {

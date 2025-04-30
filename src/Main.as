@@ -69,6 +69,7 @@ void Main() {
 
     Blocks::RegisterCallbacks(); // mostly to do with item SPlacements
     VegetRandomYaw::SetupCallbacks(); // for fixing trees on free blocks
+    MacroblockRecorder::RegisterCallbacks();
 
     startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);

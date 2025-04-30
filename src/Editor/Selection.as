@@ -66,4 +66,8 @@ namespace Editor {
             }
         }
     }
+
+    void ClearSelectedCoordsBuffer(CGameCtnEditorFree@ editor) {
+        Dev::SetOffset(editor, O_EDITOR_SELECTION_COORDS + 0x8, uint(0));
+    }
 }
