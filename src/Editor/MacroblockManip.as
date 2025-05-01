@@ -373,21 +373,22 @@ namespace Editor {
         }
 
         // todo: move to MacroblockSpec
+        // Restores original positions of blocks/items in map.
         // We always offset y positions by 56 to fit with placing macroblocks at coord <0,1,0> (below the ground)
-        // But if we want everything nicely under the cursor, we want to undo this.
+        // But if we want everything to match original positions, we want to undo this.
         void UndoMacroblockHeightOffset() {
             for (uint i = 0; i < blocks.Length; i++) {
-                if (blocks[i].isFree) {
-                    auto block = blocks[i];
-                    block.SetPosRot_AlsoCoordDir(block.pos - vec3(0, 56, 0), block.pyr);
+                auto block = blocks[i];
+                if (block.isFree) {
+                    block.pos = block.pos - vec3(0, 56, 0);
+                } else {
+                    block.coord = block.coord + nat3(0, 1, 0);
                 }
             }
             for (uint i = 0; i < items.Length; i++) {
                 auto item = cast<ItemSpecPriv>(items[i]);
-                // item.pos = item.pos - vec3(0, 56, 0);
-                item.coord = PosToCoord(item.pos);
-                // when ctrl clicking items in copy paste mode, the block coord is 7 units too high
-                item.coord.y = Math::Min(Math::Max(item.coord.y, 7) - 7, 0);
+                item.coord = item.coord + nat3(0, 1, 0);
+                item.pos.y -= 56.0;
             }
         }
 

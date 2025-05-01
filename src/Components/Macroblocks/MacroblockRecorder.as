@@ -178,6 +178,7 @@ namespace MacroblockRecorder {
     }
 
     void TransferRecordedMbToEditorCopyPasteMb(Editor::MacroblockSpecPriv@ mb) {
+        // throw("Hmm got an infinite loop");
         auto app = GetApp();
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         if (editor is null) return;
@@ -225,7 +226,7 @@ namespace MacroblockRecorder {
         }
         CheckForNoValidBlocksMsgAndDismiss(app);
         // after resetting selection, the MB is cleared; we fix this later. (We want to reset selection before bailing out if it fails)
-        // pmt.CopyPaste_ResetSelection();
+        pmt.CopyPaste_ResetSelection();
 
         // check we're all good
         if (!mb.MacroblockHasSufficientCapacity(copyPasteMb) || copyPasteMb is null) {
@@ -241,12 +242,14 @@ namespace MacroblockRecorder {
         Dev::SetOffset(editor, O_EDITOR_CurrentMacroBlockInfo, copyPasteMb);
         copyPasteMb.MwAddRef();
 
-        Editor::ClearSelectedCoordsBuffer(editor);
-        auto startCoord = mb.GetMinBlockCoords() - int3(1, 8, 1);
-        auto endCoord = mb.GetMaxBlockCoords() + int3(1, 8, 1) + 1;
-
         // undo the +56 to pos.y
         mb.UndoMacroblockHeightOffset();
+
+        // save coords for later use
+        // Editor::ClearSelectedCoordsBuffer(editor);
+        auto startCoord = mb.GetMinBlockCoords();// - int3(1, 8, 1);
+        auto endCoord = mb.GetMaxBlockCoords();// + int3(1, 8, 1) + 1;
+
         // move the contents of the macroblock into the smallest area
         mb.MoveAllToOrigin();
         if (S_RecordMB_AlignWithinBlock != Editor::AlignWithinBlock::None) {
@@ -298,25 +301,46 @@ namespace MacroblockRecorder {
         if (S_RecordMB_SaveAfterMbConstruction) {
             // now, save the macroblock -- this overwrites our hard work so we need to hook
             // the recreation of it (from the selection) so we can replace the new macroblock with ours
-            // todo: apply patch
-            _ApplySaveMbPatch();
+
+            // we don't need the patch if we're moving blocks and items in the map to fool selection
+            // _ApplySaveMbPatch();
+            auto topRightCornerMin = Nat3ToInt3(editor.Challenge.Size) - 7;
+            auto topRightCornerMid = Nat3ToInt3(editor.Challenge.Size) - 4;
+            auto topRightCornerMax = Nat3ToInt3(editor.Challenge.Size) - 1;
+
             try {
-                // todo: set selection coords then modify all blocks and items to
-                // todo: move coords/positions out of the way. After, move them back.
+                dev_trace("Move items in map if not in macroblock");
+                // set selection coords then modify all blocks and items to
+                // move coords/positions out of the way. After, move them back.
                 ModifyMapObjects_SetCoordsOutside_Filtered(editor.Challenge, startCoord, endCoord, mb);
+
+                dev_trace("Set selection coords to: " + startCoord.ToString() + " / " + endCoord.ToString());
                 pmt.CopyPaste_ResetSelection();
                 pmt.CopyPaste_AddOrSubSelection(startCoord, endCoord);
+                pmt.CopyPaste_AddOrSubSelection(topRightCornerMin, topRightCornerMax); // add it so we know we can remove it later
+                pmt.CopyPaste_Copy();
+                pmt.CopyPaste_AddOrSubSelection(topRightCornerMin, topRightCornerMax); // remove it
+
+                dev_trace("run click save macroblock (in copy paste toolbar)");
                 // activates hook and sets up 3d scene for the macroblock
                 CControl::Editor_FrameCopyPaste_SaveMacroblock.OnAction();
                 yield();
-                ModifyMapObjects_SetCoords_Reset();
+
+                dev_trace('set camera and rotate');
                 // bug: thumbnail won't show :/
                 // Editor::SetSnapCameraLocation(editor, camState.Loc);
-                Editor::SetSnapCameraPosition(editor, camState.CamPos);
-                // this works, but does let you place it outside the stadium (size 1,1,1 on reloading sometimes) which
-                // causes a CTD
+                // Editor::SetSnapCameraPosition(editor, camState.CamPos);
+                auto rotateCamBtn = CControl::Editor_FrameEditSnap_RotateCameraBtn;
+                while (!rotateCamBtn.IsVisible || !rotateCamBtn.Parent.IsVisible) {
+                    dev_trace("yield: rotateBtnVisibility");
+                    yield();
+                }
+                rotateCamBtn.OnAction();
+
+                // ~~this works, but does let you place it outside the stadium (size 1,1,1 on reloading sometimes) which~~
                 if (S_RecordMB_Save_AutoNameAndSave) {
-                    auto saveSnapMbBtn = CControl::Editor_FrameEditSnap_SaveMacroblock;
+                    yield();
+                    auto saveSnapMbBtn = CControl::Editor_FrameEditSnap_SaveBtn;
                     while (!saveSnapMbBtn.IsVisible || !saveSnapMbBtn.Parent.IsVisible) {
                         dev_trace("yield: saveSnapMbBtnVisibility");
                         yield();
@@ -342,6 +366,7 @@ namespace MacroblockRecorder {
             }
             // todo: unapply patch
             _UnapplySaveMbPatch();
+            ModifyMapObjects_SetCoords_Reset();
         }
 
 
@@ -456,22 +481,217 @@ namespace MacroblockRecorder {
 
     // MARK: Modify map objects for thumbnail
 
-    // Helper_ModifyMapObjCoords@ thumbnailMapCoordsHelper;
+    Helper_ModifyMapObjCoords@ thumbnailMapCoordsHelper;
 
     // Modifies the map objects' block coord to be outside of the selection (start, end); ignoring objects in the mb spec.
     void ModifyMapObjects_SetCoordsOutside_Filtered(CGameCtnChallenge@ map, int3 start, int3 end, Editor::MacroblockSpecPriv@ filterMb) {
-        // @thumbnailMapCoordsHelper = Helper_ModifyMapObjCoords(map, start, end, filterMb);
-        // thumbnailMapCoordsHelper.Run();
+        @thumbnailMapCoordsHelper = Helper_ModifyMapObjCoords(map, start, end, filterMb);
+        thumbnailMapCoordsHelper.Run();
     }
 
     void ModifyMapObjects_SetCoords_Reset() {
-        // if (thumbnailMapCoordsHelper !is null) {
-            // thumbnailMapCoordsHelper.Reset();
-            // @thumbnailMapCoordsHelper = null;
-        // }
+        if (thumbnailMapCoordsHelper !is null) {
+            thumbnailMapCoordsHelper.Reset();
+            @thumbnailMapCoordsHelper = null;
+        }
     }
 }
 
+
+class Helper_ModifyMapObjCoords {
+    CGameCtnChallenge@ map;
+    int3 start;
+    int3 end;
+    // do not touch blocks/items referenced by the mb
+    Editor::MacroblockSpecPriv@ mb;
+
+    nat3 targetCoord;
+    vec3 targetPos;
+
+    Helper_ModifyMapObjCoords(CGameCtnChallenge@ map, int3 start, int3 end, Editor::MacroblockSpecPriv@ mb) {
+        @this.map = map;
+        map.MwAddRef();
+        this.start = start;
+        this.end = end;
+        @this.mb = mb;
+        FindSuitableTargets();
+    }
+
+    ~Helper_ModifyMapObjCoords() {
+        Reset();
+    }
+
+    void FindSuitableTargets() {
+        targetCoord = map.Size - nat3(4, 4, 4);
+        targetPos = CoordToPos(targetCoord);
+        // if (start.x > 4 && start.y > 4 && start.z > 4) {
+        //     targetCoord = nat3();
+        //     targetPos = vec3();
+        // } else if (end.x < (map.Size.x - 5) && end.y < (map.Size.y - 5) && end.z < (map.Size.z - 5)) {
+        //     targetCoord = map.Size - 1;
+        //     targetPos = CoordToPos(targetCoord);
+        // } else {
+        // }
+    }
+
+    ModifiedMapObj@[] modified;
+    uint64[] filteredBlocks;
+    uint64[] filteredItems;
+
+    void Run() {
+        SetUpFiltered();
+        MoveBlocks_Filtered();
+        MoveItems_Filtered();
+    }
+
+    void Reset() {
+        for (uint i = 0; i < modified.Length; i++) {
+            modified[i].Restore();
+        }
+        modified.RemoveRange(0, modified.Length);
+        if (map !is null) {
+            map.MwRelease();
+            @map = null;
+        }
+    }
+
+    protected void SetUpFiltered() {
+        filteredBlocks.Reserve(mb.Blocks.Length);
+        filteredItems.Reserve(mb.Items.Length);
+        // get all blocks/items in the mb
+        for (uint i = 0; i < mb.Blocks.Length; i++) {
+            filteredBlocks.InsertLast(cast<Editor::BlockSpecPriv>(mb.Blocks[i]).ObjPtr);
+        }
+        for (uint i = 0; i < mb.Items.Length; i++) {
+            filteredItems.InsertLast(cast<Editor::ItemSpecPriv>(mb.Items[i]).ObjPtr);
+        }
+    }
+
+    protected void MoveBlocks_Filtered() {
+        auto nbBlocksInMap = map.Blocks.Length;
+        auto grassMwIdValue = GetMwId("Grass");
+        bool seenGrass = false;
+        for (uint i = 0; i < map.Blocks.Length; i++) {
+            auto block = map.Blocks[i];
+            // skip grass
+            if (!seenGrass && block.BlockInfo.Id.Value == grassMwIdValue) {
+                seenGrass = true;
+                auto testIx = map.Size.x * map.Size.z - 1 + i;
+                if (testIx < nbBlocksInMap && map.Blocks[testIx].BlockInfo.Id.Value == grassMwIdValue) {
+                    i = testIx;
+                }
+                continue;
+            }
+            auto blockPtr = Dev_GetPointerForNod(block);
+            if (filteredBlocks.Find(blockPtr) != -1) {
+                dev_trace("Skipping filtered block; ix: " + i + " / " + nbBlocksInMap);
+                continue;
+            }
+            // otherwise, let's move it
+            MoveBlock(block);
+        }
+        if (!seenGrass) {
+            Dev_NotifyWarning("MacroblockRecorder: No grass found in map.  This is a bug.");
+        }
+    }
+
+    protected void MoveItems_Filtered() {
+        auto nbItemsInMap = map.AnchoredObjects.Length;
+        for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
+            auto item = map.AnchoredObjects[i];
+            auto itemPtr = Dev_GetPointerForNod(item);
+            if (filteredItems.Find(itemPtr) != -1) {
+                dev_trace("Skipping filtered item; ix: " + i + " / " + nbItemsInMap);
+                continue;
+            }
+            MoveItem(item);
+        }
+    }
+
+    void MoveBlock(CGameCtnBlock@ block) {
+        if (block is null) return;
+        modified.InsertLast(MovedBlockInMap(block, targetCoord, targetPos));
+    }
+
+    void MoveItem(CGameCtnAnchoredObject@ item) {
+        if (item is null) return;
+        modified.InsertLast(MovedItemInMap(item, targetCoord));
+    }
+}
+
+class ModifiedMapObj {
+    ModifiedMapObj() {}
+    void Restore() {}
+}
+
+class MovedBlockInMap : ModifiedMapObj {
+    CGameCtnBlock@ block;
+    nat3 oldCoord;
+    vec3 oldPos;
+
+    MovedBlockInMap(CGameCtnBlock@ block, nat3 newCoord, vec3 newPos) {
+        SetBlock(block);
+        this.oldCoord = block.Coord;
+        this.oldPos = Editor::GetBlockLocation(block, true);
+        if (Editor::IsBlockFree(block)) {
+            Editor::SetBlockLocation(block, oldPos + newPos);
+        } else {
+            Editor::SetBlockCoord(block, oldCoord + newCoord);
+        }
+    }
+
+    ~MovedBlockInMap() {
+        if (block !is null) {
+            block.MwRelease();
+            @block = null;
+        }
+    }
+
+    void SetBlock(CGameCtnBlock@ block) {
+        @this.block = block;
+        block.MwAddRef();
+    }
+
+    void Restore() override {
+        if (block is null) return;
+        if (Editor::IsBlockFree(block)) {
+            Editor::SetBlockLocation(block, oldPos);
+        }
+        Editor::SetBlockCoord(block, oldCoord);
+        block.MwRelease();
+        @block = null;
+    }
+}
+
+class MovedItemInMap : ModifiedMapObj {
+    CGameCtnAnchoredObject@ item;
+    nat3 oldCoord;
+
+    MovedItemInMap(CGameCtnAnchoredObject@ item, nat3 newCoord) {
+        SetItem(item);
+        this.oldCoord = item.BlockUnitCoord;
+        item.BlockUnitCoord = oldCoord + newCoord;
+    }
+
+    ~MovedItemInMap() {
+        if (item !is null) {
+            item.MwRelease();
+            @item = null;
+        }
+    }
+
+    void SetItem(CGameCtnAnchoredObject@ item) {
+        @this.item = item;
+        item.MwAddRef();
+    }
+
+    void Restore() override {
+        if (item is null) return;
+        item.BlockUnitCoord = oldCoord;
+        item.MwRelease();
+        @item = null;
+    }
+}
 
 
 /*

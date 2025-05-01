@@ -55,11 +55,19 @@ namespace CControl {
         ));
     }
 
-    CControlButton@ get_Editor_FrameEditSnap_SaveMacroblock() {
+    CControlButton@ get_Editor_FrameEditSnap_SaveBtn() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return null;
         return cast<CControlButton>(FollowIdPath(editor.EditorInterface.InterfaceRoot,
             {"FrameEditSnapCamera", "ButtonOk"}
+        ));
+    }
+
+    CControlButton@ get_Editor_FrameEditSnap_RotateCameraBtn() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return null;
+        return cast<CControlButton>(FollowIdPath(editor.EditorInterface.InterfaceRoot,
+            {"FrameEditSnapCamera", "ButtonRotateIcon"}
         ));
     }
 

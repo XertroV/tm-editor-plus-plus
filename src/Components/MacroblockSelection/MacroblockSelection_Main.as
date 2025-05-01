@@ -28,7 +28,6 @@ class MacroblockSelectionTab : Tab {
             return;
         }
 
-        CGameCtnEditorFree@ editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto mbi = selectedMacroBlockInfo.AsMacroBlockInfo();
 
         UI::Columns(2, "selectedmacroblockinfo", false);
@@ -49,6 +48,7 @@ class MacroblockSelectionTab : Tab {
         if (UX::SmallButton("[DEV] place and delete test")) {
             // Editor::GetInventoryItemFolder
         }
+        DrawMBTestSpecStuff();
 #endif
 
         UI::NextColumn();
@@ -61,6 +61,63 @@ class MacroblockSelectionTab : Tab {
         UI::SameLine();
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(mbi)));
 #endif
+#if DEV
+        DrawMbSpecSelectionTest();
+#endif
+
+        UI::Columns(1);
+
+        DrawMBContents(mbi);
+    }
+
+    void _HeadingLeft() override {
+        Tab::_HeadingLeft();
+
+        // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        // auto pmt = editor.PluginMapType;
+        if (selectedMacroBlockInfo is null)
+            return;
+
+        UI::SameLine();
+        CopiableValue(selectedMacroBlockInfo.AsMacroBlockInfo().IdName);
+    }
+
+    void DrawMbSpecSelectionTest() {
+        if (lastPickedItem!is null && UI::Button("Test Picked Item as Mb Coord")) {
+            startnew(CoroutineFunc(RunItemSpecSelectionTest));
+        }
+    }
+
+    void RunItemSpecSelectionTest() {
+        CGameCtnAnchoredObject@ item;
+        CGameCtnBlock@[] blocks;
+        if (lastPickedItem is null || (@item = lastPickedItem.AsItem()) is null) {
+            NotifyWarning("No item picked.");
+            return;
+        }
+        if (lastPickedBlock !is null) {
+            blocks.InsertLast(lastPickedBlock.AsBlock());
+            dev_trace("picked block coord: " + blocks[0].Coord.ToString() + " / pos: " + Editor::GetBlockLocation(blocks[0], true).ToString());
+        }
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        dev_trace("picked item coord: " + item.BlockUnitCoord.ToString() + " / pos: " + item.AbsolutePositionInMap.ToString());
+        auto mb = Editor::MacroblockSpecPriv(blocks, array<CGameCtnAnchoredObject@> = {item});
+        if (mb.blocks.Length > 0) dev_trace("mb spec init block coord: " + mb.blocks[0].coord.ToString() + " / pos: " + mb.blocks[0].pos.ToString());
+        dev_trace("mb spec init coord: " + mb.items[0].coord.ToString() + " / pos: " + mb.items[0].pos.ToString());
+        mb.UndoMacroblockHeightOffset();
+        if (mb.blocks.Length > 0) dev_trace("mb spec after undo block coord: " + mb.blocks[0].coord.ToString() + " / pos: " + mb.blocks[0].pos.ToString());
+        dev_trace("mb spec after undo coord: " + mb.items[0].coord.ToString() + " / pos: " + mb.items[0].pos.ToString());
+        auto pmt = editor.PluginMapType;
+        pmt.CopyPaste_ResetSelection();
+        pmt.CopyPaste_AddOrSubSelection(Nat3ToInt3(mb.items[0].coord), Nat3ToInt3(mb.items[0].coord));
+        if (mb.blocks.Length > 0) {
+            pmt.CopyPaste_AddOrSubSelection(Nat3ToInt3(mb.blocks[0].coord), Nat3ToInt3(mb.blocks[0].coord));
+        }
+    }
+
+    void DrawMBTestSpecStuff() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto mbi = selectedMacroBlockInfo.AsMacroBlockInfo();
 
         if (mbSpec is null) {
             if (UI::Button("Create MB Spec")) {
@@ -163,22 +220,6 @@ class MacroblockSelectionTab : Tab {
                 }
             }
         }
-
-        UI::Columns(1);
-
-        DrawMBContents(mbi);
-    }
-
-    void _HeadingLeft() override {
-        Tab::_HeadingLeft();
-
-        // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        // auto pmt = editor.PluginMapType;
-        if (selectedMacroBlockInfo is null)
-            return;
-
-        UI::SameLine();
-        CopiableValue(selectedMacroBlockInfo.AsMacroBlockInfo().IdName);
     }
 }
 
