@@ -1,0 +1,19 @@
+# maybe up to 0x238 size, but not sure about more than 118
+[DSnapCam : 0x120]
+u01 = uint, 0, GS
+FrameEditSnapCamera = CControlFrame, 0x8, G
+Bitmap = CPlugBitmap, 0x10, G
+
+CamLoc = iso4, 0xC0, GS
+CamPos = vec3, 0xE4, GS
+# 0, 0
+# 0
+# increasing = cut off front -> back
+Clip1 = float, 0xFC, GS
+FovH = float, 0x100, GS
+FovV = float, 0x104, GS
+FovHV = vec2, 0x100, GS
+# decreasing = cut off back -> front
+Clip2 = float, 0x108, GS
+# 0
+# 4, 0

@@ -113,6 +113,13 @@ namespace Editor {
             items.InsertLast(ItemSpecPriv(item));
         }
 
+        // todo: move to MacroblockSpec
+        ItemSpecPriv@ AddItem1(CGameCtnAnchoredObject@ item) {
+            auto itemSpec = ItemSpecPriv(item);
+            items.InsertLast(itemSpec);
+            return itemSpec;
+        }
+
         protected DGameCtnMacroBlockInfo@ tmpMacroblock = null;
         protected uint64 tmpMacroblockBlocksBuf = 0;
         protected uint64 tmpMacroblockBlocksBufLenCap = 0;
@@ -1051,6 +1058,15 @@ namespace Editor {
             vec3 posDiff = CoordDistToPos(coordDist);
             pos += posDiff;
             coord = Int3ToNat3(Nat3ToInt3(coord) + coordDist);
+        }
+
+        // todo: move to MacroblockSpec
+        ItemSpec@ SetCoordAndFlying() {
+            dev_trace("SetCoordAndFlying; coord before: " + coord.ToString());
+            coord = PosToCoord(pos);
+            dev_trace("SetCoordAndFlying; coord after: " + coord.ToString());
+            isFlying = 1;
+            return this;
         }
     }
 

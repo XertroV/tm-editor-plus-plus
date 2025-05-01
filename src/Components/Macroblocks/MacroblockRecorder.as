@@ -108,7 +108,7 @@ namespace MacroblockRecorder {
 
         if (recordingMB !is null) {
             // ~~remove before adding to avoid issues with the order of events (though shouldn't be an issue)~~
-            for (uint i = 0; i < newItems.Length; i++) { recordingMB.AddItem(newItems[i]); }
+            for (uint i = 0; i < newItems.Length; i++) { recordingMB.AddItem1(newItems[i]).SetCoordAndFlying(); }
             for (uint i = 0; i < newBlocks.Length; i++) { recordingMB.AddBlock(newBlocks[i]); }
             for (uint i = 0; i < removedItems.Length; i++) { _RemoveMbItem(removedItems[i]); }
             for (uint i = 0; i < removedBlocks.Length; i++) { _RemoveMbBlock(removedBlocks[i]); }
@@ -314,16 +314,25 @@ namespace MacroblockRecorder {
                 // move coords/positions out of the way. After, move them back.
                 ModifyMapObjects_SetCoordsOutside_Filtered(editor.Challenge, startCoord, endCoord, mb);
 
+                _Patcher_AllowEmptyMacroblockCreation.Apply();
+
                 dev_trace("Set selection coords to: " + startCoord.ToString() + " / " + endCoord.ToString());
                 pmt.CopyPaste_ResetSelection();
                 pmt.CopyPaste_AddOrSubSelection(startCoord, endCoord);
-                pmt.CopyPaste_AddOrSubSelection(topRightCornerMin, topRightCornerMax); // add it so we know we can remove it later
+                // auto nbSelected =
+                // pmt.CopyPaste_AddOrSubSelection(topRightCornerMin, topRightCornerMax); // add it so we know we can remove it later
                 pmt.CopyPaste_Copy();
-                pmt.CopyPaste_AddOrSubSelection(topRightCornerMin, topRightCornerMax); // remove it
+                yield();
+                // pmt.CopyPaste_ResetSelection();
+                // pmt.CopyPaste_AddOrSubSelection(startCoord, endCoord); // just main
+                // pmt.CopyPaste_AddOrSubSelection(topRightCornerMin, topRightCornerMax); // remove it
+                // pmt.CopyPaste_Copy();
+
 
                 dev_trace("run click save macroblock (in copy paste toolbar)");
                 // activates hook and sets up 3d scene for the macroblock
                 CControl::Editor_FrameCopyPaste_SaveMacroblock.OnAction();
+                _Patcher_AllowEmptyMacroblockCreation.Unapply();
                 yield();
 
                 dev_trace('set camera and rotate');
@@ -615,7 +624,7 @@ class Helper_ModifyMapObjCoords {
 
     void MoveItem(CGameCtnAnchoredObject@ item) {
         if (item is null) return;
-        modified.InsertLast(MovedItemInMap(item, targetCoord));
+        modified.InsertLast(MovedItemInMap(item, targetCoord, targetPos));
     }
 }
 
@@ -641,10 +650,7 @@ class MovedBlockInMap : ModifiedMapObj {
     }
 
     ~MovedBlockInMap() {
-        if (block !is null) {
-            block.MwRelease();
-            @block = null;
-        }
+        Restore();
     }
 
     void SetBlock(CGameCtnBlock@ block) {
@@ -666,18 +672,18 @@ class MovedBlockInMap : ModifiedMapObj {
 class MovedItemInMap : ModifiedMapObj {
     CGameCtnAnchoredObject@ item;
     nat3 oldCoord;
+    vec3 oldPos;
 
-    MovedItemInMap(CGameCtnAnchoredObject@ item, nat3 newCoord) {
+    MovedItemInMap(CGameCtnAnchoredObject@ item, nat3 newCoord, vec3 newPos) {
         SetItem(item);
         this.oldCoord = item.BlockUnitCoord;
-        item.BlockUnitCoord = oldCoord + newCoord;
+        this.oldPos = item.AbsolutePositionInMap;
+        item.BlockUnitCoord = nat3(-1);
+        item.AbsolutePositionInMap = item.AbsolutePositionInMap + newPos;
     }
 
     ~MovedItemInMap() {
-        if (item !is null) {
-            item.MwRelease();
-            @item = null;
-        }
+        Restore();
     }
 
     void SetItem(CGameCtnAnchoredObject@ item) {
@@ -688,6 +694,7 @@ class MovedItemInMap : ModifiedMapObj {
     void Restore() override {
         if (item is null) return;
         item.BlockUnitCoord = oldCoord;
+        item.AbsolutePositionInMap = oldPos;
         item.MwRelease();
         @item = null;
     }
