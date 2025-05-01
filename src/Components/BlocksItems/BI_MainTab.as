@@ -585,6 +585,9 @@ class ViewDuplicateItemsTab : ViewAllItemsTab {
             }
             UI::TreePop();
         }
+        if (UI::Button("Remove All Duplicate Items")) {
+            startnew(CoroutineFunc(this.RunAutodeletion));
+        }
 
 #if DEV
         if (UX::SmallButton("Fix Duplicate Items by Spacing over 2m in X direction")) {
@@ -626,6 +629,36 @@ class ViewDuplicateItemsTab : ViewAllItemsTab {
         }
         Editor::MarkRefreshUnsafe();
         NotifyWarning("Items altered en masse. To avoid issues, refresh is not recommended and instead you should save + reload map. (Reload from Adv menu if you want)");
+    }
+
+    void RunAutodeletion() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto mapCache = Editor::GetMapCache();
+        auto nbDuplicateItems = mapCache.DuplicateItems.Length;
+        if (nbDuplicateItems < 2) {
+            Notify("[Autodel Dups] 1. No duplicates found.");
+            return;
+        }
+        // loop through each key with duplicates, add all instances after the 1st to a list to delete.
+        CGameCtnAnchoredObject@[] toDelete;
+        for (uint i = 0; i < mapCache.DuplicateItemKeys.Length; i++) {
+            auto k = mapCache.DuplicateItemKeys[i];
+            auto items = mapCache.GetItemsByHash(k);
+            if (items.Length < 2) {
+                NotifyWarning("[Autodel Dups] 2. Unexpected: key " + k + " has length " + items.Length);
+                continue;
+            }
+            for (uint i = 1; i < items.Length; i++) {
+                auto item = items[i];
+                auto itemToDelete = item.FindMe(editor.PluginMapType);
+                if (itemToDelete is null) {
+                    NotifyWarning("got null finding duplicate item: " + item.ToString());
+                    continue;
+                }
+                toDelete.InsertLast(itemToDelete);
+            };
+        }
+        Editor::DeleteItems(toDelete, true);
     }
 
     // void DrawAutoremoveDuplicatesMenu() {

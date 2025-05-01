@@ -369,6 +369,18 @@ namespace MacroblockRecorder {
                         yield();
                         app.BasicDialogs.HideDialogs();
                     }
+                } else {
+                    // if we aren't autosaving, wait for the thumbnail view to go away before we set the copied macroblock (because we exit to copy mode)
+                    for (uint i = 0; i < 3; i++) {
+                        while (CControl::Editor_FrameEditSnap_SaveBtn.Parent.IsVisible) yield();
+                        while (app.ActiveMenus.Length > 0) yield();
+                        yield(3);
+                    }
+
+                    Dev::SetOffset(editor, O_EDITOR_CopyPasteMacroBlockInfo, _manipulating);
+                    _manipulating.MwAddRef();
+                    Dev::SetOffset(editor, O_EDITOR_CurrentMacroBlockInfo, _manipulating);
+                    _manipulating.MwAddRef();
                 }
             } catch {
                 NotifyError("MacroblockRecorder: Failed to automate saving macroblock. " + getExceptionInfo());
@@ -377,7 +389,6 @@ namespace MacroblockRecorder {
             _UnapplySaveMbPatch();
             ModifyMapObjects_SetCoords_Reset();
         }
-
 
         CursorControl::ReleaseExclusiveControl(mbRecorderInputsControlName);
 
@@ -619,7 +630,7 @@ class Helper_ModifyMapObjCoords {
 
     void MoveBlock(CGameCtnBlock@ block) {
         if (block is null) return;
-        modified.InsertLast(MovedBlockInMap(block, targetCoord, targetPos));
+        modified.InsertLast(MovedBlockInMap(block, start.y - 1, targetPos));
     }
 
     void MoveItem(CGameCtnAnchoredObject@ item) {
@@ -643,10 +654,13 @@ class MovedBlockInMap : ModifiedMapObj {
         this.oldCoord = block.Coord;
         this.oldPos = Editor::GetBlockLocation(block, true);
         if (Editor::IsBlockFree(block)) {
-            Editor::SetBlockLocation(block, oldPos + newPos);
+            Editor::SetBlockLocation(block, oldPos + vec3(0.,111.0,0.) * newPos);
         } else {
-            Editor::SetBlockCoord(block, oldCoord + newCoord);
+            // block.CoordX = 0;
+            block.CoordY = 1;
+            // block.CoordZ = 0;
         }
+
     }
 
     ~MovedBlockInMap() {
