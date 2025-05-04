@@ -12,7 +12,7 @@ namespace ItemEditor {
             Editor::DoItemEditorAction(ieditor, Editor::ItemEditorAction::SaveItem);
             auto count = 0;
             yield();
-            while (count < 10) {
+            while (count < 50) {
                 count++;
                 @frame = GetDialogSaveAs();
                 if (frame !is null) break;

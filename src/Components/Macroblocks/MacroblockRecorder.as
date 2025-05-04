@@ -237,10 +237,8 @@ namespace MacroblockRecorder {
         }
 
         // after resetting selection, the MB is cleared; set it back.
-        Dev::SetOffset(editor, O_EDITOR_CopyPasteMacroBlockInfo, copyPasteMb);
-        copyPasteMb.MwAddRef();
-        Dev::SetOffset(editor, O_EDITOR_CurrentMacroBlockInfo, copyPasteMb);
-        copyPasteMb.MwAddRef();
+        Editor::SetCopyPasteMacroBlockInfo(editor, copyPasteMb);
+        Editor::SetSelectedMacroBlockInfo(editor, copyPasteMb);
 
         // undo the +56 to pos.y
         mb.UndoMacroblockHeightOffset();
@@ -260,20 +258,23 @@ namespace MacroblockRecorder {
         if (S_RecordMB_ForceFree) mb.SetAllBlocksFree();
         mb.SetAllItemsFlying();
 
-        // okay, now write to MB
-        mb._WriteDirectlyToMacroblock(copyPasteMb);
-        dev_trace("Size before: " + Editor::GetMacroblockCoordSize(copyPasteMb).ToString());
-        Editor::SetMacroblockCoordSize(copyPasteMb, mbSize);
-        dev_trace("Size after: " + Editor::GetMacroblockCoordSize(copyPasteMb).ToString());
-        bool setGround = hasGround && !S_RecordMB_ForceAir && !S_RecordMB_ForceFree;
-        Editor::SetMacroblockGround(copyPasteMb, setGround);
-        if (copyPasteMb.GeneratedBlockInfo.VariantGround !is null) {
-            copyPasteMb.GeneratedBlockInfo.VariantGround.AutoTerrainPlaceType = CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType::DoNotPlace;
+        if (false) {
+            // hmm, this is sometimes crashing with a simple block, freeblock, and item combo. (But saving a macroblock works fine)
+            // okay, now write to MB
+            mb._WriteDirectlyToMacroblock(copyPasteMb);
+            dev_trace("Size before: " + Editor::GetMacroblockCoordSize(copyPasteMb).ToString());
+            Editor::SetMacroblockCoordSize(copyPasteMb, mbSize);
+            dev_trace("Size after: " + Editor::GetMacroblockCoordSize(copyPasteMb).ToString());
+            bool setGround = hasGround && !S_RecordMB_ForceAir && !S_RecordMB_ForceFree;
+            Editor::SetMacroblockGround(copyPasteMb, setGround);
+            if (copyPasteMb.GeneratedBlockInfo.VariantGround !is null) {
+                copyPasteMb.GeneratedBlockInfo.VariantGround.AutoTerrainPlaceType = CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType::DoNotPlace;
+            }
+            copyPasteMb.Connected = false;
+            copyPasteMb.Initialized = false;
+            dev_trace("Setting macroblock generated block info null");
+            Dev::SetOffset(copyPasteMb, O_MACROBLOCKINFO_GeneratedBlockInfo, uint64(0));
         }
-        copyPasteMb.Connected = false;
-        copyPasteMb.Initialized = false;
-        dev_trace("Setting macroblock generated block info null");
-        Dev::SetOffset(copyPasteMb, O_MACROBLOCKINFO_GeneratedBlockInfo, uint64(0));
 
         // dev_trace("Setting macroblock temp FID");
         // SetNodFid(copyPasteMb, Drive::User, "Blocks/Stadium/_epp_tmp.Macroblock.Gbx");
@@ -376,11 +377,8 @@ namespace MacroblockRecorder {
                         while (app.ActiveMenus.Length > 0) yield();
                         yield(3);
                     }
-
-                    Dev::SetOffset(editor, O_EDITOR_CopyPasteMacroBlockInfo, _manipulating);
-                    _manipulating.MwAddRef();
-                    Dev::SetOffset(editor, O_EDITOR_CurrentMacroBlockInfo, _manipulating);
-                    _manipulating.MwAddRef();
+					// Editor::SetCopyPasteMacroBlockInfo(editor, _manipulating);
+					// Editor::SetSelectedMacroBlockInfo(editor, _manipulating);
                 }
             } catch {
                 NotifyError("MacroblockRecorder: Failed to automate saving macroblock. " + getExceptionInfo());
@@ -443,10 +441,8 @@ namespace MacroblockRecorder {
 
     void _On_SetCopyPasteMbInfo() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        Dev::SetOffset(editor, O_EDITOR_CopyPasteMacroBlockInfo, _manipulating);
-        _manipulating.MwAddRef();
-        Dev::SetOffset(editor, O_EDITOR_CurrentMacroBlockInfo, _manipulating);
-        _manipulating.MwAddRef();
+        Editor::SetCopyPasteMacroBlockInfo(editor, _manipulating);
+        Editor::SetSelectedMacroBlockInfo(editor, _manipulating);
     }
 
     // not needed
@@ -648,8 +644,9 @@ class MovedBlockInMap : ModifiedMapObj {
     CGameCtnBlock@ block;
     nat3 oldCoord;
     vec3 oldPos;
+    uint orig0x90;
 
-    MovedBlockInMap(CGameCtnBlock@ block, nat3 newCoord, vec3 newPos) {
+    MovedBlockInMap(CGameCtnBlock@ block, int yCoord, vec3 newPos) {
         SetBlock(block);
         this.oldCoord = block.Coord;
         this.oldPos = Editor::GetBlockLocation(block, true);
@@ -657,10 +654,16 @@ class MovedBlockInMap : ModifiedMapObj {
             Editor::SetBlockLocation(block, oldPos + vec3(0.,111.0,0.) * newPos);
         } else {
             // block.CoordX = 0;
-            block.CoordY = 1;
             // block.CoordZ = 0;
+            // block.CoordY = yCoord;
+            // setting y to -1 creates infinite loop (well, probs just like a 4 billion loop)
+            // block.CoordY = -1;
+            // block.CoordY = 0;
         }
-
+        // set block 0x90 |= 0x1000
+        // if ((ctnBlock != (CGameCtnBlock *)0x0) && ((*(uint *)&ctnBlock->field_0x90 & 0x1000) == 0))
+        orig0x90 = Dev::GetOffsetUint32(block, Editor::O_CGameCtnBlock_MacroblockFlags);
+        Dev::SetOffset(block, Editor::O_CGameCtnBlock_MacroblockFlags, orig0x90 | 0x1000);
     }
 
     ~MovedBlockInMap() {
@@ -677,7 +680,8 @@ class MovedBlockInMap : ModifiedMapObj {
         if (Editor::IsBlockFree(block)) {
             Editor::SetBlockLocation(block, oldPos);
         }
-        Editor::SetBlockCoord(block, oldCoord);
+        // Editor::SetBlockCoord(block, oldCoord);
+        Dev::SetOffset(block, 0x90, orig0x90);
         block.MwRelease();
         @block = null;
     }

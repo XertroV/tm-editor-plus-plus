@@ -68,7 +68,7 @@ class MacroblockOptsTab : Tab {
         }
 
         MacroblockRecorder::S_RecordMB_ForceAir = UI::Checkbox("Force Air", MacroblockRecorder::S_RecordMB_ForceAir);
-        MacroblockRecorder::S_RecordMB_ForceFree = UI::Checkbox("Force Free", MacroblockRecorder::S_RecordMB_ForceFree);
+        MacroblockRecorder::S_RecordMB_ForceFree = UI::Checkbox("Convert all Blocks to Free", MacroblockRecorder::S_RecordMB_ForceFree);
         MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction = UI::Checkbox("Save Macroblock after Construction", MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction);
         MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave = UI::Checkbox("Automate Save (to _epp_tmp.Macroblock.Gbx)", MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave);
     }

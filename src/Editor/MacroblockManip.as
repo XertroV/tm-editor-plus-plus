@@ -384,10 +384,13 @@ namespace Editor {
         // We always offset y positions by 56 to fit with placing macroblocks at coord <0,1,0> (below the ground)
         // But if we want everything to match original positions, we want to undo this.
         void UndoMacroblockHeightOffset() {
+            return;
+
             for (uint i = 0; i < blocks.Length; i++) {
                 auto block = blocks[i];
                 if (block.isFree) {
-                    block.pos = block.pos - vec3(0, 56, 0);
+                    // block.pos = block.pos; // - vec3(0, 56, 0);
+                    block.pos.y += 8.0;
                 } else {
                     block.coord = block.coord + nat3(0, 1, 0);
                 }
@@ -395,7 +398,9 @@ namespace Editor {
             for (uint i = 0; i < items.Length; i++) {
                 auto item = cast<ItemSpecPriv>(items[i]);
                 item.coord = item.coord + nat3(0, 1, 0);
-                item.pos.y -= 56.0;
+                item.pos.y += 8.0;
+                // hmm, don't need to move pos.y
+                // item.pos.y -= 56.0;
             }
         }
 
@@ -829,9 +834,10 @@ namespace Editor {
             // item.MwAddRef();
             super();
             // collection = blah
-            // need to offset coords by 0,1,0 and make height relative to that
-            coord = item.BlockUnitCoord - nat3(0, 1, 0);
+            coord = item.BlockUnitCoord;
             SetCoordFromAssociatedBlock(Editor::GetItemsBlockAssociation(item));
+            // need to offset coords by 0,1,0 and make height relative to that
+            coord = coord - nat3(0, 1, 0);
             dir = CGameCtnAnchoredObject::ECardinalDirections(uint8(-1));
             pos = Editor::GetItemLocation(item) + vec3(0, 56, 0);
             pyr = Editor::GetItemRotation(item);
@@ -1022,6 +1028,8 @@ namespace Editor {
             @Model = _model;
             if (Model !is null) {
                 name = _model.IdName;
+                // during really heavy times, we get a null ptr exception
+                // can get null ptr exception here
                 author = _model.Author.GetName();
                 Model.MwAddRef();
             }
@@ -1063,7 +1071,7 @@ namespace Editor {
         // todo: move to MacroblockSpec
         ItemSpec@ SetCoordAndFlying() {
             dev_trace("SetCoordAndFlying; coord before: " + coord.ToString());
-            coord = PosToCoord(pos);
+            coord = PosToCoord(pos) - nat3(0, 7, 0);
             dev_trace("SetCoordAndFlying; coord after: " + coord.ToString());
             isFlying = 1;
             return this;
