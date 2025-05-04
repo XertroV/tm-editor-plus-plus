@@ -138,3 +138,8 @@ namespace MathX {
             Math::IsInf(v.x) || Math::IsInf(v.y) || Math::IsInf(v.z);
     }
 }
+
+
+vec3 Iso4_GetPos(const iso4 &in iso) {
+    return vec3(iso.tx, iso.ty, iso.tz);
+}

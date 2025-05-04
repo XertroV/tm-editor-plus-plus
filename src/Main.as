@@ -316,13 +316,17 @@ void CopyFile(const string &in f1, const string &in f2) {
 }
 
 uint g_LastPause = 0;
+uint g_CurrentlyPausedCoros = 0;
 void CheckPause() {
     uint workMs = Time::Now < 60000 ? 1 : 4;
     if (g_LastPause + workMs < Time::Now) {
+        g_CurrentlyPausedCoros++;
+        UI::ShowNotification("E++ Work in Process", "Process " + g_CurrentlyPausedCoros + " yeilding...", 5);
         sleep(0);
         // trace('paused');
         g_LastPause = Time::Now;
     }
+    g_CurrentlyPausedCoros = 0;
 }
 
 bool g_LmbDown = false;

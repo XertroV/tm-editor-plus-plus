@@ -217,6 +217,7 @@ namespace FillBlocks {
                         locs.InsertLast(CoordToPos(nat3(x, y, z)));
                     }
                 }
+                CheckPause();
             }
             return locs;
         }
@@ -277,6 +278,7 @@ namespace FillBlocks {
                         p += dir;
                     }
                 }
+                CheckPause();
             }
 
             dir = up;
@@ -291,6 +293,7 @@ namespace FillBlocks {
                         p += dir;
                     }
                 }
+                CheckPause();
             }
 
             vec3[] topLayer = {};
@@ -306,12 +309,14 @@ namespace FillBlocks {
                         locs.InsertLast(along_xyz[i]);
                     }
                 }
+                CheckPause();
             }
 
             for (uint i = 0; i < topLayer.Length; i++) {
                 locs.InsertLast(topLayer[i]);
             }
             lastLocsNbTopLayer = topLayer.Length;
+            CheckPause();
 
             return locs;
         }

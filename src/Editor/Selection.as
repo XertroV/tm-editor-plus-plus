@@ -44,11 +44,10 @@ namespace Editor {
         }
         // find items with those coords
         auto map = editor.Challenge;
-        auto linkedBlockEntryOffset = GetOffset("CGameCtnAnchoredObject", "Scale") + 0x10;
         for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
             auto item = map.AnchoredObjects[i];
             auto assocBlock = Editor::GetItemsBlockAssociation(item);
-            auto linkedListEntry = Dev::GetOffsetNod(item, linkedBlockEntryOffset);
+            auto linkedListEntry = Dev::GetOffsetNod(item, Editor::LinkedBlockEntryOffset);
             if (assocBlock is null && selectedCoords.Exists(Editor::GetItemCoord(item).ToString())) {
                 selectedItems.InsertLast(item);
             } else if (assocBlock !is null) {

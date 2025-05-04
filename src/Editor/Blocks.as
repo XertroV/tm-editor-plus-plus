@@ -6,6 +6,9 @@ namespace Editor {
     const uint16 O_CGameCtnBlock_CoordOffset = GetOffset("CGameCtnBlock", "Coord");
     // const uint16 O_CGameCtnBlock_ = GetOffset("CGameCtnBlock", "Coord");
 
+    // 0x1000 = skip for macroblock
+    const uint16 O_CGameCtnBlock_MacroblockFlags       = O_CGameCtnBlock_DirOffset + (0x88 - 0x64) ; // (0x88 + 0x8 - 0x6c)
+
     // flag before this, too. checked by MB thing
     const uint16 O_CGameCtnBlock_BlockMapBlocksIndex   = O_CGameCtnBlock_DirOffset + (0x8c - 0x64) ; // (0x8c + 0x8 - 0x6c)
     const uint16 O_CGameCtnBlock_BlockUniqueSaveID     = O_CGameCtnBlock_DirOffset + (0x90 - 0x64) ; // (0x90 + 0x8 - 0x6c)

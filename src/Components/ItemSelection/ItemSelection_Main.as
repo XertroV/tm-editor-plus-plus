@@ -34,7 +34,7 @@ class ItemSelectionTab : Tab {
 
         // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         // auto pmt = editor.PluginMapType;
-        if (selectedItemModel is null)
+        if (selectedItemModel is null || selectedItemModel.AsItemModel() is null)
             return;
 
         UI::SameLine();

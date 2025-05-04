@@ -70,7 +70,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 	}
 
 	bool ShouldShowWindow(CGameCtnEditorFree@ editor) override {
-		return S_ShowItemPlacementToolbar && Editor::IsInAnyItemPlacementMode(editor);
+		return S_ShowItemPlacementToolbar && Editor::IsInAnyItemPlacementMode(editor, false);
 	}
 
 	void DrawInner_MainToolbar() override {
@@ -319,14 +319,6 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
 	void ToggleAutoPivot(CGameItemPlacementParam@ pp) {
 		pp.SwitchPivotManually = !pp.SwitchPivotManually;
-	}
-
-	void DrawLocalRotateButtons() {
-		auto btnStatus = ActiveFreeToBtnStatus(S_CursorSmartRotate);
-		bool toggleSmartRot = this.BtnToolbarHalfV("S 90" + DEGREES_CHAR, "Cursor Smart Rotate.\n Rotations are applied locally to current axes (like gizmo).\n Note: these need to fit into the existing cursor rotations, so aren't perfect.", btnStatus);
-		if (toggleSmartRot) {
-			S_CursorSmartRotate = !S_CursorSmartRotate;
-		}
 	}
 
 	void DrawCopyRotsBtn() {
