@@ -1,0 +1,31 @@
+[DSceneCharVis_SMgr : 0x2b8]
+Buffer: CharModels = DCharVis_CharModels, 0x1b0, 0x40, true
+Buffer: CharViss = DSceneCharViss, 0x168, 0x700, true
+
+[DCharVis_CharModel : 0x40]
+NativeClass = CGameCharacterModel
+# 0x18: id=PhyCharParams, class=0x10c1000
+Vis = CPlugCharVisModel, 0x20, G
+# 0x28: spawnable objects buffer
+LockMaxDist = float, 0x38, GS
+
+[DSceneCharVis : 0x700]
+Inline: CSceneCharVis@ get_Nod() const { return Dev::ForceCast<CSceneCharVis@>(Dev_GetNodFromPointer(ptr)).Get(); }
+EntID = uint, 0x0, G
+Flags = uint, 0x4, GS
+VisModel = CPlugCharVisModel, 0x8, G
+# Struct: Struct_x10 =
+PhyModel = CPlugCharPhyModel, 0x18, G
+#
+pLoc = uint64, 0x28, G
+#
+Inline: uint64 get_State_Addr() { return ptr + 0x30; }
+State_EndID = uint, 0x30, G
+CharPhyState = int, 0x30+0x04, GS
+AimPitch = int, 0x30+0x10, GS
+AimYaw = int, 0x30+0x14, GS
+
+Pos = vec3, 0x30+0x18, GS
+Vel = vec3, 0x30+0x28, GS
+WishMove = vec3, 0x30+0x3c, GS
+RotRef = quat, 0x30+0x74, GS

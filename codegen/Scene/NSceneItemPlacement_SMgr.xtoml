@@ -45,5 +45,3 @@ Buffer: RequiredTags = DRequiredTags, 0x0, 0x8, false
 x = uint, 0x0, GS
 y = uint, 0x4, GS
 xy = nat2, 0x0, GS
-# get_type crashes???
-# Inline: string get_Type() { return string(Dev::ForceCast<NPlugItemPlacement_STag>(GetThisAsNod()).Get().Type); }

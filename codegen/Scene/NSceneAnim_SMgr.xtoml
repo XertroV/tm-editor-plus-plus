@@ -1,0 +1,55 @@
+[DSceneAnim_SMgr : 0x7d0]
+Buffer: ModelInsts = DSModelInsts, 0x18, 0xe8, false
+Buffer: Models = DSModels, 0x1a8, 0x168, true
+
+[DSModelInst : 0xe8]
+Inline: NSceneAnim_SModelInst@ get_Nod() { return Dev::ForceCast<NSceneAnim_SModelInst@>(Dev_GetNodFromPointer(ptr)).Get(); }
+Model = DSModel, 0x8, G
+# SkelPose
+SkelPose_iLod = uint8, 0x10+0, G
+# NPlugAnim::EPoseType
+SkelPose_Type = uint8, 0x10+1, G
+# SkelPose_Joints = MwSArray<GmTransQuat>, 0x10+8, G
+# SkelPose_Floats = MwSArray<float>, 0x10+0x18, G
+# Input
+Input_Contexts_Len = uint, 0x40+0x10, G
+Input_Contexts0_Nod = CMwNod, 0x40+0x18, G
+Input_Contexts0_NodAddr = uint64, 0x40+0x18, G
+Struct: Input_Contexts0_Meta = DMetaPtr, 0x40+0x20, G
+Inline: uint get_Input_Contexts0_ClassID() { return Dev::ReadUInt32(Dev::ReadUInt64(ptr + 0x60) + 0x10); }
+Input_Rot = vec4, 0x40+0x38, G
+Input_Pos = vec3, 0x40+0x48, G
+Input_Vel = vec3, 0x40+0x54, G
+Struct: JointDynamic = DSModelInst_JointDyna, 0xC0, G
+
+
+[DSModel : 0x168]
+cRef = uint, 0, G
+# also at 0x8
+AnimFile = CPlugAnimFile, 0x10, G
+PrimarySkel = CPlugSkel, 0x78, G
+cGraphNode = uint, 0x118, G
+GraphModelSize = uint, 0x138, G
+GraveInstanceSize = uint, 0x13c, G
+
+
+# This has a next ptr at 0x3f8 which points to 8 bytes before DSModelInst_JointDyna (the next next ptr).
+# Or maybe this is not starting at the correct place (but it's suitable for returning from DSModelInst).
+[DSModelInst_JointDyna : 0x400]
+Struct: Instance = DSModelInst, 0x0, G
+# unk, unk
+# lots of FFFFFFFFs
+unkPtr1 = uint64, 0xf8, G
+HeadPitch = float, 0x100, G
+HeadPitchVel = float, 0x108, G
+unkPtr2 = uint64, 0x110, G
+HeadRoll = float, 0x118, G
+HeadRollVel = float, 0x120, G
+
+
+[DMetaPtr : 0x18]
+Inline: string get_Name() { return Dev::ReadCString(Dev::ReadUInt64(ptr)); }
+Size = uint, 0xC, G
+ClassID = uint, 0x10, G
+# 0x18: zero
+# 0x20: previous metadata
