@@ -166,6 +166,50 @@ class DevMiscTab : Tab {
                 }
             }
         }
+
+
+        UI::Separator();
+
+        if (UI::CollapsingHeader("MainBody Skel")) {
+            DrawMainBodySkel();
+        }
+        if (UI::CollapsingHeader("Pilot Skel")) {
+            DrawPilotSkel();
+        }
+    }
+
+    void DrawMainBodySkel() {
+        auto fid = Fids::GetGame("GameData\\Skins\\Models\\CarSport\\Stadium\\Common\\MainBody.Skel.Gbx");
+        if (fid is null) {
+            UI::Text("Failed to get fid");
+            return;
+        }
+        auto nod = cast<CPlugSkel>(Fids::Preload(fid));
+        if (nod is null) {
+            UI::Text("Failed to get nod");
+            return;
+        }
+        ItemModelTreeElement(null, -1, nod, "MainBody Skel", true, -1, true).Draw();
+    }
+
+    bool m_male = true;
+    void DrawPilotSkel() {
+        m_male = UI::Checkbox("Male?", m_male);
+        string gender = m_male ? "Male" : "Female";
+        auto fid = Fids::GetGame("GameData\\Skins\\Models\\CharacterPilot\\Stadium\\"+gender+"\\Player.Anim.Gbx");
+        if (fid is null) {
+            UI::Text("Failed to get fid");
+            return;
+        }
+        auto nod = cast<CPlugAnimFile>(Fids::Preload(fid));
+        if (nod is null) {
+            UI::Text("Failed to get nod");
+            return;
+        }
+        try {
+            auto skel = cast<CPlugSkel>(nod.Skels[0].NodRef);
+            ItemModelTreeElement(null, -1, skel, "Player Skel", true, -1, true).Draw();
+        } catch {}
     }
 
     void Remove50PctItemsTest() {

@@ -174,6 +174,7 @@ class ItemModelTreeElement {
     CPlugParticleEmitterModel@ particleEmitterModel;
     CPlugTurret@ turret;
     CGameSaveLaunchedCheckpoints@ gslcps;
+    CPlugSkel@ skel;
 
     ItemModelTreeElement(ItemModelTreeElement@ parent, int parentIx, CMwNod@ nod, const string &in name, bool drawProperties = true, uint16 nodOffset = 0xFFFF, bool isEditable = false) {
         @this.parent = parent;
@@ -224,6 +225,7 @@ class ItemModelTreeElement {
         @this.particleGpuModel = cast<CPlugParticleGpuModel>(nod);
         @this.turret = cast<CPlugTurret>(nod);
         @this.gslcps = cast<CGameSaveLaunchedCheckpoints>(nod);
+        @this.skel = cast<CPlugSkel>(nod);
         UpdateNodOffset();
         if (nod is null) return;
         classId = Reflection::TypeOf(nod).ID;
@@ -354,6 +356,8 @@ class ItemModelTreeElement {
             Draw(turret);
         } else if (gslcps !is null) {
             Draw(gslcps);
+        } else if (skel !is null) {
+            Draw(skel);
         } else {
             UI::Text("Unknown nod of type: " + UnkType(nod));
         }
@@ -382,6 +386,40 @@ class ItemModelTreeElement {
             EndTreeNode();
         }
     }
+
+    void Draw(CPlugSkel@ skel) {
+        if (StartTreeNode(name + " :: \\$f8f CPlugSkel", DEFAULT_OPEN)) {
+            if (StartTreeNode("Joints (" + skel.JointNames.Length + ")", UI::TreeNodeFlags::Framed)) {
+                for (uint i = 0; i < skel.JointNames.Length; i++) {
+                    DrawSkelJoint(skel, i);
+                }
+                EndTreeNode();
+            }
+            EndTreeNode();
+        }
+    }
+
+    vec3 DrawSkelJoint(CPlugSkel@ skel, uint i) {
+        if (i > skel.JointNames.Length) {
+            UI::Text("No Joint");
+            return vec3();
+        }
+        auto name = skel.JointNames[i].GetName();
+        // UI::Text(FmtUintHex(skel.JointNames[i].Value) + " : " + skel.JointNames[i].GetName());
+        if (StartTreeNode("Joint " + (i+1) + ". " + name, true, UI::TreeNodeFlags::None)) {
+            auto parentIx = skel.JointParentIndexs[i];
+            UI::Text("RefGlobalJoints(Iso4).Pos: " + Iso4_GetPos(skel.RefGlobalJoints[i]).ToString());
+            UI::Text("RefGlobalJointsTQ.Pos: " + skel.RefGlobalJointsTQ[i].Trans.ToString());
+            UI::Text("RefGlobalJointsTQ.Quat: " + skel.RefGlobalJointsTQ[i].Quat.ToString());
+            UI::Text("JointFixedTrans: " + skel.JointFixedTranss[i]);
+            UI::Text("RefLocJointTrans: " + skel.RefLocalJointsTranss[i].ToString());
+            UI::Text("Parent: " + parentIx);
+            auto parentPos = DrawSkelJoint(skel, parentIx);
+            EndTreeNode();
+        }
+        return vec3();
+    }
+
 
     void Draw(CPlugParticleGpuModel@ particleGpuModel) {
         if (StartTreeNode(name + " :: \\$f8f CPlugParticleGpuModel", DEFAULT_OPEN)) {
