@@ -1,5 +1,7 @@
 [Setting hidden]
-bool S_MbShowGhostFreeApplied = false;
+bool S_MbShowGhostFreeApplied = true;
+[Setting hidden]
+bool S_Debug_ShowMbPositions = false;
 
 class MacroblockOptsTab : Tab {
     MacroblockOptsTab(TabGroup@ p) {
@@ -26,6 +28,14 @@ class MacroblockOptsTab : Tab {
 
         UI::Separator();
 
+        FixCopyingItems::Patch_FixCopyingItems.IsApplied = UI::Checkbox("Patch: Fix Copying Just Items", FixCopyingItems::Patch_FixCopyingItems.IsApplied);
+        AddSimpleTooltip("The game incorrectly calculates positions of items in the macroblock if only ground items are selected. This makes the IsFlying check always succeed.");
+
+        LargeMacroblocks::IsApplied = UI::Checkbox("Patch: Large Macroblocks", LargeMacroblocks::IsApplied);
+        AddSimpleTooltip("Increases limit on macroblocks from 350 blocks / 600 items to 131k for both.");
+
+        UI::Separator();
+
         S_MbShowGhostFreeApplied = UI::Checkbox("Show Ghost/Free Blocks in Macroblock Cursor", IsMbShowGhostFreeApplied);
         if (S_MbShowGhostFreeApplied != IsMbShowGhostFreeApplied) {
             IsMbShowGhostFreeApplied = S_MbShowGhostFreeApplied;
@@ -45,10 +55,17 @@ class MacroblockOptsTab : Tab {
         UI::SeparatorText("Macroblock Recorder");
 
         bool mbRecActive = MacroblockRecorder::IsActive;
+        bool hasExistingRec = MacroblockRecorder::HasExisting;
         UI::AlignTextToFramePadding();
         UI::Text("Active: " + BoolIcon(mbRecActive));
-        if (!mbRecActive && UI::Button("Start Recording Macroblock")) {
-            MacroblockRecorder::StartRecording();
+
+        if (!mbRecActive) {
+            // start and resume buttons
+            if (UI::Button("New Macroblock Recording")) MacroblockRecorder::StartRecording();
+            if (hasExistingRec) {
+                UI::SameLine();
+                if (UI::ButtonColored("Resume Recording", .3, .6, .5)) MacroblockRecorder::ResumeRecording();
+            }
         } else if (mbRecActive) {
             UI::Text("# Blocks: " + MacroblockRecorder::recordingMB.blocks.Length);
             UI::Text("# Items: " + MacroblockRecorder::recordingMB.items.Length);
@@ -67,10 +84,7 @@ class MacroblockOptsTab : Tab {
             }
         }
 
-        MacroblockRecorder::S_RecordMB_ForceAir = UI::Checkbox("Force Air", MacroblockRecorder::S_RecordMB_ForceAir);
-        MacroblockRecorder::S_RecordMB_ForceFree = UI::Checkbox("Convert all Blocks to Free", MacroblockRecorder::S_RecordMB_ForceFree);
-        MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction = UI::Checkbox("Save Macroblock after Construction", MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction);
-        MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave = UI::Checkbox("Automate Save (to _epp_tmp.Macroblock.Gbx)", MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave);
+        MacroblockRecorder::DrawSettings();
     }
 }
 
@@ -80,6 +94,7 @@ class MacroblockOptsTab : Tab {
 const string PATTERN_MB_SHOW_GHOSTFREE_COND = "0F 84 ?? 00 00 00 0F 10 45 ?? 48 8B 45 ?? 4D"; //4d 8b c7 //8b bd ?? 01 00 00";// 49 8b d5 8b 9d 08 01 00 00";
 //                                             JZ    ^^ e2                ^^ stack offsets
 // we can leave this pattern exactly as it is
+// the code checks the block flags for ghost/free status
 // SHR EAX 1; AND EAX 01; SHR R11D 2; AND R11D 01
 // we just change ANDs to be with 0 to emulate norm blk     VV                      VV
 const string PATTERN_MB_SHOW_GHOSTFREE_COND2 = "d1 e8 83 e0 01 41 c1 eb 02 41 83 e3 01";

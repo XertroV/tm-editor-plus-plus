@@ -17,8 +17,48 @@ namespace MacroblockRecorder {
 	[Setting hidden]
 	Editor::AlignWithinBlock S_RecordMB_AlignWithinBlock = Editor::AlignWithinBlock::None;
 
+	void DrawSettings() {
+        MacroblockRecorder::S_RecordMB_ForceAir = UI::Checkbox("Set all Blocks to Air", MacroblockRecorder::S_RecordMB_ForceAir);
+        MacroblockRecorder::S_RecordMB_ForceFree = UI::Checkbox("Convert all Blocks to Free", MacroblockRecorder::S_RecordMB_ForceFree);
+        MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction = UI::Checkbox("Save Macroblock after Construction", MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction);
+        MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave = UI::Checkbox("Automate Save (to _epp_tmp.Macroblock.Gbx)", MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave);
+	}
+
 	bool get_IsActive() {
 		return recordingMB !is null;
+	}
+
+	bool get_HasExisting() {
+		return recordedMB !is null || recordingMB !is null;
+	}
+
+	bool get_ActiveRecordingIsEmpty() {
+		if (recordingMB is null) return true;
+		return recordingMB.Blocks.Length == 0 && recordingMB.Items.Length == 0;
+	}
+
+	bool get_IsActiveAndNonEmpty() {
+		return IsActive && (recordingMB.Blocks.Length > 0 || recordingMB.Items.Length > 0);
+	}
+
+	uint get_ActiveRec_NbBlocks() {
+		if (recordingMB is null) return 0;
+		return recordingMB.Blocks.Length;
+	}
+
+	uint get_ActiveRec_NbItems() {
+		if (recordingMB is null) return 0;
+		return recordingMB.Items.Length;
+	}
+
+	uint get_CompletedRec_NbBlocks() {
+		if (recordedMB is null) return 0;
+		return recordedMB.Blocks.Length;
+	}
+
+	uint get_CompletedRec_NbItems() {
+		if (recordedMB is null) return 0;
+		return recordedMB.Items.Length;
 	}
 
 	Editor::MacroblockSpec@ GetRecordingMB() {
@@ -45,6 +85,15 @@ namespace MacroblockRecorder {
 			OnFinishedRecording();
 		}
 		@recordingMB = null;
+	}
+
+	void ResumeRecording() {
+		if (recordingMB !is null) return;
+		if (recordedMB is null) {
+			NotifyWarning("No macroblock recording to resume.");
+			return;
+		}
+		@recordingMB = recordedMB;
 	}
 
 	void RegisterCallbacks() {
@@ -125,7 +174,7 @@ namespace MacroblockRecorder {
 				return;
 			}
 		}
-		NotifyWarning("MacroblockRecorder: Could not find block to remove: " + block.BlockInfo.Name + " at " + block.Coord.ToString());
+		_Log::Trace("MacroblockRecorder: Could not find block to remove: " + block.BlockInfo.Name + " at " + block.Coord.ToString());
 	}
 
 	void _RemoveMbItem(CGameCtnAnchoredObject@ item) {
@@ -136,7 +185,7 @@ namespace MacroblockRecorder {
 				return;
 			}
 		}
-		NotifyWarning("MacroblockRecorder: Could not find item to remove: " + item.ItemModel.Name + " at " + item.AbsolutePositionInMap.ToString());
+		_Log::Trace("MacroblockRecorder: Could not find item to remove: " + item.ItemModel.Name + " at " + item.AbsolutePositionInMap.ToString());
 	}
 
 
@@ -166,7 +215,7 @@ namespace MacroblockRecorder {
 
 	void OnFinishedRecording_Async() {
 		_AwaitCursorControl();
-		TransferRecordedMbToEditorCopyPasteMb(recordedMB);
+		TransferRecordedMbToEditorCopyPasteMb(cast<Editor::MacroblockSpecPriv>(recordedMB.Duplicate()));
 	}
 
 	const string mbRecorderInputsControlName = "MbRecorder::TransferRecordedMbToEditorCopyPasteMb";
@@ -186,155 +235,37 @@ namespace MacroblockRecorder {
 		// safety check
 		CursorControl::EnsureExclusiveOwnedBy(mbRecorderInputsControlName);
 
-		// if we are already in copy paste or macroblock mode, we should exit it
-		Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Block);
-
-		// now we need to manipulate the editor's copy-paste macroblock
-		auto copyPasteMb = SetManipulatingMB(editor.CopyPasteMacroBlockInfo);
-		if (copyPasteMb is null) {
-			dev_trace("CopyPasteMacroBlockInfo is null; copying all...");
-			pmt.CopyPaste_SelectAll();
-			pmt.CopyPaste_Copy();
-			if ((@copyPasteMb = SetManipulatingMB(editor.CopyPasteMacroBlockInfo)) is null) NotifyError("CopyPasteMacroBlockInfo is null after CopyPaste_Copy()!");
-			else {
-				auto tmp = DGameCtnMacroBlockInfo(copyPasteMb);
-				dev_trace("MB.Blocks: " + tmp.Blocks.Length);
-				dev_trace("MB.Items: " + tmp.Items.Length);
-			}
+		// update placement mode if not in copy paste already (though it will auto change it for us anyway)
+		if (!Editor::IsInCopyPasteMode(editor, false)) {
+			Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::CopyPaste);
+			yield();
 		}
+		// auto camState = Editor::CamState(editor.OrbitalCameraControl);
 
-		// otherwise, populate its macroblock
-		if (!mb.MacroblockHasSufficientCapacity(copyPasteMb)) {
-			dev_trace("MacroblockRecorder: CopyPaste macroblock does not have sufficient capacity; selecting region and copying.");
-			dev_trace("MacroblockRecorder: Missing " + mb.missingMBCapacityBlocks + " blocks and " + mb.missingMBCapacityItems + " items.");
-			// we need to increase its capacity
-			// pmt.CopyPaste_ResetSelection();
-			pmt.CopyPaste_AddOrSubSelection(mb.GetMinBlockCoords() -1, mb.GetMaxBlockCoords() + 1);
-			pmt.CopyPaste_Copy();
-			@copyPasteMb = SetManipulatingMB(editor.CopyPasteMacroBlockInfo);
-			CheckForNoValidBlocksMsgAndDismiss(app);
+		// MAIN COPY - works for both copy/paste and saving MB
+		_Log::Trace("MbRec: Move items in map if not in macroblock");
+		// set selection coords then modify all blocks and items to
+		// move coords/positions out of the way. After, move them back.
+		auto selectedCoordBB = ModifyMapObjects_SetCoordsOutside_Filtered(editor.Challenge, mb);
+		// if (mb.blocks.Length > 0) _Patcher_AllowEmptyMacroblockCreation.Apply();
 
-			if (!mb.MacroblockHasSufficientCapacity(copyPasteMb)) {
-				dev_warn("MacroblockRecorder: CopyPaste macroblock does not have sufficient capacity after 1st copy.");
-				dev_warn("MacroblockRecorder: Missing " + mb.missingMBCapacityBlocks + " blocks and " + mb.missingMBCapacityItems + " items.");
-				// pmt.CopyPaste_ResetSelection();
-				// pmt.CopyPaste_AddOrSubSelection(int3(-2147483648), int3(2147483647));
-				pmt.CopyPaste_SelectAll();
-				pmt.CopyPaste_Copy();
-				@copyPasteMb = SetManipulatingMB(editor.CopyPasteMacroBlockInfo);
-			}
-		}
-		CheckForNoValidBlocksMsgAndDismiss(app);
-		// after resetting selection, the MB is cleared; we fix this later. (We want to reset selection before bailing out if it fails)
+		dev_trace("Set selection coords to: " + selectedCoordBB.start.ToString() + " / " + selectedCoordBB.end.ToString());
 		pmt.CopyPaste_ResetSelection();
-
-		// check we're all good
-		if (!mb.MacroblockHasSufficientCapacity(copyPasteMb) || copyPasteMb is null) {
-			NotifyError("Unable to create a macroblock large enough for the recording.  "
-				"Please place at least: " + mb.missingMBCapacityBlocks + " blocks and " + mb.missingMBCapacityItems + " items.");
-			// throws
-			BailOut_OnFinishedRecording();
-		}
-
-		// after resetting selection, the MB is cleared; set it back.
-		Editor::SetCopyPasteMacroBlockInfo(editor, copyPasteMb);
-		Editor::SetSelectedMacroBlockInfo(editor, copyPasteMb);
-
-		// undo the +56 to pos.y
-		mb.UndoMacroblockHeightOffset();
-
-		// save coords for later use
-		// Editor::ClearSelectedCoordsBuffer(editor);
-		auto startCoord = mb.GetMinBlockCoords();// - int3(1, 8, 1);
-		auto endCoord = mb.GetMaxBlockCoords();// + int3(1, 8, 1) + 1;
-
-		// move the contents of the macroblock into the smallest area
-		mb.MoveAllToOrigin();
-		if (S_RecordMB_AlignWithinBlock != Editor::AlignWithinBlock::None) {
-			mb.AlignAll(S_RecordMB_AlignWithinBlock);
-		}
-		nat3 mbSize = mb.GetCoordSize();
-		bool hasGround = mb.HasGround();
-		if (S_RecordMB_ForceFree) mb.SetAllBlocksFree();
-		mb.SetAllItemsFlying();
-
-		if (false) {
-			// hmm, this is sometimes crashing with a simple block, freeblock, and item combo. (But saving a macroblock works fine)
-			// okay, now write to MB
-			mb._WriteDirectlyToMacroblock(copyPasteMb);
-			dev_trace("Size before: " + Editor::GetMacroblockCoordSize(copyPasteMb).ToString());
-			Editor::SetMacroblockCoordSize(copyPasteMb, mbSize);
-			dev_trace("Size after: " + Editor::GetMacroblockCoordSize(copyPasteMb).ToString());
-			bool setGround = hasGround && !S_RecordMB_ForceAir && !S_RecordMB_ForceFree;
-			Editor::SetMacroblockGround(copyPasteMb, setGround);
-			if (copyPasteMb.GeneratedBlockInfo.VariantGround !is null) {
-				copyPasteMb.GeneratedBlockInfo.VariantGround.AutoTerrainPlaceType = CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType::DoNotPlace;
-			}
-			copyPasteMb.Connected = false;
-			copyPasteMb.Initialized = false;
-			dev_trace("Setting macroblock generated block info null");
-			Dev::SetOffset(copyPasteMb, O_MACROBLOCKINFO_GeneratedBlockInfo, uint64(0));
-		}
-
-		// dev_trace("Setting macroblock temp FID");
-		// SetNodFid(copyPasteMb, Drive::User, "Blocks/Stadium/_epp_tmp.Macroblock.Gbx");
-		// pmt.SaveMacroblock(copyPasteMb);
-
-		dev_trace("Changing placement mode");
-
-		// Editor::SetMacroblockSize
-		// now change to copy-paste mode
-		// todo: test while in view/cam mode
-		// Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
-		// Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::CopyPaste);
-		Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeMacroblock);
-		Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::CopyPaste);
-		// pmt.Select
-
-		if (copyPasteMb.GeneratedBlockInfo !is null && copyPasteMb.GeneratedBlockInfo.VariantGround !is null) {
-			// bounds can be too big so reset
-			copyPasteMb.GeneratedBlockInfo.VariantGround.ResetVariantCompletely();
-			// but now size is 1,1,1 again, so set it
-			Editor::SetMacroblockCoordSize(copyPasteMb, mbSize);
-		}
-		auto camState = Editor::CamState(editor.OrbitalCameraControl);
+		pmt.CopyPaste_AddOrSubSelection(selectedCoordBB.start, selectedCoordBB.end);
+		pmt.CopyPaste_Copy();
+		// editor.ButtonSelectionBoxCopyOnClick();
+		// CControl::Editor_FrameCopyPaste_Copy.OnAction();
+		SetManipulatingMB(editor.CopyPasteMacroBlockInfo);
 
 		if (S_RecordMB_SaveAfterMbConstruction) {
-			// now, save the macroblock -- this overwrites our hard work so we need to hook
-			// the recreation of it (from the selection) so we can replace the new macroblock with ours
-
-			// we don't need the patch if we're moving blocks and items in the map to fool selection
-			// _ApplySaveMbPatch();
-			auto topRightCornerMin = Nat3ToInt3(editor.Challenge.Size) - 7;
-			auto topRightCornerMid = Nat3ToInt3(editor.Challenge.Size) - 4;
-			auto topRightCornerMax = Nat3ToInt3(editor.Challenge.Size) - 1;
-
 			try {
-				dev_trace("Move items in map if not in macroblock");
-				// set selection coords then modify all blocks and items to
-				// move coords/positions out of the way. After, move them back.
-				ModifyMapObjects_SetCoordsOutside_Filtered(editor.Challenge, startCoord, endCoord, mb);
-
-				_Patcher_AllowEmptyMacroblockCreation.Apply();
-
-				dev_trace("Set selection coords to: " + startCoord.ToString() + " / " + endCoord.ToString());
-				pmt.CopyPaste_ResetSelection();
-				pmt.CopyPaste_AddOrSubSelection(startCoord, endCoord);
-				// auto nbSelected =
-				// pmt.CopyPaste_AddOrSubSelection(topRightCornerMin, topRightCornerMax); // add it so we know we can remove it later
-				pmt.CopyPaste_Copy();
 				yield();
-				// pmt.CopyPaste_ResetSelection();
-				// pmt.CopyPaste_AddOrSubSelection(startCoord, endCoord); // just main
-				// pmt.CopyPaste_AddOrSubSelection(topRightCornerMin, topRightCornerMax); // remove it
-				// pmt.CopyPaste_Copy();
-
 
 				dev_trace("run click save macroblock (in copy paste toolbar)");
 				// activates hook and sets up 3d scene for the macroblock
 				CControl::Editor_FrameCopyPaste_SaveMacroblock.OnAction();
-				_Patcher_AllowEmptyMacroblockCreation.Unapply();
 				yield();
+				SetManipulatingMB(editor.CopyPasteMacroBlockInfo);
 
 				dev_trace('set camera and rotate');
 				// bug: thumbnail won't show :/
@@ -345,9 +276,8 @@ namespace MacroblockRecorder {
 					dev_trace("yield: rotateBtnVisibility");
 					yield();
 				}
-				rotateCamBtn.OnAction();
+				// rotateCamBtn.OnAction();
 
-				// ~~this works, but does let you place it outside the stadium (size 1,1,1 on reloading sometimes) which~~
 				if (S_RecordMB_Save_AutoNameAndSave) {
 					yield();
 					auto saveSnapMbBtn = CControl::Editor_FrameEditSnap_SaveBtn;
@@ -376,24 +306,26 @@ namespace MacroblockRecorder {
 						while (CControl::Editor_FrameEditSnap_SaveBtn.Parent.IsVisible) yield();
 						while (app.ActiveMenus.Length > 0) yield();
 						yield(3);
+						while (app.ActiveMenus.Length > 0) yield();
 					}
-					// Editor::SetCopyPasteMacroBlockInfo(editor, _manipulating);
-					// Editor::SetSelectedMacroBlockInfo(editor, _manipulating);
 				}
+				Editor::SetCopyPasteMacroBlockInfo(editor, _manipulating);
+				Editor::SetSelectedMacroBlockInfo(editor, _manipulating);
 			} catch {
 				NotifyError("MacroblockRecorder: Failed to automate saving macroblock. " + getExceptionInfo());
 			}
 			// todo: unapply patch
-			_UnapplySaveMbPatch();
-			ModifyMapObjects_SetCoords_Reset();
+			// _UnapplySaveMbPatch();
 		}
+
+		// reset blocks/items in map
+		ModifyMapObjects_SetCoords_Reset();
+		_Patcher_AllowEmptyMacroblockCreation.Unapply();
 
 		CursorControl::ReleaseExclusiveControl(mbRecorderInputsControlName);
 
-		// pmt.Cursor.Move(CGameEditorPluginMap::ECardinalDirections8::North);
-		// pmt.Cursor.Move(CGameEditorPluginMap::ECardinalDirections8::South);
-		pmt.Cursor.Raise();
-		pmt.Cursor.Lower();
+		// pmt.Cursor.Raise();
+		// pmt.Cursor.Lower();
 
 		if (_manipulating.GeneratedBlockInfo !is null) {
 			// do this after we change placement mode too.
@@ -401,7 +333,7 @@ namespace MacroblockRecorder {
 				_manipulating.GeneratedBlockInfo.VariantGround.AutoTerrainPlaceType = CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType::DoNotPlace;
 			}
 		} else {
-			dev_warn("MacroblockRecorder: Generated block info is null");
+			Dev_NotifyWarning("MacroblockRecorder: Generated block info is null");
 		}
 	}
 
@@ -428,9 +360,9 @@ namespace MacroblockRecorder {
 		}
 	}
 
-	const string Patch_NopSetCopyPasteMbInfo = "E8 ?? ?? ?? ?? 49 8B 85 ?? 06 00 00";
-	// MemPatcher@ _Patcher_NopSetCopyPasteMbInfo = MemPatcher(Patch_NopSetCopyPasteMbInfo, {0}, {"90 90 90 90 90"});
-	FunctionHookHelper@ _Hook_CallSetCopyPasteMbInfo = FunctionHookHelper(Patch_NopSetCopyPasteMbInfo, 0, 0, "MacroblockRecorder::_On_SetCopyPasteMbInfo", Dev::PushRegisters::Basic, true);
+	// const string Patch_NopSetCopyPasteMbInfo = "E8 ?? ?? ?? ?? 49 8B 85 ?? 06 00 00";
+	// // MemPatcher@ _Patcher_NopSetCopyPasteMbInfo = MemPatcher(Patch_NopSetCopyPasteMbInfo, {0}, {"90 90 90 90 90"});
+	// FunctionHookHelper@ _Hook_CallSetCopyPasteMbInfo = FunctionHookHelper(Patch_NopSetCopyPasteMbInfo, 0, 0, "MacroblockRecorder::_On_SetCopyPasteMbInfo", Dev::PushRegisters::Basic, true);
 
 	// hooks CGameCtnMacroBlockInfo::GenerateBlockInfo(mbInfo)
 	// const string Pattern_OnUpdateCopyPasteMbInfo = "40 53 48 83 EC 20 48 8B D9 E8 ?? ?? ?? ?? 33 D2 89 83 ?? 01 00 00";
@@ -446,28 +378,28 @@ namespace MacroblockRecorder {
 	}
 
 	// not needed
-	void _OnUpdateCopyPasteMbInfo(CGameCtnMacroBlockInfo@ rcx) {
-		if (rcx is null) {
-			dev_warn("MacroblockRecorder::_OnUpdateCopyPasteMbInfo; rcx is null");
-			return;
-		}
-		dev_trace("MacroblockRecorder::_OnUpdateCopyPasteMbInfo; rcx: " + rcx.Name + " refcount: " + Reflection::GetRefCount(rcx));
-		if (_manipulating is null) {
-			dev_warn("MacroblockRecorder::_OnUpdateCopyPasteMbInfo; _manipulating is null");
-			return;
-		}
-		/* for inner hook */
-		recordedMB._WriteDirectlyToMacroblock(rcx);
-		// dev_trace("MacroblockRecorder::_OnUpdateCopyPasteMbInfo; _MacroblockInfo_SwapBuffers");
-		// _MacroblockInfo_SwapBuffers(rcx, _manipulating);
-		// for good luck
-		// rcx.MwAddRef();
-		// _manipulating.MwAddRef();
-		// SetManipulatingMB(rcx);
-		dev_trace("MacroblockRecorder::_OnUpdateCopyPasteMbInfo; _MacroblockInfo_SwapBuffers Done");
-		// unhook self, only called once
-		// _UnapplySaveMbPatch();
-	}
+	// void _OnUpdateCopyPasteMbInfo(CGameCtnMacroBlockInfo@ rcx) {
+	// 	if (rcx is null) {
+	// 		dev_warn("MacroblockRecorder::_OnUpdateCopyPasteMbInfo; rcx is null");
+	// 		return;
+	// 	}
+	// 	dev_trace("MacroblockRecorder::_OnUpdateCopyPasteMbInfo; rcx: " + rcx.Name + " refcount: " + Reflection::GetRefCount(rcx));
+	// 	if (_manipulating is null) {
+	// 		dev_warn("MacroblockRecorder::_OnUpdateCopyPasteMbInfo; _manipulating is null");
+	// 		return;
+	// 	}
+	// 	/* for inner hook */
+	// 	recordedMB._WriteDirectlyToMacroblock(rcx);
+	// 	// dev_trace("MacroblockRecorder::_OnUpdateCopyPasteMbInfo; _MacroblockInfo_SwapBuffers");
+	// 	// _MacroblockInfo_SwapBuffers(rcx, _manipulating);
+	// 	// for good luck
+	// 	// rcx.MwAddRef();
+	// 	// _manipulating.MwAddRef();
+	// 	// SetManipulatingMB(rcx);
+	// 	dev_trace("MacroblockRecorder::_OnUpdateCopyPasteMbInfo; _MacroblockInfo_SwapBuffers Done");
+	// 	// unhook self, only called once
+	// 	// _UnapplySaveMbPatch();
+	// }
 
 	// void _MacroblockInfo_SwapBuffers(CGameCtnMacroBlockInfo@ a, CGameCtnMacroBlockInfo@ b) {
 	//     Dev_SwapUint64At(a, b, O_MACROBLOCK_BLOCKSBUF);
@@ -478,31 +410,31 @@ namespace MacroblockRecorder {
 	//     Dev_SwapUint64At(a, b, O_MACROBLOCK_SKINSBUF+8);
 	// }
 
-	void _ApplySaveMbPatch() {
-		// if (_OnUpdateCopyPasteMbInfo_Hook.IsApplied()) return;
-		dev_trace("MacroblockRecorder::_ApplySaveMbPatch();");
-		// _Patcher_NopSetCopyPasteMbInfo.Apply();
-		// _OnUpdateCopyPasteMbInfo_Hook.Apply();
-		_Hook_CallSetCopyPasteMbInfo.Apply();
-		_Patcher_AllowEmptyMacroblockCreation.Apply();
-	}
-	void _UnapplySaveMbPatch() {
-		// if (!_OnUpdateCopyPasteMbInfo_Hook.IsApplied()) return;
-		dev_trace("MacroblockRecorder::_UnapplySaveMbPatch();");
-		// _Patcher_NopSetCopyPasteMbInfo.Unapply();
-		// _OnUpdateCopyPasteMbInfo_Hook.Unapply();
-		_Hook_CallSetCopyPasteMbInfo.Unapply();
-		_Patcher_AllowEmptyMacroblockCreation.Unapply();
-	}
+	// void _ApplySaveMbPatch() {
+	// 	// if (_OnUpdateCopyPasteMbInfo_Hook.IsApplied()) return;
+	// 	dev_trace("MacroblockRecorder::_ApplySaveMbPatch();");
+	// 	// _Patcher_NopSetCopyPasteMbInfo.Apply();
+	// 	// _OnUpdateCopyPasteMbInfo_Hook.Apply();
+	// 	_Hook_CallSetCopyPasteMbInfo.Apply();
+	// 	_Patcher_AllowEmptyMacroblockCreation.Apply();
+	// }
+	// void _UnapplySaveMbPatch() {
+	// 	// if (!_OnUpdateCopyPasteMbInfo_Hook.IsApplied()) return;
+	// 	dev_trace("MacroblockRecorder::_UnapplySaveMbPatch();");
+	// 	// _Patcher_NopSetCopyPasteMbInfo.Unapply();
+	// 	// _OnUpdateCopyPasteMbInfo_Hook.Unapply();
+	// 	_Hook_CallSetCopyPasteMbInfo.Unapply();
+	// 	_Patcher_AllowEmptyMacroblockCreation.Unapply();
+	// }
 
 	// MARK: Modify map objects for thumbnail
 
 	Helper_ModifyMapObjCoords@ thumbnailMapCoordsHelper;
 
 	// Modifies the map objects' block coord to be outside of the selection (start, end); ignoring objects in the mb spec.
-	void ModifyMapObjects_SetCoordsOutside_Filtered(CGameCtnChallenge@ map, int3 start, int3 end, Editor::MacroblockSpecPriv@ filterMb) {
-		@thumbnailMapCoordsHelper = Helper_ModifyMapObjCoords(map, start, end, filterMb);
-		thumbnailMapCoordsHelper.Run();
+	CoordBoundingBox ModifyMapObjects_SetCoordsOutside_Filtered(CGameCtnChallenge@ map, Editor::MacroblockSpecPriv@ filterMb) {
+		@thumbnailMapCoordsHelper = Helper_ModifyMapObjCoords(map, filterMb);
+		return thumbnailMapCoordsHelper.Run();
 	}
 
 	void ModifyMapObjects_SetCoords_Reset() {
@@ -513,22 +445,52 @@ namespace MacroblockRecorder {
 	}
 }
 
+class CoordBoundingBox {
+	int3 start;
+	int3 end;
+
+	CoordBoundingBox() {}
+
+	CoordBoundingBox(int3 start, int3 end) {
+		this.start = start;
+		this.end = end;
+	}
+
+	void Set(int3 start, int3 end) {
+		this.start = start;
+		this.end = end;
+	}
+
+	void Reset() {
+		start = int3(-1);
+		end = int3(-1);
+	}
+
+	void Include(int3 coord) {
+		if (start == int3(-1) && end == int3(-1)) {
+			start = coord;
+			end = coord;
+		} else {
+			start = MathX::Min(start, coord);
+			end = MathX::Max(end, coord);
+		}
+	}
+	void Include(const nat3 &in coord) {
+		Include(Nat3ToInt3(coord));
+	}
+}
 
 class Helper_ModifyMapObjCoords {
 	CGameCtnChallenge@ map;
-	int3 start;
-	int3 end;
 	// do not touch blocks/items referenced by the mb
 	Editor::MacroblockSpecPriv@ mb;
 
 	nat3 targetCoord;
 	vec3 targetPos;
 
-	Helper_ModifyMapObjCoords(CGameCtnChallenge@ map, int3 start, int3 end, Editor::MacroblockSpecPriv@ mb) {
+	Helper_ModifyMapObjCoords(CGameCtnChallenge@ map, Editor::MacroblockSpecPriv@ mb) {
 		@this.map = map;
 		map.MwAddRef();
-		this.start = start;
-		this.end = end;
 		@this.mb = mb;
 		FindSuitableTargets();
 	}
@@ -553,11 +515,14 @@ class Helper_ModifyMapObjCoords {
 	ModifiedMapObj@[] modified;
 	uint64[] filteredBlocks;
 	uint64[] filteredItems;
+	CoordBoundingBox coordBB;
 
-	void Run() {
+	CoordBoundingBox Run() {
+		coordBB.Reset();
 		SetUpFiltered();
 		MoveBlocks_Filtered();
 		MoveItems_Filtered();
+		return coordBB;
 	}
 
 	void Reset() {
@@ -601,6 +566,7 @@ class Helper_ModifyMapObjCoords {
 			auto blockPtr = Dev_GetPointerForNod(block);
 			if (filteredBlocks.Find(blockPtr) != -1) {
 				dev_trace("Skipping filtered block; ix: " + i + " / " + nbBlocksInMap);
+				coordBB.Include(Editor::GetBlockCoord(block));
 				continue;
 			}
 			// otherwise, let's move it
@@ -616,22 +582,23 @@ class Helper_ModifyMapObjCoords {
 		for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
 			auto item = map.AnchoredObjects[i];
 			auto itemPtr = Dev_GetPointerForNod(item);
-			if (filteredItems.Find(itemPtr) != -1) {
-				dev_trace("Skipping filtered item; ix: " + i + " / " + nbItemsInMap);
-				continue;
+			auto found = filteredItems.Find(itemPtr) != -1;
+			if (found) {
+				dev_trace("Skipping filtered item; ix: " + i + " / " + nbItemsInMap + " @ " + item.AbsolutePositionInMap.ToString());
+				coordBB.Include(item.BlockUnitCoord);
 			}
-			MoveItem(item);
+			MoveItem(item, found);
 		}
 	}
 
 	void MoveBlock(CGameCtnBlock@ block) {
 		if (block is null) return;
-		modified.InsertLast(MovedBlockInMap(block, start.y - 1, targetPos));
+		modified.InsertLast(MovedBlockInMap(block, targetPos)); // start.y - 1,
 	}
 
-	void MoveItem(CGameCtnAnchoredObject@ item) {
+	void MoveItem(CGameCtnAnchoredObject@ item, bool keepInPlace) {
 		if (item is null) return;
-		modified.InsertLast(MovedItemInMap(item, targetCoord, targetPos));
+		modified.InsertLast(MovedItemInMap(item, keepInPlace));
 	}
 }
 
@@ -646,7 +613,7 @@ class MovedBlockInMap : ModifiedMapObj {
 	vec3 oldPos;
 	uint orig0x90;
 
-	MovedBlockInMap(CGameCtnBlock@ block, int yCoord, vec3 newPos) {
+	MovedBlockInMap(CGameCtnBlock@ block, vec3 newPos) {
 		SetBlock(block);
 		this.oldCoord = block.Coord;
 		this.oldPos = Editor::GetBlockLocation(block, true);
@@ -691,13 +658,17 @@ class MovedItemInMap : ModifiedMapObj {
 	CGameCtnAnchoredObject@ item;
 	nat3 oldCoord;
 	vec3 oldPos;
+	bool wasFlying;
 
-	MovedItemInMap(CGameCtnAnchoredObject@ item, nat3 newCoord, vec3 newPos) {
+	MovedItemInMap(CGameCtnAnchoredObject@ item, bool keepInPlace) {
 		SetItem(item);
 		this.oldCoord = item.BlockUnitCoord;
 		this.oldPos = item.AbsolutePositionInMap;
-		item.BlockUnitCoord = nat3(-1);
-		item.AbsolutePositionInMap = item.AbsolutePositionInMap + newPos;
+		wasFlying = item.IsFlying;
+		if (!keepInPlace) {
+			item.BlockUnitCoord = nat3(-1);
+		}
+		item.IsFlying = true;
 	}
 
 	~MovedItemInMap() {
@@ -713,6 +684,7 @@ class MovedItemInMap : ModifiedMapObj {
 		if (item is null) return;
 		item.BlockUnitCoord = oldCoord;
 		item.AbsolutePositionInMap = oldPos;
+		item.IsFlying = wasFlying;
 		item.MwRelease();
 		@item = null;
 	}
