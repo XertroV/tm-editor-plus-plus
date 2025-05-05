@@ -22,4 +22,12 @@ namespace Editor {
         Dev::SetOffset(editor, O_EDITOR_CopyPasteMacroBlockInfo, mbi);
         mbi.MwAddRef();
     }
+
+    // returns the macroblock info depending on copy/paste mode or not
+    CGameCtnMacroBlockInfo@ GetCursorMacroBlockInfo(CGameCtnEditorFree@ editor) {
+        if (Editor::IsInCopyPasteMode(editor, false)) {
+            return editor.CopyPasteMacroBlockInfo;
+        }
+        return editor.CurrentMacroBlockInfo;
+    }
 }

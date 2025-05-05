@@ -46,11 +46,22 @@ class ToolbarTab : Tab {
 		UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(1, fp.y));
 		bool click = false;
 		bool disabled = status == BtnStatus::Disabled;
+		float disabledLerpT = BtnStatus_DisabledLerpT(status);
 		float hue = BtnStatusHue(status);
-		float sat = disabled ? 0.0 : .6;
-		float lightness = disabled ? 0.3 : .6;
+		float sat = Math::Lerp(0.0, .6, disabledLerpT);
+		float lightness = Math::Lerp(0.3, 0.6, disabledLerpT); //disabled ? 0.3 : .6;
+
+		auto cPos = UI::GetCursorPos();
+
+		UI::BeginDisabled(disabled);
 		click = UI::ButtonColored(label, hue, sat, lightness, size) && !disabled;
+		UI::EndDisabled();
 		UI::PopStyleVar();
+
+		if (disabled) {
+			UI::SetCursorPos(cPos);
+			UI::InvisibleButton(label, size);
+		}
 
 		if (desc.Length > 0) AddSimpleTooltip(desc, true);
 		return click;
@@ -81,6 +92,7 @@ class ToolbarTab : Tab {
 	}
 
 	bool isFree;
+	bool isNorm;
 
 	void DrawInfPrecisionButtons() {
 		bool active = S_EnableInfinitePrecisionFreeBlocks;
@@ -141,6 +153,14 @@ class ToolbarTab : Tab {
 		}
 	}
 
+	BtnStatus BtnStatus_NormalActive(bool active) {
+		return isNorm ? (active ? BtnStatus::FeatureActive : BtnStatus::Default) : BtnStatus::Disabled;
+	}
+
+	BtnStatus BtnStatus_Active(bool active) {
+		return (active ? BtnStatus::FeatureActive : BtnStatus::Default);
+	}
+
 	BtnStatus FreeButtonStatusActive(bool active) {
 		return isFree ? (active ? BtnStatus::FeatureActive : BtnStatus::Default) : BtnStatus::Disabled;
 	}
@@ -167,12 +187,42 @@ class ToolbarTab : Tab {
 			ResetBigSnap();
 		}
 	}
+
+	void OptDrawMacroblockRecordMini() {
+		UI::Separator();
+		bool showOpts;
+		if (MacroblockRecorder::IsActive) {
+			bool cStopRec = this.BtnToolbarHalfV(Icons::Stop + Icons::VideoCamera, "Stop Recording Macroblock", BtnStatus::Default);
+			if (cStopRec) {
+				auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+				Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::CopyPaste);
+				MacroblockRecorder::StopRecording(false);
+			}
+		} else {
+			bool cStartRec = this.BtnToolbarHalfV(Icons::Circle + Icons::VideoCamera, "Start Recording Macroblock", BtnStatus::Default);
+			if (cStartRec) {
+				MacroblockRecorder::StartRecording();
+			}
+		}
+		showOpts = UI::IsItemClicked(UI::MouseButton::Right);
+        DrawMacroblockRecOptsPopup(showOpts);
+	}
+
+    void DrawMacroblockRecOptsPopup(bool showPopup = false) {
+		if (showPopup) UI::OpenPopup("Macroblock Recording Options");
+        if (UI::BeginPopup("Macroblock Recording Options")) {
+            MacroblockRecorder::DrawSettings();
+			UX::CloseCurrentPopupIfMouseFarAway();
+            UI::EndPopup();
+        }
+    }
 }
 
 const string RMBIcon = "\\$i\\$999 Right-clickable";
 
 enum BtnStatus {
 	Default,
+	DefaultHalf,
 	FeatureActive,
 	FeatureBlocked,
 	Disabled,
@@ -185,10 +235,25 @@ float BtnStatusHue(BtnStatus status) {
 			auto d = UI::GetStyleColor(UI::Col::Button);
 			return UI::ToHSV(d.x, d.y, d.z).x;
 		}
+		case BtnStatus::DefaultHalf: {
+			auto d = UI::GetStyleColor(UI::Col::Button);
+			return UI::ToHSV(d.x, d.y, d.z).x;
+		}
 		case BtnStatus::FeatureActive: return 0.3;
 		case BtnStatus::FeatureBlocked: return 0.1;
 	}
 	return 0.5;
+}
+
+float BtnStatus_DisabledLerpT(BtnStatus status) {
+	switch (status) {
+		case BtnStatus::Disabled: return 0.0;
+		case BtnStatus::DefaultHalf: return 0.5;
+		case BtnStatus::Default: return 1.0;
+		case BtnStatus::FeatureActive: return 1.0;
+		case BtnStatus::FeatureBlocked: return 1.0;
+	}
+	return 1.0;
 }
 
 const vec2 d_ToolbarBtnSize = vec2(52);

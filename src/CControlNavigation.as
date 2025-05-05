@@ -55,6 +55,14 @@ namespace CControl {
         ));
     }
 
+    CControlButton@ get_Editor_FrameCopyPaste_Copy() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return null;
+        return cast<CControlButton>(FollowIdPath(editor.EditorInterface.InterfaceRoot,
+            {"FrameMain", "FrameCopyPasteTools", "FrameMacroblock", "FrameButtonCopy", "ButtonSelectionBoxCopy"}
+        ));
+    }
+
     CControlButton@ get_Editor_FrameEditSnap_SaveBtn() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return null;

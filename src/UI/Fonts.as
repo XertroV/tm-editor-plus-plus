@@ -6,7 +6,7 @@ int f_NvgFont = nvg::LoadFont("DroidSans.ttf");
 Meta::PluginCoroutine@ fontLoadCoro = startnew(_LoadFonts);
 
 void _LoadFonts() {
-    @g_Heading = UI::LoadFont("DroidSans.ttf", 20.0, -1, -1, true, true, true);
-    @g_Mono = UI::LoadFont("DroidSansMono.ttf", 16.0);
+    @g_Heading = UI::Font::Default20;
+    @g_Mono = UI::Font::DefaultMono;
     AreFontsLoaded = true;
 }

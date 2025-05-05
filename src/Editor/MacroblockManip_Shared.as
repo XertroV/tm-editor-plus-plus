@@ -815,4 +815,27 @@ namespace Editor {
             return null;
         }
     }
+
+    // todo:
+    // to add for override:
+
+    // ItemSpec:
+    // void SetModel(CGameItemModel@ _model)
+    // void TranslateCoords(int3 coordDist)
+    // ItemSpec@ SetCoordAndFlying()
+    // ItemSpec@ Duplicate()
+
+    // MacroblockSpec:
+    // MacroblockSpec@ Duplicate()
+    // int3 GetMinBlockCoords()
+    // int3 GetMaxBlockCoords()
+    // nat3 GetCoordSize()
+    // bool HasGround()
+    // void SetAllBlocksFree()
+    // void SetAllItemsFlying()
+    // void MoveAllToOrigin()
+    // void UndoMacroblockHeightOffset()
+    // void AlignAll(Editor::AlignWithinBlock)
+
+
 }

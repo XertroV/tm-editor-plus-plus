@@ -157,7 +157,7 @@ class FindReplaceTab : GenericApplyTab {
         ClearAfterRun = UI::Checkbox("Auto-clear sources and filter after apply", ClearAfterRun);
         AddWithoutReplace = UI::Checkbox("Add new blocks/items without replacing the original", AddWithoutReplace);
         KeepSourceColor = UI::Checkbox("Use color from source block/item instead of targets", KeepSourceColor);
-        KeepSourceVariant = UI::Checkbox("Use variant from source block (disabling might cause a crash in some cases)", KeepSourceVariant);
+        KeepSourceVariant = UI::Checkbox("Use variant from source block/item (disabling might cause a crash in some cases)", KeepSourceVariant);
 
         UI::AlignTextToFramePadding();
         if (sourceItemModel is null) {

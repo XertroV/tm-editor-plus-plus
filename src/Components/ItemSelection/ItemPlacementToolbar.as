@@ -85,7 +85,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		auto varNb = varList !is null ? varList.Variants.Length : 1;
 
 		isFree = Editor::GetItemPlacementMode(true, true) == Editor::ItemMode::Free;
-		isNormal = Editor::GetItemPlacementMode(true, true) == Editor::ItemMode::Normal;
+		isNorm = Editor::GetItemPlacementMode(true, true) == Editor::ItemMode::Normal;
 		bool hasVariants = varList !is null;
 
 		DrawCopyRotsBtn();
@@ -138,6 +138,12 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		DrawInfPrecisionButtons();
 		DrawLocalRotateButtons();
 
+		// Last button (optionally drawn)
+		OptDrawMacroblockRecordMini();
+
+
+		// ! no buttons below here
+
 		// bool flyingStepUp = BtnToolbarHalfH(Icons::AngleUp + "##flyUp", "Increase Flying Step", ActiveToBtnStatus(pp.FlyStep > 0));
 
 		DrawGridOptsPopup(pp);
@@ -157,14 +163,14 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		// if (toggleInfPrec) S_EnableInfinitePrecisionFreeBlocks = !S_EnableInfinitePrecisionFreeBlocks;
 	}
 
-	bool isFreeGround, isNormal;
+	bool isFreeGround;
 
 	void DrawItemModeButtons() {
 		auto itemMode = Editor::GetItemPlacementMode(false, false);
 		isFreeGround = itemMode == Editor::ItemMode::FreeGround;
-		isNormal = itemMode == Editor::ItemMode::Normal;
+		isNorm = itemMode == Editor::ItemMode::Normal;
 
-		bool cNorm = this.BtnToolbarHalfV(Icons::Cube, "Normal Item Mode", ActiveToBtnStatus(isNormal));
+		bool cNorm = this.BtnToolbarHalfV(Icons::Cube, "Normal Item Mode", ActiveToBtnStatus(isNorm));
 		bool cGround = this.BtnToolbarHalfV(Icons::Download, "Free Ground Item Mode", ActiveToBtnStatus(isFreeGround));
 		bool cFree = this.BtnToolbarHalfV(Icons::Refresh, "Free Item Mode", ActiveToBtnStatus(isFree));
 
@@ -232,7 +238,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 	}
 
 	BtnStatus ActiveNormalToBtnStatus(bool active) {
-		return isNormal ? (active ? BtnStatus::FeatureActive : BtnStatus::Default) : BtnStatus::Disabled;
+		return isNorm ? (active ? BtnStatus::FeatureActive : BtnStatus::Default) : BtnStatus::Disabled;
 	}
 
 	BtnStatus ActiveFreeToBtnStatus(bool active) {

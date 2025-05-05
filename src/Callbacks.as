@@ -35,6 +35,8 @@ ProcessNewSelectedBlock@[] selectedBlockChangedCbs;
 string[] selectedBlockChangedCbNames;
 ProcessNewSelectedMacroblock@[] selectedMacroblockChangedCbs;
 string[] selectedMacroblockChangedCbNames;
+ProcessNewSelectedMacroblock@[] copyPasteMacroblockChangedCbs;
+string[] copyPasteMacroblockChangedCbNames;
 ProcessNewPlacementMode@[] placementModeChangedCbs;
 string[] placementModeChangedCbNames;
 CoroutineFunc@[] onLeavingPlaygroundCbs;
@@ -179,6 +181,13 @@ void RegisterSelectedMacroblockChangedCallback(ProcessNewSelectedMacroblock@ f, 
     if (f !is null) {
         selectedMacroblockChangedCbs.InsertLast(f);
         selectedMacroblockChangedCbNames.InsertLast(name);
+    }
+}
+
+void RegisterCopyPasteMacroblockChangedCallback(ProcessNewSelectedMacroblock@ f, const string &in name) {
+    if (f !is null) {
+        copyPasteMacroblockChangedCbs.InsertLast(f);
+        copyPasteMacroblockChangedCbNames.InsertLast(name);
     }
 }
 
@@ -420,6 +429,14 @@ namespace Event {
         // Editor::Callbacks::Exts::Run_OnNewSelectedMacroblock(mbInfo);
         _Log::Trace("Finished OnSelectedMacroblockChanged");
     }
+    void OnCopyPasteMacroblockChanged(CGameCtnMacroBlockInfo@ mbInfo) {
+        _Log::Trace("Running OnCopyPasteMacroblockChanged");
+        for (uint i = 0; i < copyPasteMacroblockChangedCbs.Length; i++) {
+            copyPasteMacroblockChangedCbs[i](mbInfo);
+        }
+        // Editor::Callbacks::Exts::Run_OnNewCopyPasteMacroblock(mbInfo);
+        _Log::Trace("Finished OnCopyPasteMacroblockChanged");
+    }
     void OnPlacementModeChanged(CGameEditorPluginMap::EPlaceMode newMode) {
         _Log::Trace("Running OnPlacementModeChanged");
         for (uint i = 0; i < placementModeChangedCbs.Length; i++) {
@@ -561,6 +578,7 @@ uint _lastSelectedBlockInfoId = 0;
 uint _lastSelectedGhostBlockInfoId = 0;
 uint _lastSelectedMacroBlockInfoId = 0;
 uint _lastSelectedItemModelId = 0;
+CGameCtnMacroBlockInfo@ _lastCopyPasteMacroBlockInfo = null;
 CGameEditorPluginMap::EPlaceMode _lastPlacementMode = CGameEditorPluginMap::EPlaceMode::Unknown;
 
 void CheckForNewSelectedItem(CGameCtnEditorFree@ editor) {
@@ -600,6 +618,22 @@ void CheckForNewSelectedMacroblock(CGameCtnEditorFree@ editor) {
     if (mb.Id.Value != _lastSelectedMacroBlockInfoId) {
         _lastSelectedMacroBlockInfoId = mb.Id.Value;
         Event::OnSelectedMacroblockChanged(mb);
+    }
+}
+
+void CheckForNewCopyPasteMacroblock(CGameCtnEditorFree@ editor) {
+    if (editor is null) return;
+    if (editor.CurrentMacroBlockInfo is null) return;
+    auto mb = editor.CopyPasteMacroBlockInfo;
+    if (mb !is _lastCopyPasteMacroBlockInfo) {
+        if (_lastCopyPasteMacroBlockInfo !is null) {
+            _lastCopyPasteMacroBlockInfo.MwRelease();
+        }
+        @_lastCopyPasteMacroBlockInfo = mb;
+        if (_lastCopyPasteMacroBlockInfo !is null) {
+            _lastCopyPasteMacroBlockInfo.MwAddRef();
+        }
+        Event::OnCopyPasteMacroblockChanged(mb);
     }
 }
 

@@ -60,7 +60,10 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 		UI::Separator();
 		DrawBigSnapButton();
 		DrawInfPrecisionButtons();
-		DrawLocalRotateButtons(editor);
+		DrawLocalRotateButtons();
+
+		// Last
+		OptDrawMacroblockRecordMini();
 	}
 
 	void DrawCopyRotationsButton(CGameCtnEditorFree@ editor) {
@@ -71,9 +74,7 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 		}
 	}
 
-	bool isNorm;
 	bool isGhost;
-	// bool isFree;
 	bool isAir;
 
 	void DrawPlaceModeButtons(CGameCtnEditorFree@ editor) {
@@ -105,7 +106,7 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 		_forcedVarEnabled = int(editor.GhostBlockForcedVariantIndex) >= 0;
 		auto gVar = _forcedVarEnabled && _forcedGround ? _forcedVarIndex : -1;
 		auto aVar = _forcedVarEnabled && !_forcedGround ? _forcedVarIndex : -1;
-		bool modeValid = Editor::IsInGhostOrFreeBlockPlacementMode(editor);
+		// bool modeValid = Editor::IsInGhostOrFreeBlockPlacementMode(editor);
 		auto gLabel = gVar > -1 ? "G:"+gVar+"###cy-gv" : "G###cy-gv";
 		auto aLabel = aVar > -1 ? "A:"+aVar+"###cy-av" : "A###cy-av";
 
@@ -113,12 +114,24 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 		bool cycleGroundVar = this.BtnToolbarQ(gLabel, "Cycle Ground Variant", ForcedVarCycleBtnStatus(editor, true));
 		bool cycleAirVar = this.BtnToolbarQ(aLabel, "Cycle Air Variant", ForcedVarCycleBtnStatus(editor, false), true);
 
-		if (modeValid && toggleForcedV) ToggleForcedVar(editor);
-		if (modeValid && cycleAirVar) SetForcedVar(editor, false, aVar + 1);
-		if (modeValid && cycleGroundVar) SetForcedVar(editor, true, gVar + 1);
+		if (toggleForcedV) ToggleForcedVar(editor);
+		if (cycleAirVar) SetForcedVar(editor, false, aVar + 1);
+		if (cycleGroundVar) SetForcedVar(editor, true, gVar + 1);
 	}
 
 	void ToggleForcedVar(CGameCtnEditorFree@ editor) {
+		_Log::Trace("Toggling forced variant");
+		// if we're in normal mode, switch to ghost
+		if (Editor::GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Block) {
+			_Log::Trace("Switching to ghost mode to set forced variant");
+			Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::GhostBlock);
+			_forcedVarEnabled = false;
+			// need to reselect before setting forced variant
+			SelectCurrentBlock(editor);
+			ToggleForcedVarSoon();
+			return;
+		}
+
 		_forcedVarEnabled = !_forcedVarEnabled;
 		if (_forcedVarEnabled) {
 			editor.GhostBlockForcedVariantIndex = 0;
@@ -132,7 +145,7 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 
 	void SelectCurrentBlock(CGameCtnEditorFree@ editor) {
 		if (BlockInfo is null) return;
-		dev_trace("Setting selected block to " + BlockInfo.Name);
+		_Log::Trace("Setting selected block to " + BlockInfo.Name);
 		auto inv = Editor::GetInventoryCache();
 		auto article = inv.GetBlockByName(BlockInfo.IdName);
 		if (article !is null) {
@@ -142,6 +155,16 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 
 	void SetForcedVar(CGameCtnEditorFree@ editor, bool ground, int index) {
 		if (BlockInfo is null) return;
+
+		if (Editor::GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Block) {
+			_Log::Trace("Switching to ghost mode to set forced variant");
+			// if we clicked in normal mode, switch to ghost
+			Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::GhostBlock);
+			SelectCurrentBlock(editor);
+			SetForcedVarSoon(ground, index);
+			return;
+		}
+
 		auto bi = BlockInfo;
 		auto nbVars = Editor::GetNbBlockVariants(bi, ground);
 		if (nbVars <= 0) {
@@ -155,16 +178,41 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 		editor.GhostBlockForcedGroundElseAir = ground;
 	}
 
+	// UI safe
+	void ToggleForcedVarSoon() {
+		startnew(CoroutineFunc(_ToggleForcedVarSoon));
+	}
+	protected void _ToggleForcedVarSoon() {
+		yield();
+		auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+		ToggleForcedVar(editor);
+
+	}
+	// UI safe
+	void SetForcedVarSoon(bool ground, int index) {
+		_sfvsGround = ground;
+		_sfvsIndex = index;
+		startnew(CoroutineFunc(_SetForcedVarSoon));
+	}
+
+	bool _sfvsGround;
+	int _sfvsIndex;
+	protected void _SetForcedVarSoon() {
+		yield();
+		auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+		SetForcedVar(editor, _sfvsGround, _sfvsIndex);
+	}
+
 	BtnStatus ForcedVarBtnStatus(CGameCtnEditorFree@ editor) {
-		if (Editor::IsInGhostOrFreeBlockPlacementMode(editor))
+		if (Editor::IsInGhostOrFreeBlockPlacementMode(editor, false))
 			return _forcedVarEnabled ? BtnStatus::FeatureActive : BtnStatus::Default;
-		return BtnStatus::Disabled;
+		return BtnStatus::DefaultHalf;
 	}
 
 	BtnStatus ForcedVarCycleBtnStatus(CGameCtnEditorFree@ editor, bool ground) {
-		if (Editor::IsInGhostOrFreeBlockPlacementMode(editor))
+		if (Editor::IsInGhostOrFreeBlockPlacementMode(editor, false))
 			return _forcedVarEnabled && _forcedGround == ground ? BtnStatus::FeatureActive : BtnStatus::Default;
-		return BtnStatus::Disabled;
+		return BtnStatus::DefaultHalf;
 	}
 
 

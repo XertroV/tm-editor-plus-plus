@@ -11,6 +11,7 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     CheckForNewSelectedBlock(editor);
     CheckForNewSelectedGhostBlock(editor);
     CheckForNewSelectedMacroblock(editor);
+    CheckForNewCopyPasteMacroblock(editor);
     CheckPlacementMode(editor);
 
     //! No need to check for items/blocks anymore after new hooks. These hooks also work before the block/item is rendered, so no refresh needed
@@ -309,6 +310,13 @@ namespace Editor {
         return mode == CGameEditorPluginMap::EPlaceMode::FreeBlock
             || mode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock
             || GetItemPlacementMode() != ItemMode::None;
+    }
+
+    bool IsInCopyPasteMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (checkEditMode && !IsInPlacementMode(editor))
+            return false;
+        auto mode = GetPlacementMode(editor);
+        return mode == CGameEditorPluginMap::EPlaceMode::CopyPaste;
     }
 
     // normal or free

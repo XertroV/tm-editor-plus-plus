@@ -410,6 +410,21 @@ namespace Editor {
             warn("todo: AlignAllImpl");
         }
 
+        // todo: move to MacroblockSpec
+        // Create a complete copy of the macroblock
+        MacroblockSpec@ Duplicate() {
+            auto newMb = MacroblockSpecPriv();
+            for (uint i = 0; i < blocks.Length; i++) {
+                newMb.blocks.InsertLast((cast<BlockSpecPriv>(blocks[i]).Duplicate()));
+            }
+            for (uint i = 0; i < items.Length; i++) {
+                newMb.items.InsertLast((cast<ItemSpecPriv>(items[i]).Duplicate()));
+            }
+            for (uint i = 0; i < skins.Length; i++) {
+                newMb.skins.InsertLast((cast<SkinSpecPriv>(skins[i]).Duplicate()));
+            }
+            return newMb;
+        }
     }
 
     const uint32 MAGIC_BLOCKS = 0x734b4c42;
@@ -540,7 +555,8 @@ namespace Editor {
             if (fg.Length == 0 && bg.Length == 0) {
                 @skin = null;
             } else {
-                @skin = SetSkinSpecPriv(null, fg, bg);
+                BlockSpec@ b = null;
+                @skin = SetSkinSpecPriv(b, fg, bg);
             }
         }
 
@@ -782,6 +798,33 @@ namespace Editor {
             pos += posDiff;
             coord = Int3ToNat3(Nat3ToInt3(coord) + coordDist);
         }
+
+        // todo: move to BlockSpec
+        BlockSpec@ Duplicate() {
+            auto newBlock = BlockSpecPriv();
+            newBlock.name = name;
+            newBlock.collection = collection;
+            newBlock.author = author;
+            newBlock.coord = coord;
+            newBlock.dir = dir;
+            newBlock.dir2 = dir2;
+            newBlock.pos = pos;
+            newBlock.pyr = pyr;
+            newBlock.color = color;
+            newBlock.lmQual = lmQual;
+            newBlock.mobilIx = mobilIx;
+            newBlock.mobilVariant = mobilVariant;
+            newBlock.variant = variant;
+            newBlock.flags = flags;
+            if (waypoint !is null) {
+                @newBlock.waypoint = WaypointSpec(waypoint.tag, waypoint.order);
+            }
+            newBlock.SetBlockInfo(BlockInfo);
+            @newBlock.skin = skin;
+            newBlock.ObjPtr = ObjPtr;
+            return newBlock;
+        }
+
     }
 
     // MARK: SkinSpec
@@ -802,13 +845,17 @@ namespace Editor {
             mem.Write(blockIx);
             // mem.WritePtr(rawSkin);
         }
+
+        SkinSpecPriv@ Duplicate() {
+            return SkinSpecPriv(this.rawSkin, blockIx);
+        }
     }
 
     // MARK: ItemSpec
 
     class ItemSpecPriv : ItemSpec {
         uint64 ObjPtr;
-        CGameCtnAnchoredObject@ GameItem;
+        // CGameCtnAnchoredObject@ GameItem;
 
         CSystemPackDesc@ _rawFGSkin = null;
         CSystemPackDesc@ _rawBGSkin = null;
@@ -818,10 +865,10 @@ namespace Editor {
                 Model.MwRelease();
                 @Model = null;
             }
-            if (GameItem !is null) {
-                GameItem.MwRelease();
-                @GameItem = null;
-            }
+            // if (GameItem !is null) {
+            //     GameItem.MwRelease();
+            //     @GameItem = null;
+            // }
         }
 
         ItemSpecPriv() {
@@ -920,7 +967,7 @@ namespace Editor {
             bool ret = name == item.ItemModel.IdName && collection == 26 && author == item.ItemModel.Author.GetName() &&
                 MathX::Nat3Eq(coord, item.BlockUnitCoord - nat3(0, 1, 0)) &&
                 // uint8(dir) == uint(-1) &&
-                MathX::Vec3Eq(pos, Editor::GetItemLocation(item) + vec3(0, 56, 0)) &&
+                MathX::Vec3Within(pos, Editor::GetItemLocation(item) + vec3(0, 56, 0), 0.0001) &&
                 scale == item.Scale &&
                 // color == item.MapElemColor && lmQual == item.MapElemLmQuality &&
                 phase == item.AnimPhaseOffset &&
@@ -1061,20 +1108,50 @@ namespace Editor {
             return spec;
         }
 
-        // todo: move to BlockSpec
+        // todo: move to ItemSpec
         void TranslateCoords(int3 coordDist) {
             vec3 posDiff = CoordDistToPos(coordDist);
             pos += posDiff;
             coord = Int3ToNat3(Nat3ToInt3(coord) + coordDist);
         }
 
-        // todo: move to MacroblockSpec
+        // todo: move to ItemSpec
         ItemSpec@ SetCoordAndFlying() {
             dev_trace("SetCoordAndFlying; coord before: " + coord.ToString());
             coord = PosToCoord(pos) - nat3(0, 7, 0);
             dev_trace("SetCoordAndFlying; coord after: " + coord.ToString());
             isFlying = 1;
             return this;
+        }
+
+        // todo: move to ItemSpec
+        ItemSpec@ Duplicate() {
+            auto newItem = ItemSpecPriv();
+            newItem.name = name;
+            newItem.collection = collection;
+            newItem.author = author;
+            newItem.coord = coord;
+            newItem.dir = dir;
+            newItem.pos = pos;
+            newItem.pyr = pyr;
+            newItem.scale = scale;
+            newItem.color = color;
+            newItem.lmQual = lmQual;
+            newItem.phase = phase;
+            newItem.visualRot = visualRot;
+            newItem.pivotPos = pivotPos;
+            newItem.isFlying = isFlying > 0 ? 1 : 0;
+            newItem.variantIx = variantIx;
+            newItem.associatedBlockIx = associatedBlockIx;
+            newItem.itemGroupOnBlock = itemGroupOnBlock;
+            if (waypoint !is null) @newItem.waypoint = WaypointSpec(waypoint.tag, waypoint.order);
+            if (skin !is null) @newItem.skin = SetSkinSpecPriv(newItem, skin.fgSkin, skin.bgSkin);
+            newItem.SetModel(Model);
+
+            newItem.ObjPtr = ObjPtr;
+            @newItem._rawFGSkin = _rawFGSkin;
+            @newItem._rawBGSkin = _rawBGSkin;
+            return newItem;
         }
     }
 
@@ -1087,6 +1164,9 @@ namespace Editor {
 
         SetSkinSpecPriv(ItemSpec@ item, const string &in skin, bool isForegroundElseBackground) {
             super(item, skin, isForegroundElseBackground);
+        }
+        SetSkinSpecPriv(ItemSpec@ item, const string &in fgSkin, const string &in bgSkin) {
+            super(item, fgSkin, bgSkin);
         }
         SetSkinSpecPriv(MemoryBuffer@ buf) {
             super();

@@ -70,6 +70,7 @@ void Main() {
     Blocks::RegisterCallbacks(); // mostly to do with item SPlacements
     VegetRandomYaw::SetupCallbacks(); // for fixing trees on free blocks
     MacroblockRecorder::RegisterCallbacks();
+    LargeMacroblocks::OnLoad();
 
     startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
@@ -140,6 +141,7 @@ void Unload(bool freeMem = true) {
 #if DEV
     Murmur32::Unhook();
 #endif
+    Notify("If E++ doesn't load after updating, please restart the game.", 20000);
 }
 
 uint lastInItemEditor = 0;

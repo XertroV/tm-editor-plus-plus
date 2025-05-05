@@ -1,7 +1,7 @@
 
 
-void Notify(const string &in msg) {
-    UI::ShowNotification(Meta::ExecutingPlugin().Name, msg);
+void Notify(const string &in msg, int time = 5000) {
+    UI::ShowNotification(Meta::ExecutingPlugin().Name, msg, time);
     trace("Notified: " + msg);
 }
 
@@ -148,7 +148,7 @@ namespace UX {
     void CloseCurrentPopupIfMouseFarAway(bool closeAnyway = false) {
         auto wPos = UI::GetWindowPos();
         auto wSize = UI::GetWindowSize();
-        vec2 areaPad = vec2(g_screen.y * .2);
+        vec2 areaPad = vec2(g_screen.y * .3);
         auto showBoundsRect = vec4(wPos - areaPad, wSize + (areaPad * 2.));
 
         closeAnyway = closeAnyway || !MathX::Within(UI::GetMousePos(), showBoundsRect);

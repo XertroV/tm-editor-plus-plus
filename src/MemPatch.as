@@ -90,4 +90,14 @@ class MemPatcher {
             Dev::Patch(ptr + offsets[i], origBytes[i]);
         }
     }
+
+    MemPatcher@ AutoLoad() {
+        startnew(CoroutineFunc(this._AutoLoadCoro));
+        return this;
+    }
+
+    void _AutoLoadCoro() {
+        yield();
+        IsApplied = true;
+    }
 }

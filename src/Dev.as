@@ -246,6 +246,7 @@ uint64 Dev_GetPointerForNod(CMwNod@ nod) {
 
 const bool IS_MEMORY_ALWAYS_ALIGNED = true;
 CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
+    if (ptr == 0) return null;
     // if linux
     // if (ptr < 0xFFFFFFF || ptr % 8 != 0) {
     //     return null;
@@ -548,6 +549,9 @@ const uint16 O_MAP_EMBEDDEDITEMS_BUF2 = O_MAP_SCRIPTMETADATA + (0x788 - 0x668);
 const uint16 O_MAP_EMBEDDEDITEMS_BUF3 = O_MAP_SCRIPTMETADATA + (0x7A8 - 0x668);
 
 
+const uint16 O_MAP_MATRIX = O_MAP_SCRIPTMETADATA + (0x7F0 - 0x668);
+const uint16 O_MAP_IGNORE_MATRIX = O_MAP_SCRIPTMETADATA + (0x820 - 0x668);
+
 /*
 todo: set flag to false and experiment with the other flag
 
@@ -722,8 +726,16 @@ const uint16 O_MATMOD_REMAPFOLDER = GetOffset("CPlugGameSkinAndFolder", "RemapFo
 
 // MARK: O Item/Mat
 
+// More anchored object offsets in Editor/Items.as
+
+// 0x50
+const uint16 O_ANCHOREDOBJ_PIVOT_MAT = GetOffset("CGameCtnAnchoredObject", "AbsolutePositionInMap") + 0xC;
+const uint16 O_ANCHOREDOBJ_PIVOT_POS = O_ANCHOREDOBJ_PIVOT_MAT + 0x24;
 // scale at 0x80 (2024_02_26)
 const uint16 O_ANCHOREDOBJ_SKIN_SCALE = GetOffset("CGameCtnAnchoredObject", "Scale");
+// least bit 0x0000001: isFlying, bit: 0x0000002: isAutoPiloted
+const uint16 O_ANCHOREDOBJ_IsFlying = O_ANCHOREDOBJ_SKIN_SCALE + 0x4; // 0x84
+const uint16 O_ANCHOREDOBJ_LINKEDBLOCK = O_ANCHOREDOBJ_SKIN_SCALE + 0x10; // 0x90
 const uint16 O_ANCHOREDOBJ_BGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x18; // 0x98
 const uint16 O_ANCHOREDOBJ_FGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x20;
 // c8

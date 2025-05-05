@@ -35,6 +35,13 @@ namespace MathX {
             Math::Max(a.z, b.z)
         );
     }
+    int3 Max(const int3 &in a, const int3 &in b) {
+        return int3(
+            Math::Max(a.x, b.x),
+            Math::Max(a.y, b.y),
+            Math::Max(a.z, b.z)
+        );
+    }
 
     shared vec3 Min(vec3 &in a, vec3 &in b) {
         return vec3(
@@ -45,6 +52,13 @@ namespace MathX {
     }
     shared nat3 Min(nat3 &in a, nat3 &in b) {
         return nat3(
+            Math::Min(a.x, b.x),
+            Math::Min(a.y, b.y),
+            Math::Min(a.z, b.z)
+        );
+    }
+    int3 Min(const int3 &in a, const int3 &in b) {
+        return int3(
             Math::Min(a.x, b.x),
             Math::Min(a.y, b.y),
             Math::Min(a.z, b.z)
@@ -67,6 +81,12 @@ namespace MathX {
     shared bool Vec3Eq(vec3 &in a, vec3 &in b) {
         return a.x == b.x && a.y == b.y && a.z == b.z;
         return (a-b).LengthSquared() < 1e10;
+    }
+
+    bool Vec3Within(vec3 &in a, vec3 &in b, float epsilon) {
+        return Math::Abs(a.x - b.x) < epsilon &&
+            Math::Abs(a.y - b.y) < epsilon &&
+            Math::Abs(a.z - b.z) < epsilon;
     }
 
     shared bool Nat3Eq(nat3 &in a, nat3 &in b) {

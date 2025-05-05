@@ -32,13 +32,12 @@ namespace Editor {
     }
 
     vec3 GetItemPivot(CGameCtnAnchoredObject@ item) {
-        auto pivotOffset = GetOffset("CGameCtnAnchoredObject", "Scale") - 0xC;
-        auto pivotOffset2 = GetOffset("CGameCtnAnchoredObject", "AbsolutePositionInMap") + 0x30;
-        if (pivotOffset != pivotOffset2) {
-            NotifyWarning("Item.Pivot memory offset changed. Unsafe to use.");
-            throw("Item.Pivot memory offset changed. Unsafe to use.");
-        }
-        return Dev::GetOffsetVec3(item, pivotOffset);
+        return Dev::GetOffsetVec3(item, O_ANCHOREDOBJ_PIVOT_POS);
+    }
+
+    // idk what happens if you set rotations
+    iso4 GetItemPivotMat(CGameCtnAnchoredObject@ item) {
+        return Dev::GetOffsetVec3(item, O_ANCHOREDOBJ_PIVOT_MAT);
     }
 
     mat4 GetItemMatrix(CGameCtnAnchoredObject@ item) {
