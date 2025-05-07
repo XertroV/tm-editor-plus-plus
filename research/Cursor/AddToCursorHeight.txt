@@ -1,0 +1,16 @@
+Trackmania.exe.text+10F1890 - 48 83 EC 28           - sub rsp,28 { 40 }
+Trackmania.exe.text+10F1894 - 83 79 2C 00           - cmp dword ptr [rcx+2C],00 { 0 }
+Trackmania.exe.text+10F1898 - 75 18                 - jne Trackmania.exe.text+10F18B2
+Trackmania.exe.text+10F189A - 83 79 3C 00           - cmp dword ptr [rcx+3C],00 { 0 }
+Trackmania.exe.text+10F189E - 75 12                 - jne Trackmania.exe.text+10F18B2
+Trackmania.exe.text+10F18A0 - E8 BBFFFFFF           - call Trackmania.exe.text+10F1860
+Trackmania.exe.text+10F18A5 - F3 0F58 82 FC000000   - addss xmm0,[rdx+000000FC]
+Trackmania.exe.text+10F18AD - 48 83 C4 28           - add rsp,28 { 40 }
+Trackmania.exe.text+10F18B1 - C3                    - ret
+Trackmania.exe.text+10F18B2 - F3 0F10 82 FC000000   - movss xmm0,[rdx+000000FC]
+Trackmania.exe.text+10F18BA - F3 0F58 82 F8000000   - addss xmm0,[rdx+000000F8] { add to draw height
+when snapped or free
+
+ }
+Trackmania.exe.text+10F18C2 - 48 83 C4 28           - add rsp,28 { 40 }
+Trackmania.exe.text+10F18C6 - C3                    - ret

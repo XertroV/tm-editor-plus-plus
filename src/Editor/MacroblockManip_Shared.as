@@ -199,7 +199,7 @@ namespace Editor {
             items.InsertLast(item);
         }
         // Add an item to the MB and return the corresponding itemspec
-        ItemSpec@ AddItem1(CGameCtnAnchoredObject@ item) { throw('implemented elsewhere'); }
+        ItemSpec@ AddItem1(CGameCtnAnchoredObject@ item) { throw('implemented elsewhere'); return null; }
 
         void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
             // 0x734b4c42 = "BLKs"
@@ -277,7 +277,7 @@ namespace Editor {
         void AlignAll(Editor::AlignWithinBlock) { throw("Implemented elsewhere"); }
 
         // Create a complete copy of this macroblock (deep copy)
-        MacroblockSpec@ Duplicate() { throw("Implemented elsewhere"); }
+        MacroblockSpec@ Duplicate() { throw("Implemented elsewhere"); return null; }
 
         /* Restores the original positions of blocks/items to what it was in the map.
            We always offset y positions by 56 to fit with placing macroblocks at coord <0,1,0> (below the ground).
@@ -289,13 +289,13 @@ namespace Editor {
         void MoveAllToOrigin() { throw("Implemented elsewhere"); }
 
         // Get the size of the macroblock in coord space. NOTE: this will not count dead space below/left/behind the MB. Formula: MaxBlockCoords() - MinBlockCoords() + 1.
-        nat3 GetCoordSize() { throw("Implemented elsewhere"); }
+        nat3 GetCoordSize() { throw("Implemented elsewhere"); return nat3(); }
 
         // Get the maximum X,Y,Z coord occupied by any block/item (note: not necessarily the same block). Used as the upper corner of bounding box.
-        int3 GetMaxBlockCoords() { throw("Implemented elsewhere"); }
+        int3 GetMaxBlockCoords() { throw("Implemented elsewhere"); return int3(); }
 
         // Get the minimum X,Y,Z coord occupied by any block/item (note: not necessarily the same block). Used as the lower corner of bounding box.
-        int3 GetMinBlockCoords() { throw("Implemented elsewhere"); }
+        int3 GetMinBlockCoords() { throw("Implemented elsewhere"); return int3(); }
     }
 
     // 2 bits for each axis: 0=None, 1=Left, 2=Mid, 3=Right
@@ -590,7 +590,7 @@ namespace Editor {
         }
 
         // Create a complete copy of this block (deep copy)
-        BlockSpec@ Duplicate() { throw("implemented elsewhere"); }
+        BlockSpec@ Duplicate() { throw("implemented elsewhere"); return null; }
 
         // Move the block by the given distance in coord space. If updateBoth is false, then either the pos or coord will be updated depending on isFree. Otherwise both are updated.
         void TranslateCoords(int3 coordDist, bool updateBoth = false) { throw("implemented elsewhere"); }
@@ -662,9 +662,7 @@ namespace Editor {
             // todo: compare skins
         }
 
-        SkinSpec@ Duplicate() {
-            return SkinSpec(rawSkin, blockIx);
-        }
+        SkinSpec@ Duplicate() { throw("implemented elsewhere;"); return null; }
     }
 
     shared class SetSkinSpec : NetworkSerializable {
