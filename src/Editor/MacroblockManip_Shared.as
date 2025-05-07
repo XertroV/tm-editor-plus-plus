@@ -198,6 +198,8 @@ namespace Editor {
         void AddItem(ItemSpec@ item) {
             items.InsertLast(item);
         }
+        // Add an item to the MB and return the corresponding itemspec
+        ItemSpec@ AddItem1(CGameCtnAnchoredObject@ item) { throw('implemented elsewhere'); }
 
         void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
             // 0x734b4c42 = "BLKs"
@@ -246,6 +248,54 @@ namespace Editor {
             throw("AddMacroblock for MacroBlockInfo not implemented here");
             return null;
         }
+
+        // return true if any block is ground
+        bool HasGround() {
+            for (uint i = 0; i < blocks.Length; i++) {
+                if (blocks[i].isGround) return true;
+            }
+            return false;
+        }
+
+        // set isFree = true on all blocks
+        void SetAllBlocksFree() {
+            for (uint i = 0; i < blocks.Length; i++) {
+                blocks[i].SetFree();
+            }
+        }
+
+        // set isFlying = true on all items
+        void SetAllItemsFlying() {
+            for (uint i = 0; i < items.Length; i++) {
+                items[i].isFlying = 1;
+            }
+        }
+
+        /* Shift things within the macroblock to touch the aligned face/edge/corner (or centered in axis if mid).
+           Within the block coords bounding box, move blocks and items so that they are most left / middle / top / whatever that they can be.
+        */
+        void AlignAll(Editor::AlignWithinBlock) { throw("Implemented elsewhere"); }
+
+        // Create a complete copy of this macroblock (deep copy)
+        MacroblockSpec@ Duplicate() { throw("Implemented elsewhere"); }
+
+        /* Restores the original positions of blocks/items to what it was in the map.
+           We always offset y positions by 56 to fit with placing macroblocks at coord <0,1,0> (below the ground).
+           But if we want everything to match original positions, we want to undo this.
+        */
+        void UndoMacroblockHeightOffset() { throw("Implemented elsewhere"); }
+
+        // This will cut out dead space below, behind, and to the right of the macroblock (in TM, +X is left, -X is right).
+        void MoveAllToOrigin() { throw("Implemented elsewhere"); }
+
+        // Get the size of the macroblock in coord space. NOTE: this will not count dead space below/left/behind the MB. Formula: MaxBlockCoords() - MinBlockCoords() + 1.
+        nat3 GetCoordSize() { throw("Implemented elsewhere"); }
+
+        // Get the maximum X,Y,Z coord occupied by any block/item (note: not necessarily the same block). Used as the upper corner of bounding box.
+        int3 GetMaxBlockCoords() { throw("Implemented elsewhere"); }
+
+        // Get the minimum X,Y,Z coord occupied by any block/item (note: not necessarily the same block). Used as the lower corner of bounding box.
+        int3 GetMinBlockCoords() { throw("Implemented elsewhere"); }
     }
 
     // 2 bits for each axis: 0=None, 1=Left, 2=Mid, 3=Right
@@ -369,6 +419,11 @@ namespace Editor {
             } else {
                 flags &= ~uint8(BlockFlags::Free);
             }
+        }
+        // Sets flags to free (and not ground nor ghost)
+        void SetFree() {
+            // clear ground/ghost
+            flags = uint8(BlockFlags::Free);
         }
 
         bool get_isGround() const {
@@ -533,6 +588,12 @@ namespace Editor {
             throw("implemented elsewhere");
             return true;
         }
+
+        // Create a complete copy of this block (deep copy)
+        BlockSpec@ Duplicate() { throw("implemented elsewhere"); }
+
+        // Move the block by the given distance in coord space. If updateBoth is false, then either the pos or coord will be updated depending on isFree. Otherwise both are updated.
+        void TranslateCoords(int3 coordDist, bool updateBoth = false) { throw("implemented elsewhere"); }
     }
 
     shared class WaypointSpec : NetworkSerializable {
@@ -571,6 +632,10 @@ namespace Editor {
         bool opEquals(const WaypointSpec@ other) const {
             return tag == other.tag && order == other.order;
         }
+
+        WaypointSpec@ Clone() {
+            return WaypointSpec(tag, order);
+        }
     }
 
     shared class SkinSpec : NetworkSerializable {
@@ -595,6 +660,10 @@ namespace Editor {
         bool opEquals(const SkinSpec@ other) const {
             return blockIx == other.blockIx;
             // todo: compare skins
+        }
+
+        SkinSpec@ Duplicate() {
+            return SkinSpec(rawSkin, blockIx);
         }
     }
 
@@ -810,7 +879,23 @@ namespace Editor {
             return mat4::Translate(pos) * EulerToMat_Shared(pyr);
         }
 
+        // Given BlockInfo, will create a BlockSpec with the same parameters as this item.
         BlockSpec@ ToBlockSpec(CGameCtnBlockInfo@ model, uint blockVariant = 0, bool isGround = false) {
+            throw("implemented elsewhere");
+            return null;
+        }
+
+        // Move the item this much in coordinates.
+        void TranslateCoords(int3 coordDist) { throw("implemented elsewhere"); }
+
+        // Sets the block unit coordinate based on item position, and sets flying.
+        ItemSpec@ SetCoordAndFlying() {
+            throw("implemented elsewhere");
+            return null;
+        }
+
+        // Creates a complete copy of this item (deep copy)
+        ItemSpec@ Duplicate() {
             throw("implemented elsewhere");
             return null;
         }

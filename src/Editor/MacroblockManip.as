@@ -113,8 +113,7 @@ namespace Editor {
             items.InsertLast(ItemSpecPriv(item));
         }
 
-        // todo: move to MacroblockSpec
-        ItemSpecPriv@ AddItem1(CGameCtnAnchoredObject@ item) {
+        ItemSpec@ AddItem1(CGameCtnAnchoredObject@ item) override {
             auto itemSpec = ItemSpecPriv(item);
             items.InsertLast(itemSpec);
             return itemSpec;
@@ -291,8 +290,7 @@ namespace Editor {
             return chunks;
         }
 
-        // todo: move to MacroblockSpec
-        int3 GetMinBlockCoords() {
+        int3 GetMinBlockCoords() override {
             int3 minCoord = int3(2147483647);
             for (uint i = 0; i < blocks.Length; i++) {
                 auto @block = blocks[i];
@@ -312,8 +310,7 @@ namespace Editor {
             return minCoord;
         }
 
-        // todo: move to MacroblockSpec
-        int3 GetMaxBlockCoords() {
+        int3 GetMaxBlockCoords() override {
             int3 maxCoord = int3(-2147483647);
             for (uint i = 0; i < blocks.Length; i++) {
                 auto @block = blocks[i];
@@ -333,8 +330,7 @@ namespace Editor {
             return maxCoord;
         }
 
-        // todo: move to MacroblockSpec
-        nat3 GetCoordSize() {
+        nat3 GetCoordSize() override {
             if (blocks.Length == 0 && items.Length == 0) return nat3(0);
             auto min = GetMinBlockCoords();
             auto max = GetMaxBlockCoords();
@@ -345,31 +341,7 @@ namespace Editor {
             return Int3ToNat3(size);
         }
 
-        // todo: move to MacroblockSpec
-        bool HasGround() {
-            for (uint i = 0; i < blocks.Length; i++) {
-                if (blocks[i].isGround) return true;
-            }
-            return false;
-        }
-
-        // todo: move to MacroblockSpec
-        void SetAllBlocksFree() {
-            for (uint i = 0; i < blocks.Length; i++) {
-                blocks[i].isFree = true;
-            }
-        }
-
-        // todo: move to MacroblockSpec
-        void SetAllItemsFlying() {
-            for (uint i = 0; i < items.Length; i++) {
-                items[i].isFlying = 1;
-            }
-        }
-
-        // todo: move to MacroblockSpec
-        // This will cut out dead space below, behind, and to the right of the macroblock (in TM, +X is left, -X is right).
-        void MoveAllToOrigin() {
+        void MoveAllToOrigin() override {
             auto minCoord = this.GetMinBlockCoords();
             for (uint i = 0; i < blocks.Length; i++) {
                 cast<BlockSpecPriv>(blocks[i]).TranslateCoords(minCoord * -1);
@@ -379,11 +351,8 @@ namespace Editor {
             }
         }
 
-        // todo: move to MacroblockSpec
-        // Restores original positions of blocks/items in map.
-        // We always offset y positions by 56 to fit with placing macroblocks at coord <0,1,0> (below the ground)
-        // But if we want everything to match original positions, we want to undo this.
-        void UndoMacroblockHeightOffset() {
+        void UndoMacroblockHeightOffset() override {
+            warn("todo: UndoMacroblockHeightOffset");
             return;
 
             for (uint i = 0; i < blocks.Length; i++) {
@@ -404,24 +373,21 @@ namespace Editor {
             }
         }
 
-        // todo: move to MacroblockSpec
-        // Within the block coords bounding box, move blocks and items so that they are most left / middle / top / whatever that they can be.
-        void AlignAll(Editor::AlignWithinBlock) {
+        void AlignAll(Editor::AlignWithinBlock) override {
             warn("todo: AlignAllImpl");
         }
 
-        // todo: move to MacroblockSpec
         // Create a complete copy of the macroblock
-        MacroblockSpec@ Duplicate() {
+        MacroblockSpec@ Duplicate() override {
             auto newMb = MacroblockSpecPriv();
             for (uint i = 0; i < blocks.Length; i++) {
-                newMb.blocks.InsertLast((cast<BlockSpecPriv>(blocks[i]).Duplicate()));
+                newMb.blocks.InsertLast((blocks[i]).Duplicate());
             }
             for (uint i = 0; i < items.Length; i++) {
-                newMb.items.InsertLast((cast<ItemSpecPriv>(items[i]).Duplicate()));
+                newMb.items.InsertLast((items[i]).Duplicate());
             }
             for (uint i = 0; i < skins.Length; i++) {
-                newMb.skins.InsertLast((cast<SkinSpecPriv>(skins[i]).Duplicate()));
+                newMb.skins.InsertLast((skins[i]).Duplicate());
             }
             return newMb;
         }
@@ -792,15 +758,17 @@ namespace Editor {
             return true;
         }
 
-        // todo: move to BlockSpec
-        void TranslateCoords(int3 coordDist) {
-            vec3 posDiff = CoordDistToPos(coordDist);
-            pos += posDiff;
-            coord = Int3ToNat3(Nat3ToInt3(coord) + coordDist);
+        void TranslateCoords(int3 coordDist, bool updateBoth = false) override {
+            if (updateBoth || isFree) {
+                vec3 posDiff = CoordDistToPos(coordDist);
+                pos += posDiff;
+            }
+            if (updateBoth || !isFree) {
+                coord = Int3ToNat3(Nat3ToInt3(coord) + coordDist);
+            }
         }
 
-        // todo: move to BlockSpec
-        BlockSpec@ Duplicate() {
+        BlockSpec@ Duplicate() override {
             auto newBlock = BlockSpecPriv();
             newBlock.name = name;
             newBlock.collection = collection;
@@ -1108,15 +1076,13 @@ namespace Editor {
             return spec;
         }
 
-        // todo: move to ItemSpec
-        void TranslateCoords(int3 coordDist) {
+        void TranslateCoords(int3 coordDist) override {
             vec3 posDiff = CoordDistToPos(coordDist);
             pos += posDiff;
             coord = Int3ToNat3(Nat3ToInt3(coord) + coordDist);
         }
 
-        // todo: move to ItemSpec
-        ItemSpec@ SetCoordAndFlying() {
+        ItemSpec@ SetCoordAndFlying() override {
             dev_trace("SetCoordAndFlying; coord before: " + coord.ToString());
             coord = PosToCoord(pos) - nat3(0, 7, 0);
             dev_trace("SetCoordAndFlying; coord after: " + coord.ToString());
@@ -1124,8 +1090,7 @@ namespace Editor {
             return this;
         }
 
-        // todo: move to ItemSpec
-        ItemSpec@ Duplicate() {
+        ItemSpec@ Duplicate() override {
             auto newItem = ItemSpecPriv();
             newItem.name = name;
             newItem.collection = collection;
@@ -1144,7 +1109,7 @@ namespace Editor {
             newItem.variantIx = variantIx;
             newItem.associatedBlockIx = associatedBlockIx;
             newItem.itemGroupOnBlock = itemGroupOnBlock;
-            if (waypoint !is null) @newItem.waypoint = WaypointSpec(waypoint.tag, waypoint.order);
+            if (waypoint !is null) @newItem.waypoint = waypoint.Clone();
             if (skin !is null) @newItem.skin = SetSkinSpecPriv(newItem, skin.fgSkin, skin.bgSkin);
             newItem.SetModel(Model);
 
