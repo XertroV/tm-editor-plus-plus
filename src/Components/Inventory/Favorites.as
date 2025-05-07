@@ -48,6 +48,16 @@ namespace IconTextures {
         initializedResources = true;
     }
 
+    UI::Texture@ GetFailedTexture() {
+        if (failedImg is null) @failedImg = UI::LoadTexture("img/failed.png");
+        return failedImg;
+    }
+
+    UI::Texture@ GetNoIconTexture() {
+        if (noIconImg is null) @noIconImg = UI::LoadTexture("img/no-icon.png");
+        return noIconImg;
+    }
+
     void LoadIconTextureCsvCache() {
         if (!IO::FileExists(ArticleMappingPath())) return;
         IO::File csv(ArticleMappingPath(), IO::FileMode::Read);
@@ -163,16 +173,14 @@ namespace IconTextures {
             @gbx = Gbx(toLoad);
         } catch {
             // failed to load gbx
-            NotifyWarning("Failed to load GBX. (" + getExceptionInfo() + ") - " + toLoad);
-            if (failedImg is null) @failedImg = UI::LoadTexture("img/failed.png");
-            @loadedTextures[nodeName] = failedImg;
+            Dev_NotifyWarning("Failed to load GBX. (" + getExceptionInfo() + ") - " + toLoad);
+            @loadedTextures[nodeName] = GetFailedTexture();
             return;
         }
         auto iconUD = gbx.GetHeaderChunk(GBX_CHUNK_IDS::CGameItemModel_Icon);
         if (iconUD is null) {
             trace("Could not load icon from " + toLoad + ' -- it probably has none.');
-            if (noIconImg is null) @noIconImg = UI::LoadTexture("img/no-icon.png");
-            @loadedTextures[nodeName] = noIconImg;
+            @loadedTextures[nodeName] = GetNoIconTexture();
             return;
         }
         auto icon = iconUD.AsIcon();

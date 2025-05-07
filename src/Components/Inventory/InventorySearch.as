@@ -1,6 +1,7 @@
 class InventorySearchTab : Tab {
     InvSearcher@ searcher;
     bool setKbFocusOnSearchbar = false;
+    Hotkey@ hotkey;
 
     InventorySearchTab(TabGroup@ p) {
         super(p, "Inv. Search", Icons::FolderOpenO + Icons::Search);
@@ -8,7 +9,7 @@ class InventorySearchTab : Tab {
         @searcher = InvSearcher();
         searcher.SetUpdateCallbacks(CoroutineFunc(this.SearchUpdateStart), CoroutineFunc(this.SearchUpdateEnd));
         // Oem5 = backslash `\`
-        AddHotkey(VirtualKey::Oem5, false, false, false, HotkeyFunction(this.OnShowSearchWindow), "Search Inventory");
+        @hotkey = AddHotkey(VirtualKey::Oem5, false, false, false, HotkeyFunction(this.OnShowSearchWindow), "Search Inventory");
         closeWindowOnEscape = true;
     }
 
@@ -48,7 +49,7 @@ class InventorySearchTab : Tab {
         promptCursorPos = UI::GetCursorPos();
         AddMarkdownTooltip("### Search the inventory for items, blocks, and macroblocks.\n"
             "Use \\<space\\> or '*' to indicate wildcards.<br>"
-            "Backslash (default) to quicksearch.\n"
+            "Backslash (default) to quicksearch. Current Binding: " + hotkey.formatted + ".\n"
             "Escape to close the window.<br>"
             "Unless the search term is prefixed with '=', a wildcard is automatically inserted before the search term.<br>"
             // todo: filter on types (blocks, items, macroblocks, folders)
@@ -70,6 +71,11 @@ class InventorySearchTab : Tab {
             ToggleLables();
         }
         UI::PopFont();
+
+        if (searching) {
+            UI::Text("Searching... Results so far: " + searcher.filtered.Length);
+            // return;
+        }
 
         if (UI::BeginChild("##searchresults", vec2(-1, -1), true)) {
             availableSize = UI::GetContentRegionAvail();
@@ -122,6 +128,7 @@ class InventorySearchTab : Tab {
     uint pageSize = 100;
     uint minResultsIfPossible = 10;
     float resAmbAlpha = 0.35;
+    bool searching = false;
 
     void SearchUpdateStart() {
         results.RemoveRange(0, results.Length);
@@ -129,6 +136,7 @@ class InventorySearchTab : Tab {
         nbResults = 0;
         offset = 0;
         hasMoreResults = false;
+        searching = true;
     }
 
     void SearchUpdateEnd() {
@@ -141,30 +149,34 @@ class InventorySearchTab : Tab {
         hasMoreResults = endAt < totalSearchRes;
         for (uint i = startFrom; i < endAt; i++) {
             auto name = searcher.filtered[i];
-            auto item = inv.GetItemByPath(name);
-            auto block = inv.GetBlockByName(name);
-            auto mb = inv.GetMacroblockByName(name);
-            auto itemFolder = inv.GetItemDirectory(name);
-            auto blockFolder = inv.GetBlockDirectory(name);
-            auto mbFolder = inv.GetMacroblockDirectory(name);
-            if (item !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::Item));
-            } else if (block !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::Block));
-            } else if (mb !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::Macroblock));
-            } else if (itemFolder !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::ItemFolder));
-            } else if (blockFolder !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::BlockFolder));
-            } else if (mbFolder !is null) {
-                results.InsertLast(FavObj(name, InvObjectType::MacroblockFolder));
+            CGameCtnArticleNodeArticle@ item, block, mb;
+            CGameCtnArticleNodeDirectory@ itemFolder, blockFolder, mbFolder;
+            FavObj@ obj;
+            // auto item = inv.GetItemByPath(name);
+            // auto block = inv.GetBlockByName(name);
+            // auto mb = inv.GetMacroblockByName(name);
+            // auto itemFolder = inv.GetItemDirectory(name);
+            // auto blockFolder = inv.GetBlockDirectory(name);
+            // auto mbFolder = inv.GetMacroblockDirectory(name);
+            if ((@item = inv.GetItemByPath(name)) !is null) {
+                @obj = (FavObj(name, InvObjectType::Item));
+            } else if ((@block = inv.GetBlockByName(name)) !is null) {
+                @obj = (FavObj(name, InvObjectType::Block));
+            } else if ((@mb = inv.GetMacroblockByName(name)) !is null) {
+                @obj = (FavObj(name, InvObjectType::Macroblock));
+            } else if ((@itemFolder = inv.GetItemDirectory(name)) !is null) {
+                @obj = (FavObj(name, InvObjectType::ItemFolder));
+            } else if ((@blockFolder = inv.GetBlockDirectory(name)) !is null) {
+                @obj = (FavObj(name, InvObjectType::BlockFolder));
+            } else if ((@mbFolder = inv.GetMacroblockDirectory(name)) !is null) {
+                @obj = (FavObj(name, InvObjectType::MacroblockFolder));
             } else {
                 NotifyWarning("Inventory item not found: " + name);
                 continue;
             }
-            results[results.Length - 1].WithAmbAlpha(resAmbAlpha).WithSelectedCb(CoroutineFunc(this.OnSelectedObject));
+            results.InsertLast(obj.WithAmbAlpha(resAmbAlpha).WithSelectedCb(CoroutineFunc(this.OnSelectedObject)));
         }
+        searching = false;
     }
 
     void OnSelectedObject() {

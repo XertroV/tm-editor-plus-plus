@@ -1,6 +1,13 @@
 namespace Editor {
     bool PAUSE_INVENTORY_CACHING = false;
 
+    enum ScanType {
+        None = 0,
+        Blocks = 1,
+        Items = 2,
+        Macroblocks = 3
+    }
+
     class InventoryCache {
         InventoryCache() {
             RefreshCacheSoon();
@@ -14,7 +21,11 @@ namespace Editor {
         uint loadProgress = 0;
         uint loadTotal = 0;
         string LoadingStatus() {
-            return tostring(loadProgress) + " / " + loadTotal + Text::Format(" (%2.1f%%)", float(loadProgress) / Math::Max(1, loadTotal) * 100);
+            return tostring(loadProgress) + " / " + loadTotal + " (" + LoadingStatusShort() + ")";
+        }
+
+        string LoadingStatusShort() {
+            return Text::Format("%2.1f%%", float(loadProgress) / Math::Max(1, loadTotal) * 100);
         }
 
         void StopRefreshing() {
@@ -30,6 +41,7 @@ namespace Editor {
             loadProgress = 0;
             loadTotal = 0;
             hasClubItems = false;
+            _ScanType = ScanType::None;
             cachedInvItemPaths.RemoveRange(0, cachedInvItemPaths.Length);
             cachedInvItemNames.RemoveRange(0, cachedInvItemNames.Length);
             cachedInvBlockNames.RemoveRange(0, cachedInvBlockNames.Length);
@@ -47,6 +59,20 @@ namespace Editor {
             cachedInvItemFolderLookup.DeleteAll();
             cachedInvMacroblockFolderLookup.DeleteAll();
             return myNonce;
+        }
+
+        void CountObjects(CGameCtnArticleNodeDirectory@ node, uint nonce) {
+            // if (nonce != cacheRefreshNonce) { dev_trace("exiting CountObjects 1"); return; }
+            loadTotal += node.ChildNodes.Length;
+            // if (GetEditor(GetApp()) is null) return;
+            // CheckPause();
+            for (uint i = 0; i < node.ChildNodes.Length; i++) {
+                // if (nonce != cacheRefreshNonce) { dev_trace("exiting CountObjects 2"); return; }
+                // if (i >= node.ChildNodes.Length) { Dev_NotifyWarning('exiting i >= node.ChildNodes.Length: ' + i + " / " + node.ChildNodes.Length); return; }
+                auto child = node.ChildNodes[i];
+                if (child.IsDirectory) CountObjects(cast<CGameCtnArticleNodeDirectory>(node.ChildNodes[i]), nonce);
+                // if (nonce != cacheRefreshNonce) { dev_trace("exiting CountObjects 3"); return; }
+            }
         }
 
         uint cacheRefreshNonce = 1;
@@ -68,22 +94,32 @@ namespace Editor {
             CGameCtnArticleNodeDirectory@ itemRN = cast<CGameCtnArticleNodeDirectory>(inv.RootNodes[3]);
             CGameCtnArticleNodeDirectory@ mbRN = cast<CGameCtnArticleNodeDirectory>(Editor::GetInventoryRootNode(InventoryRootNode::Macroblocks));
 
+            CountObjects(blockRN, myNonce);
+            yield();
+            if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
+
+            CountObjects(itemRN, myNonce);
+            yield();
+            if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
+
+            CountObjects(mbRN, myNonce);
+            yield();
+            if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
+
             trace('Caching inventory blocks...');
-            _IsScanningItems = false;
-            _IsScanningMacroblocks = false;
+            _ScanType = ScanType::Blocks;
             CacheInvNode(blockRN, myNonce);
             yield();
             if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
             // if (GetEditor(GetApp()) is null) return;
             trace('Caching inventory items...');
-            _IsScanningItems = true;
+            _ScanType = ScanType::Items;
             hasClubItems = itemRN.ChildNodes.Length >= 3;
             CacheInvNode(itemRN, myNonce);
             if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
             // if (GetEditor(GetApp()) is null) return;
             trace('Caching inventory macroblocks...');
-            _IsScanningItems = false;
-            _IsScanningMacroblocks = true;
+            _ScanType = ScanType::Macroblocks;
             CacheInvNode(mbRN, myNonce);
             if (myNonce != cacheRefreshNonce) { dev_trace("exiting RefreshCache"); return; }
             // if (GetEditor(GetApp()) is null) return;
@@ -93,6 +129,7 @@ namespace Editor {
                 cacheRefreshNonce++;
                 isRefreshing = false;
             }
+            _ScanType = ScanType::None;
         }
 
         protected CGameCtnEditorFree@ GetEditor(CGameCtnApp@ app) {
@@ -126,8 +163,11 @@ namespace Editor {
         const array<string>@ get_BlockFolders() { return cachedInvBlockFolders; }
         const array<string>@ get_ItemFolders() { return cachedInvItemFolders; }
 
-        protected bool _IsScanningItems = false;
-        protected bool _IsScanningMacroblocks = false;
+        bool get_IsScanningMacroblocks() { return _ScanType == ScanType::Macroblocks; }
+        bool get_IsScanningItems() { return _ScanType == ScanType::Items; }
+        bool get_IsScanningBlocks() { return _ScanType == ScanType::Blocks; }
+
+        protected ScanType _ScanType = ScanType::None;
         protected string itemsFolderPrefix;
         protected string[] cachedInvItemPaths;
         protected string[] cachedInvItemNames;
@@ -228,21 +268,23 @@ namespace Editor {
         protected void CacheInvNode(CGameCtnArticleNodeDirectory@ node, uint nonce) {
             if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 2"); return; }
             // if (GetEditor(GetApp()) is null) return;
-            loadTotal += node.Children.Length + 1;
+            // loadTotal += node.Children.Length + 1;
             loadProgress += 1;
             for (uint i = 0; i < node.ChildNodes.Length; i++) {
-                CheckPause();
-                // if (GetEditor(GetApp()) is null) return;
-                if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 3"); return; }
+                if (i % 5 == 0) {
+                    CheckPause();
+                    // if (GetEditor(GetApp()) is null) return;
+                    if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 3"); return; }
+                }
                 if (i >= node.ChildNodes.Length) { Dev_NotifyWarning('exiting i >= node.ChildNodes.Length: ' + i + " / " + node.ChildNodes.Length); return; }
                 CacheInvNode(node.ChildNodes[i], nonce);
                 if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 3"); return; }
             }
             string name = GetInvDirFullPath(node);
-            if (_IsScanningItems) {
+            if (IsScanningItems) {
                 cachedInvItemFolders.InsertLast(name);
                 @cachedInvItemFolderLookup[name] = node;
-            } else if (_IsScanningMacroblocks) {
+            } else if (IsScanningMacroblocks) {
                 cachedInvMacroblockFolders.InsertLast(name);
                 @cachedInvMacroblockFolderLookup[name] = node;
             } else {
@@ -265,12 +307,12 @@ namespace Editor {
                 warn('null article nod for ' + node.Name);
                 return;
             }
-            if (_IsScanningItems) {
+            if (IsScanningItems) {
                 cachedInvItemIndexes[string(node.NodeName)] = cachedInvItemPaths.Length;
                 cachedInvItemPaths.InsertLast(string(node.NodeName));
                 cachedInvItemNames.InsertLast(string(node.Article.NameOrDisplayName));
                 cachedInvItemArticleNodes.InsertLast(node);
-            } else if (_IsScanningMacroblocks) {
+            } else if (IsScanningMacroblocks) {
                 cachedInvMacroblockIndexes[string(node.NodeName)] = cachedInvMacroblockNames.Length;
                 cachedInvMacroblockNames.InsertLast(string(node.NodeName));
                 cachedInvMacroblockArticleNodes.InsertLast(node);

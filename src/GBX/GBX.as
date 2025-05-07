@@ -1,3 +1,4 @@
+
 shared enum GBX_CHUNK_IDS {
     CGameItemModel_Icon = 0x2E001004,
 }

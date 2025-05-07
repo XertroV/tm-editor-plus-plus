@@ -37,7 +37,7 @@ namespace Editor {
 
     // idk what happens if you set rotations
     iso4 GetItemPivotMat(CGameCtnAnchoredObject@ item) {
-        return Dev::GetOffsetVec3(item, O_ANCHOREDOBJ_PIVOT_MAT);
+        return Dev::GetOffsetIso4(item, O_ANCHOREDOBJ_PIVOT_MAT);
     }
 
     mat4 GetItemMatrix(CGameCtnAnchoredObject@ item) {

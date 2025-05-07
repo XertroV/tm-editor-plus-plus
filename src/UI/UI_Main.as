@@ -442,19 +442,26 @@ namespace MenuBar {
             bool isLoading = mapCache.isRefreshing
                 || inv.isRefreshing
                 ;
-            if (isLoading && UI::BeginMenu("Loading...")) {
+            if (isLoading) {
+                if (UI::BeginMenu("Loading...")) {
+                    UI::BeginDisabled();
+                    if (mapCache.isRefreshing) {
+                        UI::MenuItem("Map Objs Cache: " + mapCache.LoadingStatus());
+                    }
+                    // todo: alerts for duplicate free blocks
+                    UI::AlignTextToFramePadding();
+                    UI::TextDisabled("Duplicate Free Blocks: " + mapCache.NbDuplicateFreeBlocks);
+                    if (inv.isRefreshing) {
+                        UI::MenuItem("Inventory Cache: " + inv.LoadingStatus());
+                    }
+                    UI::EndDisabled();
+                    UI::EndMenu();
+                }
                 UI::BeginDisabled();
-                if (mapCache.isRefreshing) {
-                    UI::MenuItem("Map Objs Cache: " + mapCache.LoadingStatus());
-                }
-                // todo: alerts for duplicate free blocks
-                UI::AlignTextToFramePadding();
-                UI::TextDisabled("Duplicate Free Blocks: " + mapCache.NbDuplicateFreeBlocks);
-                if (inv.isRefreshing) {
-                    UI::MenuItem("Inventory Cache: " + inv.LoadingStatus());
-                }
+                if (mapCache.isRefreshing) UI::MenuItem("M: " + mapCache.LoadingStatusShort());
+                if (inv.isRefreshing) UI::MenuItem("I: " + inv.LoadingStatusShort());
                 UI::EndDisabled();
-                UI::EndMenu();
+
             }
 
             UI::EndMenuBar();

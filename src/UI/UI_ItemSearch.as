@@ -21,9 +21,15 @@ class ItemSearcher {
     }
 
     CGameCtnArticleNodeArticle@ DrawPrompt() {
-
         UI::PushID(idNonce);
         auto inv = Editor::GetInventoryCache();
+        if (inv.isRefreshing) {
+            UI::Text("\\$f44Inventory cache refreshing...");
+            UI::AlignTextToFramePadding();
+            UI::Text(inv.LoadingStatus());
+            UI::PopID();
+            return null;
+        }
         if (inv.NbItems == 0) {
             UI::Text("\\$f44Inventory cache empty -- enter main editor to refresh.");
             if (UI::Button("Refresh##inv-cache")) {
@@ -147,8 +153,12 @@ class ItemSearcher {
 
 
     string[]@ searchParts = {};
+    uint searchNonce = 0;
+    uint64 lastSearchPause = 0;
 
     void UpdateSearch() {
+        uint mySearchNonce = ++searchNonce;
+        lastSearchPause = Time::Now;
         if (updateStartCallback !is null) updateStartCallback();
         auto inv = Editor::GetInventoryCache();
         filtered.RemoveRange(0, filtered.Length);
@@ -157,14 +167,30 @@ class ItemSearcher {
             if (FilterMatchesName(inv.ItemPaths[i].ToLower(), inv.ItemPaths[i])) {
                 filtered.InsertLast(inv.ItemPaths[i]);
             }
+            if (i % 20 == 0) {
+                if (!this.CheckPause(mySearchNonce)) return;
+            }
         }
         for (uint i = 0; i < inv.BlockNames.Length; i++) {
             if (FilterMatchesName(inv.BlockNames[i].ToLower(), inv.BlockNames[i])) {
                 filtered.InsertLast(inv.BlockNames[i]);
             }
+            if (i % 20 == 0) {
+                if (!this.CheckPause(mySearchNonce)) return;
+            }
         }
         if (updateEndCallback !is null) updateEndCallback();
         OnSearchEnd();
+    }
+
+    // return true to keep going; false to break/return
+    bool CheckPause(uint _myNonce) {
+        if (Time::Now - lastSearchPause > 15) {
+            yield();
+            lastSearchPause = Time::Now;
+        }
+        if (searchNonce != _myNonce) return false;
+        return true;
     }
 
     // for overridding

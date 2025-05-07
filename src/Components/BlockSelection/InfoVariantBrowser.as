@@ -97,6 +97,7 @@ class BlockVariantBrowserTab : Tab {
 
     void DrawBlockInfoInfo(CGameCtnBlockInfo@ bi) {
         bi.IsPillar = UI::Checkbox("IsPillar", bi.IsPillar);
+        // VFC = Vertical Free Clip
         bi.IsMultiHeightPillarOrVFC = UI::Checkbox("IsMultiHeightPillarOrVFC", bi.IsMultiHeightPillarOrVFC);
         bi.EdNoRespawn = UI::Checkbox("EdNoRespawn", bi.EdNoRespawn);
         bi.EdWaypointType = DrawComboEWayPointType("EdWaypointType", bi.EdWaypointType);

@@ -53,7 +53,7 @@ class Hotkey {
         if (ctrl) formatted += "Ctrl + ";
         if (alt) formatted += "Alt + ";
         if (shift) formatted += "Shift + ";
-        formatted += tostring(key);
+        formatted += VirtualKeyToStr(key);
     }
 
     void UnregisterBeforeChange() {
@@ -248,7 +248,7 @@ void _ShowLastKeyPressed(VirtualKey k) {
 void UI_DrawHotkeyList() {
     // keep track of when this is visible so we can show key-presses to the user.
     _hotkeysLastVisible = Time::Now;
-    UI::Text("Last key pressed: " + tostring(_lastKeyPressed));
+    UI::Text("Last key pressed: " + VirtualKeyToStr(_lastKeyPressed));
 
     UI::SeparatorText("Hotkeys");
 
@@ -274,7 +274,7 @@ void UI_DrawHotkeyList() {
             UI::TableNextColumn();
             UI::Text((h.disabled ? "\\$999" : "") + h.name);
             UI::TableNextColumn();
-            UI::Text(tostring(h.formatted));
+            UI::Text(h.formatted);
             UI::TableNextColumn();
             if (UI::Button("Rebind##" + h._id)) {
                 h.StartRebind();
@@ -387,4 +387,26 @@ void LoadHotkeyDb() {
     for (uint i = 0; i < hotkeyList.Length; i++) {
         hotkeyList[i].LoadFromJsonObj(j);
     }
+}
+
+string VirtualKeyToStr(VirtualKey k) {
+    switch (k) {
+        case VirtualKey::Next: return "PgDn";
+        case VirtualKey::Prior: return "PgUp";
+        case VirtualKey::Back: return "Backspace";
+        case VirtualKey::Snapshot: return "PrintScreen";
+        case VirtualKey::Menu: return "Alt";
+        case VirtualKey::OemPlus: return "=";
+        case VirtualKey::OemMinus: return "-";
+        case VirtualKey::OemComma: return ",";
+        case VirtualKey::OemPeriod: return ".";
+        case VirtualKey::Oem1: return ";";
+        case VirtualKey::Oem2: return "/";
+        case VirtualKey::Oem3: return "` (~)";
+        case VirtualKey::Oem4: return "[";
+        case VirtualKey::Oem5: return "\\";
+        case VirtualKey::Oem6: return "]";
+        case VirtualKey::Oem7: return "'";
+    }
+    return tostring(k);
 }

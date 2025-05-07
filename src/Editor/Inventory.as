@@ -10,6 +10,8 @@ namespace Editor {
         Grass = 2,
         Items = 3,
         Macroblocks = 4,
+        // 6/7 = MP4? Stadium256?
+        Plugins = 9,
     }
     enum InventoryItemsFolder {
         Official = 0,

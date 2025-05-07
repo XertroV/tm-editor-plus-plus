@@ -28,11 +28,11 @@ class MacroblockOptsTab : Tab {
 
         UI::Separator();
 
-        FixCopyingItems::Patch_FixCopyingItems.IsApplied = UI::Checkbox("Patch: Fix Copying Just Items", FixCopyingItems::Patch_FixCopyingItems.IsApplied);
+        FixCopyingItems::Patch_FixCopyingItems.IsApplied = UI::Checkbox("Patch: Fix Copying Just Items" + NewIndicator, FixCopyingItems::Patch_FixCopyingItems.IsApplied);
         AddSimpleTooltip("The game incorrectly calculates positions of items in the macroblock if only ground items are selected. This makes the IsFlying check always succeed.");
 
-        LargeMacroblocks::IsApplied = UI::Checkbox("Patch: Large Macroblocks", LargeMacroblocks::IsApplied);
-        AddSimpleTooltip("Increases limit on macroblocks from 350 blocks / 600 items to 131k for both.");
+        LargeMacroblocks::IsApplied = UI::Checkbox("Patch: Visible Large Macroblocks" + NewIndicator, LargeMacroblocks::IsApplied);
+        AddSimpleTooltip("Increases limit on visible macroblocks from 350 blocks / 600 items to 131k for both.");
 
         UI::Separator();
 
@@ -52,7 +52,7 @@ class MacroblockOptsTab : Tab {
         }
         UI::TextWrapped("If it seems to do nothing, select a different macroblock then select this one again.");
 
-        UI::SeparatorText("Macroblock Recorder");
+        UI::SeparatorText("Macroblock Recorder" + NewIndicator);
 
         bool mbRecActive = MacroblockRecorder::IsActive;
         bool hasExistingRec = MacroblockRecorder::HasExisting;

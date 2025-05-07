@@ -52,3 +52,4 @@ Trackmania.exe.text+10F2A53 - 0F87 C7020000         - ja Trackmania.exe.text+10F
 0F 85 D4 02 00 00 41 81 FA 58 02 00 00 0F 87 C7 02 00 00
 0F 85 ?? ?? 00 00 41 81 ?? 58 02 00 00 0F 87 ?? ?? 00 00
 */
+;

@@ -32,7 +32,7 @@ class GenericInventoryBrowserTab : Tab {
         @WindowChildren = TabGroup(name, this);
     }
 
-    // 0: blocks but crashes, 1: blocks, 2: grass, 3: items, 4: macroblocks
+    // 0: blocks but crashes, 1: blocks, 2: grass, 3: items, 4: macroblocks, 5:?, 6: MP4, 7: MP4, 8: ?, 9: Plugins
     CGameCtnArticleNode@ GetRootNode(CGameEditorGenericInventory@ inv) {
         if (OverrideRootNode !is null) {
             return OverrideRootNode;
@@ -67,14 +67,17 @@ class GenericInventoryBrowserTab : Tab {
     void DrawInvNodeTreeArticle(CGameCtnArticleNodeArticle@ node) {
 #if SIG_DEVELOPER
         if (showExplore) {
-            if (UI::Button(Icons::Cube + "##" + node.Name)) {
+            if (UI::Button(Icons::Cube + "##" + node.Name)) { // Icons::Cubes + Icons::FileO
                 ExploreNod("Article " + node.NodeName, node);
-                // node.GetCollectorNod() points to .Article.LoadedNod (and probs loads it if need be)
-                // auto cnod = node.GetCollectorNod();
-                // if (cnod !is null) {
-                //     ExploreNod("CollectorNod " + node.NodeName, cnod);
-                // }
             }
+            // if (UI::Button(Icons::Cubes + Icons::Cube + "##" + node.Name)) {
+            //     auto colNod = node.GetCollectorNod();
+            //     if (colNod !is null) {
+            //         ExploreNod("CollectorNod " + node.NodeName, colNod);
+            //     } else {
+            //         NotifyWarning("No GetCollectorNod returned null for " + node.Name);
+            //     }
+            // }
             UI::SameLine();
         }
 #endif
