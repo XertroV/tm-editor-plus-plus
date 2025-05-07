@@ -814,7 +814,7 @@ namespace Editor {
             // mem.WritePtr(rawSkin);
         }
 
-        SkinSpecPriv@ Duplicate() {
+        SkinSpec@ Duplicate() override {
             return SkinSpecPriv(this.rawSkin, blockIx);
         }
     }

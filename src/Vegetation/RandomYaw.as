@@ -362,7 +362,7 @@ namespace VegetRandomYaw {
 		auto pos = origPos;
 		auto bestPos = pos;
 		auto bestQuatErr = 400.0f, currErr;
-		// ! preprocessor DEV method
+
 		auto start = Time::Now;
 		// fix trees epislon
 		float ftEpsilon = 0.00001;
@@ -408,10 +408,10 @@ namespace VegetRandomYaw {
 			} else {
 				auto treeModel = cast<CPlugVegetTreeModel>(varList.Variants[variant].EntityModel);
 				if (treeModel !is null && treeModel.Data.Params_EnableRandomRotationY) {
-					auto ampDeg = treeModel.Data.Params_AngleMax_RotXZ_Deg;
+					// auto ampDeg = treeModel.Data.Params_AngleMax_RotXZ_Deg;
 
 					// 1. read the editor PYR  (pitch to terrain, yaw user, roll user)
-					vec3 pos   = item.AbsolutePositionInMap;
+					vec3 pos = item.AbsolutePositionInMap;
 					vec3 pyr = Editor::GetItemRotation(item);
 					vec3 ypr = PYR_to_YPR(pyr);
 
@@ -431,44 +431,6 @@ namespace VegetRandomYaw {
 					dev_trace('calc next (op quat): ' + n.ToString());
 
 					FixItemRotationsForTrees(item, vec2(treeModel.Data.ReductionRatio01, treeModel.Data.Params_AngleMax_RotXZ_Deg), treeModel.Data.Params_EnableRandomRotationY);
-
-
-					// local-up axis is qTerrain * (0,1,0)
-					// vec3 localUp = (qEngine * vec3(0,1,0)).Normalized();
-
-					// auto yprFinal = SelfCancellingQuat(ypr, pos, ampDeg);
-					// GameQuat resQ2 = GameQuat(resQ) * -1.0;
-					// resQ = resQ2.ToOpQuat();
-					// float ampRad = Math::ToRad(ampDeg);
-
-					// // 3. build the Δ-quaternion that cancels the engine’s random yaw
-					// auto rng  = MurmurHash2QuatPos(qEngine, pos);  // y-z-w-x order
-					// // float yawRnd = (rng.RandFloat01()*2.0f - 1.0f) * ampRad;
-					// float yawRnd = rng.RandSym(ampRad);
-
-					// quat qDelta = quat(localUp, yawRnd);  // engine’s Δ
-					// quat qCancel = qDelta.Inverse();                 // our undo
-
-					// quat qFinal  = qCancel * qEngine;               // what we write back
-
-					// vec3 yprFinal = ToEulerYZX(resQ2);              // our final euler angles
-					// Editor::SetItemRotation(item, YPR_to_PYR(yprFinal));
-					// auto resQ = YPR_to_PYR(yprFinal);
-
-					// dev_trace("Result Q2: " + resQ2.ToString());
-					// dev_trace("Result Q: " + resQ.ToString());
-					// dev_trace("YPR output: " + yprFinal.ToString());
-
-					// check it
-					// quat qRe = GameQuat(yprFinal);   // our final quat
-					// auto lcg = MurmurHash2QuatPos(qRe, pos);
-					// float yawRnd2 = (lcg.RandFloat01()*2-1) * ampRad;
-					// quat d2 = quat(localUp, yawRnd2);
-					// trace("Very end: err = " + QuatErrorAngle(d2 * qRe, qEngine));  // prints 0
-
-					// float errA = QuatErrorAngle((resQ * d2),    qEngine); // post‐multiply
-					// float errB = QuatErrorAngle((d2 * resQ),    qEngine); // pre‐multiply
-					// trace("multOrder errA=" + errA + "  errB=" + errB);
 
 					return true;
 				}
@@ -537,7 +499,7 @@ namespace VegetRandomYaw {
 
 
 
-#if DEV
+#if DEV && FALSE
 
 const string Pattern_Murmur32 = "BA 1C 00 00 00 48 8B CB e8 66 a7 ef ff f3 41 0f 10 43 18 8b d0 89 84 24 98 00 00 00";
 namespace Murmur32 {

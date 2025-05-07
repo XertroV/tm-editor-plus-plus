@@ -139,7 +139,7 @@ void Unload(bool freeMem = true) {
     NodPtrs::Cleanup();
     FreeAllAllocated();
 #if DEV
-    Murmur32::Unhook();
+    // Murmur32::Unhook();
 #endif
     Notify("If E++ doesn't load after updating, please restart the game.", 20000);
 }
