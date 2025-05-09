@@ -1,6 +1,6 @@
 enum LogLevel {
-    TRACE,
     DEBUG,
+    TRACE,
     INFO,
     WARN,
     ERROR,
@@ -20,6 +20,11 @@ namespace _Log {
             trace('[' + Time::Now + '] ' + msg);
         }
     }
+    void Trace(const string &in scope, const string &in msg) {
+        if (S_LogLevel <= LogLevel::TRACE) {
+            trace('[' + Time::Now + ']['+scope+'] ' + msg);
+        }
+    }
     void Debug(const string &in msg) {
         if (S_LogLevel <= LogLevel::DEBUG) {
             trace('[' + Time::Now + '] ' + msg);
@@ -34,6 +39,15 @@ namespace _Log {
         if (S_LogLevel <= LogLevel::WARN) {
             warn('[' + Time::Now + '] ' + msg);
         }
+    }
+    void Warn_NID(const string &in msg) {
+#if DEV
+        NotifyWarning(msg);
+#else
+        if (S_LogLevel <= LogLevel::WARN) {
+            warn('[' + Time::Now + '] ' + msg);
+        }
+#endif
     }
     void Error(const string &in msg) {
         if (S_LogLevel <= LogLevel::ERROR) {
