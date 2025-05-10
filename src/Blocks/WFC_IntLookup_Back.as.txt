@@ -1,0 +1,131 @@
+
+class IntLookup {
+    IntLookup@[] children;
+    ref@[] values;
+    // x = values, y = nodes, z = total
+    int2 cachedCount = int2(-1);
+    uint nodeKey = -1, nodeId = -1;
+
+    IntLookup() {}
+
+    bool Has(uint key) {
+        if (key == -1) return false;
+        return Get(key) !is null;
+    }
+
+    // Get from the root node.
+    ref@[]@ Get(uint key) {
+        if (key == -1) return null;
+        key = key & 0x00FFFFFF;
+        return Get(key, key);
+    }
+
+    // Internal get for children.
+    ref@[]@ Get(uint key, uint id) {
+        if (id == -1) return null;
+        // mask out the top 8 bits (mwids)
+        id = id & 0x00FFFFFF;
+        key = key & 0x00FFFFFF;
+        if (id == 0 && nodeKey == key) {
+            if (values.Length == 0) return null;
+            return values;
+        }
+
+        if (children.Length == 0) return null;
+        uint childIx = id % INT_LOOKUP_CHILDREN;
+        if (children[childIx] is null) return null;
+        return children[childIx].Get(key, id >> INT_LOOKUP_CHILDREN_SHL);
+    }
+
+    void Insert(uint itemKey, ref@ thing) {
+        Insert(itemKey, itemKey, thing);
+    }
+
+    // key stays the same, id is manipulated to find the right child
+    void Insert(uint itemKey, uint id, ref@ thing) {
+        if (id == -1 || itemKey == -1) throw("id/itemKey is -1");
+        cachedCount = int2(-1);
+        // mask out the top 8 bits (mwids)
+        id = id & 0x00FFFFFF;
+        itemKey = itemKey & 0x00FFFFFF;
+
+        // if this node matches the item key, we insert it here.
+        // we want to double check this because if we insert 0x111 and then 0x11, the latter would have an id of 0 at this point.
+        if (nodeKey == itemKey) {
+            // no duplicates
+            if (values.FindByRef(thing) != -1) return;
+            // insert
+            values.InsertLast(thing);
+            // sets this since it's stable in these conditions.
+            // nodeKey = itemKey;
+            nodeId = id;
+            return;
+        }
+
+        bool noKids = children.Length == 0;
+        bool noValues = values.Length == 0;
+
+        // is this the first item?
+        if (noKids && noValues) {
+            nodeKey = itemKey;
+            nodeId = id;
+            values.InsertLast(thing);
+            return;
+        }
+
+        // after this point, we must insert the item into a child.
+
+        if (noKids) {
+            children.Resize(INT_LOOKUP_CHILDREN);
+            // when we create children, check to see if we should reset this node's key and id.
+            // if we have a key, then we need to move the values to the child.
+            // if the nodeKey is -1 then we don't have a key, so we're reset or empty.
+            // if our nodeId is 0 then the values belong here. >0 tests for a moveable id.
+            if (nodeId > 0 && nodeKey != -1) {
+                // move values to children
+                auto childIx = nodeId % INT_LOOKUP_CHILDREN;
+                @children[childIx] = IntLookup();
+                children[childIx].InsertMany(nodeKey, nodeId >> INT_LOOKUP_CHILDREN_SHL, values);
+                // clear values
+                values.Resize(0);
+                nodeId = nodeKey = -1;
+            }
+        }
+
+        uint childIx = id % INT_LOOKUP_CHILDREN;
+        if (children[childIx] is null) {
+            @children[childIx] = IntLookup();
+        }
+        children[childIx].Insert(itemKey, id >> INT_LOOKUP_CHILDREN_SHL, thing);
+    }
+
+    void InsertMany(uint itemKey, uint id, ref@[]@ things) {
+        for (uint i = 0; i < things.Length; i++) {
+            Insert(itemKey, id, things[i]);
+        }
+    }
+
+    // returns (totalValues, totalNodes)
+    int2 Count() {
+        if (cachedCount.x != -1) return cachedCount;
+        int2 count = int2(0);
+        count.x += values.Length;
+        count.y = 1;
+        if (children.Length > 0) {
+            for (uint i = 0; i < INT_LOOKUP_CHILDREN; i++) {
+                if (children[i] is null) continue;
+                count += children[i].Count();
+            }
+        }
+        cachedCount = count;
+        return count;
+    }
+
+    // void InitializeChildren(bool force = false) {
+    //     if (children.Length > 0 && !force) return;
+    //     children.Resize(INT_LOOKUP_CHILDREN);
+    //     // for (uint i = 0; i < INT_LOOKUP_CHILDREN; i++) {
+    //     //     @children[i] = IntLookup();
+    //     // }
+    // }
+}

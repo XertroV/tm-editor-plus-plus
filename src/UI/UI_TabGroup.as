@@ -1,15 +1,23 @@
-class TabGroup {
-    Tab@ Parent = null;
+const UI::MouseButton MOUSE_BUTTON_BACK = UI::MouseButton(3);
+const UI::MouseButton MOUSE_BUTTON_FORWARD = UI::MouseButton(4);
 
+
+class TabGroup : HasGroupMeta {
+    // # From HasGroupMeta:
+    // TabGroupMeta@ meta;
+
+    // the parent tab
+    Tab@ Parent = null;
     Tab@[] tabs;
+    string tabGroupId;
     string groupName;
     string fullName;
     bool IsRoot = false;
-    string tabGroupId;
 
     TabGroup(const string &in name, Tab@ parent) {
         groupName = name;
         @Parent = parent;
+        // ! root tab init in its class
         if (parent is null) return;
         if (parent.Parent !is null) {
             tabGroupId = parent.Parent.tabGroupId + ".";
@@ -19,6 +27,7 @@ class TabGroup {
         if (name.Length > 0 && name != parent.tabName) {
             fullName += " > " + name;
         }
+        @meta = TabGroupMeta(this);
     }
 
     string mainWindowTitle;
@@ -47,6 +56,14 @@ class TabGroup {
         auto ix = tabs.FindByRef(child);
         if (ix >= 0) selectedTabIx = ix;
         else warn("Could not find child: " + child.fullName);
+    }
+
+    // To be called based on which children are drawn as tabs
+    void UpdateLastSelectedTab(int ix) {
+        if (ix < 0 || ix >= int(tabs.Length)) return;
+        if (selectedTabIx == ix) return;
+        for (uint i = 0; i < tabs.Length; i++)
+            tabs[i].SetSelectedInGroup(i == ix);
     }
 
     bool HasTabNamed(const string &in name) {
@@ -79,6 +96,7 @@ class TabGroup {
         if (ix >= 0) {
             tabs.RemoveAt(ix);
             @t.Parent = null;
+            TabState::RemoveTab(t);
         }
     }
 
@@ -88,7 +106,9 @@ class TabGroup {
         UI::BeginTabBar(groupName, tabBarFlags);
 
         for (uint i = 0; i < tabs.Length; i++) {
-            tabs[i].DrawTab();
+            if (tabs[i].DrawTab()) {
+                UpdateLastSelectedTab(i);
+            }
         }
 
         UI::EndTabBar();
@@ -108,15 +128,24 @@ class TabGroup {
     vec2 framePadding;
     vec2 regionSize;
     int _selectedTabIx = 0;
-    int get_selectedTabIx() { return GetSelectedTabFor(tabGroupId); }
-    void set_selectedTabIx(int value) { SetSelectedTabFor(tabGroupId, value); }
+
+    int get_selectedTabIx() {
+        return Math::Min(tabs.Length - 1, GetSelectedTabFor(tabGroupId));
+    }
+    void set_selectedTabIx(int value) {
+        UpdateLastSelectedTab(value);
+        SetSelectedTabFor(tabGroupId, value);
+    }
 
     void DrawTabsAsSidebar(const string &in title = "") {
+        bool rClick = UI::IsMouseClicked(UI::MouseButton::Right);
+        bool mClick = UI::IsMouseClicked(UI::MouseButton::Middle);
+
         framePadding = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
         regionSize = UI::GetContentRegionAvail();
         auto sbWidth = (sideBarExpanded ? 170. : 60.) * UI::GetScale() + framePadding.x * 2.;
         UI::PushStyleColor(UI::Col::Border, vec4(1));
-        if (UI::BeginChild("sidebar-left|" + fullName, vec2(sbWidth, 0), true)) {
+        if (UI::BeginChild("sidebar-left|" + fullName, vec2(sbWidth, 0), UI::ChildFlags::NavFlattened | UI::ChildFlags::Border)) {
             if (title.Length > 0) {
                 // UI::PushFont(g_Heading);
                 UI::AlignTextToFramePadding();
@@ -131,21 +160,94 @@ class TabGroup {
                 if (UI::Selectable(sideBarExpanded ? tab.DisplayIconAndName : tab.DisplayIconWithId, selectedTabIx == i)) {
                     selectedTabIx = i;
                 }
+                bool hovered = UI::IsItemHovered(UI::HoveredFlags::DelayNone);
+                if (hovered) {
+                    if (rClick) tab.OnSideBarLabel_RightClick();
+                    else if (mClick) tab.OnSideBarLabel_MiddleClick();
+                }
             }
         }
         UI::EndChild();
         UI::PopStyleColor();
         UI::SameLine();
-        if (UI::BeginChild("inner|" + fullName, vec2(-1, -1), false)) {
-            if (selectedTabIx >= 0 && selectedTabIx < int(tabs.Length)) {
-                tabs[selectedTabIx].DrawTab(false);
+        if (UI::BeginChild("inner|" + fullName, vec2(-1, -1), UI::ChildFlags::NavFlattened)) {
+            auto ix = selectedTabIx;
+            if (ix >= 0 && ix < int(tabs.Length)) {
+                if (tabs[ix].DrawTab(false)) {
+                    UpdateLastSelectedTab(ix);
+                }
             } else {
                 UI::Text("No tab selected");
             }
         }
         UI::EndChild();
+
+        auto isFocused = UI::IsWindowFocused(UI::FocusedFlags::RootAndChildWindows);
+        // isFocused = UI::IsWindowFocused(UI::FocusedFlags::RootWindow);
+        bool backClicked = false, fwdClicked = false;
+        if (isFocused) {
+            auto pos = UI::GetWindowPos();
+            auto size = UI::GetWindowSize();
+            nvgCircleScreenPos(pos);
+            nvgCircleScreenPos(pos + size);
+            nvgCircleScreenPos(pos + size * vec2(0, 1));
+            nvgCircleScreenPos(pos + size * vec2(1, 0));
+            size = size * g_scaleInv;
+            nvgCircleScreenPos(pos + size);
+            nvgCircleScreenPos(pos + size * vec2(0, 1));
+            nvgCircleScreenPos(pos + size * vec2(1, 0));
+            size = size * g_scale * g_scale;
+            nvgCircleScreenPos(pos + size);
+            nvgCircleScreenPos(pos + size * vec2(0, 1));
+            nvgCircleScreenPos(pos + size * vec2(1, 0));
+            bool isWithin = MathX::Within(UI::GetMousePos(), vec4(pos, size));
+            if (isWithin) {
+                backClicked = UI::IsMouseClicked(MOUSE_BUTTON_BACK);
+                fwdClicked = UI::IsMouseClicked(MOUSE_BUTTON_FORWARD);
+            }
+        }
+
+        if (backClicked) {
+            OnNavigationBack();
+        } else if (fwdClicked) {
+            OnNavigationForward();
+        }
     }
 
+    void OnNavigationBack() {
+        // TabState::NavHistory(this, -1);
+        _Log::Warn_NID("TabGroup", "Navigation back");
+    }
+    void OnNavigationForward() {
+        // TabState::NavHistory(this, 1);
+        _Log::Warn_NID("TabGroup", "Navigation forward");
+    }
+
+    // draw show/hide toggle for tab in context menu
+    void DrawHideShowTabMenuItem(Tab& tab) {
+        if (meta is null) {
+            _Log::Warn_NID("TabGroup", "No meta for tab group: " + tabGroupId);
+            return;
+        }
+        bool isHidden = meta.IsHidden(tab.nameIdValue);
+        if (UI::MenuItem(isHidden ? "Show Tab" : "Hide Tab")) {
+            meta.ToggleHidden(tab.nameIdValue);
+        }
+    }
+
+    void FavoriteTab(Tab@ t) {
+        if (t is null) return;
+        auto ix = tabs.FindByRef(t);
+        if (t.nameIdValue < 0) {
+            _Log::Warn_NID("FavoriteTab", "Tab has no nameIdValue: " + t.fullName);
+        }
+        if (ix >= 0) {
+            meta.AddFavorite(t.nameIdValue);
+            // todo: favorites logic
+            // tabs.RemoveAt(ix);
+            // tabs.InsertAt(0, t);
+        }
+    }
 
     void DrawWindows() {
         for (uint i = 0; i < tabs.Length; i++) {
@@ -167,6 +269,30 @@ class TabGroup {
             tabs[i].DrawMenuItem();
         }
     }
+
+    void AterLoadedState() {
+        //
+    }
+}
+
+mixin class HasGroupMeta {
+    TabGroupMeta@ meta;
+
+    // void Json_SetStateUnderKey(Json::Value@ j) {
+    //     meta.WriteToJson(j);
+    // }
+    bool WritingJson_WriteObjKeyEl(string[]& parts, bool commaPrefix = false) {
+        if (tabs.Length == 0) return false;
+        auto prior = parts.Length;
+        meta.WritingJson_WriteObjKeyEl(parts);
+        if (commaPrefix) parts[prior] = "," + parts[prior];
+        return true;
+    }
+
+    void Json_LoadState(Json::Value@ j) {
+        meta.LoadFromJson(j);
+        AterLoadedState();
+    }
 }
 
 class RootTabGroupCls : TabGroup {
@@ -177,13 +303,7 @@ class RootTabGroupCls : TabGroup {
         fullName = PluginIcon;
         tabGroupId = Text::StripOpenplanetFormatCodes(name);
         IsRoot = true;
-    }
-
-    int get_selectedTabIx() override property {
-        return Math::Min(tabs.Length - 1, GetSelectedTabFor(tabGroupId));
-    }
-    void set_selectedTabIx(int value) override property {
-        SetSelectedTabFor(tabGroupId, value);
+        @meta = TabGroupMeta(this);
     }
 }
 
