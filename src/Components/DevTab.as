@@ -10,6 +10,7 @@ class DevMainTab : Tab {
         DevBlockTab(Children);
         DevBlockTab(Children, true);
         DevItemsTab(Children);
+        DevJsonTabsStateTab(Children);
         DevCallbacksTab(Children);
         DevMiscTab(Children);
         MapChangesFrameTab(Children);
@@ -31,6 +32,43 @@ class DevMainTab : Tab {
         if (!drawStuff) return;
         Children.DrawTabs();
         return;
+    }
+}
+
+class DevJsonTabsStateTab : Tab {
+    DevJsonTabsStateTab(TabGroup@ p) {
+        super(p, "TabState", Icons::FileCodeO);
+    }
+
+    void DrawInner() override {
+        LabeledValue("lastSaveTime", TabState::lastSaveTime);
+        LabeledValue("lastSaveSoonReq", TabState::lastSaveSoonReq);
+        LabeledValue("loadedJsonSavedAt", TabState::loadedJsonSavedAt);
+        LabeledValue("saveSoonWaiting", TabState::saveSoonWaiting);
+        TabState::_debug_PrintTraceSaveSoon = UI::Checkbox("Print Trace SaveSoon", TabState::_debug_PrintTraceSaveSoon);
+        if (UI::Button("Open Plugin Storage")) {
+            OpenExplorerPath(IO::FromStorageFolder(""));
+        }
+        if (UI::Button("Open Json File")) {
+            OpenExplorerPath(TabState::TabStateJsonFilePath);
+        }
+        if (UI::Button("Save Tab State Soon")) {
+            startnew(TabState::SaveSoon);
+        }
+        if (UI::Button("Save Tab State Direct")) {
+            startnew(TabState::_RunSaveNow);
+        }
+        if (UI::Button("Load Tab State Direct")) {
+            startnew(TabState::_RunLoadNow);
+        }
+
+        UI::PushFont(g_Mono);
+
+        UI::BeginChild("tsjd", vec2(-1));
+        UI::TextWrapped(TabState::_lastJsonDebug);
+        UI::EndChild();
+
+        UI::PopFont();
     }
 }
 

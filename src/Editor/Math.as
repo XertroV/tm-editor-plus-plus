@@ -104,6 +104,10 @@ vec3 CoordToPos(const nat3 &in coord) {
     return vec3(coord.x * 32, (int(coord.y) - 8) * 8, coord.z * 32);
 }
 
+vec3 CoordToPos(const int3 &in coord) {
+    return vec3(coord.x * 32, (int(coord.y) - 8) * 8, coord.z * 32);
+}
+
 vec3 CoordToPos(const vec3 &in coord) {
     return vec3(coord.x * 32, (int(coord.y) - 8) * 8, coord.z * 32);
 }

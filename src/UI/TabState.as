@@ -144,8 +144,64 @@ namespace TabState {
     void _WriteJsonKey(string[]& parts, const string &in key) {
         parts.InsertLast(DOUBLE_QUOTE + key + DOUBLE_QUOTE + ":");
     }
+
+    // MARK: NavState
+
+    void NavHistory(int dir, TabGroup@ tg) {
+        if (dir == 0) return;
+        auto histStack = GetNavHistoryStack(tg.tabGroupId);
+        histStack.Move(dir);
+    }
+
+    dictionary navHistStacks;
+
+    NavHistStack@ GetNavHistoryStack(const string &in tabGroupId) {
+        if (tabGroupId == "") return null;
+        if (navHistStacks.Exists(tabGroupId)) {
+            return cast<NavHistStack>(navHistStacks[tabGroupId]);
+        } else {
+            NavHistStack@ stack = NavHistStack();
+            @navHistStacks[tabGroupId] = stack;
+            return stack;
+        }
+    }
 }
 
+
+class NavHistStack {
+    array<Tab@> stack;
+    int pos = -1;
+
+    void Move(int dir) {
+        if (dir == 0) return;
+        int slm1 = stack.Length - 1;
+        while (dir > 0 && pos < slm1) {
+            pos++;
+            dir--;
+        }
+        while (dir < 0 && pos > 0) {
+            pos--;
+            dir++;
+        }
+        auto @cur = GetCurrent();
+        if (cur !is null) cur.SetSelectedTab_Debounce();
+    }
+
+    void Push(Tab@ tab) {
+        if (pos < int(stack.Length) - 1) {
+            stack.RemoveRange(pos + 1, stack.Length - pos - 1);
+        }
+        if (stack.Length == 0 || stack[stack.Length - 1] !is tab) {
+            stack.InsertLast(tab);
+        }
+        pos = stack.Length - 1;
+    }
+
+    Tab@ GetCurrent() {
+        if (pos < 0 || pos >= stack.Length) return null;
+        return stack[pos];
+    }
+}
 
 
 void WriteFile(const string &in path, const string &in content) {

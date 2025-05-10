@@ -66,7 +66,7 @@ namespace FormatX {
             + "  " + Vec3_4DPS(vec3(v.tx, v.ty, v.tz)) + " >";
     }
     // tmp
-    string Iso4a(iso4 &in v) {
+    string Iso4a(const iso4 &in v) {
         return "< " + Vec3_4DPS(vec3(v.xx, v.xy, v.xz)) + "\n"
             + "  " + Vec3_4DPS(vec3(v.yx, v.yy, v.yz)) + "\n"
             + "  " + Vec3_4DPS(vec3(v.zx, v.zy, v.zz)) + "\n"

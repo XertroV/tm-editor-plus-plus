@@ -70,7 +70,8 @@ void Main() {
     Blocks::RegisterCallbacks(); // mostly to do with item SPlacements
     VegetRandomYaw::SetupCallbacks(); // for fixing trees on free blocks
     MacroblockRecorder::RegisterCallbacks();
-    LargeMacroblocks::OnLoad();
+    LargeMacroblocks::OnPluginStart();
+    WFC::RegisterCallbacks();
 
     startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
     startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
@@ -80,12 +81,16 @@ void Main() {
 
     startnew(Loop_RunCtx_AfterMainLoop).WithRunContext(Meta::RunContext::AfterMainLoop);
 
-    yield(2);
+    yield(1);
     startnew(ColorSelectionHook::SetupHooks);
     startnew(Gizmo::SetupGizmoHotkeysOnPluginStart);
 
-    yield(2);
+    yield(1);
     Editor::SetInvPatchTy(S_InvPatchTy);
+
+    // initialize UI, blocked before this.
+    startnew(Init_Main_UI_Coro);
+
 
     sleep(400);
     CallbacksEnabledPostInit = true;
@@ -153,6 +158,7 @@ uint g_PriorRenderEarlyTime;
 uint g_ThisRenderEarlyTime;
 vec2 g_screen;
 float g_scale = UI::GetScale();
+float g_scaleInv = 1. / g_scale;
 // e.g., 1080/1440 for showing on 1080p
 float g_stdPxToScreenPx = 1.;
 
@@ -260,6 +266,8 @@ void Render() {
     if (g_BigFont is null) return;
     if (!GameVersionSafe) return;
     if (!UserHasPermissions) return;
+    if (!MainRenderStarted) return;
+
     if (EnteringEditor)
         trace('Updating editor watchers.');
     // send null if we're not flagged as in the editor to wait for it to update
@@ -282,7 +290,6 @@ void Render() {
     if (IsInAnyEditor) {
         ToolsTG.DrawWindows();
     }
-
 }
 
 void RenderInterface() {
@@ -317,18 +324,26 @@ void CopyFile(const string &in f1, const string &in f2) {
     inFile.Close();
 }
 
+void OnProcessPaused() {
+    g_CurrentlyPausedCoros++;
+    UI::ShowNotification("E++ Work in Process", "Process " + g_CurrentlyPausedCoros + " yeilding...", 5);
+}
+
+void AfterProcessPaused() {
+    g_CurrentlyPausedCoros = 0;
+}
+
 uint g_LastPause = 0;
 uint g_CurrentlyPausedCoros = 0;
 void CheckPause() {
     uint workMs = Time::Now < 60000 ? 1 : 4;
     if (g_LastPause + workMs < Time::Now) {
-        g_CurrentlyPausedCoros++;
-        UI::ShowNotification("E++ Work in Process", "Process " + g_CurrentlyPausedCoros + " yeilding...", 5);
+        OnProcessPaused();
         sleep(0);
         // trace('paused');
         g_LastPause = Time::Now;
+        AfterProcessPaused();
     }
-    g_CurrentlyPausedCoros = 0;
 }
 
 bool g_LmbDown = false;

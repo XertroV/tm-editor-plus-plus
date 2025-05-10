@@ -21,7 +21,7 @@ namespace LargeMacroblocks {
         }
     }
 
-    void OnLoad() {
+    void OnPluginStart() {
         IsApplied = S_LargeMacroblocksApplied;
     }
 }

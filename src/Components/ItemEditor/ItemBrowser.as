@@ -10,6 +10,7 @@ const UI::TreeNodeFlags DEFAULT_OPEN = UI::TreeNodeFlags::None;
 const UI::TreeNodeFlags DEFAULT_OPEN = UI::TreeNodeFlags::DefaultOpen;
 #endif
 
+const UI::TreeNodeFlags TREE_F_NONE = UI::TreeNodeFlags::None;
 
 class ItemModel {
     CGameItemModel@ item;
@@ -127,6 +128,7 @@ class ItemModelTreeElement {
     // set to true by subclasses to disable some things.
     bool isPicker = false;
     uint classId = 0x1001000; // CMwNod
+    int AuxInfo_ClipFace = -1;
 
     bool isEditable = false;
 
@@ -466,7 +468,7 @@ class ItemModelTreeElement {
     }
 
     void Draw(CGameCtnBlockInfo@ blockInfo) {
-        if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfo", DEFAULT_OPEN)) {
+        if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockInfo", AuxInfo_ClipFace >= 0 ? TREE_F_NONE : DEFAULT_OPEN)) {
             auto biClip = cast<CGameCtnBlockInfoClip>(blockInfo);
             if (biClip !is null) {
                 DrawBiClipExtra(biClip);
@@ -475,7 +477,8 @@ class ItemModelTreeElement {
             auto mmOffset = GetOffset(blockInfo, "MatModifierPlacementTag");
             auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
             string mmPlacementTagsStr = ItemPlace_StringConsts::LookupJoined(mmPlacementTag);
-            CopiableLabeledValue("Name MwID", toHex(blockInfo.Id.Value));
+            DrawMwId("Name", blockInfo.Id);
+            // CopiableLabeledValue("Name MwID", toHex(blockInfo.Id.Value) + " > " + blockInfo.Id.GetName());
             if (isEditable) {
                 Dev::SetOffset(blockInfo, mmOffset, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
             } else {
@@ -498,13 +501,16 @@ class ItemModelTreeElement {
     }
 
     void DrawBiClipExtra(CGameCtnBlockInfoClip@ clip) {
+        LabeledValue("Clip Face: ", ClipFaceStr(AuxInfo_ClipFace));
+        DrawMwId("ClipId", clip.Id);
+        UI::SameLine();
         DrawMwId("SymmetricalClipId", clip.SymmetricalClipId);
 
         DrawMwId("ClipGroupId", clip.ClipGroupId);
         UI::SameLine();
-        DrawMwId("ClipGroupId2", clip.ClipGroupId2);
-
         DrawMwId("SymmetricalClipGroupId", clip.SymmetricalClipGroupId);
+
+        DrawMwId("ClipGroupId2", clip.ClipGroupId2);
         UI::SameLine();
         DrawMwId("SymmetricalClipGroupId2", clip.SymmetricalClipGroupId2);
 
@@ -534,17 +540,23 @@ class ItemModelTreeElement {
         LabeledValue("IsAntiClip", tostring(clip.IsAntiClip));
 #endif
 
+        LabeledValue("HasMesh", Editor::DoesBlockInfoHaveMesh(clip));
+
         auto bicv = cast<CGameCtnBlockInfoClipVertical@>(clip);
         auto bich = cast<CGameCtnBlockInfoClipHorizontal@>(clip);
         if (bicv !is null) {
+            UI::AlignTextToFramePadding();
             DrawMwId("VerticalClipGroupId", bicv.VerticalClipGroupId);
         } else if (bich !is null) {
+            UI::AlignTextToFramePadding();
             DrawMwId("HorizontalClipGroupId", bich.HorizontalClipGroupId);
         }
     }
 
     void DrawMwId(const string &in name, const MwId &in id) {
-        CopiableLabeledValue(name, toHex(id.Value) + " | " + id.GetName());
+        string val;
+        if (id.Value == -1) val = "\\$888\\$i";
+        CopiableLabeledValue(val + name, toHex(id.Value) + " > " + id.GetName());
     }
 
     void Draw(CGameCtnBlockInfoVariant@ infoVar) {
@@ -596,8 +608,20 @@ class ItemModelTreeElement {
 
     void Draw(CGameCtnBlockUnitInfo@ unitInfo) {
         if (StartTreeNode(name + " ::\\$f8f CGameCtnBlockUnitInfo", UI::TreeNodeFlags::None)) {
-            for (uint i = 0; i < unitInfo.AllClips.Length; i++) {
-                MkAndDrawChildNode(unitInfo.AllClips[i], 0x8 * i, "AllClips["+i+"]");
+            LabeledValue("Offset", unitInfo.Offset.ToString());
+            LabeledValue("ClipBakedMobilIndexesForPreview", MwFastBuffer_uint_ToString(unitInfo.ClipBakedMobilIndexesForPreview));
+            auto nbClips = unitInfo.AllClips.Length;
+            auto northLt = unitInfo.ClipCount_North, eastLt = unitInfo.ClipCount_East + northLt,
+                southLt = unitInfo.ClipCount_South + eastLt, westLt = unitInfo.ClipCount_West + southLt,
+                topLt = unitInfo.ClipCount_Top + westLt, bottomLt = unitInfo.ClipCount_Bottom + topLt;
+            // print("North: " + northLt + ", East: " + eastLt + ", South: " + southLt + ", West: " + westLt);
+            int dir = 0; // north
+
+            for (uint i = 0; i < nbClips; i++) {
+                dir = i < topLt ? i < westLt ? i < southLt ? i < eastLt ? i < northLt ? 0 : 1 : 2 : 3 : 4 : 5;
+                auto treeEl = ItemModelTreeElement(this, currentIndex, unitInfo.AllClips[i], "Clip["+i+"]: " + ClipFaceStr(dir), drawProperties, 0x8 * i, isEditable);
+                treeEl.AuxInfo_ClipFace = dir;
+                treeEl.Draw();
             }
             EndTreeNode();
         }
@@ -1919,7 +1943,10 @@ void Draw_IB_DevBtnPtr(const string &in title, CMwNod@ nod, uint16 nodOffset) {
         UI::TextDisabled(Text::Format("0x%03x", nodOffset));
         UI::SameLine();
         if (UX::SmallButton(Icons::Cube + " Explore Nod")) {
-            ExploreNod(title, nod);
+            auto splitAt = title.IndexOf("::");
+            if (splitAt == -1) splitAt = title.Length;
+            else splitAt += 8;
+            ExploreNod(title.SubStr(0, splitAt), nod);
         }
         UI::SameLine();
         CopiableLabeledValue("ptr", Text::FormatPointer(Dev_GetPointerForNod(nod)));
@@ -2554,4 +2581,28 @@ void DrawMMFids(CPlugGameSkinAndFolder@ mm) {
         }
 #endif
     }
+}
+
+
+string ClipFaceStr(int clipFace) {
+    switch (clipFace) {
+        case -1: return "--";
+        case 0: return "North";
+        case 1: return "East";
+        case 2: return "South";
+        case 3: return "West";
+        case 4: return "Top";
+        case 5: return "Bottom";
+    }
+    return "Unk(" + clipFace + ")";
+}
+
+
+string MwFastBuffer_uint_ToString(MwFastBuffer<uint>&in buf) {
+    string ret = "Len=" + buf.Length + ": [ ";
+    for (uint i = 0; i < buf.Length; i++) {
+        if (i > 0) ret += ", ";
+        ret += Text::Format("0x%08x", buf[i]);
+    }
+    return ret + " ]";
 }

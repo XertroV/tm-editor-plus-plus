@@ -410,6 +410,31 @@ namespace Editor {
     DGameCtnChallenge_Macroblocks@ GetMapMacroblocks(CGameCtnChallenge@ map) {
         return DGameCtnChallenge(map).MacroblockInstances;
     }
+
+    // MARK: Matrix
+
+    iso4 GetMapMatrix(CGameCtnChallenge@ map) {
+        return Dev::GetOffsetIso4(map, O_MAP_MATRIX);
+    }
+
+    void SetMapMatrix(CGameCtnChallenge@ map, const iso4 &in newMatrix) {
+        Dev::SetOffset(map, O_MAP_MATRIX, newMatrix);
+        Editor::MarkRefreshUnsafe();
+    }
+
+    uint GetMapMatrixIgnoreFlag(CGameCtnChallenge@ map) {
+        return Dev::GetOffsetUint32(map, O_MAP_MATRIX_IGNORE);
+    }
+
+    void SetMapMatrixIgnoreFlag(CGameCtnChallenge@ map, bool flag) {
+        Dev::SetOffset(map, O_MAP_MATRIX_IGNORE, uint8(flag ? 1 : 0));
+        Editor::MarkRefreshUnsafe();
+    }
+
+    void SetMapMatrixIgnoreFlag(CGameCtnChallenge@ map, uint flag) {
+        Dev::SetOffset(map, O_MAP_MATRIX_IGNORE, flag);
+        Editor::MarkRefreshUnsafe();
+    }
 }
 
 /*

@@ -8,6 +8,7 @@ void SetUpEditMapIntercepts() {
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap2", _EditMap2);
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap3", _EditMap3);
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap4", _EditMap4);
+    // this one is used
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap5", _EditMap5);
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMap1", _EditNewMap1);
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMap2", _EditNewMap2);
@@ -39,6 +40,7 @@ void UnloadIntercepts() {
 }
 
 bool _EditMap(CMwStack &in stack) {
+    trace("Editing map via: _EditMap");
     Event::RunOnEditorStartingUpCbs(true);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
@@ -47,6 +49,7 @@ bool _EditMap(CMwStack &in stack) {
 }
 
 bool _EditMap2(CMwStack &in stack) {
+    trace("Editing map via: _EditMap2");
     Event::RunOnEditorStartingUpCbs(true);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
@@ -55,6 +58,7 @@ bool _EditMap2(CMwStack &in stack) {
 }
 
 bool _EditMap3(CMwStack &in stack) {
+    trace("Editing map via: _EditMap3");
     Event::RunOnEditorStartingUpCbs(true);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
@@ -63,6 +67,7 @@ bool _EditMap3(CMwStack &in stack) {
 }
 
 bool _EditMap4(CMwStack &in stack) {
+    trace("Editing map via: _EditMap4");
     Event::RunOnEditorStartingUpCbs(true);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
@@ -177,6 +182,7 @@ namespace EditMapIntercept {
 
 
 bool _EditNewMap1(CMwStack &in stack) {
+    trace("Editing new map via: _EditNewMap1");
     Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
@@ -184,6 +190,7 @@ bool _EditNewMap1(CMwStack &in stack) {
     // return true;
 }
 bool _EditNewMap2(CMwStack &in stack) {
+    trace("Editing new map via: _EditNewMap2");
     Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
@@ -210,6 +217,7 @@ bool _EditNewMap2(CMwStack &in stack) {
     // return true;
 }
 bool _EditNewMap3(CMwStack &in stack) {
+    trace("Editing new map via: _EditNewMap3");
     Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
@@ -219,6 +227,7 @@ bool _EditNewMap3(CMwStack &in stack) {
 
 // used for all UI calls
 bool _EditNewMap4(CMwStack &in stack, CMwNod@ nod) {
+    trace("Editing new map via: _EditNewMap4");
     Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
@@ -272,6 +281,7 @@ bool _EditNewMap4(CMwStack &in stack, CMwNod@ nod) {
     // return false;
 }
 bool _EditNewMapFromBaseMap(CMwStack &in stack) {
+    trace("Editing new map via: _EditNewMapFromBaseMap");
     Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
@@ -279,6 +289,7 @@ bool _EditNewMapFromBaseMap(CMwStack &in stack) {
     // return true;
 }
 bool _EditNewMapFromBaseMap2(CMwStack &in stack) {
+    trace("Editing new map via: _EditNewMapFromBaseMap2");
     Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;
@@ -286,6 +297,7 @@ bool _EditNewMapFromBaseMap2(CMwStack &in stack) {
     // return true;
 }
 bool _EditNewMapFromBaseMap3(CMwStack &in stack) {
+    trace("Editing new map via: _EditNewMapFromBaseMap3");
     Event::RunOnEditorStartingUpCbs(false);
     return true;
     // if (EDIT_MAP_PASSTHROUGH) return true;

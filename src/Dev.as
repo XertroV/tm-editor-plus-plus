@@ -321,6 +321,15 @@ class ReferencedNod {
     uint64 ptr;
 
     ReferencedNod(CMwNod@ _nod) {
+        SetNod(_nod);
+    }
+
+    ~ReferencedNod() {
+        NullifyAndRelease();
+    }
+
+    void SetNod(CMwNod@ _nod) {
+        NullifyAndRelease();
         @nod = _nod;
         if (nod !is null) {
             nod.MwAddRef();
@@ -331,15 +340,23 @@ class ReferencedNod {
         }
     }
 
-    ~ReferencedNod() {
-        if (nod is null) return;
-        nod.MwRelease();
-        @nod = null;
+    void NullifyAndRelease() {
+        if (nod !is null) {
+            nod.MwRelease();
+            @nod = null;
+        }
     }
 
     // force release the nod if the game clears the memory for whatever reason
     void NullifyNoRelease() {
         @nod = null;
+    }
+
+    // true if nod was different
+    bool UpdateNod(CMwNod@ _nod) {
+        if (nod is _nod) return false;
+        SetNod(_nod);
+        return true;
     }
 
     CGameCtnAnchoredObject@ AsItem() {
@@ -360,6 +377,10 @@ class ReferencedNod {
 
     CGameCtnBlockInfo@ AsBlockInfo() {
         return cast<CGameCtnBlockInfo>(this.nod);
+    }
+
+    CGameCtnBlockInfoVariant@ AsBlockInfoVariant() {
+        return cast<CGameCtnBlockInfoVariant>(this.nod);
     }
 
     CGameItemModel@ AsItemModel() {
@@ -548,9 +569,8 @@ const uint16 O_MAP_EMBEDDEDITEMS_BUF2 = O_MAP_SCRIPTMETADATA + (0x788 - 0x668);
 // buf of (mwid name, uint collection, mwid author) -- populated on ctrl+s (includes blocks and items)
 const uint16 O_MAP_EMBEDDEDITEMS_BUF3 = O_MAP_SCRIPTMETADATA + (0x7A8 - 0x668);
 
-
-const uint16 O_MAP_MATRIX = O_MAP_SCRIPTMETADATA + (0x7F0 - 0x668);
-const uint16 O_MAP_IGNORE_MATRIX = O_MAP_SCRIPTMETADATA + (0x820 - 0x668);
+const uint16 O_MAP_MATRIX = O_MAP_SCRIPTMETADATA + (0x7F0 - 0x670);
+const uint16 O_MAP_MATRIX_IGNORE = O_MAP_SCRIPTMETADATA + (0x820 - 0x670);
 
 /*
 todo: set flag to false and experiment with the other flag
@@ -596,6 +616,10 @@ const uint16 O_EDITOR_LAST_RMB_PRESSED = O_EDITOR_LAST_LMB_PRESSED + 0x4; // 0xB
 const uint16 O_EDITOR_LMB_PRESSED1 = O_EDITOR_LAST_RMB_PRESSED + 0x4; // 0xBB8
 const uint16 O_EDITOR_RMB_PRESSED1 = O_EDITOR_LMB_PRESSED1 + 0x4; // 0xBBC
 const uint16 O_EDITOR_LMB_PRESSED2 = O_EDITOR_RMB_PRESSED1 + 0x4; // 0xBC0
+//
+const uint16 O_EDITOR_AIR_MODE = O_EDITOR_GridColor - (0xC10 - 0xBDC); // 0xBDC
+// 1,x14,x21 for block normal,ghost,free; 5 = item, 6=Macroblock, x22=Macroblock free, x10=copypaste, x13=offzone
+const uint16 O_EDITOR_PLACE_MODE = O_EDITOR_GridColor - (0xC10 - 0xBF0); // 0xBF0
 // 1 when freelook, 2 when deleting block, 3 when picking block, 4 in copy mode add, 5 copy sub, 8 in block props, 11 in plugin, 13 offzone
 const uint16 O_EDITOR_EDIT_MODE = O_EDITOR_GridColor - (0xC10 - 0xBF8); // 0xBF8
 
@@ -681,6 +705,7 @@ const uint16 O_CTNBLOCK_PLACEMODE_FLAG = O_CTNBLOCK_DIR + (0x8F - 0x6C);
 // originally 0xA8 -- is FFFFFFFF when not in a macroblock
 const uint16 O_CTNBLOCK_MACROBLOCK_INST_NB = O_CTNBLOCK_DIR + 0x3C;
 
+const uint16 O_CTNBLOCKUNITINFO_PackedNSEWUD = 0x24;
 
 // CGameCtnBlockInfo
 const uint16 SZ_CTNBLOCKINFO = 0x250;

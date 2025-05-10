@@ -144,14 +144,21 @@ namespace UX {
     bool IsItemRightClicked() {
         return UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Right);
     }
-    // call this before you end the popup
-    void CloseCurrentPopupIfMouseFarAway(bool closeAnyway = false) {
+    bool IsItemMiddleClicked() {
+        return UI::IsItemHovered() && UI::IsMouseClicked(UI::MouseButton::Middle);
+    }
+    // set closeAnyway=true to close it regardless. call this before you end the popup.
+    void CloseCurrentPopupIfMouseFarAway(bool closeAnyway = false, float pad_ScreenYProp = 0.25) {
         auto wPos = UI::GetWindowPos();
         auto wSize = UI::GetWindowSize();
-        vec2 areaPad = vec2(g_screen.y * .3);
-        auto showBoundsRect = vec4(wPos - areaPad, wSize + (areaPad * 2.));
-
-        closeAnyway = closeAnyway || !MathX::Within(UI::GetMousePos(), showBoundsRect);
+        auto wMid = wPos + (wSize * 0.5);
+        float radius = Math::Max(wSize.x, wSize.y) * 0.5 + Math::Max(pad_ScreenYProp, 1e-5) * g_screen.y;
+        // vec2 areaPad = vec2(g_screen.y * Math::Clamp(pad_ScreenYProp, 0.0, 1.0));
+        // auto showBoundsRect = vec4(wPos - areaPad, wSize + (areaPad * 2.));
+        // closeAnyway = closeAnyway || !MathX::Within(UI::GetMousePos(), showBoundsRect);
+        if ((UI::GetMousePos() - wMid).LengthSquared() > radius * radius) {
+            closeAnyway = true;
+        }
         // trace(UI::GetMousePos().ToString() + " " + showBoundsRect.ToString());
         if (closeAnyway) UI::CloseCurrentPopup();
     }

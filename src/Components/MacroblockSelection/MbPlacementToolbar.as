@@ -26,7 +26,12 @@ class CurrentMacroblock_PlacementToolbar : ToolbarTab {
     }
 
     void OnMbChanged(CGameCtnMacroBlockInfo@ mbi) {
+        if (mbi is null) return;
         @currMbModel = ReferencedNod(mbi);
+        if (IsMbShowGhostFreeApplied && !mbi.Description.EndsWith(".") && GetFidFromNod(mbi) !is null) {
+            mbi.Description = wstring(string(mbi.Description) + ".");
+            mbi.Initialized = false;
+        }
     }
 
     CGameCtnMacroBlockInfo@ get_MacroblockInfo() {

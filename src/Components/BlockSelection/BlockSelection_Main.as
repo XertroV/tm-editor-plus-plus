@@ -9,6 +9,7 @@ class BlockSelectionTab : Tab {
         BlockVariantBrowserTab(Children);
         NormalBlockModelBrowserTab(Children);
         GhostBlockModelBrowserTab(Children);
+        // ClipsInspectorTab(Children);
     }
 
     bool get_favEnabled() override property {
@@ -40,15 +41,13 @@ class BlockSelectionTab : Tab {
     void _HeadingLeft() override {
         Tab::_HeadingLeft();
 
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto pmt = editor.PluginMapType;
-        bool inGhostMode = pmt.PlaceMode == CGameEditorPluginMap::EPlaceMode::GhostBlock;
-        auto bi = inGhostMode ? selectedGhostBlockInfo : selectedBlockInfo;
-        if (bi is null)
+        auto biRef = CurrentBlockSelection;
+        if (biRef is null || biRef.AsBlockInfo() is null) {
+            UI::Text("No block selected");
             return;
-
+        }
         UI::SameLine();
-        CopiableValue(bi.AsBlockInfo().Name);
+        CopiableValue(biRef.AsBlockInfo().Name);
     }
 }
 

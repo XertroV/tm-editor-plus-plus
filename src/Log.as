@@ -30,6 +30,11 @@ namespace _Log {
             trace('[' + Time::Now + '] ' + msg);
         }
     }
+    void Debug(const string &in scope, const string &in msg) {
+        if (S_LogLevel <= LogLevel::DEBUG) {
+            trace('[' + Time::Now + ']['+scope+'] ' + msg);
+        }
+    }
     void Info(const string &in msg) {
         if (S_LogLevel <= LogLevel::INFO) {
             print('[' + Time::Now + '] ' + msg);
@@ -39,6 +44,9 @@ namespace _Log {
         if (S_LogLevel <= LogLevel::WARN) {
             warn('[' + Time::Now + '] ' + msg);
         }
+    }
+    void Warn_NID(const string &in scope, const string &in msg) {
+        Warn_NID("[" + scope + "]  " + msg);
     }
     void Warn_NID(const string &in msg) {
 #if DEV
@@ -52,6 +60,11 @@ namespace _Log {
     void Error(const string &in msg) {
         if (S_LogLevel <= LogLevel::ERROR) {
             error('[' + Time::Now + '] ' + msg);
+        }
+    }
+    void Error(const string &in scope, const string &in msg) {
+        if (S_LogLevel <= LogLevel::ERROR) {
+            error('[' + Time::Now + ']['+scope+'] ' + msg);
         }
     }
 }

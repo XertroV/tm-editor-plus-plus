@@ -16,6 +16,12 @@
  */
 
 
+void Init_Main_UI_Coro() {
+    TabState::OnPluginStart_LoadTabState();
+    yield();
+    MainRenderStarted = true;
+}
+
 
 TabGroup@ RootTabGroup_Editor = CreateRootTabGroup();
 TabGroup@ RootTabGroup_ItemEditor = CreateItemEditorRT();
@@ -35,10 +41,23 @@ TabGroup@ ToolsTG = CreateToolsTabGroup();
 //     @ToolsTG = CreateToolsTabGroup();
 // }
 
-
+bool _disableUiMainRenderOnException = false;
 void UI_Main_Render() {
+    _UI_Main_Render();
+    // if (_disableUiMainRenderOnException) return;
+    // try {
+    // } catch {
+    //     PrintActiveContextStack(true);
+    //     NotifyError("UI_Main_Render exception: " + getExceptionInfo());
+    //     _disableUiMainRenderOnException = true;
+    // }
+}
+
+bool MainRenderStarted = false;
+void _UI_Main_Render() {
     if (!UserHasPermissions) return;
     if (!AreFontsLoaded) return;
+    if (!MainRenderStarted) return;
 
     auto tabToDraw = RootTabGroup_Editor;
     if (tabToDraw is null) return;
@@ -178,7 +197,34 @@ void UI_Main_Render() {
         UI::End();
     }
 
+    if (IsInAnyEditor) {
+        RenderMiscWindowRenderCBs();
+    } else if (g_MiscWindowRenderCallbacks.Length > 0) {
+        ClearMiscRenderCBs();
+    }
+
     UI::PopStyleColor(2);
+}
+
+funcdef bool TmpWindowRenderF();
+TmpWindowRenderF@[] g_MiscWindowRenderCallbacks;
+
+void AddMiscWindowRenderCallback(TmpWindowRenderF@ render) {
+    g_MiscWindowRenderCallbacks.InsertLast(render);
+}
+
+void ClearMiscRenderCBs() {
+    g_MiscWindowRenderCallbacks.RemoveRange(0, g_MiscWindowRenderCallbacks.Length);
+}
+
+void RenderMiscWindowRenderCBs() {
+    for (uint i = 0; i < g_MiscWindowRenderCallbacks.Length; i++) {
+        auto @cb = g_MiscWindowRenderCallbacks[i];
+        if (cb is null || !cb()) {
+            g_MiscWindowRenderCallbacks.RemoveAt(i);
+            i--;
+        }
+    }
 }
 
 
@@ -610,10 +656,12 @@ TabGroup@ CreateRootTabGroup() {
     @g_BlocksItemsTab = BI_MainTab(root);
     TodoTab(root, "Pinned B&I", Icons::MapO + Icons::MapMarker, "lists of pinned blocks and items");
     CursorTab(root);
+
     CustomCursorTab(root);
     @g_PickedBlockTab = PickedBlockTab(root);
     @g_PickedItemTab = PickedItemTab(root);
     PillarsAutochangerTab(root);
+    SceneryGenTab(root);
     // TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
     InventoryMainTab(root);
     InventoryMainV2Tab(root);

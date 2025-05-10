@@ -91,6 +91,8 @@ void UpdatePickedBlockCachedValues() {
 
 ReferencedNod@ selectedBlockInfo;
 ReferencedNod@ selectedGhostBlockInfo;
+// the most recent block info selected, regardless of mode
+ReferencedNod@ selectedBlockInfoAny;
 ReferencedNod@ selectedItemModel;
 ReferencedNod@ selectedMacroBlockInfo;
 
@@ -101,6 +103,7 @@ void ClearSelectedOnEditorUnload() {
     @selectedGhostBlockInfo = null;
     @selectedItemModel = null;
     @selectedMacroBlockInfo = null;
+    @selectedBlockInfoAny = null;
 }
 
 void UpdateSelectedBlockItem(CGameCtnEditorFree@ editor) {
@@ -109,24 +112,37 @@ void UpdateSelectedBlockItem(CGameCtnEditorFree@ editor) {
         @selectedGhostBlockInfo = null;
         @selectedItemModel = null;
         @selectedMacroBlockInfo = null;
+        @selectedBlockInfoAny = null;
         return;
     }
 
+    if (selectedBlockInfo is null && editor.CurrentBlockInfo !is null) @selectedBlockInfo = ReferencedNod(editor.CurrentBlockInfo);
+    if (selectedGhostBlockInfo is null && editor.CurrentGhostBlockInfo !is null) @selectedGhostBlockInfo = ReferencedNod(editor.CurrentGhostBlockInfo);
+    if (selectedItemModel is null && editor.CurrentItemModel !is null) @selectedItemModel = ReferencedNod(editor.CurrentItemModel);
+    if (selectedMacroBlockInfo is null && editor.CurrentMacroBlockInfo !is null) @selectedMacroBlockInfo = ReferencedNod(editor.CurrentMacroBlockInfo);
+    auto selectedBIAny = Editor::GetSelectedBlockInfo(editor);
+    if (selectedBlockInfoAny is null && selectedBIAny !is null) @selectedBlockInfoAny = ReferencedNod(Editor::GetSelectedBlockInfo(editor));
+
     if (editor.CurrentBlockInfo !is null) {
-        @selectedBlockInfo = ReferencedNod(editor.CurrentBlockInfo);
+        if (selectedBlockInfo.UpdateNod(editor.CurrentBlockInfo)) {
+            selectedBlockInfoAny.UpdateNod(editor.CurrentBlockInfo);
+        }
     }
+
     if (editor.CurrentGhostBlockInfo !is null) {
-        @selectedGhostBlockInfo = ReferencedNod(editor.CurrentGhostBlockInfo);
+        if (selectedGhostBlockInfo.UpdateNod(editor.CurrentGhostBlockInfo)) {
+            selectedBlockInfoAny.UpdateNod(editor.CurrentGhostBlockInfo);
+        }
     }
     if (editor.CurrentItemModel !is null) {
         auto lastItem = selectedItemModel !is null ? selectedItemModel.AsItemModel() : null;
-        @selectedItemModel = ReferencedNod(editor.CurrentItemModel);
+        selectedItemModel.UpdateNod(editor.CurrentItemModel);
         if (lastItem !is selectedItemModel.AsItemModel()) {
             startnew(CacheSelectedItemValues);
         }
     }
     if (editor.CurrentMacroBlockInfo !is null) {
-        @selectedMacroBlockInfo = ReferencedNod(editor.CurrentMacroBlockInfo);
+        selectedMacroBlockInfo.UpdateNod(editor.CurrentMacroBlockInfo);
     }
 }
 

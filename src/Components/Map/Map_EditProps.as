@@ -217,33 +217,20 @@ class MapEditPropsTab : Tab {
 
         UI::Separator();
 
+        UI::Columns(2);
+
+        // Setting Size.X/Z crashes the game
         CopiableLabeledValue("Map Size", map.Size.ToString());
         UI::Indent();
-        newSizeY = Math::Clamp(UI::InputInt("Size.Y", newSizeY), 8, 255);
+        newSizeY = Math::Clamp(UI::InputInt("Height", newSizeY), 8, 255);
         if (UI::Button("Update Map Height")) {
             Editor::SetNewMapHeight(map, newSizeY);
         }
         AddSimpleTooltip("You may need to save and reload the map to avoid camera/placement bugs.");
-        // UI::SameLine();
-        // UI::TextDisabled("Use gbxexplorer.net to change X/Z -- may not work for validated maps");
-
-        // if (UI::Button("Change Map Base Size " + BetaIndicator)) {
-        //     OpenMapBaseSizeChanger();
-        // }
-
-        // sorta works but often crashes the game
-        // newSizeX = Math::Clamp(UI::InputInt("Size.X", newSizeX), 8, 255);
-        // newSizeZ = Math::Clamp(UI::InputInt("Size.Z", newSizeZ), 8, 255);
-        // if (UI::Button("Update Map X/Z")) {
-        //     oldSize = map.Size;
-        //     newSize = nat3(newSizeX, newSizeY, newSizeZ);
-        //     startnew(CoroutineFunc(this.SaveAndRevertSize));
-        // }
-        // AddSimpleTooltip("Note: this will save and reload the map.");
 
         UI::Unindent();
 
-        UI::Separator();
+        UI::NextColumn();
 
         // DECORATION
 
@@ -271,7 +258,12 @@ class MapEditPropsTab : Tab {
             UI::Text("Save the map to change the map decoration.");
         }
 
+        editor.PluginMapType.MapElemColorPalette = DrawComboEMapElemColorPalette("Color Palette", editor.PluginMapType.MapElemColorPalette);
+
         UI::Unindent();
+
+        UI::Columns(1);
+
 
         UI::Separator();
 
@@ -299,27 +291,9 @@ class MapEditPropsTab : Tab {
             UI::Unindent();
         }
 
-        UI::SeparatorText("Color Palette ");
+        //
 
-        editor.PluginMapType.MapElemColorPalette = DrawComboEMapElemColorPalette("Color Palette", editor.PluginMapType.MapElemColorPalette);
-
-        UI::SeparatorText("Custom Color Tables \\$i(Experimental) \\$f80(Not the new color palettes!)");
-        if (FromML::HasCustomColors()) {
-            UI::Text("Embedded Custom Colors (Encoded): " + FromML::_customColorTablesRaw);
-            if (UX::SmallButton("Clear")) {
-                ToML::SetEmbeddedCustomColors("");
-            }
-            UI::SameLine();
-        } else {
-            UI::Text("No Embedded Custom Colors.");
-        }
-        if (UX::SmallButton("Append some test data")) {
-            ToML::SetEmbeddedCustomColors(FromML::_customColorTablesRaw + "_test");
-        }
-
-
-
-        UI::Separator();
+        UI::SeparatorText("Vehicle");
 
         S_ShowVehicleTestWindow = UI::Checkbox("Show choice of vehicle when testing?", S_ShowVehicleTestWindow);
         AddSimpleTooltip("When placing a car to test the map, show a window that allows you to choose between different vehicles.");
@@ -330,66 +304,23 @@ class MapEditPropsTab : Tab {
             UI::Unindent();
         }
 
-        UI::Separator();
+        UI::SeparatorText("Map Mod");
 
-        UI::Text("Map Mod:");
         DrawMapModPackChoices();
 
-        UI::Separator();
+        UI::SeparatorText("MediaTracker");
 
         DrawMediaTrackerSettings();
 
-        UI::Separator();
+        UI::SeparatorText("Offzone");
 
-        auto offzoneLen = Dev::GetOffsetUint32(map, O_MAP_OFFZONE_BUF_OFFSET + 0x8);
+        DrawOffzoneWidget(editor, map);
 
-        if (offzoneLen > 0) {
-            if (UI::TreeNode("Offzones ("+offzoneLen+")###map-offzones", UI::TreeNodeFlags::None)) {
-                m_EditOffzones = UI::Checkbox("Edit Offzones", m_EditOffzones);
-                auto offzoneBuf = Dev::GetOffsetNod(map, O_MAP_OFFZONE_BUF_OFFSET);
-                for (uint i = 0; i < offzoneLen; i++) {
-                    UI::PushID("ofz"+i);
-                    int3 start = Dev::GetOffsetInt3(offzoneBuf, i * 0x18);
-                    int3 end = Dev::GetOffsetInt3(offzoneBuf, i * 0x18 + 0xC);
-                    if (!m_EditOffzones) {
-                        UI::Text(start.ToString() + " -> " + end.ToString());
-                    } else {
-                        UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(1, 0));
-                        UI::PushItemWidth(75);
-                        start.x = UI::InputInt("##offzone-start-x", start.x);
-                        UI::SameLine();
-                        start.y = UI::InputInt("##offzone-start-y", start.y);
-                        UI::SameLine();
-                        start.z = UI::InputInt("##offzone-start-z", start.z);
-                        UI::SameLine();
-                        UI::Text("->");
-                        UI::SameLine();
-                        end.x = UI::InputInt("##offzone-end-x", end.x);
-                        UI::SameLine();
-                        end.y = UI::InputInt("##offzone-end-y", end.y);
-                        UI::SameLine();
-                        end.z = UI::InputInt("##offzone-end-z", end.z);
-                        UI::PopItemWidth();
-                        UI::PopStyleVar();
-                        Dev::SetOffset(offzoneBuf, i * 0x18, start);
-                        Dev::SetOffset(offzoneBuf, i * 0x18 + 0xC, end);
-                    }
-                    UI::PopID();
-                }
-                if (UX::SmallButton("Drop Last")) {
-                    Dev::SetOffset(map, O_MAP_OFFZONE_BUF_OFFSET + 0x8, uint(offzoneLen - 1));
-                }
-                UI::TreePop();
-            }
-            m_ShowOffzone = UI::Checkbox("Show Offzones", m_ShowOffzone);
-            if (m_ShowOffzone) {
-                this.DrawOffzoneBoxes(map);
-            }
-        } else {
-            UI::Text("Map has no offzones.");
-        }
+#if DEV
+        DrawMapMatrixSection(map);
+#endif
 
-        DrawOffzoneSettings();
+        DrawDeprecated(editor);
     }
 
     bool m_EditOffzones;
@@ -730,47 +661,6 @@ class MapEditPropsTab : Tab {
 
     bool m_DrawMtTriggerBoxes = false;
 
-    void DrawOffzoneSettings() {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto map = editor.Challenge;
-        nat3 ozPerBlock = Editor::GetOffzoneTriggerSize(map);
-        auto ozBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
-        nat3 origOzPerBlock = ozPerBlock;
-        if (UI::CollapsingHeader("Offzone Trigger:")) {
-            UI::Indent();
-                UI::TextWrapped("This measures how many trigger cubes you have per block (32x8x32). 2,1,2 will mean 4 trigger cubes completely cover 1 block.\n\\$f80Note: \\$zUnequal X-Z dimensions, or Y > 1 may be unstable.");
-                // UI::BeginChild("oz-trigger-child", vec2(UI::GetContentRegionAvail().x * 0.5, 0));
-                ozPerBlock.x = Math::Clamp(UI::InputInt("x##oz-trigger", ozPerBlock.x), 1, 128);
-                ozPerBlock.y = Math::Clamp(UI::InputInt("y##oz-trigger", ozPerBlock.y), 1, 128);
-                ozPerBlock.z = Math::Clamp(UI::InputInt("z##oz-trigger", ozPerBlock.z), 1, 128);
-                if (UI::Button("Reset##ozsize")) {
-                    ozPerBlock = nat3(3, 1, 3);
-                }
-                if (ozPerBlock != origOzPerBlock) {
-                    Dev::SetOffset(map, O_MAP_OFFZONE_SIZE_OFFSET, ozPerBlock);
-                }
-                UI::Text("Offzone Trigger Size: " + ozBlockSize.ToString());
-                // UI::EndChild();
-            UI::Unindent();
-        }
-    }
-
-    void DrawOffzoneBoxes(CGameCtnChallenge@ map) {
-        nat3 ozPerBlock = Editor::GetOffzoneTriggerSize(map);
-        auto ozBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
-        auto offzoneLen = Dev::GetOffsetUint32(map, O_MAP_OFFZONE_BUF_OFFSET + 0x8);
-        if (offzoneLen == 0) return;
-        auto offzoneBuf = Dev::GetOffsetNod(map, O_MAP_OFFZONE_BUF_OFFSET);
-        auto offzoneBufPtr = Dev::GetOffsetUint64(map, O_MAP_OFFZONE_BUF_OFFSET);
-        CopiableLabeledPtr(offzoneBufPtr);
-        for (uint i = 0; i < offzoneLen; i++) {
-            int3 start = Dev::GetOffsetInt3(offzoneBuf, i * 0x18);
-            int3 end = Dev::GetOffsetInt3(offzoneBuf, i * 0x18 + 0xC) + int3(1, 1, 1);
-            auto startPos = MTCoordToPos(start, ozBlockSize);
-            auto endPos = MTCoordToPos(end, ozBlockSize) - vec3(0.1);
-            nvgDrawBlockBox(mat4::Translate(startPos), endPos - startPos);
-        }
-    }
 
     vec4[] clipColors;
     bool[] drawTriggers;
@@ -820,6 +710,8 @@ class MapEditPropsTab : Tab {
         }
     }
 
+    // MARK: deco extra
+
     MapDecoChoice m_deco = MapDecoChoice::XXX_Last;
 
     void RevertDeco(ref@ data) {
@@ -845,7 +737,165 @@ class MapEditPropsTab : Tab {
         // Editor::NoSaveAndReloadMap();
 #endif
     }
+
+
+    // MARK: [D] Map Matrix
+
+    void DrawMapMatrixSection(CGameCtnChallenge@ map) {
+        UI::SeparatorText("Map Matrix [DEV]");
+
+        auto rawFlag = Editor::GetMapMatrixIgnoreFlag(map);
+        bool flagPre = rawFlag >= 1;
+        bool flag = UI::Checkbox("Flag: Ignore Matrix?", flagPre);
+        SameLineText(Text::Format("Current: 0x%08x", rawFlag));
+        if (flag != flagPre) Editor::SetMapMatrixIgnoreFlag(map, flag);
+
+        auto mat = Editor::GetMapMatrix(map);
+        UI::Text("Matrix: " + FormatX::Iso4a(mat));
+
+        DevEditable_Vec3("x_", map, O_MAP_MATRIX + 0xC * 0);
+        DevEditable_Vec3("y_", map, O_MAP_MATRIX + 0xC * 1);
+        DevEditable_Vec3("z_", map, O_MAP_MATRIX + 0xC * 2);
+        DevEditable_Vec3("t_", map, O_MAP_MATRIX + 0xC * 3);
+    }
+
+    void DevEditable_Vec3(const string &in label, CMwNod@ nod, uint16 offset) {
+        auto val = Dev::GetOffsetVec3(nod, offset);
+        auto newVal = UI::InputFloat3(label, val, "%.5f", UI::InputTextFlags::None);
+        if (newVal != val) {
+            Dev::SetOffset(nod, offset, newVal);
+        }
+    }
+
+
+    // MARK: Offzone Widget
+
+    void DrawOffzoneWidget(CGameCtnEditorFree@ editor, CGameCtnChallenge@ map) {
+
+        auto offzoneLen = Dev::GetOffsetUint32(map, O_MAP_OFFZONE_BUF_OFFSET + 0x8);
+
+        if (offzoneLen > 0) {
+            if (UI::TreeNode("Offzones ("+offzoneLen+")###map-offzones", UI::TreeNodeFlags::None)) {
+                m_EditOffzones = UI::Checkbox("Edit Offzones", m_EditOffzones);
+                auto offzoneBuf = Dev::GetOffsetNod(map, O_MAP_OFFZONE_BUF_OFFSET);
+                for (uint i = 0; i < offzoneLen; i++) {
+                    UI::PushID("ofz"+i);
+                    int3 start = Dev::GetOffsetInt3(offzoneBuf, i * 0x18);
+                    int3 end = Dev::GetOffsetInt3(offzoneBuf, i * 0x18 + 0xC);
+                    if (!m_EditOffzones) {
+                        UI::Text(start.ToString() + " -> " + end.ToString());
+                    } else {
+                        UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(1, 0));
+                        UI::PushItemWidth(75);
+                        start.x = UI::InputInt("##offzone-start-x", start.x);
+                        UI::SameLine();
+                        start.y = UI::InputInt("##offzone-start-y", start.y);
+                        UI::SameLine();
+                        start.z = UI::InputInt("##offzone-start-z", start.z);
+                        UI::SameLine();
+                        UI::Text("->");
+                        UI::SameLine();
+                        end.x = UI::InputInt("##offzone-end-x", end.x);
+                        UI::SameLine();
+                        end.y = UI::InputInt("##offzone-end-y", end.y);
+                        UI::SameLine();
+                        end.z = UI::InputInt("##offzone-end-z", end.z);
+                        UI::PopItemWidth();
+                        UI::PopStyleVar();
+                        Dev::SetOffset(offzoneBuf, i * 0x18, start);
+                        Dev::SetOffset(offzoneBuf, i * 0x18 + 0xC, end);
+                    }
+                    UI::PopID();
+                }
+                if (UX::SmallButton("Drop Last")) {
+                    Dev::SetOffset(map, O_MAP_OFFZONE_BUF_OFFSET + 0x8, uint(offzoneLen - 1));
+                }
+                UI::TreePop();
+            }
+            m_ShowOffzone = UI::Checkbox("Show Offzones", m_ShowOffzone);
+            if (m_ShowOffzone) {
+                this.DrawOffzoneBoxes(map);
+            }
+        } else {
+            UI::Text("Map has no offzones.");
+        }
+
+        DrawOffzoneSettings();
+    }
+
+    void DrawOffzoneSettings() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto map = editor.Challenge;
+        nat3 ozPerBlock = Editor::GetOffzoneTriggerSize(map);
+        auto ozBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
+        nat3 origOzPerBlock = ozPerBlock;
+        if (UI::CollapsingHeader("Offzone Trigger:")) {
+            UI::Indent();
+                UI::TextWrapped("This measures how many trigger cubes you have per block (32x8x32). 2,1,2 will mean 4 trigger cubes completely cover 1 block.\n\\$f80Note: \\$zUnequal X-Z dimensions, or Y > 1 may be unstable.");
+                // UI::BeginChild("oz-trigger-child", vec2(UI::GetContentRegionAvail().x * 0.5, 0));
+                ozPerBlock.x = Math::Clamp(UI::InputInt("x##oz-trigger", ozPerBlock.x), 1, 128);
+                ozPerBlock.y = Math::Clamp(UI::InputInt("y##oz-trigger", ozPerBlock.y), 1, 128);
+                ozPerBlock.z = Math::Clamp(UI::InputInt("z##oz-trigger", ozPerBlock.z), 1, 128);
+                if (UI::Button("Reset##ozsize")) {
+                    ozPerBlock = nat3(3, 1, 3);
+                }
+                if (ozPerBlock != origOzPerBlock) {
+                    Dev::SetOffset(map, O_MAP_OFFZONE_SIZE_OFFSET, ozPerBlock);
+                }
+                UI::Text("Offzone Trigger Size: " + ozBlockSize.ToString());
+                // UI::EndChild();
+            UI::Unindent();
+        }
+    }
+
+
+    void DrawOffzoneBoxes(CGameCtnChallenge@ map) {
+        nat3 ozPerBlock = Editor::GetOffzoneTriggerSize(map);
+        auto ozBlockSize = vec3(32, 8, 32) / vec3(ozPerBlock.x, ozPerBlock.y, ozPerBlock.z);
+        auto offzoneLen = Dev::GetOffsetUint32(map, O_MAP_OFFZONE_BUF_OFFSET + 0x8);
+        if (offzoneLen == 0) return;
+        auto offzoneBuf = Dev::GetOffsetNod(map, O_MAP_OFFZONE_BUF_OFFSET);
+        auto offzoneBufPtr = Dev::GetOffsetUint64(map, O_MAP_OFFZONE_BUF_OFFSET);
+        CopiableLabeledPtr(offzoneBufPtr);
+        for (uint i = 0; i < offzoneLen; i++) {
+            int3 start = Dev::GetOffsetInt3(offzoneBuf, i * 0x18);
+            int3 end = Dev::GetOffsetInt3(offzoneBuf, i * 0x18 + 0xC) + int3(1, 1, 1);
+            auto startPos = MTCoordToPos(start, ozBlockSize);
+            auto endPos = MTCoordToPos(end, ozBlockSize) - vec3(0.1);
+            nvgDrawBlockBox(mat4::Translate(startPos), endPos - startPos);
+        }
+    }
+
+
+    // MARK: Deprecated
+
+    void DrawDeprecated(CGameCtnEditorFree@ editor) {
+        UI::SeparatorText("Deprecated");
+        m_ShowDeprec_CustomColorPalette = UI::Checkbox("Show Custom Color Palette", m_ShowDeprec_CustomColorPalette);
+
+        if (m_ShowDeprec_CustomColorPalette) DrawCustomColorPalette(editor);
+    }
+
+    bool m_ShowDeprec_CustomColorPalette = false;
+    void DrawCustomColorPalette(CGameCtnEditorFree@ editor) {
+        if (!m_ShowDeprec_CustomColorPalette) return;
+        UI::SeparatorText("Custom Color Tables \\$i(Experimental) \\$f80(Not the new color palettes!)");
+        if (FromML::HasCustomColors()) {
+            UI::Text("Embedded Custom Colors (Encoded): " + FromML::_customColorTablesRaw);
+            if (UX::SmallButton("Clear")) {
+                ToML::SetEmbeddedCustomColors("");
+            }
+            UI::SameLine();
+        } else {
+            UI::Text("No Embedded Custom Colors.");
+        }
+        if (UX::SmallButton("Append some test data")) {
+            ToML::SetEmbeddedCustomColors(FromML::_customColorTablesRaw + "_test");
+        }
+    }
 }
+
+// MARK: End Tab
 
 MapDecoChoice DecoIdToEnum(const string &in id) {
     bool isNS = id.StartsWith("NoStadium");

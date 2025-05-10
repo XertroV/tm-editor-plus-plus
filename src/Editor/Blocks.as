@@ -142,6 +142,49 @@ namespace Editor {
         return Nat3ToVec3(biv.Size);
     }
 
+
+    bool DoesBlockInfoHaveMesh(CGameCtnBlockInfo@ bi) {
+        if (bi is null) throw("block info is null");
+        if (DoesBlockInfoVariantHaveMesh(bi.VariantBaseGround)) return true;
+        if (DoesBlockInfoVariantHaveMesh(bi.VariantBaseAir)) return true;
+        if (bi.AdditionalVariantsGround.Length > 0) {
+            for (int i = 0; i < bi.AdditionalVariantsGround.Length; i++) {
+                auto @biv = bi.AdditionalVariantsGround[i];
+                if (biv is null) continue;
+                if (DoesBlockInfoVariantHaveMesh(biv)) return true;
+            }
+        }
+        if (bi.AdditionalVariantsAir.Length > 0) {
+            for (int i = 0; i < bi.AdditionalVariantsAir.Length; i++) {
+                auto @biv = bi.AdditionalVariantsAir[i];
+                if (biv is null) continue;
+                if (DoesBlockInfoVariantHaveMesh(biv)) return true;
+            }
+        }
+        return false;
+    }
+
+    bool DoesBlockInfoVariantHaveMesh(CGameCtnBlockInfoVariant@ biv) {
+        if (biv is null) return false;
+        if (biv.Mobils00.Length > 0 && DoesBlockInfoMobilsHaveMesh(biv.Mobils00)) return true;
+        if (biv.Mobils01.Length > 0 && DoesBlockInfoMobilsHaveMesh(biv.Mobils01)) return true;
+        if (biv.Mobils02.Length > 0 && DoesBlockInfoMobilsHaveMesh(biv.Mobils02)) return true;
+        if (biv.Mobils03.Length > 0 && DoesBlockInfoMobilsHaveMesh(biv.Mobils03)) return true;
+        if (biv.Mobils04.Length > 0 && DoesBlockInfoMobilsHaveMesh(biv.Mobils04)) return true;
+        if (biv.Mobils05.Length > 0 && DoesBlockInfoMobilsHaveMesh(biv.Mobils05)) return true;
+        return false;
+    }
+
+    bool DoesBlockInfoMobilsHaveMesh(MwFastBuffer<CMwNod@> &in mobils) {
+        for (int i = 0; i < mobils.Length; i++) {
+            auto @mobil = cast<CGameCtnBlockInfoMobil>(mobils[i]);
+            if (mobil is null) continue;
+            if (mobil.PrefabFid !is null) return true;
+        }
+        return false;
+    }
+
+
     int GetNbBlockVariants(CGameCtnBlockInfo@ bi, bool isGround) {
         if (bi is null) throw("block info is null");
         auto baseVar = GetBlockBaseVariant(bi, isGround);
@@ -149,14 +192,50 @@ namespace Editor {
         return (isGround ? bi.AdditionalVariantsGround.Length : bi.AdditionalVariantsAir.Length) + nbBase;
     }
 
+    CGameCtnBlockInfoVariant@ GetBlockZerothVariant(CGameCtnBlockInfo@ bi, bool isGround) {
+        return isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
+    }
+
     CGameCtnBlockInfoVariant@ GetBlockBaseVariant(CGameCtnBlockInfo@ bi, bool isGround) {
         auto r = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantBaseGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantBaseAir);
         if (r is null) {
-            @r = isGround ? cast<CGameCtnBlockInfoVariant>(bi.VariantGround) : cast<CGameCtnBlockInfoVariant>(bi.VariantAir);
+            return GetBlockZerothVariant(bi, isGround);
         }
         return r;
     }
 
+
+    CGameCtnBlockInfoVariant@ GetBlockBestVariant(CGameCtnBlockInfo@ bi, bool isGround, uint &out varIx) {
+        if (isGround) {
+            if (bi.AdditionalVariantsGround.Length > 0) {
+                for (int i = bi.AdditionalVariantsGround.Length - 1; i >= 0; i--) {
+                    auto @biv = bi.AdditionalVariantsGround[i];
+                    if (biv is null) continue;
+                    if (biv.IsObsoleteVariant) continue;
+                    if (!biv.IsNoPillarBelowVariant) continue;
+                    // guess: the pillar versions have ReplacedPillarBlockInfo, not PlacedPillarBlockInfo
+                    if (biv.ReplacedPillarBlockInfo_List.Length > 0) continue;
+                    varIx = i + 1;
+                    return biv;
+                }
+            }
+            varIx = 0;
+            return bi.VariantBaseGround;
+        }
+        if (bi.AdditionalVariantsAir.Length > 0) {
+            for (int i = bi.AdditionalVariantsAir.Length - 1; i >= 0; i--) {
+                auto @biv = bi.AdditionalVariantsAir[i];
+                if (biv is null) continue;
+                if (biv.IsObsoleteVariant) continue;
+                if (!biv.IsNoPillarBelowVariant) continue;
+                if (biv.ReplacedPillarBlockInfo_List.Length > 0) continue;
+                varIx = i + 1;
+                return biv;
+            }
+        }
+        varIx = 0;
+        return bi.VariantBaseAir;
+    }
 
     CGameCtnBlockInfoVariant@ GetBlockInfoVariant(CGameCtnBlock@ block) {
         // auto bivIx = block.BlockInfoVariantIndex;
@@ -260,6 +339,19 @@ namespace Editor {
 
     mat4 GetBlockMatrix(CGameCtnBlock@ block) {
         return mat4::Translate(GetBlockLocation(block)) * GetBlockRotationMatrix(block);
+    }
+
+    mat4 GetBlockMatrix(nat3 coord, int dir, nat3 coordSize) {
+        auto pos = BlockCoordAndCoordSizeToPos(coord, Nat3ToVec3(coordSize), dir);
+        return mat4::Translate(pos) * EulerToMat(vec3(0, CardinalDirectionToYaw(dir), 0));
+    }
+
+    mat4 GetBlockMatrix(int3 coord, int dir, int3 coordSize) {
+        return GetBlockMatrix(Int3ToNat3(coord), dir, Int3ToNat3(coordSize));
+    }
+
+    mat4 GetBlockMatrix(int3 coord) {
+        return mat4::Translate(CoordToPos(coord));
     }
 
     mat4 GetBlockRotationMatrix(CGameCtnBlock@ block) {

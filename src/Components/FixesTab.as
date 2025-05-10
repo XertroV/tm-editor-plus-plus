@@ -1,6 +1,7 @@
 class FixesTab : Tab {
     FixesTab(TabGroup@ parent) {
-        super(parent, "Fixes" + NewIndicator, Icons::Wrench);
+        super(parent, "Fixes", Icons::Wrench);
+        ShowNewIndicator = true;
     }
 
     string suggestionPrefix = "\\$i\\$fda " + Icons::ExclamationTriangle + "  ";

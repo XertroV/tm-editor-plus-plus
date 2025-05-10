@@ -20,10 +20,16 @@ uint64 GetSystemTimeAsFileTime() {
 
 class Tester {
     string name;
-    TestCase@[]@ tests;
+    TestCase@[] tests;
     Tester(const string &in name, TestCase@[]@ tests) {
         this.name = name;
-        @this.tests = tests;
+        this.tests.Reserve(tests.Length);
+        for (uint i = 0; i < tests.Length; i++) {
+            if (tests[i] !is null) {
+
+                this.tests.InsertLast(tests[i]);
+            }
+        }
         startnew(CoroutineFunc(this.Run));
     }
     void Run() {
@@ -50,7 +56,8 @@ class Tester {
             yield();
         }
         duration = GetSystemTimeAsFileTime() - suite_start;
-        print("\\$8f8Test Suite: " + name + " (" + (duration / 10000) + " ms), " + successes + " passed, " + failures + " failed");
+        auto col = failures == 0 ? "\\$8f8" : "\\$f44";
+        print(col + "\\$i <> Test Suite: " + name + " (" + (duration / 10000) + " ms), " + successes + " passed, " + failures + " failed");
     }
 }
 
@@ -227,6 +234,11 @@ void assert_eq(vec3 a, vec3 b, const string &in msg = "") {
         throw("assertion failed: " + FormatX::Vec3_9DPS(a) + " != " + FormatX::Vec3_9DPS(b) + (msg != "" ? ", " + msg : ""));
     }
 }
+void assert_eq(int3 a, int3 b, const string &in msg = "") {
+    if (!MathX::Int3Eq(a, b)) {
+        throw("assertion failed: " + a.ToString() + " != " + b.ToString() + (msg != "" ? ", " + msg : ""));
+    }
+}
 void assert_nearly_eq(float a, float b, float tolerence, const string &in msg = "") {
     if (Math::Abs(a - b) > tolerence) {
         throw("assertion failed: " + a + " !~= " + b + (msg != "" ? ", " + msg : ""));
@@ -256,6 +268,20 @@ void assert_matrix_nearly_eq(mat4 &in m, mat4 &in m2, const string &in msg = "")
     assert_nearly_eq(m.ty, m2.ty, 1e-5, "ty" + msg);
     assert_nearly_eq(m.tz, m2.tz, 1e-5, "tz" + msg);
     assert_nearly_eq(m.tw, m2.tw, 1e-5, "tw" + msg);
+}
+
+
+string[] whitespaceCache;
+string getWhitespace(int n) {
+    if (whitespaceCache.Length < n) {
+        whitespaceCache.Resize(n);
+        for (int i = 0; i < n+2; i++) {
+            if (whitespaceCache[i].Length != i) {
+                whitespaceCache[i] = whitespaceCache[i - 1] + " ";
+            }
+        }
+    }
+    return whitespaceCache[n];
 }
 
 

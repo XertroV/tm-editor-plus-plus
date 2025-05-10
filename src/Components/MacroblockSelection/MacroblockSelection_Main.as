@@ -1,6 +1,7 @@
 class MacroblockSelectionTab : Tab {
     MacroblockSelectionTab(TabGroup@ parent) {
-        super(parent, "[DEV] Current MB" + NewIndicator, Icons::FolderOpenO + Icons::Cubes);
+        super(parent, "[DEV] Current MB", Icons::FolderOpenO + Icons::Cubes);
+        ShowNewIndicator = true;
         canPopOut = false;
         // todo: macroblock favs
         SetupFav(InvObjectType::Macroblock);
@@ -75,7 +76,7 @@ class MacroblockSelectionTab : Tab {
 
         // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         // auto pmt = editor.PluginMapType;
-        if (selectedMacroBlockInfo is null)
+        if (selectedMacroBlockInfo is null || selectedMacroBlockInfo.AsMacroBlockInfo() is null)
             return;
 
         UI::SameLine();

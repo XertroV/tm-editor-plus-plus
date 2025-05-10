@@ -1,6 +1,7 @@
 class LaunchedCPsTab : Tab {
     LaunchedCPsTab(TabGroup@ p) {
-        super(p, "Launched CPs" + NewIndicator, Icons::ClockO + Icons::Car);
+        super(p, "Launched CPs", Icons::ClockO + Icons::Car);
+        ShowNewIndicator = true;
     }
 
     void DrawInner() override {
