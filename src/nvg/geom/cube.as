@@ -51,7 +51,7 @@ const vec3[] faceMidpoints = {
     vec3(0, 0.5, 0.5)
 };
 
-void drawCubeFace(const mat4 &in m, uint faceIx, const vec4 &in strokeCol = cWhite) {
+void drawCubeFace(const mat4 &in m, uint faceIx, const vec4 &in strokeCol = cWhite, bool shadeFace = false) {
     vec3 p0 = (m * cubeVertices[cubeFaces[faceIx][0]]).xyz;
     auto rot = mat4::Translate((m * vec3()).xyz * -1.) * m;
     auto camPos = Camera::GetCurrentPosition();
@@ -67,7 +67,7 @@ void drawCubeFace(const mat4 &in m, uint faceIx, const vec4 &in strokeCol = cWhi
     nvg::StrokeColor(facingCam ? strokeCol : cBlack25);
     // if (facingCam) nvg::FillColor(Math::Lerp(cLimeGreen50, cSkyBlue50, camDot * .5 + .5) * vec4(1, 1, 1, .44));
     // else
-    nvg::FillColor(vec4(0));
+    nvg::FillColor(cBlack50);
     // trace("camDot: " + camDot);
     nvgMoveToWorldPos(p0);
     for (uint i = 1; i < 4; i++) {
@@ -75,8 +75,9 @@ void drawCubeFace(const mat4 &in m, uint faceIx, const vec4 &in strokeCol = cWhi
         nvgLineToWorldPos(p);
     }
     nvgLineToWorldPos(p0);
-    // if (facingCam)
-    // nvg::Fill();
+    if (shadeFace) {
+        nvg::Fill();
+    }
     nvg::Stroke();
     nvg::ClosePath();
 
@@ -101,7 +102,7 @@ enum DrawFaces {
 uint[]@ getCubeFaceBackToFront(const mat4 &in m, DrawFaces drawFaces = DrawFaces::All) {
     uint[] faceOrder = {0, 1, 2, 3, 4, 5};
     vec3 camPos = Camera::GetCurrentPosition();
-    vec3 dirToCam = (camPos - (m * vec3(.5)).xyz).Normalized();
+    // vec3 dirToCam = (camPos - (m * vec3(.5)).xyz).Normalized();
     auto rot = mat4::Translate((m * vec3()).xyz * -1.) * m;
 
     float[] faceDists = {
@@ -149,11 +150,11 @@ vec3 getFaceMidpoint(uint faceIx) {
     return sum / 4.;
 }
 
-void nvgDrawRect3d(const mat4 &in m, vec3 size, const vec4 &in col = cWhite, DrawFaces drawFaces = DrawFaces::All) {
+void nvgDrawRect3d(const mat4 &in m, vec3 size, const vec4 &in col = cWhite, DrawFaces drawFaces = DrawFaces::All, bool shadeFrontFace = false) {
     mat4 smat = m * mat4::Scale(size);
     auto faceOrder = getCubeFaceBackToFront(smat, drawFaces);
     for (uint i = 0; i < faceOrder.Length; i++) {
-        drawCubeFace(smat, faceOrder[i], col);
+        drawCubeFace(smat, faceOrder[i], col, shadeFrontFace && faceOrder[i] == 1);
     }
 }
 void nvgDrawRect3d(vec3 pos, vec3 size, const vec4 &in col = cWhite, DrawFaces drawFaces = DrawFaces::All) {

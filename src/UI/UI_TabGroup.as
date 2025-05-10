@@ -30,6 +30,11 @@ class TabGroup : HasGroupMeta {
         @meta = TabGroupMeta(this);
     }
 
+    string RootTabGroupID() {
+        if (Parent is null) return tabGroupId;
+        return Parent.RootTabGroupID();
+    }
+
     string mainWindowTitle;
 
     string MainWindowTitle() {
@@ -51,11 +56,12 @@ class TabGroup : HasGroupMeta {
         return false;
     }
 
-    void SetChildSelected(Tab@ child) {
+    void SetChildSelected(Tab@ child, bool propagate = true) {
         if (child is null) return;
         auto ix = tabs.FindByRef(child);
         if (ix >= 0) selectedTabIx = ix;
         else warn("Could not find child: " + child.fullName);
+        if (propagate && Parent !is null) Parent.SetSelectedTab();
     }
 
     // To be called based on which children are drawn as tabs
@@ -188,18 +194,18 @@ class TabGroup : HasGroupMeta {
         if (isFocused) {
             auto pos = UI::GetWindowPos();
             auto size = UI::GetWindowSize();
-            nvgCircleScreenPos(pos);
-            nvgCircleScreenPos(pos + size);
-            nvgCircleScreenPos(pos + size * vec2(0, 1));
-            nvgCircleScreenPos(pos + size * vec2(1, 0));
-            size = size * g_scaleInv;
-            nvgCircleScreenPos(pos + size);
-            nvgCircleScreenPos(pos + size * vec2(0, 1));
-            nvgCircleScreenPos(pos + size * vec2(1, 0));
-            size = size * g_scale * g_scale;
-            nvgCircleScreenPos(pos + size);
-            nvgCircleScreenPos(pos + size * vec2(0, 1));
-            nvgCircleScreenPos(pos + size * vec2(1, 0));
+            // nvgCircleScreenPos(pos);
+            // nvgCircleScreenPos(pos + size);
+            // nvgCircleScreenPos(pos + size * vec2(0, 1));
+            // nvgCircleScreenPos(pos + size * vec2(1, 0));
+            // size = size * g_scaleInv;
+            // nvgCircleScreenPos(pos + size);
+            // nvgCircleScreenPos(pos + size * vec2(0, 1));
+            // nvgCircleScreenPos(pos + size * vec2(1, 0));
+            // size = size * g_scale * g_scale;
+            // nvgCircleScreenPos(pos + size);
+            // nvgCircleScreenPos(pos + size * vec2(0, 1));
+            // nvgCircleScreenPos(pos + size * vec2(1, 0));
             bool isWithin = MathX::Within(UI::GetMousePos(), vec4(pos, size));
             if (isWithin) {
                 backClicked = UI::IsMouseClicked(MOUSE_BUTTON_BACK);
@@ -215,12 +221,10 @@ class TabGroup : HasGroupMeta {
     }
 
     void OnNavigationBack() {
-        // TabState::NavHistory(this, -1);
-        _Log::Warn_NID("TabGroup", "Navigation back");
+        TabState::NavHistory(-1, this);
     }
     void OnNavigationForward() {
-        // TabState::NavHistory(this, 1);
-        _Log::Warn_NID("TabGroup", "Navigation forward");
+        TabState::NavHistory(1, this);
     }
 
     // draw show/hide toggle for tab in context menu

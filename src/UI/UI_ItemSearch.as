@@ -186,7 +186,9 @@ class ItemSearcher {
     // return true to keep going; false to break/return
     bool CheckPause(uint _myNonce) {
         if (Time::Now - lastSearchPause > 15) {
+            OnProcessPaused();
             yield();
+            AfterProcessPaused();
             lastSearchPause = Time::Now;
         }
         if (searchNonce != _myNonce) return false;

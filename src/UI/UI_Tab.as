@@ -89,11 +89,30 @@ class Tab : HasTabMeta {
         Parent.SetChildSelected(this);
     }
 
+    void SetSelectedTab_Debounce() {
+        isSelectedInGroup = true;
+        _ShouldSelectNext = true;
+        if (Parent !is null) {
+            Parent.SetChildSelected(this, false);
+            if (Parent.Parent !is null)
+                Parent.Parent.SetSelectedTab_Debounce();
+        }
+        _Log::Trace("Tab::"+fullName, "SetSelectedTab_Debounce => " + isSelectedInGroup);
+        startnew(CoroutineFunc(OnStaleMeta));
+    }
+
     void SetSelectedInGroup(bool value) {
         if (isSelectedInGroup == value) return;
         isSelectedInGroup = value;
         startnew(CoroutineFunc(OnStaleMeta));
         _Log::Debug("Tab::"+fullName, "SetSelectedInGroup => " + value);
+        if (value) {
+            TabState::GetNavHistoryStack(RootTabGroupID()).Push(this);
+        }
+    }
+
+    string RootTabGroupID() {
+        return Parent.RootTabGroupID();
     }
 
     void OnStaleMeta() {

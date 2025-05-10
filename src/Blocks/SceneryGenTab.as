@@ -4,9 +4,13 @@ uint nbToPlaceRandomly = 10;
 
 uint S_SleepMsBetweenRandPlace = 500;
 
+[Setting hidden]
+bool S_Clips_ExpandedMatch = false;
+
 class SceneryGenTab : Tab {
     SceneryGenTab(TabGroup@ parent) {
-        super(parent, "Scenery Gen" + NewIndicator, Icons::Tree + Icons::Magic);
+        super(parent, "Scenery Gen", Icons::Tree + Icons::Magic);
+        ShowNewIndicator = true;
     }
 
     void DrawInner() override {
@@ -15,11 +19,13 @@ class SceneryGenTab : Tab {
         if (blockInv.IngestionDone) {
             UI::Text("Block inventory loaded.");
             UI::Text("Duration ms: " + blockInv.ingestionDuration);
-            UI::Text("SymIdsToClips: " + blockInv.SymIdsToClips.Count().ToString());
+            // UI::Text("SymIdsToClips: " + blockInv.SymIdsToClips.Count().ToString());
+            // UI::Text("SymGroupIdsToClips: " + blockInv.SymGroupIdsToClips.Count().ToString());
+            UI::Text("ClipIdsToClips: " + blockInv.ClipIdsToClips.Count().ToString());
             UI::Text("GroupIdsToClips: " + blockInv.GroupIdsToClips.Count().ToString());
-            UI::Text("SymGroupIdsToClips: " + blockInv.SymGroupIdsToClips.Count().ToString());
             nbToPlaceRandomly = UI::SliderInt("Blocks to place", nbToPlaceRandomly, 1, 100);
             S_SleepMsBetweenRandPlace = UI::SliderInt("Sleep (ms) between blocks", S_SleepMsBetweenRandPlace, 1, 2000);
+            S_Clips_ExpandedMatch = UI::Checkbox("Expanded Match", S_Clips_ExpandedMatch);
             if (UI::Button("Start new (" + nbToPlaceRandomly + ")")) {
                 startnew(CoroutineFunc(this.PlaceRandomBlocks));
             }
@@ -30,20 +36,39 @@ class SceneryGenTab : Tab {
             if (UI::Button("Continue for " + nbToPlaceRandomly + " blocks")) {
                 startnew(CoroutineFunc(this.PlaceNextRandomBlocksContinue));
             }
-            INCLUDE_CG1 = UI::Checkbox("Include CG1", INCLUDE_CG1);
-            INCLUDE_CG2 = UI::Checkbox("Include CG2", INCLUDE_CG2);
-            INCLUDE_SCG1 = UI::Checkbox("Include SCG1", INCLUDE_SCG1);
-            INCLUDE_SCG2 = UI::Checkbox("Include SCG2", INCLUDE_SCG2);
-            INCLUDE_SCID = UI::Checkbox("Include SCID", INCLUDE_SCID);
-            INCLUDE_ID = UI::Checkbox("Include ID", INCLUDE_ID);
-            PLACE_IN_GHOST_MODE = UI::Checkbox("Place in Ghost Mode", PLACE_IN_GHOST_MODE);
 
-            DrawPlaceBlockDebug(blockInv);
+            UI::Separator();
+            if (UI::Button("Reset Voxels")) {
+                WFC::mapVoxels.Reset();
+            }
+            WFC::mapVoxels.DrawDebug = UI::Checkbox("Draw Debug", WFC::mapVoxels.DrawDebug);
+            if (WFC::mapVoxels.DrawDebug) WFC::mapVoxels.RenderDebug();
+
+            if (UI::Button("Dump Clip Info")) {
+                WFC::blockInv.DumpClipInfo(IO::FromStorageFolder("SceneryGen_ClipInfo.txt"));
+            }
+            UI::SeparatorText("Clip Filter");
+            WFC::clipFilter.DrawAsSettings();
+            UI::SeparatorText("");
+
+            DrawNvgDebug();
+
+            // INCLUDE_CG1 = UI::Checkbox("Include CG1", INCLUDE_CG1);
+            // INCLUDE_CG2 = UI::Checkbox("Include CG2", INCLUDE_CG2);
+            // INCLUDE_SCG1 = UI::Checkbox("Include SCG1", INCLUDE_SCG1);
+            // INCLUDE_SCG2 = UI::Checkbox("Include SCG2", INCLUDE_SCG2);
+            // INCLUDE_SCID = UI::Checkbox("Include SCID", INCLUDE_SCID);
+            // INCLUDE_ID = UI::Checkbox("Include ID", INCLUDE_ID);
+            // PLACE_IN_GHOST_MODE = UI::Checkbox("Place in Ghost Mode", PLACE_IN_GHOST_MODE);
+
+            // DrawPlaceBlockDebug(blockInv);
         } else {
             UI::Text("Block inventory not loaded.");
         }
 
         DrawBlockInv(blockInv);
+
+        DrawPlaceLog();
     }
 
     WFC_BlockInfo@ testBlock;
@@ -53,7 +78,7 @@ class SceneryGenTab : Tab {
     WFC_BlockInfo@ blockInfoToPlace;
     int m_dir = 0;
     void DrawPlaceBlockDebug(BlockInventory@ blockInv) {
-        DrawNvgDebug();
+
         if (testBlock is null) @testBlock = blockInv.FindBlockByName("OpenTechHillsShortCurve1Out");
         if (testBlock is null) return;
 
@@ -166,6 +191,9 @@ class SceneryGenTab : Tab {
     };
 
     void DrawNvgDebug() {
+        if (_placeFailure_draw) {
+            nvgDrawBlockBox(Editor::GetBlockMatrix(_placeFailure_drawCoord, int(_placeFailure_drawDir), _placeFailure_drawSize), CoordDistToPos(_placeFailure_drawSize), _placeFailure_drawColor, DrawFaces::All, true);
+        }
         if (_drawCoord) {
             nvgDrawBlockBox(_drawClipMat, _drawClipSize, cWhite, DrawFaces::All, true);
         }
@@ -251,6 +279,7 @@ class SceneryGenTab : Tab {
             _nbToPlace--;
         }
         print("Placed " + nbToPlace + " blocks");
+        _placeFailure_draw = false;
         // WFC_BlockInfo@ startBlock;
         // int3 startingCoord;
         // CGameEditorPluginMap::ECardinalDirections randDir;
@@ -291,6 +320,12 @@ class SceneryGenTab : Tab {
         // }
     }
 
+    bool _placeFailure_draw = false;
+    ClipFace _placeFailure_drawDir = ClipFace::North;
+    int3 _placeFailure_drawCoord = int3(0, 0, 0);
+    int3 _placeFailure_drawSize = int3(0, 0, 0);
+    vec4 _placeFailure_drawColor = cRed;
+
     PlacedBlock@ lastPlacedRandBlock = null;
     uint placeFailures = 0;
 
@@ -299,58 +334,89 @@ class SceneryGenTab : Tab {
         bool noClips = clipSource is null;
         auto pmt = editor.PluginMapType;
         WFC_BlockInfo@ startBlock = null;
-        int3 startingCoord = int3(0, 0, 0);
-        CGameEditorPluginMap::ECardinalDirections randDir;
+        int3 blockCoord = int3(0, 0, 0);
+        CGameEditorPluginMap::ECardinalDirections blockDir;
         bool placed = false;
-        uint loopCount = 0, loopLimit = 50;
+        uint loopCount = 0, loopLimit = 100;
         _Log::Warn("Placing block...");
 
         while (!placed && loopCount < loopLimit) {
             loopCount++;
             if (noClips) {
-                if (startFromCursor) {
-                    @startBlock = blockInv.GetCursorBlock();
-                } else {
-                    @startBlock = blockInv.GetRandomBlock(2);
-                }
-                startingCoord = GetRandomCoord(int3(0, 12, 0), mapSize);
+                @startBlock = null;
+                if (startFromCursor) @startBlock = blockInv.GetCursorBlock();
+                if (startBlock is null) @startBlock = blockInv.GetRandomBlock(2);
+                blockCoord = GetRandomCoord(int3(6, 18, 6), mapSize - 6);
                 // randDir = GetRandomDirection();
-                randDir = GetRandomDirection();
+                blockDir = GetRandomDirection();
             } else {
-                @startBlock = blockInv.GetRandomAdjoiningBlock(1, clipSource, startingCoord, randDir);
+                @startBlock = blockInv.GetRandomAdjoiningBlock(2, clipSource, blockCoord, blockDir, S_Clips_ExpandedMatch);
                 if (startBlock is null) {
                     _Log::Warn("No adjoining block found");
                     noClips = loopCount > loopLimit - 5;
                     continue;
                 }
             }
+
+            if (!MathX::Within(blockCoord, int3(0, 10, 0), mapSize - 1)) {
+                _Log::Warn("Coord out of bounds: " + blockCoord.ToString());
+                noClips = loopCount > loopLimit - 5;
+                placeFailures++;
+                continue;
+            }
+            _placeFailure_draw = true;
+            _placeFailure_drawColor = cGreen;
+            _placeFailure_drawSize = startBlock.Size;
+            _placeFailure_drawCoord = blockCoord;
+            _placeFailure_drawDir = ClipFace(blockDir);
+            if (!WFC::mapVoxels.CanPlaceBlock(startBlock, blockCoord, CardinalDir(blockDir))) {
+                _Log::Warn("MapVoxels: Cannot place block: " + startBlock.nameId.GetName());
+                noClips = loopCount > loopLimit - 5;
+                placeFailures++;
+                _placeFailure_drawColor = cRed;
+                yield();
+                continue;
+            }
+            // _placeFailure_drawSize = int3(0);
+            // _placeFailure_drawCoord = int3(0);
+            // _placeFailure_drawDir = ClipFace(blockDir);
+
             _Log::Trace("Rand Block: " + startBlock.nameId.GetName());
-            _Log::Trace("Rand Coord: " + startingCoord.ToString());
-            _Log::Trace("Random Direction: " + tostring(randDir));
+            _Log::Trace("Rand Coord: " + blockCoord.ToString());
+            _Log::Trace("Random Direction: " + tostring(blockDir));
             // canPlace = pmt.CanPlaceBlock_NoDestruction(startBlock.BlockInfo, startingCoord, randDir, false, startBlock.VarIx);
             if (PLACE_IN_GHOST_MODE) {
-                placed = pmt.PlaceGhostBlock(startBlock.BlockInfo, startingCoord, randDir);
+                placed = pmt.PlaceGhostBlock(startBlock.BlockInfo, blockCoord, blockDir);
             } else {
-                placed = pmt.PlaceBlock(startBlock.BlockInfo, startingCoord, randDir);
+                placed = pmt.PlaceBlock(startBlock.BlockInfo, blockCoord, blockDir);
             }
             if (!placed) {
                 placeFailures++;
                 _Log::Trace("Failed to place block; consecutive failures: " + placeFailures);
             } else {
                 placeFailures = 0;
+                WFC::mapVoxels.RegisterBlock(startBlock, blockCoord, CardinalDir(blockDir));
+                _LogPlaced();
+                break;
             }
         }
         _Log::Trace("Placed block:");
         _Log::Trace("Block: " + startBlock.nameId.GetName());
-        _Log::Trace("Coord: " + startingCoord.ToString());
-        _Log::Trace("Direction: " + tostring(randDir));
+        _Log::Trace("Coord: " + blockCoord.ToString());
+        _Log::Trace("Direction: " + tostring(blockDir));
         _Log::Trace("Loop Count: " + loopCount);
         auto cs = Editor::GetCurrentCamState(editor);
-        Editor::SetCamAnimationGoTo(cs.withPos(CoordToPos(startingCoord) + HALF_COORD));
-        auto @pb = PlacedBlock(startBlock, startingCoord, CardinalDir(randDir));
+        Editor::SetCamAnimationGoTo(cs.withPos(CoordToPos(blockCoord) + HALF_COORD));
+        auto @pb = PlacedBlock(startBlock, blockCoord, CardinalDir(blockDir));
         _Log::Trace("PlacedBlock: " + pb.ToString());
         pmt.AutoSave();
         return pb;
+    }
+
+    PlaceLog@[] PlaceLogs;
+
+    void _LogPlaced() {
+        PlaceLogs.InsertLast(PlaceLog());
     }
 
 
@@ -379,6 +445,29 @@ class SceneryGenTab : Tab {
         UI::Text("nameId: " + blockInfo.nameId.GetName());
         UI::Text("clips.Length: " + blockInfo.clips.Length);
     }
+
+    void DrawPlaceLog() {
+        UI::SeparatorText("Place Log");
+        if (UI::Button("Clear to len=10") && PlaceLogs.Length > 10) {
+            PlaceLogs.RemoveRange(0, PlaceLogs.Length - 10);
+        }
+        if (UI::BeginChild("PlaceLog", vec2())) {
+            for (int i = 0; i < PlaceLogs.Length; i++) {
+                UI::PushID(tostring(i));
+                PlaceLogs[i].DrawLogLine();
+                UI::PopID();
+            }
+            // UI::ListClipper clip(PlaceLogs.Length);
+            // while (clip.Step()) {
+            //     for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
+            //         UI::PushID(tostring(i));
+            //         PlaceLogs[i].DrawLogLine();
+            //         UI::PopID();
+            //     }
+            // }
+        }
+        UI::EndChild();
+    }
 }
 
 int3 GetRandomCoord(int3 min, int3 max) {
@@ -394,4 +483,86 @@ int3 GetBlockCoordMaskForDir(CardinalDir dir) {
     //     case CardinalDir::South: return int3(1, -1, 0);
     // }
     return int3(1, 1, 1);
+}
+
+vec4 MwIdToColor(uint idValue) {
+    if (idValue == 0) return cWhite;
+    uint val = simpleRng.SeedAnd(idValue).NextUInt();
+    auto r = float(val & 0xFF) / 255.0;
+    auto g = float((val >> 8) & 0xFF) / 255.0;
+    auto b = float((val >> 16) & 0xFF) / 255.0;
+    // auto a = float((val >> 24) & 0xFF) / 255.0;
+    return vec4(r, g, b, 1);
+}
+
+void Text_MwIdColored(uint idValue) {
+    UI::PushStyleColor(UI::Col::Text, MwIdToColor(idValue));
+    UI::Text(Text::Format("%08x", idValue));
+    if (UI::IsItemHovered()) UI::SetTooltip(MwIdValueToStr(idValue));
+    UI::PopStyleColor();
+}
+
+
+class PlaceLog {
+    PlacedBlock@ sourceBlock;
+    WFC_ClipInfo@ sourceClip;
+    WFC_ClipInfo@ nextClip;
+    WFC_BlockInfo@ nextBlock;
+    int3 nextCoord;
+    int3 nextOffset;
+    ClipFace nextCoordDir;
+    ClipFace nextBlockDir;
+
+    PlaceLog() {
+        auto inv = WFC::blockInv;
+        @sourceBlock = inv.dbg_ClipSource;
+        @sourceClip = inv.dbg_BaseClip;
+        @nextClip = inv.dbg_ClipToPlace;
+        @nextBlock = inv.dbg_BlockInfo;
+        nextCoord = inv.dbg_NextClipCoord;
+        nextOffset = inv.dbg_NextClipOffset;
+        nextCoordDir = ClipFace(inv.dbg_Dir1_AtCoordConnecting);
+        nextBlockDir = ClipFace(inv.dbg_Dir2_BlockDir);
+    }
+
+    void DrawLogLine() {
+        // if (sourceBlock is null) {
+        //     UI::Text("\\$i\\$999-- No source block --");
+        //     return;
+        // }
+        // UI::Text("From: " + .GetName()
+        //     + " @ " + sourceBlock.Coord.ToString()
+        //     + " (" + tostring(sourceBlock.Dir) + ")");
+        // if (sourceClip is null) return;
+
+        auto srcBlockV = sourceBlock is null ? -1 : sourceBlock.BlockInfo.nameId.Value;
+        auto srcClipV = sourceClip is null ? -1 : sourceClip.cId.Value;
+        auto nextBlockV = nextBlock is null ? -1 : nextBlock.nameId.Value;
+        auto nextClipV = nextClip is null ? -1 : nextClip.cId.Value;
+
+
+        Text_MwIdColored(srcBlockV);
+        UI::SameLine();
+        TextSameLine(".");
+        Text_MwIdColored(srcClipV);
+        UI::SameLine();
+        TextSameLine(" --> ");
+        Text_MwIdColored(nextBlockV);
+        UI::SameLine();
+        TextSameLine(".");
+        Text_MwIdColored(nextClipV);
+
+
+        // UI::Text("\t\tFClip: " +
+        //     + " @ +" + RotateOffset(sourceClip.buiOffset, sourceBlock.Dir, sourceBlock.BlockInfo.Size).ToString()
+        //     + " (" + tostring(RotateDir(CardinalDir(nextCoordDir), 2)) + ")");
+        // if (nextClip is null) return;
+        // UI::Text("\t\tTClip: " + nextClip.cId.GetName()
+        //     + " @ " + nextCoord.ToString() + " +" + nextOffset.ToString()
+        //     + " (" + tostring(nextCoordDir) + ")");
+        // if (nextBlock is null) return;
+        // UI::Text("\t\tTBlock: " + nextBlock.nameId.GetName()
+        //     + " @ " + nextCoord.ToString()
+        //     + " (" + tostring(nextBlockDir) + ")");
+    }
 }

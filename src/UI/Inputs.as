@@ -142,6 +142,10 @@ namespace UX {
         return ret;
     }
 
+    int3 InputInt3(const string &in label, int3 val, float width = -1.0) {
+        return Nat3ToInt3(InputNat3(label, Int3ToNat3(val), width));
+    }
+
     nat2 InputNat2(const string &in label, nat2 val) {
         UI::SetNextItemWidth(100.);
         auto newX = UI::InputText("##" + label + "n2x", tostring(val.x));
@@ -192,4 +196,39 @@ namespace UX {
         Dev::SetOffset(nod, offset, val2);
         return val2 != val;
     }
+}
+
+
+
+int Tribox(const string &in label, int val) {
+    UI::PushID(label);
+    bool isAny = val < 0;
+    bool isFalse = val == 0;
+    bool isTrue = val == 1;
+    auto isp = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
+    if (TriboxBtn(Icons::Asterisk, isAny, -1, val))
+        val = -1;
+    UI::SameLine();
+    UI::SetCursorPos(UI::GetCursorPos() - vec2(isp.x + 0.51, 0));
+    if (TriboxBtn(Icons::Times, isFalse, 0, val))
+        val = 0;
+    UI::SameLine();
+    UI::SetCursorPos(UI::GetCursorPos() - vec2(isp.x + 0.51, 0));
+    if (TriboxBtn(Icons::Check, isTrue, 1, val))
+        val = 1;
+    UI::SameLine();
+    UI::Text(label);
+    UI::PopID();
+    return val;
+}
+
+bool TriboxBtn(const string &in label, bool isDisabled, int forVal, int val) {
+    UI::BeginDisabled(isDisabled);
+    float h = 0.6;
+    if (forVal == val) {
+        h = forVal >= 0 ? forVal == 0 ? 0.1 : 0.3 : 0.56;
+    }
+    auto r = UI::ButtonColored(label, h);
+    UI::EndDisabled();
+    return r;
 }

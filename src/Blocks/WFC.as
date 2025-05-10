@@ -24,6 +24,7 @@ namespace WFC {
 
     BlockInventory@ blockInv;
     MapVoxels mapVoxels;
+    ClipFilter@ clipFilter = ClipFilter();
 
     void Preload() {
         GetBlockInventory();
@@ -187,10 +188,64 @@ class CoordState {
 // MARK: ClipFilter
 
 class ClipFilter {
-    uint[] bannedIds;
+    uint[] bannedBlockIds;
+    uint[] bannedClipIds;
     uint[] preferredIds;
+
+    // for ints: -1 = any, 0 = must be false, 1 = must be true
+    int IsAlwaysVisibleFreeClip = 0;
+    int Suffix_VFC = 0;
+    int cardinalOnly = 1;
+
+    // 0x3F = 63 = b111111
+    // 0x0F = 15 = b001111 - only NESW
+    uint allowedFaces = 0x0F;
+
+    int3 offset = int3(-1);
+
     ClipFilter() {}
 
+    bool IsFaceOk(ClipFace face) {
+        return (allowedFaces & (1 << int(face))) != 0;
+    }
+
+    void SetFaceOk(ClipFace face, bool ok) {
+        if (ok) allowedFaces |= 1 << int(face);
+        else allowedFaces &= ~(1 << int(face));
+    }
+
+    void SetAllowedFaces(ClipFace[] &in faces) {
+        allowedFaces = 0;
+        for (uint i = 0; i < faces.Length; i++) {
+            SetFaceOk(faces[i], true);
+        }
+    }
+
+    void SetDeniedFaces(ClipFace[] &in faces) {
+        allowedFaces = 0x3F;
+        for (uint i = 0; i < faces.Length; i++) {
+            SetFaceOk(faces[i], false);
+        }
+    }
+
+    void SetDefaults() {
+        // AddBanned("DecoCliff");
+    }
+
+    void DrawAsSettings() {
+        IsAlwaysVisibleFreeClip = Tribox("IsAlwaysVisibleFreeClip", IsAlwaysVisibleFreeClip);
+        Suffix_VFC = Tribox("ID Matches: ___VFC (Vert Front Clip)", Suffix_VFC);
+        cardinalOnly = Tribox("Cardinal Only", cardinalOnly);
+    }
+
+    bool IsClipOkay(WFC_ClipInfo@ clip) {
+        if (clip is null) return false;
+        if (!IsFaceOk(clip.clipFace)) return false;
+        if (IsAlwaysVisibleFreeClip >= 0 && IsAlwaysVisibleFreeClip != (clip.IsAlwaysVisibleFreeClip ? 1 : 0)) return false;
+        if (Suffix_VFC >= 0 && Suffix_VFC != (clip.cId.GetName().EndsWith("VFC") ? 1 : 0)) return false;
+        if (bannedClipIds.Length > 0 && bannedClipIds.Find(clip.cId.Value) != -1) return false;
+        return true;
+    }
 }
 
 // MARK: WFC_ClipInfo
@@ -202,6 +257,7 @@ class WFC_ClipInfo {
     ClipFace clipFace;
     int3 buiOffset;
     int distFromTop = 0;
+    uint flags = 0;
     WFC_ClipInfo@[]@ snappableClips;
 
     WFC_ClipInfo(CGameCtnBlockInfoClip@ bic, ClipFace clipFace, uint biIx, uint buiIx, uint clipIx, CGameCtnBlockUnitInfo@ bui, WFC_BlockInfo@ parent) {
@@ -218,10 +274,18 @@ class WFC_ClipInfo {
         this.buiIx = buiIx;
         this.clipIx = clipIx;
         this.clipFace = clipFace;
+        IsAlwaysVisibleFreeClip = bic.IsAlwaysVisibleFreeClip;
         if (!MathX::Nat3Eq(bui.Offset, bui.RelativeOffset)) {
             warn("BlockUnitInfo offset != relativeOffset: " + bui.Offset.ToString() + " != " + bui.RelativeOffset.ToString());
         }
     }
+
+    bool get_IsAlwaysVisibleFreeClip() { return flags & 0x1 != 0; }
+    void set_IsAlwaysVisibleFreeClip(bool value) {
+        if (value) flags |= 0x1;
+        else flags &= ~0x1;
+    }
+
 
     CardinalDir get_dirFromParent() {
         if (clipFace < ClipFace::North || clipFace > ClipFace::West) return CardinalDir::North;
@@ -468,9 +532,27 @@ class WFC_BlockInfo {
     // }
 
     WFC_ClipInfo@ GetRandomClip(bool cardinal) {
-        if (clips.Length == 0) return null;
-        uint ix = Math::Rand(0, cardinal ? nbCardinalClips + 1 : clips.Length);
-        return clips[ix];
+        auto okClips = GetClipsSatisfying(WFC::clipFilter);
+        if (okClips.Length == 0) return null;
+        auto ix = Math::Rand(0, okClips.Length);
+        return okClips[ix];
+        // if (clips.Length == 0) return null;
+        // uint ix = Math::Rand(0, cardinal ? nbCardinalClips : clips.Length);
+        // uint loopCount = 0;
+        // while (!WFC::clipFilter.IsClipOkay(clips[ix]) && ++loopCount < 100) {
+        //     ix = Math::Rand(0, cardinal ? nbCardinalClips : clips.Length);
+        // }
+        // return loopCount < 100 ? clips[ix] : null;
+    }
+
+    WFC_ClipInfo@[] GetClipsSatisfying(ClipFilter@ filter) {
+        WFC_ClipInfo@[] filteredClips = {};
+        for (uint i = 0; i < clips.Length; i++) {
+            if (filter.IsClipOkay(clips[i])) {
+                filteredClips.InsertLast(clips[i]);
+            }
+        }
+        return filteredClips;
     }
 
     WFC_ClipInfo@[] GetClipsByBlockUnitInfoIx(uint buiIx) {
@@ -482,7 +564,43 @@ class WFC_BlockInfo {
         }
         return clipsByBuiIx;
     }
+
+    void DumpToFile(ThinLazyFile& file) {
+        file.WriteLine("BlockInfo:" + BlockInfo.IdName);
+        file.WriteLine("Clips: " + Json::Write(GetClipsJsonCount()));
+    }
+
+    Json::Value GetClipsJsonCount() {
+        Json::Value j = Json::Object();
+        for (uint i = 0; i < clips.Length; i++) {
+            string k = clips[i].cId.GetName();
+            int prev = j.Get(k, int(0));
+            j[k] = prev + 1;
+        }
+        return j;
+    }
 }
+
+[Setting hidden]
+bool S_WFC_Blocks_ExcludeBigDecoCliff = true;
+[Setting hidden]
+bool S_WFC_Blocks_ExcludeDecoWall = true;
+[Setting hidden]
+bool S_WFC_Blocks_ExcludeWater = true;
+
+bool ShouldExcludeBlockFromIngestion(CGameCtnBlockInfo@ bi) {
+    if (S_WFC_Blocks_ExcludeBigDecoCliff && bi.IdName.StartsWith("DecoCliff")) {
+        return bi.IdName.StartsWith("DecoCliff10") || bi.IdName.StartsWith("DecoCliff8");
+    }
+    if (S_WFC_Blocks_ExcludeDecoWall && bi.IdName.StartsWith("DecoWall")) {
+        return true;
+    }
+    if (S_WFC_Blocks_ExcludeWater && bi.IdName.Contains("Water")) {
+        return true;
+    }
+    return false;
+}
+
 
 // MARK: BlockInventory
 
@@ -504,6 +622,7 @@ class BlockInventory {
     }
 
     protected void IngestBlockInfo(CGameCtnBlockInfo@ bi) {
+        if (ShouldExcludeBlockFromIngestion(bi)) return;
         // if (!filter.Matches(bi)) return;
         auto wfcBi = WFC_BlockInfo(bi, blockInfos.Length);
         if (!CheckPause()) return;
@@ -548,8 +667,9 @@ class BlockInventory {
     WFC_BlockInfo@ GetCursorBlock() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return null;
-        if (selectedBlockInfoAny is null) return null;
-        auto bi = selectedBlockInfoAny.AsBlockInfo();
+        CGameCtnBlockInfo@ bi;
+        if (selectedBlockInfoAny is null || (@bi = selectedBlockInfoAny.AsBlockInfo()) is null)
+            @bi = Editor::GetSelectedBlockInfo(editor);
         if (bi is null) return null;
         return FindBlockById(bi.Id);
     }
@@ -587,7 +707,7 @@ class BlockInventory {
         dbg_Dir2_BlockDir = -1;
 
 
-        WFC_ClipInfo@ placedClip = clipSource.GetRandomClip();
+        WFC_ClipInfo@ placedClip = clipSource.GetRandomClip(true);
         if (placedClip is null) return null;
         int3 c;
         // dir = ChooseCompatibleDirection(clip, clipSource);
@@ -599,7 +719,8 @@ class BlockInventory {
         while (clipToPlace is null || blockInfo is null || blockInfo.clips.Length < minClips) {
             loopCount++;
             if (loopCount > 20) break;
-            @placedClip = clipSource.GetRandomClip();
+            @placedClip = clipSource.GetRandomClip(true);
+            if (placedClip is null) continue;
             @dbg_BaseClip = placedClip;
             // @clipToPlace = GetRandomConnectingClipFromClip(placedClip);
             @clipToPlace = FindRandomSnappableClip(placedClip, expandedMatch);
@@ -787,9 +908,11 @@ class BlockInventory {
     string _dumpCIPath;
     IO::FileMode _dumpCIMode;
     void _DumpCI_MainCoro() {
+
         auto path = _dumpCIPath;
         auto mode = _dumpCIMode;
-        IO::File file(path, mode);
+        // IO::File file(path, mode);
+        ThinLazyFile@ file = ThinLazyFile(path, mode);
         _DumpCI_BlockIDs(file);
         _DumpCI_Blocks(file);
         yield();
@@ -799,7 +922,7 @@ class BlockInventory {
         OpenExplorerPath(Path::GetDirectoryName(path));
     }
 
-    void _DumpCI_BlockIDs(IO::File& file) {
+    void _DumpCI_BlockIDs(ThinLazyFile& file) {
         file.WriteLine("# [START:BlockIDs]");
         for (uint i = 0; i < blockInfos.Length; i++) {
             file.WriteLine(blockInfos[i].nameId.GetName());
@@ -809,7 +932,7 @@ class BlockInventory {
 
     }
 
-    void _DumpCI_Blocks(IO::File& file) {
+    void _DumpCI_Blocks(ThinLazyFile& file) {
         file.WriteLine("# [START:Blocks]");
         for (uint i = 0; i < blockInfos.Length; i++) {
             blockInfos[i].DumpToFile(file);
@@ -818,7 +941,7 @@ class BlockInventory {
         file.WriteLine("# [END:Blocks]");
     }
 
-    void _DumpCI_AllIDs(IO::File& file) {
+    void _DumpCI_AllIDs(ThinLazyFile& file) {
         file.WriteLine("# [START:IDs]");
         _DumpCI_IDs(file, ClipIdsToClips, "ClipIdsToClips");
         _DumpCI_IDs(file, GroupIdsToClips, "GroupIdsToClips");
@@ -828,12 +951,12 @@ class BlockInventory {
         file.WriteLine("# [END:IDs]");
     }
 
-    void _DumpCI_IDs(IO::File& file, IntLookup& lookup, const string &in name) {
+    void _DumpCI_IDs(ThinLazyFile& file, IntLookup& lookup, const string &in name) {
         file.WriteLine("## [START:IDs_" + name + "]");
         uint next = -1, count = 0;
         while (lookup.KeyIterGetNext(next, next)) {
             if (next == 0xFFFFFFFF) throw("Unexpected id = -1");
-            file.WriteLine(MwIdValueToStr(next));
+            file.WriteLine(MwIdValueToStr(next | 0x40000000));
             if (++count % 50 == 0 && !CheckPause()) return;
         }
         file.WriteLine("## [END:IDs_" + name + "]");
@@ -854,8 +977,8 @@ class PlacedBlock {
         this.Dir = direction;
     }
 
-    WFC_ClipInfo@ GetRandomClip() {
-        return BlockInfo.GetRandomClip(true);
+    WFC_ClipInfo@ GetRandomClip(bool cardinal = true) {
+        return BlockInfo.GetRandomClip(cardinal);
     }
 
     int3 CalcClipConnectingCoord(WFC_ClipInfo@ clip, CardinalDir &out dir) {
@@ -1098,14 +1221,102 @@ class IntLookup {
 
     // returns true while there are more keys to iterate
     bool KeyIterGetNext(uint &out nextKey, uint priorKey) {
-        // if the prior key was our key, then id == 0 or we're a shortcut node so we go to children.
-        if (priorKey == nodeKey) {
-            if (children.Length == 0) {
-                nextKey = 0xFFFFFFFF;
-                return false;
+        return KeyIterGetNext(nextKey, priorKey, priorKey);
+    }
+
+    // returns true while there are more keys to iterate
+    bool KeyIterGetNext(uint &out nextKey, uint priorKey, uint priorId) {
+        /* We want to get the key after priorKey.
+        - Is priorKey under this node? id == 0 -> next child
+        -                              id > 0 -> call appropriate child, then next if false
+        - Is priorKey the last key under this node? if yes: return false (handled by parent caller)
+        - priorId == -1 => the prior key is before this node. So we get the first entry in our node that we can.
+        - priorId other than -1 => prior key is in this node.
+        -   - if 0 => return first child.
+        -   - if nonzero, call corresponding child.
+        -     - if true, return.
+        -     - if false, call next or return false.
+        */
+
+        // if we have no values nor children, we can't iterate from here.
+        bool hasKids = children.Length > 0;
+        bool hasValues = values.Length > 0;
+        if (!hasValues and !hasKids) {
+            nextKey = -1;
+            return false;
+        }
+        // check for if prior was before this node.
+        if (priorId == -1) {
+            // if something lives here
+            if (nodeId != -1) {
+                nextKey = nodeKey;
+                return true;
+            }
+            return hasKids && _KeyIterGetNext_FromFirstChild(nextKey, priorKey);
+        }
+
+        // was prior this node?
+        if (nodeId == priorId) {
+            return hasKids && _KeyIterGetNext_FromFirstChild(nextKey, priorKey);
+        }
+
+        // otherwise, it's in a child.
+        if (!hasKids) {
+            nextKey = -1;
+            return false;
+        }
+        auto childIx = priorId % INT_LOOKUP_CHILDREN;
+        return _KeyIterGetNext_FromFirstChild(nextKey, priorId, childIx, priorId >> INT_LOOKUP_CHILDREN_SHL);
+
+    }
+
+    // assumes children exist
+    bool _KeyIterGetNext_FromFirstChild(uint&out nextKey, uint priorKey, uint startIx = 0, uint priorId = -1) {
+        for (uint i = startIx; i < INT_LOOKUP_CHILDREN; i++) {
+            if (children[i] !is null) {
+                // did we find nextKey?
+                bool ret = children[i].KeyIterGetNext(nextKey, priorKey, priorId);
+                if (ret) { return ret; }
+                // otherwise continue
+                // reset priorId: if we are given a startIx and a priorId, we can only use that for the first child we check (since that's where the id leads).
+                priorId = -1;
             }
         }
+        nextKey = -1;
+        return false;
     }
+
+    // bool KIGN_Notes() {
+    //     // if the prior key was -1, then we're at the start of iter and we need to get the first key.
+    //     if (priorKey == 0xFFFFFFFF) {
+    //         // this node is always before children
+    //         if (nodeKey != 0xFFFFFFFF) {
+    //             nextKey = nodeKey;
+    //             return true;
+    //         }
+    //         if (children.Length > 0) {
+    //             for (uint i = 0; i < INT_LOOKUP_CHILDREN; i++) {
+    //                 if (children[i] is null) continue;
+    //                 return children[i].KeyIterGetNext(nextKey, nodeId);
+    //             }
+    //         }
+    //         nextKey = 0xFFFFFFFF;
+    //         return false;
+    //     }
+
+    //     // if the prior key was our key, then id == 0 or we're a shortcut node so we go to children.
+    //     if (priorKey == nodeKey) {
+    //         if (children.Length > 0) {
+    //             for (uint i = 0; i < INT_LOOKUP_CHILDREN; i++) {
+    //                 if (children[i] is null) continue;
+    //                 return children[i].KeyIterGetNext(nextKey, nodeId);
+    //             }
+    //         }
+    //         nextKey = 0xFFFFFFFF;
+    //         return false;
+
+    //     }
+    // }
 }
 
 

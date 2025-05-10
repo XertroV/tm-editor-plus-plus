@@ -125,8 +125,8 @@ void nvgDrawCoordHelpers(mat4 &in m, float size = 10.) {
     nvgDrawCoordHelpers(pos, left, up, dir);
 }
 
-void nvgDrawBlockBox(const mat4 &in m, const vec3 &in size, const vec4 &in strokeCol = cWhite, DrawFaces drawFaces = DrawFaces::All) {
-    nvgDrawRect3d(m, size, strokeCol, drawFaces);
+void nvgDrawBlockBox(const mat4 &in m, const vec3 &in size, const vec4 &in strokeCol = cWhite, DrawFaces drawFaces = DrawFaces::All, bool shadeFrontFace = false) {
+    nvgDrawRect3d(m, size, strokeCol, drawFaces, shadeFrontFace);
 }
 
 vec3[] lastFacePoints;
