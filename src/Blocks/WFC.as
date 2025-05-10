@@ -7,20 +7,34 @@ bool INCLUDE_SCG2 = false;
 bool INCLUDE_SCID = true;
 bool INCLUDE_ID = false;
 
+SimpleRNG simpleRng;
+
 namespace WFC {
     /*
         Each coord has a number of possible states.
 
         Each block has a BlockUnitInfo around it when it can be connected to other blocks.
         Below is (always?) pillars.
-
     */
 
+    void RegisterCallbacks() {
+        RegisterOnEditorLoadCallback(OnEditorLoad, "WFC::MapVoxels");
+        RegisterOnEditorUnloadCallback(OnEditorUnload, "WFC::MapVoxels");
+    }
+
     BlockInventory@ blockInv;
-    MapVoxels@ mapVoxels;
+    MapVoxels mapVoxels;
 
     void Preload() {
         GetBlockInventory();
+    }
+
+    void OnEditorLoad() {
+        mapVoxels.InitializeForMapSize(GetApp().RootMap.Size);
+    }
+
+    void OnEditorUnload() {
+        mapVoxels.Reset();
     }
 
     BlockInventory@ GetBlockInventory() {
@@ -39,8 +53,114 @@ class BlockFilter {
 // MARK: MapVoxels
 
 class MapVoxels {
+    int3 mapSize;
     CoordState[][] states;
+    bool DrawDebug = false;
 
+    void Reset() {
+        states.RemoveRange(0, states.Length);
+    }
+
+    void InitializeForMapSize(nat3 &in size) {
+        Reset();
+        mapSize = Nat3ToInt3(size);
+        states.Resize(size.x * size.z);
+    }
+
+    int GetXZIx(int3 &in coord) {
+        return coord.x * mapSize.z + coord.z;
+    }
+
+    int3 IxToXZ(int ix) {
+        return int3(ix / mapSize.z, 0, ix % mapSize.z);
+    }
+
+    bool IsCoordOccupied(const int3 &in coord) {
+        if (coord.x < 0 || coord.y < 0 || coord.z < 0) return true;
+        if (coord.x >= mapSize.x || coord.y >= mapSize.y || coord.z >= mapSize.z) return true;
+        auto column = states[GetXZIx(coord)];
+        if (column.Length <= coord.y) return false;
+        return column[coord.y].IsOccupied;
+    }
+
+    bool CanPlaceBlock(WFC_BlockInfo@ blockInfo, int3 coord, CardinalDir dir) {
+        // check if the block can be placed at the given coord
+        // todo elsewhere: check if the block is compatible with the existing blocks
+        // todo elsewhere: check if the block is compatible with the existing constraints
+        auto bi = blockInfo.refBlockInfoVariant.AsBlockInfoVariant();
+        auto nbBUIs = bi.BlockUnitInfos.Length;
+        for (uint i = 0; i < nbBUIs; i++) {
+            auto bui = bi.BlockUnitInfos[i];
+            auto newOffset = RotateOffset(Nat3ToInt3(bui.Offset), dir, blockInfo.Size);
+            if (IsCoordOccupied(coord + newOffset)) return false;
+        }
+        return true;
+    }
+
+    bool RegisterBlock(WFC_BlockInfo& blockInfo, int3 coord, CardinalDir dir) {
+        // register the block at the given coord
+        auto bi = blockInfo.refBlockInfoVariant.AsBlockInfoVariant();
+        auto nbBUIs = bi.BlockUnitInfos.Length;
+        auto size = blockInfo.Size;
+        // holds count and minimum y offset
+        int2[] xzCount = array<int2>(size.x * size.z, int2(0, 0xffff));
+        for (uint i = 0; i < nbBUIs; i++) {
+            auto o = bi.BlockUnitInfos[i].Offset;
+            auto ix = size.z * o.x + o.z;
+            xzCount[ix].x++;
+            xzCount[ix].y = Math::Min(xzCount[ix].y, o.y);
+        }
+        for (uint i = 0; i < nbBUIs; i++) {
+            auto bui = bi.BlockUnitInfos[i];
+            auto o = bui.Offset;
+            auto ix = size.z * o.x + o.z;
+            if (bui.Offset.y != xzCount[ix].y) continue;
+            auto newOffset = RotateOffset(Nat3ToInt3(bui.Offset), dir, size);
+            RegisterBlockUnit(bui, coord + newOffset, dir, blockInfo.GetClipsByBlockUnitInfoIx(i), xzCount[ix].x);
+        }
+        return true;
+    }
+
+    // register the block unit at the given coord
+    void RegisterBlockUnit(CGameCtnBlockUnitInfo@ bui, int3 coord, CardinalDir dir, WFC_ClipInfo@[] &in clips, uint nbBlocksGoingUp = 1) {
+        if (nbBlocksGoingUp > 255) throw("Too many blocks going up: " + nbBlocksGoingUp);
+        auto ix = GetXZIx(coord);
+        if (ix >= states.Length) {
+            warn("Index out of bounds: " + ix + " / " + states.Length);
+            return;
+        }
+        auto top = coord.y + nbBlocksGoingUp;
+        if (states[ix].Length <= top) {
+            states[ix].Resize(top >= mapSize.y / 2 ? mapSize.y : mapSize.y / 2 + 1);
+        }
+        for (uint i = 0; i < nbBlocksGoingUp; i++) {
+            states[ix][coord.y + i].SetOccupied(bui, dir, clips);
+        }
+        // clipsBySourceUnit[ix][coord.y].SetOccupied(bui, dir, clips);
+    }
+
+    void RenderDebug() {
+        if (!DrawDebug) return;
+        auto nbCoords = states.Length;
+        for (uint i = 0; i < nbCoords; i++) {
+            if (states[i].Length == 0) continue;
+            auto coordXZ = IxToXZ(i);
+            for (uint y = 0; y < states[i].Length; y++) {
+                if (!states[i][y].IsOccupied) continue;
+                // draw the coord
+                nvgDrawBlockBox(Editor::GetBlockMatrix(coordXZ + int3(0, y, 0)), Editor::DEFAULT_COORD_SIZE);
+                // auto coord = int3(coordXZ.x, y, coordXZ.z);
+                // auto state = states[i][y];
+                // if (state.IsOccupied) {
+                //     // draw the coord
+                //     auto pos = Editor::GetBlockPosition(Int3ToNat3(coord));
+                //     UI::Text(pos.ToString());
+                //     UI::SetCursorPos(pos);
+                //     UI::Text("X");
+                // }
+            }
+        }
+    }
 }
 
 class CoordState {
@@ -51,18 +171,41 @@ class CoordState {
     // need easy lookup for compatible clips
     //
 
+    bool get_IsOccupied() {
+        return (inner & 0x1) != 0;
+    }
+
+    void SetOccupied(CGameCtnBlockUnitInfo@ bui, CardinalDir dir, WFC_ClipInfo@[] &in clips) {
+        // set the state to occupied
+        inner = 1;
+        // set the block unit info
+        // set the direction
+        // set the clips
+    }
+}
+
+// MARK: ClipFilter
+
+class ClipFilter {
+    uint[] bannedIds;
+    uint[] preferredIds;
+    ClipFilter() {}
+
 }
 
 // MARK: WFC_ClipInfo
 
 class WFC_ClipInfo {
-    int cId = -1, symCID = -1, clipGroup1 = -1, clipGroup2 = -1, symClipGroup1 = -1, symClipGroup2 = -1;
+    MwId cId = MwId(-1);
+    int symCID = -1, clipGroup1 = -1, clipGroup2 = -1, symClipGroup1 = -1, symClipGroup2 = -1;
     uint biIx = -1, buiIx = -1, clipIx = -1;
-    CardinalDir dirFromParent;
+    ClipFace clipFace;
     int3 buiOffset;
     int distFromTop = 0;
-    WFC_ClipInfo(CGameCtnBlockInfoClip@ bic, CardinalDir dirFromParent, uint biIx, uint buiIx, uint clipIx, CGameCtnBlockUnitInfo@ bui, WFC_BlockInfo@ parent) {
-        cId = bic.Id.Value;
+    WFC_ClipInfo@[]@ snappableClips;
+
+    WFC_ClipInfo(CGameCtnBlockInfoClip@ bic, ClipFace clipFace, uint biIx, uint buiIx, uint clipIx, CGameCtnBlockUnitInfo@ bui, WFC_BlockInfo@ parent) {
+        cId.Value = bic.Id.Value;
         symCID = bic.SymmetricalClipId.Value;
         // if (symCID == -1) symCID = cId; // if no symmetrical clip, use the same id
         clipGroup1 = bic.ClipGroupId.Value;
@@ -74,19 +217,24 @@ class WFC_ClipInfo {
         this.biIx = biIx;
         this.buiIx = buiIx;
         this.clipIx = clipIx;
-        this.dirFromParent = dirFromParent;
+        this.clipFace = clipFace;
         if (!MathX::Nat3Eq(bui.Offset, bui.RelativeOffset)) {
             warn("BlockUnitInfo offset != relativeOffset: " + bui.Offset.ToString() + " != " + bui.RelativeOffset.ToString());
         }
     }
 
-    void InsertSelfToLookups(IntLookup& groupIds, IntLookup& symGroupIds, IntLookup& symIds, IntLookup& clipIds) {
+    CardinalDir get_dirFromParent() {
+        if (clipFace < ClipFace::North || clipFace > ClipFace::West) return CardinalDir::North;
+        return CardinalDir(int(clipFace));
+    }
+
+    void InsertSelfToLookups(IntLookup& groupIds, IntLookup& clipIds) { // IntLookup& symGroupIds, IntLookup& symIds
         if (clipGroup1 != -1) groupIds.Insert(clipGroup1, this);
         if (clipGroup2 != -1) groupIds.Insert(clipGroup2, this);
-        if (symClipGroup1 != -1) symGroupIds.Insert(symClipGroup1, this);
-        if (symClipGroup2 != -1) symGroupIds.Insert(symClipGroup2, this);
-        if (symCID != -1) symIds.Insert(symCID, this);
-        if (cId != -1) clipIds.Insert(cId, this);
+        // if (symClipGroup1 != -1) symGroupIds.Insert(symClipGroup1, this);
+        // if (symClipGroup2 != -1) symGroupIds.Insert(symClipGroup2, this);
+        // if (symCID != -1) symIds.Insert(symCID, this);
+        if (cId.Value != -1) clipIds.Insert(cId.Value, this);
     }
 
     string ToString() {
@@ -128,6 +276,14 @@ class WFC_ClipInfo {
     bool CanSnapTo(WFC_ClipInfo@ other) {
         return DoClipsSnap(this, other);
     }
+
+    WFC_ClipInfo@[]@ SetSnappable_JoinMatches(const ref@[]@[] &in toJoin) {
+        if (toJoin.Length == 0) return null;
+        auto joined = JoinMatches(toJoin);
+        if (joined.Length == 0) return null;
+        @snappableClips = joined;
+        return snappableClips;
+    }
 }
 
 
@@ -147,10 +303,10 @@ bool DoClipsSnap(WFC_ClipInfo@ left, WFC_ClipInfo@ right) {
         // if we have no sym ID
         if (left.symCID == -1) {
             // return direct clip
-            return left.cId == right.cId;
+            return left.cId.Value == right.cId.Value;
         }
         // otherwise, are this two clips matched (sym-norm)?
-        return left.symCID == right.cId;
+        return left.symCID == right.cId.Value;
     }
     // if we have left sym groups, check them against right clip groups
     auto gRight = right.ClipGroups;
@@ -187,14 +343,25 @@ enum CardinalDir {
     West = 3
 }
 
+enum ClipFace {
+    North = 0,
+    East = 1,
+    South = 2,
+    West = 3,
+    Top = 4,
+    Bottom = 5
+}
+
 // MARK: WFC_BlockInfo
 
 class WFC_BlockInfo {
     ReferencedNod@ refBlockInfo;
+    ReferencedNod@ refBlockInfoVariant;
     WFC_ClipInfo@[] clips;
     MwId nameId;
     uint VarIx;
     uint BiIx;
+    uint nbCardinalClips;
     int3 Size = int3(1);
 
     WFC_BlockInfo(CGameCtnBlockInfo@ bi, uint biIx) {
@@ -202,19 +369,23 @@ class WFC_BlockInfo {
         nameId.Value = bi.Id.Value;
         BiIx = biIx;
 
-        auto biv = bi.VariantBaseAir;
+        uint _varIx;
+        auto biv = Editor::GetBlockBestVariant(bi, false, _varIx);
+        // auto biv = bi.VariantBaseAir;
         Size = Nat3ToInt3(biv.Size);
-        VarIx = 0;
+        VarIx = _varIx;
         AddBlockUnitInfos(biv, biIx);
+        @refBlockInfoVariant = ReferencedNod(biv);
     }
+
     CGameCtnBlockInfo@ get_BlockInfo() {
         return refBlockInfo.AsBlockInfo();
     }
 
-    void InsertClipsToLookups(IntLookup& groupIds, IntLookup& symGroupIds, IntLookup& symIds, IntLookup& clipIds) {
+    void InsertClipsToLookups(IntLookup& groupIds, IntLookup& clipIds) { // IntLookup& symGroupIds, IntLookup& symIds
         auto nbClips = clips.Length;
         for (uint i = 0; i < nbClips; i++) {
-            clips[i].InsertSelfToLookups(groupIds, symGroupIds, symIds, clipIds);
+            clips[i].InsertSelfToLookups(groupIds, clipIds); // symGroupIds, symIds
             // if (clip is null) continue;
             // if (clip.clipGroup1 != -1) groupIds.Insert(clip.clipGroup1, clip);
             // if (clip.clipGroup2 != -1) groupIds.Insert(clip.clipGroup2, clip);
@@ -254,12 +425,12 @@ class WFC_BlockInfo {
 
     void AddClips(CGameCtnBlockUnitInfo@ bui, uint buiIx, CGameCtnBlockInfoVariant@ biv, uint biIx) {
         auto nbClips = bui.AllClips.Length;
-        auto northLt = bui.ClipCount_North, eastLt = bui.ClipCount_East + northLt, southLt = bui.ClipCount_South + eastLt, westLt = bui.ClipCount_West + southLt;
+        auto northLt = bui.ClipCount_North, eastLt = bui.ClipCount_East + northLt, southLt = bui.ClipCount_South + eastLt, westLt = bui.ClipCount_West + southLt, topLt = bui.ClipCount_Top + westLt, bottomLt = bui.ClipCount_Bottom + topLt;
         // print("North: " + northLt + ", East: " + eastLt + ", South: " + southLt + ", West: " + westLt);
-        CardinalDir dir = CardinalDir::North;
+        ClipFace dir = ClipFace::North;
 
         for (uint i = 0; i < nbClips; i++) {
-            if (i >= westLt) break;
+            if (i < westLt) nbCardinalClips++;
             // if (i < northLt) {
             //     dir = CardinalDir::North;
             // } else if (i < eastLt) {
@@ -269,7 +440,7 @@ class WFC_BlockInfo {
             // } else if (i < westLt) {
             //     dir = CardinalDir::West;
             // } else break;
-            dir = i < southLt ? i < eastLt ? i < northLt ? CardinalDir::North : CardinalDir::East : CardinalDir::South : CardinalDir::West;
+            dir = i < topLt ? i < westLt ? i < southLt ? i < eastLt ? i < northLt ? ClipFace::North : ClipFace::East : ClipFace::South : ClipFace::West : ClipFace::Top : ClipFace::Bottom;
             auto clip = bui.AllClips[i];
             if (clip is null) {
                 warn("Clip is null for " + BlockInfo.IdName);
@@ -279,7 +450,8 @@ class WFC_BlockInfo {
                 && clip.SymmetricalClipGroupId.Value == -1
                 && clip.SymmetricalClipId.Value == -1
                 && clip.ClipGroupId2.Value == -1
-                && clip.SymmetricalClipGroupId2.Value == -1) {
+                && clip.SymmetricalClipGroupId2.Value == -1
+                && clip.Id.Value == -1) {
                 // warn("Clip has no group ids for " + BlockInfo.IdName);
                 continue;
             }
@@ -295,10 +467,20 @@ class WFC_BlockInfo {
 
     // }
 
-    WFC_ClipInfo@ GetRandomClip() {
+    WFC_ClipInfo@ GetRandomClip(bool cardinal) {
         if (clips.Length == 0) return null;
-        uint ix = Math::Rand(0, clips.Length);
+        uint ix = Math::Rand(0, cardinal ? nbCardinalClips + 1 : clips.Length);
         return clips[ix];
+    }
+
+    WFC_ClipInfo@[] GetClipsByBlockUnitInfoIx(uint buiIx) {
+        WFC_ClipInfo@[] clipsByBuiIx = {};
+        for (uint i = 0; i < clips.Length; i++) {
+            if (clips[i].buiIx == buiIx) {
+                clipsByBuiIx.InsertLast(clips[i]);
+            }
+        }
+        return clipsByBuiIx;
     }
 }
 
@@ -312,18 +494,20 @@ class BlockInventory {
     uint count, ingestionStart, ingestionDuration;
     WFC_BlockInfo@[] blockInfos;
     IntLookup GroupIdsToClips;
-    IntLookup SymGroupIdsToClips;
-    IntLookup SymIdsToClips;
+    // IntLookup SymGroupIdsToClips;
+    // IntLookup SymIdsToClips;
     IntLookup ClipIdsToClips;
     IntLookup BlocksById;
 
     BlockInventory() {
+        blockInfos.Reserve(4096);
     }
 
     protected void IngestBlockInfo(CGameCtnBlockInfo@ bi) {
         // if (!filter.Matches(bi)) return;
         auto wfcBi = WFC_BlockInfo(bi, blockInfos.Length);
-        wfcBi.InsertClipsToLookups(GroupIdsToClips, SymGroupIdsToClips, SymIdsToClips, ClipIdsToClips);
+        if (!CheckPause()) return;
+        wfcBi.InsertClipsToLookups(GroupIdsToClips, ClipIdsToClips); // SymGroupIdsToClips, SymIdsToClips
         blockInfos.InsertLast(wfcBi);
         BlocksById.Insert(bi.Id.Value, wfcBi);
         count += 1;
@@ -383,8 +567,26 @@ class BlockInventory {
         return blockInfo;
     }
 
-    WFC_BlockInfo@ GetRandomAdjoiningBlock(int minClips, PlacedBlock@ clipSource, int3 &out coord, CGameEditorPluginMap::ECardinalDirections &out dir) {
-        if (clipSource.BlockInfo.clips.Length == 0) return null;
+    PlacedBlock@ dbg_ClipSource;
+    WFC_ClipInfo@ dbg_BaseClip;
+    WFC_ClipInfo@ dbg_ClipToPlace;
+    int dbg_Dir1_AtCoordConnecting;
+    WFC_BlockInfo@ dbg_BlockInfo;
+    int dbg_Dir2_BlockDir;
+    int3 dbg_NextClipCoord;
+    int3 dbg_NextClipOffset;
+
+    WFC_BlockInfo@ GetRandomAdjoiningBlock(int minClips, PlacedBlock@ clipSource, int3 &out coord, CGameEditorPluginMap::ECardinalDirections &out dir, bool expandedMatch = false) {
+        if (clipSource is null || clipSource.BlockInfo.clips.Length == 0) return null;
+
+        @dbg_ClipSource = clipSource;
+        @dbg_BaseClip = null;
+        @dbg_ClipToPlace = null;
+        @dbg_BlockInfo = null;
+        dbg_Dir1_AtCoordConnecting = -1;
+        dbg_Dir2_BlockDir = -1;
+
+
         WFC_ClipInfo@ placedClip = clipSource.GetRandomClip();
         if (placedClip is null) return null;
         int3 c;
@@ -398,36 +600,41 @@ class BlockInventory {
             loopCount++;
             if (loopCount > 20) break;
             @placedClip = clipSource.GetRandomClip();
+            @dbg_BaseClip = placedClip;
             // @clipToPlace = GetRandomConnectingClipFromClip(placedClip);
-            @clipToPlace = FindRandomSnappableClips(placedClip);
+            @clipToPlace = FindRandomSnappableClip(placedClip, expandedMatch);
+            @dbg_ClipToPlace = clipToPlace;
             if (clipToPlace is null) continue;
 
             CardinalDir dir;
             c = clipSource.CalcClipConnectingCoord(placedClip, dir);
-            dirAtCoordOfConnectingClip = dir;
+            dbg_Dir1_AtCoordConnecting = dirAtCoordOfConnectingClip = dir;
             @blockInfo = blockInfos[clipToPlace.biIx];
+            @dbg_BlockInfo = blockInfo;
         }
 
         if (clipToPlace is null) return null;
 
+        // CardinalDir _blockDir;
+        // int3 revOffset, newCoord;
+        // CalcCoord_ClipToBlock(dirAtCoordOfConnectingClip, clipToPlace.dirFromParent, clipToPlace.buiOffset, blockInfo.Size, _blockDir, revOffset, newCoord);
+
         // calc updated coord given rotation
         // if symmetric: flip dir?
-        auto _dir = RotateDir(dirAtCoordOfConnectingClip, -clipToPlace.dirFromParent);
-        auto revOffset = RotateOffset(clipToPlace.buiOffset, _dir, blockInfo.Size);
+        auto _blockDir = RotateDir(dirAtCoordOfConnectingClip, -clipToPlace.dirFromParent);
+        dbg_Dir2_BlockDir = _blockDir;
+        auto revOffset = RotateOffset(clipToPlace.buiOffset, _blockDir, blockInfo.Size);
+        dbg_NextClipOffset = revOffset;
         auto newCoord = c - revOffset;
-        _Log::Trace("New direction: " + tostring(_dir));
-        _Log::Trace("Clip offset: " + clipToPlace.buiOffset.ToString());
-        _Log::Trace("Block size: " + blockInfo.Size.ToString());
-        _Log::Trace("Coord: " + newCoord.ToString());
-
-        // coord = c + int3(1, -1, 1) * RotateOffset(clipToPlace.buiOffset, _dir, blockInfo.Size);
-
+        dbg_NextClipCoord = newCoord;
+        // --
         coord = newCoord;
-        dir = CGameEditorPluginMap::ECardinalDirections(_dir);
+        dir = CGameEditorPluginMap::ECardinalDirections(_blockDir);
         return blockInfo;
     }
 
     WFC_ClipInfo@[]@ FindSnappableClips(WFC_ClipInfo@ clip, bool expandedMatch = false) {
+        // if (clip.snappableClips !is null) return clip.snappableClips;
         ref@[]@[] toJoin;
         // sym groups match to clip groups
         // clip groups match to clip groups
@@ -437,19 +644,29 @@ class BlockInventory {
             toJoin.InsertLast(GroupIdsToClips.Get(symGroups.x));
             toJoin.InsertLast(GroupIdsToClips.Get(symGroups.y));
             if (!expandedMatch) return JoinMatches(toJoin);
+            // auto ret = clip.SetSnappable_JoinMatches(toJoin);
+            // if (!expandedMatch && ret !is null && ret.Length > 0) return ret;
         }
         auto clipGroups = clip.ClipGroups;
         if (clipGroups.x != -1) {
             toJoin.InsertLast(GroupIdsToClips.Get(clipGroups.x));
             toJoin.InsertLast(GroupIdsToClips.Get(clipGroups.y));
             if (!expandedMatch) return JoinMatches(toJoin);
+            // auto ret = clip.SetSnappable_JoinMatches(toJoin);
+            // if (!expandedMatch && ret !is null && ret.Length > 0) return ret;
         }
-        toJoin.InsertLast(clip.symCID != -1 ? SymIdsToClips.Get(clip.symCID) : ClipIdsToClips.Get(clip.cId));
+        toJoin.InsertLast(clip.symCID != -1 ? ClipIdsToClips.Get(clip.symCID) : ClipIdsToClips.Get(clip.cId.Value));
         return JoinMatches(toJoin);
+        // return clip.SetSnappable_JoinMatches(toJoin);
     }
 
-    WFC_ClipInfo@ FindRandomSnappableClips(WFC_ClipInfo@ clip) {
-        auto snappableClips = FindSnappableClips(clip);
+    WFC_ClipInfo@ FindRandomSnappableClip(WFC_ClipInfo@ clip, bool expandedMatch = false) {
+        // todo: select only empty coords
+        auto @snappableClips = FindSnappableClips(clip, expandedMatch);
+        if (snappableClips is null) {
+            warn("Unexpected: snappableClips is null for clip: " + clip.ToString());
+            return null;
+        }
         if (snappableClips.Length == 0) return null;
         uint ix = Math::Rand(0, snappableClips.Length);
         return snappableClips[ix];
@@ -458,19 +675,19 @@ class BlockInventory {
     WFC_ClipInfo@ GetRandomConnectingClipFromClip(WFC_ClipInfo@ clip) {
         auto cg1 = INCLUDE_CG1 ? GroupIdsToClips.Get(clip.symClipGroup1) : null;
         auto cg2 = INCLUDE_CG2 ? GroupIdsToClips.Get(clip.symClipGroup2) : null;
-        auto scg1 = INCLUDE_SCG1 ? SymGroupIdsToClips.Get(clip.clipGroup1) : null;
-        auto scg2 = INCLUDE_SCG2 ? SymGroupIdsToClips.Get(clip.clipGroup2) : null;
+        // auto scg1 = INCLUDE_SCG1 ? SymGroupIdsToClips.Get(clip.clipGroup1) : null;
+        // auto scg2 = INCLUDE_SCG2 ? SymGroupIdsToClips.Get(clip.clipGroup2) : null;
         auto c2scid = INCLUDE_SCID ? ClipIdsToClips.Get(clip.symCID) : null;
-        auto s2cid = INCLUDE_ID ? ClipIdsToClips.Get(clip.cId) : null;
+        auto s2cid = INCLUDE_ID ? ClipIdsToClips.Get(clip.cId.Value) : null;
         auto cg1Len = cg1 is null ? 0 : cg1.Length;
         auto cg2Len = cg2 is null ? 0 : cg2.Length;
-        auto scg1Len = scg1 is null ? 0 : scg1.Length;
-        auto scg2Len = scg2 is null ? 0 : scg2.Length;
+        // auto scg1Len = scg1 is null ? 0 : scg1.Length;
+        // auto scg2Len = scg2 is null ? 0 : scg2.Length;
         auto c2scidLen = c2scid is null ? 0 : c2scid.Length;
         auto s2cidLen = s2cid is null ? 0 : s2cid.Length;
-        auto total = cg1Len + cg2Len + scg1Len + scg2Len + c2scidLen + s2cidLen;
+        auto total = cg1Len + cg2Len + c2scidLen + s2cidLen; // scg1Len + scg2Len
         if (total == 0) return null;
-        auto cg1Lt = cg1Len, cg2Lt = cg1Lt + cg2Len, scg1Lt = cg2Lt + scg1Len, scg2Lt = scg1Lt + scg2Len, c2scidLt = scg2Lt + c2scidLen, s2cidLt = c2scidLt + s2cidLen;
+        auto cg1Lt = cg1Len, cg2Lt = cg1Lt + cg2Len, c2scidLt = cg2Lt + c2scidLen, s2cidLt = c2scidLt + s2cidLen;
         // trace("cg1Lt: " + cg1Lt + ", cg2Lt: " + cg2Lt + ", scg1Lt: " + scg1Lt + ", scg2Lt: " + scg2Lt + ", c2scidLt: " + c2scidLt + ", s2cidLt: " + s2cidLt);
         WFC_ClipInfo@ clipInfo;
         uint loopCount = 0;
@@ -482,12 +699,12 @@ class BlockInventory {
                 @clipInfo = cast<WFC_ClipInfo@>(cg1[ix]);
             } else if (ix < cg2Lt) {
                 @clipInfo = cast<WFC_ClipInfo@>(cg2[ix - cg1Lt]);
-            } else if (ix < scg1Lt) {
-                @clipInfo = cast<WFC_ClipInfo@>(scg1[ix - cg2Lt]);
-            } else if (ix < scg2Lt) {
-                @clipInfo = cast<WFC_ClipInfo@>(scg2[ix - scg1Lt]);
+            // } else if (ix < scg1Lt) {
+            //     @clipInfo = cast<WFC_ClipInfo@>(scg1[ix - cg2Lt]);
+            // } else if (ix < scg2Lt) {
+            //     @clipInfo = cast<WFC_ClipInfo@>(scg2[ix - scg1Lt]);
             } else if (ix < c2scidLt) {
-                @clipInfo = cast<WFC_ClipInfo@>(c2scid[ix - scg2Lt]);
+                @clipInfo = cast<WFC_ClipInfo@>(c2scid[ix - cg2Lt]);
             } else if (ix < s2cidLt) {
                 @clipInfo = cast<WFC_ClipInfo@>(s2cid[ix - c2scidLt]);
             } else {
@@ -558,6 +775,69 @@ class BlockInventory {
         }
         return true;
     }
+
+    void DumpClipInfo(const string &in path, IO::FileMode mode = IO::FileMode::Write) {
+        if (path.Length == 0) throw("Path is empty");
+        _dumpCIPath = path;
+        _dumpCIMode = mode;
+        startnew(CoroutineFunc(_DumpCI_MainCoro));
+
+    }
+
+    string _dumpCIPath;
+    IO::FileMode _dumpCIMode;
+    void _DumpCI_MainCoro() {
+        auto path = _dumpCIPath;
+        auto mode = _dumpCIMode;
+        IO::File file(path, mode);
+        _DumpCI_BlockIDs(file);
+        _DumpCI_Blocks(file);
+        yield();
+        _DumpCI_AllIDs(file);
+        file.Close();
+        yield();
+        OpenExplorerPath(Path::GetDirectoryName(path));
+    }
+
+    void _DumpCI_BlockIDs(IO::File& file) {
+        file.WriteLine("# [START:BlockIDs]");
+        for (uint i = 0; i < blockInfos.Length; i++) {
+            file.WriteLine(blockInfos[i].nameId.GetName());
+            if ((i+1) % 50 == 0 && !CheckPause()) return;
+        }
+        file.WriteLine("# [END:BlockIDs]");
+
+    }
+
+    void _DumpCI_Blocks(IO::File& file) {
+        file.WriteLine("# [START:Blocks]");
+        for (uint i = 0; i < blockInfos.Length; i++) {
+            blockInfos[i].DumpToFile(file);
+            if ((i+1) % 20 == 0 && !CheckPause()) return;
+        }
+        file.WriteLine("# [END:Blocks]");
+    }
+
+    void _DumpCI_AllIDs(IO::File& file) {
+        file.WriteLine("# [START:IDs]");
+        _DumpCI_IDs(file, ClipIdsToClips, "ClipIdsToClips");
+        _DumpCI_IDs(file, GroupIdsToClips, "GroupIdsToClips");
+        // _DumpCI_IDs(file, SymGroupIdsToClips, "SymGroupIdsToClips");
+        // _DumpCI_IDs(file, SymIdsToClips, "SymIdsToClips");
+        // _DumpCI_IDs(file, BlocksById, "BlocksById");
+        file.WriteLine("# [END:IDs]");
+    }
+
+    void _DumpCI_IDs(IO::File& file, IntLookup& lookup, const string &in name) {
+        file.WriteLine("## [START:IDs_" + name + "]");
+        uint next = -1, count = 0;
+        while (lookup.KeyIterGetNext(next, next)) {
+            if (next == 0xFFFFFFFF) throw("Unexpected id = -1");
+            file.WriteLine(MwIdValueToStr(next));
+            if (++count % 50 == 0 && !CheckPause()) return;
+        }
+        file.WriteLine("## [END:IDs_" + name + "]");
+    }
 }
 
 // MARK: PlacedBlock
@@ -575,7 +855,7 @@ class PlacedBlock {
     }
 
     WFC_ClipInfo@ GetRandomClip() {
-        return BlockInfo.GetRandomClip();
+        return BlockInfo.GetRandomClip(true);
     }
 
     int3 CalcClipConnectingCoord(WFC_ClipInfo@ clip, CardinalDir &out dir) {
@@ -585,6 +865,7 @@ class PlacedBlock {
         // move in the direction of the clip
         auto _dir = RotateDir(Dir, clip.dirFromParent);
         dir = RotateDir(_dir, 2);
+        // dir = _dir;
         offset = MoveOffset(offset, _dir);
         return Coord + offset;
     }
@@ -645,39 +926,42 @@ const uint INT_LOOKUP_CHILDREN = 2 ** INT_LOOKUP_CHILDREN_SHL;
 
 class IntLookup {
     IntLookup@[] children;
-    ref@[] values;
+    ref@[]@ values;
     // x = values, y = nodes, z = total
     int2 cachedCount = int2(-1);
-    uint nodeKey = -1, nodeId = -1;
+    uint nodeKey = 0xFFFFFFFF, nodeId = 0xFFFFFFFF; // Use 0xFFFFFFFF as uninitialized/invalid
 
-    IntLookup() {}
+    IntLookup() {
+        @values = {};
+    }
 
     bool Has(uint key) {
-        if (key == -1) return false;
+        if (key == 0xFFFFFFFF) return false;
         return Get(key) !is null;
     }
 
     // Get from the root node.
     ref@[]@ Get(uint key) {
-        if (key == -1) return null;
+        if (key == 0xFFFFFFFF) return null;
         key = key & 0x00FFFFFF;
         return Get(key, key);
     }
 
     // Internal get for children.
     ref@[]@ Get(uint key, uint id) {
-        if (id == -1) return null;
+        if (id == 0xFFFFFFFF) return null; // Check against actual invalid marker
         // mask out the top 8 bits (mwids)
         id = id & 0x00FFFFFF;
         key = key & 0x00FFFFFF;
-        if (id == 0 && nodeKey == key) {
+
+        if (nodeKey == key) {
             if (values.Length == 0) return null;
             return values;
         }
 
         if (children.Length == 0) return null;
         uint childIx = id % INT_LOOKUP_CHILDREN;
-        if (children[childIx] is null) return null;
+        if (childIx >= children.Length || children[childIx] is null) return null; // Bounds check
         return children[childIx].Get(key, id >> INT_LOOKUP_CHILDREN_SHL);
     }
 
@@ -687,69 +971,101 @@ class IntLookup {
 
     // key stays the same, id is manipulated to find the right child
     void Insert(uint itemKey, uint id, ref@ thing) {
-        if (id == -1 || itemKey == -1) throw("id/itemKey is -1");
+        string logPrefix = "IntLookup2::Insert[" + Text::Format("0x%X", nodeKey) + " / " + Text::Format("0x%X", itemKey) + "]: ";
+        if (thing is null) {
+            // warn(logPrefix + "Attempted to insert null reference for key: " + itemKey);
+            return;
+        }
+        if (id | itemKey == 0xFFFFFFFF) {
+            // warn(logPrefix + "id/itemKey is invalid (0xFFFFFFFF)");
+            return;
+        }
         cachedCount = int2(-1);
         // mask out the top 8 bits (mwids)
         id = id & 0x00FFFFFF;
         itemKey = itemKey & 0x00FFFFFF;
 
-        // if this node matches the item key, we insert it here.
-        // we want to double check this because if we insert 0x111 and then 0x11, the latter would have an id of 0 at this point.
-        if (id == 0 && nodeKey == itemKey) {
-            // no duplicates
-            if (values.FindByRef(thing) != -1) return;
-            // insert
+        if (nodeKey == itemKey) {
+            // if (values.FindByRef(thing) != -1) {
+            //     print(logPrefix + "Duplicate itemKey " + itemKey + " for id " + id + " already exists.");
+            //     return;
+            // }
+            // print(logPrefix + "Adding itemKey " + itemKey + " for id " + id + " to existing node.");
             values.InsertLast(thing);
-            // sets this since it's stable in these conditions.
-            nodeKey = itemKey;
-            nodeId = id;
             return;
         }
 
         bool noKids = children.Length == 0;
         bool noValues = values.Length == 0;
 
-        // is this the first item?
-        if (noKids && noValues) {
+        if (noKids && noValues && nodeKey == 0xFFFFFFFF) { // && id < 0x40) { // Ensure nodeKey is unassigned and don't insert too much at the top
+            // print(logPrefix + "First itemKey " + itemKey + " for id " + id + " in empty node.");
             nodeKey = itemKey;
-            nodeId = id;
+            nodeId = id; // This 'id' is the original (shifted) id for itemKey at this point in tree
             values.InsertLast(thing);
             return;
         }
 
-        // after this point, we must insert the item into a child.
-
         if (noKids) {
+            // print(logPrefix + "No children, creating new children array.");
             children.Resize(INT_LOOKUP_CHILDREN);
-            // when we create children, check to see if we should reset this node's key and id.
-            // if we have a key, then we need to move the values to the child.
-            // if the nodeKey is -1 then we don't have a key, so we're reset or empty.
-            // if our nodeId is 0 then the values belong here. >0 tests for a moveable id.
-            if (nodeId > 0 && nodeKey != -1) {
-                // move values to children
-                auto childIx = nodeId % INT_LOOKUP_CHILDREN;
-                @children[childIx] = IntLookup();
-                children[childIx].InsertMany(nodeKey, nodeId >> INT_LOOKUP_CHILDREN_SHL, values);
-                // clear values
-                values.Resize(0);
-                nodeId = nodeKey = -1;
+            if (nodeId != 0xFFFFFFFF && nodeKey != 0xFFFFFFFF) { // Check if nodeKey/nodeId were set
+                // print(logPrefix + "Inner test.");
+                if (this.nodeId != 0 && this.nodeKey != 0xFFFFFFFF) { // Using this.nodeId, the one stored in the node
+                    // print(logPrefix + "Migrating values ("+values.Length+") from nodeKey " + this.nodeKey + " to children.");
+
+                    uint childIxForOldValues = this.nodeId % INT_LOOKUP_CHILDREN;
+                    if (children[childIxForOldValues] !is null) throw("Child already exists for old values.");
+                    auto @next = IntLookup();
+                    @(children[childIxForOldValues]) = next;
+                    // Pass the original nodeKey and the *next level* of nodeId
+                    @next.values = values;
+                    next.nodeKey = this.nodeKey;
+                    next.nodeId = this.nodeId >> INT_LOOKUP_CHILDREN_SHL;
+                    // children[childIxForOldValues].InsertMany(this.nodeKey, this.nodeId >> INT_LOOKUP_CHILDREN_SHL, values);
+                    // Clear the values from this node
+                    @values = {};
+
+                    this.nodeKey = 0xFFFFFFFF; // This node becomes an internal node
+                    this.nodeId = 0xFFFFFFFF;
+                    // print(logPrefix + "Reset nodeKey and nodeId after migration.");
+                    if (id == 0) {
+                        this.Insert(itemKey, id, thing); // Re-insert the new itemKey
+                        return;
+                    }
+                } else {
+                    // print(logPrefix + "No migration needed, just adding to values.");
+                }
             }
         }
 
         uint childIx = id % INT_LOOKUP_CHILDREN;
+        if (childIx >= children.Length) { // Should not happen if resized properly
+            //  warn(logPrefix + "Child index out of bounds before insert.");
+             children.Resize(INT_LOOKUP_CHILDREN); // Ensure it's sized
+        }
+
         if (children[childIx] is null) {
             @children[childIx] = IntLookup();
         }
+        // print(logPrefix + "Adding itemKey " + itemKey + " for id " + id + " to child[" + childIx + "].");
         children[childIx].Insert(itemKey, id >> INT_LOOKUP_CHILDREN_SHL, thing);
     }
 
+    // for use at the root
+    void InsertMany(uint itemKey, ref@[]@ things) {
+        for (uint i = 0; i < things.Length; i++) {
+            Insert(itemKey, things[i]);
+        }
+    }
+
+    // for internal use
     void InsertMany(uint itemKey, uint id, ref@[]@ things) {
         for (uint i = 0; i < things.Length; i++) {
             Insert(itemKey, id, things[i]);
         }
     }
 
-    // returns (totalValues, totalNodes)
     int2 Count() {
         if (cachedCount.x != -1) return cachedCount;
         int2 count = int2(0);
@@ -765,14 +1081,33 @@ class IntLookup {
         return count;
     }
 
-    // void InitializeChildren(bool force = false) {
-    //     if (children.Length > 0 && !force) return;
-    //     children.Resize(INT_LOOKUP_CHILDREN);
-    //     // for (uint i = 0; i < INT_LOOKUP_CHILDREN; i++) {
-    //     //     @children[i] = IntLookup();
-    //     // }
-    // }
+    // Helper for debugging
+    string GetStructure(string indent = "") {
+        string s = indent + "Node: key=" + Text::Format("0x%X", nodeKey) + ", id=" + Text::Format("0x%X", nodeId) + ", values=" + values.Length + "\n";
+        if (children.Length > 0) {
+            s += indent + " Children:\n";
+            for (uint i = 0; i < children.Length; i++) {
+                if (children[i] !is null) {
+                    s += indent + "  [" + i + "]:\n";
+                    s += children[i].GetStructure(indent + "    ");
+                }
+            }
+        }
+        return s;
+    }
+
+    // returns true while there are more keys to iterate
+    bool KeyIterGetNext(uint &out nextKey, uint priorKey) {
+        // if the prior key was our key, then id == 0 or we're a shortcut node so we go to children.
+        if (priorKey == nodeKey) {
+            if (children.Length == 0) {
+                nextKey = 0xFFFFFFFF;
+                return false;
+            }
+        }
+    }
 }
+
 
 
 
@@ -782,24 +1117,46 @@ class IntLookup {
 
 #if DEV
 
+Tester@ T_RotOffset = Tester("Test_RotateOffset", {
+    TestCase("2x1x2a", Test_RotateOffset::_2x1x2_1_1),
+    TestCase("2x3x3a", Test_RotateOffset::_2x3x3_1_2),
+    TestCase("2x3x3b", Test_RotateOffset::_2x3x3_1_1),
+    TestCase("2x3x3c", Test_RotateOffset::_2x3x3_0_1)
+});
+
+namespace Test_RotateOffset {
+    void _2x1x2_1_1() { Test_RotateOffset_Inner(int3(1, 0, 1), int3(2, 1, 2), int3(0, 0, 1), int3(0, 0, 0), int3(1, 0, 0)); }
+    void _2x3x3_1_2() { Test_RotateOffset_Inner(int3(1, 2, 2), int3(2, 3, 3), int3(0, 2, 1), int3(0, 2, 0), int3(2, 2, 0)); }
+    void _2x3x3_1_1() { Test_RotateOffset_Inner(int3(1, 1, 1), int3(2, 3, 3), int3(1, 1, 1), int3(0, 1, 1), int3(1, 1, 0)); }
+    void _2x3x3_0_1() { Test_RotateOffset_Inner(int3(0, 0, 1), int3(2, 3, 3), int3(1, 0, 0), int3(1, 0, 1), int3(1, 0, 1)); }
+
+    void Test_RotateOffset_Inner(int3 offset, int3 blockSize, int3 expEast, int3 expSout, int3 expWest) {
+        auto dir = CardinalDir::North;
+        auto newOffset = RotateOffset(offset, dir + 4, blockSize);
+        assert_eq(newOffset, offset, "North = no rotation");
+
+        dir = CardinalDir::East;
+        newOffset = RotateOffset(offset, dir, blockSize);
+        assert_eq(expEast, newOffset, "East = -z, +x");
+
+        dir = CardinalDir::South;
+        newOffset = RotateOffset(offset, dir, blockSize);
+        assert_eq(expSout, newOffset, "South = -x, -z");
+
+        dir = CardinalDir::West;
+        newOffset = RotateOffset(offset, dir, blockSize);
+        assert_eq(expWest, newOffset, "West = +z, -x");
+        // print("\\$4f4 Test_RotateOffset: Test Passed");
+
+
+    }
+}
 
 void Test_RotateOffset() {
-    auto offset = int3(1, 0, 1);
-    auto blockSize = int3(2, 0, 2);
-    auto dir = CardinalDir::North;
-    auto newOffset = RotateOffset(offset, dir, blockSize);
-    assert_eq(newOffset, offset, "North = no rotation");
-    dir = CardinalDir::East;
-    newOffset = RotateOffset(offset, dir, blockSize);
-    assert_eq(newOffset, int3(0, 0, 1), "East = -z, +x");
-    dir = CardinalDir::South;
-    newOffset = RotateOffset(offset, dir, blockSize);
-    assert_eq(newOffset, int3(0, 0, 0), "South = -x, -z");
-    dir = CardinalDir::West;
-    newOffset = RotateOffset(offset, dir, blockSize);
-    assert_eq(newOffset, int3(1, 0, 0), "West = +z, -x");
-    print("\\$4f4 Test_RotateOffset: Test Passed");
+
+
 }
+
 Meta::PluginCoroutine@ PC_Test_RotateOffset = startnew(Test_RotateOffset);
 
 
