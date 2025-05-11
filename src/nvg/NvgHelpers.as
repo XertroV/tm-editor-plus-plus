@@ -1,10 +1,14 @@
-void nvgCircleWorldPos(vec3 pos, vec4 col = vec4(1, .5, 0, 1)) {
-    auto uv = Camera::ToScreen(pos);
+void nvgCircleWorldPos(vec3 pos, vec4 col = vec4(1, .5, 0, 1), float radius = 5.0) {
+    vec3 uv;
+    nvgCircleWorldPos(pos, uv, col, radius);
+}
+void nvgCircleWorldPos(vec3 pos, vec3 &out uv, vec4 col = vec4(1, .5, 0, 1), float radius = 5.0) {
+    uv = Camera::ToScreen(pos);
     if (uv.z < 0) {
         nvg::Reset();
         nvg::BeginPath();
         nvg::FillColor(col);
-        nvg::Circle(uv.xy, 5);
+        nvg::Circle(uv.xy, radius);
         nvg::Fill();
         nvg::ClosePath();
     }

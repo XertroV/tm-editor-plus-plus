@@ -68,6 +68,8 @@ class SceneryGenTab : Tab {
 
         DrawBlockInv(blockInv);
 
+        WFC::mapVoxels.DrawEntropy();
+
         DrawPlaceLog();
     }
 
@@ -370,7 +372,7 @@ class SceneryGenTab : Tab {
             _placeFailure_drawCoord = blockCoord;
             _placeFailure_drawDir = ClipFace(blockDir);
             if (!WFC::mapVoxels.CanPlaceBlock(startBlock, blockCoord, CardinalDir(blockDir))) {
-                _Log::Warn("MapVoxels: Cannot place block: " + startBlock.nameId.GetName());
+                _Log::Warn("MapVoxels: Cannot place block: " + blockCoord.ToString() + " - " + startBlock.nameId.GetName());
                 noClips = loopCount > loopLimit - 5;
                 placeFailures++;
                 _placeFailure_drawColor = cRed;
