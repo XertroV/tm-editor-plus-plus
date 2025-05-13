@@ -45,7 +45,8 @@ namespace _Log {
             warn('[' + Time::Now + '] ' + msg);
         }
     }
-    void Warn(const string &in scope, const string &in msg) {
+    void Warn(const string &in scope, const string &in msg, bool andNotify = false) {
+        if (andNotify) NotifyWarning(scope, msg, false);
         if (S_LogLevel <= LogLevel::WARN) {
             warn('[' + Time::Now + ']['+scope+'] ' + msg);
         }

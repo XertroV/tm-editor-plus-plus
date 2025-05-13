@@ -19,6 +19,10 @@ void NotifyWarning(const string &in msg) {
     warn(msg);
     UI::ShowNotification(Meta::ExecutingPlugin().Name + ": Warning", msg, vec4(.9, .6, .2, .3), 15000);
 }
+void NotifyWarning(const string &in title, const string &in msg, bool log = true) {
+    if (log) warn(msg);
+    UI::ShowNotification(Meta::ExecutingPlugin().Name + ": " + title, msg, vec4(.9, .6, .2, .3), 15000);
+}
 
 void Dev_NotifyWarning(const string &in msg) {
 #if DEV

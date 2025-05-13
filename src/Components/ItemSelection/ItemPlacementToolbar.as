@@ -17,7 +17,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
 	void OnEditor() {
 		this.windowOpen = S_ShowItemPlacementToolbar;
-		RandomizeVegitationLayouts::OnEditor();
+		RandomizeVegetationLayouts::OnEditor();
 	}
 
 	bool OnNewItemSelection(CGameItemModel@ itemModel) {
@@ -131,7 +131,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		// in normal mode
 		UI::Separator();
 
-		bool toggleRandomizeVeg = BtnToolbarHalfV(Icons::Random + Icons::Leaf, "Randomize Vegetation Layouts\n(When placing trees on terrain)", ActiveNormalToBtnStatus(RandomizeVegitationLayouts::IsActive));
+		bool toggleRandomizeVeg = BtnToolbarHalfV(Icons::Random + Icons::Leaf, "Randomize Vegetation Layouts\n(When placing trees on terrain)", ActiveNormalToBtnStatus(RandomizeVegetationLayouts::IsActive));
 
 		UI::Separator();
 
@@ -150,7 +150,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
 		if (toggleFlying) ToggleFlying(pp);
 		if (toggleGhost) pp.GhostMode = !pp.GhostMode;
-		if (toggleRandomizeVeg) RandomizeVegitationLayouts::Toggle();
+		if (toggleRandomizeVeg) RandomizeVegetationLayouts::Toggle();
 		if (toggleFixTrees) VegetRandomYaw::Toggle();
 		if (cycleVariant) pp.PlacementClass.CurVariant = (curVar + (int(varNb) + int(cycleVariantAlt ? -1 : 1))) % varNb;
 

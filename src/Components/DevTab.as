@@ -635,7 +635,7 @@ class ItemPlacementMgrTab : Tab {
         if (editor is null || editor.ItemCursor is null) return;
         auto sbpZoneId = Editor::GetItemCursorSnappedBlockPlacementZoneId(editor.ItemCursor);
         UI::Text("Snapped Block Placement Zone ID: " + tostring(sbpZoneId));
-        auto itemPlacementMgr = RandomizeVegitationLayouts::GetItemPlacementMgr(app);
+        auto itemPlacementMgr = RandomizeVegetationLayouts::GetItemPlacementMgr(app);
         UI::SeparatorText("Item Placement Mgr");
         UI::AlignTextToFramePadding();
         CopiableLabeledPtr(itemPlacementMgr.Ptr);

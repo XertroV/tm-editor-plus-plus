@@ -53,7 +53,7 @@ class CursorPosition : Tab {
     CursorPosition(TabGroup@ parent) {
         this.addRandWindowExtraId = false;
         super(parent, "Cursor Coords", Icons::HandPointerO);
-        this.windowExtraId = 0;
+        this.windowExtraId = 1;
         RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditor), this.tabName);
     }
 

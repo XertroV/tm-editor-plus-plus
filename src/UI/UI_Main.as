@@ -813,5 +813,7 @@ TabGroup@ CreateRootTabGroup() {
     LaunchedCPsTab(root);
 #endif
 
+    root.FinalizeCategories();
+
     return root;
 }

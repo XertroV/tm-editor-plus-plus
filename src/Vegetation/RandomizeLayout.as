@@ -4,7 +4,7 @@
 [Setting hidden]
 bool S_RandomizeVegetationLayouts = false;
 
-namespace RandomizeVegitationLayouts {
+namespace RandomizeVegetationLayouts {
 	bool IsActive {
 		get { return S_RandomizeVegetationLayouts; }
 		set {
@@ -139,12 +139,12 @@ namespace RandomizeVegitationLayouts {
 	// // offset = 7
 	// const string Pattern_SetPZoneId = "0F 29 95 ?? 00 00 00 E8 ?? ?? ?? ?? 48 8D 8D ?? 01 00 00 E8";
 	// FunctionHookHelper@ Hook_ItemCursor_SetPZoneId = FunctionHookHelper(
-	//     Pattern_SetPZoneId, 7, 0, "RandomizeVegitationLayouts::AfterItemCursorPlacementZoneIdUpdated", Dev::PushRegisters::SSE, false
+	//     Pattern_SetPZoneId, 7, 0, "RandomizeVegetationLayouts::AfterItemCursorPlacementZoneIdUpdated", Dev::PushRegisters::SSE, false
 	// );
 	// offset = 0; padding = 1
 	const string Pattern_SetPZoneId = "89 9F 88 00 00 00 0F 28 00";
 	HookHelper@ Hook_ItemCursor_SetPZoneId = HookHelper(
-		Pattern_SetPZoneId, 0, 1, "RandomizeVegitationLayouts::AfterItemCursorPlacementZoneIdUpdated", Dev::PushRegisters::SSE, false
+		Pattern_SetPZoneId, 0, 1, "RandomizeVegetationLayouts::AfterItemCursorPlacementZoneIdUpdated", Dev::PushRegisters::SSE, false
 	);
 
 

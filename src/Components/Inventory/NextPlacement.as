@@ -41,6 +41,12 @@ class GlobalPlacementOptionsTab : EffectTab {
         AddSimpleTooltip("Normally, the game doesn't let you place freelay anchorable and autorotated items on free blocks. Checking this box will enable the helper so that you can place these items.\n\nItem Placement Requirements: 0 for GridSnap_HStep and GridSnap_VStep, AutoRotation=true, GhostMode=false, IsFreelyAnchorable=true.");
         DrawInfinitePrecisionSetting();
 
+        UI::Separator();
+        DrawItemsAutoRotateTrees();
+        DrawItemsRandomizePlacements();
+
+        UI::Separator();
+
         if (UI::CollapsingHeader("Animation Offsets")) {
             f_RandomizeItemAnimOffset = UI::Checkbox("Randomize Item Anim Offset", f_RandomizeItemAnimOffset);
             f_RandomizeMbAdditionalAnimOffset = UI::Checkbox("Randomize Mb Additional Anim Offset", f_RandomizeMbAdditionalAnimOffset);
@@ -55,6 +61,15 @@ class GlobalPlacementOptionsTab : EffectTab {
                 }
             }
         }
+
+    }
+
+    void DrawItemsAutoRotateTrees() {
+        VegetRandomYaw::IsActive = UI::Checkbox("Auto-Fix Rotated Trees", VegetRandomYaw::IsActive);
+    }
+
+    void DrawItemsRandomizePlacements() {
+        RandomizeVegetationLayouts::IsActive = UI::Checkbox("Randomize Vegetation Layouts", RandomizeVegetationLayouts::IsActive);
     }
 
     uint lastUpdate = 0;

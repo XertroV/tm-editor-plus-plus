@@ -82,7 +82,7 @@ class Tab : HasTabMeta {
     }
 
     void OnSideBarLabel_MiddleClick() {
-        windowOpen = true;
+        windowOpen = !windowOpen;
     }
 
     protected bool _ShouldSelectNext = false;
@@ -294,7 +294,8 @@ class Tab : HasTabMeta {
             if (UI::MenuItem("Pop Out")) {
                 windowOpen = !windowOpen;
             }
-            if (UI::MenuItem("Favorite Tab")) {
+            AddSimpleTooltip("\\$bbb\\$i Also: Middle Click Tab");
+            if (UI::MenuItem("Favorite Tab", "", Parent.meta.IsFavorite(nameIdValue))) {
                 Parent.FavoriteTab(this);
             }
             Parent.DrawHideShowTabMenuItem(this);

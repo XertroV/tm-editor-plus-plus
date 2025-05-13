@@ -255,13 +255,15 @@ class TabGroup : HasGroupMeta {
         return ix;
     }
 
-    void FavoriteTab(Tab@ t) {
+    // setTo requires toggle = false
+    void FavoriteTab(Tab@ t, bool toggle = true, bool setTo = false) {
         auto ix = GetTabIx(t);
         if (ix >= 0) {
-            meta.AddFavorite(t.nameIdValue);
-            // todo: favorites logic
-            // tabs.RemoveAt(ix);
-            // tabs.InsertAt(0, t);
+            if ((!toggle && setTo) || (toggle && !meta.IsFavorite(t.nameIdValue))) {
+                meta.AddFavorite(t.nameIdValue);
+            } else {
+                meta.RemFavorite(t.nameIdValue);
+            }
         }
     }
 
@@ -346,6 +348,10 @@ class RootTabGroupCls : TabGroup {
         categoryIsOpen.InsertLast(isOpen);
     }
 
+    void FinalizeCategories() {
+        BeginCategory("Hidden", true);
+    }
+
     bool SetCategoryOpen(uint catIx, bool isOpen) {
         if (catIx >= categoryIsOpen.Length) return false;
         categoryIsOpen[catIx] = isOpen;
@@ -362,8 +368,8 @@ class RootTabGroupCls : TabGroup {
         UI::PushStyleColor(UI::Col::Text, textCol);
         bool isOpen = true;
         auto stix = selectedTabIx;
-
-        for (uint i = 0; i < tabs.Length; i++) {
+        // we break after looping over categories
+        for (uint i = 0;; i++) {
             while (i >= nextCatStartsTabIx) {
                 catIx++;
                 categoryName = categories[catIx];
@@ -381,12 +387,34 @@ class RootTabGroupCls : TabGroup {
                     DrawFavoriteTabs_Sidebar(clicks, stix);
                     UI::PopID();
                 }
+                if (categoryName == "Hidden" && isOpen) {
+                    UI::PushID("hidden");
+                    DrawHiddenTabs_Sidebar(clicks, stix);
+                    UI::PopID();
+                }
             }
+            if (i >= tabs.Length) break;
             if (!isOpen) continue;
+            if (meta.IsHidden(tabs[i].nameIdValue)) continue;
             DrawSidebarTabEntry(i, tabs[i], i == stix, clicks, false);
         }
 
         UI::PopStyleColor();
+    }
+
+    void DrawHiddenTabs_Sidebar(ClickFlags cf, int stix) {
+        auto nb = this.meta.hidden.Length;
+        for (uint i = 0; i < nb; i++) {
+            auto tab = FindTabNamedId(this.meta.hidden[i]);
+            if (tab is null) {
+                _Log::Warn("DrawHiddenTabs_Sidebar", "Unknown: " + MwIdValueToStr(this.meta.hidden[i]), true);
+                this.meta.hidden.RemoveAt(i);
+                i--;
+            } else {
+                auto tix = GetTabIx(tab);
+                DrawSidebarTabEntry(tix, tab, tix == stix, cf, true);
+            }
+        }
     }
 
     void DrawFavoriteTabs_Sidebar(ClickFlags cf, int stix) {
@@ -394,7 +422,9 @@ class RootTabGroupCls : TabGroup {
         for (uint i = 0; i < nb; i++) {
             auto tab = FindTabNamedId(this.meta.favorites[i]);
             if (tab is null) {
-                UI::Text("Unknown: " + MwIdValueToStr(this.meta.favorites[i]));
+                _Log::Warn("DrawFavoriteTabs_Sidebar", "Unknown: " + MwIdValueToStr(this.meta.favorites[i]), true);
+                this.meta.favorites.RemoveAt(i);
+                i--;
             } else {
                 auto tix = GetTabIx(tab);
                 DrawSidebarTabEntry(tix, tab, tix == stix, cf, true);
