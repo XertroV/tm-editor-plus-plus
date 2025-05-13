@@ -44,7 +44,7 @@ namespace Blocks {
         // CGameCtnBlockInfoMobil@ biMobil;
         // CPlugPrefab@ prefab;
         BlockInfoMobilExtra(CGameCtnBlockInfoMobil@ biMobil) {
-            biMobil.MwAddRef();
+            // biMobil.MwAddRef();
             // @this.biMobil = biMobil;
             auto fid = cast<CSystemFidFile>(biMobil.PrefabFid);
             // nothing to do if prefab fid null
@@ -52,15 +52,28 @@ namespace Blocks {
                 dev_trace("Prefab fid is null: " + Text::FormatPointer(Dev_GetPointerForNod(biMobil)));
                 return;
             }
+            InitFromFid(fid);
+        }
 
+        BlockInfoMobilExtra(CSystemFidFile@ fid) {
+            InitFromFid(fid);
+        }
+
+        BlockInfoMobilExtra(CPlugPrefab@ prefab) {
+            InitFromPrefab(prefab);
+        }
+
+        protected void InitFromFid(CSystemFidFile@ fid) {
             // do we need to preload?
             if (fid.Nod is null) Fids::Preload(fid);
-            if (fid.Nod is null) throw("BlockInfoMobilExtra: fid nod is null after preloading: " + Text::FormatPointer(Dev_GetPointerForNod(biMobil)));
+            if (fid.Nod is null) throw("BlockInfoMobilExtra: fid nod is null after preloading: " + Text::FormatPointer(Dev_GetPointerForNod(fid)));
             // get the prefab
             auto @prefab = cast<CPlugPrefab>(fid.Nod);
-            if (prefab is null) throw("BlockInfoMobilExtra: prefab is null: " + Text::FormatPointer(Dev_GetPointerForNod(biMobil)));
-            // prefab.MwAddRef();
+            if (prefab is null) throw("BlockInfoMobilExtra: prefab is null: " + Text::FormatPointer(Dev_GetPointerForNod(fid)));
+            InitFromPrefab(prefab);
+        }
 
+        protected void InitFromPrefab(CPlugPrefab@ prefab) {
             // get the item placements
             auto nbEnts = prefab.Ents.Length;
             auto entPtr = Dev::GetOffsetUint64(prefab, O_PREFAB_ENTS);
@@ -97,8 +110,8 @@ namespace Blocks {
         quat Quat;
         vec3 Pos;
         uint iLayout;
+        // Contains tag
         SPlacementOpt[] Opts;
-        // nat2[] AllReqTags;
 
         ItemSPlacement() {}
 
@@ -107,14 +120,8 @@ namespace Blocks {
             Pos = loc.Trans;
             iLayout = sp.iLayout;
             auto nbOpts = sp.Options.Length;
-            // uint nbTags = 0;
             for (uint i = 0; i < nbOpts; i++) {
                 Opts.InsertLast(SPlacementOpt(sp.Options.GetSPlacementOption(i)));
-                // auto tags = Opts[i].ReqTags;
-                // nbTags = tags.Length;
-                // for (uint j = 0; j < nbTags; j++) {
-                //     AllReqTags.InsertLast(tags[j]);
-                // }
             }
         }
 
