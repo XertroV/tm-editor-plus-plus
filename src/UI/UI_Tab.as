@@ -25,6 +25,7 @@ class Tab : HasTabMeta {
     bool closeWindowOnEscape = false;
     bool isSelectedInGroup = false;
     bool ShowNewIndicator = false;
+    bool ShowDevIndicator = false;
 
     bool tabInWarningState = false;
 
@@ -59,7 +60,7 @@ class Tab : HasTabMeta {
         if (tabInWarningState) {
             return "\\$f80" + tabIconAndName + "  " + Icons::ExclamationTriangle;
         }
-        return tabIconAndName + (ShowNewIndicator ? NewIndicator : "");
+        return (ShowDevIndicator ? "[D] " : "") + tabIconAndName + (ShowNewIndicator ? NewIndicator : "");
     }
 
     const string get_DisplayIcon() {
@@ -71,15 +72,17 @@ class Tab : HasTabMeta {
     }
 
     protected bool _openSidebarContextMenu = false;
+    protected bool _sidebarContextMenu_IsFav = false;
 
     // triggered from main ui when drawing tab label in sidebar. Used for popping out / options.
-    void OnSideBarLabel_RightClick() {
+    void OnSideBarLabel_RightClick(bool isFavInSidebar) {
         _openSidebarContextMenu = true;
+        _sidebarContextMenu_IsFav = isFavInSidebar;
         AddMiscWindowRenderCallback(TmpWindowRenderF(this.DrawSidebarContextMenu));
-
     }
+
     void OnSideBarLabel_MiddleClick() {
-        if (canPopOut) windowOpen = true;
+        windowOpen = true;
     }
 
     protected bool _ShouldSelectNext = false;
@@ -295,11 +298,40 @@ class Tab : HasTabMeta {
                 Parent.FavoriteTab(this);
             }
             Parent.DrawHideShowTabMenuItem(this);
+
+            if (_sidebarContextMenu_IsFav) DrawSidebarTabCtxMenu_FavOpts();
+
             UX::CloseCurrentPopupIfMouseFarAway();
             UI::EndPopup();
             return true;
         }
         return false;
+    }
+
+    int mTmp_FavTabSetIx = 1;
+    void DrawSidebarTabCtxMenu_FavOpts() {
+        UI::PushID("favMov");
+        auto pMeta = Parent.meta;
+        if (UI::BeginMenu("[Fav] Move")) {
+            if (UI::Button(Icons::AngleUp)) pMeta.MoveFavoriteTab(nameIdValue, -1);
+            UI::SameLine();
+            if (UI::Button("Top")) pMeta.SetFavoriteTabIx(nameIdValue, 0);
+
+            if (UI::Button(Icons::AngleDown)) pMeta.MoveFavoriteTab(nameIdValue, 1);
+            UI::SameLine();
+            if (UI::Button("Bottom")) pMeta.SetFavoriteTabIx(nameIdValue, -1);
+
+            UI::SetNextItemWidth(85);
+            mTmp_FavTabSetIx = UI::InputInt("##favix", mTmp_FavTabSetIx, 1);
+            mTmp_FavTabSetIx = Math::Clamp(mTmp_FavTabSetIx, 1, pMeta.favorites.Length);
+            UI::SameLine();
+            if (UI::Button("Set #" + mTmp_FavTabSetIx)) {
+                pMeta.SetFavoriteTabIx(nameIdValue, mTmp_FavTabSetIx - 1);
+            }
+
+            UI::EndMenu();
+        }
+        UI::PopID();
     }
 
     void AfterLoadedState() {

@@ -11,6 +11,7 @@ class SceneryGenTab : Tab {
     SceneryGenTab(TabGroup@ parent) {
         super(parent, "Scenery Gen", Icons::Tree + Icons::Magic);
         ShowNewIndicator = true;
+        ShowDevIndicator = true;
     }
 
     void DrawInner() override {

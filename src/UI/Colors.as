@@ -14,6 +14,7 @@ const vec4 cBlack =  vec4(0,0,0, 1);
 const vec4 cBlack75 =  vec4(0,0,0, .75);
 const vec4 cBlack50 =  vec4(0,0,0, .50);
 const vec4 cBlack25 =  vec4(0,0,0, .25);
+const vec4 cBlack0 =  vec4(0,0,0,0);
 const vec4 cGray =  vec4(.5, .5, .5, 1);
 const vec4 cGray50 =  vec4(.5, .5, .5, .5);
 const vec4 cWhite = vec4(1);

@@ -222,11 +222,14 @@ class MapEditPropsTab : Tab {
         // Setting Size.X/Z crashes the game
         CopiableLabeledValue("Map Size", map.Size.ToString());
         UI::Indent();
+        UI::SetNextItemWidth(140);
         newSizeY = Math::Clamp(UI::InputInt("Height", newSizeY), 8, 255);
+        UI::SameLine();
         if (UI::Button("Update Map Height")) {
             Editor::SetNewMapHeight(map, newSizeY);
         }
         AddSimpleTooltip("You may need to save and reload the map to avoid camera/placement bugs.");
+        UI::TextWrapped("\\$bbb\\$i  To change X/Z, use https://explorer.gbx.tools/ to set the size manually\\$db7 and delete chunk 43!\\$bbb (will not work otherwise).");
 
         UI::Unindent();
 

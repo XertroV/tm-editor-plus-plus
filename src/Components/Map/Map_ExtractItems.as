@@ -1,6 +1,6 @@
 class MapExtractItems : Tab {
     MapExtractItems(TabGroup@ parent) {
-        super(parent, "Extract Items", Icons::MapO + Icons::ArrowRight + Icons::FolderOpenO);
+        super(parent, "\\$fa8Extract Items", Icons::MapO + Icons::ArrowRight + Icons::FolderOpenO);
         removable = false;
         // RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEnterEditor), this.tabName);
     }

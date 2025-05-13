@@ -144,8 +144,7 @@ class TabGroup : HasGroupMeta {
     }
 
     void DrawTabsAsSidebar(const string &in title = "") {
-        bool rClick = UI::IsMouseClicked(UI::MouseButton::Right);
-        bool mClick = UI::IsMouseClicked(UI::MouseButton::Middle);
+        ClickFlags clicks = ClickFlags(0b110);
 
         framePadding = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
         regionSize = UI::GetContentRegionAvail();
@@ -161,17 +160,7 @@ class TabGroup : HasGroupMeta {
             if (UI::Button(Icons::Bars + "##expand-" + fullName)) {
                 sideBarExpanded = !sideBarExpanded;
             }
-            for (int i = 0; i < int(tabs.Length); i++) {
-                auto tab = tabs[i];
-                if (UI::Selectable(sideBarExpanded ? tab.DisplayIconAndName : tab.DisplayIconWithId, selectedTabIx == i)) {
-                    selectedTabIx = i;
-                }
-                bool hovered = UI::IsItemHovered(UI::HoveredFlags::DelayNone);
-                if (hovered) {
-                    if (rClick) tab.OnSideBarLabel_RightClick();
-                    else if (mClick) tab.OnSideBarLabel_MiddleClick();
-                }
-            }
+            DrawSidebarTabEntries(clicks);
         }
         UI::EndChild();
         UI::PopStyleColor();
@@ -220,6 +209,24 @@ class TabGroup : HasGroupMeta {
         }
     }
 
+    void DrawSidebarTabEntries(ClickFlags clicks) {
+        auto _selectedIx = selectedTabIx;
+        for (int i = 0; i < int(tabs.Length); i++) {
+            DrawSidebarTabEntry(i, tabs[i], i == _selectedIx, clicks, false);
+        }
+    }
+
+    void DrawSidebarTabEntry(uint i, Tab@ tab, bool isActive, ClickFlags clicks, bool isFav) {
+        if (UI::Selectable(sideBarExpanded ? tab.DisplayIconAndName : tab.DisplayIconWithId, isActive)) {
+            selectedTabIx = i;
+        }
+        bool hovered = UI::IsItemHovered(UI::HoveredFlags::DelayNone);
+        if (hovered) {
+            if (clicks.RMB) tab.OnSideBarLabel_RightClick(isFav);
+            else if (clicks.MMB) tab.OnSideBarLabel_MiddleClick();
+        }
+    }
+
     void OnNavigationBack() {
         TabState::NavHistory(-1, this);
     }
@@ -239,18 +246,30 @@ class TabGroup : HasGroupMeta {
         }
     }
 
-    void FavoriteTab(Tab@ t) {
-        if (t is null) return;
+    int GetTabIx(Tab@ t) {
+        if (t is null) return -1;
         auto ix = tabs.FindByRef(t);
-        if (t.nameIdValue < 0) {
-            _Log::Warn_NID("FavoriteTab", "Tab has no nameIdValue: " + t.fullName);
+        if (ix < 0) {
+            _Log::Warn_NID("GetTabIx", "Tab not found: " + t.fullName);
         }
+        return ix;
+    }
+
+    void FavoriteTab(Tab@ t) {
+        auto ix = GetTabIx(t);
         if (ix >= 0) {
             meta.AddFavorite(t.nameIdValue);
             // todo: favorites logic
             // tabs.RemoveAt(ix);
             // tabs.InsertAt(0, t);
         }
+    }
+
+    Tab@ FindTabNamedId(int idValue) {
+        for (uint i = 0; i < tabs.Length; i++) {
+            if (tabs[i].nameIdValue == idValue) return tabs[i];
+        }
+        return null;
     }
 
     void DrawWindows() {
@@ -299,7 +318,13 @@ mixin class HasGroupMeta {
     }
 }
 
+// MARK: RootTabGroup
+
 class RootTabGroupCls : TabGroup {
+    string[] categories;
+    int[] categoryEndIxs;
+    bool[] categoryIsOpen;
+
     RootTabGroupCls(const string &in name = "Root") {
         super(name, null);
         // root
@@ -309,7 +334,146 @@ class RootTabGroupCls : TabGroup {
         IsRoot = true;
         @meta = TabGroupMeta(this);
     }
+
+    void StartCategories(const string &in initialCategoryName) {
+        categories.InsertLast(initialCategoryName);
+        categoryIsOpen.InsertLast(true);
+    }
+
+    void BeginCategory(const string &in name, bool isOpen = false) {
+        categories.InsertLast(name);
+        categoryEndIxs.InsertLast(tabs.Length);
+        categoryIsOpen.InsertLast(isOpen);
+    }
+
+    bool SetCategoryOpen(uint catIx, bool isOpen) {
+        if (catIx >= categoryIsOpen.Length) return false;
+        categoryIsOpen[catIx] = isOpen;
+        meta.UpdateCategoriesOpen(categories, categoryIsOpen);
+        return isOpen;
+    }
+
+    void DrawSidebarTabEntries(ClickFlags clicks) override {
+        string categoryName = "";
+        uint catIx = -1;
+        uint nextCatStartsTabIx = 0;
+        uint nbCategories = categories.Length;
+        auto textCol = UI::GetStyleColor(UI::Col::Text);
+        UI::PushStyleColor(UI::Col::Text, textCol);
+        bool isOpen = true;
+        auto stix = selectedTabIx;
+
+        for (uint i = 0; i < tabs.Length; i++) {
+            while (i >= nextCatStartsTabIx) {
+                catIx++;
+                categoryName = categories[catIx];
+                isOpen = categoryIsOpen[catIx];
+                nextCatStartsTabIx = (catIx+1) >= nbCategories ? -1 : categoryEndIxs[catIx];
+                bool containsActiveTab = i <= stix && stix < nextCatStartsTabIx;
+                // bool shouldOpen = !isOpen && containsActiveTab;
+                // if (shouldOpen) isOpen = SetCategoryOpen(catIx, true);
+                // UI::PushFont(isOpen ? g_BoldFont : g_NormFont);
+                DrawCategoryHeader(catIx, categoryName, isOpen, containsActiveTab);
+                // UI::SeparatorText("\\$i\\$ffc" + categoryName);
+                // UI::PopFont();
+                if (categoryName == "Favorites" && isOpen) {
+                    UI::PushID("fav");
+                    DrawFavoriteTabs_Sidebar(clicks, stix);
+                    UI::PopID();
+                }
+            }
+            if (!isOpen) continue;
+            DrawSidebarTabEntry(i, tabs[i], i == stix, clicks, false);
+        }
+
+        UI::PopStyleColor();
+    }
+
+    void DrawFavoriteTabs_Sidebar(ClickFlags cf, int stix) {
+        auto nb = this.meta.favorites.Length;
+        for (uint i = 0; i < nb; i++) {
+            auto tab = FindTabNamedId(this.meta.favorites[i]);
+            if (tab is null) {
+                UI::Text("Unknown: " + MwIdValueToStr(this.meta.favorites[i]));
+            } else {
+                auto tix = GetTabIx(tab);
+                DrawSidebarTabEntry(tix, tab, tix == stix, cf, true);
+            }
+        }
+    }
+
+    void DrawCategoryHeader(uint catIx, const string &in name, bool isOpen, bool containsActiveTab) {
+        float height = UI::GetTextLineHeight() * 1.35;
+        // vec2 framePad = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
+        vec2 framePad = UI::GetStyleVarVec2(UI::StyleVar::CellPadding);
+        vec4 secondaryBg = cBlack0;
+        auto navHighlight = UI::GetStyleColor(UI::Col::NavHighlight);
+        vec4 catBgCol = navHighlight * vec4(.5);
+        catBgCol.w = 0.6;
+
+        auto dl = UI::GetWindowDrawList();
+        auto catPad = vec2(0, 2);
+        auto origPos = UI::GetCursorScreenPos();
+        auto pos = origPos - framePad;
+        origPos += catPad;
+        UI::SetCursorScreenPos(pos);
+
+        auto avail = UI::GetContentRegionAvail();
+        auto size = vec2(avail.x, height) + framePad*2.0 + catPad*2.0;
+        auto rect = vec4(pos, size);
+
+        // dummy and clicks
+        UI::Dummy(size);
+        bool hovered = UI::IsItemHovered(UI::HoveredFlags::DelayNone);
+        if (hovered) {
+            UI::SetMouseCursor(UI::MouseCursor::Hand);
+            secondaryBg = catBgCol * .7;
+            catBgCol = catBgCol * 1.6;
+        }
+        if (hovered && UI::IsMouseClicked()) {
+            isOpen = SetCategoryOpen(catIx, !categoryIsOpen[catIx]);
+            // if (!isOpen && containsActiveTab) {
+            //     selectedTabIx = -1; // categoryEndIxs[catIx];
+            // }
+        }
+        UI::SetCursorScreenPos(pos);
+
+        // The bg and label
+        dl.AddRectFilledMultiColor(rect, catBgCol, secondaryBg, secondaryBg, catBgCol);
+        UI::SetCursorScreenPos(origPos);
+        auto icon = isOpen ? Icons::AngleDown : Icons::AngleRight;
+        auto textCol = hovered ? "\\$fff" : "\\$eee";
+        textCol += isOpen ? "\\$i" : "";
+        UI::SeparatorText(icon + textCol + "\\$s " + name);
+        auto finalPos = UI::GetCursorScreenPos() + catPad;
+        UI::SetCursorScreenPos(finalPos);
+        // ensure we don't get UI assertion failures
+        UI::Dummy(vec2(0));
+        UI::SetCursorScreenPos(finalPos);
+    }
+
+    void AterLoadedState() override {
+        auto favKeys = meta.categoriesOpen.GetKeys();
+        for (uint i = 0; i < categories.Length; i++) {
+            auto name = categories[i];
+            if (favKeys.Find(name) > -1) {
+                categoryIsOpen[i] = J::ToBool(meta.categoriesOpen[name], false);
+            }
+        }
+        SetCategoryOpen(FindCatIdForTabIx(selectedTabIx), true);
+    }
+
+    int FindCatIdForTabIx(int tabIx) {
+        for (uint i = 0; i < categoryEndIxs.Length; i++) {
+            if (tabIx < categoryEndIxs[i]) return i;
+        }
+        return -1;
+    }
 }
+
+
+
+// MARK: selected tab setting
 
 Json::Value@ _cachedSelectedTabsJson = null;
 
@@ -339,4 +503,33 @@ void SetSelectedTabFor(const string &in tabGroupId, int value) {
     }
     j[tabGroupId] = value;
     S_SelectedTabsJson = Json::Write(j);
+}
+
+
+
+
+class ClickFlags {
+    int flags;
+
+    ClickFlags(int getMask = 0xF) {
+        flags = 0;
+        if (getMask & (1 << 0) != 0) Set(0, UI::IsMouseClicked(UI::MouseButton::Left));
+        if (getMask & (1 << 1) != 0) Set(1, UI::IsMouseClicked(UI::MouseButton::Right));
+        if (getMask & (1 << 2) != 0) Set(2, UI::IsMouseClicked(UI::MouseButton::Middle));
+        if (getMask & (1 << 3) != 0) Set(3, UI::IsMouseClicked(MOUSE_BUTTON_BACK));
+        if (getMask & (1 << 4) != 0) Set(4, UI::IsMouseClicked(MOUSE_BUTTON_FORWARD));
+    }
+
+    bool get_LMB() { return (flags & 1) != 0; }
+    // right mouse button
+    bool get_RMB() { return (flags & 2) != 0; }
+    // middle mouse button
+    bool get_MMB() { return (flags & 4) != 0; }
+    bool get_BackMB() { return (flags & 8) != 0; }
+    bool get_ForwardMB() { return (flags & 16) != 0; }
+
+    void Set(int flagPos, bool value) {
+        if (value) flags |= (1 << flagPos);
+        else flags &= ~(1 << flagPos);
+    }
 }

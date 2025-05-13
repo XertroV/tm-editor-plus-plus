@@ -33,6 +33,7 @@ namespace SPlacement {
             Dev_NotifyWarning("Block ID mismatch: " + block.DescId.Value + " != " + block.BlockInfo.Id.Value);
             throw("Block ID mismatch: " + block.DescId.Value + " != " + block.BlockInfo.Id.Value);
         }
+#endif
         seenBlockInfoIds.InsertLast(block.DescId.Value);
         auto blockIx = blockInfoIds.Length;
         blockInfoIds.InsertLast(block.DescId.Value);

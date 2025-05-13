@@ -646,59 +646,146 @@ CurrentItem_PlacementToolbar@ g_ItemPlacementToolbar;
 CurrentBlock_PlacementToolbar@ g_BlockPlacementToolbar;
 CurrentMacroblock_PlacementToolbar@ g_MbPlacementToolbar;
 
+/* STRUCTURE
+Global:
+- Changelog
+- Map
+- Cursor
+- Custom Cursor
+- Lightmap
+- Kinematics
+- Editor Misc
+
+Map Contents:
+- Blocks & Items
+- Picked Block
+- Picked Item
+
+Inventory
+- Inventory
+- Inventory V2
+- Inventory Search
+- Favorites
+- Refresh Items
+
+Inventory Selection
+- Block Selection
+- Item Selection
+- Macroblock Selection
+
+Placement
+- Global Placement Options
+- Macroblock Opts
+- Checkpoints
+
+Effects
+- Auto-Place Items
+- Scenery Generator
+- Repeat Item (Matrix/Grid)
+- Dissociate Items
+- Jitter Effect
+- Randomizer
+
+Utilities
+- Find & Replace
+- Mass Delete
+- Pillars Autochanger
+- Apply Color
+- Apply Phase Offset
+- Apply Translation
+
+Settings & Help
+- Hotkeys
+- Editor Controls Docs
+- Fixes
+- About
+- Dev
+
+*/
+
 TabGroup@ CreateRootTabGroup() {
     auto root = RootTabGroupCls();
+    // ---------------------------------
+    root.StartCategories("Favorites");
+    // this gets autofilled when listing tabs in sidebar
+
+    root.BeginCategory("Global", true);
+
     ChangelogTab(root);
     @g_MapPropsTab = MapEditPropsTab(root);
 #if DEV
     MapExtractItems(root);
 #endif
-    LightmapTab(root);
-    @g_BlocksItemsTab = BI_MainTab(root);
-    TodoTab(root, "Pinned B&I", Icons::MapO + Icons::MapMarker, "lists of pinned blocks and items");
     CursorTab(root);
-
     CustomCursorTab(root);
+
+    LightmapTab(root);
+    ViewKinematicsTab(root);
+    EditorMiscTab(root);
+
+    // ---------------------------------
+    root.BeginCategory("Map Contents");
+
+    @g_BlocksItemsTab = BI_MainTab(root);
     @g_PickedBlockTab = PickedBlockTab(root);
     @g_PickedItemTab = PickedItemTab(root);
-    PillarsAutochangerTab(root);
-    SceneryGenTab(root);
+
+    // ---------------------------------
+    root.BeginCategory("Inv Selection");
+    BlockSelectionTab(root);
+    ItemSelectionTab(root);
+#if DEV
+    MacroblockSelectionTab(root);
+#endif
+    // SkinsMainTab(root);
+    // TodoTab(root, "Pinned B&I", Icons::MapO + Icons::MapMarker, "lists of pinned blocks and items");
+
+    // ---------------------------------
+    root.BeginCategory("Inventory");
+
     // TodoTab(root, "Inventory", Icons::FolderOpenO, "browse the inventory and set favorite blocks/items.");
     InventoryMainTab(root);
     InventoryMainV2Tab(root);
     @g_InvSearchTab = InventorySearchTab(root);
     @g_Favorites = FavoritesTab(root);
     ItemEmbedTab(root);
-    BlockSelectionTab(root);
-    ItemSelectionTab(root);
-#if DEV
-    MacroblockSelectionTab(root);
-#endif
+
+
+    // ---------------------------------
+    root.BeginCategory("Placement");
     GlobalPlacementOptionsTab(root);
-    // SkinsMainTab(root);
     MacroblockOptsTab(root);
-    ViewKinematicsTab(root);
 
     // - filtered view of blocks/items show just checkpoints
     // - set linked order
     //   -- for next, selected, picked
     CheckpointsTab(root);
 
-    // @g_GraphTab = NG::GraphTab(root);
+    // ---------------------------------
+    root.BeginCategory("Effects");
+
+
+#if DEV
+    AutoPlaceItemsTab(root);
+    SceneryGenTab(root);
+#endif
 
     Repeat::MainRepeatTab(root);
     DissociateItemsTab(root);
     JitterEffectTab(root);
-    ColorApplyTab(root);
-    PhaseOffsetApplyTab(root);
-    FindReplaceTab(root);
-    MassDeleteTab(root);
-    ApplyTranslationTab(root);
-    // ApplyRotationTab(root);
-
     RandomizerEffectsTab(root);
 
-    EditorMiscTab(root);
+    // ---------------------------------
+    root.BeginCategory("Utilities");
+
+    // @g_GraphTab = NG::GraphTab(root);
+    FindReplaceTab(root);
+    MassDeleteTab(root);
+    PillarsAutochangerTab(root);
+    ColorApplyTab(root);
+    PhaseOffsetApplyTab(root);
+    ApplyTranslationTab(root);
+    // ApplyRotationTab(root);
 
     // TodoTab(root, "Apply Transformation", "f(x)", "apply a transformation to a Source of blocks/items");
 
@@ -709,6 +796,9 @@ TabGroup@ CreateRootTabGroup() {
     // TodoTab(root, "Validation Runs", Icons::Car, 'track validation runs so you dont lose validation times');
 
     // TodoTab(root, "For Devs", Icons::QuestionCircle, "-- ignore that.\n\nI want to make a decent export system for this plugin so it's exensible. The idea is that it's easy to add a new root tab, or add some feature to an existing tab group. Medals & validation is an example -- i'm going to use that as a test plugin to implement the interface. Some work has already been done, but testing volunteers and feedback/ideas would be great. Check out the code (particularly src/Editor/*.as), there's lots of stuff set up for export, like convenience functions and ones for reading/writing values, camera controls, in-map block/item refreshing, map saving and reloading, etc.");
+
+    // ---------------------------------
+    root.BeginCategory("Settings & Help", true);
 
     HotkeysTab(root);
     EditorControlsDocsTab(root);

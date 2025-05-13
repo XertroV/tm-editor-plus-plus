@@ -3,6 +3,7 @@ const string DOUBLE_QUOTE = "\"";
 class TabGroupMeta : HasCustomLogs {
     // LIFO if adding fav to top; FIFO otherwise.
     int[] favorites;
+    Json::Value@ categoriesOpen = Json::Object();
     int[] hidden;
     string parentTabId;
     int parentTabIdValue;
@@ -21,6 +22,9 @@ class TabGroupMeta : HasCustomLogs {
         Json::Value@ j = Json::Object();
         j["hidden"] = J::From_ArrayMwIdValue(hidden);
         j["favorites"] = J::From_ArrayMwIdValue(favorites);
+        if (this.categoriesOpen.Length > 0) {
+            j["categoriesOpen"] = this.categoriesOpen;
+        }
         @_lastJson = j;
         _lastJsonStr = Json::Write(j);
         return j;
@@ -52,6 +56,7 @@ class TabGroupMeta : HasCustomLogs {
         }
         if (j.HasKey("hidden")) hidden = J::To_ArrayMwIdValue(j["hidden"]);
         if (j.HasKey("favorites")) favorites = J::To_ArrayMwIdValue(j["favorites"]);
+        if (j.HasKey("categoriesOpen")) categoriesOpen = J::ToJsonObj(j["categoriesOpen"]);
     }
 
     // lookup this group's key in a json object. throws if not an object
@@ -123,6 +128,38 @@ class TabGroupMeta : HasCustomLogs {
         if (ix != -1) favorites.RemoveAt(ix);
         _MarkStale();
     }
+
+    void MoveFavoriteTab(int id, int relativePos) {
+        if (relativePos == 0) return;
+        auto currIx = favorites.Find(id);
+        if (currIx == -1) return;
+        _SetFavoriteTabIx(currIx, currIx + relativePos);
+    }
+
+    void SetFavoriteTabIx(int id, int newIx) {
+        auto currIx = favorites.Find(id);
+        if (currIx == -1) return;
+        _SetFavoriteTabIx(currIx, newIx);
+    }
+
+    private void _SetFavoriteTabIx(int currIx, int newIx) {
+        if (currIx == newIx) return;
+        newIx = Math::Clamp(newIx, 0, favorites.Length - 1);
+        auto id = favorites[currIx];
+        favorites.RemoveAt(currIx);
+        favorites.InsertAt(newIx, id);
+        _MarkStale();
+    }
+
+    void UpdateCategoriesOpen(const string[] &in names, const bool[] &in opens) {
+        if (names.Length != opens.Length) throw("UpdateCategoriesOpen: names.Length != opens.Length");
+        for (uint i = 0; i < names.Length; i++) {
+            categoriesOpen[names[i]] = opens[i];
+        }
+        _MarkStale();
+    }
+
+
 }
 
 
@@ -284,5 +321,21 @@ namespace J {
             }
         }
         return arr;
+    }
+
+    Json::Value@ ToJsonObj(Json::Value@ j) {
+        if (j.GetType() != Json::Type::Object) {
+            _Log::Warn("ToJsonObj", "expected object; got " + tostring(j.GetType()) + " / value was: " + Json::Write(j));
+            return Json::Object();
+        }
+        return j;
+    }
+
+    bool ToBool(Json::Value@ j, bool def = false) {
+        if (j.GetType() != Json::Type::Boolean) {
+            _Log::Warn("ToBool", "expected bool; got " + tostring(j.GetType()) + " / value was: " + Json::Write(j));
+            return def;
+        }
+        return j;
     }
 }

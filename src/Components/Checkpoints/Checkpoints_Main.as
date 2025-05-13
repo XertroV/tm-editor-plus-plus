@@ -151,7 +151,7 @@ class CpPatchesTab : EffectTab {
     }
 
     void DrawInner() override {
-        _IsActive = UI::Checkbox("Enable testing from Circle CPs", _IsActive);
-        UI::Text("Must be manually enabled and auto-disabled when leaving editor.");
+        _IsActive = UI::Checkbox("Enable testing from Ring CPs", _IsActive);
+        UI::Text("Must be manually enabled and is auto-disabled when leaving editor.");
     }
 }

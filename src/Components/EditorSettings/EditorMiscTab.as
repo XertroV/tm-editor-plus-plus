@@ -215,9 +215,10 @@ class EditorMiscTab : Tab {
 
         CheckSetHideBlockHelpers(app, editor);
         editor.HideBlockHelpers = UI::Checkbox("Hide Block Helpers", editor.HideBlockHelpers);
-
-        S_ControlBlockHelpers = UI::Checkbox("Hide Block Helpers: Save and persist setting", S_ControlBlockHelpers);
+        UI::SameLine();
+        S_ControlBlockHelpers = UI::Checkbox("Save and persist##hideblockhelpers", S_ControlBlockHelpers);
         AddSimpleTooltip("Otherwise it resets after test mode, etc.");
+
         if (S_ControlBlockHelpers) {
             S_HideBlockHelpers = editor.HideBlockHelpers;
         }
