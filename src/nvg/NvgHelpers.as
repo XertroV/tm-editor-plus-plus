@@ -22,6 +22,15 @@ void nvgCircleScreenPos(vec2 xy, vec4 col = vec4(1, .5, 0, 1), float radius = 5.
     nvg::Fill();
     nvg::ClosePath();
 }
+void nvgRingScreenPos(vec2 xy, vec4 col = vec4(1, .5, 0, 1), float radius = 5., float strokeWidth = 2.) {
+    nvg::Reset();
+    nvg::BeginPath();
+    nvg::StrokeColor(col);
+    nvg::StrokeWidth(strokeWidth);
+    nvg::Circle(xy, radius);
+    nvg::Stroke();
+    nvg::ClosePath();
+}
 
 void nvgDrawHorizGridHelper(vec3 worldPos, vec4 col, float strokeWidth, float gridSize = 32., int gridStepsOut = 1) {
     gridStepsOut = Math::Abs(gridStepsOut);

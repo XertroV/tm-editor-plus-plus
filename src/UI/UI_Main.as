@@ -593,6 +593,7 @@ TabGroup@ CreateToolsTabGroup() {
     @g_ItemPlacementToolbar = CurrentItem_PlacementToolbar(tools);
     @g_BlockPlacementToolbar = CurrentBlock_PlacementToolbar(tools);
     @g_MbPlacementToolbar = CurrentMacroblock_PlacementToolbar(tools);
+    PaletteOfSnappingTool(tools);
     // @g_MapBaseSizeChanger = MapBaseSizeChangerTab(tools);
     return tools;
 }

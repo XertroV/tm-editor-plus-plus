@@ -53,18 +53,48 @@ class BlockFilter {
 
 // MARK: MapVoxels
 
+const uint GRASS_ID_VAL = StrToMwIdValue_NoDep("Grass");
+
 class MapVoxels {
     int3 mapSize;
     CoordState@[][] states;
     bool DrawDebug = false;
 
-    void Reset() {
-        states.RemoveRange(0, states.Length);
-
+    void Reset(bool andScrapeMap = true) {
+        auto mapSize = nat3(48, 48, 48);
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor !is null) mapSize = editor.Challenge.Size;
+        InitializeForMapSize(mapSize);
+        if (andScrapeMap and editor !is null) {
+            auto map = editor.Challenge;
+            auto nbBlocks = map.Blocks.Length;
+            bool foundGrass = false;
+            for (uint i = 0; i < nbBlocks; i++) {
+                auto block = map.Blocks[i];
+                if (block is null) continue;
+                if (!foundGrass && block.DescId.Value == GRASS_ID_VAL) {
+                    i += mapSize.x * mapSize.z - 1;
+                    foundGrass = true;
+                    continue;
+                }
+                auto wfcBlock = WFC::blockInv.FindBlockById(block.DescId.Value);
+                if (wfcBlock is null) continue;
+                RegisterBlock(wfcBlock, Nat3ToInt3(block.Coord), CardinalDir(int(block.Dir)));
+            }
+        }
     }
 
     void InitializeForMapSize(nat3 &in size) {
-        Reset();
+        for (uint i = 0; i < states.Length; i++) {
+            for (uint j = 0; j < states[i].Length; j++) {
+                if (states[i][j] !is null) {
+                    @states[i][j] = null;
+                }
+            }
+        }
+        EntropyNextList.RemoveRange(0, EntropyNextList.Length);
+        CoordsToRefresh.RemoveRange(0, CoordsToRefresh.Length);
+        states.RemoveRange(0, states.Length);
         mapSize = Nat3ToInt3(size);
         states.Resize(size.x * size.z);
     }
@@ -78,7 +108,10 @@ class MapVoxels {
     }
 
     CoordState@ GetCoordState(const int3 &in coord) {
-        auto ix = GetXZIx(coord);
+        uint ix = GetXZIx(coord);
+        if (ix > states.Length) {
+            throw("GetCoordState: index out of bounds: " + ix + " / " + states.Length);
+        }
         auto top = coord.y;
         if (states[ix].Length <= top) {
             states[ix].Resize(top >= mapSize.y / 2 ? mapSize.y : mapSize.y / 2 + 1);
@@ -87,6 +120,10 @@ class MapVoxels {
             @states[ix][top] = CoordState();
         }
         return states[ix][top];
+    }
+
+    CoordState_AndCoord GetCoordState_AndCoord(const int3 &in coord) {
+        return CoordState_AndCoord(GetCoordState(coord), coord);
     }
 
     bool IsCoordOccupied(const int3 &in coord) {
@@ -176,8 +213,10 @@ class MapVoxels {
     int3[] CoordsToRefresh;
     bool RefreshCoroInitiated = false;
 
-    void QueueCoordStateRefresh(const int3 &in coord) {
+    void OnOccupy_QueueCoordStateRefresh(const int3 &in coord) {
         CoordsToRefresh.InsertLast(coord);
+        auto existingIx = FindInEntropyList(coord);
+        if (existingIx != -1) EntropyNextList.RemoveAt(existingIx);
         if (!RefreshCoroInitiated) {
             RefreshCoroInitiated = true;
             startnew(CoroutineFunc(_RunRefreshCoordState));
@@ -189,6 +228,7 @@ class MapVoxels {
         while (CoordsToRefresh.Length > 0) {
             _RunRefreshCoords_Iter(firstRun);
             firstRun = false;
+            yield();
         }
         if (_entropyListUnsorted) SortEntropyList();
         RefreshCoroInitiated = false;
@@ -222,15 +262,27 @@ class MapVoxels {
                 // search all blocks based on constraints
                 InitializeAvailableBlocks(cs, coord);
                 availableNb = cs.availableBlockIxsAndRots.Length;
+                // If we have no available blocks
+
             }
+
+            if (availableNb == 0 && cs.Entropy == -2) {
+                // we have no available blocks, but entropy is max; which means anything can match.
+                continue;
+            }
+
             // we are only going to be reducing the list
             // we run this after initializing too so we can be a bit lazier during initialization
             uint[] toRem;
             uint entropy = 0;
             for (uint i = 0; i < availableNb; i++) {
                 auto blockIxAndDirs = cs.availableBlockIxsAndRots[i];
-                auto dirs = blockIxAndDirs >> 0x10;
-                auto ix = blockIxAndDirs & 0xFFFF;
+                auto dirs = blockIxAndDirs.dirs;
+                auto ix = blockIxAndDirs.ci.biIx;
+                if (ix >= WFC::blockInv.blockInfos.Length) {
+                    Dev_NotifyWarning("Invalid block index: " + ix);
+                    continue;
+                }
                 auto blockInfo = WFC::blockInv.blockInfos[ix];
                 // need to get constraints from neighboring blocks...
                 auto matchingDirs = blockInfo.SolveCardinalDirections(this, coord);
@@ -243,7 +295,7 @@ class MapVoxels {
                     toRem.InsertLast(i);
                 } else {
                     // update the list of available blocks
-                    cs.availableBlockIxsAndRots[i] = (uint(matchingDirs) << 0x10) | ix;
+                    cs.availableBlockIxsAndRots[i].dirs = matchingDirs;
                     entropy += CountDirsInPacked(matchingDirs);
                 }
             }
@@ -261,6 +313,34 @@ class MapVoxels {
         }
     }
 
+    // void dbg_GotFaceConstraints(FaceClipConstraint@ northCs, FaceClipConstraint@ eastCs, FaceClipConstraint@ southCs, FaceClipConstraint@ westCs) {
+    //     string msg = "Got face constraints: ";
+    //     msg += (northCs !is null ? "N=null" : "N=<"+northCs.ToString()+">");
+    //     msg += (eastCs is null ? "E=null" : "E=<"+eastCs.ToString()+">");
+    //     msg += (southCs is null ? "S=null" : "S=<"+southCs.ToString()+">");
+    //     msg += (westCs is null ? "W=null" : "W=<"+westCs.ToString()+">");
+    //     _Log::Info(msg);
+    // }
+
+    // void dbg_FoundBlockIxs(const uint[] &in northR, const uint[] &in eastR, const uint[] &in southR, const uint[] &in westR) {
+    //     string msg = "Found block ixs: ";
+    //     msg += (northR.Length == 0 ? "N=null" : "N=< "+UintArrToString(northR, false)+" >");
+    //     msg += (eastR.Length == 0 ? "E=null" : "E=< "+UintArrToString(eastR, false)+" >");
+    //     msg += (southR.Length == 0 ? "S=null" : "S=< "+UintArrToString(southR, false)+" >");
+    //     msg += (westR.Length == 0 ? "W=null" : "W=< "+UintArrToString(westR, false)+" >");
+    //     _Log::Info(msg);
+    // }
+
+    // void dbg_Intersection(const string &in name, const uint[] &in arr) {
+    //     string msg = "Intersection: " + name + ": ";
+    //     if (arr.Length == 0) {
+    //         msg += "empty";
+    //     } else {
+    //         msg += "<" + UintArrToString(arr, false) + ">";
+    //     }
+    //     _Log::Info(msg);
+    // }
+
     void InitializeAvailableBlocks(CoordState@ cs, const int3 &in coord) {
         // search all blocks based on constraints; note: we won't solve them here, just filtere down blocks to a reasonable list.
         cs.availableBlockIxsAndRots.RemoveRange(0, cs.availableBlockIxsAndRots.Length);
@@ -268,17 +348,37 @@ class MapVoxels {
         auto eastCs = GetConstraintsForFaceInMap(coord, ClipFace::East);
         auto southCs = GetConstraintsForFaceInMap(coord, ClipFace::South);
         auto westCs = GetConstraintsForFaceInMap(coord, ClipFace::West);
-        uint[] northR = WFC::blockInv.FindBlockIxsByClipIds(northCs.allowedClipIds);
-        uint[] eastR = WFC::blockInv.FindBlockIxsByClipIds(eastCs.allowedClipIds);
-        uint[] southR = WFC::blockInv.FindBlockIxsByClipIds(southCs.allowedClipIds);
-        uint[] westR = WFC::blockInv.FindBlockIxsByClipIds(westCs.allowedClipIds);
-        uint[] intersectNE = northR.Length > 0 ? eastR.Length > 0 ? Intersection(northR, eastR) : northR : eastR;
-        uint[] intersectSW = southR.Length > 0 ? westR.Length > 0 ? Intersection(southR, westR) : southR : westR;
-        uint[] intersect = intersectNE.Length > 0 ? intersectSW.Length > 0 ? Intersection(intersectNE, intersectSW) : intersectNE : intersectSW;
+        // dbg_GotFaceConstraints(northCs, eastCs, southCs, westCs);
+        auto northR = WFC::blockInv.FindOkClipsByClipIds(northCs.allowedClipIds);
+        auto eastR = WFC::blockInv.FindOkClipsByClipIds(eastCs.allowedClipIds);
+        auto southR = WFC::blockInv.FindOkClipsByClipIds(southCs.allowedClipIds);
+        auto westR = WFC::blockInv.FindOkClipsByClipIds(westCs.allowedClipIds);
+        // dbg_FoundBlockIxs(northR, eastR, southR, westR);
+        auto intersectNE = northR.Length > 0 ? eastR.Length > 0 ? Intersection(northR, eastR) : northR : eastR;
+        auto intersectSW = southR.Length > 0 ? westR.Length > 0 ? Intersection(southR, westR) : southR : westR;
+        WFC_ClipInfo@[] intersect = intersectNE.Length > 0 ? intersectSW.Length > 0 ? Intersection(intersectNE, intersectSW) : intersectNE : intersectSW;
+        // dbg_Intersection("intersectNE", intersectNE);
+        // dbg_Intersection("intersectSW", intersectSW);
+        // dbg_Intersection("intersect", intersect);
+
+        if (intersect.Length == 1 and intersect[0] is null) {
+            _Log::Info("No constraints, any block is valid");
+            // we can match any
+            cs.Entropy = uint(-2);
+            NotifyEntropyChanged(cs, coord);
+            return;
+        }
+
         // now we have a list of blocks that are compatible with the constraints
         for (uint i = 0; i < intersect.Length; i++) {
+            if (intersect[i] is null) {
+                // shouldn't get this here
+                Dev_NotifyWarning("Invalid blockIx at i=" + i);
+                PrintActiveContextStack(true);
+                continue;
+            }
             // assume everything is valid because we're about to filter them down as per non-initializaiton procedure.
-            cs.availableBlockIxsAndRots.InsertLast(0xF0000 | intersect[i]);
+            cs.availableBlockIxsAndRots.InsertLast(BlockIxCoordDir(intersect[i], 0xF));
         }
         cs.Entropy = 4 * cs.availableBlockIxsAndRots.Length;
         NotifyEntropyChanged(cs, coord);
@@ -290,9 +390,15 @@ class MapVoxels {
     // When entropy changes, we need to make sure the coord is in the list, and
     // that the list is resorted.
     void NotifyEntropyChanged(CoordState@ cs, const int3 &in coord) {
-        _Log::Info("NotifyEntropyChanged: " + coord.ToString() + " -> " + cs.Entropy);
+        if (cs.Entropy != -2) _Log::Debug("NotifyEntropyChanged", coord.ToString() + " -> " + cs.Entropy);
         int existingIx = FindInEntropyList(coord);
         _entropyListUnsorted = true;
+        // don't store entries that can match anything or nothing
+        if (cs.Entropy == -2 || cs.Entropy == 0) {
+            if (existingIx == -1) return;
+            EntropyNextList.RemoveAt(existingIx);
+            return;
+        }
         if (existingIx == -1) {
             EntropyNextList.InsertLast(EntropyEntry(cs.Entropy, coord.x, coord.y, coord.z));
             return;
@@ -314,32 +420,69 @@ class MapVoxels {
 
     }
 
+
+    CoordState_AndCoord[]@ GetNextLowestEtropyCoords() {
+        uint lowestE = 0;
+        return GetNextLowestEtropyCoords(lowestE);
+    }
+    CoordState_AndCoord[]@ GetNextLowestEtropyCoords(uint &out lowestE) {
+        CoordState_AndCoord[]@ list = {};
+        if (EntropyNextList.Length == 0) return list;
+        lowestE = EntropyNextList[0].entropy;
+        for (uint i = 0; i < EntropyNextList.Length && EntropyNextList[i].entropy == lowestE; i++) {
+            if (EntropyNextList[i].entropy == lowestE) {
+                list.InsertLast(GetCoordState_AndCoord(EntropyNextList[i].GetCoord()));
+            } else {
+                break;
+            }
+        }
+        return list;
+    }
+
+
     void DrawEntropy() {
         auto listLen = EntropyNextList.Length;
-        auto nbToDraw = Math::Min(20, listLen);
+        auto nbToDraw = Math::Min(50, listLen);
         string asText = "Entropies: ";
         for (uint i = 0; i < nbToDraw; i++) {
             asText += (i > 0 ? ", " : "") + EntropyNextList[i].ToString();
         }
         UI::TextWrapped(asText);
-        for (uint i = 0; i < nbToDraw; i++) {
+        int hoverEntry = -1;
+        vec2 hoverXY;
+        vec4 hoverCol;
+        float hoverRadius;
+        // auto mouseCoords = g_lastMousePos;
+        auto mousePos = UI::GetMousePos();
+        for (int i = nbToDraw - 1; i >= 0; i--) {
             auto entropy = EntropyNextList[i].entropy;
+            if (entropy == -2) continue;
             auto coord = EntropyNextList[i].GetCoord();
             vec4 col = vec4(1.0);
-            col.x = 1.0 - Math::Clamp(float(entropy) / 32.0, 0.0, 1.0);
-            col.y = Math::Clamp(float(entropy) / 32.0, 0.0, 1.0);
+            col.x = 1.0 - Math::Clamp(float(entropy) / 64.0, 0.0, 1.0);
+            col.y = Math::Clamp(float(entropy) / 64.0, 0.0, 1.0);
             col.z = col.y * 0.5;
-            col.w = Math::Lerp(0.2, 1.0, col.x);
-            auto radius = Math::Lerp(30.0, 0.0, col.x);
+            col.w = Math::Pow(Math::Lerp(0.1, 1.0, col.x), 1.5);
+            auto radius = Math::Lerp(7.0, 1.0, col.x) ** 2 + 3.0;
             vec3 uv;
             auto worldPos = CoordToPos(coord) + HALF_COORD;
-            auto camDist = MathX::Abs(Camera::GetCurrentPosition() - worldPos).LengthSquared();
+            auto camDist = MathX::Abs(Camera::GetCurrentPosition() - worldPos).Length();
             nvgCircleWorldPos(worldPos, uv, col, radius);
-            if (uv.z >= 0.0) continue;
+            if (uv.z > 0.0) continue;
 
-            auto fontDistScale = Math::Clamp(1.0 - camDist / 100000.0, 0.0, 1.0);
-            auto fontSize = g_screen.y * 0.04 * fontDistScale;
+            if ((mousePos - uv.xy).LengthSquared() <= radius*radius) {
+                hoverEntry = i;
+                hoverXY = uv.xy;
+                hoverCol = col;
+                hoverRadius = radius;
+                hoverCol.w = 1.0;
+            }
+
+            auto fontDistScale = Math::Clamp(1.0 - camDist / 1000.0, 0.0, 1.0);
+            auto fontSize = g_screen.y * 0.035 * fontDistScale;
+            if (fontSize < 2.0) continue;
             nvg::FontSize(fontSize);
+
             string t = tostring(entropy);
             auto bounds = nvg::TextBounds(t);
             nvgDrawTextWithShadow(uv.xy - bounds * 0.5, t);
@@ -349,6 +492,13 @@ class MapVoxels {
             // nvgDrawBlockBox(Editor::GetBlockMatrix(coord), Editor::DEFAULT_COORD_SIZE);
             // // draw the entropy
             // UI::Text("Entropy: " + entry.entropy);
+        }
+
+        if (hoverEntry != -1) {
+            nvgRingScreenPos(hoverXY, hoverCol, hoverRadius, 2.0);
+            nvg::FontSize(20.0 * g_screen.y / 1440.0);
+            nvg::TextAlign(0x1 | 0x4);
+            nvgDrawTextWithShadow(hoverXY, EntropyNextList[hoverEntry].ToString());
         }
     }
 
@@ -410,14 +560,65 @@ void ExtendArray(ref@[] &inout arr1, const ref@[] &in arr2) {
     }
 }
 
+// Note: {-1} means any match, and is handled as a special case.
 uint[] Intersection(const uint[] &in arr1, const uint[] &in arr2) {
-    uint[] ret;
+    // special case: {-1} means any match, and should only be propagated if arr1 is also -1.
+    // similarly, if arr1 is {-1} and arr2 is not, we should return arr2.
+    bool arr1_isAny = arr1.Length == 1 && arr1[0] == -1;
+    bool arr2_isAny = arr2.Length == 1 && arr2[0] == -1;
+    // if both any => return any
+    if (arr1_isAny && arr2_isAny) return {-1};
+    // if arr1 is any => return copy of arr2
+    if (arr1_isAny) {
+        return arr2;
+    } else if (arr2_isAny) {
+        // if arr2 is any => just return arr1
+        return arr1;
+    }
+
+    uint[] ret = {};
     for (uint i = 0; i < arr1.Length; i++) {
         if (arr2.Find(arr1[i]) != -1 && ret.Find(arr1[i]) == -1) {
             ret.InsertLast(arr1[i]);
         }
     }
     return ret;
+}
+
+WFC_ClipInfo@[] Intersection(const WFC_ClipInfo@[] &in arr1, const WFC_ClipInfo@[] &in arr2) {
+    // special case: {null} means any match, and should only be propagated if arr1 is also null.
+    // similarly, if arr1 is {null} and arr2 is not, we should return arr2.
+    bool arr1_isAny = arr1.Length == 1 && arr1[0] is null;
+    bool arr2_isAny = arr2.Length == 1 && arr2[0] is null;
+    // if both any => return any
+    if (arr1_isAny && arr2_isAny) return {null};
+    // if arr1 is any => return copy of arr2
+    if (arr1_isAny) {
+        return arr2;
+    } else if (arr2_isAny) {
+        // if arr2 is any => just return arr1
+        return arr1;
+    }
+
+    WFC_ClipInfo@[] ret = {};
+    for (uint i = 0; i < arr1.Length; i++) {
+        ret.InsertLast(arr1[i]);
+        // if (arr2.Find(arr1[i]) != -1 && ret.Find(arr1[i]) == -1) {
+        // }
+    }
+    return ret;
+}
+
+class CoordState_AndCoord {
+    CoordState@ cs;
+    int3 coord;
+
+    CoordState_AndCoord() {}
+
+    CoordState_AndCoord(CoordState@ cs, const int3 &in coord) {
+        @this.cs = cs;
+        this.coord = coord;
+    }
 }
 
 class CoordState {
@@ -434,7 +635,7 @@ class CoordState {
     // need easy lookup for compatible clips
     FaceClipConstraint@[] faceConstraints = DefaultFaceConstraints();
     // list of (id(u16), packedCardinals(u8))
-    uint[] availableBlockIxsAndRots;
+    BlockIxCoordDir[] availableBlockIxsAndRots;
 
     // bool get_IsOccupied() { return (inner & 0x1) != 0; }
     // void set_IsOccupied(bool value) {
@@ -457,13 +658,31 @@ class CoordState {
             auto clip = clips[i];
             // set the clip
             auto allowedIds = clip.GetSnapIDs();
-            faceConstraints[int(clip.clipFace)].allowedClipIds.InsertLast(allowedIds.x);
+            auto newClipDir = RotateDir(dir, int(clip.clipFace));
+            faceConstraints[newClipDir].allowedClipIds.InsertLast(allowedIds.x);
             if (allowedIds.y != -1)
-                faceConstraints[int(clip.clipFace)].allowedClipIds.InsertLast(allowedIds.y);
+                faceConstraints[newClipDir].allowedClipIds.InsertLast(allowedIds.y);
         }
-        parent.QueueCoordStateRefresh(MyCoord);
+        parent.OnOccupy_QueueCoordStateRefresh(MyCoord);
         Entropy = -1;
         availableBlockIxsAndRots.RemoveRange(0, availableBlockIxsAndRots.Length);
+    }
+
+    bool GetAnyAvailableBlockAndDir(BlockIxCoordDir &out deets, ClipFace &out dir) {
+        if (availableBlockIxsAndRots.Length == 0) {
+            deets = BlockIxCoordDir(null, 0);
+            dir = ClipFace::North;
+            return false;
+        }
+        deets = availableBlockIxsAndRots[Math::Rand(0, availableBlockIxsAndRots.Length)];
+        ClipFace[] dirs = {};
+        for (uint i = 0; i < 4; i++) {
+            if ((deets.dirs & (1 << i)) != 0) {
+                dirs.InsertLast(ClipFace(i));
+            }
+        }
+        dir = dirs[Math::Rand(0, dirs.Length)];
+        return true;
     }
 }
 
@@ -530,12 +749,33 @@ class ClipFilter {
     }
 }
 
+class BlockIxCoordDir {
+    // uint16 blockIx;
+    int16 dirs;
+    // int3 offset;
+    WFC_ClipInfo@ ci;
+    BlockIxCoordDir() {}
+    BlockIxCoordDir(WFC_ClipInfo@ ci, int16 dirs) {
+        @this.ci = ci;
+        this.dirs = dirs;
+    }
+}
+
 class FaceClipConstraint {
     uint[] allowedClipIds;
     ClipFace requiredFaceDir;
     FaceClipConstraint() {}
     FaceClipConstraint(int face) {
         requiredFaceDir = ClipFace(face);
+    }
+
+    string ToString() {
+        string ret = "FaceClipConstraint(reqFace=" + tostring(requiredFaceDir) + ", allowedClipIds = { ";
+        for (uint i = 0; i < allowedClipIds.Length; i++) {
+            ret += (i > 0 ? ", " : "") + FmtUintHex(allowedClipIds[i]);
+        }
+        return ret + " } )";
+
     }
 }
 
@@ -574,9 +814,15 @@ class WFC_ClipInfo {
         this.clipIx = clipIx;
         this.clipFace = clipFace;
         IsAlwaysVisibleFreeClip = bic.IsAlwaysVisibleFreeClip;
-        if (!MathX::Nat3Eq(bui.Offset, bui.RelativeOffset)) {
-            warn("BlockUnitInfo offset != relativeOffset: " + bui.Offset.ToString() + " != " + bui.RelativeOffset.ToString());
-        }
+        // never happens
+        // if (!MathX::Nat3Eq(bui.Offset, bui.RelativeOffset)) {
+        //     warn("BlockUnitInfo offset != relativeOffset: " + bui.Offset.ToString() + " != " + bui.RelativeOffset.ToString());
+        // }
+    }
+
+    bool opEquals(const WFC_ClipInfo &in other) {
+        // if (other is null) return false;
+        return cId.Value == other.cId.Value && clipFace == other.clipFace && buiIx == other.buiIx && biIx == other.biIx && clipIx == other.clipIx;
     }
 
     bool get_IsAlwaysVisibleFreeClip() { return flags & 0x1 != 0; }
@@ -783,6 +1029,12 @@ class WFC_BlockInfo {
     CGameCtnBlockInfo@ get_BlockInfo() {
         return refBlockInfo.AsBlockInfo();
     }
+
+    // int3 FindAnyOffsetSatisfying(CoordState_AndCoord& csac, ClipFace blockDir) {
+    //     // find any offset that satisfies the constraints
+    //     for (uint i = 0; i < clips.Length; i++) {
+    //     }
+    // }
 
     // returns in [0, 15], packed cardinal directions
     uint SolveCardinalDirections(MapVoxels& map, const int3 &in coord) {
@@ -1044,24 +1296,69 @@ class BlockInventory {
         return blockInfos[clip.biIx];
     }
 
-    uint[] FindBlockIxsByClipIds(const uint[] &in clipIds) {
+    // returns {-1} if we can match any block (no clips)
+    WFC_ClipInfo@[] FindOkClipsByClipIds(const uint[] &in clipIds) {
         ref@[] foundClips = {};
+        bool anyFound = false;
         for (uint i = 0; i < clipIds.Length; i++) {
-            auto @clips = ClipIdsToClips.Get(clipIds[i]);
-            if (clips !is null) ExtendArray(foundClips, clips);
-            @clips = GroupIdsToClips.Get(clipIds[i]);
-            if (clips !is null) ExtendArray(foundClips, clips);
+            auto cFromIds = ClipIdsToClips.Get(clipIds[i]);
+            auto cFromGroups = GroupIdsToClips.Get(clipIds[i]);
+            if (cFromIds !is null) {
+                ExtendArray(foundClips, cFromIds);
+                anyFound = cFromIds.Length > 0;
+            }
+            if (cFromGroups !is null) {
+                ExtendArray(foundClips, cFromGroups);
+                anyFound = cFromGroups.Length > 0;
+            }
         }
-        uint[] foundBlockIxs = {};
-        for (uint i = 0; i < foundClips.Length; i++) {
-            auto clip = cast<WFC_ClipInfo@>(foundClips[i]);
-            if (clip is null) continue;
-            if (foundBlockIxs.Find(clip.biIx) != -1) continue;
-            foundBlockIxs.InsertLast(clip.biIx);
+        WFC_ClipInfo@[] foundClips2 = {};
+        if (anyFound) {
+            anyFound = false;
+            for (uint i = 0; i < foundClips.Length; i++) {
+                auto clip = cast<WFC_ClipInfo@>(foundClips[i]);
+                if (clip is null) continue;
+                if (!WFC::clipFilter.IsClipOkay(clip)) continue;
+                if (foundClips2.FindByRef(clip) != -1) continue;
+                foundClips2.InsertLast(clip);
+                anyFound = true;
+            }
         }
-        return foundBlockIxs;
+        // SanityCheckFoundBlocks(foundBlockIxs);
+        return anyFound ? foundClips2 : ({null});
     }
 
+    // returns {-1} if we can match any block (no clips)
+    uint[] FindBlockIxsByClipIds(const uint[] &in clipIds) {
+        ref@[] foundClips = {};
+        bool anyFound = false;
+        for (uint i = 0; i < clipIds.Length; i++) {
+            auto cFromIds = ClipIdsToClips.Get(clipIds[i]);
+            auto cFromGroups = GroupIdsToClips.Get(clipIds[i]);
+            if (cFromIds !is null) {
+                ExtendArray(foundClips, cFromIds);
+                anyFound = cFromIds.Length > 0;
+            }
+            if (cFromGroups !is null) {
+                ExtendArray(foundClips, cFromGroups);
+                anyFound = cFromGroups.Length > 0;
+            }
+        }
+        uint[] foundClips2 = {};
+        if (anyFound) {
+            anyFound = false;
+            for (uint i = 0; i < foundClips.Length; i++) {
+                auto clip = cast<WFC_ClipInfo@>(foundClips[i]);
+                if (clip is null) continue;
+                if (!WFC::clipFilter.IsClipOkay(clip)) continue;
+                if (foundClips2.Find(clip.biIx) != -1) continue;
+                foundClips2.InsertLast(clip.biIx);
+                anyFound = true;
+            }
+        }
+        // SanityCheckFoundBlocks(foundBlockIxs);
+        return anyFound ? foundClips2 : ({-1});
+    }
 
     WFC_BlockInfo@ GetCursorBlock() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -1362,6 +1659,17 @@ class BlockInventory {
     }
 }
 
+
+void SanityCheckFoundBlocks(uint[] &in foundBlockIxs) {
+    if (foundBlockIxs.Length == 0) return;
+    if (foundBlockIxs.Find(-1) != -1) {
+        Dev_NotifyWarning("Found -1 in foundBlockIxs");
+        throw("Found -1 in foundBlockIxs");
+        return;
+    }
+}
+
+
 // MARK: PlacedBlock
 
 class PlacedBlock {
@@ -1435,6 +1743,10 @@ int3 MoveOffset(int3 offset, CardinalDir dir, int dist = 1) {
 
 CardinalDir RotateDir(CardinalDir dir, int rot) {
     return CardinalDir((int(dir) + rot + 4) % 4);
+}
+ClipFace RotateDir(int dir, int rot) {
+    if (dir >= 4) return ClipFace(dir);
+    return ClipFace((int(dir) + rot + 4) % 4);
 }
 
 // MARK: IntLookup
@@ -1718,6 +2030,18 @@ class IntLookup {
     // }
 }
 
+
+
+
+string UintArrToString(const uint[] &in arr, bool withSurroundingBrackets = true) {
+    string s = (withSurroundingBrackets ? "[" : "");
+    for (uint i = 0; i < arr.Length; i++) {
+        s += Text::Format("0x%X", arr[i]);
+        if (i != arr.Length - 1) s += ", ";
+    }
+    if (withSurroundingBrackets) s += "]";
+    return s;
+}
 
 
 

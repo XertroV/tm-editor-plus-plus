@@ -36,6 +36,14 @@ class SceneryGenTab : Tab {
             if (UI::Button("Continue for " + nbToPlaceRandomly + " blocks")) {
                 startnew(CoroutineFunc(this.PlaceNextRandomBlocksContinue));
             }
+            UI::SameLine();
+            if (UI::Button("WFC Single Step")) {
+                startnew(CoroutineFunc(this.PlaceSingleBlockFromLowestEntropy));
+            }
+            UI::SameLine();
+            if (UI::Button("WFC Steps: " + nbToPlaceRandomly)) {
+                startnew(CoroutineFunc(this.PlaceLowEntropyBlocks));
+            }
 
             UI::Separator();
             if (UI::Button("Reset Voxels")) {
@@ -255,6 +263,14 @@ class SceneryGenTab : Tab {
         }
     }
 
+    void PlaceLowEntropyBlocks() {
+        for (uint i = 0; i < nbToPlaceRandomly; i++) {
+            PlaceSingleBlockFromLowestEntropy();
+            sleep(S_SleepMsBetweenRandPlace);
+        }
+    }
+
+
     void PlaceRandomBlocks() {
         PlaceRandomBlocks(nbToPlaceRandomly, false);
     }
@@ -282,44 +298,6 @@ class SceneryGenTab : Tab {
         }
         print("Placed " + nbToPlace + " blocks");
         _placeFailure_draw = false;
-        // WFC_BlockInfo@ startBlock;
-        // int3 startingCoord;
-        // CGameEditorPluginMap::ECardinalDirections randDir;
-        // bool placed;
-        // uint loopCount = 0;
-        // _Log::Trace("Placing block...");
-        // while (!placed) {
-        //     @startBlock = blockInv.GetRandomBlock(2);
-        //     startingCoord = GetRandomCoord(int3(0, 12, 0), mapSize);
-        //     // randDir = GetRandomDirection();
-        //     randDir = GetRandomDirection();
-        //     _Log::Trace("Random Direction: " + tostring(randDir));
-        //     // canPlace = pmt.CanPlaceBlock_NoDestruction(startBlock.BlockInfo, startingCoord, randDir, false, startBlock.VarIx);
-        //     placed = pmt.PlaceBlock_NoDestruction(startBlock.BlockInfo, startingCoord, randDir);
-        //     loopCount++;
-        // }
-        // _Log::Trace("Starting Block: " + startBlock.nameId.GetName());
-        // _Log::Trace("Starting Coord: " + startingCoord.ToString());
-        // _Log::Trace("Starting Direction: " + tostring(randDir));
-        // _Log::Trace("Loop Count: " + loopCount);
-        // _Log::Trace("Placed block");
-        // Editor::SetCamAnimationGoTo(Editor::GetCurrentCamState(editor).withPos(CoordToPos(startingCoord)));
-        // auto pb = PlacedBlock(startBlock, startingCoord, randDir);
-        // _Log::Trace("Placed Block: " + pb.ToString());
-        // nbToPlace--;
-
-        // while (nbToPlace > 0) {
-        //     @startBlock = blockInv.GetRandomBlock(2);
-        //     startingCoord = GetRandomCoord(int3(0, 12, 0), mapSize);
-        //     randDir = GetRandomDirection();
-        //     placed = pmt.PlaceBlock_NoDestruction(startBlock.BlockInfo, startingCoord, randDir);
-        //     loopCount++;
-        //     _Log::Trace("Placed Block: " + startBlock.nameId.GetName());
-        //     _Log::Trace("Starting Coord: " + startingCoord.ToString());
-        //     _Log::Trace("Starting Direction: " + tostring(randDir));
-        //     _Log::Trace("Loop Count: " + loopCount);
-        //     nbToPlace--;
-        // }
     }
 
     bool _placeFailure_draw = false;
@@ -414,6 +392,69 @@ class SceneryGenTab : Tab {
         pmt.AutoSave();
         return pb;
     }
+
+
+    void PlaceSingleBlockFromLowestEntropy() {
+        bool placed = false;
+        uint loopCount = 0, loopLimit = 2;
+        while (!placed && loopCount++ < loopLimit) {
+            auto blockInv = WFC::GetBlockInventory();
+            uint lowestE;
+            auto coordChoices = WFC::mapVoxels.GetNextLowestEtropyCoords(lowestE);
+            if (coordChoices.Length == 0) {
+                NotifyWarning("No more coords to place");
+                return;
+            }
+            auto csac = coordChoices[Math::Rand(0, coordChoices.Length)];
+            auto coord = csac.coord;
+            BlockIxCoordDir bIxCD;
+            ClipFace blockDir;
+            int3 offset;
+            csac.cs.GetAnyAvailableBlockAndDir(bIxCD, blockDir);
+            auto blockIx = bIxCD.ci.biIx;
+            if (blockIx == -1) {
+                NotifyWarning("No block found for index: " + blockIx);
+                continue;
+            }
+            _Log::Info("Lowest Entropy = " + lowestE + " : " + coord.ToString() + " ix=" + int(blockIx) + " - " + tostring(blockDir));
+            auto blockInfo = blockInv.blockInfos[blockIx];
+            offset = bIxCD.ci.buiOffset;
+            blockDir = RotateDir(blockDir, bIxCD.ci.dirFromParent);
+            offset = RotateOffset(offset, blockDir, blockInfo.Size);
+            coord = coord - offset;
+
+            if (blockInfo is null) {
+                NotifyWarning("No block found for index: " + blockIx);
+                return;
+            }
+            _Log::Info("Placing block: " + blockInfo.nameId.GetName() + " " + tostring(blockDir) + " at " + coord.ToString());
+            placed = RunPlaceBlock(blockInfo, coord, blockDir);
+        }
+        if (!placed) {
+            NotifyWarning("Failed to place block; loop count: " + loopCount);
+            return;
+        }
+    }
+
+    bool RunPlaceBlock(WFC_BlockInfo@ blockInfo, int3 coord, ClipFace dir, bool autosave = true) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        auto pmt = editor.PluginMapType;
+        if (blockInfo is null) return false;
+        Editor::SetCamAnimationGoTo(Editor::GetCurrentCamState(editor).withPos(CoordToPos(coord) + HALF_COORD));
+        if (pmt.PlaceBlock(blockInfo.BlockInfo, coord, CGameEditorPluginMap::ECardinalDirections(int(dir)))) {
+            WFC::mapVoxels.RegisterBlock(blockInfo, coord, CardinalDir(dir));
+            _LogPlaced();
+        } else {
+            _Log::Warn("Failed to place block");
+            return false;
+        }
+        if (autosave) pmt.AutoSave();
+        return true;
+        // if (pmt.CanPlaceBlock(blockInfo.BlockInfo, coord, CGameEditorPluginMap::ECardinalDirections(int(dir)))) {
+        // }
+        return false;
+    }
+
 
     PlaceLog@[] PlaceLogs;
 

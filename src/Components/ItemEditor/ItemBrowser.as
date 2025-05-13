@@ -474,7 +474,7 @@ class ItemModelTreeElement {
                 DrawBiClipExtra(biClip);
             }
             MkAndDrawChildNode(blockInfo.MaterialModifier, O_BLOCKINFO_MATERIALMOD, "MaterialModifier");
-            auto mmOffset = GetOffset(blockInfo, "MatModifierPlacementTag");
+            auto mmOffset = O_BLOCKINFO_MATERIALMOD;
             auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
             string mmPlacementTagsStr = ItemPlace_StringConsts::LookupJoined(mmPlacementTag);
             DrawMwId("Name", blockInfo.Id);

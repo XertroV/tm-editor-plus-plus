@@ -711,6 +711,7 @@ const uint16 O_CTNBLOCKUNITINFO_PackedNSEWUD = 0x24;
 const uint16 SZ_CTNBLOCKINFO = 0x250;
 const uint16 O_BLOCKINFO_MATERIALMOD = GetOffset("CGameCtnBlockInfo", "MaterialModifier");
 const uint16 O_BLOCKINFO_MATERIALMOD2 = GetOffset("CGameCtnBlockInfo", "MaterialModifier2");
+const uint16 O_BLOCKINFO_MATMODPLACEMENTTAG = GetOffset("CGameCtnBlockInfo", "MatModifierPlacementTag");
 
 
 // CGameCtnBlockInfoVariant, 0x250

@@ -173,7 +173,7 @@ class IntLookup_X {
     }
 
     // Helper for debugging
-    string GetStructure(string indent = "") {
+    string GetStructure(const string &in indent = "") {
         string s = indent + "Node: key=" + Text::Format("0x%X", nodeKey) + ", id=" + Text::Format("0x%X", nodeId) + ", values=" + values.Length + "\n";
         if (children.Length > 0) {
             s += indent + " Children:\n";
@@ -191,7 +191,7 @@ class IntLookup_X {
 class DummyRef {
     int id;
     string name;
-    DummyRef(int id, string name = "") {
+    DummyRef(int id, const string &in name = "") {
         this.id = id;
         this.name = (name == "" ? "DummyRef_" + id : name);
     }

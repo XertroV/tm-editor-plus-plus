@@ -250,6 +250,11 @@ int StrToMwIdValue(const string &in str) {
      _globalMwIdForConversion.SetName(str);
     return _globalMwIdForConversion.Value;
 }
+int StrToMwIdValue_NoDep(const string &in str) {
+    MwId id = MwId();
+    id.SetName(str);
+    return id.Value;
+}
 string MwIdValueToStr(int id) {
     _globalMwIdForConversion.Value = id;
     return _globalMwIdForConversion.GetName();
