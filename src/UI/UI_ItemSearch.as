@@ -62,7 +62,7 @@ class ItemSearcher {
         if (!firstRunDone || lastNonce != inv.cacheRefreshNonce) {
             firstRunDone = true;
             lastNonce = inv.cacheRefreshNonce;
-            UpdateSearch();
+            startnew(CoroutineFunc(UpdateSearch));
         }
         if (filtered.Length == 0) {
             UI::Text("No items found matching query.");

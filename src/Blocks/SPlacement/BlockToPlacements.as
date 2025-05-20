@@ -4,20 +4,53 @@ namespace SPlacement {
     // BI ID. Lookup: BlockInfos -> Mobils -> SPlacements[]
     uint[] blockInfoIds;
     // index(blockInfoId) -> [index(mobilPrefabId or placements)]
-    uint[][] blockToMobilIds;
+    uint[][] blockToMobilIxs;
     // Indentify each mobil; 1:1 with placements (mobils without placements are not included)
     uint[] mobilPrefabIds;
     SPlacementBlockData@[] placements;
     // mobils that we've seen
     uint[] seenMobilIds;
 
+    bool initRunning = false;
+    bool initDone = false;
+
+    SPlacementBlockData@[] GetPlacements(const string &in name) { return GetPlacements(StrToMwIdValue(name)); }
+    SPlacementBlockData@[] GetPlacements(MwId blockInfoId) { return GetPlacements(blockInfoId.Value); }
+    SPlacementBlockData@[] GetPlacements(uint blockInfoIdValue) {
+        SPlacementBlockData@[] val;
+        auto blockIx = blockInfoIds.Find(blockInfoIdValue);
+        if (blockIx == -1) return val;
+        auto mobilIxs = blockToMobilIxs[blockIx];
+        for (uint i = 0; i < mobilIxs.Length; i++) {
+            auto mIx = mobilIxs[i];
+            val.InsertLast(placements[mIx]);
+        }
+        return val;
+    }
+
+    uint CountPlacements(uint blockInfoIdValue) {
+        auto blockIx = blockInfoIds.Find(blockInfoIdValue);
+        if (blockIx == -1) return 0;
+        auto mIxs = blockToMobilIxs[blockIx];
+        auto count = 0;
+        for (uint i = 0; i < mIxs.Length; i++) {
+            count += placements[mIxs[i]].layouts.Length;
+        }
+        return count;
+    }
+
     void InitCoro() {
+        if (initRunning) return;
+        initRunning = true;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
         auto nbBlocks = map.Blocks.Length;
         for (uint i = 0; i < nbBlocks; i++) {
             IngestBlock(map.Blocks[i]);
+            CheckPause();
         }
+        initRunning = false;
+        initDone = true;
     }
 
     string BlockIxToName(uint blockIx) {
@@ -36,9 +69,17 @@ namespace SPlacement {
 #endif
         seenBlockInfoIds.InsertLast(block.DescId.Value);
         auto blockIx = blockInfoIds.Length;
+        auto placementsBefore = placements.Length;
+        auto mobilPrefabIdsBefore = mobilPrefabIds.Length;
         blockInfoIds.InsertLast(block.DescId.Value);
-        blockToMobilIds.InsertLast({});
+        blockToMobilIxs.InsertLast({});
         IngestBlockInfo(block.BlockInfo, blockIx);
+        if (placementsBefore == placements.Length) {
+            // no placements added
+            blockInfoIds.RemoveLast();
+            blockToMobilIxs.RemoveLast();
+            mobilPrefabIds.RemoveRange(mobilPrefabIdsBefore, mobilPrefabIds.Length - mobilPrefabIdsBefore);
+        }
     }
 
     void IngestBlockInfo(CGameCtnBlockInfo@ blockInfo, uint blockIx) {
@@ -102,13 +143,14 @@ namespace SPlacement {
             // if we have seen it, but it isn't in mobilPrefabIds, then it doesn't contain placements
             if (mobilIx == -1) return;
             // otherwise, add the mobil to the block
-            blockToMobilIds[blockIx].InsertLast(mobilIx);
+            blockToMobilIxs[blockIx].InsertLast(mobilIx);
             return;
         }
         // since we haven't seen it, then add it to the list
         mobilIx = IngestMobilPrefab(fid, mobilId, mmpt);
+        if (mobilIx == -1) return;
         // and the block
-        blockToMobilIds[blockIx].InsertLast(mobilIx);
+        blockToMobilIxs[blockIx].InsertLast(mobilIx);
     }
 
     // returns index of the mobil in the list
@@ -121,6 +163,7 @@ namespace SPlacement {
             Dev_NotifyWarning("IngestMobilPrefab: placementData is null for mobilId: " + mobilId.Value);
             return -1;
         }
+        if (placementData.layouts.Length == 0) return -1;
         mobilPrefabIds.InsertLast(mobilId.Value);
         placements.InsertLast(placementData);
         return mobilIx;
@@ -146,7 +189,7 @@ namespace SPlacement {
 
 
     class SPlacementBlockData {
-        // index in main arrays
+        // index in main arrays (mobil and placements)
         uint ix;
         // each block has a number of patterns cycled through with RMB
         SP_Layout@[] layouts;
@@ -173,7 +216,7 @@ namespace SPlacement {
         }
 
         void AddPlacement(uint i, Blocks::ItemSPlacement& p) {
-            while (p.iLayout > layouts.Length) layouts.InsertLast(SP_Layout(layouts.Length));
+            while (p.iLayout >= layouts.Length) layouts.InsertLast(SP_Layout(layouts.Length));
             layouts[p.iLayout].Add(i, p);
         }
     }

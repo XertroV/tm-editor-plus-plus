@@ -90,10 +90,10 @@ namespace Blocks {
                             DPlugItemPlacement_SPlacement(ptr1))
                         );
                     } else {
-                        dev_trace("Miss on class id: " + FmtUintHex(paramsClsId));
+                        // dev_trace("Miss on class id: " + FmtUintHex(paramsClsId));
                     }
                 } else {
-                    dev_trace("Bad pointer: " + Text::FormatPointer(ptr2) + " / " + Text::FormatPointer(ptr1));
+                    // dev_trace("Bad pointer: " + Text::FormatPointer(ptr2) + " / " + Text::FormatPointer(ptr1));
                 }
             }
         }

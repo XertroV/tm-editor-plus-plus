@@ -210,6 +210,39 @@ namespace UX {
         // UI::Text("]");
         UI::PopFont();
     }
+
+    void StartValuesTable(const string &in id, int nbCols = 2) {
+        UI::BeginTable(id, 3, UI::TableFlags::SizingStretchSame);
+        UI::TableSetupColumn("Label", UI::TableColumnFlags::WidthFixed);
+        UI::TableSetupColumn("Value", UI::TableColumnFlags::WidthStretch);
+        for (uint i = 2; i < nbCols; i++) {
+            UI::TableSetupColumn("Col" + tostring(i), UI::TableColumnFlags::WidthFixed);
+        }
+    }
+
+    void EndValuesTable() {
+        UI::EndTable();
+    }
+
+    void ValuesTableRow(const string &in label, const string &in value) {
+        UI::TableNextRow();
+        UI::TableNextColumn();
+        UI::Text(label);
+        UI::TableNextColumn();
+        UI::Text(value);
+    }
+    void ValuesTableRow(const string &in label, uint value) {
+        ValuesTableRow(label, tostring(value));
+    }
+    void ValuesTableRow(const string &in label, float value, int dps = 4) {
+        ValuesTableRow(label, Text::Format("%."+dps+"f", value));
+    }
+    void ValuesTableRow(const string &in label, bool value) {
+        ValuesTableRow(label, tostring(value));
+    }
+    void ValuesTableRow(const string &in label, vec2 value) {
+        ValuesTableRow(label, value.ToString());
+    }
 }
 
 

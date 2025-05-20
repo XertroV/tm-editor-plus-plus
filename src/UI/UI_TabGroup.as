@@ -370,7 +370,7 @@ class RootTabGroupCls : TabGroup {
         auto stix = selectedTabIx;
         // we break after looping over categories
         for (uint i = 0;; i++) {
-            while (i >= nextCatStartsTabIx) {
+            while (i >= nextCatStartsTabIx && nbCategories > 0) {
                 catIx++;
                 categoryName = categories[catIx];
                 isOpen = categoryIsOpen[catIx];
