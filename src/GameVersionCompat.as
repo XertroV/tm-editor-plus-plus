@@ -5,6 +5,8 @@ const string[] KnownSafeVersions = {
     "---end---"
 };
 const string configUrl = "https://openplanet.dev/plugin/editor/config/version-compat";
+[Setting hidden]
+string S_Compat_SavedGameVersion = "";
 
 /**
  * New version checklist:
@@ -25,7 +27,7 @@ string TmGameVersion = "";
 void EnsureGameVersionCompatibility() {
     if (GameVersionSafe) return;
     TmGameVersion = GetApp().SystemPlatform.ExeVersion;
-    GameVersionSafe = KnownSafeVersions.Find(TmGameVersion) > -1;
+    GameVersionSafe = KnownSafeVersions.Find(TmGameVersion) > -1 || S_Compat_SavedGameVersion == TmGameVersion;
     if (GameVersionSafe) return;
     GameVersionSafe = GetStatusFromOpenplanet();
     trace("Got GameVersionSafe status: " + GameVersionSafe);
@@ -83,5 +85,9 @@ void OverrideGameSafetyCheck() {
     UI::Text("Check request ended: " + tostring(requestEnded));
     if (!GameVersionSafe && UI::Button("Disable safety features and run anyway")) {
         GameVersionSafe = true;
+    }
+    if (!GameVersionSafe && UI::Button("Run anyway + Save this game version as safe to run")) {
+        GameVersionSafe = true;
+        S_Compat_SavedGameVersion = TmGameVersion;
     }
 }
