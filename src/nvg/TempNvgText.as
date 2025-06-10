@@ -18,7 +18,7 @@ class TempNvgText {
         this.msg = msg;
         this.durationMs = durationMs;
         start = Time::Now;
-        startnew(CoroutineFunc(this.Loop)).WithRunContext(Meta::RunContext::UpdateSceneEngine);
+        Meta::StartWithRunContext(Meta::RunContext::UpdateSceneEngine, CoroutineFunc(this.Loop));
     }
 
     void Destroy() {

@@ -6,7 +6,7 @@ namespace Editor {
         }
 
         // this is run when the plugin is started, so doesn't need to be called elsewhere.
-        Meta::PluginCoroutine@ onInitCoro = startnew(OnInit);
+        awaitable@ onInitCoro = startnew(OnInit);
 
         class DrawInstancePriv : DrawInstance {
             DrawInstancePriv(const string &in id) {
@@ -51,9 +51,9 @@ namespace Editor {
                 Dev_NotifyWarning("DrawLinesAndQuads::OnEnterEditor: drawInstances.Length > 0");
                 // ClearInstances();
             }
-            startnew(InstanceMaintenanceLoopCoro).WithRunContext(Meta::RunContext::BeforeScripts);
-            // startnew(EditorDrawLoopCoro).WithRunContext(Meta::RunContext::AfterMainLoop);
-            startnew(EditorDrawLoopCoro).WithRunContext(Meta::RunContext::UpdateSceneEngine);
+            Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, InstanceMaintenanceLoopCoro);
+            // Meta::StartWithRunContext(Meta::RunContext::AfterMainLoop, EditorDrawLoopCoro);
+            Meta::StartWithRunContext(Meta::RunContext::UpdateSceneEngine, EditorDrawLoopCoro);
         }
 
         void InstanceMaintenanceLoopCoro() {

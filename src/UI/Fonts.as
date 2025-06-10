@@ -3,7 +3,7 @@ UI::Font@ g_Heading = null;
 UI::Font@ g_Mono = null;
 int f_NvgFont = nvg::LoadFont("DroidSans.ttf");
 
-Meta::PluginCoroutine@ fontLoadCoro = startnew(_LoadFonts);
+awaitable@ fontLoadCoro = startnew(_LoadFonts);
 
 void _LoadFonts() {
     @g_Heading = UI::Font::Default20;

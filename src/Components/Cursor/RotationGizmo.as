@@ -342,7 +342,7 @@ class RotationTranslationGizmo {
                 // pivotAnimator.SetAt(1.0);
             }
             @pivotAnimator = AnimMgr(false, S_AnimationDuration);
-            startnew(CoroutineFunc(RunPivotAnim)).WithRunContext(Meta::RunContext::AfterMainLoop);
+            Meta::StartWithRunContext(Meta::RunContext::AfterMainLoop, CoroutineFunc(RunPivotAnim));
             AddTmpTranslation(dist, true);
             FocusCameraOn(pos + tmpPos, false);
             AddTmpTranslation(dist * -1., true);

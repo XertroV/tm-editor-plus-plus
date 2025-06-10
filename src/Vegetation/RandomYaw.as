@@ -268,7 +268,7 @@ namespace VegetRandomYaw {
 		print("  match?   " + (calcSeed == expected ? "✅ yes" : "❌ NO"));
 	}
 
-	// Meta::PluginCoroutine@ _run_QuatRandGameTests = startnew(CoroutineFunc(RunQuatRandGameTests));
+	// awaitable@ _run_QuatRandGameTests = startnew(CoroutineFunc(RunQuatRandGameTests));
 }
 
 

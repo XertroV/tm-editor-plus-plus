@@ -222,7 +222,7 @@ class ViewAllBlocksTab : BlockItemListTab {
         if (block is null) return;
         Editor::DeleteBlocks({block}, true);
         if (Editor::HasPendingFreeBlocksToDelete()) {
-            startnew(Editor::RunDeleteFreeBlockDetection).WithRunContext(Meta::RunContext::MainLoop);
+            Meta::StartWithRunContext(Meta::RunContext::MainLoop, Editor::RunDeleteFreeBlockDetection);
         }
         // auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         // editor.PluginMapType.AutoSave();
@@ -509,7 +509,7 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
 
         Notify("[Autodel Dups] 3. Deleting " + mbSpec.Blocks.Length + " blocks.");
         Editor::DeleteMacroblock(mbSpec, true);
-        startnew(Editor::RunDeleteFreeBlockDetection).WithRunContext(Meta::RunContext::MainLoop);
+        Meta::StartWithRunContext(Meta::RunContext::MainLoop, Editor::RunDeleteFreeBlockDetection);
         yield();
         Notify("[Autodel Dups] 3. Deleted " + mbSpec.Blocks.Length + " blocks. Refreshing cache.");
         mapCache.RefreshCacheSoon();

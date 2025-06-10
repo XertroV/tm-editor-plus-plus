@@ -60,7 +60,7 @@ namespace VisSpriteDots {
             yield();
         }
         print("\\$bf0\\$iWatchForSpriteNod: mainSpriteNod is " + (mainSpriteNod is null ? "null" : "not null"));
-        startnew(VisSpriteDots::UpdateLoop).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
+        Meta::StartWithRunContext(Meta::RunContext::NetworkAfterMainLoop, VisSpriteDots::UpdateLoop);
     }
 
     void ClearAllDotsFromSpriteNod() {
@@ -516,7 +516,7 @@ void TestRunVisSpriteDots() {
 }
 
 
-// Meta::PluginCoroutine@ testRunVisSpriteDots = startnew(TestRunVisSpriteDots);
-// Meta::PluginCoroutine@ testRunVisLines = startnew(DemoRunVisLines);
+// awaitable@ testRunVisSpriteDots = startnew(TestRunVisSpriteDots);
+// awaitable@ testRunVisLines = startnew(DemoRunVisLines);
 
 #endif

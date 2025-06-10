@@ -108,7 +108,7 @@ namespace Editor {
     }
 }
 
-// Meta::PluginCoroutine@ testLoadPackDescs = startnew(function() {
+// awaitable@ testLoadPackDescs = startnew(function() {
 //     yield(120);
 //     print('loading pack descs in 10s');
 //     sleep(5000);

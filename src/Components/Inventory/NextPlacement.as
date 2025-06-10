@@ -131,7 +131,7 @@ bool CheckPlacingItemFreeMode() {
             bool didPlace = pmt.PlaceBlock_NoDestruction(bm, coord, pmt.CursorDir);
             dev_trace('didPlace: ' + didPlace);
             if (didPlace) {
-                startnew(_WatchAndCleanUp, array<nat3> = {pmt.CursorCoord}).WithRunContext(Meta::RunContext::AfterMainLoop);
+                Meta::StartWithRunContext(Meta::RunContext::AfterMainLoop, _WatchAndCleanUp, array<nat3> = {pmt.CursorCoord});
                 ExtraUndoFix::DisableUndo();
             }
         }

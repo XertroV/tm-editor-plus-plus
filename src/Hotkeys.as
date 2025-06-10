@@ -368,7 +368,7 @@ void _InitAddHotkeys() {
     // LoadHotkeyDb();
 }
 
-Meta::PluginCoroutine@ addHotkeysCoro = startnew(_InitAddHotkeys);
+awaitable@ addHotkeysCoro = startnew(_InitAddHotkeys);
 
 const string HOTKEYS_JSON_PATH = IO::FromStorageFolder("hotkeys.json");
 

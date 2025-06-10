@@ -239,7 +239,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         if (m_BlockChanged) {
             dev_trace('Nudge block: changed');
             if (Editor::IsBlockFree(block)) {
-                startnew(CoroutineFunc(CheckDeleteFreeblockAfterNudge)).WithRunContext(Meta::RunContext::MainLoop);
+                Meta::StartWithRunContext(Meta::RunContext::MainLoop, CoroutineFunc(CheckDeleteFreeblockAfterNudge));
             }
             safeToRefresh = true;
         }

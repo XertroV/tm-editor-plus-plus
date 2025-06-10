@@ -209,7 +209,7 @@ void Main2() {
     // startnew(PatchEditorInput::Load);
 
     // @editor.Challenge.AnchoredObjects[46].WaypointSpecialProperty = CGameWaypointSpecialProperty();
-    // startnew(DeleteItemTest).WithRunContext(Meta::RunContext::BeforeScripts);
+    // Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, DeleteItemTest);
     print("doing thing");
     auto ptrAfterInputs = Dev::FindPattern("4C 8B 6C 24 28 4C 8B 64 24 30 3D 1E 00 07 80 75 17 FF C7 83 FF 10 73 10 49 8B 06 49 8B CE FF 50 38 3D 1E 00 07 80 74 E9");
     print("ptr: " + Text::FormatPointer(ptrAfterInputs));

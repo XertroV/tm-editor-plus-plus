@@ -64,7 +64,7 @@ class ViewKinematicsTab : Tab {
 
         // if (UI::Button("Refresh Kinematic Items Cache")) {
         //     @kinCache = null;
-        //     startnew(CoroutineFunc(InitKinCache)).WithRunContext(Meta::RunContext::GameLoop);
+        //     Meta::StartWithRunContext(Meta::RunContext::GameLoop, CoroutineFunc(InitKinCache));
         // }
 
         // if (kinCache is null) {

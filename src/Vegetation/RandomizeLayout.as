@@ -23,7 +23,7 @@ namespace RandomizeVegetationLayouts {
 
 	void Start_UpdateRunRVL() {
 		Hook_ItemCursor_SetPZoneId.SetApplied(IsActive);
-		// startnew(UpdateRunRVL).WithRunContext(Meta::RunContext::AfterScripts);
+		// Meta::StartWithRunContext(Meta::RunContext::AfterScripts, UpdateRunRVL);
 	}
 
 	DSceneItemPlacement_SMgr2@ GetItemPlacementMgr(CGameCtnApp@ app) {

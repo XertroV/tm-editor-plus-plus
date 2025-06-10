@@ -203,7 +203,7 @@ namespace FarlandsHelper {
             Editor::SetItemCursorPos(editor.ItemCursor, _addBlockCursorPos);
         }
 
-        startnew(FH_ResetCursorAfterPlaced).WithRunContext(Meta::RunContext::AfterMainLoop);
+        Meta::StartWithRunContext(Meta::RunContext::AfterMainLoop, FH_ResetCursorAfterPlaced);
 
         return false;
     }

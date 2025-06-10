@@ -58,7 +58,7 @@ namespace Gizmo {
         if (v && CursorControl::RequestExclusiveControl(gizmoControlName)) {
             _IsActive = v;
             // startnew(GizmoLoop); // .WithRunContext(Meta::RunContext::AfterScripts);
-            startnew(GizmoLoop).WithRunContext(Meta::RunContext::GameLoop);
+            Meta::StartWithRunContext(Meta::RunContext::GameLoop, GizmoLoop);
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             origEditMode = CGameEditorPluginMap::EditMode::Place;
             origPlaceMode = Editor::GetPlacementMode(editor);

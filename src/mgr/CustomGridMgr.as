@@ -24,7 +24,7 @@ namespace CustomGridMgr {
         // todo
         _active = value;
         if (value && CursorControl::RequestExclusiveControl(customGridControlName)) {
-            startnew(CustomGridMgr::UpdateCursorLoop).WithRunContext(Meta::RunContext::GameLoop);
+            Meta::StartWithRunContext(Meta::RunContext::GameLoop, CustomGridMgr::UpdateCursorLoop);
         } else if (!value) {
             CursorControl::ReleaseExclusiveControl(customGridControlName);
         } else {

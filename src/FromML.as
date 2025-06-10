@@ -79,7 +79,7 @@ namespace ToML {
     void SendMessage(const string &in type, string[]@ data) {
         dev_trace("Queueing msg to ML of type " + type);
         queued.InsertLast(ML_Event(type, data));
-        startnew(ClearSendQueue).WithRunContext(Meta::RunContext::BeforeScripts);
+        Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, ClearSendQueue);
     }
 
     void ResyncPlease() {
@@ -142,15 +142,15 @@ namespace ToML {
         pmt.PlaceMode = CGameEditorPluginMap::EPlaceMode::Plugin;
         // order:
         // Order: BeforeScripts, MainLoop, GameLoop, NetworkAfterMainLoop, AfterScripts, UpdateSceneEngine
-        // startnew(AsyncPrint, "BeforeScripts").WithRunContext(Meta::RunContext::BeforeScripts);
-        // startnew(AsyncPrint, "MainLoop").WithRunContext(Meta::RunContext::MainLoop);
-        // startnew(AsyncPrint, "GameLoop").WithRunContext(Meta::RunContext::GameLoop);
+        // Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, AsyncPrint, "BeforeScripts");
+        // Meta::StartWithRunContext(Meta::RunContext::MainLoop, AsyncPrint, "MainLoop");
+        // Meta::StartWithRunContext(Meta::RunContext::GameLoop, AsyncPrint, "GameLoop");
         // ! UI inventory stuff available after NetworkAfterMainLoop
-        // startnew(AsyncPrint, "NetworkAfterMainLoop").WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
-        // startnew(AsyncPrint, "AfterScripts").WithRunContext(Meta::RunContext::AfterScripts);
-        // startnew(AsyncPrint, "UpdateSceneEngine").WithRunContext(Meta::RunContext::UpdateSceneEngine);
+        // Meta::StartWithRunContext(Meta::RunContext::NetworkAfterMainLoop, AsyncPrint, "NetworkAfterMainLoop");
+        // Meta::StartWithRunContext(Meta::RunContext::AfterScripts, AsyncPrint, "AfterScripts");
+        // Meta::StartWithRunContext(Meta::RunContext::UpdateSceneEngine, AsyncPrint, "UpdateSceneEngine");
 
-        startnew(_EnablePluginSoon).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
+        Meta::StartWithRunContext(Meta::RunContext::NetworkAfterMainLoop, _EnablePluginSoon);
     }
 
     void AsyncPrint(const string &in context) {

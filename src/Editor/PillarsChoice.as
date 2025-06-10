@@ -215,7 +215,7 @@ class PillarsAutochangerTab : EffectTab, WithGetPillarsAndReplacements {
     void QueueResetFrame() {
         if (isResetFrameQueued) return;
         isResetFrameQueued = true;
-        startnew(CoroutineFunc(OnBeforeScripts)).WithRunContext(Meta::RunContext::BeforeScripts);
+        Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, CoroutineFunc(OnBeforeScripts));
     }
 
     void OnBeforeScripts() {

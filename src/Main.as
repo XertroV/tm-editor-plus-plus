@@ -73,13 +73,13 @@ void Main() {
     LargeMacroblocks::OnPluginStart();
     WFC::RegisterCallbacks();
 
-    startnew(FarlandsHelper::CursorLoop).WithRunContext(Meta::RunContext::MainLoop);
-    startnew(EditorCameraNearClipCoro).WithRunContext(Meta::RunContext::NetworkAfterMainLoop);
-    startnew(Editor::ResetTrackMapChanges_Loop).WithRunContext(Meta::RunContext::BeforeScripts);
+    Meta::StartWithRunContext(Meta::RunContext::MainLoop, FarlandsHelper::CursorLoop);
+    Meta::StartWithRunContext(Meta::RunContext::NetworkAfterMainLoop, EditorCameraNearClipCoro);
+    Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, Editor::ResetTrackMapChanges_Loop);
 
     startnew(RegisterEditorLeaveUndoStandingRespawnCheck);
 
-    startnew(Loop_RunCtx_AfterMainLoop).WithRunContext(Meta::RunContext::AfterMainLoop);
+    Meta::StartWithRunContext(Meta::RunContext::AfterMainLoop, Loop_RunCtx_AfterMainLoop);
 
     yield(1);
     startnew(ColorSelectionHook::SetupHooks);

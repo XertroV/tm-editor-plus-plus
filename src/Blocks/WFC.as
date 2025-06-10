@@ -2091,7 +2091,7 @@ void Test_RotateOffset() {
 
 }
 
-Meta::PluginCoroutine@ PC_Test_RotateOffset = startnew(Test_RotateOffset);
+awaitable@ PC_Test_RotateOffset = startnew(Test_RotateOffset);
 
 
 #endif

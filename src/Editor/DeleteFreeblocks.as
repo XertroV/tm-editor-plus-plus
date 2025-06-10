@@ -126,7 +126,7 @@ namespace Editor {
         pendingFreeBlocksToDelete.InsertLast(block);
         if (!waitingToDeleteFreeBlocks) {
             waitingToDeleteFreeBlocks = true;
-            // startnew(WaitToDeleteFreeBlocks).WithRunContext(Meta::RunContext::MainLoop);
+            // Meta::StartWithRunContext(Meta::RunContext::MainLoop, WaitToDeleteFreeBlocks);
             // NotifyWarning('started wait to delete free blocks coro');
         }
         // Notify('added block to delete queue: ' + block.name);

@@ -31,6 +31,6 @@ namespace NG {
         // }
     }
 
-    Meta::PluginCoroutine@ testcoro = startnew(test);
+    awaitable@ testcoro = startnew(test);
 }
 #endif
