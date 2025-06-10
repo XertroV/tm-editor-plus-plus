@@ -91,6 +91,7 @@ class DSceneCharVis : RawBufferElem {
 	void set_WishMove(vec3 value) { this.SetVec3(0x30+0x3c, value); }
 	quat get_RotRef() { return (this.GetQuat(0x30+0x74)); }
 	void set_RotRef(quat value) { this.SetQuat(0x30+0x74, value); }
+	uint8 get_InternalCam() { return (this.GetUint8(0x255)); }
 }
 
 
