@@ -39,6 +39,7 @@ class ToolbarTab : Tab {
 		// override me
 	}
 
+	// 2x2 by default (d_ToolbarBtnSize)
 	bool BtnToolbar(const string &in label, const string &in desc, BtnStatus status, vec2 size = vec2()) {
 		if (size.LengthSquared() == 0) size = d_ToolbarBtnSize * g_scale;
 		auto fp = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
@@ -67,15 +68,18 @@ class ToolbarTab : Tab {
 		return click;
 	}
 
+	// 1x2 buttons (half horizontal)
 	bool BtnToolbarHalfH(const string &in label, const string &in desc, BtnStatus status) {
 		float framePad = UI::GetStyleVarVec2(UI::StyleVar::FramePadding).x;
 		return BtnToolbar(label, desc, status, vec2(d_ToolbarBtnSize.x * .5, d_ToolbarBtnSize.y) * g_scale - vec2(framePad, 0));
 	}
 
+	// 2x1 buttons (half vertical)
 	bool BtnToolbarHalfV(const string &in label, const string &in desc, BtnStatus status) {
 		return BtnToolbar(label, desc, status, vec2(d_ToolbarBtnSize.x, d_ToolbarBtnSize.y * .5) * g_scale);
 	}
 
+	// 1x1 buttons (quarter size)
 	bool BtnToolbarQ(const string &in label, const string &in desc, BtnStatus status, bool isLast = false) {
 		float framePad = UI::GetStyleVarVec2(UI::StyleVar::FramePadding).x;
 		auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);

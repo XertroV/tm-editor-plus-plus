@@ -1,4 +1,3 @@
-
 [Setting hidden]
 bool S_ShowItemPlacementToolbar = true;
 
@@ -92,6 +91,8 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		bool toggleItemToBlockSnapping = BtnToolbarHalfV(Icons::Magnet + Icons::Cube + "##itbs", "Item-to-Block Snapping", ActiveToBtnStatus(CustomCursorRotations::ItemSnappingEnabled));
 		// bool toggleInfPrec = this.BtnToolbarHalfV("∞" + Icons::MousePointer, "Place Anywhere / Infinite Precision", ActiveFreeToBtnStatus(S_EnableInfinitePrecisionFreeBlocks));
 
+		bool toggleAutoDissociation = BtnToolbarHalfV(Icons::ChainBroken + "##ad", "Auto Dissociate New Items", ActiveOrDisabledToBtnStatus(g_DissociateItemsTab._IsActive));
+
 		UI::Separator();
 
 		DrawItemModeButtons();
@@ -104,17 +105,16 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		bool toggleGridDisable = BtnToolbarHalfV(Icons::Th + "##gd", "Grid Snap (RMB: Set Grid)" + RMBIcon, GridDisabledStatus(pp));
 		DrawGridOptions_OnRMB(pp);
 
-		bool decrGridSize = BtnToolbarHalfH("[##gd", "Decrease Grid Size (RMB: Set Grid)" + RMBIcon, GridStepBtnStatus(pp));
+		// Show on same row; quarter buttons
+		bool decrGridSize = this.BtnToolbarQ("[##gd", "Decrease Grid Size (RMB: Set Grid)" + RMBIcon, GridStepBtnStatus(pp));
 		DrawGridOptions_OnRMB(pp);
-
-		UI::PushFont(g_MidFont);
-		UI::SameLine();
-		bool incrGridSize = BtnToolbarHalfH("]##gi", "Increase Grid Size (RMB: Set Grid)" + RMBIcon, GridStepBtnStatus(pp));
+		bool incrGridSize = this.BtnToolbarQ("]##gi", "Increase Grid Size (RMB: Set Grid)" + RMBIcon, GridStepBtnStatus(pp), true);
 		DrawGridOptions_OnRMB(pp);
-		UI::PopFont();
 
 		UI::AlignTextToFramePadding();
-		UI::Text(Text::Format("%.1f", pp.GridSnap_HStep) + ", " + Text::Format("%.1f", pp.GridSnap_VStep));
+		string gridDesc = Text::Format("%.1f", pp.GridSnap_HStep) + ", " + Text::Format("%.1f", pp.GridSnap_VStep);
+		UI::Text(gridDesc);
+		AddSimpleTooltip("Current grid X/Z, Y steps: " + gridDesc);
 
 		bool toggleGhost = BtnToolbarHalfV((pp.GhostMode ? Icons::SnapchatGhost : Icons::User) + "###ghoTog", "Toggle Ghost Mode (Places on other items or goes through them)", ActiveToBtnStatus(pp.GhostMode));
 		bool toggleFlying = BtnToolbarHalfV((pp.FlyStep > 0 ? Icons::Plane : Icons::Tree) + "###flyTog", "Toggle Flying / Lock to Ground", ActiveToBtnStatus(pp.FlyStep > 0));
@@ -160,6 +160,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		if (toggleAutoRotate) ToggleAutoRotate(pp);
 		if (toggleAutoPivot) ToggleAutoPivot(pp);
 		if (toggleItemToBlockSnapping) CustomCursorRotations::ItemSnappingEnabled = !CustomCursorRotations::ItemSnappingEnabled;
+		if (toggleAutoDissociation) g_DissociateItemsTab.ToggleActivation();
 		// if (toggleInfPrec) S_EnableInfinitePrecisionFreeBlocks = !S_EnableInfinitePrecisionFreeBlocks;
 	}
 

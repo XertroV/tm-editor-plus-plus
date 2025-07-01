@@ -645,6 +645,7 @@ NG::GraphTab@ g_GraphTab;
 CurrentItem_PlacementToolbar@ g_ItemPlacementToolbar;
 CurrentBlock_PlacementToolbar@ g_BlockPlacementToolbar;
 CurrentMacroblock_PlacementToolbar@ g_MbPlacementToolbar;
+DissociateItemsTab@ g_DissociateItemsTab;
 
 /* STRUCTURE
 Global:
@@ -771,7 +772,7 @@ TabGroup@ CreateRootTabGroup() {
 #endif
 
     Repeat::MainRepeatTab(root);
-    DissociateItemsTab(root);
+    @g_DissociateItemsTab = DissociateItemsTab(root);
     JitterEffectTab(root);
     RandomizerEffectsTab(root);
 

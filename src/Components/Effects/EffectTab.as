@@ -12,6 +12,11 @@ class EffectTab : Tab {
     protected void set__IsActive(bool v) {
         __IsActive = v;
     }
+    // returns new value of _IsActive
+    bool ToggleActivation() {
+        _IsActive = !_IsActive;
+        return _IsActive;
+    }
 
     const string get_DisplayIconAndName() override property {
         if (_IsActive) {

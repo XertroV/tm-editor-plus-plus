@@ -867,6 +867,7 @@ float _handle_nanf(uint param_1) {
 
 
 
+#if DEV
 
 void Test_game_EulerQuatMatFunctions() {
     Test_YPR_To_Quat_FromGame();
@@ -968,3 +969,4 @@ void Test_YPR_to_Mat3() {
     // assert_eq(gq.f2, -gq2.f2, "gq.f2 != gq2.f2");
     // assert_eq(gq.f3, -gq2.f3, "gq.f3 != gq2.f3");
 }
+#endif
