@@ -471,7 +471,7 @@ class LMAnalysisWindow : Tab {
     void CheckLoadTextures() {
         if (loadedTexturesStarted) return;
         loadedTexturesStarted = true;
-        for (int i = 0; i < lmFiles.Length; i++) {
+        for (uint i = 0; i < lmFiles.Length; i++) {
             lmTextures.InsertLast(lmFiles[i].GetTexture());
             lmFileNames[i] = lmFiles[i].name;
         }
@@ -586,7 +586,7 @@ namespace LightMapCustomRes {
 
     uint GetLMResolution() {
         CheckInitAddr();
-        if (g_LMResPatternAddr == 0) return -1;
+        if (g_LMResPatternAddr == 0) return uint(-1);
         return Dev::ReadUInt32(g_LMResPatternAddr + CustomLMResolutionOffset);
     }
 

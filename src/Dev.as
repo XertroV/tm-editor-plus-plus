@@ -210,7 +210,7 @@ uint Dev_CastFloatToUint(float f) {
     return r;
 }
 
-uint Dev_CastFloatToInt(float f) {
+int Dev_CastFloatToInt(float f) {
     if (NodPtrs::g_TmpPtrSpace == 0) NodPtrs::InitializeTmpPointer();
     Dev::Write(NodPtrs::g_TmpPtrSpace, f);
     auto r = Dev::ReadInt32(NodPtrs::g_TmpPtrSpace);

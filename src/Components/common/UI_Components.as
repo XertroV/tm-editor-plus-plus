@@ -380,11 +380,11 @@ int InputIntFlags(const string &in label, int value, int[]@ allowedValues) {
         if (vIx > 0) return allowedValues[vIx - 1];
         return allowedValues[0];
     } else if (newValue > value && vIx >= 0) {
-        if (vIx < allowedValues.Length - 1) return allowedValues[vIx + 1];
+        if (vIx < int(allowedValues.Length - 1)) return allowedValues[vIx + 1];
         return allowedValues[allowedValues.Length - 1];
     }
     bool retBefore = newValue < value;
-    for (int i = 0; i < allowedValues.Length; i++) {
+    for (uint i = 0; i < allowedValues.Length; i++) {
         if (retBefore && allowedValues[i] > newValue) {
             return allowedValues[Math::Max(i - 1, 0)];
         } else if (!retBefore && allowedValues[i] >= newValue) {

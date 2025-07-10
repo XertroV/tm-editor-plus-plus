@@ -535,7 +535,7 @@ class ViewDuplicateFreeBlocksTab : ViewAllBlocksTab {
             if (keepIx < 0) throw("Should never be -1 after 1st loop (keepIx)");
         }
         for (uint i = 0; i < blocks.Length; i++) {
-            if (i == keepIx) continue;
+            if (i == uint(keepIx)) continue;
             auto b = blocks[i];
             auto block = b.FindMe(pmt);
             if (block is null) continue;
@@ -648,8 +648,8 @@ class ViewDuplicateItemsTab : ViewAllItemsTab {
                 NotifyWarning("[Autodel Dups] 2. Unexpected: key " + k + " has length " + items.Length);
                 continue;
             }
-            for (uint i = 1; i < items.Length; i++) {
-                auto item = items[i];
+            for (uint j = 1; j < items.Length; j++) {
+                auto item = items[j];
                 auto itemToDelete = item.FindMe(editor.PluginMapType);
                 if (itemToDelete is null) {
                     NotifyWarning("got null finding duplicate item: " + item.ToString());

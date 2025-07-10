@@ -28,7 +28,7 @@ namespace VegetRandomYaw {
 
 		if (len > 3) {
 			uVar3 = (uint64(len) >> 2);
-			len += (len >> 2) * -4;
+			len += (len >> 2) * uint(-4);
 			for (uint i = 0; i < uVar3; ++i) {
 				iVar1 = data[i*4+0] | (data[i*4+1] << 8) | (data[i*4+2] << 16) | (data[i*4+3] << 24);
 				seed = seed * m ^ ((iVar1 * m) >> r ^ iVar1 * m) * m;
@@ -58,7 +58,7 @@ namespace VegetRandomYaw {
 		void SaveState() { savedState = state; }
 		void RestoreState() { state = savedState; }
 		uint Next() {
-			state = (state * (-0x3e39b193) + uint(0x3039)) & uint(0x7FFFFFFF);
+			state = (state * uint(-0x3e39b193) + uint(0x3039)) & uint(0x7FFFFFFF);
 			return state;
 		}
 		float RandFloat01() {
@@ -335,7 +335,7 @@ namespace VegetRandomYaw {
 	vec2 GetItemModelVeget_ReductionRatio_AngleMax(NPlugItem_SVariantList@ varList, int variant = -1) {
 		if (varList is null) return 0.0;
 		int minVar = Math::Max(variant, 0);
-		int maxVar = MathX::Max(uint(variant + 1), varList.Variants.Length);
+		int maxVar = int(MathX::Max(uint(variant + 1), varList.Variants.Length));
 		for (int i = minVar; i < maxVar; i++) {
 			auto em = varList.Variants[i].EntityModel;
 			auto treeModel = cast<CPlugVegetTreeModel>(em);

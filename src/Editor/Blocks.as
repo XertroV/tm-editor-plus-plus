@@ -148,14 +148,14 @@ namespace Editor {
         if (DoesBlockInfoVariantHaveMesh(bi.VariantBaseGround)) return true;
         if (DoesBlockInfoVariantHaveMesh(bi.VariantBaseAir)) return true;
         if (bi.AdditionalVariantsGround.Length > 0) {
-            for (int i = 0; i < bi.AdditionalVariantsGround.Length; i++) {
+            for (uint i = 0; i < bi.AdditionalVariantsGround.Length; i++) {
                 auto @biv = bi.AdditionalVariantsGround[i];
                 if (biv is null) continue;
                 if (DoesBlockInfoVariantHaveMesh(biv)) return true;
             }
         }
         if (bi.AdditionalVariantsAir.Length > 0) {
-            for (int i = 0; i < bi.AdditionalVariantsAir.Length; i++) {
+            for (uint i = 0; i < bi.AdditionalVariantsAir.Length; i++) {
                 auto @biv = bi.AdditionalVariantsAir[i];
                 if (biv is null) continue;
                 if (DoesBlockInfoVariantHaveMesh(biv)) return true;
@@ -176,7 +176,7 @@ namespace Editor {
     }
 
     bool DoesBlockInfoMobilsHaveMesh(MwFastBuffer<CMwNod@> &in mobils) {
-        for (int i = 0; i < mobils.Length; i++) {
+        for (uint i = 0; i < mobils.Length; i++) {
             auto @mobil = cast<CGameCtnBlockInfoMobil>(mobils[i]);
             if (mobil is null) continue;
             if (mobil.PrefabFid !is null) return true;
@@ -444,7 +444,7 @@ namespace Editor {
         // zero block uints at 0x50
         Dev::SetOffset(block, O_CGameCtnBlock_BlockUnitsEOffset, uint64(0));
         Dev::SetOffset(block, O_CGameCtnBlock_BlockUnitsEOffset + 0x8, uint64(0));
-        Dev::SetOffset(block, O_CGameCtnBlock_CoordOffset, nat3(-1, 0, -1));
+        Dev::SetOffset(block, O_CGameCtnBlock_CoordOffset, nat3(uint(-1), 0, uint(-1)));
         Dev::SetOffset(block, FreeBlockPosOffset, pos);
         Dev::SetOffset(block, FreeBlockRotOffset, rot);
     }

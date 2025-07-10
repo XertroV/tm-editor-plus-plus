@@ -315,7 +315,7 @@ namespace Editor {
         CGameOutlineBox@ GetHostBoxForQuads(CGameCtnEditorFree@ e) {
             if (e is null) return null;
             return e.SectorConstraintsBox;
-            return e.AnimatedElemOutlineBox_Items;
+            // return e.AnimatedElemOutlineBox_Items;
         }
 
         // use different box for quads to avoid shader crash

@@ -75,7 +75,7 @@ namespace RandomizeVegetationLayouts {
 			for (uint ix = 0; ix < len; ix++) {
 				auto idAddr = elsAddr + ix * 0x4;
 				auto idVal = Dev::ReadUInt32(idAddr);
-				if (idVal == id) {
+				if (idVal == uint(id)) {
 					return ix;
 				}
 			}

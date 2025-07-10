@@ -198,7 +198,7 @@ class NavHistStack {
     }
 
     Tab@ GetCurrent() {
-        if (pos < 0 || pos >= stack.Length) return null;
+        if (pos < 0 || pos >= int(stack.Length)) return null;
         return stack[pos];
     }
 }

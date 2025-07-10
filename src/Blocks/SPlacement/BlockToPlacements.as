@@ -161,9 +161,9 @@ namespace SPlacement {
         auto placementData = SPlacementBlockData_FromFid(fid, mobilIx, mmpt);
         if (placementData is null) {
             Dev_NotifyWarning("IngestMobilPrefab: placementData is null for mobilId: " + mobilId.Value);
-            return -1;
+            return uint(-1);
         }
-        if (placementData.layouts.Length == 0) return -1;
+        if (placementData.layouts.Length == 0) return uint(-1);
         mobilPrefabIds.InsertLast(mobilId.Value);
         placements.InsertLast(placementData);
         return mobilIx;

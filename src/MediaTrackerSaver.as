@@ -188,7 +188,7 @@ namespace MediatrackerSaver {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto map = editor.Challenge;
         UI::PushFont(g_BigFont);
-        UI::SetNextWindowPos(g_screen.x / 2 - 100, g_screen.y / 2 - 100, UI::Cond::Appearing);
+        UI::SetNextWindowPos(int(g_screen.x / 2 - 100), int(g_screen.y / 2 - 100), UI::Cond::Appearing);
         if (UI::Begin("Missing Clips", UI::WindowFlags::NoCollapse | UI::WindowFlags::AlwaysAutoResize)) {
             UI::Text("Some MT clips have changed (did you \\$<\\$dd0Undo\\$>?)");
             UI::Text("Please either \\$<\\$i\\$f80Ignore\\$> or \\$<\\$8f0\\$iRestore\\$> the clips");

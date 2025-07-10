@@ -137,7 +137,7 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 			editor.GhostBlockForcedVariantIndex = 0;
 			editor.GhostBlockForcedGroundElseAir = _forcedGround;
 		} else {
-			editor.GhostBlockForcedVariantIndex = -1;
+			editor.GhostBlockForcedVariantIndex = uint(-1);
 			// reselect current block to reset
 			SelectCurrentBlock(editor);
 		}

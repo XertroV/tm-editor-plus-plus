@@ -591,7 +591,7 @@ namespace Editor {
         // IO::SetClipboard(Text::FormatPointer(Dev_GetPointerForNod(newAnchored)));
         Editor::SetItemLocation(newAnchored, cs.Pos);
         newAnchored.AbsolutePositionInMap.y = Math::Max(8, newAnchored.AbsolutePositionInMap.y);
-        newAnchored.BlockUnitCoord = nat3(-1);
+        newAnchored.BlockUnitCoord = nat3(uint(-1));
         Dev::SetOffset(newAnchored, GetOffset(newAnchored, "ItemModel"), model);
         // not sure how many of these are required
         // Editor::SetAO_ItemModelMwId(newAnchored);

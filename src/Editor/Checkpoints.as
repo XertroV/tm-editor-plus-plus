@@ -20,12 +20,12 @@ namespace Editor {
     bool IsCheckpointLinked(CGameCtnBlock@ block, int linkOrder = -1) {
         if (block is null || block.WaypointSpecialProperty is null) return false;
         return block.WaypointSpecialProperty.Tag == "LinkedCheckpoint"
-            && (linkOrder == -1 || block.WaypointSpecialProperty.Order == linkOrder);
+            && (linkOrder == -1 || block.WaypointSpecialProperty.Order == uint(linkOrder));
     }
 
     bool IsCheckpointLinked(CGameCtnAnchoredObject@ item, int linkOrder = -1) {
         if (item is null || item.WaypointSpecialProperty is null) return false;
         return item.WaypointSpecialProperty.Tag == "LinkedCheckpoint"
-            && (linkOrder == -1 || item.WaypointSpecialProperty.Order == linkOrder);
+            && (linkOrder == -1 || item.WaypointSpecialProperty.Order == uint(linkOrder));
     }
 }
