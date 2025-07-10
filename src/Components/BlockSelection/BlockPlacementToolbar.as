@@ -45,6 +45,13 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 		}
 	}
 
+	void DrawMenuItem() override {
+		if (UI::MenuItem(DisplayIconAndName, "", windowOpen)) {
+			windowOpen = !windowOpen;
+			S_ShowBlockPlacementToolbar = !S_ShowBlockPlacementToolbar;
+		}
+	}
+
 	bool ShouldShowWindow(CGameCtnEditorFree@ editor) override {
 		return S_ShowBlockPlacementToolbar && Editor::IsInBlockPlacementMode(editor, false);
 	}
