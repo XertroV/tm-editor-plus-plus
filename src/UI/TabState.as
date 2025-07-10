@@ -89,8 +89,8 @@ namespace TabState {
 
     bool _HasLoadBeenCalled = false;
     void _RunLoadNow() {
-        if (!IO::FileExists(TabStateJsonFilePath)) return;
         _HasLoadBeenCalled = true;
+        if (!IO::FileExists(TabStateJsonFilePath)) return;
         auto j = Json::FromFile(TabStateJsonFilePath);
         if (j.GetType() != Json::Type::Object) {
             _Log::Trace("TabState", "LoadNow: expected object; got " + tostring(j.GetType()));
