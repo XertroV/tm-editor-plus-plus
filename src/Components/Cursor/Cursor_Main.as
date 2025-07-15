@@ -643,8 +643,6 @@ class CustomCursorTab : EffectTab {
     }
 
     void DrawFreeBlockSnapRadiusSettings() {
-        UI::Indent();
-
         float currSnapRadius = CustomCursor::GetCurrentSnapRadius();
         UI::SetNextItemWidth(60.);
         UI::InputText("##fb-snap-r", Text::Format("%.2f", currSnapRadius), int(UI::InputTextFlags::ReadOnly));
@@ -659,6 +657,8 @@ class CustomCursorTab : EffectTab {
         bool reset_radius = UI::Button(Icons::Refresh + "##fb-snap-rst", vec2(btnWidth, 0)); //  || UI::IsItemClicked()
         UI::SameLine();
         UI::Text("Free Block Snap Radius");
+
+        // modify snap radius
         if (decr_radius) {
             CustomCursor::StepFreeBlockSnapRadius(false);
         } else if (incr_radius) {
@@ -672,12 +672,15 @@ class CustomCursorTab : EffectTab {
             CustomCursor::ResetSnapRadius();
         }
 
+        // other settings
         S_DrawFreeBlockClips = UI::Checkbox("Draw Block Clip Helpers", S_DrawFreeBlockClips);
+
+        UI::Indent();
         S_DrawAnySnapRadiusOnHelpers = UI::Checkbox("Draw Snap Radius on Helpers", S_DrawAnySnapRadiusOnHelpers);
         S_DrawFreeBlockClipsOnNearbyBlocks = UI::Checkbox("Draw Block Clip Helpers on Nearby Blocks", S_DrawFreeBlockClipsOnNearbyBlocks);
-        DrawFreeBlockOffsetForm();
-
         UI::Unindent();
+
+        DrawFreeBlockOffsetForm();
     }
 
     void DrawFreeBlockOffsetForm() {
