@@ -95,6 +95,8 @@ namespace Gizmo {
         if (Editor::GetPlacementMode(editor) != origPlaceMode) {
             Editor::SetPlacementMode(editor, origPlaceMode);
         }
+
+        // Bug: not resetting to correct item mode - fixed in SetItemPlacementMode. //  && !Editor::GetItemPlacementMode(false, false)
         if (origModeWasItem) {
             Editor::SetItemPlacementMode(origItemPlacementMode);
         }
@@ -513,7 +515,8 @@ namespace Gizmo {
         Editor::SetAllCursorPos(bb.pos);
         @gizmo = RotationTranslationGizmo("gizmo").WithBoundingBox(bb)
             .WithOnApplyF(_GizmoOnApply).WithOnExitF(_GizmoOnCancel)
-            .WithOnApplyAndContinueF(_GizmoOnApplyAndContinue);
+            .WithOnApplyAndContinueF(_GizmoOnApplyAndContinue)
+            .WithPlacingType(modePlacingType);
 
         if (modePlacingType == BlockOrItem::Item) {
             gizmo.WithPlacementParams(placingItemModel.DefaultPlacementParam_Content);

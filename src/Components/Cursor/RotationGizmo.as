@@ -113,6 +113,7 @@ class RotationTranslationGizmo {
     mat4 tmpRot = mat4::Identity();
     string name;
     Gizmo::Mode mode = Gizmo::Mode::Rotation;
+    BlockOrItem placingType = BlockOrItem::Block;
     // UV for moving object on plane
     vec2 altMoveUV;
 
@@ -153,6 +154,11 @@ class RotationTranslationGizmo {
         pos = vec3(m.tx, m.ty, m.tz);
         // rot = mat4::Inverse(mat4::Translate(pos * -1.) * m);
         rot = (mat4::Translate(pos * -1.) * m);
+        return this;
+    }
+
+    RotationTranslationGizmo@ WithPlacingType(BlockOrItem placeType) {
+        this.placingType = placeType;
         return this;
     }
 
@@ -909,13 +915,32 @@ class RotationTranslationGizmo {
             }
             AddSimpleTooltip("Reset Camera");
 
+            if (this.placingType == BlockOrItem::Item && editor.ItemCursor !is null) {
+                // if we're in item mode, show button for the fix for ghost items
+                UI::SameLine();
+                if (UI::Button(Icons::Wrench + Icons::SnapchatGhost, btnSize2)) {
+                    Fixes::FixGhostItems(editor.ItemCursor);
+                }
+                AddSimpleTooltip("Fix 'Ghost' Items (Unselectable Items).\n\n1. Click this. \\$<\\$i(More items will appear, don't worry)\\$>\n2. Exit gizmo mode.\n3. Swap to another item and back again to remove the extra items.");
+            }
+
             UI::SameLine();
+            auto pos = UI::GetCursorPos();
             UI::BeginDisabled(!CanRepeatAppDiff);
             if (UI::Button(Icons::Repeat, btnSize2Thinner)) {
                 RepeatLastApplicationDiff();
             }
-            AddSimpleTooltip("Repeat Last Difference" + NewIndicator);
             UI::EndDisabled();
+            if (!CanRepeatAppDiff) {
+                // if we can't repeat, show an invisible button for the tooltip.
+                auto prePos = UI::GetCursorPos();
+                UI::SetCursorPos(pos);
+                UI::InvisibleButton("##gz-repeat-disabled", btnSize2Thinner);
+                UI::SetCursorPos(prePos);
+                AddSimpleTooltip("Repeat Last Difference (Place multiple without leaving gizmo to enable)" + NewIndicator);
+            } else {
+                AddSimpleTooltip("Repeat Last Difference" + NewIndicator);
+            }
 
             UI::SameLine();
             if (UI::Button(Icons::Cog, btnSize2)) {
