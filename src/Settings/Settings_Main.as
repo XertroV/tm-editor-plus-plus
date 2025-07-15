@@ -39,7 +39,7 @@ uint S_AnimationDuration = 150;
 bool S_RenderQuickToggle = true;
 
 [Setting hidden]
-int S_AutosavePeriod = -1;
+int S_AutosavePeriod = 67;
 
 [Setting hidden]
 bool S_DefaultToAirMode = false;

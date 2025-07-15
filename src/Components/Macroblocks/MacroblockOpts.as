@@ -104,6 +104,11 @@ const string PATTERN_MB_SHOW_GHOSTFREE_COND2 = "d1 e8 83 e0 01 41 c1 eb 02 41 83
 // nops a JNE
 const string PATTERN_MB_SHOW_GHOSTFREE_INIT_COND = "0F 85 ?? ?? 00 00 48 89 74 24 ?? 48 8B CD 4C 89 A4 24 ?? 00 00 00"; // 4C 89 74 24 50 E8 99 F3 FF FF 48 8B C8 4C 8B E0 E8 4E 5D 5E FF";
 
+// When the macroblock is initialized, it pulls coordinates from the SMacroBlock_Block object, which are (-1,0,-1) for free blocks.
+// TEST: Patch out the additions so that the block unit info coord is 0,0,0;
+//       Method: hook before to test if the SMB_Block is free.
+//       Pattern: 44 8b 4c 24 38 44 03 5d 0c 44 03 55 10 44 03 4d 14 (mov r9d,buInfoCoord.z, add r11d,x, add r10d,y, add r9d,z)
+const string PATTERN_MB_BEFORE_ADD_COORDS = "44 8b 4c 24 38 44 03 ?? 0c 44 03 ?? 10 44 03 ?? 14";
 
 MemPatcher@ mbShowGhostFree_PatchCond = MemPatcher(
     PATTERN_MB_SHOW_GHOSTFREE_COND,
@@ -118,19 +123,127 @@ MemPatcher@ mbShowGhostFree_PatchInitCond = MemPatcher(
     {0}, {"90 90 90 90 90 90"}
 );
 
+HookHelper@ mbShowGhostFree_HookBeforeAddCoords = HookHelper(
+    PATTERN_MB_BEFORE_ADD_COORDS,
+    0, 0, "_MbShowGhostFree_HookBeforeAddCoords", Dev::PushRegisters::Basic, true
+);
+// MemPatcher mBShowGhostFree_NopAddCoords = MemPatcher(
+//     PATTERN_MB_BEFORE_ADD_COORDS,
+//     {5, 9, 13}, {"90 90 90 90", "90 90 90 90", "90 90 90 90"}
+// );
+
 bool IsMbShowGhostFreeApplied {
     get {
-        return mbShowGhostFree_PatchCond.IsApplied && mbShowGhostFree_PatchCond2.IsApplied
-            && mbShowGhostFree_PatchInitCond.IsApplied;
+        return mbShowGhostFree_PatchCond.IsApplied
+            && mbShowGhostFree_PatchCond2.IsApplied
+            && mbShowGhostFree_PatchInitCond.IsApplied
+            && mbShowGhostFree_HookBeforeAddCoords.IsApplied()
+            ;
     }
     set {
         mbShowGhostFree_PatchCond.IsApplied = value;
         mbShowGhostFree_PatchCond2.IsApplied = value;
         mbShowGhostFree_PatchInitCond.IsApplied = value;
+        mbShowGhostFree_HookBeforeAddCoords.SetApplied(value);
+        if (!value) {
+            // ensure this patch is disabled if we disable the main patch
+            // mBShowGhostFree_NopAddCoords.IsApplied = false;
+        }
         trace("IsMbShowGhostFreeApplied = " + value);
     }
 }
 
+// rpb is *SMacroBlock_Block. int3 coords at +0xC
+// r15 is the original macroblock info
+void _MbShowGhostFree_HookBeforeAddCoords(uint64 rbp, CGameCtnMacroBlockInfo@ r15) {
+    if (Dev_PointerLooksBad(rbp)) {
+        Dev_NotifyWarning("MbShowGhostFree: bad rbp pointer " + Text::FormatPointer(rbp));
+        return;
+    }
+    // test if X/Z is negative
+    auto coords = Dev::ReadInt3(rbp + 0xC);
+    bool hasFreeBlock = coords.x < 0 || coords.z < 0;
+    if (hasFreeBlock) {
+        // queue this for later
+        MbShowGhostFree::Fix_MacroBlock_BlockUnitCoords_Soon(r15);
+        dev_trace('MbShowGhostFree: _MbShowGhostFree_HookBeforeAddCoords found bad coords: ' + coords.ToString());
+    }
+
+    // mBShowGhostFree_NopAddCoords.IsApplied = coords.x < 0 || coords.z < 0;
+    // dev_trace('TESTING - NopAddCoords applied: ' + tostring(mBShowGhostFree_NopAddCoords.IsApplied) + ' for coords: ' + coords.ToString());
+}
+
+namespace MbShowGhostFree {
+    bool _WillFixBUnitSoon = false;
+    bool mbiWasUnassigned = false; // if the mbi.Id was unassigned, we will re-trigger generation
+    CGameCtnMacroBlockInfo@ mbiToFix = null;
+    void Fix_MacroBlock_BlockUnitCoords_Soon(CGameCtnMacroBlockInfo@ mbi) {
+        if (mbi is null) return;
+        if (_WillFixBUnitSoon) {
+#if DEV
+            if (mbi !is mbiToFix) {
+                Dev_NotifyWarning("MbShowGhostFree: Fix_MacroBlock_BlockUnitCoords_Soon called with a different mbi than the previous one.");
+            }
+#endif
+            return;
+        }
+        _WillFixBUnitSoon = true;
+        @mbiToFix = mbi;
+        mbiToFix.MwAddRef();
+        mbiWasUnassigned = mbi.Id.Value == uint(-1);
+        // this will be applied after generation is done
+        Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, CoroutineFunc(_Run_Fix_MacroBlock_BlockUnitCoords));
+        dev_trace('MbShowGhostFree: Fix_MacroBlock_BlockUnitCoords_Soon called for mbi: ' + mbi.IdName);
+    }
+
+    // Only call this via Fix_MacroBlock_BlockUnitCoords_Soon to ensure a good run context and avoid multiple instances
+    void _Run_Fix_MacroBlock_BlockUnitCoords() {
+        _WillFixBUnitSoon = false;
+        if (mbiToFix is null) {
+            throw("MbShowGhostFree: _Run_Fix_MacroBlock_BlockUnitCoords called with mbiToFix == null");
+        }
+
+        if (mbiWasUnassigned) {
+            // if there is no ID, mark it as uninitialized and let generation re-trigger.
+            dev_trace('MbShowGhostFree: _Run_Fix_MacroBlock_BlockUnitCoords called with mbiToFix.Id == -1, marking as uninitialized. Connected=' + mbiToFix.Connected + ' Initialized=' + mbiToFix.Initialized);
+            mbiToFix.Initialized = false;
+            _Cleanup_Fix_MacroBlock_BlockUnitCoords();
+            return;
+        }
+        // dev_trace('MbShowGhostFree: _Run_Fix_MacroBlock_BlockUnitCoords called for mbiToFix: ' + mbiToFix.IdName + ' Id.Value='+FmtUintHex(mbiToFix.Id.Value)+' Connected=' + mbiToFix.Connected + ' Initialized=' + mbiToFix.Initialized);
+
+        auto genBUI = mbiToFix.GeneratedBlockInfo;
+        CGameCtnBlockInfoVariant@ var = genBUI.VariantAir;
+        if (var is null) @var = genBUI.VariantGround;
+        if (var is null) {
+            Dev_NotifyWarning("MbShowGhostFree: _Run_Fix_MacroBlock_BlockUnitCoords called with mbiToFix.GeneratedBlockInfo.VariantAir == null and VariantGround == null");
+            _Cleanup_Fix_MacroBlock_BlockUnitCoords();
+            return;
+        }
+
+        uint count = 0;
+        auto nb = var.BlockUnitInfos.Length;
+        for (uint i = 0; i < nb; i++) {
+            auto buInfo = var.BlockUnitInfos[i];
+            if (buInfo is null) continue;
+            // fix coords <= -1
+            if (int(buInfo.OffsetE.x) < 0 || int(buInfo.OffsetE.z) < 0) {
+                buInfo.OffsetE.x = 0;
+                buInfo.OffsetE.z = 0;
+                count++;
+            }
+        }
+
+        dev_trace('MbShowGhostFree: Fixed ' + count + ' BlockUnitInfos in mbi: ' + mbiToFix.IdName);
+        _Cleanup_Fix_MacroBlock_BlockUnitCoords();
+        return;
+    }
+
+    void _Cleanup_Fix_MacroBlock_BlockUnitCoords() {
+        mbiToFix.MwRelease();
+        @mbiToFix = null;
+    }
+}
 
 
 /*

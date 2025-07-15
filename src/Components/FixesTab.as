@@ -6,25 +6,35 @@ class FixesTab : Tab {
 
     string suggestionPrefix = "\\$i\\$fda " + Icons::ExclamationTriangle + "  ";
 
+    void TextFixesDesc(const string &in msg) {
+        // UI::PushFont(g_MonoFont, 20.0);
+        UI::TextWrapped("\\$cf8\\$iFIXES: " + msg);
+        // UI::PopFont();
+    }
+
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto mtst = editor.PluginMapType.EnableMapTypeStartTest;
+        auto mtst = editor.PluginMapType.EnableMapTypeStartTest && Editor::IsInTestPlacementMode(editor);
         auto eicp = editor.PluginMapType.EnableEditorInputsCustomProcessing;
 
+        UI::TextWrapped("\\$iNote: these sections auto-expand when they are detected to be relevant.");
+
         if (ProactiveCollapsingHeader("Test Mode: Click does nothing", mtst)) {
+            TextFixesDesc("If you can't enter test mode -- click does nothing. (Not sure why this happens, but this seems to fix it.)");
             UI::Text("Editor.PluginMapType.EnableMapTypeStartTest: " + BoolIcon(mtst, false));
             editor.PluginMapType.EnableMapTypeStartTest = UI::Checkbox("EnableMapTypeStartTest", mtst);
             if (mtst) UI::Text(suggestionPrefix + "Set to false and try again");
         }
 
         if (ProactiveCollapsingHeader("All Inputs Blocked", eicp)) {
+            TextFixesDesc("When inputs don't work. (Note: gizmo mode will re-enable it.)");
             UI::Text("Editor.PluginMapType.EnableEditorInputsCustomProcessing: " + BoolIcon(eicp, false));
             editor.PluginMapType.EnableEditorInputsCustomProcessing = UI::Checkbox("EnableEditorInputsCustomProcessing", eicp);
             if (eicp) UI::Text(suggestionPrefix + "Set to false and try again");
         }
 
-        if (UI::CollapsingHeader("Gizmo + 'Ghost' Items")) {
-            UI::TextWrapped("If you have 'ghost' items (unselectable items) in your map after using the gizmo, you can fix them by clicking the button below.");
+        if (UI::CollapsingHeader("Gizmo + 'Ghost' Items" + NewIndicator)) {
+            TextFixesDesc("If you have 'ghost' items (unselectable items) in your map after using the gizmo, you can fix them by clicking the button below.");
             UI::TextWrapped("This will show more items in the cursor, like when you snap to road borders. You need to swap to another item and back again to remove the extra items.");
             UI::TextWrapped("This sometimes happens when using the gizmo or when nudging items from \\$<\\$inormal item\\$> mode.");
             if (UI::Button(Icons::Wrench + Icons::SnapchatGhost + "  Fix 'Ghost' Items Now")) {
@@ -32,7 +42,6 @@ class FixesTab : Tab {
             }
             AddSimpleTooltip("Fix 'Ghost' Items (Unselectable Items).\n\n1. Click this.\n2. Swap to another item and back again to remove the extra items.");
         }
-
 
         UI::SeparatorText("Misc");
 
