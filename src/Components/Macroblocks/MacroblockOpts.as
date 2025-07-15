@@ -105,9 +105,10 @@ const string PATTERN_MB_SHOW_GHOSTFREE_COND2 = "d1 e8 83 e0 01 41 c1 eb 02 41 83
 const string PATTERN_MB_SHOW_GHOSTFREE_INIT_COND = "0F 85 ?? ?? 00 00 48 89 74 24 ?? 48 8B CD 4C 89 A4 24 ?? 00 00 00"; // 4C 89 74 24 50 E8 99 F3 FF FF 48 8B C8 4C 8B E0 E8 4E 5D 5E FF";
 
 // When the macroblock is initialized, it pulls coordinates from the SMacroBlock_Block object, which are (-1,0,-1) for free blocks.
-// TEST: Patch out the additions so that the block unit info coord is 0,0,0;
+// TEST: ~~Patch out the additions so that the block unit info coord is 0,0,0;~~
 //       Method: hook before to test if the SMB_Block is free.
 //       Pattern: 44 8b 4c 24 38 44 03 5d 0c 44 03 55 10 44 03 4d 14 (mov r9d,buInfoCoord.z, add r11d,x, add r10d,y, add r9d,z)
+// Result: we don't NOP, but it's a useful hook to trigger fixing bad block unit coords (.x < -1 || .z < -1)
 const string PATTERN_MB_BEFORE_ADD_COORDS = "44 8b 4c 24 38 44 03 ?? 0c 44 03 ?? 10 44 03 ?? 14";
 
 MemPatcher@ mbShowGhostFree_PatchCond = MemPatcher(
