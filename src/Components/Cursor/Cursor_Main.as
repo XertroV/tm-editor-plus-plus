@@ -554,7 +554,9 @@ class CustomCursorTab : EffectTab {
         return CustomCursorRotations::Active
             || CustomCursorRotations::ItemSnappingEnabled
             || CustomCursorRotations::CustomYawActive
-            || CustomCursorRotations::IsPromiscuousItemSnappingEnabled;
+            || CustomCursorRotations::IsPromiscuousItemSnappingEnabled
+            || S_EnableInfinitePrecisionFreeBlocks
+            || S_CursorSmartRotate;
     }
 
     void DrawInner() override {
@@ -575,8 +577,6 @@ class CustomCursorTab : EffectTab {
         S_HelpPlaceItemsOnFreeBlocks = UI::Checkbox("Help place items on free/ghost blocks", S_HelpPlaceItemsOnFreeBlocks);
         AddSimpleTooltip("\\$<\\$8f4\\$iVery helpful for checkpoints!\\$> The item will have a red box, but it will place okay.");
 
-        DrawInfinitePrecisionSetting();
-
         wasActive = S_EnablePromiscuousItemSnapping;
         S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping", S_EnablePromiscuousItemSnapping);
         AddSimpleTooltip("Items that snap to blocks will be less picky about which blocks they snap to. Example: trees will now snap to all terrain.\n\nNOTE: If you toggle this, it will only take effect for newly placed blocks, or when you reload the map.");
@@ -589,6 +589,12 @@ class CustomCursorTab : EffectTab {
         if (wasActive != CustomCursor::DoNotOffsetBlockInCursorPreview_Active) {
             S_DoNotOffsetBlockInCursorPreview = CustomCursor::DoNotOffsetBlockInCursorPreview_Active;
         }
+
+        // -----------------
+        UI::SeparatorText("Advanced Free Placement");
+
+        UI::TextWrapped("\\$ab9  " + Icons::QuestionCircle +  "\\$i  If cursor stuff is weird in free modes, try disabling all of these.");
+        DrawInfinitePrecisionSetting();
 
         // -----------------
         UI::SeparatorText("Free Blocks");

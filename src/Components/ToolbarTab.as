@@ -132,18 +132,7 @@ class ToolbarTab : Tab {
 		bool closePopup = false;
 		UI::PushFont(g_NormFont);
 		if (UI::BeginPopup("FreeGridOpts")) {
-			UI::SetNextItemWidth(100.0);
-			auto newSize = UI::InputFloat("Grid Size", S_FreeGridSize, 1.0);
-			bool sizeChanged = newSize != S_FreeGridSize;
-			bool sizeIncr = newSize > S_FreeGridSize;
-			if (sizeChanged) {
-				if (sizeIncr) {
-					S_FreeGridSize *= 2.;
-				} else {
-					S_FreeGridSize /= 2.;
-				}
-				S_FreeGridSize = Math::Clamp(S_FreeGridSize, 0.03125, 64.0);
-			}
+			DrawFreeGridOptions();
 			UX::CloseCurrentPopupIfMouseFarAway(closePopup);
 			UI::EndPopup();
 		}

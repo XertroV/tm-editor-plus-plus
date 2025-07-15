@@ -4,266 +4,300 @@
  */
 
 void DrawInfinitePrecisionSetting() {
-    S_EnableInfinitePrecisionFreeBlocks = UI::Checkbox("Enable infinite precision for free blocks / items / macroblocks" + BetaIndicator + Icons::ExclamationTriangle, S_EnableInfinitePrecisionFreeBlocks);
-    AddSimpleTooltip("Overwrite the cursor position so you can preview and place blocks outside the stadium. You should also unlock the editor camera (under Editor Misc). Can be used to prevent item snapping.\n\\$f80Warning! If you have trouble placing things, disable this!");
+	S_EnableInfinitePrecisionFreeBlocks = UI::Checkbox("Enable infinite precision for free blocks / items / macroblocks" + BetaIndicator + Icons::ExclamationTriangle, S_EnableInfinitePrecisionFreeBlocks);
+	AddSimpleTooltip("Overwrite the cursor position so you can preview and place blocks outside the stadium. You should also unlock the editor camera (under Editor Misc). Can be used to prevent item snapping.\n\\$f80Warning! If you have trouble placing things, disable this!");
+
+	UI::Indent();
+	S_EnableFreeGrid = UI::Checkbox("Enable Free Grid", S_EnableFreeGrid);
+	AddSimpleTooltip("Enable free grid for free blocks. This will allow you to place blocks with a custom grid size. Combined with Infinite Precision, you can place blocks on-grid ANYWHERE.");
+	if (!S_EnableInfinitePrecisionFreeBlocks) {
+		SameLineText("\\$i\\$888 Inactive when Infinite Precision is disabled.");
+	}
+	S_FreeGridLocal = UI::Checkbox("Local Free Grid", S_FreeGridLocal);
+	AddSimpleTooltip("Local Free Grid will rotate the grid to match the cursor local axes.\nIf false: the grid is aligned to global axes.");
+	if (!S_EnableFreeGrid) {
+		SameLineText("\\$i\\$888 Inactive when Free Grid is disabled.");
+	}
+	DrawFreeGridOptions();
+	UI::Unindent();
+
+	S_CursorSmartRotate = UI::Checkbox("Cursor Smart Rotate / Local Rotate", S_CursorSmartRotate);
+	AddSimpleTooltip("This will modify rotations so they are applied locally according to the current cursor direction (similar to local rotation with the gizmo).\nNote: these need to fit into the existing cursor rotations, so aren't perfect.");
 }
 
+void DrawFreeGridOptions() {
+	UI::SetNextItemWidth(100.0);
+	auto newSize = UI::InputFloat("Grid Size", S_FreeGridSize, 1.0);
+	bool sizeChanged = newSize != S_FreeGridSize;
+	bool sizeIncr = newSize > S_FreeGridSize;
+	if (sizeChanged) {
+		if (sizeIncr) {
+			S_FreeGridSize *= 2.;
+		} else {
+			S_FreeGridSize /= 2.;
+		}
+		S_FreeGridSize = Math::Clamp(S_FreeGridSize, 0.03125, 64.0);
+	}
+}
+
+
+
 namespace FarlandsHelper {
-    // float CustomRotation = 0.1;
-    bool FL_Helper_Active = false;
-    bool drawDebugFarlandsHelper = false;
-    bool updateBlockPosFHHelper = false;
-    vec3 lastCursorPos;
+	// float CustomRotation = 0.1;
+	bool FL_Helper_Active = false;
+	bool drawDebugFarlandsHelper = false;
+	bool updateBlockPosFHHelper = false;
+	vec3 lastCursorPos;
 
-    bool IsCameraInFarlands() {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        auto cam = Editor::GetCurrentCamState(editor);
-        // 210m is a little more than 3 * (256*32)^2;
-        return cam.Pos.LengthSquared() > 210e6;
-    }
+	bool IsCameraInFarlands() {
+		auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+		auto cam = Editor::GetCurrentCamState(editor);
+		// 210m is a little more than 3 * (256*32)^2;
+		return cam.Pos.LengthSquared() > 210e6;
+	}
 
-    void Render() {
-        if (FL_Helper_Active) {
-            // nvgDrawHorizGridHelper(lastCursorPos, vec4(1), 1.5, 32., 3);
-        }
-    }
+	void Render() {
+		if (FL_Helper_Active) {
+			// nvgDrawHorizGridHelper(lastCursorPos, vec4(1), 1.5, 32., 3);
+		}
+	}
 
-    void CursorLoop() {
-        GetCursorRotation_BlockCreation_Hook.Apply();
-        GetCursorRotation_ForDrawing_Hook.Apply();
-        while (true) {
-            yield();
-            // if (skipNextFrame) {
-            //     yield();
-            //     skipNextFrame = false;
-            //     continue;
-            // }
-            if (!S_EnableInfinitePrecisionFreeBlocks) continue;
-            if (!IsInEditor) continue;
-            // get the cursor
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            if (editor is null) continue;
-            auto pmt = editor.PluginMapType;
-            auto cursor = editor.Cursor;
-            if (cursor is null || editor.ItemCursor is null) continue;
-            auto itemCursor = DGameCursorItem(editor.ItemCursor);
-            bool isSnapping = itemCursor.snappedGlobalIx != uint(-1);
-            if (isSnapping) continue;
-            // do some checks first
-            // if (!Editor::IsInPlacementMode(editor)) continue;
-            if (pmt.EditMode != CGameEditorPluginMap::EditMode::Place) continue;
-            // bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor, false);
-            // if (!Editor::IsInAnyFreePlacementMode(editor)) continue;
-            auto placeMode = pmt.PlaceMode;
-            bool isPlacingAnythingFree = placeMode == CGameEditorPluginMap::EPlaceMode::FreeBlock || placeMode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock
-                || (placeMode == CGameEditorPluginMap::EPlaceMode::Item && Editor::GetItemPlacementMode() == Editor::ItemMode::Free);
-            bool isPlacingItem = placeMode == CGameEditorPluginMap::EPlaceMode::Item;
-            if (!isPlacingAnythingFree) continue;
-            if (!Editor::IsAnythingBeingDrawn(cursor)) continue;
-            if (!cursor.UseFreePos && !isPlacingItem) continue;
-            if (!S_EnableInfinitePrecisionFreeBlocks) continue;
-            // waiting for game to place stuff
-            // skip if we're setting the cursor pos atm
-            if (updateBlockPosFHHelper) continue;
+	void CursorLoop() {
+		GetCursorRotation_BlockCreation_Hook.Apply();
+		GetCursorRotation_ForDrawing_Hook.Apply();
+		while (true) {
+			yield();
+			// if (skipNextFrame) {
+			//     yield();
+			//     skipNextFrame = false;
+			//     continue;
+			// }
+			if (!S_EnableInfinitePrecisionFreeBlocks) continue;
+			if (!IsInEditor) continue;
+			// get the cursor
+			auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+			if (editor is null) continue;
+			auto pmt = editor.PluginMapType;
+			auto cursor = editor.Cursor;
+			if (cursor is null || editor.ItemCursor is null) continue;
+			auto itemCursor = DGameCursorItem(editor.ItemCursor);
+			bool isSnapping = itemCursor.snappedGlobalIx != uint(-1);
+			if (isSnapping) continue;
+			// do some checks first
+			// if (!Editor::IsInPlacementMode(editor)) continue;
+			if (pmt.EditMode != CGameEditorPluginMap::EditMode::Place) continue;
+			// bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor, false);
+			// if (!Editor::IsInAnyFreePlacementMode(editor)) continue;
+			auto placeMode = pmt.PlaceMode;
+			bool isPlacingAnythingFree = placeMode == CGameEditorPluginMap::EPlaceMode::FreeBlock || placeMode == CGameEditorPluginMap::EPlaceMode::FreeMacroblock
+				|| (placeMode == CGameEditorPluginMap::EPlaceMode::Item && Editor::GetItemPlacementMode() == Editor::ItemMode::Free);
+			bool isPlacingItem = placeMode == CGameEditorPluginMap::EPlaceMode::Item;
+			if (!isPlacingAnythingFree) continue;
+			if (!Editor::IsAnythingBeingDrawn(cursor)) continue;
+			if (!cursor.UseFreePos && !isPlacingItem) continue;
+			if (!S_EnableInfinitePrecisionFreeBlocks) continue;
+			// waiting for game to place stuff
+			// skip if we're setting the cursor pos atm
+			if (updateBlockPosFHHelper) continue;
 
-            // skip if something else is doing cursor things
-            if (!CursorControl::RequestExclusiveControl(farlandsHelperCursorControlName)) continue;
+			// skip if something else is doing cursor things
+			if (!CursorControl::RequestExclusiveControl(farlandsHelperCursorControlName)) continue;
 
-            // auto occ = editor.OrbitalCameraControl;
-            auto camTarget = editor.PluginMapType.CameraTargetPosition;
-            lastCursorPos = Picker::GetMouseToWorldAtHeight(camTarget.y);
-            SetCursorPos(editor, lastCursorPos, isPlacingItem);
-            // cursor.FreePosInMap = lastCursorPos;
-            // if (isPlacingItem) {
-            //     Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, lastCursorPos);
-            // }
-            // if (CustomCursorRotations::CustomYawActive &&
-            //     CustomCursorRotations::HasCustomCursorSnappedPos &&
-            //     cursor.UseSnappedLoc
-            // ) {
-            //     cursor.SnappedLocInMap_Trans = lastCursorPos;
-            // }
+			// auto occ = editor.OrbitalCameraControl;
+			auto camTarget = editor.PluginMapType.CameraTargetPosition;
+			lastCursorPos = Picker::GetMouseToWorldAtHeight(camTarget.y);
+			SetCursorPos(editor, lastCursorPos, isPlacingItem);
+			// cursor.FreePosInMap = lastCursorPos;
+			// if (isPlacingItem) {
+			//     Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, lastCursorPos);
+			// }
+			// if (CustomCursorRotations::CustomYawActive &&
+			//     CustomCursorRotations::HasCustomCursorSnappedPos &&
+			//     cursor.UseSnappedLoc
+			// ) {
+			//     cursor.SnappedLocInMap_Trans = lastCursorPos;
+			// }
 
-            if (S_EnableFreeGrid) {
-                ApplyGridToCursor(editor, isPlacingItem);
-            }
+			if (S_EnableFreeGrid) {
+				ApplyGridToCursor(editor, isPlacingItem);
+			}
 
-            CursorControl::ReleaseExclusiveControl(farlandsHelperCursorControlName);
-        }
-    }
+			CursorControl::ReleaseExclusiveControl(farlandsHelperCursorControlName);
+		}
+	}
 
-    void SetCursorPos(CGameCtnEditorFree@ editor, vec3 pos, bool alsoUpdateItem = false) {
-        auto cursor = editor.Cursor;
-        cursor.FreePosInMap = pos;
-        if (alsoUpdateItem) {
-            Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, pos);
-        }
-        if (CustomCursorRotations::CustomYawActive &&
-            CustomCursorRotations::HasCustomCursorSnappedPos &&
-            cursor.UseSnappedLoc
-        ) {
-            cursor.SnappedLocInMap_Trans = pos;
-        }
-    }
+	void SetCursorPos(CGameCtnEditorFree@ editor, vec3 pos, bool alsoUpdateItem = false) {
+		auto cursor = editor.Cursor;
+		cursor.FreePosInMap = pos;
+		if (alsoUpdateItem) {
+			Dev::SetOffset(editor.ItemCursor, O_ITEMCURSOR_CurrentPos, pos);
+		}
+		if (CustomCursorRotations::CustomYawActive &&
+			CustomCursorRotations::HasCustomCursorSnappedPos &&
+			cursor.UseSnappedLoc
+		) {
+			cursor.SnappedLocInMap_Trans = pos;
+		}
+	}
 
-    void ApplyGridToCursor(CGameCtnEditorFree@ editor, bool isPlacingItem = false) {
-        auto cursor = editor.Cursor;
-        // auto itemCursor = DGameCursorItem(editor.ItemCursor);
-        auto cursorRot = CustomCursorRotations::GetEditorCursorRotations(cursor);
-        auto targetPos = editor.OrbitalCameraControl.m_TargetedPosition;
-        auto newPoint = Picker::QuantizePointInGrid(cursor.FreePosInMap, S_FreeGridLocal ? cursorRot.Euler : vec3(), S_FreeGridSize);
-        SetCursorPos(editor, newPoint, isPlacingItem);
-        // dev_trace("Set cursor pos to grid: " + newPoint.ToString());
-    }
+	void ApplyGridToCursor(CGameCtnEditorFree@ editor, bool isPlacingItem = false) {
+		auto cursor = editor.Cursor;
+		// auto itemCursor = DGameCursorItem(editor.ItemCursor);
+		auto cursorRot = CustomCursorRotations::GetEditorCursorRotations(cursor);
+		auto targetPos = editor.OrbitalCameraControl.m_TargetedPosition;
+		auto newPoint = Picker::QuantizePointInGrid(cursor.FreePosInMap, S_FreeGridLocal ? cursorRot.Euler : vec3(), S_FreeGridSize);
+		SetCursorPos(editor, newPoint, isPlacingItem);
+		// dev_trace("Set cursor pos to grid: " + newPoint.ToString());
+	}
 
 
 
-    const string farlandsHelperCursorControlName = "FarlandsHelper::CursorLoop";
+	const string farlandsHelperCursorControlName = "FarlandsHelper::CursorLoop";
 
-    HookHelper@ GetCursorRotation_ForDrawing_Hook = HookHelper(
-        "0F 11 0B F2 0F 11 43 10 48 8B 5C 24 60 48 83 C4 50 5F C3",
-        3, 0, "FarlandsHelper::_GetCursorRotation_SetViaRbxPlus0xC"
-    );
-    HookHelper@ GetCursorRotation_BlockCreation_Hook = HookHelper(
-        "8B 86 ?? ?? 00 00 48 8B 5C 24 30 89 07 8B 86 ?? ?? 00 00 48 8B 74 24 38 48 8B 7C 24 40 41 89 06 48 83 C4 20",
-        0, 1, "FarlandsHelper::_GetCursorRotation_SetViaRbx"
-    );
+	HookHelper@ GetCursorRotation_ForDrawing_Hook = HookHelper(
+		"0F 11 0B F2 0F 11 43 10 48 8B 5C 24 60 48 83 C4 50 5F C3",
+		3, 0, "FarlandsHelper::_GetCursorRotation_SetViaRbxPlus0xC"
+	);
+	HookHelper@ GetCursorRotation_BlockCreation_Hook = HookHelper(
+		"8B 86 ?? ?? 00 00 48 8B 5C 24 30 89 07 8B 86 ?? ?? 00 00 48 8B 74 24 38 48 8B 7C 24 40 41 89 06 48 83 C4 20",
+		0, 1, "FarlandsHelper::_GetCursorRotation_SetViaRbx"
+	);
 
-    // note: only works for blocks
-    // const string GetRotationPattern = "8B 86 54 01 00 00 48 8B 5C 24 30 89 07 8B 86 58 01 00 00 48 8B 74 24 38 48 8B 7C 24 40 41 89 06 48 83 C4 20 41 5E C3 ??";
-    // const string GetRotationPattern = ;
+	// note: only works for blocks
+	// const string GetRotationPattern = "8B 86 54 01 00 00 48 8B 5C 24 30 89 07 8B 86 58 01 00 00 48 8B 74 24 38 48 8B 7C 24 40 41 89 06 48 83 C4 20 41 5E C3 ??";
+	// const string GetRotationPattern = ;
 
-    float get_CustomRotation() {
-        return float(Time::Now) / 1000. % TAU;
-    }
+	float get_CustomRotation() {
+		return float(Time::Now) / 1000. % TAU;
+	}
 
-    void _GetCursorRotation_SetViaRbx(uint64 rbx) {
-        // dev_trace("OnGetCursorRotation");
-        if (FL_Helper_Active) {
-            Dev::Write(rbx, float(CustomRotation));
-            // Dev::Write(rbx + 0x10, float(CustomRotation));
-            // dev_trace("Wrote custom rotation: " + CustomRotation);
-        }
-    }
-    // this works, but
-    void _GetCursorRotation_SetViaRbxPlus0xC(uint64 rbx) {
-        // dev_trace("OnGetCursorRotation");
-        if (FL_Helper_Active) {
-            Dev::Write(rbx + 0xC, float(CustomRotation)); //  % (TAU / 4.)
-            // if (Time::Now / 1000 % 2 == 0)
-            // dev_trace("Wrote custom rotation: " + CustomRotation);
-        }
-    }
+	void _GetCursorRotation_SetViaRbx(uint64 rbx) {
+		// dev_trace("OnGetCursorRotation");
+		if (FL_Helper_Active) {
+			Dev::Write(rbx, float(CustomRotation));
+			// Dev::Write(rbx + 0x10, float(CustomRotation));
+			// dev_trace("Wrote custom rotation: " + CustomRotation);
+		}
+	}
+	// this works, but
+	void _GetCursorRotation_SetViaRbxPlus0xC(uint64 rbx) {
+		// dev_trace("OnGetCursorRotation");
+		if (FL_Helper_Active) {
+			Dev::Write(rbx + 0xC, float(CustomRotation)); //  % (TAU / 4.)
+			// if (Time::Now / 1000 % 2 == 0)
+			// dev_trace("Wrote custom rotation: " + CustomRotation);
+		}
+	}
 
-    // free block stuff
-    // return true to block click -- always returns false atm
-    bool FH_CheckPlacing() {
-        if (!S_EnableInfinitePrecisionFreeBlocks) return false;
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return false;
-        auto cursor = editor.Cursor;
-        // if (!Editor::IsBlockOrMacroblockBeingDrawn(cursor)) return false;
-        bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor);
-        if (!Editor::IsAnythingBeingDrawn(cursor)) return false;
-        if (!Editor::IsInAnyFreePlacementMode(editor)) return false;
-        if (!cursor.UseFreePos && !isPlacingItem) return false;
-        if (!Editor::IsInPlacementMode(editor)) return false;
+	// free block stuff
+	// return true to block click -- always returns false atm
+	bool FH_CheckPlacing() {
+		if (!S_EnableInfinitePrecisionFreeBlocks) return false;
+		auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+		if (editor is null) return false;
+		auto cursor = editor.Cursor;
+		// if (!Editor::IsBlockOrMacroblockBeingDrawn(cursor)) return false;
+		bool isPlacingItem = Editor::IsInAnyItemPlacementMode(editor);
+		if (!Editor::IsAnythingBeingDrawn(cursor)) return false;
+		if (!Editor::IsInAnyFreePlacementMode(editor)) return false;
+		if (!cursor.UseFreePos && !isPlacingItem) return false;
+		if (!Editor::IsInPlacementMode(editor)) return false;
 
-        // if (!Editor::IsInFreeBlockPlacementMode(editor, true)) return false;
-        // if (cursor.Color != cursor.CannotPlaceNorJoinColor) return false;
+		// if (!Editor::IsInFreeBlockPlacementMode(editor, true)) return false;
+		// if (cursor.Color != cursor.CannotPlaceNorJoinColor) return false;
 
-        // instead of trying to figure out if we want to overwrite the cursor, just always do it
+		// instead of trying to figure out if we want to overwrite the cursor, just always do it
 
-        // bool cursorCannotPlaceColor = cursor.Color == cursor.CannotPlaceNorJoinColor;
-        // bool cursorOutOfStadium = cursor.FreePosInMap.x < 0 || cursor.FreePosInMap.x > g_MapBounds.x
-        //     || cursor.FreePosInMap.z < 0 || cursor.FreePosInMap.z > g_MapBounds.z
-        //     || cursor.FreePosInMap.y < 0 || cursor.FreePosInMap.y > g_MapBounds.y
-        //     || S_EnableInfinitePrecisionFreeBlocks;
-        // if (!cursorOutOfStadium && !cursorCannotPlaceColor) return false;
+		// bool cursorCannotPlaceColor = cursor.Color == cursor.CannotPlaceNorJoinColor;
+		// bool cursorOutOfStadium = cursor.FreePosInMap.x < 0 || cursor.FreePosInMap.x > g_MapBounds.x
+		//     || cursor.FreePosInMap.z < 0 || cursor.FreePosInMap.z > g_MapBounds.z
+		//     || cursor.FreePosInMap.y < 0 || cursor.FreePosInMap.y > g_MapBounds.y
+		//     || S_EnableInfinitePrecisionFreeBlocks;
+		// if (!cursorOutOfStadium && !cursorCannotPlaceColor) return false;
 
-        if (GetApp().Viewport.Picker.Overlay !is null) return false;
-        _addBlockSetPos = cursor.FreePosInMap;
-        @_addBlockSetRot = CustomCursorRotations::GetEditorCursorRotations(cursor);
-        dev_trace('setting cursor to middle of map');
+		if (GetApp().Viewport.Picker.Overlay !is null) return false;
+		_addBlockSetPos = cursor.FreePosInMap;
+		@_addBlockSetRot = CustomCursorRotations::GetEditorCursorRotations(cursor);
+		dev_trace('setting cursor to middle of map');
 
-        cursor.FreePosInMap = _addBlockCursorPos = Editor::GetMapMidpoint(editor.Challenge);
-        if (!CustomCursorRotations::HasCustomCursorSnappedPos && cursor.UseSnappedLoc) {
-            _addBlockSetPos = cursor.SnappedLocInMap_Trans;
-        }
-        cursor.SnappedLocInMap_Trans = _addBlockCursorPos;
-        // cursor.SnappedLocInMap_Pitch = 0.;
-        // cursor.SnappedLocInMap_Roll = 0.;
-        // cursor.SnappedLocInMap_Yaw = 0.;
-        cursor.Coord = editor.Challenge.Size / 2;
-        cursor.Coord.y = 8;
-        updateBlockPosFHHelper = true;
-        checkedCursorPos = false;
+		cursor.FreePosInMap = _addBlockCursorPos = Editor::GetMapMidpoint(editor.Challenge);
+		if (!CustomCursorRotations::HasCustomCursorSnappedPos && cursor.UseSnappedLoc) {
+			_addBlockSetPos = cursor.SnappedLocInMap_Trans;
+		}
+		cursor.SnappedLocInMap_Trans = _addBlockCursorPos;
+		// cursor.SnappedLocInMap_Pitch = 0.;
+		// cursor.SnappedLocInMap_Roll = 0.;
+		// cursor.SnappedLocInMap_Yaw = 0.;
+		cursor.Coord = editor.Challenge.Size / 2;
+		cursor.Coord.y = 8;
+		updateBlockPosFHHelper = true;
+		checkedCursorPos = false;
 
-        if (isPlacingItem) {
-            Editor::SetItemCursorPos(editor.ItemCursor, _addBlockCursorPos);
-        }
+		if (isPlacingItem) {
+			Editor::SetItemCursorPos(editor.ItemCursor, _addBlockCursorPos);
+		}
 
-        Meta::StartWithRunContext(Meta::RunContext::AfterMainLoop, FH_ResetCursorAfterPlaced);
+		Meta::StartWithRunContext(Meta::RunContext::AfterMainLoop, FH_ResetCursorAfterPlaced);
 
-        return false;
-    }
+		return false;
+	}
 
-    void FH_ResetCursorAfterPlaced() {
-        yield();
-        updateBlockPosFHHelper = false;
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return;
-        auto cursor = editor.Cursor;
-        if (cursor is null) return;
-        // yield()
-        cursor.FreePosInMap = _addBlockSetPos;
-        cursor.SnappedLocInMap_Trans = _addBlockSetPos;
-        Editor::SetItemCursorPos(editor.ItemCursor, _addBlockSetPos);
-    }
-    vec3 _addBlockSetPos;
-    EditorRotation@ _addBlockSetRot;
-    vec3 _addBlockCursorPos;
+	void FH_ResetCursorAfterPlaced() {
+		yield();
+		updateBlockPosFHHelper = false;
+		auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+		if (editor is null) return;
+		auto cursor = editor.Cursor;
+		if (cursor is null) return;
+		// yield()
+		cursor.FreePosInMap = _addBlockSetPos;
+		cursor.SnappedLocInMap_Trans = _addBlockSetPos;
+		Editor::SetItemCursorPos(editor.ItemCursor, _addBlockSetPos);
+	}
+	vec3 _addBlockSetPos;
+	EditorRotation@ _addBlockSetRot;
+	vec3 _addBlockCursorPos;
 
-    bool checkedCursorPos = false;
+	bool checkedCursorPos = false;
 
-    bool FH_OnBI_CheckCursor() {
-        if (!updateBlockPosFHHelper) return false;
-        if (!checkedCursorPos) {
-            checkedCursorPos = true;
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            if (editor is null) return false;
-            if (editor.Cursor.FreePosInMap != _addBlockCursorPos) {
-                updateBlockPosFHHelper = false;
-                dev_trace("Detected bad cursor pos, not updating!!");
-            }
-        }
-        return updateBlockPosFHHelper;
-    }
+	bool FH_OnBI_CheckCursor() {
+		if (!updateBlockPosFHHelper) return false;
+		if (!checkedCursorPos) {
+			checkedCursorPos = true;
+			auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+			if (editor is null) return false;
+			if (editor.Cursor.FreePosInMap != _addBlockCursorPos) {
+				updateBlockPosFHHelper = false;
+				dev_trace("Detected bad cursor pos, not updating!!");
+			}
+		}
+		return updateBlockPosFHHelper;
+	}
 
-    bool FH_OnAddBlock(CGameCtnBlock@ block) {
-        // updateBlockPosFHHelper check implicit in check cursor
-        if (!FH_OnBI_CheckCursor()) return false;
-        if (!Editor::IsBlockFree(block)) return false;
-        auto origPos = Editor::GetBlockLocation(block, true);
-        auto finalPos = _addBlockSetPos + origPos - _addBlockCursorPos;
-        Editor::SetBlockLocation(block, finalPos);
-        // Editor::SetBlockRotation(block, _addBlockSetRot.Euler);
-        // dev_trace('set location on block: ' + block.Id.Value + ': ' + origPos.ToString() + ' -> ' + _addBlockSetPos.ToString() + ' (with cursor pos: '+_addBlockCursorPos.ToString()+')');
-        // dev_trace('final pos: ' + finalPos.ToString());
-        return false;
-    }
+	bool FH_OnAddBlock(CGameCtnBlock@ block) {
+		// updateBlockPosFHHelper check implicit in check cursor
+		if (!FH_OnBI_CheckCursor()) return false;
+		if (!Editor::IsBlockFree(block)) return false;
+		auto origPos = Editor::GetBlockLocation(block, true);
+		auto finalPos = _addBlockSetPos + origPos - _addBlockCursorPos;
+		Editor::SetBlockLocation(block, finalPos);
+		// Editor::SetBlockRotation(block, _addBlockSetRot.Euler);
+		// dev_trace('set location on block: ' + block.Id.Value + ': ' + origPos.ToString() + ' -> ' + _addBlockSetPos.ToString() + ' (with cursor pos: '+_addBlockCursorPos.ToString()+')');
+		// dev_trace('final pos: ' + finalPos.ToString());
+		return false;
+	}
 
-    bool FH_OnAddItem(CGameCtnAnchoredObject@ item) {
-        // updateBlockPosFHHelper check implicit in check cursor
-        if (!FH_OnBI_CheckCursor()) return false;
-        auto origPos = Editor::GetItemLocation(item);
-        auto finalPos = _addBlockSetPos + origPos - _addBlockCursorPos;
-        Editor::SetItemLocation(item, finalPos);
-        // Editor::SetItemRotation(item, _addBlockSetRot.Euler);
-        // dev_trace('set location on block: ' + item.Id.Value + ': ' + origPos.ToString() + ' -> ' + _addBlockSetPos.ToString() + ' (with cursor pos: '+_addBlockCursorPos.ToString()+')');
-        // dev_trace('final pos: ' + finalPos.ToString());
-        return false;
-    }
+	bool FH_OnAddItem(CGameCtnAnchoredObject@ item) {
+		// updateBlockPosFHHelper check implicit in check cursor
+		if (!FH_OnBI_CheckCursor()) return false;
+		auto origPos = Editor::GetItemLocation(item);
+		auto finalPos = _addBlockSetPos + origPos - _addBlockCursorPos;
+		Editor::SetItemLocation(item, finalPos);
+		// Editor::SetItemRotation(item, _addBlockSetRot.Euler);
+		// dev_trace('set location on block: ' + item.Id.Value + ': ' + origPos.ToString() + ' -> ' + _addBlockSetPos.ToString() + ' (with cursor pos: '+_addBlockCursorPos.ToString()+')');
+		// dev_trace('final pos: ' + finalPos.ToString());
+		return false;
+	}
 
 }
 

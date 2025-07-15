@@ -39,6 +39,9 @@ class GlobalPlacementOptionsTab : EffectTab {
 
         S_HelpPlaceItemsOnFreeBlocks = UI::Checkbox("Help place autorotated items on free blocks", S_HelpPlaceItemsOnFreeBlocks);
         AddSimpleTooltip("Normally, the game doesn't let you place freelay anchorable and autorotated items on free blocks. Checking this box will enable the helper so that you can place these items.\n\nItem Placement Requirements: 0 for GridSnap_HStep and GridSnap_VStep, AutoRotation=true, GhostMode=false, IsFreelyAnchorable=true.");
+
+        UI::Separator();
+
         DrawInfinitePrecisionSetting();
 
         UI::Separator();
