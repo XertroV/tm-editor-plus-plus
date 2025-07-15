@@ -179,7 +179,7 @@ namespace NG {
             //     UI::AlignTextToFramePadding();
             //     string label = name + ": " + value;
             //     if (IsOutput) {
-            //         UI::Dummy(vec2(UI::GetContentRegionAvail().x - (Draw::MeasureString(label, g_NormFont, 16.) * UI::GetScale()).x - 16., 0.));
+            //         UI::Dummy(vec2(UI::GetContentRegionAvail().x - (Draw::MeasureString(label, g_NormFont, 16.) * g_scale).x - 16., 0.));
             //         UI::SameLine();
             //     }
             //     UI::Text(label);

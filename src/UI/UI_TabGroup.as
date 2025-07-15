@@ -148,7 +148,7 @@ class TabGroup : HasGroupMeta {
 
         framePadding = UI::GetStyleVarVec2(UI::StyleVar::FramePadding);
         regionSize = UI::GetContentRegionAvail();
-        auto sbWidth = (sideBarExpanded ? 170. : 60.) * UI::GetScale() + framePadding.x * 2.;
+        auto sbWidth = (sideBarExpanded ? 170. : 60.) * g_scale + framePadding.x * 2.;
         UI::PushStyleColor(UI::Col::Border, vec4(1));
         if (UI::BeginChild("sidebar-left|" + fullName, vec2(sbWidth, 0), UI::ChildFlags::NavFlattened | UI::ChildFlags::Border)) {
             if (title.Length > 0) {

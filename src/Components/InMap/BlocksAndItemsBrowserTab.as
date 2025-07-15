@@ -36,10 +36,10 @@ class InMap_BlocksListTab : InMap_BlockItemListTab {
     }
 
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
-        float idColWidth = UI::GetScale() * 50.0;
-        float bigNumberColWidth = UI::GetScale() * 110.0;
-        float numberColWidth = UI::GetScale() * 90.0;
-        float smlNumberColWidth = UI::GetScale() * 70.0;
+        float idColWidth = g_scale * 50.0;
+        float bigNumberColWidth = g_scale * 110.0;
+        float numberColWidth = g_scale * 90.0;
+        float smlNumberColWidth = g_scale * 70.0;
         float exploreColWidth = numberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
         UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, idColWidth);
         if (BIL_Settings::Col_Type) UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
@@ -162,10 +162,10 @@ class InMap_ItemsListTab : InMap_BlockItemListTab {
     }
 
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
-        float idColWidth = UI::GetScale() * 50.0;
-        float bigNumberColWidth = UI::GetScale() * 110.0;
-        float stdNumberColWidth = UI::GetScale() * 90.0;
-        float smlNumberColWidth = UI::GetScale() * 70.0;
+        float idColWidth = g_scale * 50.0;
+        float bigNumberColWidth = g_scale * 110.0;
+        float stdNumberColWidth = g_scale * 90.0;
+        float smlNumberColWidth = g_scale * 70.0;
         float exploreColWidth = stdNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
         UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, idColWidth);
         if (BIL_Settings::Col_Type) UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);

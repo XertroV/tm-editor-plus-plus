@@ -237,10 +237,10 @@ class BlockItemListTab : Tab {
 
     void SetupMainTableColumns(bool offsetScrollbar = false) {
         throw('override me');
-        // float numberColWidth = 90;
-        // float smlNumberColWidth = 70;
+        // float numberColWidth = 90 * g_scale;
+        // float smlNumberColWidth = 70 * g_scale;
         // float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
-        // UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
+        // UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50. * g_scale);
         // UI::TableSetupColumn("Type", UI::TableColumnFlags::WidthStretch);
         // UI::TableSetupColumn("", UI::TableColumnFlags::WidthFixed, numberColWidth);
         // UI::TableSetupColumn("Color", UI::TableColumnFlags::WidthFixed, numberColWidth);

@@ -789,7 +789,7 @@ class MapEditPropsTab : Tab {
                         UI::Text(start.ToString() + " -> " + end.ToString());
                     } else {
                         UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(1, 0));
-                        UI::PushItemWidth(75 * UI::GetScale());
+                        UI::PushItemWidth(75 * g_scale);
                         start.x = UI::InputInt("##offzone-start-x", start.x);
                         UI::SameLine();
                         start.y = UI::InputInt("##offzone-start-y", start.y);

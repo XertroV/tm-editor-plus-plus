@@ -791,7 +791,7 @@ namespace CustomCursorRotations {
     vec3 cursorCustomPYR = vec3();
 
     void DrawSettings() {
-        UI::PushItemWidth(120. * UI::GetScale());
+        UI::PushItemWidth(120. * g_scale);
         if (customRot <= 0.0005) customRot = 0.0005;
         int origParts = int(Math::Round(TAU / 4. / customRot));
         int newParts = Math::Clamp(UI::InputInt("Taps per 90 degrees", origParts), 2, 360);

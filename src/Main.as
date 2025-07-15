@@ -165,6 +165,10 @@ float g_scaleInv = 1. / g_scale;
 float g_stdPxToScreenPx = 1.;
 
 void RenderEarly() {
+    if (g_scale != (g_scale = UI::GetScale())) {
+        Dev_NotifyWarning("Scale updated to: " + g_scale);
+        g_scaleInv = 1. / g_scale;
+    }
     g_PriorRenderEarlyTime = g_ThisRenderEarlyTime;
     g_ThisRenderEarlyTime = Time::Now;
 

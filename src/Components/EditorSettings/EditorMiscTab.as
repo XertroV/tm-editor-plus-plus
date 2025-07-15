@@ -72,12 +72,14 @@ class EditorMiscTab : Tab {
         string[] path;
         while (string(dir.Name) != "" && dir.ParentNode !is null) {
             path.InsertAt(0, dir.Name);
+            if (dir is dir.ParentNode) break;
             @dir = dir.ParentNode;
         }
         auto node = inv.CurrentRootNode;
         uint i = 0;
         while (i < path.Length) {
             string name = path[i];
+            auto pre_i = i;
             for (uint j = 0; j < node.ChildNodes.Length; j++) {
                 auto item = node.ChildNodes[j];
                 if (item.IsDirectory && name == string(item.Name)) {
@@ -85,6 +87,10 @@ class EditorMiscTab : Tab {
                     i++;
                     break;
                 }
+            }
+            if (i == pre_i) {
+                // didn't find the next item, so we can't select this directory
+                return;
             }
         }
         inv.OpenDirectory(node);

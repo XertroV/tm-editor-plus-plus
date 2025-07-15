@@ -2,7 +2,11 @@ const string FAV_JSON_PATH = IO::FromStorageFolder("favs.json");
 const string FAV_ICON_PATH = IO::FromDataFolder("Common/EditorIcons/");
 
 [Setting hidden]
-vec2 S_IconSize = vec2(64);
+vec2 _S_IconSize = vec2(64);
+
+vec2 get_S_IconSize() {
+    return _S_IconSize * g_scale;
+}
 
 namespace IconTextures {
     dictionary loadedTextures;

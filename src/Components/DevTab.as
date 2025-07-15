@@ -282,10 +282,11 @@ class DevItemsTab : BlockItemListTab {
     }
 
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
-        float bigNumberColWidth = 90;
-        float smlNumberColWidth = 65;
+        float bigNumberColWidth = 90 * g_scale;
+        float smlNumberColWidth = 65 * g_scale;
+        float smallerNumberColWidth = 50 * g_scale;
         float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
-        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
+        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, smallerNumberColWidth);
         UI::TableSetupColumn("Nod ID", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
         UI::TableSetupColumn("Save ID", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
         UI::TableSetupColumn("Block ID", UI::TableColumnFlags::WidthFixed, bigNumberColWidth);
@@ -332,10 +333,10 @@ class DevBlockTab : BlockItemListTab {
     }
 
     void SetupMainTableColumns(bool offsetScrollbar = false) override {
-        float numberColWidth = 90;
-        float smlNumberColWidth = 70;
+        float numberColWidth = 90 * g_scale;
+        float smlNumberColWidth = 70 * g_scale;
         float exploreColWidth = smlNumberColWidth + (offsetScrollbar ? UI::GetStyleVarFloat(UI::StyleVar::ScrollbarSize) : 0.);
-        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50.);
+        UI::TableSetupColumn("#", UI::TableColumnFlags::WidthFixed, 50. * g_scale);
         UI::TableSetupColumn(".Blocks Ix", UI::TableColumnFlags::WidthFixed, numberColWidth);
         UI::TableSetupColumn("Save ID", UI::TableColumnFlags::WidthFixed, numberColWidth);
         UI::TableSetupColumn("Block ID", UI::TableColumnFlags::WidthFixed, smlNumberColWidth);

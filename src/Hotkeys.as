@@ -260,13 +260,14 @@ void UI_DrawHotkeyList() {
 
     UI::BeginDisabled(Bind::IsRebinding);
     if (UI::BeginTable("hotkeys", 7, UI::TableFlags::SizingStretchSame)) {
+        auto _scale = g_scale;
         UI::TableSetupColumn("Name", UI::TableColumnFlags::WidthStretch, 2.);
         UI::TableSetupColumn("Key", UI::TableColumnFlags::WidthStretch, 1.);
-        UI::TableSetupColumn("Rebind", UI::TableColumnFlags::WidthFixed, 70);
-        UI::TableSetupColumn("Disabled", UI::TableColumnFlags::WidthFixed, 50);
-        UI::TableSetupColumn("Ctrl", UI::TableColumnFlags::WidthFixed, 30);
-        UI::TableSetupColumn("Alt", UI::TableColumnFlags::WidthFixed, 30);
-        UI::TableSetupColumn("Shift", UI::TableColumnFlags::WidthFixed, 40);
+        UI::TableSetupColumn("Rebind", UI::TableColumnFlags::WidthFixed, 70 * _scale);
+        UI::TableSetupColumn("Disabled", UI::TableColumnFlags::WidthFixed, 50 * _scale);
+        UI::TableSetupColumn("Ctrl", UI::TableColumnFlags::WidthFixed, 30 * _scale);
+        UI::TableSetupColumn("Alt", UI::TableColumnFlags::WidthFixed, 30 * _scale);
+        UI::TableSetupColumn("Shift", UI::TableColumnFlags::WidthFixed, 40 * _scale);
         UI::TableHeadersRow();
         UI::TableNextRow();
         for (uint i = 0; i < hotkeyList.Length; i++) {
