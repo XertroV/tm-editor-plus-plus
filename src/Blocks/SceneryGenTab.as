@@ -1,3 +1,5 @@
+#if COMPILE_WFC
+
 bool PLACE_IN_GHOST_MODE = false;
 
 uint nbToPlaceRandomly = 10;
@@ -610,3 +612,5 @@ class PlaceLog {
         //     + " (" + tostring(nextBlockDir) + ")");
     }
 }
+
+#endif

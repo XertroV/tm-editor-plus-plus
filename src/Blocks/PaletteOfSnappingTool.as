@@ -1,3 +1,5 @@
+#if COMPILE_WFC
+
 class PaletteOfSnappingTool : Tab {
     uint currBlockId = -1;
 
@@ -122,6 +124,8 @@ class PaletteOfSnappingTool : Tab {
     }
 }
 
+
+#endif
 
 // keyword hits for closeness between blocks
 // hill, deco, ice, slope, dirt, platform, cliff, road, bump, water

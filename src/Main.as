@@ -71,7 +71,9 @@ void Main() {
     VegetRandomYaw::SetupCallbacks(); // for fixing trees on free blocks
     MacroblockRecorder::RegisterCallbacks();
     LargeMacroblocks::OnPluginStart();
+#if COMPILE_WFC
     WFC::RegisterCallbacks();
+#endif
 
     Meta::StartWithRunContext(Meta::RunContext::MainLoop, FarlandsHelper::CursorLoop);
     Meta::StartWithRunContext(Meta::RunContext::NetworkAfterMainLoop, EditorCameraNearClipCoro);
@@ -324,9 +326,11 @@ void CopyFile(const string &in f1, const string &in f2) {
     inFile.Close();
 }
 
-void OnProcessPaused() {
+void OnProcessPaused(const string &in procName = "") {
     g_CurrentlyPausedCoros++;
-    UI::ShowNotification("E++ Work in Process", "Process " + g_CurrentlyPausedCoros + " yielding...", 5);
+    string msg = "Process " + g_CurrentlyPausedCoros + " yielding...";
+    if (procName.Length > 0) msg += " (" + procName + ")";
+    UI::ShowNotification("E++ Work in Process", msg, 5);
 }
 
 void AfterProcessPaused() {
@@ -335,11 +339,11 @@ void AfterProcessPaused() {
 
 uint g_LastPause = 0;
 uint g_CurrentlyPausedCoros = 0;
-void CheckPause() {
-    uint workMs = Time::Now < 60000 ? 1 : 4;
+void CheckPause(const string &in procName = "") {
+    uint workMs = Time::Now < 60000 ? 3 : 10;
     if (g_LastPause + workMs < Time::Now) {
-        OnProcessPaused();
-        sleep(0);
+        OnProcessPaused(procName);
+        sleep(1);
         // trace('paused');
         g_LastPause = Time::Now;
         AfterProcessPaused();

@@ -65,7 +65,7 @@ namespace Editor {
             // if (nonce != cacheRefreshNonce) { dev_trace("exiting CountObjects 1"); return; }
             loadTotal += node.ChildNodes.Length;
             // if (GetEditor(GetApp()) is null) return;
-            // CheckPause();
+            // CheckPause("InventoryCache::CountObjects");
             for (uint i = 0; i < node.ChildNodes.Length; i++) {
                 // if (nonce != cacheRefreshNonce) { dev_trace("exiting CountObjects 2"); return; }
                 // if (i >= node.ChildNodes.Length) { Dev_NotifyWarning('exiting i >= node.ChildNodes.Length: ' + i + " / " + node.ChildNodes.Length); return; }
@@ -272,7 +272,7 @@ namespace Editor {
             loadProgress += 1;
             for (uint i = 0; i < node.ChildNodes.Length; i++) {
                 if (i % 5 == 0) {
-                    CheckPause();
+                    CheckPause("InventoryCache::CacheInvNode");
                     // if (GetEditor(GetApp()) is null) return;
                     if (nonce != cacheRefreshNonce) { dev_trace("exiting CacheInvNode 3"); return; }
                 }

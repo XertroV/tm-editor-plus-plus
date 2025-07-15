@@ -8,7 +8,8 @@ class CurrentMacroblock_PlacementToolbar : ToolbarTab {
 
     CurrentMacroblock_PlacementToolbar(TabGroup@ parent) {
         super(parent, "Macroblock Placement Toolbar", Icons::Wrench, "mbptb");
-        RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditor), this.tabName);
+        this.windowOpen = S_ShowMbPlacementToolbar;
+        // RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditor), this.tabName);
         RegisterOnEditorUnloadCallback(CoroutineFunc(this.ResetCached), this.tabName);
         RegisterSelectedMacroblockChangedCallback(ProcessNewSelectedMacroblock(this.OnMbChanged), this.tabName);
         RegisterCopyPasteMacroblockChangedCallback(ProcessNewSelectedMacroblock(this.OnMbChanged), this.tabName);
@@ -16,10 +17,6 @@ class CurrentMacroblock_PlacementToolbar : ToolbarTab {
     }
 
     ~CurrentMacroblock_PlacementToolbar() {}
-
-    void OnEditor() {
-        this.windowOpen = S_ShowMbPlacementToolbar;
-    }
 
     void ResetCached() {
         @this.currMbModel = null;

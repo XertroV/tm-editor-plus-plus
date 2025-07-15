@@ -6,7 +6,8 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 
 	CurrentBlock_PlacementToolbar(TabGroup@ parent) {
 		super(parent, "Block Placement Toolbar", Icons::Wrench, "bptb");
-		RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditor), this.tabName);
+		this.windowOpen = S_ShowBlockPlacementToolbar;
+		// RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditor), this.tabName);
 		RegisterOnEditorUnloadCallback(CoroutineFunc(this.ResetCached), this.tabName);
 		RegisterSelectedBlockChangedCallback(ProcessNewSelectedBlock(this.OnBlockChanged), this.tabName);
 		RegisterPlacementModeChangedCallback(ProcessNewPlacementMode(this.OnPModeChanged), this.tabName);
@@ -15,7 +16,7 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 	~CurrentBlock_PlacementToolbar() {}
 
 	void OnEditor() {
-		this.windowOpen = S_ShowBlockPlacementToolbar;
+		// this.windowOpen = S_ShowBlockPlacementToolbar;
 	}
 
 	void ResetCached() {

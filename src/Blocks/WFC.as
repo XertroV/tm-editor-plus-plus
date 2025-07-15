@@ -1,3 +1,7 @@
+#if COMPILE_WFC
+// alt: if FALSE || DEV
+
+
 // implementation of wave function collapse for level generation
 
 bool INCLUDE_CG1 = false;
@@ -35,7 +39,7 @@ namespace WFC {
     }
 
     void OnEditorUnload() {
-        mapVoxels.Reset();
+        mapVoxels.Reset(false);
     }
 
     BlockInventory@ GetBlockInventory() {
@@ -65,6 +69,8 @@ class MapVoxels {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor !is null) mapSize = editor.Challenge.Size;
         InitializeForMapSize(mapSize);
+        if (editor is null) return;
+
         if (andScrapeMap and editor !is null) {
             auto map = editor.Challenge;
             auto nbBlocks = map.Blocks.Length;
@@ -1252,7 +1258,7 @@ class BlockInventory {
         if (ShouldExcludeBlockFromIngestion(bi)) return;
         // if (!filter.Matches(bi)) return;
         auto wfcBi = WFC_BlockInfo(bi, blockInfos.Length);
-        if (!CheckPause()) return;
+        if (!CheckPause("IngestBlockInfo")) return;
         wfcBi.InsertClipsToLookups(GroupIdsToClips, ClipIdsToClips); // SymGroupIdsToClips, SymIdsToClips
         blockInfos.InsertLast(wfcBi);
         BlocksById.Insert(bi.Id.Value, wfcBi);
@@ -1572,20 +1578,20 @@ class BlockInventory {
             auto bi = cast<CGameCtnBlockInfo>(Fids::Preload(file));
             if (bi is null) _Log::Info("Failed to load block info: " + file.FileName);
             else IngestBlockInfo(bi);
-            if (!CheckPause()) return;
+            if (!CheckPause("IngestFidFolder")) return;
         }
         auto nbFolders = folder.Trees.Length;
         for (uint i = 0; i < nbFolders; i++) {
             IngestFidFolder(folder.Trees[i]);
-            if (!CheckPause()) return;
+            if (!CheckPause("IngestFidFolder")) return;
         }
     }
 
     protected uint64 lastSearchPause = 0;
     // return true to keep going; false to break/return
-    protected bool CheckPause() {
+    protected bool CheckPause(const string &in part) {
         if (Time::Now - lastSearchPause > 15) {
-            OnProcessPaused();
+            OnProcessPaused("BlockInventory" + (part.Length > 0 ? "::" + part : ""));
             yield();
             AfterProcessPaused();
             lastSearchPause = Time::Now;
@@ -1622,7 +1628,7 @@ class BlockInventory {
         file.WriteLine("# [START:BlockIDs]");
         for (uint i = 0; i < blockInfos.Length; i++) {
             file.WriteLine(blockInfos[i].nameId.GetName());
-            if ((i+1) % 50 == 0 && !CheckPause()) return;
+            if ((i+1) % 50 == 0 && !CheckPause("_DumpCI_BlockIDs")) return;
         }
         file.WriteLine("# [END:BlockIDs]");
 
@@ -1632,7 +1638,7 @@ class BlockInventory {
         file.WriteLine("# [START:Blocks]");
         for (uint i = 0; i < blockInfos.Length; i++) {
             blockInfos[i].DumpToFile(file);
-            if ((i+1) % 20 == 0 && !CheckPause()) return;
+            if ((i+1) % 20 == 0 && !CheckPause("_DumpCI_Blocks")) return;
         }
         file.WriteLine("# [END:Blocks]");
     }
@@ -1653,7 +1659,7 @@ class BlockInventory {
         while (lookup.KeyIterGetNext(next, next)) {
             if (next == 0xFFFFFFFF) throw("Unexpected id = -1");
             file.WriteLine(MwIdValueToStr(next | 0x40000000));
-            if (++count % 50 == 0 && !CheckPause()) return;
+            if (++count % 50 == 0 && !CheckPause("_DumpCI_IDs")) return;
         }
         file.WriteLine("## [END:IDs_" + name + "]");
     }
@@ -2045,11 +2051,13 @@ string UintArrToString(const uint[] &in arr, bool withSurroundingBrackets = true
 
 
 
+#endif
+
+// MARK: ^ IF COMPILE_WFC
 
 
 
-
-#if DEV
+#if DEV && COMPILE_WFC
 
 Tester@ T_RotOffset = Tester("Test_RotateOffset", {
     TestCase("2x1x2a", Test_RotateOffset::_2x1x2_1_1),

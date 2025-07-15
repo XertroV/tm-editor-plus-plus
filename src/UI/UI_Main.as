@@ -593,7 +593,9 @@ TabGroup@ CreateToolsTabGroup() {
     @g_ItemPlacementToolbar = CurrentItem_PlacementToolbar(tools);
     @g_BlockPlacementToolbar = CurrentBlock_PlacementToolbar(tools);
     @g_MbPlacementToolbar = CurrentMacroblock_PlacementToolbar(tools);
+#if COMPILE_WFC
     PaletteOfSnappingTool(tools);
+#endif
     // @g_MapBaseSizeChanger = MapBaseSizeChangerTab(tools);
     return tools;
 }

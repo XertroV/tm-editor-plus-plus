@@ -47,7 +47,7 @@ namespace SPlacement {
         auto nbBlocks = map.Blocks.Length;
         for (uint i = 0; i < nbBlocks; i++) {
             IngestBlock(map.Blocks[i]);
-            CheckPause();
+            CheckPause("SPlacement::InitCoro");
         }
         initRunning = false;
         initDone = true;

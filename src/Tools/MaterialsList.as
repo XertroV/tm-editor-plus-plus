@@ -71,7 +71,7 @@ class MaterialsListTab : Tab {
             if (string(item.ShortFileName).ToLower().Contains(lowerFilter)) {
                 filtered.InsertLast(item);
             }
-            CheckPause();
+            CheckPause("MaterialsListTab::UpdateFiltered");
         }
     }
 }

@@ -7,6 +7,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
 	CurrentItem_PlacementToolbar(TabGroup@ parent) {
 		super(parent, "Item Placement Toolbar", Icons::Wrench, "iptb");
+		this.windowOpen = S_ShowItemPlacementToolbar;
 		RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEditor), this.tabName);
 		RegisterItemChangedCallback(ProcessNewSelectedItem(OnNewItemSelection), this.tabName);
 		RegisterOnEditorUnloadCallback(CoroutineFunc(this.ResetCached), this.tabName);
@@ -15,7 +16,6 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 	~CurrentItem_PlacementToolbar() {}
 
 	void OnEditor() {
-		this.windowOpen = S_ShowItemPlacementToolbar;
 		RandomizeVegetationLayouts::OnEditor();
 	}
 

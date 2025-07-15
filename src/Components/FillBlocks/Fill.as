@@ -69,7 +69,7 @@ namespace FillBlocks {
         for (uint i = 0; i < chunks.Length; i++) {
             bool isLast = i == chunks.Length - 1;
             Editor::PlaceMacroblock(chunks[i], isLast);
-            CheckPause();
+            CheckPause("FillBlocks::OnFillSelectionComplete");
             if (UI::IsKeyPressed(UI::Key::Escape)) {
                 trace("Exiting fill loop as escape was pressed");
                 break;
@@ -217,7 +217,7 @@ namespace FillBlocks {
                         locs.InsertLast(CoordToPos(nat3(x, y, z)));
                     }
                 }
-                CheckPause();
+                CheckPause("FillBlocks::GetFillLocationsOnGrid");
             }
             return locs;
         }
@@ -278,7 +278,7 @@ namespace FillBlocks {
                         p += dir;
                     }
                 }
-                CheckPause();
+                CheckPause("FillBlocks::GetFillLocations::along_x");
             }
 
             dir = up;
@@ -293,7 +293,7 @@ namespace FillBlocks {
                         p += dir;
                     }
                 }
-                CheckPause();
+                CheckPause("FillBlocks::GetFillLocations::along_xy");
             }
 
             vec3[] topLayer = {};
@@ -309,14 +309,14 @@ namespace FillBlocks {
                         locs.InsertLast(along_xyz[i]);
                     }
                 }
-                CheckPause();
+                CheckPause("FillBlocks::GetFillLocations::along_xyz");
             }
 
             for (uint i = 0; i < topLayer.Length; i++) {
                 locs.InsertLast(topLayer[i]);
             }
             lastLocsNbTopLayer = topLayer.Length;
-            CheckPause();
+            CheckPause("FillBlocks::GetFillLocations::topLayer");
 
             return locs;
         }

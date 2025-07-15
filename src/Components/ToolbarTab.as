@@ -11,6 +11,7 @@ class ToolbarTab : Tab {
 	}
 
 	bool get_windowOpen() override property {
+		if (!IsInEditor) return false;
 		auto app = GetApp();
 		auto editor = cast<CGameCtnEditorFree>(app.Editor);
 		return editor !is null
