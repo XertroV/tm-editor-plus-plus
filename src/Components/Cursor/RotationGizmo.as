@@ -236,7 +236,7 @@ class RotationTranslationGizmo {
     }
 
     vec3 GetPivot(int ix) {
-        if (ix < 0 || ix >= itemPivots.Length) return vec3();
+        if (ix < 0 || ix >= int(itemPivots.Length)) return vec3();
         return itemPivots[ix];
     }
 
@@ -873,7 +873,7 @@ class RotationTranslationGizmo {
         auto itemSpacing = UI::GetStyleVarVec2(UI::StyleVar::ItemSpacing);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
 
-        UI::SetNextWindowPos(.5 * (g_screen.x - (btnSize + itemSpacing.x) * nbBtns) / g_scale, 24 * g_scale, UI::Cond::Appearing);
+        UI::SetNextWindowPos(int(.5 * (g_screen.x - (btnSize + itemSpacing.x) * nbBtns) / g_scale), int(24 * g_scale), UI::Cond::Appearing);
 
         if (UI::Begin("###gz-tlbr-"+name, UI::WindowFlags::NoTitleBar | UI::WindowFlags::AlwaysAutoResize)) {
             // UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(g_screen.y * 0.005));

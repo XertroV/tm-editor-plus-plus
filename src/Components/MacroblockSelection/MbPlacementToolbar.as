@@ -58,6 +58,13 @@ class CurrentMacroblock_PlacementToolbar : ToolbarTab {
         }
     }
 
+    void DrawMenuItem() override {
+        if (UI::MenuItem(DisplayIconAndName, "", windowOpen)) {
+            windowOpen = !windowOpen;
+            S_ShowMbPlacementToolbar = !S_ShowMbPlacementToolbar;
+        }
+    }
+
     bool ShouldShowWindow(CGameCtnEditorFree@ editor) override {
         return S_ShowMbPlacementToolbar && (
             Editor::IsInMacroblockPlacementMode(editor, false)

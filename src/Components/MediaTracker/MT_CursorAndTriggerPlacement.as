@@ -8,7 +8,7 @@ class MT_CursorAndTriggerPlacementTab : Tab {
 
     void DrawInner() override {
         UI::Text("UNSTABLE FEATURE; NEEDS REWORK");
-        return;
+        if (true) return;
         auto app = GetApp();
         auto mteditor = cast<CGameEditorMediaTracker>(app.Editor);
         if (mteditor is null) return;

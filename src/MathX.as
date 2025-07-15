@@ -75,12 +75,12 @@ namespace MathX {
 
     shared bool Vec2Eq(vec2 &in a, vec2 &in b) {
         return a.x == b.x && a.y == b.y;
-        return (a-b).LengthSquared() < 1e10;
+        // return (a-b).LengthSquared() < 1e10;
     }
 
     shared bool Vec3Eq(vec3 &in a, vec3 &in b) {
         return a.x == b.x && a.y == b.y && a.z == b.z;
-        return (a-b).LengthSquared() < 1e10;
+        // return (a-b).LengthSquared() < 1e10;
     }
 
     bool Vec3Within(vec3 &in a, vec3 &in b, float epsilon) {

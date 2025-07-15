@@ -270,7 +270,7 @@ namespace Editor {
             auto chunk = MacroblockSpecPriv();
             nat3 lastCoord;
             for (uint i = 0; i < this.blocks.Length; i++) {
-                if (!MathX::Nat3XZEq(lastCoord, this.blocks[i].coord) && chunk.Length >= chunkSize) {
+                if (!MathX::Nat3XZEq(lastCoord, this.blocks[i].coord) && chunk.Length >= uint(chunkSize)) {
                     chunks.InsertLast(chunk);
                     @chunk = MacroblockSpecPriv();
                 }
@@ -278,7 +278,7 @@ namespace Editor {
                 lastCoord = this.blocks[i].coord;
             }
             for (uint i = 0; i < this.items.Length; i++) {
-                if (chunk.Length >= chunkSize) {
+                if (chunk.Length >= uint(chunkSize)) {
                     chunks.InsertLast(chunk);
                     @chunk = MacroblockSpecPriv();
                 }
@@ -353,7 +353,7 @@ namespace Editor {
 
         void UndoMacroblockHeightOffset() override {
             warn("todo: UndoMacroblockHeightOffset");
-            return;
+            if (true) return;
 
             for (uint i = 0; i < blocks.Length; i++) {
                 auto block = blocks[i];

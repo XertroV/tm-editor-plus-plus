@@ -158,7 +158,7 @@ namespace PillarsChoice {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (nullifiedSkinsOnLoad && editor !is null) {
             UI::SetNextWindowSize(300, 180);
-            UI::SetNextWindowPos(g_screen.x * .5 - 150, g_screen.y * .5 - 60);
+            UI::SetNextWindowPos(int(g_screen.x * .5 - 150), int(g_screen.y * .5 - 60));
             UI::PushStyleColor(UI::Col::WindowBg, Math::Lerp(Math::Lerp(cRed, cMagenta, Math::Sin(float(Time::Now % 3142) / 1000.) ** 2), cBlack, .5));
             if (UI::Begin("\\$fdbSkins nullified: Save and reload map", nullifiedSkinsOnLoad)) {
                 UI::Text("\\$fdbSkins on pillars were nullified on load.");

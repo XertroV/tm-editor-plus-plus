@@ -265,9 +265,9 @@ void DrawFreeBlockClipsForInMapBlocksNear(vec3 pos, float blockRadius) {
         auto varIx = (blk.isGround || blk.variant == 0) ? blk.variant : (blk.variant - bi.AdditionalVariantsGround.Length - 1);
         auto var = Editor::GetBlockInfoVariant(bi, varIx, blk.isGround);
         if (var is null) continue;
-        auto pos = blk.pos -  vec3(0, 56, 0);
+        auto pos2 = blk.pos - vec3(0, 56, 0);
         auto rot = EditorRotation(blk.pyr);
-        auto mat = rot.GetMatrix(pos);
+        auto mat = rot.GetMatrix(pos2);
         for (uint j = 0; j < var.BlockUnitInfos.Length; j++) {
             auto bui = var.BlockUnitInfos[j];
             BlockClips(bui).Draw(mat);

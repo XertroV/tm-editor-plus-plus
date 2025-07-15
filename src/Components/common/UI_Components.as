@@ -360,8 +360,8 @@ UI::Font@ g_NormFont;
 void LoadFonts() {
     @g_BoldFont = UI::Font::DefaultBold;
     @g_MonoFont = UI::Font::DefaultMono;
-    @g_BigFont = UI::Font::Default26;
-    @g_MidFont = UI::Font::Default20;
+    @g_BigFont = UI::LoadFont("DroidSans.ttf", 26);
+    @g_MidFont = UI::LoadFont("DroidSans.ttf", 20);
     @g_NormFont = UI::LoadFont("DroidSans.ttf", 16);
 }
 
@@ -380,11 +380,11 @@ int InputIntFlags(const string &in label, int value, int[]@ allowedValues) {
         if (vIx > 0) return allowedValues[vIx - 1];
         return allowedValues[0];
     } else if (newValue > value && vIx >= 0) {
-        if (vIx < allowedValues.Length - 1) return allowedValues[vIx + 1];
+        if (vIx < int(allowedValues.Length - 1)) return allowedValues[vIx + 1];
         return allowedValues[allowedValues.Length - 1];
     }
     bool retBefore = newValue < value;
-    for (int i = 0; i < allowedValues.Length; i++) {
+    for (uint i = 0; i < allowedValues.Length; i++) {
         if (retBefore && allowedValues[i] > newValue) {
             return allowedValues[Math::Max(i - 1, 0)];
         } else if (!retBefore && allowedValues[i] >= newValue) {

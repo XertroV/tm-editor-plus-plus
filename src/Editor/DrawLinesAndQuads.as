@@ -13,8 +13,8 @@ namespace Editor {
                 super(id);
             }
 
-            uint lastLinesIx = -1;
-            uint lastQuadsIx = -1;
+            uint lastLinesIx = uint(-1);
+            uint lastQuadsIx = uint(-1);
 
             bool LinesNeedWriting(uint i) {
                 if (lastLinesIx != i || updated) {
@@ -186,7 +186,7 @@ namespace Editor {
                         di.ResizeLineSegments(0);
                         continue;
                     }
-                    if (vertices.Capacity < vertexIx + verts.Length) {
+                    if (vertices.Capacity < uint(vertexIx + verts.Length)) {
                         Editor::DrawLines::ResizeBuffer(vertices, (vertexIx + verts.Length) * 2);
                     }
                     vertices.Length = vertexIx + verts.Length;
@@ -227,7 +227,7 @@ namespace Editor {
                         continue;
                     }
                     gotNewQuads = true;
-                    if (vertices.Capacity < vertexIx + verts.Length) {
+                    if (vertices.Capacity < uint(vertexIx + verts.Length)) {
                         Editor::DrawLines::ResizeBuffer(vertices, (vertexIx + verts.Length) * 2);
                         // dev_trace("Resized quads vertex buffer to " + (vertexIx + verts.Length) * 2);
                     }

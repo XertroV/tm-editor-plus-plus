@@ -555,7 +555,7 @@ class ItemModelTreeElement {
 
     void DrawMwId(const string &in name, const MwId &in id) {
         string val;
-        if (id.Value == -1) val = "\\$888\\$i";
+        if (id.Value == uint(-1)) val = "\\$888\\$i";
         CopiableLabeledValue(val + name, toHex(id.Value) + " > " + id.GetName());
     }
 
@@ -1631,7 +1631,7 @@ class ItemModelTreeElement {
             auto objSize = SZ_LM_SPIMP_Buf2_EL;
             UI::ListClipper clip(bufLen);
             while (clip.Step()) {
-                for (uint i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
+                for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                     UI::PushID(i);
 
                     auto ptr = startPtr + i * objSize;

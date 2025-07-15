@@ -36,7 +36,7 @@ void AddSimpleTooltip(const string &in msg, bool pushFont = false) {
     if (UI::IsItemHovered()) {
         if (pushFont) UI::PushFont(g_NormFont);
         UI::SetNextWindowSize(400, 0, UI::Cond::Appearing);
-        UI::SetNextWindowPos(g_lastMousePos.x + 8, g_lastMousePos.y + 8);
+        UI::SetNextWindowPos(int(g_lastMousePos.x + 8), int(g_lastMousePos.y + 8));
         UI::BeginTooltip();
         UI::TextWrapped(msg);
         UI::EndTooltip();
@@ -215,7 +215,7 @@ namespace UX {
         UI::BeginTable(id, 3, UI::TableFlags::SizingStretchSame);
         UI::TableSetupColumn("Label", UI::TableColumnFlags::WidthFixed);
         UI::TableSetupColumn("Value", UI::TableColumnFlags::WidthStretch);
-        for (uint i = 2; i < nbCols; i++) {
+        for (int i = 2; i < nbCols; i++) {
             UI::TableSetupColumn("Col" + tostring(i), UI::TableColumnFlags::WidthFixed);
         }
     }

@@ -666,7 +666,7 @@ class MovedItemInMap : ModifiedMapObj {
 		this.oldPos = item.AbsolutePositionInMap;
 		wasFlying = item.IsFlying;
 		if (!keepInPlace) {
-			item.BlockUnitCoord = nat3(-1);
+			item.BlockUnitCoord = nat3(uint(-1));
 		}
 		item.IsFlying = true;
 	}

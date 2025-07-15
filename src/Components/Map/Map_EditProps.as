@@ -66,8 +66,8 @@ class MapEditPropsTab : Tab {
     }
 
     VehicleToPlace m_VehicleTestType = VehicleToPlace::Map_Default;
-    uint m_ChosenVehicleMwId = -1;
-    uint m_ChosenVehicleAuthorMwId = -1;
+    uint m_ChosenVehicleMwId = uint(-1);
+    uint m_ChosenVehicleAuthorMwId = uint(-1);
     uint m_ChosenVehicleCollection = 10003; // 0x2713
 
     void DrawTestPlacementWindows() {
@@ -552,8 +552,8 @@ class MapEditPropsTab : Tab {
             CGameCtnArticle@ art;
             auto chapterId = chapter.Id.Value;
             dev_trace('FindVehicles: Articles: ' + chapter.Articles.Length);
-            for (uint i = 0; i < chapter.Articles.Length; i++) {
-                @art = chapter.Articles[i];
+            for (uint j = 0; j < chapter.Articles.Length; j++) {
+                @art = chapter.Articles[j];
                 if (!S_LoadAllVehicles) {
                     if (!art.Name.StartsWith("Car")) continue;
                     if (art.CollectorFid.FullFileName != "<virtual>"
@@ -691,7 +691,7 @@ class MapEditPropsTab : Tab {
                     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
                     Editor::SetCamAnimationGoTo(Editor::GetCurrentCamState(editor).withAdditionalHAngle(1.5).withPos(MTCoordToPos(trigger.boundingBoxCenter, mtTriggerSize)).withTargetDist(MTCoordToPos(trigger.boundingBoxSize).Length()));
                 }
-                while (clipColors.Length <= i) {
+                while (clipColors.Length <= uint(i)) {
                     clipColors.InsertLast(vec4(Math::Rand(0.0, 1.0), Math::Rand(0.0, 1.0), Math::Rand(0.0, 1.0), 0.9));
                 }
                 UI::SameLine();

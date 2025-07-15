@@ -6,7 +6,7 @@ int f_NvgFont = nvg::LoadFont("DroidSans.ttf");
 awaitable@ fontLoadCoro = startnew(_LoadFonts);
 
 void _LoadFonts() {
-    @g_Heading = UI::Font::Default20;
+    @g_Heading = UI::LoadFont("DroidSans.ttf", 20);
     @g_Mono = UI::Font::DefaultMono;
     AreFontsLoaded = true;
 }

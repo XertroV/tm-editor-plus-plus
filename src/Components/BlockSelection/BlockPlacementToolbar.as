@@ -45,6 +45,13 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 		}
 	}
 
+	void DrawMenuItem() override {
+		if (UI::MenuItem(DisplayIconAndName, "", windowOpen)) {
+			windowOpen = !windowOpen;
+			S_ShowBlockPlacementToolbar = !S_ShowBlockPlacementToolbar;
+		}
+	}
+
 	bool ShouldShowWindow(CGameCtnEditorFree@ editor) override {
 		return S_ShowBlockPlacementToolbar && Editor::IsInBlockPlacementMode(editor, false);
 	}
@@ -137,7 +144,7 @@ class CurrentBlock_PlacementToolbar : ToolbarTab {
 			editor.GhostBlockForcedVariantIndex = 0;
 			editor.GhostBlockForcedGroundElseAir = _forcedGround;
 		} else {
-			editor.GhostBlockForcedVariantIndex = -1;
+			editor.GhostBlockForcedVariantIndex = uint(-1);
 			// reselect current block to reset
 			SelectCurrentBlock(editor);
 		}

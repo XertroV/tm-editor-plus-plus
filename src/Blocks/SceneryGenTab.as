@@ -413,7 +413,7 @@ class SceneryGenTab : Tab {
             int3 offset;
             csac.cs.GetAnyAvailableBlockAndDir(bIxCD, blockDir);
             auto blockIx = bIxCD.ci.biIx;
-            if (blockIx == -1) {
+            if (blockIx == uint(-1)) {
                 NotifyWarning("No block found for index: " + blockIx);
                 continue;
             }
@@ -453,7 +453,7 @@ class SceneryGenTab : Tab {
         return true;
         // if (pmt.CanPlaceBlock(blockInfo.BlockInfo, coord, CGameEditorPluginMap::ECardinalDirections(int(dir)))) {
         // }
-        return false;
+        // return false;
     }
 
 
@@ -496,7 +496,7 @@ class SceneryGenTab : Tab {
             PlaceLogs.RemoveRange(0, PlaceLogs.Length - 10);
         }
         if (UI::BeginChild("PlaceLog", vec2())) {
-            for (int i = 0; i < PlaceLogs.Length; i++) {
+            for (uint i = 0; i < PlaceLogs.Length; i++) {
                 UI::PushID(tostring(i));
                 PlaceLogs[i].DrawLogLine();
                 UI::PopID();

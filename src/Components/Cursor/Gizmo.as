@@ -369,19 +369,19 @@ namespace Gizmo {
             targetVariant = blockSpec.variant;
             placingColor = CGameEditorPluginMap::EMapElemColor(int(b.MapElemColor));
         } else {
-            CGameCtnAnchoredObject@ item;
-            if (lastPickedItem is null || (@item = lastPickedItem.AsItem()) is null) {
+            CGameCtnAnchoredObject@ item2;
+            if (lastPickedItem is null || (@item2 = lastPickedItem.AsItem()) is null) {
                 warn("no last picked item");
                 IsActive = false;
                 return;
             }
-            @itemSpec = Editor::ItemSpecPriv(item);
-            @placingItemModel = item.ItemModel;
+            @itemSpec = Editor::ItemSpecPriv(item2);
+            @placingItemModel = item2.ItemModel;
             targetPos = lastPickedItemPos;
             targetRot = lastPickedItemRot.GetMatrix();
-            itemMat = Editor::GetItemMatrix(item);
+            itemMat = Editor::GetItemMatrix(item2);
             // @bb = Editor::GetItemAABB(placingItemModel);
-            placingColor = CGameEditorPluginMap::EMapElemColor(int(item.MapElemColor));
+            placingColor = CGameEditorPluginMap::EMapElemColor(int(item2.MapElemColor));
         }
 
         if (!shouldReplaceTarget) {
