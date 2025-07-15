@@ -712,6 +712,8 @@ const uint16 SZ_CTNBLOCKINFO = 0x250;
 const uint16 O_BLOCKINFO_MATERIALMOD = GetOffset("CGameCtnBlockInfo", "MaterialModifier");
 const uint16 O_BLOCKINFO_MATERIALMOD2 = GetOffset("CGameCtnBlockInfo", "MaterialModifier2");
 const uint16 O_BLOCKINFO_MATMODPLACEMENTTAG = GetOffset("CGameCtnBlockInfo", "MatModifierPlacementTag");
+const uint16 O_BLOCKINFO_ISINTERNAL = GetOffset("CGameCtnBlockInfo", "IsInternal");
+const uint16 O_BLOCKINFO_GAMESKIN = O_BLOCKINFO_ISINTERNAL + 0x10;
 
 
 // CGameCtnBlockInfoVariant, 0x250

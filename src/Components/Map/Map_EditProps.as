@@ -506,7 +506,17 @@ class MapEditPropsTab : Tab {
         }
         // note: skin might not be null when mapper has already been placing skinned blocks
 
+        string origSkinDir = block.BlockInfo.SkinDirectory;
+        auto gameSkin = cast<CPlugGameSkin>(Dev::GetOffsetNod(block.BlockInfo, O_BLOCKINFO_GAMESKIN));
+        if (gameSkin !is null) {
+            DPlugGameSkin(gameSkin).Path1 = "Stadium\\Mod\\";
+            // Dev::SetOffset(gameSkin, O_GAMESKIN_PATH1, "Stadium\\Mod\\")
+        }
         pmt.SetBlockSkin(block, url);
+        if (gameSkin !is null) {
+            // restore original skin path (for TechnicsScreen1x1Straight: Any\Advertisement1x1\)
+            DPlugGameSkin(gameSkin).Path1 = origSkinDir;
+        }
         if (block.Skin is null) {
             NotifyWarning("Could not set skin on screen block.");
             return;
@@ -520,7 +530,7 @@ class MapEditPropsTab : Tab {
         Editor::SetModPackDesc(map, block.Skin.PackDesc);
 
         if (!pmt.RemoveBlock(int3(placeX, placeY, placeZ))) {
-            NotifyWarning("Could not remove screen block.");
+            NotifyWarning("Could not remove screen block at " + int3(placeX, placeY, placeZ).ToString() + ".");
         }
 
         startnew(Editor::SaveAndReloadMap);
