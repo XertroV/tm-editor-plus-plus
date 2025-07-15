@@ -150,10 +150,11 @@ namespace Editor {
 
         CustomBuffer@ tmpWriteBuf;
 
-        void _AllocAndWriteMemory(bool writeToMb = false, CustomBuffer@ tmpWriteBuf = null) {
+        void _AllocAndWriteMemory(bool writeToMb = false, CustomBuffer@ _tmpWriteBuf = null) {
             // allow passing in a buffer for flexibility
-            if (tmpWriteBuf is null) {
-                @tmpWriteBuf = CustomBuffer(CalcRequiredMbBufSize());
+            @tmpWriteBuf = _tmpWriteBuf;
+            if (this.tmpWriteBuf is null) {
+                @this.tmpWriteBuf = CustomBuffer(CalcRequiredMbBufSize());
             }
             // for each: get a window to a section of the memory, then write to it.
             auto blocksPtrs = tmpWriteBuf.GetPtrVAlloc(0x8 * blocks.Length);

@@ -23,7 +23,12 @@ uint64 RequestMemory(uint size, bool exec = false) {
         memoryAllocations.InsertLast(ptr);
         return ptr;
     }
-    return Dev::Allocate(size);
+    auto ba = BufferAlloc::Alloc(size);
+    if (ba.LengthInBytes < size) {
+        throw("RequestMemory: allocated buffer size " + ba.LengthInBytes + " is less than requested size " + size);
+    }
+    return ba.ptr;
+    // return Dev::Allocate(size);
     // I think this started crashing the game :/
     // return StringAlloc::Alloc(size);
 }
@@ -43,11 +48,14 @@ void FreeAllAllocated() {
 
 void FreeAllocated(uint64 ptr) {
     auto ix = memoryAllocations.Find(ptr);
-    if (ix < 0 && CheckStringAllocForRelease(ptr)) {
+    trace("Freed memory (one-off) at " + Text::FormatPointer(ptr) + " (index: " + ix + ")");
+    if (ix < 0) {
+        if (!CheckStringAllocForRelease(ptr) && !CheckBufferAllocForRelease(ptr)) {
+            dev_trace("FreeAllocated: ptr " + Text::FormatPointer(ptr) + " not found in memoryAllocations, ignoring");
+        }
         return;
     }
     Dev::Free(ptr);
-    trace("Freed memory (one-off) at " + Text::FormatPointer(ptr) + " (index: " + ix + ")");
     if (ix >= 0) {
         memoryAllocations.RemoveAt(ix);
     }
@@ -143,21 +151,48 @@ namespace StringAlloc {
 }
 
 
+bool CheckBufferAllocForRelease(uint64 ptr) {
+    return BufferAlloc::PretendRelease(ptr);
+}
+
+
 namespace BufferAlloc {
     CPlugCloudsParam@ _bufferAllocNod = CPlugCloudsParam();
     // buffer of floats
     uint16 O_CPLUGCLOUDPARAM_PointDists = GetOffset("CPlugCloudsParam", "PointDists");
+
+    AllocdBuffer@[] allocationsLog;
+    uint64[] allocatedPtrs;
+
+    bool IsBufferAllocated(uint64 ptr) {
+        return allocatedPtrs.Find(ptr) >= 0;
+    }
+
+    bool PretendRelease(uint64 ptr) {
+        auto ix = allocatedPtrs.Find(ptr);
+        if (ix < 0) {
+            dev_trace("BufferAlloc::PretendRelease: ptr " + Text::FormatPointer(ptr) + " not found in allocatedPtrs, ignoring");
+            return false;
+        }
+        dev_trace("BufferAlloc::PretendRelease: pretending to release buffer at " + Text::FormatPointer(ptr));
+        allocatedPtrs.RemoveAt(ix);
+        return true;
+    }
 
     void _ClearBufferInAllocNod() {
         Dev::SetOffset(_bufferAllocNod, O_CPLUGCLOUDPARAM_PointDists, uint64(0));
         Dev::SetOffset(_bufferAllocNod, O_CPLUGCLOUDPARAM_PointDists + 8, uint64(0));
     }
 
+    AllocdBuffer@ Alloc(uint nBytes) {
+        return Alloc(nBytes, 1);
+    }
+
     AllocdBuffer@ Alloc(uint nbElements, uint elSize) {
         auto size = nbElements * elSize;
         if (size % 4 != 0) throw("BufferAlloc::Alloc: size must be a multiple of 4");
         if (Dev::GetOffsetUint64(_bufferAllocNod, O_CPLUGCLOUDPARAM_PointDists) > 0) {
-            NotifyWarning("BufferAlloc::Alloc: O_CPLUGCLOUDPARAM_PointDists already set, this will overwrite it");
+            Dev_NotifyWarning("BufferAlloc::Alloc: O_CPLUGCLOUDPARAM_PointDists already set, this will overwrite it");
             _ClearBufferInAllocNod();
         }
         uint pushedBytes = 0;
@@ -166,6 +201,8 @@ namespace BufferAlloc {
             pushedBytes += 4;
         }
         auto ret = AllocdBuffer(_bufferAllocNod, elSize);
+        allocationsLog.InsertLast(ret);
+        allocatedPtrs.InsertLast(ret.ptr);
         _ClearBufferInAllocNod();
         return ret;
     }
@@ -187,6 +224,10 @@ namespace BufferAlloc {
             this.capacity = capacity * 4 / elSize;
             this.elSize = elSize;
             LogAllocation();
+        }
+
+        uint get_LengthInBytes() {
+            return capacity * elSize;
         }
 
         void LogAllocation() {

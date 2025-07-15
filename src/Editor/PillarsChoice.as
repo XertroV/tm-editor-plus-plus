@@ -332,7 +332,7 @@ The types are:
 
         UI::Text("Autochange Pillars");
 
-        UI::PushItemWidth(200.);
+        UI::PushItemWidth(200. * UI::GetScale());
         if (UI::BeginCombo("Autochange Pillars To", PillarsTypeStrName(m_AutoPillars))) {
             for (uint i = 0; i < int(PillarsType::XXX_Last); i++) {
                 if (UI::Selectable(PillarsTypeStrName(PillarsType(i)), m_AutoPillars == PillarsType(i))) {

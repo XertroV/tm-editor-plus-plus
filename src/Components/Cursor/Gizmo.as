@@ -158,7 +158,7 @@ namespace Gizmo {
             dev_trace("Item placement mode: " + tostring(origItemPlacementMode));
         }
         Editor::SetCurrentPivot(editor, 0);
-        bool was_DoNotOffsetBlockInCursorPreview_Active = CustomCursor::DoNotOffsetBlockInCursorPreview_Active;
+        was_DoNotOffsetBlockInCursorPreview_Active = CustomCursor::DoNotOffsetBlockInCursorPreview_Active;
         CustomCursor::DoNotOffsetBlockInCursorPreview_Active = true;
 
         shouldReplaceTarget = lmb;
@@ -488,6 +488,7 @@ namespace Gizmo {
 
         if (shouldReplaceTarget) {
             editor.PluginMapType.AutoSave();
+            dev_trace("Gizmo deleting target");
             if (modeTargetType == BlockOrItem::Block) {
                 // origPlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
                 if (blockSpec.isFree) {
@@ -506,6 +507,7 @@ namespace Gizmo {
                 Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
                 Editor::DeleteBlocksAndItems({}, {itemSpec});
             }
+            dev_trace("Gizmo deleted target");
         }
 
         Editor::SetAllCursorPos(bb.pos);

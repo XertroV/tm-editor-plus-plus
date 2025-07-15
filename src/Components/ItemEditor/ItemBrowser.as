@@ -934,7 +934,7 @@ class ItemModelTreeElement {
             auto pyr = PitchYawRollFromRotationMatrix(spawnRot);
             // todo: test update check thing to avoid oscillating matrix calcs from rotation
             if (isEditable) {
-                UI::PushItemWidth(UI::GetContentRegionAvail().x * .5);
+                UI::PushItemWidth(UI::GetContentRegionAvail().x * .5 * UI::GetScale());
                 auto spawnLocOut = UX::InputFloat3("Spawn Pos", spawnLoc, vec3(16, 0, 11.2));
                 auto pyrOut = UX::InputAngles3("Spawn Rot", pyr, vec3(0, 0, 0));
                 UI::PopItemWidth();
