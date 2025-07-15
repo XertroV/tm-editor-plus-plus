@@ -506,6 +506,9 @@ class MapEditPropsTab : Tab {
         }
         // note: skin might not be null when mapper has already been placing skinned blocks
 
+        // Before setting the skin, set skin directory to Stadium\\Mod\\, not Any\\Advertisement1x1\\.
+        // Works better with game cache, esp with large mods.
+        // Restore the original skin directory after.
         string origSkinDir = block.BlockInfo.SkinDirectory;
         auto gameSkin = cast<CPlugGameSkin>(Dev::GetOffsetNod(block.BlockInfo, O_BLOCKINFO_GAMESKIN));
         if (gameSkin !is null) {
@@ -517,6 +520,7 @@ class MapEditPropsTab : Tab {
             // restore original skin path (for TechnicsScreen1x1Straight: Any\Advertisement1x1\)
             DPlugGameSkin(gameSkin).Path1 = origSkinDir;
         }
+
         if (block.Skin is null) {
             NotifyWarning("Could not set skin on screen block.");
             return;
