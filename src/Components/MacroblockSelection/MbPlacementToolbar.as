@@ -56,8 +56,7 @@ class CurrentMacroblock_PlacementToolbar : ToolbarTab {
     }
 
     void DrawMenuItem() override {
-        if (UI::MenuItem(DisplayIconAndName, "", windowOpen)) {
-            windowOpen = !windowOpen;
+        if (UI::MenuItem(DisplayIconAndName, "", S_ShowMbPlacementToolbar)) {
             S_ShowMbPlacementToolbar = !S_ShowMbPlacementToolbar;
         }
     }

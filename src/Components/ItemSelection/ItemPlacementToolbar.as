@@ -69,8 +69,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 	}
 
 	void DrawMenuItem() override {
-		if (UI::MenuItem(DisplayIconAndName, "", windowOpen)) {
-			windowOpen = !windowOpen;
+		if (UI::MenuItem(DisplayIconAndName, "", S_ShowItemPlacementToolbar)) {
 			S_ShowItemPlacementToolbar = !S_ShowItemPlacementToolbar;
 		}
 	}
