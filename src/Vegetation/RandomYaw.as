@@ -58,7 +58,7 @@ namespace VegetRandomYaw {
 		void SaveState() { savedState = state; }
 		void RestoreState() { state = savedState; }
 		uint Next() {
-			state = (state * uint(-0x3e39b193) + uint(0x3039)) & uint(0x7FFFFFFF);
+			state = (state * (-0x3e39b193) + uint(0x3039)) & uint(0x7FFFFFFF);
 			return state;
 		}
 		float RandFloat01() {
