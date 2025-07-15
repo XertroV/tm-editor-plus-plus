@@ -361,6 +361,7 @@ namespace MenuBar {
                             auto blocks = mapCache.GetBlocksByHash(key);
                             if (UI::BeginMenu(key + Text::Format(" (%d)", blocks.Length) + "###"+key)) {
                                 for (uint j = 0; j < blocks.Length; j++) {
+                                    UI::PushID("" + j);
                                     auto block = blocks[j];
                                     if (UI::MenuItem(block.ToString())) {
                                         auto gameBlock = block.FindMe(cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType);
@@ -373,6 +374,7 @@ namespace MenuBar {
                                             NotifyWarning("Block not found, try refreshing map cache.");
                                         }
                                     }
+                                    UI::PopID();
                                 }
                                 UI::EndMenu();
                             }
@@ -396,6 +398,7 @@ namespace MenuBar {
                             auto items = mapCache.GetItemsByHash(key);
                             if (UI::BeginMenu(key + Text::Format(" (%d)", items.Length) + "###"+key)) {
                                 for (uint j = 0; j < items.Length; j++) {
+                                    UI::PushID("" + j);
                                     auto item = items[j];
                                     if (UI::MenuItem(item.ToString())) {
                                         auto gameItem = item.FindMe(cast<CGameCtnEditorFree>(GetApp().Editor).PluginMapType);
@@ -408,6 +411,7 @@ namespace MenuBar {
                                             NotifyWarning("Item not found, try refreshing map cache.");
                                         }
                                     }
+                                    UI::PopID();
                                 }
                                 UI::EndMenu();
                             }
@@ -768,7 +772,7 @@ TabGroup@ CreateRootTabGroup() {
     root.BeginCategory("Effects");
 
 
-#if DEV
+#if DEV && COMPILE_WFC
     AutoPlaceItemsTab(root);
     SceneryGenTab(root);
 #endif

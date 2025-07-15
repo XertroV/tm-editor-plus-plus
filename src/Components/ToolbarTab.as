@@ -62,7 +62,7 @@ class ToolbarTab : Tab {
 
 		if (disabled) {
 			UI::SetCursorPos(cPos);
-			UI::InvisibleButton(label, size);
+			UI::InvisibleButton(label + "##i", size);
 		}
 
 		if (desc.Length > 0) AddSimpleTooltip(desc, true);

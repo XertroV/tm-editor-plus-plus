@@ -420,6 +420,9 @@ class RootTabGroupCls : TabGroup {
     void DrawFavoriteTabs_Sidebar(ClickFlags cf, int stix) {
         auto nb = this.meta.favorites.Length;
         for (uint i = 0; i < nb; i++) {
+            // this can happen because we i--
+            if (i >= this.meta.favorites.Length) break;
+            // find tab, maybe remove from favorites
             auto tab = FindTabNamedId(this.meta.favorites[i]);
             if (tab is null) {
                 _Log::Warn("DrawFavoriteTabs_Sidebar", "Unknown: " + MwIdValueToStr(this.meta.favorites[i]), true);

@@ -23,7 +23,9 @@ uint64 RequestMemory(uint size, bool exec = false) {
         memoryAllocations.InsertLast(ptr);
         return ptr;
     }
-    return StringAlloc::Alloc(size);
+    return Dev::Allocate(size);
+    // I think this started crashing the game :/
+    // return StringAlloc::Alloc(size);
 }
 
 void FreeAllAllocated() {

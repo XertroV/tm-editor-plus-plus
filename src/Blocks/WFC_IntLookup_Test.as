@@ -1,4 +1,4 @@
-#if DEV
+#if DEV && COMPILE_WFC
 
 // Developing: replace inherited class for IntLookup2 with IntLookup_X and tests will use that.
 // Modify IntLookup_X to update the data struct. Then copy back to IntLookup and change the
