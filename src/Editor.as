@@ -129,6 +129,14 @@ namespace Editor {
         return ItemMode(Dev::GetOffsetUint32(editor, O_EDITOR_ITEM_PLACEMENT_OFFSET) + 1);
     }
 
+    void SetItemPlacementMode_Raw(CGameCtnEditorFree@ editor, ItemMode mode) {
+        // this works, but the UI doesn't update, so we prefer not to use it.
+        if (mode == ItemMode::None) return;
+        uint iMode = uint(mode) - 1;
+        if (iMode >= 3) throw("Invalid item placement mode: " + tostring(mode) + ", must be normal, free ground, free (corresponding to 1, 2, 3)");
+        Dev::SetOffset(editor, O_EDITOR_ITEM_PLACEMENT_OFFSET, iMode);
+    }
+
     int GetItemPlacementModeInt(bool checkEditMode = true, bool checkPlacementMode = true) {
         return int(GetItemPlacementMode(checkEditMode, checkPlacementMode));
     }
@@ -161,10 +169,14 @@ namespace Editor {
         SetItemPlacementMode(ItemMode(mode));
     }
 
-    void SetItemPlacementMode(ItemMode mode) {
+    void SetItemPlacementMode(ItemMode mode, bool allowSecondTry = true) {
         if (mode == ItemMode::None) return;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        // if this is set to true, the OnClick methods do nothing.
+        bool custInputs = editor.PluginMapType.EnableEditorInputsCustomProcessing;
+        editor.PluginMapType.EnableEditorInputsCustomProcessing = false;
         try {
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             // editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
             if (mode == ItemMode::Normal)
                 editor.ButtonNormalItemModeOnClick();
@@ -175,6 +187,18 @@ namespace Editor {
         } catch {
             warn("exception setting item placement mode: " + getExceptionInfo());
         }
+        auto currItemPMode = GetItemPlacementMode(false, false);
+        if (currItemPMode != mode) {
+            // this seems to be unnecessary now that we handle InputsCustomProcessing
+            Dev_NotifyWarning("Setting item placement mode to " + tostring(mode) + ", but it is currently " + tostring(currItemPMode) + ". Trying again? " + tostring(allowSecondTry));
+            if (allowSecondTry) {
+                dev_trace("Item mode raw was: " + tostring(GetItemPlacementMode_Raw(editor)));
+                SetItemPlacementMode_Raw(editor, mode);
+                dev_trace("Item mode raw is now: " + tostring(GetItemPlacementMode_Raw(editor)));
+                dev_trace("Item mode detected is now: " + tostring(GetItemPlacementMode(false, false)));
+            }
+        }
+        editor.PluginMapType.EnableEditorInputsCustomProcessing = custInputs;
     }
 
     void SetSelectedInventoryNode(CGameCtnEditorFree@ editor, CGameCtnArticleNodeArticle@ article, bool isItem) {
