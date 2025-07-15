@@ -27,7 +27,7 @@ namespace Editor {
     CGameCtnArticleNode@ GetInventoryItemFolder(InventoryItemsFolder folder) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Switcher.ModuleStack[0]);
         auto rn = cast<CGameCtnArticleNodeDirectory>(editor.PluginMapType.Inventory.RootNodes[InventoryRootNode::Items]);
-        if (rn.ChildNodes.Length <= folder) return null;
+        if (rn.ChildNodes.Length <= uint(folder)) return null;
         return rn.ChildNodes[folder];
     }
 

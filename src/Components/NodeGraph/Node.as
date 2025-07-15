@@ -281,12 +281,12 @@ namespace NG {
         }
 
         bool CheckIO() {
-            for (int i = 0; i < inputs.Length; i++) {
+            for (uint i = 0; i < inputs.Length; i++) {
                 if (inputs[i] is null) {
                     return false;
                 }
             }
-            for (int i = 0; i < outputs.Length; i++) {
+            for (uint i = 0; i < outputs.Length; i++) {
                 if (outputs[i] is null) {
                     return false;
                 }
@@ -310,7 +310,7 @@ namespace NG {
 
         int GetInt(int index) {
             // Read the value from the input
-            if (index < inputs.Length && inputs[index] !is null) {
+            if (index < int(inputs.Length) && inputs[index] !is null) {
                 return inputs[index].GetInt();
             }
             return 0;
@@ -318,7 +318,7 @@ namespace NG {
 
         void WriteInt(int index, int value) {
             // Write the value to the output
-            if (index < outputs.Length && outputs[index] !is null) {
+            if (index < int(outputs.Length) && outputs[index] !is null) {
                 outputs[index].WriteInt(value);
                 outputs[index].SignalUpdated();
             }

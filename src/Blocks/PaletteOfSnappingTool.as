@@ -1,7 +1,7 @@
 #if COMPILE_WFC
 
 class PaletteOfSnappingTool : Tab {
-    uint currBlockId = -1;
+    uint currBlockId = uint(-1);
 
     PaletteOfSnappingTool(TabGroup@ parent) {
         super(parent, "Blocks that Snap", Icons::Magnet + Icons::Cube);
@@ -60,9 +60,9 @@ class PaletteOfSnappingTool : Tab {
         auto blockIxs = inv.FindBlockIxsByClipIds(clipIds);
         for (uint i = 0; i < blockIxs.Length; i++) {
             auto ix = blockIxs[i];
-            auto b = inv.blockInfos[ix];
-            if (b is null) continue;
-            showBlocks.InsertLast(b);
+            auto b2 = inv.blockInfos[ix];
+            if (b2 is null) continue;
+            showBlocks.InsertLast(b2);
         }
     }
 

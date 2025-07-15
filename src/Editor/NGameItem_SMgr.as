@@ -10,7 +10,7 @@ namespace Editor {
         auto mgrNwp = NodWithPtr(Dev_GetNodFromPointer(mgr.ptr));
         // auto @nGameItemMgr = Dev::GetOffsetNod(scene, O_GAMESCENE_NGameItem_SMgr_Offset);
         return Dev::ForceCast<NGameItem_SMgr@>(mgrNwp.nod).Get();
-        return null;
+        // return null;
     }
 
     uint64 GetNGameItem_SMgr_Ptr(ISceneVis@ scene) {

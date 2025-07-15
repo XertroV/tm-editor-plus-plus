@@ -47,7 +47,7 @@ namespace FarlandsHelper {
             auto cursor = editor.Cursor;
             if (cursor is null || editor.ItemCursor is null) continue;
             auto itemCursor = DGameCursorItem(editor.ItemCursor);
-            bool isSnapping = itemCursor.snappedGlobalIx != -1;
+            bool isSnapping = itemCursor.snappedGlobalIx != uint(-1);
             if (isSnapping) continue;
             // do some checks first
             // if (!Editor::IsInPlacementMode(editor)) continue;

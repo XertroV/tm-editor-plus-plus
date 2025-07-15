@@ -980,7 +980,7 @@ namespace MeshDuplication {
         auto lightBuffer = Dev::GetOffsetNod(mesh, 0x168);
         auto lightBufferCount = Dev::GetOffsetUint32(mesh, 0x168 + 0x8);
         trace('applied mat mods to mesh (lightBufferCount: '+lightBufferCount+')');
-        for (int i = 0; i < lightBufferCount; i++) {
+        for (uint i = 0; i < lightBufferCount; i++) {
             auto light = cast<CPlugLight>(Dev::GetOffsetNod(lightBuffer, 0x60 * i + 0x58));
             auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(light, 0x8));
             auto newLight = MatMod_FidToReplacement(fid);
@@ -999,7 +999,7 @@ namespace MeshDuplication {
         if (surface.Materials.Length == 0) return;
         trace('applying mat mods to surface');
         auto surfMatsBufFakeNod = Dev::GetOffsetNod(surface, GetOffset(surface, "Materials"));
-        for (int i = 0; i < surface.Materials.Length; i++) {
+        for (uint i = 0; i < surface.Materials.Length; i++) {
             auto mat = surface.Materials[i];
             if (mat is null) continue;
             auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(mat, 0x8));

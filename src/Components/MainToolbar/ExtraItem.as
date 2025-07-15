@@ -36,7 +36,7 @@ class ExtraMainToolbarItem {
 
 // x,y in [-1, 0, 1]
 int Get_NvgAlign(int8 x, int8 y) {
-    int r;
+    int r = 0;
     r |= (x < 0 ? nvg::Align::Left : x == 0 ? nvg::Align::Center : nvg::Align::Right);
     r |= (y < 0 ? nvg::Align::Top : y == 0 ? nvg::Align::Middle : nvg::Align::Bottom);
     return r;
@@ -52,7 +52,7 @@ class ToolbarExtras {
     }
 
     void Draw() {
-        return; // ! tmp while testing
+        if (true) return; // ! tmp while testing
         for (uint i = 0; i < items.Length; i++) {
             items[i].Draw();
         }

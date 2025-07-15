@@ -182,14 +182,14 @@ class DevMiscTab : Tab {
                     if (!editor.PluginMapType.PlaceMacroblock(model, int3(10, 10, 10), CGameEditorPluginMap::ECardinalDirections::North)) {
                         NotifyWarning("Failed to place Macroblock.");
                     }
-                    auto mbInst = editor.PluginMapType.CreateMacroblockInstance(model, nat3(10, 10, 10), CGameEditorPluginMap::ECardinalDirections::North, CGameEditorPluginMap::EMapElemColor::Default, false);
-                    if (mbInst !is null) {
+                    auto mbInst2 = editor.PluginMapType.CreateMacroblockInstance(model, nat3(10, 10, 10), CGameEditorPluginMap::ECardinalDirections::North, CGameEditorPluginMap::EMapElemColor::Default, false);
+                    if (mbInst2 !is null) {
                         print("inst not null");
-                        print("inst ptr: " + Text::FormatPointer(Dev_GetPointerForNod(mbInst)));
-                        print("inst name: " + mbInst.Id.GetName());
-                        print("inst order: " + mbInst.Order);
-                        print("inst ref count: " + Reflection::GetRefCount(mbInst));
-                        editor.PluginMapType.ComputeItemsForMacroblockInstance(mbInst);
+                        print("inst ptr: " + Text::FormatPointer(Dev_GetPointerForNod(mbInst2)));
+                        print("inst name: " + mbInst2.Id.GetName());
+                        print("inst order: " + mbInst2.Order);
+                        print("inst ref count: " + Reflection::GetRefCount(mbInst2));
+                        editor.PluginMapType.ComputeItemsForMacroblockInstance(mbInst2);
                         print("nb items: " + editor.PluginMapType.MacroblockInstanceItemsResults.Length);
                         if (editor.PluginMapType.MacroblockInstanceItemsResults.Length > 0) {
                             print("items[0] ptr: " + Text::FormatPointer(Dev_GetPointerForNod(editor.PluginMapType.MacroblockInstanceItemsResults[0])));
@@ -227,7 +227,7 @@ class DevMiscTab : Tab {
             UI::Text("Failed to get nod");
             return;
         }
-        ItemModelTreeElement(null, -1, nod, "MainBody Skel", true, -1, true).Draw();
+        ItemModelTreeElement(null, uint16(-1), nod, "MainBody Skel", true, uint16(-1), true).Draw();
     }
 
     bool m_male = true;
@@ -246,7 +246,7 @@ class DevMiscTab : Tab {
         }
         try {
             auto skel = cast<CPlugSkel>(nod.Skels[0].NodRef);
-            ItemModelTreeElement(null, -1, skel, "Player Skel", true, -1, true).Draw();
+            ItemModelTreeElement(null, uint16(-1), skel, "Player Skel", true, uint16(-1), true).Draw();
         } catch {}
     }
 

@@ -68,6 +68,13 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		@currItemModel = null;
 	}
 
+	void DrawMenuItem() override {
+		if (UI::MenuItem(DisplayIconAndName, "", windowOpen)) {
+			windowOpen = !windowOpen;
+			S_ShowItemPlacementToolbar = !S_ShowItemPlacementToolbar;
+		}
+	}
+
 	bool ShouldShowWindow(CGameCtnEditorFree@ editor) override {
 		return S_ShowItemPlacementToolbar && Editor::IsInAnyItemPlacementMode(editor, false);
 	}

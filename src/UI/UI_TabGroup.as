@@ -69,7 +69,7 @@ class TabGroup : HasGroupMeta {
         if (ix < 0 || ix >= int(tabs.Length)) return;
         if (selectedTabIx == ix) return;
         for (uint i = 0; i < tabs.Length; i++)
-            tabs[i].SetSelectedInGroup(i == ix);
+            tabs[i].SetSelectedInGroup(i == uint(ix));
     }
 
     bool HasTabNamed(const string &in name) {
@@ -361,7 +361,7 @@ class RootTabGroupCls : TabGroup {
 
     void DrawSidebarTabEntries(ClickFlags clicks) override {
         string categoryName = "";
-        uint catIx = -1;
+        uint catIx = uint(-1);
         uint nextCatStartsTabIx = 0;
         uint nbCategories = categories.Length;
         auto textCol = UI::GetStyleColor(UI::Col::Text);
@@ -375,7 +375,7 @@ class RootTabGroupCls : TabGroup {
                 categoryName = categories[catIx];
                 isOpen = categoryIsOpen[catIx];
                 nextCatStartsTabIx = (catIx+1) >= nbCategories ? -1 : categoryEndIxs[catIx];
-                bool containsActiveTab = i <= stix && stix < nextCatStartsTabIx;
+                bool containsActiveTab = i <= uint(stix) && stix < int(nextCatStartsTabIx);
                 // bool shouldOpen = !isOpen && containsActiveTab;
                 // if (shouldOpen) isOpen = SetCategoryOpen(catIx, true);
                 // UI::PushFont(isOpen ? g_BoldFont : g_NormFont);
@@ -396,7 +396,7 @@ class RootTabGroupCls : TabGroup {
             if (i >= tabs.Length) break;
             if (!isOpen) continue;
             if (meta.IsHidden(tabs[i].nameIdValue)) continue;
-            DrawSidebarTabEntry(i, tabs[i], i == stix, clicks, false);
+            DrawSidebarTabEntry(i, tabs[i], i == uint(stix), clicks, false);
         }
 
         UI::PopStyleColor();

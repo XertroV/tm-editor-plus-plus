@@ -75,7 +75,7 @@ class EditorMiscTab : Tab {
             @dir = dir.ParentNode;
         }
         auto node = inv.CurrentRootNode;
-        int i = 0;
+        uint i = 0;
         while (i < path.Length) {
             string name = path[i];
             for (uint j = 0; j < node.ChildNodes.Length; j++) {
@@ -158,9 +158,9 @@ class EditorMiscTab : Tab {
         }
 
         if (_cameraUnlocked) {
-            auto occ_YBounds = vec2(occ_YBounds.x, occ_YBounds.y);
-            auto occ_NewYBounds = UI::InputFloat2("Y Bounds", occ_YBounds);
-            if (occ_YBounds != occ_NewYBounds) {
+            auto occ_YBounds2 = vec2(occ_YBounds.x, occ_YBounds.y);
+            auto occ_NewYBounds = UI::InputFloat2("Y Bounds", occ_YBounds2);
+            if (occ_YBounds2 != occ_NewYBounds) {
                 Editor::SetCamCtrlOrbital_YBounds(occ, occ_NewYBounds);
             }
         }

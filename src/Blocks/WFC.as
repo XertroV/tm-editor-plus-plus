@@ -119,7 +119,7 @@ class MapVoxels {
             throw("GetCoordState: index out of bounds: " + ix + " / " + states.Length);
         }
         auto top = coord.y;
-        if (states[ix].Length <= top) {
+        if (states[ix].Length <= uint(top)) {
             states[ix].Resize(top >= mapSize.y / 2 ? mapSize.y : mapSize.y / 2 + 1);
         }
         if (states[ix][top] is null) {
@@ -272,7 +272,7 @@ class MapVoxels {
 
             }
 
-            if (availableNb == 0 && cs.Entropy == -2) {
+            if (availableNb == 0 && cs.Entropy == uint(-2)) {
                 // we have no available blocks, but entropy is max; which means anything can match.
                 continue;
             }
@@ -281,8 +281,8 @@ class MapVoxels {
             // we run this after initializing too so we can be a bit lazier during initialization
             uint[] toRem;
             uint entropy = 0;
-            for (uint i = 0; i < availableNb; i++) {
-                auto blockIxAndDirs = cs.availableBlockIxsAndRots[i];
+            for (uint j = 0; j < availableNb; i++) {
+                auto blockIxAndDirs = cs.availableBlockIxsAndRots[j];
                 auto dirs = blockIxAndDirs.dirs;
                 auto ix = blockIxAndDirs.ci.biIx;
                 if (ix >= WFC::blockInv.blockInfos.Length) {
@@ -292,22 +292,22 @@ class MapVoxels {
                 auto blockInfo = WFC::blockInv.blockInfos[ix];
                 // need to get constraints from neighboring blocks...
                 auto matchingDirs = blockInfo.SolveCardinalDirections(this, coord);
-                if (matchingDirs == dirs) {
+                if (matchingDirs == uint(dirs)) {
                     entropy += CountDirsInPacked(matchingDirs);
                     continue;
                 }
                 if (matchingDirs == 0) {
                     // remove this block from the list
-                    toRem.InsertLast(i);
+                    toRem.InsertLast(j);
                 } else {
                     // update the list of available blocks
-                    cs.availableBlockIxsAndRots[i].dirs = matchingDirs;
+                    cs.availableBlockIxsAndRots[j].dirs = matchingDirs;
                     entropy += CountDirsInPacked(matchingDirs);
                 }
             }
             // remove the blocks that are not compatible
-            for (int i = toRem.Length - 1; i >= 0; i--) {
-                cs.availableBlockIxsAndRots.RemoveAt(toRem[i]);
+            for (int j = toRem.Length - 1; j >= 0; j--) {
+                cs.availableBlockIxsAndRots.RemoveAt(toRem[j]);
             }
             // update the entropy
             bool entropyChanged = cs.Entropy != entropy;
@@ -396,11 +396,11 @@ class MapVoxels {
     // When entropy changes, we need to make sure the coord is in the list, and
     // that the list is resorted.
     void NotifyEntropyChanged(CoordState@ cs, const int3 &in coord) {
-        if (cs.Entropy != -2) _Log::Debug("NotifyEntropyChanged", coord.ToString() + " -> " + cs.Entropy);
+        if (cs.Entropy != uint(-2)) _Log::Debug("NotifyEntropyChanged", coord.ToString() + " -> " + cs.Entropy);
         int existingIx = FindInEntropyList(coord);
         _entropyListUnsorted = true;
         // don't store entries that can match anything or nothing
-        if (cs.Entropy == -2 || cs.Entropy == 0) {
+        if (cs.Entropy == uint(-2) || cs.Entropy == 0) {
             if (existingIx == -1) return;
             EntropyNextList.RemoveAt(existingIx);
             return;
@@ -448,7 +448,7 @@ class MapVoxels {
 
     void DrawEntropy() {
         auto listLen = EntropyNextList.Length;
-        auto nbToDraw = Math::Min(50, listLen);
+        uint nbToDraw = Math::Min(50, listLen);
         string asText = "Entropies: ";
         for (uint i = 0; i < nbToDraw; i++) {
             asText += (i > 0 ? ", " : "") + EntropyNextList[i].ToString();
@@ -462,7 +462,7 @@ class MapVoxels {
         auto mousePos = UI::GetMousePos();
         for (int i = nbToDraw - 1; i >= 0; i--) {
             auto entropy = EntropyNextList[i].entropy;
-            if (entropy == -2) continue;
+            if (entropy == uint(-2)) continue;
             auto coord = EntropyNextList[i].GetCoord();
             vec4 col = vec4(1.0);
             col.x = 1.0 - Math::Clamp(float(entropy) / 64.0, 0.0, 1.0);
@@ -529,7 +529,7 @@ class EntropyEntry {
         return int3(cx, cy, cz);
     }
     bool IsCoord(const int3 &in coord) {
-        return cx == coord.x && cy == coord.y && cz == coord.z;
+        return cx == uint(coord.x) && cy == uint(coord.y) && cz == uint(coord.z);
     }
     string ToString() {
         return tostring(entropy) + "@(" + cx + ", " + cy + ", " + cz + ")";
@@ -570,10 +570,10 @@ void ExtendArray(ref@[] &inout arr1, const ref@[] &in arr2) {
 uint[] Intersection(const uint[] &in arr1, const uint[] &in arr2) {
     // special case: {-1} means any match, and should only be propagated if arr1 is also -1.
     // similarly, if arr1 is {-1} and arr2 is not, we should return arr2.
-    bool arr1_isAny = arr1.Length == 1 && arr1[0] == -1;
-    bool arr2_isAny = arr2.Length == 1 && arr2[0] == -1;
+    bool arr1_isAny = arr1.Length == 1 && arr1[0] == uint(-1);
+    bool arr2_isAny = arr2.Length == 1 && arr2[0] == uint(-1);
     // if both any => return any
-    if (arr1_isAny && arr2_isAny) return {-1};
+    if (arr1_isAny && arr2_isAny) return {uint(-1)};
     // if arr1 is any => return copy of arr2
     if (arr1_isAny) {
         return arr2;
@@ -629,7 +629,7 @@ class CoordState_AndCoord {
 
 class CoordState {
     // -1 = done. 0 = no options. -2 = very big uint (for sorting)
-    uint Entropy = -2;
+    uint Entropy = uint(-2);
     bool IsOccupied = false;
 
     // // 64 bits used: [occupied 1][55 unused][8 entropy]
@@ -670,7 +670,7 @@ class CoordState {
                 faceConstraints[newClipDir].allowedClipIds.InsertLast(allowedIds.y);
         }
         parent.OnOccupy_QueueCoordStateRefresh(MyCoord);
-        Entropy = -1;
+        Entropy = uint(-1);
         availableBlockIxsAndRots.RemoveRange(0, availableBlockIxsAndRots.Length);
     }
 
@@ -796,9 +796,9 @@ FaceClipConstraint@[] DefaultFaceConstraints() {
 // MARK: WFC_ClipInfo
 
 class WFC_ClipInfo {
-    MwId cId = MwId(-1);
+    MwId cId = MwId(uint(-1));
     int symCID = -1, clipGroup1 = -1, clipGroup2 = -1, symClipGroup1 = -1, symClipGroup2 = -1;
-    uint biIx = -1, buiIx = -1, clipIx = -1;
+    uint biIx = uint(-1), buiIx = uint(-1), clipIx = uint(-1);
     ClipFace clipFace;
     int3 buiOffset;
     int distFromTop = 0;
@@ -849,7 +849,7 @@ class WFC_ClipInfo {
         // if (symClipGroup1 != -1) symGroupIds.Insert(symClipGroup1, this);
         // if (symClipGroup2 != -1) symGroupIds.Insert(symClipGroup2, this);
         // if (symCID != -1) symIds.Insert(symCID, this);
-        if (cId.Value != -1) clipIds.Insert(cId.Value, this);
+        if (cId.Value != uint(-1)) clipIds.Insert(cId.Value, this);
     }
 
     string ToString() {
@@ -904,7 +904,7 @@ class WFC_ClipInfo {
         if (symClipGroup1 != -1) return int2(symClipGroup1, symClipGroup2);
         if (clipGroup1 != -1) return int2(clipGroup1, clipGroup2);
         if (symCID != -1) return int2(symCID, -1);
-        if (cId.Value != -1) return int2(cId.Value, -1);
+        if (cId.Value != uint(-1)) return int2(cId.Value, -1);
         return int2(-1, -1);
     }
 }
@@ -914,10 +914,10 @@ class WFC_ClipInfo {
 bool DoClipsSnap(WFC_ClipInfo@ left, WFC_ClipInfo@ right) {
     auto gLeft = left.SymGroups;
     // no left sym groups
-    if (gLeft.x == -1) {
+    if (gLeft.x == uint(-1)) {
         gLeft = left.ClipGroups;
         // we have left clip groups
-        if (gLeft.x != -1) {
+        if (gLeft.x != uint(-1)) {
             // return right clip groups overlap
             auto gRight = right.ClipGroups;
             return ClipsOverlap(gLeft, gRight);
@@ -929,7 +929,7 @@ bool DoClipsSnap(WFC_ClipInfo@ left, WFC_ClipInfo@ right) {
             return left.cId.Value == right.cId.Value;
         }
         // otherwise, are this two clips matched (sym-norm)?
-        return left.symCID == right.cId.Value;
+        return left.symCID == int(right.cId.Value);
     }
     // if we have left sym groups, check them against right clip groups
     auto gRight = right.ClipGroups;
@@ -939,9 +939,9 @@ bool DoClipsSnap(WFC_ClipInfo@ left, WFC_ClipInfo@ right) {
 // check if two groups overlap, but only if they are not -1
 bool ClipsOverlap(nat2 left, nat2 right) {
     // check if left and right groups overlap
-    if (left.x == -1 || right.x == -1) return false;
+    if (left.x == uint(-1) || right.x == uint(-1)) return false;
     if (left.x == right.x || left.x == right.y || left.y == right.x) return true;
-    if (left.y == -1 || right.y == -1) return false;
+    if (left.y == uint(-1) || right.y == uint(-1)) return false;
     return left.y == right.y;
 }
 
@@ -1143,12 +1143,12 @@ class WFC_BlockInfo {
                 warn("Clip is null for " + BlockInfo.IdName);
                 continue;
             }
-            if (clip.ClipGroupId.Value == -1
-                && clip.SymmetricalClipGroupId.Value == -1
-                && clip.SymmetricalClipId.Value == -1
-                && clip.ClipGroupId2.Value == -1
-                && clip.SymmetricalClipGroupId2.Value == -1
-                && clip.Id.Value == -1) {
+            if (clip.ClipGroupId.Value == uint(-1)
+                && clip.SymmetricalClipGroupId.Value == uint(-1)
+                && clip.SymmetricalClipId.Value == uint(-1)
+                && clip.ClipGroupId2.Value == uint(-1)
+                && clip.SymmetricalClipGroupId2.Value == uint(-1)
+                && clip.Id.Value == uint(-1)) {
                 // warn("Clip has no group ids for " + BlockInfo.IdName);
                 continue;
             }
@@ -1363,7 +1363,7 @@ class BlockInventory {
             }
         }
         // SanityCheckFoundBlocks(foundBlockIxs);
-        return anyFound ? foundClips2 : ({-1});
+        return anyFound ? foundClips2 : ({uint(-1)});
     }
 
     WFC_BlockInfo@ GetCursorBlock() {
@@ -1382,7 +1382,7 @@ class BlockInventory {
         WFC_BlockInfo@ blockInfo;
         uint ix;
         uint loopCount = 0;
-        while ((blockInfo is null || blockInfo.clips.Length < minClips || ShouldExcludeBlockFromIngestion(blockInfo.BlockInfo)) && (++loopCount < 10)) {
+        while ((blockInfo is null || blockInfo.clips.Length < uint(minClips) || ShouldExcludeBlockFromIngestion(blockInfo.BlockInfo)) && (++loopCount < 10)) {
             ix = Math::Rand(0, nbBlocks);
             @blockInfo = blockInfos[ix];
         }
@@ -1418,7 +1418,7 @@ class BlockInventory {
         uint loopCount = 0;
         //  || blockInfo.clips.Length < minClips
         CardinalDir dirAtCoordOfConnectingClip;
-        while (clipToPlace is null || blockInfo is null || blockInfo.clips.Length < minClips) {
+        while (clipToPlace is null || blockInfo is null || blockInfo.clips.Length < uint(minClips)) {
             loopCount++;
             if (loopCount > 20) break;
             @placedClip = clipSource.GetRandomClip(true);
@@ -1429,9 +1429,9 @@ class BlockInventory {
             @dbg_ClipToPlace = clipToPlace;
             if (clipToPlace is null) continue;
 
-            CardinalDir dir;
-            c = clipSource.CalcClipConnectingCoord(placedClip, dir);
-            dbg_Dir1_AtCoordConnecting = dirAtCoordOfConnectingClip = dir;
+            CardinalDir dir2;
+            c = clipSource.CalcClipConnectingCoord(placedClip, dir2);
+            dbg_Dir1_AtCoordConnecting = dirAtCoordOfConnectingClip = dir2;
             @blockInfo = blockInfos[clipToPlace.biIx];
             @dbg_BlockInfo = blockInfo;
         }
@@ -1463,7 +1463,7 @@ class BlockInventory {
         // clip groups match to clip groups
         // no sym id => match `symId <|> cId` to clip id
         auto symGroups = clip.SymGroups;
-        if (symGroups.x != -1) {
+        if (symGroups.x != uint(-1)) {
             toJoin.InsertLast(GroupIdsToClips.Get(symGroups.x));
             toJoin.InsertLast(GroupIdsToClips.Get(symGroups.y));
             if (!expandedMatch) return JoinMatches(toJoin);
@@ -1471,7 +1471,7 @@ class BlockInventory {
             // if (!expandedMatch && ret !is null && ret.Length > 0) return ret;
         }
         auto clipGroups = clip.ClipGroups;
-        if (clipGroups.x != -1) {
+        if (clipGroups.x != uint(-1)) {
             toJoin.InsertLast(GroupIdsToClips.Get(clipGroups.x));
             toJoin.InsertLast(GroupIdsToClips.Get(clipGroups.y));
             if (!expandedMatch) return JoinMatches(toJoin);
@@ -1655,7 +1655,7 @@ class BlockInventory {
 
     void _DumpCI_IDs(ThinLazyFile& file, IntLookup& lookup, const string &in name) {
         file.WriteLine("## [START:IDs_" + name + "]");
-        uint next = -1, count = 0;
+        uint next = uint(-1), count = 0;
         while (lookup.KeyIterGetNext(next, next)) {
             if (next == 0xFFFFFFFF) throw("Unexpected id = -1");
             file.WriteLine(MwIdValueToStr(next | 0x40000000));
@@ -1668,7 +1668,7 @@ class BlockInventory {
 
 void SanityCheckFoundBlocks(uint[] &in foundBlockIxs) {
     if (foundBlockIxs.Length == 0) return;
-    if (foundBlockIxs.Find(-1) != -1) {
+    if (foundBlockIxs.Find(uint(-1)) != -1) {
         Dev_NotifyWarning("Found -1 in foundBlockIxs");
         throw("Found -1 in foundBlockIxs");
         return;
@@ -1959,13 +1959,13 @@ class IntLookup {
         bool hasKids = children.Length > 0;
         bool hasValues = values.Length > 0;
         if (!hasValues and !hasKids) {
-            nextKey = -1;
+            nextKey = uint(-1);
             return false;
         }
         // check for if prior was before this node.
-        if (priorId == -1) {
+        if (priorId == uint(-1)) {
             // if something lives here
-            if (nodeId != -1) {
+            if (nodeId != uint(-1)) {
                 nextKey = nodeKey;
                 return true;
             }
@@ -1979,7 +1979,7 @@ class IntLookup {
 
         // otherwise, it's in a child.
         if (!hasKids) {
-            nextKey = -1;
+            nextKey = uint(-1);
             return false;
         }
         auto childIx = priorId % INT_LOOKUP_CHILDREN;
@@ -1996,10 +1996,10 @@ class IntLookup {
                 if (ret) { return ret; }
                 // otherwise continue
                 // reset priorId: if we are given a startIx and a priorId, we can only use that for the first child we check (since that's where the id leads).
-                priorId = -1;
+                priorId = uint(-1);
             }
         }
-        nextKey = -1;
+        nextKey = uint(-1);
         return false;
     }
 

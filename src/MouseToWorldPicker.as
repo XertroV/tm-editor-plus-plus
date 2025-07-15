@@ -100,7 +100,7 @@ namespace Picker {
         pos.z = Math::Round(pos.z / quantize) * quantize;
         pos = ((gridMat) * pos).xyz;
         return GetMouseToWorldOnPlane((gridMat * UP).xyz, pos, quantize);
-        return pos;
+        // return pos;
     }
 
     void DrawDebugWindow() {

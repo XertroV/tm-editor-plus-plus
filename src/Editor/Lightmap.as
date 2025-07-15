@@ -14,7 +14,7 @@ namespace Editor {
         // if the fid Nod is null, then we are probably using a different lightmap loaded due to the environment / mod
         if (lmFid.Nod is null) {
             auto lmFolder = Fids::GetGameFolder("GameData/LightMap/HmsPackLightMap");
-            for (int i = 0; i < lmFolder.Leaves.Length; i++) {
+            for (uint i = 0; i < lmFolder.Leaves.Length; i++) {
                 auto lm = cast<CHmsLightMap>(lmFolder.Leaves[i].Nod);
                 if (lm !is null)
                     return lm;

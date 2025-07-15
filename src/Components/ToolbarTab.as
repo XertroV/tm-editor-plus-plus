@@ -27,7 +27,7 @@ class ToolbarTab : Tab {
 
 	void _BeforeBeginWindow() override {
 		UI::SetNextWindowPos(0, 400, UI::Cond::FirstUseEver);
-		UI::SetNextWindowSize(d_ToolbarBtnSize.x, d_ToolbarBtnSize.y, UI::Cond::Appearing);
+		UI::SetNextWindowSize(int(d_ToolbarBtnSize.x), int(d_ToolbarBtnSize.y), UI::Cond::Appearing);
 	}
 
 	void DrawInner() override {

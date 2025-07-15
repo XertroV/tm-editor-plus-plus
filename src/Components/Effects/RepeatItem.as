@@ -563,9 +563,9 @@ class GridRepeat : RepeatMethod {
         if (item is null || item.ItemModel is null) return;
         auto sizeXZ = item.ItemModel.DefaultPlacementParam_Content.GridSnap_HStep;
         auto sizeY = item.ItemModel.DefaultPlacementParam_Content.GridSnap_VStep;
-        grid_ItemsX = Math::Floor(grid_Size.x / (sizeXZ <= 0. ? 1. : sizeXZ)) + 1;
-        grid_ItemsZ = Math::Floor(grid_Size.z / (sizeXZ <= 0. ? 1. : sizeXZ)) + 1;
-        grid_ItemsY = Math::Floor(grid_Size.y / (sizeY <= 0. ? 1. : sizeY)) + 1;
+        grid_ItemsX = int(Math::Floor(grid_Size.x / (sizeXZ <= 0. ? 1. : sizeXZ))) + 1;
+        grid_ItemsZ = int(Math::Floor(grid_Size.z / (sizeXZ <= 0. ? 1. : sizeXZ))) + 1;
+        grid_ItemsY = int(Math::Floor(grid_Size.y / (sizeY <= 0. ? 1. : sizeY))) + 1;
     }
 
     mat4[]@ CalcPosRotMatricies() {

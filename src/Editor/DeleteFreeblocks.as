@@ -301,7 +301,7 @@ void FindFreeBlockPMTAndSetMbId(CGameEditorPluginMapMapType@ pmt, OctTreeNode@ t
     for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
         @b = pmt.ClassicBlocks[i];
         if (!Editor::IsBlockFree(b)) continue;
-        if (Editor::GetBlockMbInstId(b) == mbInstId) continue;
+        if (Editor::GetBlockMbInstId(b) == int(mbInstId)) continue;
         if (bs is null) {
             @bs = Editor::MakeBlockSpec(b);
         } else {
