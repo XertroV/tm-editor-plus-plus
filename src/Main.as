@@ -326,7 +326,7 @@ void CopyFile(const string &in f1, const string &in f2) {
 
 void OnProcessPaused() {
     g_CurrentlyPausedCoros++;
-    UI::ShowNotification("E++ Work in Process", "Process " + g_CurrentlyPausedCoros + " yeilding...", 5);
+    UI::ShowNotification("E++ Work in Process", "Process " + g_CurrentlyPausedCoros + " yielding...", 5);
 }
 
 void AfterProcessPaused() {

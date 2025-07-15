@@ -86,7 +86,7 @@ namespace Editor {
         return 1;
     }
 
-    // find an item and do not yeild
+    // find an item and do not yield
     CGameItemModel@ FindItemByName(const string &in name) {
         auto itemsCatalog = GetApp().GlobalCatalog.Chapters[3];
         for (int i = itemsCatalog.Articles.Length - 1; i > 1; i--) {
