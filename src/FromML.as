@@ -6,7 +6,7 @@ void OnEppLayerCustomEvent(const string &in type, MwFastBuffer<wstring> &in rawD
         data.InsertLast(rawData[i]);
         dataStr += (i > 0 ? ", " : "") + data[data.Length - 1];
     }
-    FromML::eventLog.InsertLast(ML_Event(type, data));
+    // FromML::eventLog.InsertLast(ML_Event(type, data));
     // print("got event: " + type);
     // print("got data: " + dataStr);
     if (type == "MappingTime") {
@@ -31,7 +31,7 @@ void OnEppLayerCustomEvent(const string &in type, MwFastBuffer<wstring> &in rawD
 }
 
 namespace FromML {
-    ML_Event@[] eventLog;
+    // ML_Event@[] eventLog;
     uint mappingTime = 0;
     uint mappingTimeMapping = 0;
     uint mappingTimeTesting = 0;
@@ -56,12 +56,20 @@ namespace FromML {
     }
 }
 
+
+uint64 mlEventsInstantiated = 0;
+uint64 mlEventsDestroyed = 0;
 class ML_Event {
     string type;
     string[]@ data;
     ML_Event(const string &in type, string[]@ data) {
         @this.data = data;
         this.type = type;
+        mlEventsInstantiated++;
+        dev_trace("ML_Event | nbCreated: " + mlEventsInstantiated + ", nbDestroyed: " + mlEventsDestroyed);
+    }
+    ~ML_Event() {
+        mlEventsDestroyed++;
     }
     string ToMLEventString() {
         string ret = '["' + type;
