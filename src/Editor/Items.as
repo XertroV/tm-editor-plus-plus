@@ -206,14 +206,17 @@ namespace Editor {
         auto modelId = prevItem.ItemModel.Id.Value;
         auto pos = prevItem.AbsolutePositionInMap;
         auto rot = Editor::GetItemRotation(prevItem);
+        // if this is a tree and rand Y is compensated for, we need a larger epsilon
+        bool isTree = VegetRandomYaw::IsActive && Veget::DoesItemModelHaveVeget(prevItem.ItemModel, true);
         for (int i = map.AnchoredObjects.Length - 1; i >= 0; i--) {
             auto item = map.AnchoredObjects[i];
             if (item.ItemModel.Id.Value != modelId) continue;
-            if (!MathX::Vec3Eq(pos, item.AbsolutePositionInMap)) continue;
-            if (item.IVariant != prevItem.IVariant) continue;
-            if (item.Pitch != rot.x) continue;
-            if (item.Yaw != rot.y) continue;
-            if (item.Roll != rot.z) continue;
+            if (!MathX::Vec3Within(pos, item.AbsolutePositionInMap, isTree ? 0.01 : 0.00001)) continue;
+            if (!MathX::Vec3Within(rot, GetItemRotation(prevItem), isTree ? 0.01 : 0.00001)) continue;
+            if (item.IVariant != prevItem.IVariant) {
+                trace("Items differ in variant, skipping: " + item.IVariant + " vs " + prevItem.IVariant);
+                continue;
+            }
             // match!?
             trace('found item match: ' + i + ' / ' + (map.AnchoredObjects.Length - 1));
             return item;
@@ -225,14 +228,23 @@ namespace Editor {
      require force refresh: set true if a prop other than position, rotation, or color was set
     */
     CGameCtnAnchoredObject@ RefreshSingleItemAfterModified(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ item, bool requiresForceRefresh = false) {
+        if (item is null) throw("Item is null!");
+        auto @origItem = item;
+        origItem.MwAddRef();
+
         if (requiresForceRefresh) {
             EditorPriv::RotateItemColorForRefresh(editor, item);
         }
         Editor::RefreshBlocksAndItems(editor);
         @item = Editor::FindReplacementItemAfterUpdate(editor, item);
-        if (requiresForceRefresh) {
-            @item = EditorPriv::RestoreItemColorAfterRefresh(editor, item);
+        if (item is null) {
+            @item = Editor::FindReplacementItemAfterUpdate(editor, origItem);
         }
+        if (requiresForceRefresh) {
+            @item = EditorPriv::RestoreItemColorAfterRefresh(editor, origItem);
+        }
+        origItem.MwRelease();
+        @origItem = null;
         return item;
     }
 
@@ -277,6 +289,7 @@ namespace EditorPriv {
     }
 
     CGameCtnAnchoredObject@ RestoreItemColorAfterRefresh(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ item) {
+        if (item is null) return null;
         auto _ref = ReferencedNod(item);
         item.MapElemColor = cachedCol;
         Editor::RefreshBlocksAndItems(editor);

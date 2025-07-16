@@ -217,19 +217,37 @@ class FocusedItemTab : Tab, NudgeItemBlock {
         UI::Text("Nudge Picked Item:");
 
         if (DrawNudgeFor(item)) {
-            changed = true;
-            skipForceRefresh = true;
+            // this updates the map already so no need to do it again, just update the item
+            changed = false;
+            skipForceRefresh = false;
+            auto newItem = Editor::FindReplacementItemAfterUpdate(editor, item);
+            if (newItem is null) {
+                Dev_NotifyWarning("Item not found after nudge.");
+                @newItem = editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1];
+                if (newItem.ItemModel.Id.Value != item.ItemModel.Id.Value) {
+                    Dev_NotifyWarning("Item model changed after nudge, this is not expected.");
+                    @newItem = null;
+                }
+            }
+            @FocusedItem = ReferencedNod(newItem);
+            @item = FocusedItem.AsItem();
+            trace('refinding item after nudge. found: ' + (item !is null));
         }
 
         if (changed) {
             trace('Updating modified item');
+            // if the item was changed, we refind it and force a refresh
             @FocusedItem = ReferencedNod(Editor::RefreshSingleItemAfterModified(editor, item, !skipForceRefresh));
             // @FocusedItem = ReferencedNod(editor.Challenge.AnchoredObjects[editor.Challenge.AnchoredObjects.Length - 1]);
+            // @FocusedItem = ReferencedNod(Editor::FindReplacementItemAfterUpdate(editor, item));
             @item = FocusedItem.AsItem();
             if (item is null) {
-                UI::PopItemWidth();
-                return;
+                Dev_NotifyWarning("Item not found after nudging.");
             }
+        }
+        if (item is null) {
+            UI::PopItemWidth();
+            return;
         }
 
         UI::Separator();
