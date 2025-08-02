@@ -1,3 +1,7 @@
+// Source: Editor++/src/nvg/TempNvgText.as
+// Author: XertroV
+// Public Domain
+
 class TempNvgText {
     string[]@ msgLines;
     uint durationMs;

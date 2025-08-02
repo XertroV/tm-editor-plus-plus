@@ -90,8 +90,8 @@ namespace Repeat {
             super(p, "Matrix Iter.");
         }
 
-        void UpdateMatricies() override {
-            RepeatMethod::UpdateMatricies();
+        void UpdateMatrices() override {
+            RepeatMethod::UpdateMatrices();
             auto item = lastPickedItem !is null ? lastPickedItem.AsItem() : null;
 
             internalTRot = EulerToMat(internal_Rot);
@@ -201,7 +201,7 @@ namespace Repeat {
 
             nbRepetitions = Math::Max(UI::InputInt("Repetitions", nbRepetitions), 0);
 
-            UpdateMatricies();
+            UpdateMatrices();
             if (lastPickedItem !is null) {
                 DrawHelpers();
             }
@@ -311,7 +311,7 @@ class RepeatMethod : Tab {
 
     bool m_IgnoreItemRotation = false;
 
-    void UpdateMatricies() {
+    void UpdateMatrices() {
         auto item = lastPickedItem !is null ? lastPickedItem.AsItem() : null;
         if (item !is null) {
             // pivot position
@@ -416,8 +416,8 @@ int spiral_NbIter = 32;
 //         super("Spiral");
 //     }
 
-//     void UpdateMatricies() override {
-//         RepeatMethod::UpdateMatricies();
+//     void UpdateMatrices() override {
+//         RepeatMethod::UpdateMatrices();
 
 //     }
 
@@ -428,7 +428,7 @@ int spiral_NbIter = 32;
 //     void DrawControls(CGameCtnEditorFree@ editor) override {
 //         RepeatMethod::DrawControls(editor);
 
-//         UpdateMatricies();
+//         UpdateMatrices();
 
 //         spiral_NbIter = Math::Clamp(UI::InputInt("Nb. Items", spiral_NbIter, 1), 1, 5000);
 
@@ -494,8 +494,8 @@ class GridRepeat : RepeatMethod {
     mat4 base = mat4::Identity();
     bool setGridFromItem = false;
 
-    void UpdateMatricies() override {
-        RepeatMethod::UpdateMatricies();
+    void UpdateMatrices() override {
+        RepeatMethod::UpdateMatrices();
         gridRotM = EulerToMat(grid_Rot);
         gridRotMInv = mat4::Inverse(gridRotM);
 
@@ -548,12 +548,30 @@ class GridRepeat : RepeatMethod {
         grid_ItemsZ = Math::Clamp(UI::InputInt("Items (Z)", grid_ItemsZ, 1), 1, 5000);
         UI::EndDisabled();
 
-        UpdateMatricies();
-        DrawHelpers(false);
-        int nbCreating = matricies.Length - 1;
+        auto totalPoints = (grid_RepeatX ? grid_ItemsX : 1)
+                                * (grid_RepeatY ? grid_ItemsY : 1)
+                                * (grid_RepeatZ ? grid_ItemsZ : 1);
 
-        if (UI::Button(Text::Format("Create %d Items", nbCreating))) {
-            RunItemCreation(editor, lastPickedItem.AsItem());
+        UI::AlignTextToFramePadding();
+        UI::Text("Total Points: " + totalPoints + " (Maximum: 10,000)");
+
+        if (totalPoints > 10000) {
+            auto reduceFactor = totalPoints / 3333;
+            TempNvgText("Repeat Items Grid too BIG! (" + totalPoints + " points). Max 10,000.", 5000)
+                .WithCols(cOrange, cBlack, 5.0)
+                .WithFontSize(g_screen.y * 0.05)
+                .WithPosOffset(vec2(0, -g_screen.y * 0.25));
+            if (grid_RepeatX) grid_ItemsX = Math::Max(grid_ItemsX / reduceFactor, int(1));
+            if (grid_RepeatY) grid_ItemsY = Math::Max(grid_ItemsY / reduceFactor, int(1));
+            if (grid_RepeatZ) grid_ItemsZ = Math::Max(grid_ItemsZ / reduceFactor, int(1));
+        } else {
+            UpdateMatrices();
+            DrawHelpers(false);
+            int nbCreating = matricies.Length - 1;
+
+            if (UI::Button(Text::Format("Create %d Items", nbCreating))) {
+                RunItemCreation(editor, lastPickedItem.AsItem());
+            }
         }
     }
 
