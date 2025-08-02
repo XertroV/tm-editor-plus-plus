@@ -305,9 +305,10 @@ bool _EditNewMapFromBaseMap3(CMwStack &in stack) {
     // return true;
 }
 
-
+// Note: this fires on any LayerCustomEvent, not just CGameEditorPluginMap ones
 bool _CGameEditorPluginMap_LayerCustomEvent(CMwStack &in stack, CMwNod@ nod) {
     string type = stack.CurrentWString(1);
+    // print("Intercepted LayerCustomEvent: " + type);
     if (!type.StartsWith("E++")) return true;
     auto data = stack.CurrentBufferWString(0);
     OnEppLayerCustomEvent(type.SubStr(4), data);
