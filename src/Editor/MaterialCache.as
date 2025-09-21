@@ -5,13 +5,16 @@ class FidCache {
         files.RemoveRange(0, files.Length);
     }
 
+    // for fileExt, do not add `.Gbx` at the end (added automatically for case stuff)
     protected void CacheFolder(CSystemFidsFolder@ folder, const string &in fileExt, const string &in origPath = "") {
         if (folder is null && origPath.Length > 0) {
             warn("Failed to get material folder: " + origPath);
             return;
         }
+        wstring fname;
         for (uint i = 0; i < folder.Leaves.Length; i++) {
-            if (folder.Leaves[i].FileName.EndsWith(fileExt)) {
+            fname = folder.Leaves[i].FileName;
+            if (fname.EndsWith(fileExt + ".Gbx") || fname.EndsWith(fileExt + ".gbx")) {
                 CacheFile(folder.Leaves[i]);
             }
         }
@@ -49,11 +52,12 @@ class MaterialCache : FidCache {
     }
 
     void UpdateTrees() {
-        for (uint i = 0; i < materialPaths.Length; i++) {
-            auto folder = Fids::GetGameFolder(materialPaths[i]);
-            if (folder !is null) Fids::UpdateTree(folder);
-            else warn("Could not find materials folder: " + materialPaths[i]);
-        }
+        Fids::UpdateTree(Fids::GetGameFolder(""));
+        // for (uint i = 0; i < materialPaths.Length; i++) {
+        //     auto folder = Fids::GetGameFolder(materialPaths[i]);
+        //     if (folder !is null) Fids::UpdateTree(folder);
+        //     else warn("Could not find materials folder: " + materialPaths[i]);
+        // }
     }
 
     void RefreshCacheBg() {
@@ -63,7 +67,7 @@ class MaterialCache : FidCache {
     void RefreshCache() {
         this.ResetCache();
         for (uint i = 0; i < materialPaths.Length; i++) {
-            CacheFolder(Fids::GetGameFolder(materialPaths[i]), ".Material.Gbx", materialPaths[i]);
+            CacheFolder(Fids::GetGameFolder(materialPaths[i]), ".Material", materialPaths[i]);
             yield();
         }
     }
@@ -75,15 +79,15 @@ class MaterialCache : FidCache {
         auto fake = Fids::GetFakeFolder("");
         auto resource = Fids::GetResourceFolder("");
         auto pgData = Fids::GetProgramDataFolder("");
-        if (game !is null) CacheFolder(game, ".Material.Gbx");
+        if (game !is null) CacheFolder(game, ".Material");
         yield();
-        if (user !is null) CacheFolder(user, ".Material.Gbx");
+        if (user !is null) CacheFolder(user, ".Material");
         yield();
-        if (fake !is null) CacheFolder(fake, ".Material.Gbx");
+        if (fake !is null) CacheFolder(fake, ".Material");
         yield();
-        if (resource !is null) CacheFolder(resource, ".Material.Gbx");
+        if (resource !is null) CacheFolder(resource, ".Material");
         yield();
-        if (pgData !is null) CacheFolder(pgData, ".Material.Gbx");
+        if (pgData !is null) CacheFolder(pgData, ".Material");
         yield();
     }
 

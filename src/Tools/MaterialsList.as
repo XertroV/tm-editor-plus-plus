@@ -44,20 +44,33 @@ class MaterialsListTab : Tab {
 
         if (changed) startnew(CoroutineFunc(UpdateFiltered));
 
+        auto @files = filter.Length > 0 ? filtered : g_MaterialCache.files;
+
+        if (UI::Button("Copy all listed to clipboard")) {
+            string[] names;
+            for (uint i = 0; i < files.Length; i++) {
+                names.InsertLast(FID_GetListName(files[i], false));
+            }
+            IO::SetClipboard(string::Join(names, "\n"));
+            Notify("Copied " + names.Length + " material paths to clipboard.");
+        }
+
         UI::Indent();
 
-        auto @files = filter.Length > 0 ? filtered : g_MaterialCache.files;
         UI::ListClipper clip(files.Length);
         while (clip.Step()) {
             for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
-                auto item = files[i];
-                auto parts = string(item.ParentFolder.FullDirName).Split("GameData\\");
-                auto folder = parts[parts.Length - 1];
-                CopiableValue(folder + item.ShortFileName);
+                CopiableValue(FID_GetListName(files[i]));
             }
         }
 
         UI::Unindent();
+    }
+
+    string FID_GetListName(CSystemFidFile@ file, bool shortFileName = true) {
+        auto parts = string(file.ParentFolder.FullDirName).Split("GameData\\");
+        auto folder = parts[parts.Length - 1];
+        return folder + (shortFileName ? file.ShortFileName : file.FileName);
     }
 
     uint updateNonce = 0;
