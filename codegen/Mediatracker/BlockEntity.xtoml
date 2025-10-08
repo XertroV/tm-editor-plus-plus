@@ -11,6 +11,7 @@ NativeClass = CGameCtnMediaBlockEntity
 EntRecordData = CPlugEntRecordData, 0x58, G
 StartOffset = float, 0x60, GS
 GhostName = string, 0x68, G
+RaceTime = uint, 0x7C, GS
 ForceHue = bool, 0x88, GS
 Skin = CSystemPackDesc, 0xB8, G
 Horn = CSystemPackDesc, 0xC0, G

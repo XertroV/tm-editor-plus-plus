@@ -42,6 +42,8 @@ class DGameCtnMediaBlockEntity : RawBufferElem {
 	float get_StartOffset() { return (this.GetFloat(0x60)); }
 	void set_StartOffset(float value) { this.SetFloat(0x60, value); }
 	string get_GhostName() { return (this.GetString(0x68)); }
+	uint get_RaceTime() { return (this.GetUint32(0x7C)); }
+	void set_RaceTime(uint value) { this.SetUint32(0x7C, value); }
 	bool get_ForceHue() { return (this.GetBool(0x88)); }
 	void set_ForceHue(bool value) { this.SetBool(0x88, value); }
 	CSystemPackDesc@ get_Skin() { return cast<CSystemPackDesc>(this.GetNod(0xB8)); }
