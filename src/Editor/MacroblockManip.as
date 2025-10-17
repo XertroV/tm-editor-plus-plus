@@ -477,10 +477,6 @@ namespace Editor {
 
         void SetFrom(CGameCtnBlock@ block) override {
             ObjPtr = Dev_GetPointerForNod(block);
-            name = block.BlockInfo.IdName;
-            // collection = blah
-            // author = GetMwIdName(block.BlockInfo.Author);
-            author = block.BlockInfo.Author.GetName();
             coord = block.Coord;
             // correct for mb offset at min location 0,1,0
             if (coord.y > 0) {
@@ -507,7 +503,17 @@ namespace Editor {
             if (block.WaypointSpecialProperty !is null) {
                 @waypoint = WaypointSpec(block.WaypointSpecialProperty);
             }
-            SetBlockInfo(block.BlockInfo);
+            // Works:
+            auto bi0 = block.BlockInfo;
+            auto bi1 = cast<CGameCtnCollector>(bi0);
+            auto bi2 = cast<CGameCtnBlockInfo>(bi1);
+            SetBlockInfo(bi2);
+            // Crashes:
+            // SetBlockInfo(cast<CGameCtnBlockInfo>(cast<CGameCtnCollector>(block.BlockInfo)));
+            // Crashes:
+            // SetBlockInfo(cast<CGameCtnBlockInfo>(cast<CMwNod>(block.BlockInfo)));
+            // original:
+            // SetBlockInfo(block.BlockInfo);
         }
 
         void SetSkinsFrom(CGameCtnBlock@ block) {

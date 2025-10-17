@@ -86,15 +86,21 @@ namespace Editor {
         CGameCtnAnchoredObject@ item;
         for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
             @b = pmt.ClassicBlocks[i];
+            if (cast<CGameCtnBlockInfo>(b.BlockInfo) is null) {
+                continue;
+            }
             blocks.InsertLast(b);
-            if (b.Skin !is null) {
+            if (b.Skin !is null && (HasSkinPath(b.Skin.ForegroundPackDesc) || HasSkinPath(b.Skin.PackDesc))) {
                 skins.InsertLast(SetSkinSpecPriv(BlockSpecPriv(b), GetSkinPath(b.Skin.ForegroundPackDesc), GetSkinPath(b.Skin.PackDesc)));
             }
         }
         for (uint i = 0; i < pmt.GhostBlocks.Length; i++) {
             @b = pmt.GhostBlocks[i];
+            if (cast<CGameCtnBlockInfo>(b.BlockInfo) is null) {
+                continue;
+            }
             blocks.InsertLast(b);
-            if (b.Skin !is null) {
+            if (b.Skin !is null && (HasSkinPath(b.Skin.ForegroundPackDesc) || HasSkinPath(b.Skin.PackDesc))) {
                 skins.InsertLast(SetSkinSpecPriv(BlockSpecPriv(b), GetSkinPath(b.Skin.ForegroundPackDesc), GetSkinPath(b.Skin.PackDesc)));
             }
         }
@@ -103,10 +109,10 @@ namespace Editor {
             items.InsertLast(item);
             auto fgSkin = Editor::GetItemFGSkin(item);
             auto bgSkin = Editor::GetItemBGSkin(item);
-            if (bgSkin !is null) {
+            if (bgSkin !is null && HasSkinPath(bgSkin)) {
                 skins.InsertLast(SetSkinSpecPriv(ItemSpecPriv(item), GetSkinPath(bgSkin), false));
             }
-            if (fgSkin !is null) {
+            if (fgSkin !is null && HasSkinPath(fgSkin)) {
                 skins.InsertLast(SetSkinSpecPriv(ItemSpecPriv(item), GetSkinPath(fgSkin), true));
             }
         }
@@ -596,7 +602,13 @@ namespace Editor {
 
 
 
-
+bool HasSkinPath(CSystemPackDesc@ pack) {
+    return pack !is null
+        && (
+            pack.FileName.StartsWith("<virtual>")
+            || pack.Url.Length > 0
+        );
+}
 
 string GetSkinPath(CSystemPackDesc@ pack) {
     if (pack is null) {
