@@ -885,11 +885,13 @@ namespace CustomCursorRotations {
     // idea is to use this to overwrite cursor stuff right after it's been set
     // hooks before and on call to CGameCursorBlock::UpdateCursor (0x228)
     MultiHookHelper@ BeforeAfterCursorUpdateHook = MultiHookHelper(
+     // 2025
      // after only: "FF 90 28 02 00 00 83 7D F4 00 74 23 48 8B 4F 68 BA 41 00 00 00 4C 8B 01 41 FF 90 08 01 00 00 85 C0",
-     // "48 8D 55 00 48 8B CF FF 90 28 02 00 00 83 7D F4 00 74 23 48 8B 4F 68 BA 41 00 00 00 4C 8B 01 41 FF 90 08 01 00 00 85 C0",
-     // "48 8D 55 E0 48 8B CF FF 90 28 02 00 00 83 7D D4 00 74 23"
-        "48 8D 55 ?? 48 8B CF FF 90 ?? 02 00 00 83 7D ?? 00 74 23", // 48 8B 4F ?? BA ?? 00 00 00 4C 8B 01 41 FF 90 ?? ?? 00 00 85 C0",
-        {0, 7}, {2, 1}, {"CustomCursorRotations::BeforeCursorUpdate", "CustomCursorRotations::AfterCursorUpdate"}
+     // "48 8B 07 48 8D 55 00 48 8B CF FF 90 28 02 00 00 83 7D F4 00 74 23 48 8B 4F 68 BA 41 00 00 00 4C 8B 01 41 FF 90 08 01 00 00 85 C0",
+     // "48 8B 07 48 8D 55 E0 48 8B CF FF 90 28 02 00 00 83 7D D4 00 74 23"
+     // "48 8B 07 48 8D 55 F0 48 8B CF FF 90 28 02 00 00" // 2026
+        "48 8B 07 48 8D 55 ?? 48 8B CF FF 90 28 02 00 00",
+        {3, 10}, {5, 1}, {"CustomCursorRotations::BeforeCursorUpdate", "CustomCursorRotations::AfterCursorUpdate"}
     );
 
     // this gives access to the stack values that update the cursor rotations

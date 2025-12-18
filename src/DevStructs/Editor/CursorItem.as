@@ -36,11 +36,12 @@ class DGameCursorItem : RawBufferElem {
 	bool get_isAutoRotate() { return (this.GetBool(0x98)); }
 	CGameResources@ get_resource() { return cast<CGameResources>(this.GetNod(0xA0)); }
 	// updated 2026
-	CGameItemModel@ get_itemModel() { return cast<CGameItemModel>(this.GetNod(0xB0)); }
-	CSceneMobil@ get_helperMobil() { return cast<CSceneMobil>(this.GetNod(0xB8)); }
-	vec4 get_Zeros1() { return (this.GetVec4(0xD0)); }
-	ISceneVis@ get_GameScene() { return cast<ISceneVis>(this.GetNod(0xE0)); }
-	DGameCursorItem_ItemDescs@ get_displayedItems() { return DGameCursorItem_ItemDescs(this.GetBuffer(0xC0, 0xA0, false)); }
+	CGameItemModel@ get_itemModel() { return cast<CGameItemModel>(this.GetNod(O_ITEMCURSOR_Helper - 0x8)); }
+	// 0xB8 2026 update, was 0xB0; O_ITEMCURSOR_Helper
+	CSceneMobil@ get_helperMobil() { return cast<CSceneMobil>(this.GetNod(O_ITEMCURSOR_Helper)); }
+	vec4 get_Zeros1() { return (this.GetVec4(O_ITEMCURSOR_Helper + (0xD0 - 0xB8))); }
+	ISceneVis@ get_GameScene() { return cast<ISceneVis>(this.GetNod(O_ITEMCURSOR_Helper + (0xE0 - 0xB8))); }
+	DGameCursorItem_ItemDescs@ get_displayedItems() { return DGameCursorItem_ItemDescs(this.GetBuffer(O_ITEMCURSOR_Helper + 0x8, 0xA0, false)); }
 }
 
 class DGameCursorItem_ItemDescs : RawBuffer {
