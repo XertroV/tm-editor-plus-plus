@@ -19,6 +19,7 @@ void Main() {
         NotifyWarning("This plugin requires the advanced map editor");
         return;
     }
+    SetGameVerFlags();
     CheckAndSetGameVersionSafe();
     while (!GameVersionSafe) yield();
 

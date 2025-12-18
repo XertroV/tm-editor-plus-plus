@@ -2,12 +2,23 @@ bool GameVersionSafe = false;
 const string[] KnownSafeVersions = {
     "2024-07-02_14_35", "2024-08-08_14_58", "2024-09-17_11_17", "2024-10-04_11_08",
     "2024-11-25_17_31", "2024-12-04_12_20", "2024-12-12_15_15", "2025-06-02_09_06",
-    "2025-07-04_14_15",
+    "2025-07-04_14_15", "2025-12-17_20_05",
     "---end---"
 };
 const string configUrl = "https://openplanet.dev/plugin/editor/config/version-compat";
 [Setting hidden]
 string S_Compat_SavedGameVersion = "";
+
+bool FLAG_GameVer2025 = true;
+void SetGameVerFlags() {
+    auto app = GetApp();
+    auto ver = app.SystemPlatform.ExeVersion;
+    if (ver.StartsWith("2025-0")) {
+        FLAG_GameVer2025 = true;
+        return;
+    }
+    FLAG_GameVer2025 = false;
+}
 
 /**
  * New version checklist:

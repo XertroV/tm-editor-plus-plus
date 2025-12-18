@@ -21,6 +21,10 @@ namespace Editor {
         return mgr.ptr;
     }
 
+    uint16 Get_NGameItem_SMgr_Buffer_ElementSize() {
+        return FLAG_GameVer2025 ? 0x130 : 0x138;
+    }
+
     RawBuffer@ Get_NGameItem_SMgr_Buffer() {
         auto app = GetApp();
         auto scene = app.GameScene;
@@ -29,29 +33,41 @@ namespace Editor {
         // if (!Editor::IsInAnyItemPlacementMode(editor)) return null;
         auto gameItemSMgrPtr = GetNGameItem_SMgr_Ptr(scene);
         if (gameItemSMgrPtr == 0) return null;
-        return RawBuffer(gameItemSMgrPtr + 0x38, 0x130, false);
+        return RawBuffer(gameItemSMgrPtr + 0x38, Get_NGameItem_SMgr_Buffer_ElementSize(), false);
+    }
+
+    uint16 Get_NGameItem_SMgr_Buffer_El_InstanceDetailsOffset() {
+        return FLAG_GameVer2025 ? 0x98 : 0xA0;
+    }
+    uint16 Get_NGameItem_SMgr_Buffer_El_HasModelOffset() {
+        return FLAG_GameVer2025 ? 0xF8 : 0x100;
     }
 
     AABB@ GetSelectedItemAABB() {
         auto buf = Get_NGameItem_SMgr_Buffer();
         auto len = buf.Length;
+        // 0x70 - CGameCtnAnchoredObject
+        // 0x98 - class ID of NGamePrefabPhy_SInst? (when in map)
+        // 0x9C - 0xFFFFFFFF for item in cursor; counter/ix otherwise
+        // 0xA0 - 0 for item in cursor; counter/ix otherwise
+        // 2026: +0x8
+        uint16 offset = Get_NGameItem_SMgr_Buffer_El_InstanceDetailsOffset();
         // the cursor item is usually the last in the buffer, but not if you've placed an item of that type recently
         while(len > 0) {
             auto item = buf[len - 1];
-            // 0x98 - class ID of NGamePrefabPhy_SInst?
-            // 0x9C - 0xFFFFFFFF for item in cursor; counter/ix otherwise
-            // 0xA0 - 0 for item in cursor; counter/ix otherwise
-            if (item.GetUint32(0x98) == 0 &&
-                item.GetInt32(0x9C) == -1 &&
-                item.GetInt32(0xA0) == 0) break;
+            if (item.GetUint32(offset) == 0 &&
+                item.GetInt32(offset + 0x4) == -1 &&
+                item.GetInt32(offset + 0x8) == 0) break;
             len--;
         }
         if (len == 0) return null;
         auto last = buf[len - 1];
-        auto hasModel = last.GetBool(0xF8);
+        // 2025: 0xf8, 2026: 0x100
+        offset = Get_NGameItem_SMgr_Buffer_El_HasModelOffset();
+        auto hasModel = last.GetBool(offset);
         if (!hasModel) return null;
-        auto midPoint = last.GetVec3(0xFC);
-        auto halfDiag = last.GetVec3(0x108);
+        auto midPoint = last.GetVec3(offset + 0x4);
+        auto halfDiag = last.GetVec3(offset + 0x14);
         return AABB(last.GetIso4(0x8), midPoint, halfDiag);
     }
 
@@ -60,13 +76,14 @@ namespace Editor {
         auto modelPtr = Dev_GetPointerForNod(model);
         auto buf = Get_NGameItem_SMgr_Buffer();
         RawBufferElem@ el;
+        uint16 offset = Get_NGameItem_SMgr_Buffer_El_HasModelOffset();
         for (int ix = buf.Length - 1; ix >= 0; ix--) {
             @el = buf.GetElement(ix, el);
             if (el.GetUint64(0) == modelPtr) {
-                auto hasModel = el.GetBool(0xF8);
+                auto hasModel = el.GetBool(offset);
                 if (!hasModel) continue;
-                auto midPoint = el.GetVec3(0xFC);
-                auto halfDiag = el.GetVec3(0x108);
+                auto midPoint = el.GetVec3(offset + 0x4);
+                auto halfDiag = el.GetVec3(offset + 0x14);
                 return AABB(el.GetIso4(0x8), midPoint, halfDiag);
             }
         }
