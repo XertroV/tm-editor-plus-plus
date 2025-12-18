@@ -6,7 +6,7 @@ const uint16 O_GAMESSCENE_TIME = GetOffset("ISceneVis", "ScenePhy") - 0xC; // of
 class ViewKinematicsTab : Tab {
     // how likely would you be to refer friends and family to watch @sophie_ice_tm? ————————————————————————————————————————————————————————————————————— interviewen
     // see PauseMovingItemsInEditor.txt
-    MemPatcher kinematicsControlPatch("89 91 04 0D 00 00 8B 05 ?? ?? ?? ?? 48 89 7C 24 28 4C 89 7C 24 20 85 C0 74 2D 8B FD 8B F0", {0}, {"90 90 90 90 90 90"});
+    MemPatcher kinematicsControlPatch("KinematicsControl", "89 91 04 0D 00 00 8B 05 ?? ?? ?? ?? 48 89 7C 24 28 4C 89 7C 24 20 85 C0 74 2D 8B FD 8B F0", {0}, {"90 90 90 90 90 90"});
 
     ViewKinematicsTab(TabGroup@ p) {
         super(p, "Kinematic Items", Icons::PauseCircle);

@@ -58,7 +58,7 @@
 
 */
 
-MemPatcher@ Editor_DeleteUnderCursor = MemPatcher(
+MemPatcher@ Editor_DeleteUnderCursor = MemPatcher("Editor_DeleteUnderCursor",
     "44 39 7F 18 75 ?? 44 39 BB ?? ?? 00 00 74 3E 8B 47 ?? 39",
     {4}, {"EB"}, {"75"}
 );

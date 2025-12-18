@@ -21,8 +21,9 @@ namespace VisSpriteDots {
     const uint16 O_HMSZONE_SpritesBuf2 = GetOffset("CHmsZone", "VisionCst") + 0x18;
 
     void WatchForSpriteNod() {
-        print("\\$0f0\\$iWatchForSpriteNod");
+        print("\\$0f0\\$iWatchForSpriteNod (about to yield 2)");
         yield(2);
+        print("\\$0f0\\$iWatchForSpriteNod");
         auto app = GetApp();
         auto editor = cast<CGameCtnEditorFree>(app.Editor);
         while ((@editor = cast<CGameCtnEditorFree>(app.Editor)) !is null) {

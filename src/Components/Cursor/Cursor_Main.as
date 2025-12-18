@@ -552,7 +552,7 @@ class CustomCursorTab : EffectTab {
 
     bool get__IsActive() override property {
         return CustomCursorRotations::Active
-            || CustomCursorRotations::ItemSnappingEnabled
+            || !CustomCursorRotations::ItemSnappingEnabled // default on
             || CustomCursorRotations::CustomYawActive
             || CustomCursorRotations::IsPromiscuousItemSnappingEnabled
             || S_EnableInfinitePrecisionFreeBlocks
@@ -891,7 +891,7 @@ namespace CustomCursorRotations {
      // "48 8B 07 48 8D 55 E0 48 8B CF FF 90 28 02 00 00 83 7D D4 00 74 23"
      // "48 8B 07 48 8D 55 F0 48 8B CF FF 90 28 02 00 00" // 2026
         "48 8B 07 48 8D 55 ?? 48 8B CF FF 90 28 02 00 00",
-        {3, 10}, {5, 1}, {"CustomCursorRotations::BeforeCursorUpdate", "CustomCursorRotations::AfterCursorUpdate"}
+        {0, 10}, {5, 1}, {"CustomCursorRotations::BeforeCursorUpdate", "CustomCursorRotations::AfterCursorUpdate"}
     );
 
     // this gives access to the stack values that update the cursor rotations
@@ -901,7 +901,7 @@ namespace CustomCursorRotations {
     );
 
     // patches to always JMP like there was nothing to snap to
-    MemPatcher@ DisableItemSnapping = MemPatcher(
+    MemPatcher@ DisableItemSnapping = MemPatcher("DisableItemSnapping",
         "0F 84 ?? ?? 00 00 48 8B 96 78 04 00 00 4C 8D 85 ?? ?? 00 00 48 8B 85 ?? ?? 00 00",
         {0}, {"90 E9"}, /* expected */ {"0F 84"}
         // turn JE into NOP, JMP
@@ -911,7 +911,7 @@ namespace CustomCursorRotations {
     // Items are less picky about the blocks they snap to. Needs to be enabled before blocks are placed, or before they are loaded (i.e., before the map is loaded in the editor)
     // 48 8B 80 30 02 00 00 -- load 0x230 from CGameCtnBlockInfo into rax (MatModifierPlacementTag)
     // patch to xor rax,rax; dec rax; nop
-    MemPatcher@ PromiscuousItemToBlockSnapping = MemPatcher(
+    MemPatcher@ PromiscuousItemToBlockSnapping = MemPatcher("PromiscuousItemToBlockSnapping",
         // "48 8b 80 ?? ?? 00 00 0f 28 85 ?? ?? 00 00 48 8d 14 ba f2 0f 11 8d ?? ?? 00 00 0f 28 8d ?? ?? 00 00",
         "48 8b 80 ?? 02 00 00 0f 28 85 ?? ?? 00 00 48 8d 14 ba",
         {0}, {"48 31 C0 48 FF C8 90"} /* expected , {"48 8B 80 38 02 00 00"} */
@@ -1233,13 +1233,13 @@ namespace CustomCursorRotations {
 }
 
 namespace CustomCursor {
-    MemPatcher@ Patch_AllowFreeWaterBlocks = MemPatcher(
+    MemPatcher@ Patch_AllowFreeWaterBlocks = MemPatcher("AllowFreeWaterBlocks",
       // v cmp water len   v jbe             v mov
         "39 87 ?? ?? 00 00 0F 86 ?? ?? 00 00 48 8B 4C 24 30",
         {6}, {"90 E9"},  {"0F 86"} // patch jbe -> jmp
     );
 
-    MemPatcher@ Patch_AllowFreeWaterMacroBlocks = MemPatcher(
+    MemPatcher@ Patch_AllowFreeWaterMacroBlocks = MemPatcher("AllowFreeWaterMacroBlocks",
         // v cmp           v jbe             v start of movss
         "39 83 ?? ?? 00 00 0F 86 ?? 00 00 00 F3",
         {6}, {"90 E9"},  {"0F 86"} // patch jbe -> jmp
@@ -1256,7 +1256,7 @@ namespace CustomCursor {
         }
     }
 
-    MemPatcher@ Patch_DoNotOffsetBlockInCursorPreview = MemPatcher(
+    MemPatcher@ Patch_DoNotOffsetBlockInCursorPreview = MemPatcher("DoNotOffsetBlockInCursorPreview",
         // mov eax,[rdx+108]; movss xmm0,[rdx+f8] -- only 1 instance in TM
         "8B 82 ?? ?? 00 00 F3 0F 10 82 ?? ?? 00 00",
         {6}, {"0F 57 C0 90 90 90 90 90"}
@@ -1283,7 +1283,7 @@ Trackmania.exe.text+115622E - C3                    - ret
 Trackmania.exe.text+115622F - CC                    - int 3
     */
 
-    MemPatcher@ Patch_DoNotSetCursorVisibleFlag = MemPatcher(
+    MemPatcher@ Patch_DoNotSetCursorVisibleFlag = MemPatcher("DoNotSetCursorVisibleFlag",
         // [rdx] to xmm0 to [rcx+1f8], then next 16 bytes
         // v      v                    v           v
         "0F 10 02 0F 11 81 ?? ?? 00 00 0F 10 4A 10 0F 11 89 ?? ?? 00 00 8B 42 20",
@@ -1300,7 +1300,7 @@ Trackmania.exe.text+115622F - CC                    - int 3
     }
 
     // warning: if used when changing out of test mode, the vehicle will stick around and leaving the editor will crash the game.
-    MemPatcher@ Patch_DoNotHideCursorItemModels = MemPatcher(
+    MemPatcher@ Patch_DoNotHideCursorItemModels = MemPatcher("DoNotHideCursorItemModels",
         //                                   v call function that hides cursor item models
         "90 83 3B FF 74 0B 48 8B D3 48 8B CE E8",
         {12}, {"90 90 90 90 90"}
@@ -1341,7 +1341,7 @@ Trackmania.exe.text+115D16D - E8 DED9D5FF           - call Trackmania.exe.text+E
     // 2025: 74 1B F3 0F 10 5B 28 48 8D 55 F7 4C 8B C0 C7 44 24 20 01 00 00 00 E8 ?? ?? ?? ??
     // 2026: 74 2B 48 8B 8B A8000000 48 8D 55 F7 F3 0F 10 5B 28
     string[] Patterns_DoNotShowCursorItemModels = {"74 1B F3 0F 10 5B 28 48 8D 55 F7 4C", "74 2B 48 8B 8B A8 00 00 00 48 8D 55 F7"};
-    MemPatcher@ Patch_DoNotShowCursorItemModels = MemPatcher(
+    MemPatcher@ Patch_DoNotShowCursorItemModels = MemPatcher("DoNotShowCursorItemModels",
         Patterns_DoNotShowCursorItemModels,
         {0}, {"EB"}, {"74"}
     );

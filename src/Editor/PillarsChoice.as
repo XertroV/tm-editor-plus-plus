@@ -70,7 +70,7 @@ namespace PillarsChoice {
     // (2024-06-01)                                    v read map + 0x2E0                     v add rcx, 38
     const string ALWAYS_READ_OLD_PILLARS_2024_06_01 = "83 8F ?? ?? 00 00 04 8B 87 ?? ?? 00 00 48 8B 8F ?? ?? 00 00 C1 E8 02 48 83 C1 38 F7 D0 83 E0 01 89 05 ?? ?? ?? ?? 8B";
 
-    MemPatcher@ AlwaysReadOldPillars = MemPatcher(
+    MemPatcher@ AlwaysReadOldPillars = MemPatcher("AlwaysReadOldPillars",
         { ALWAYS_READ_OLD_PILLARS_2024_09_19
         , ALWAYS_READ_OLD_PILLARS_2024_06_01
         },
@@ -79,7 +79,7 @@ namespace PillarsChoice {
         { "90 90 90 90 90 90 90 B8 01 00 00 00 90"}, {"83 8F F8 02 00 00 04 8B 87 F8 02 00 00"}
     );
 
-    MemPatcher@ SkipUpdateAllPillarBlockSkinRemapFolders = MemPatcher(
+    MemPatcher@ SkipUpdateAllPillarBlockSkinRemapFolders = MemPatcher("SkipUpdateAllPillarBlockSkinRemapFolders",
         // v call UpdateAllPillarBlockSkinRemapFolders
         // v                     v Editor_CamMode+0x8  v then +0xA0
         "E8 ?? ?? ?? ?? 48 8B BB ?? ?? 00 00 48 8D 8F ?? 00 00 00",

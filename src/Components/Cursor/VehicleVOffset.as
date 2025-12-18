@@ -6,7 +6,7 @@ namespace VehicleVOffset {
     // The pattern moves in a value from static memory (0.5) that is added to height.
     //                      v movss xmm8,?             v ecx,3
     const string Pattern = "F3 44 0F 10 05 ?? ?? ?? ?? B9 03 00 00 00";
-    MemPatcher patcher(Pattern, {0x0}, {"90 90 90 90 90 90 90 90 90"});
+    MemPatcher patcher("NopSetVehicleVOffset", Pattern, {0x0}, {"90 90 90 90 90 90 90 90 90"});
 
     bool DisabledAddingOffset {
         get { return patcher.IsApplied; }

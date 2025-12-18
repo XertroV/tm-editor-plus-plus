@@ -19,6 +19,7 @@ class DevMainTab : Tab {
         ForestMgrTab(Children);
         ItemMgrTab(Children);
         ItemPlacementMgrTab(Children);
+        DevHooksAndPatchesTab(Children);
     }
 
     void DrawInner() override {
@@ -32,6 +33,17 @@ class DevMainTab : Tab {
         if (!drawStuff) return;
         Children.DrawTabs();
         return;
+    }
+}
+
+class DevHooksAndPatchesTab : Tab {
+    DevHooksAndPatchesTab(TabGroup@ p) {
+        super(p, "Hooks & Patches", Icons::Cogs);
+    }
+
+    void DrawInner() override {
+        Dev_DrawHookIndex();
+        Dev_DrawPatcherIndex();
     }
 }
 

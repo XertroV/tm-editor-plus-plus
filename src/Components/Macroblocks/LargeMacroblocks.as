@@ -4,12 +4,11 @@ bool S_LargeMacroblocksApplied = false;
 namespace LargeMacroblocks {
     const string Pattern_MaxBlocksInMacroblock = "48 83 EC 28 E8 ?? ?? ?? ?? 33 C9 3D 5E 01 00 00";
     // 0x15E = 350 -> 0x2015e = 131422
-    MemPatcher@ Patcher_MaxBlocksInMacroblock = MemPatcher(Pattern_MaxBlocksInMacroblock, {14}, {"02"}, {"00"});
+    MemPatcher@ Patcher_MaxBlocksInMacroblock = MemPatcher("MaxBlocksInMacroblock", Pattern_MaxBlocksInMacroblock, {14}, {"02"}, {"00"});
 
     const string Pattern_MaxItemsInMacroblock = "0F 85 ?? ?? 00 00 41 81 ?? 58 02 00 00 0F 87 ?? ?? 00 00";
     // 0x258 = 600 -> 0x20258 = 131672
-    MemPatcher@ Patcher_MaxItemsInMacroblock = MemPatcher(Pattern_MaxItemsInMacroblock, {11}, {"02"}, {"00"});
-
+    MemPatcher@ Patcher_MaxItemsInMacroblock = MemPatcher("MaxItemsInMacroblock", Pattern_MaxItemsInMacroblock, {11}, {"02"}, {"00"});
     bool IsApplied {
         get {
             return Patcher_MaxBlocksInMacroblock.IsApplied && Patcher_MaxItemsInMacroblock.IsApplied;

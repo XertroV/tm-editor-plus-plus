@@ -111,15 +111,15 @@ const string PATTERN_MB_SHOW_GHOSTFREE_INIT_COND = "0F 85 ?? ?? 00 00 48 89 74 2
 // Result: we don't NOP, but it's a useful hook to trigger fixing bad block unit coords (.x < -1 || .z < -1)
 const string PATTERN_MB_BEFORE_ADD_COORDS = "44 8b 4c 24 38 44 03 ?? 0c 44 03 ?? 10 44 03 ?? 14";
 
-MemPatcher@ mbShowGhostFree_PatchCond = MemPatcher(
+MemPatcher@ mbShowGhostFree_PatchCond = MemPatcher("MbShowGhostFree_PatchCond",
     PATTERN_MB_SHOW_GHOSTFREE_COND,
     {0}, {"90 90 90 90 90 90"}
 );
-MemPatcher@ mbShowGhostFree_PatchCond2 = MemPatcher(
+MemPatcher@ mbShowGhostFree_PatchCond2 = MemPatcher("MbShowGhostFree_PatchCond2",
     PATTERN_MB_SHOW_GHOSTFREE_COND2,
     {4, 12}, {"00", "00"}, {"01", "01"}
 );
-MemPatcher@ mbShowGhostFree_PatchInitCond = MemPatcher(
+MemPatcher@ mbShowGhostFree_PatchInitCond = MemPatcher("MbShowGhostFree_PatchInitCond",
     PATTERN_MB_SHOW_GHOSTFREE_INIT_COND,
     {0}, {"90 90 90 90 90 90"}
 );
@@ -128,7 +128,7 @@ HookHelper@ mbShowGhostFree_HookBeforeAddCoords = HookHelper(
     PATTERN_MB_BEFORE_ADD_COORDS,
     0, 0, "_MbShowGhostFree_HookBeforeAddCoords", Dev::PushRegisters::Basic, true
 );
-// MemPatcher mBShowGhostFree_NopAddCoords = MemPatcher(
+// MemPatcher mBShowGhostFree_NopAddCoords = MemPatcher("MbShowGhostFree_NopAddCoords",
 //     PATTERN_MB_BEFORE_ADD_COORDS,
 //     {5, 9, 13}, {"90 90 90 90", "90 90 90 90", "90 90 90 90"}
 // );

@@ -7,18 +7,20 @@ class MemPatcher {
     protected uint16[]@ offsets;
     protected bool applied;
     uint64 ptr;
+    string name;
 
-    MemPatcher(const string &in pattern, uint16[]@ offsets, string[]@ newBytes, string[]@ expected = {}) {
-        Setup({pattern}, offsets, newBytes, expected);
+    MemPatcher(const string &in name, const string &in pattern, uint16[]@ offsets, string[]@ newBytes, string[]@ expected = {}) {
+        Setup(name, {pattern}, offsets, newBytes, expected);
 
     }
 
     // multiple patterns are for incompatible game updates
-    MemPatcher(string[]@ patterns, uint16[]@ offsets, string[]@ newBytes, string[]@ expected = {}) {
-        Setup(patterns, offsets, newBytes, expected);
+    MemPatcher(const string &in name, string[]@ patterns, uint16[]@ offsets, string[]@ newBytes, string[]@ expected = {}) {
+        Setup(name, patterns, offsets, newBytes, expected);
     }
 
-    protected void Setup(string[]@ patterns, uint16[]@ offsets, string[]@ newBytes, string[]@ expected = {}) {
+    protected void Setup(const string &in name, string[]@ patterns, uint16[]@ offsets, string[]@ newBytes, string[]@ expected = {}) {
+        this.name = name;
         @this.patterns = patterns;
         patternDisplay = Json::Write(patterns.ToJson());
         @this.newBytes = newBytes;
@@ -30,10 +32,15 @@ class MemPatcher {
         if (ptr == 0) {
             NotifyError("MemPatcher: Pattern(s) not found: " + Json::Write(patterns.ToJson()));
         }
+        startnew(CoroutineFunc(this._RegisterWithIndex));
     }
 
     ~MemPatcher() {
         Unapply();
+    }
+
+    private void _RegisterWithIndex() {
+        Dev_AddToPatcherIndex(this);
     }
 
     protected void FindPatternSetPtr() {

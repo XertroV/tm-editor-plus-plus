@@ -276,6 +276,8 @@ namespace Event {
         TMP_DISABLE_ONBlockItem_CB = false;
     }
     void RunOnEditorLoadCbs() {
+        // _Log::Trace("DEBUG: SKIPPING Running OnEditorLoad callbacks");
+        // return;
         _Log::Trace("Running OnEditorLoad callbacks");
         for (uint i = 0; i < onEditorLoadCbs.Length; i++) {
             trace("Running OnEditorLoad callback: " + onEditorLoadCbNames[i]);

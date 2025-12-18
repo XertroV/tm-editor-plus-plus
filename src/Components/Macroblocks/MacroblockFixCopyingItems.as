@@ -22,5 +22,5 @@ F6 87 84 00 00 00 01 75 07 8B C6
 
 namespace FixCopyingItems {
     const string Pattern_FixCopyingItems = "41 F6 ?? 84 00 00 00 01 74";
-    MemPatcher@ Patch_FixCopyingItems = MemPatcher(Pattern_FixCopyingItems, {8}, {"90 90"}).AutoLoad();
+    MemPatcher@ Patch_FixCopyingItems = MemPatcher("FixCopyingItems", Pattern_FixCopyingItems, {8}, {"90 90"}).AutoLoad();
 }

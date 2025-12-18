@@ -7,7 +7,7 @@ const string Pattern_CpCanStandingResapwnCheck =
 
 // This patch lets us choose circle CPs in the editor for starting a test run from.
 // It also allows standing respawn at these CPs but only in test mode (not validation, not solo campaign, not online TA)
-MemPatcher@ Patch_CpCanStandingResapwnCheck = MemPatcher(
+MemPatcher@ Patch_CpCanStandingResapwnCheck = MemPatcher("CpCanStandingRespawnCheck",
     Pattern_CpCanStandingResapwnCheck,
     {0}, {"90 90"}
 );

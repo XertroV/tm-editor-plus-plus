@@ -1601,6 +1601,14 @@ class HookHelper {
 
     void _RegisterUnhookCall() {
         RegisterUnhookFunction(UnapplyHookFn(this.Unapply));
+        Dev_AddToHookIndex(this);
+    }
+
+    uint64 PatternPtr {
+        get { return patternPtr; }
+    }
+    int Offset {
+        get { return offset; }
     }
 
     void FindPatternPtr() {
@@ -1646,6 +1654,10 @@ class HookHelper {
 
     void Toggle() {
         SetApplied(!IsApplied());
+    }
+
+    string FunctionName {
+        get { return functionName; }
     }
 }
 
@@ -1717,3 +1729,75 @@ void CheckUnhookAllRegisteredHooks() {
         unapplyHookFns[i]();
     }
 }
+
+#if !DEV
+void Dev_AddToHookIndex(HookHelper@ hook) {}
+void Dev_AddToPatcherIndex(MemPatcher@ patcher) {}
+void Dev_DrawHookIndex() {}
+#else
+
+HookHelper@[] g_HookIndex;
+void Dev_AddToHookIndex(HookHelper@ hook) {
+    g_HookIndex.InsertLast(hook);
+}
+
+MemPatcher@[] g_PatcherIndex;
+void Dev_AddToPatcherIndex(MemPatcher@ patcher) {
+    g_PatcherIndex.InsertLast(patcher);
+}
+
+void Dev_DrawHookIndex() {
+    UI::SeparatorText("Hooks");
+    UI::BeginTable("hookTable", 3, UI::TableFlags::SizingStretchSame | UI::TableFlags::NoSavedSettings | UI::TableFlags::RowBg);
+    UI::TableSetupColumn("Function", UI::TableColumnFlags::WidthStretch);
+    UI::TableSetupColumn("Ptr", UI::TableColumnFlags::WidthFixed, 100);
+    UI::TableSetupColumn("Action", UI::TableColumnFlags::WidthFixed, 100);
+    UI::TableHeadersRow();
+    UI::ListClipper clip(g_HookIndex.Length);
+    while (clip.Step()) {
+        for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
+            auto item = g_HookIndex[i];
+            UI::PushID("" + i);
+            UI::TableNextRow();
+            UI::TableNextColumn();
+            UI::Text((item.IsApplied() ? "\\$8f8" : "\\$888") + item.FunctionName);
+            UI::TableNextColumn();
+            CopiableValue(Text::FormatPointer(item.PatternPtr + item.Offset));
+            UI::TableNextColumn();
+            if (UI::Button((item.IsApplied() ? "Unapply" : "Apply") + "##hook"+i)) {
+                item.Toggle();
+            }
+            UI::PopID();
+        }
+    }
+    UI::EndTable();
+}
+
+void Dev_DrawPatcherIndex() {
+    UI::SeparatorText("Patchers");
+    UI::BeginTable("patchTable", 3, UI::TableFlags::SizingStretchSame | UI::TableFlags::NoSavedSettings | UI::TableFlags::RowBg);
+    UI::TableSetupColumn("Name", UI::TableColumnFlags::WidthStretch);
+    UI::TableSetupColumn("Ptr", UI::TableColumnFlags::WidthFixed, 100);
+    UI::TableSetupColumn("Action", UI::TableColumnFlags::WidthFixed, 100);
+    UI::TableHeadersRow();
+    UI::ListClipper clip(g_PatcherIndex.Length);
+    while (clip.Step()) {
+        for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
+            auto item = g_PatcherIndex[i];
+            UI::PushID("" + i);
+            UI::TableNextRow();
+            UI::TableNextColumn();
+            UI::Text((item.IsApplied ? "\\$8f8" : "\\$888") + item.name);
+            UI::TableNextColumn();
+            CopiableValue(Text::FormatPointer(item.ptr));
+            UI::TableNextColumn();
+            if (UI::Button((item.IsApplied ? "Unapply" : "Apply") + "##patch"+i)) {
+                item.IsApplied = !item.IsApplied;
+            }
+            UI::PopID();
+        }
+    }
+    UI::EndTable();
+}
+
+#endif

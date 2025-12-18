@@ -1,7 +1,7 @@
 namespace Editor {
     namespace MapBakedBlocksDirtyFlag {
         const string Pattern_SetDirty = "00 00 01 00 00 00 48 8B 91 ?? 04 00 00";
-        MemPatcher@ SetDirty_Patch = MemPatcher(Pattern_SetDirty, {2}, {"00"}, {"01"});
+        MemPatcher@ SetDirty_Patch = MemPatcher("MapBakedBlocksDirtyFlag::SetDirty_Patch", Pattern_SetDirty, {2}, {"00"}, {"01"});
         bool get_IsActive() { return SetDirty_Patch.IsApplied; }
         void set_IsActive(bool value) { SetDirty_Patch.IsApplied = value; }
     }

@@ -1,12 +1,12 @@
 namespace EditorPatches {
     // this will disable club items entirely
-    MemPatcher@ Patch_DisableClubFavItems = MemPatcher(
+    MemPatcher@ Patch_DisableClubFavItems = MemPatcher("Patch_DisableClubFavItems",
         "E8 ?? ?? ?? ?? ?? 8B ?? 48 83 79 10 FF 0F 85 ?? ?? 00 00 48 8B 81 ?? 01 00 00",
         {0, 13}, {"90 90 90 90 90", "90 90 90 90 90 90"}
     );
 
     // this will skip the update of the club fav items, so we don't have to wait for them to download
-    MemPatcher@ Patch_SkipClubFavItemUpdate = MemPatcher(
+    MemPatcher@ Patch_SkipClubFavItemUpdate = MemPatcher("Patch_SkipClubFavItemUpdate",
         "E8 ?? ?? ?? ?? ?? 8B ?? 48 83 79 10 FF 0F 85 ?? ?? 00 00 48 8B 81 ?? 01 00 00",
         {13}, {"90 90 90 90 90 90"}
     );

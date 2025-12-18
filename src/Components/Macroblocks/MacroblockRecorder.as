@@ -369,7 +369,7 @@ namespace MacroblockRecorder {
 	// HookHelper@ _OnUpdateCopyPasteMbInfo_Hook = HookHelper(Pattern_OnUpdateCopyPasteMbInfo, 0x0, 0x1, "MacroblockRecorder::_OnUpdateCopyPasteMbInfo", Dev::PushRegisters::Basic, false);
 
 	const string Patch_AllowEmptyMacroblockCreation = "89 4d c0 45 85 ed 0f 85 ?? 01 00 00";
-	MemPatcher@ _Patcher_AllowEmptyMacroblockCreation = MemPatcher(Patch_AllowEmptyMacroblockCreation, {6}, {"90 e9"});
+	MemPatcher@ _Patcher_AllowEmptyMacroblockCreation = MemPatcher("AllowEmptyMacroblockCreation", Patch_AllowEmptyMacroblockCreation, {6}, {"90 e9"});
 
 	void _On_SetCopyPasteMbInfo() {
 		auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
