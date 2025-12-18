@@ -1256,7 +1256,7 @@ namespace CustomCursor {
 
     MemPatcher@ Patch_DoNotOffsetBlockInCursorPreview = MemPatcher(
         // mov eax,[rdx+108]; movss xmm0,[rdx+f8] -- only 1 instance in TM
-        "8B 82 08 01 00 00 F3 0F 10 82 F8 00 00 00",
+        "8B 82 ?? ?? 00 00 F3 0F 10 82 ?? ?? 00 00",
         {6}, {"0F 57 C0 90 90 90 90 90"}
     );
 
@@ -1269,10 +1269,22 @@ namespace CustomCursor {
         }
     }
 
+    /*
+Trackmania.exe.text+115620F - CC                    - int 3
+Trackmania.exe.text+1156210 - 0F10 02               - movups xmm0,[rdx]
+Trackmania.exe.text+1156213 - 0F11 81 10020000      - movups [rcx+00000210],xmm0
+Trackmania.exe.text+115621A - 0F10 4A 10            - movups xmm1,[rdx+10]
+Trackmania.exe.text+115621E - 0F11 89 20020000      - movups [rcx+00000220],xmm1
+Trackmania.exe.text+1156225 - 8B 42 20              - mov eax,[rdx+20]
+Trackmania.exe.text+1156228 - 89 81 30020000        - mov [rcx+00000230],eax
+Trackmania.exe.text+115622E - C3                    - ret
+Trackmania.exe.text+115622F - CC                    - int 3
+    */
+
     MemPatcher@ Patch_DoNotSetCursorVisibleFlag = MemPatcher(
         // [rdx] to xmm0 to [rcx+1f8], then next 16 bytes
         // v      v                    v           v
-        "0F 10 02 0F 11 81 F8 01 00 00 0F 10 4A 10 0F 11 89 08 02 00 00",
+        "0F 10 02 0F 11 81 ?? ?? 00 00 0F 10 4A 10 0F 11 89 ?? ?? 00 00 8B 42 20",
         {3}, {"90 90 90 90 90 90 90"}
     );
 
@@ -1301,10 +1313,34 @@ namespace CustomCursor {
         }
     }
 
+/*
+Trackmania.exe.text+115D111 - E8 5A62C4FF           - call Trackmania.exe.text+DA3370 { get SGameItemMgr }
+Trackmania.exe.text+115D116 - 48 8B 8B C0000000     - mov rcx,[rbx+000000C0] { params buffer }
+Trackmania.exe.text+115D11D - 40 F6 C7 02           - test dil,02 { unsure but consistent }
+Trackmania.exe.text+115D121 - 8B 93 C8000000        - mov edx,[rbx+000000C8] { params buffer len }
+Trackmania.exe.text+115D127 - 4C 8B BC 24 C0000000  - mov r15,[rsp+000000C0]
+Trackmania.exe.text+115D12F - 48 8B BC 24 08010000  - mov rdi,[rsp+00000108]
+Trackmania.exe.text+115D137 - 48 89 4D B7           - mov [rbp-49],rcx
+Trackmania.exe.text+115D13B - 89 55 BF              - mov [rbp-41],edx
+Trackmania.exe.text+115D13E - 0F28 45 B7            - movaps xmm0,[rbp-49]
+Trackmania.exe.text+115D142 - 66 0F7F 45 B7         - movdqa [rbp-49],xmm0
+Trackmania.exe.text+115D147 - 74 2B                 - je Trackmania.exe.text+115D174 { je -> jmp }
+Trackmania.exe.text+115D149 - 48 8B 8B A8000000     - mov rcx,[rbx+000000A8] { access new thing }
+Trackmania.exe.text+115D150 - 48 8D 55 F7           - lea rdx,[rbp-09]
+Trackmania.exe.text+115D154 - F3 0F10 5B 28         - movss xmm3,[rbx+28] { consistent with prior versions }
+Trackmania.exe.text+115D159 - 4C 8B C0              - mov r8,rax
+Trackmania.exe.text+115D15C - C7 44 24 28 01000000  - mov [rsp+28],00000001 { 1 }
+Trackmania.exe.text+115D164 - 48 89 4C 24 20        - mov [rsp+20],rcx
+Trackmania.exe.text+115D169 - 48 8D 4D B7           - lea rcx,[rbp-49]
+Trackmania.exe.text+115D16D - E8 DED9D5FF           - call Trackmania.exe.text+EBAB50
+*/
+    ;
+    //       v je, then prep xmm3, registers, stack
+    // 2025: 74 1B F3 0F 10 5B 28 48 8D 55 F7 4C 8B C0 C7 44 24 20 01 00 00 00 E8 ?? ?? ?? ??
+    // 2026: 74 2B 48 8B 8B A8000000 48 8D 55 F7 F3 0F 10 5B 28
+    string[] Patterns_DoNotShowCursorItemModels = {"74 1B F3 0F 10 5B 28 48 8D 55 F7 4C", "74 2B 48 8B 8B A8 00 00 00 48 8D 55 F7"};
     MemPatcher@ Patch_DoNotShowCursorItemModels = MemPatcher(
-        // 74 1B F3 0F 10 5B 28 48 8D 55 F7 4C 8B C0 C7 44 24 20 01 00 00 00 E8 ?? ?? ?? ??
-        // v je, then prep xmm3, registers, stack
-        "74 1B F3 0F 10 5B 28 48 8D 55 F7 4C",
+        Patterns_DoNotShowCursorItemModels,
         {0}, {"EB"}, {"74"}
     );
 

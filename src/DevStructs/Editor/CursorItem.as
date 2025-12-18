@@ -35,10 +35,12 @@ class DGameCursorItem : RawBufferElem {
 	// Nope, must have been a left over reference: geneology = CGameCtnZoneGenealogy, 0x90, G
 	bool get_isAutoRotate() { return (this.GetBool(0x98)); }
 	CGameResources@ get_resource() { return cast<CGameResources>(this.GetNod(0xA0)); }
-	CGameItemModel@ get_itemModel() { return cast<CGameItemModel>(this.GetNod(0xA8)); }
-	CSceneMobil@ get_helperMobil() { return cast<CSceneMobil>(this.GetNod(0xB0)); }
-	vec4 get_Zeros1() { return (this.GetVec4(0xC8)); }
-	DGameCursorItem_ItemDescs@ get_displayedItems() { return DGameCursorItem_ItemDescs(this.GetBuffer(0xB8, 0xA0, false)); }
+	// updated 2026
+	CGameItemModel@ get_itemModel() { return cast<CGameItemModel>(this.GetNod(0xB0)); }
+	CSceneMobil@ get_helperMobil() { return cast<CSceneMobil>(this.GetNod(0xB8)); }
+	vec4 get_Zeros1() { return (this.GetVec4(0xD0)); }
+	ISceneVis@ get_GameScene() { return cast<ISceneVis>(this.GetNod(0xE0)); }
+	DGameCursorItem_ItemDescs@ get_displayedItems() { return DGameCursorItem_ItemDescs(this.GetBuffer(0xC0, 0xA0, false)); }
 }
 
 class DGameCursorItem_ItemDescs : RawBuffer {
