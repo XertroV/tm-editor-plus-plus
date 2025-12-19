@@ -435,6 +435,14 @@ namespace Editor {
         Dev::SetOffset(map, O_MAP_MATRIX_IGNORE, flag);
         Editor::MarkRefreshUnsafe();
     }
+
+    vec2 GetMapCoordSize(CGameCtnChallenge@ map) {
+        return Dev::GetOffsetVec2(map, O_MAP_COORD_SIZE_XY);
+    }
+
+    float GetMapExtendsBelowZero(CGameCtnChallenge@ map) {
+        return Dev::GetOffsetFloat(map, O_MAP_EXTENDS_BELOW_0);
+    }
 }
 
 /*

@@ -645,7 +645,7 @@ const uint16 O_EI_SNAPSTRUCT_CAMPOS_VEC3 = 0xE4;
 
 
 const uint16 SZ_CGAMECURSORITEM = 0xF0;
-const uint16 SZ_CGAMECURSORBLOCK = 0x4c8;
+const uint16 SZ_CGAMECURSORBLOCK = Reflection::GetType("CGameCursorBlock").Size;
 // MARK: O Item Mdl
 
 const uint16 O_ITEM_MODEL_Id = 0x28;

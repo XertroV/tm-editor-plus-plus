@@ -136,6 +136,7 @@ class MapEditPropsTab : Tab {
         UI::Columns(2, "map-props-cols", false);
 
         UI::Text("Author: " + map.AuthorNickName);
+        UI::Text("Collection: " + map.CollectionName);
         // todo: test
         if (map.MapInfo !is null) {
             UI::BeginDisabled(map.MapInfo.FileName == "Unnamed");
@@ -319,14 +320,22 @@ class MapEditPropsTab : Tab {
 
         DrawOffzoneWidget(editor, map);
 
+        DrawMiscStuffProps(editor, map);
 #if DEV
         DrawMapMatrixSection(map);
 #endif
-
         DrawDeprecated(editor);
     }
 
     bool m_EditOffzones;
+
+    void DrawMiscStuffProps(CGameCtnEditorFree@ editor, CGameCtnChallenge@ map) {
+        UI::SeparatorText("Miscellaneous");
+        vec2 coordSize = Editor::GetMapCoordSize(map);
+        float extendsBelow = Editor::GetMapExtendsBelowZero(map);
+        LabeledValue("Map Coord Size", coordSize.ToString());
+        LabeledValue("Map Extends Below 0", Text::Format("%.1f m", extendsBelow));
+    }
 
     void DrawMapFlags() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
