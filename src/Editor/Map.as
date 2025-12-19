@@ -475,6 +475,12 @@ namespace Editor {
     vec3 GetMacroblockPosOffset() {
         return vec3(0, GetMacroblockHeightOffset(), 0);
     }
+
+    uint GetMapCollectorId() {
+        auto map = GetApp().RootMap;
+        if (map is null || map.Collection is null) return 0;
+        return map.Collection.CollectionId;
+    }
 }
 
 /*

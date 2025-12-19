@@ -128,6 +128,7 @@ namespace Editor {
         protected uint64 tmpMacroblockSkinsBufLenCap = 0;
         protected bool tmpMacroblockIsGround = false;
         bool releaseTmpMacroblock = false;
+        uint tmpMacroblockCollectionId;
 
         void _TempWriteToMacroblock(CGameCtnMacroBlockInfo@ macroblock) {
             @tmpMacroblock = DGameCtnMacroBlockInfo(macroblock);
@@ -148,6 +149,9 @@ namespace Editor {
 
             tmpMacroblockIsGround = macroblock.IsGround;
             Editor::SetMacroblockGround(macroblock, false);
+
+            tmpMacroblockCollectionId = macroblock.CollectionId;
+            macroblock.CollectionId = Editor::GetMapCollectorId();
             // macroblock.Initialized = false;
             // macroblock.Connected = false;
 
@@ -245,10 +249,11 @@ namespace Editor {
             Dev::Write(tmpMacroblock.Skins.Ptr, tmpMacroblockSkinsBuf);
             Dev::Write(tmpMacroblock.Skins.Ptr + 0x8, tmpMacroblockSkinsBufLenCap);
             SetMacroblockGround(tmpMacroblock.Nod, tmpMacroblockIsGround);
+            macroblock.CollectionId = tmpMacroblockCollectionId;
             // tmpMacroblock.Nod.IsGround = tmpMacroblockIsGround;
-            if (tmpMacroblock !is null && releaseTmpMacroblock) {
-                tmpMacroblock.Nod.MwRelease();
-            }
+            // if (tmpMacroblock !is null && releaseTmpMacroblock) {
+            //     tmpMacroblock.Nod.MwRelease();
+            // }
             @tmpMacroblock = null;
             releaseTmpMacroblock = false;
         }

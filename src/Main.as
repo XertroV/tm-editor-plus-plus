@@ -31,6 +31,7 @@ void Main() {
     RegisterOnEditorLoadCallback(Editor::CacheMaterials, "CacheMaterials");
     RegisterOnItemEditorLoadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
     RegisterOnEditorUnloadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
+    RegisterOnEditorUnloadCallback(Gizmo::_GizmoOnCancel, "Gizmo::_GizmoOnCancel");
 
     RegisterOnEditorLoadCallback(HookOnMapSave::OnEnterEditor, "HookOnMapSave::OnEnterEditor");
     RegisterOnEditorUnloadCallback(HookOnMapSave::OnEditorLeave, "HookOnMapSave::OnEditorLeave");

@@ -60,6 +60,11 @@ namespace Gizmo {
             // startnew(GizmoLoop); // .WithRunContext(Meta::RunContext::AfterScripts);
             Meta::StartWithRunContext(Meta::RunContext::GameLoop, GizmoLoop);
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor is null || editor.Cursor is null) {
+                NotifyWarning("Gizmo could not start (editor/cursor null)");
+                OnGoInactive();
+                return;
+            }
             origEditMode = CGameEditorPluginMap::EditMode::Place;
             origPlaceMode = Editor::GetPlacementMode(editor);
             origCustomYawActive = CustomCursorRotations::CustomYawActive;
@@ -86,7 +91,9 @@ namespace Gizmo {
         }
 
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        origCursor.SetCursor(editor.Cursor);
+        if (editor !is null && editor.Cursor !is null && origCursor !is null) {
+            origCursor.SetCursor(editor.Cursor);
+        }
         // CustomCursorRotations::SetCustomPYRAndCursor
 
         if (editor !is null) {
@@ -197,6 +204,11 @@ namespace Gizmo {
         Gizmo_Setup(editor);
         CustomCursorRotations::CustomYawActive = false;
         yield();
+        if (!IsActive) return;
+        if ((@editor = cast<CGameCtnEditorFree>(app.Editor)) is null) {
+            IsActive = false;
+            return;
+        }
         bool isItem = modePlacingType == BlockOrItem::Item;
         CustomCursor::NoSetCursorVisFlagPatchActive = !isItem;
         if (isItem) CustomCursor::NoHideCursorItemModelsPatchActive = true;
@@ -569,6 +581,10 @@ namespace Gizmo {
 
     void _GizmoOnApply_Params(bool setInactiveAfter = true) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) {
+            IsActive = false;
+            return;
+        }
         // auto coordSizeXY = Editor::GetMapCoordSize(editor.Challenge);
         // auto hOffset = -Editor::GetMapExtendsBelowZero(editor.Challenge) - coordSizeXY.y;
         auto xyzOffset = Editor::GetMacroblockPosOffset();
@@ -615,6 +631,10 @@ namespace Gizmo {
         if (!IsActive) return;
         bool hadGizmo = gizmo !is null;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) {
+            IsActive = false;
+            return;
+        }
         if (hadGizmo && shouldReplaceTarget) {
             editor.PluginMapType.Undo();
         }

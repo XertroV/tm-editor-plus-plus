@@ -217,6 +217,14 @@ namespace Editor {
         }
         warn('checking if safe to del free blocks');
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) {
+            // we're not in the editor, clear and abort
+            pendingFreeBlocksToDelete.RemoveRange(0, pendingFreeBlocksToDelete.Length);
+            waitingToDeleteFreeBlocks = false;
+            canDeleteFreeBlocks = false;
+            Dev_NotifyWarning('aborting free block delete, not in editor');
+            return;
+        }
         if (editor.PickedBlock !is null || editor.PickedObject !is null) { dev_trace("skipping free block delete b/c picked block/item"); return; }
         if (editor.Cursor is null) return;
         if (Editor::IsSpaceBarDown(editor)) { dev_trace("skipping free block delete b/c space bar down"); return; }
