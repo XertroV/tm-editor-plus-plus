@@ -48,6 +48,7 @@ void Main() {
     RegisterOnEditorLoadCallback(PillarsChoice::OnEditorLoad, "PillarsChoice::OnEditorLoad");
     RegisterOnEditorUnloadCallback(PillarsChoice::OnEditorUnload, "PillarsChoice::OnEditorUnload");
     // RegisterNewBlockCallback_Private(PillarsChoice::OnBlockPlaced, "PillarsChoice::OnBlockPlaced", 0);
+    RegisterOnEditorLoadCallback(Editor::_OnEnterEditor_ResetMbHeightOffset, "Editor::_OnEnterEditor_ResetMbHeightOffset");
 
     RegisterOnLeavingPlaygroundCallback(Editor::ImproveDefaultThumbnailLocation_OnReturnFromPg, "Editor::ImproveDefaultThumbnailLocation_OnReturnFromPg");
 

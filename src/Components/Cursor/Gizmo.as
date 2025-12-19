@@ -422,6 +422,10 @@ namespace Gizmo {
 
             if (modePlacingType == BlockOrItem::Block) {
                 blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
+                // we need to ensure the variant we want to place exists
+                if (!blockSpec.EnsureValidVariant()) {
+                    Dev_NotifyWarning("Selected block model does not have variant " + tostring(blockSpec.variant));
+                }
             } else {
                 itemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(placingColor));
             }
@@ -564,15 +568,18 @@ namespace Gizmo {
     }
 
     void _GizmoOnApply_Params(bool setInactiveAfter = true) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        // auto coordSizeXY = Editor::GetMapCoordSize(editor.Challenge);
+        // auto hOffset = -Editor::GetMapExtendsBelowZero(editor.Challenge) - coordSizeXY.y;
+        auto xyzOffset = Editor::GetMacroblockPosOffset();
         if (modePlacingType == BlockOrItem::Item) {
             dev_trace("Applying gizmo item: ");
             dev_trace("   lastAppliedPivot: " + lastAppliedPivot.ToString());
             dev_trace("   gizmo.placementParamOffset: " + gizmo.placementParamOffset.ToString());
             dev_trace("   gizmo.pivotPoint: " + gizmo.pivotPoint.ToString());
-            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             itemSpec.isFlying = 1;
             itemSpec.pivotPos = gizmo.GetPivot(Editor::GetCurrentPivot(editor)) * -1.; // - gizmo.placementParamOffset * 2.;
-            itemSpec.pos = gizmo.pos + vec3(0, 56, 0) + gizmo.GetRotatedPivotPoint();
+            itemSpec.pos = gizmo.pos + xyzOffset + gizmo.GetRotatedPivotPoint();
             itemSpec.coord = Int3ToNat3(PosToCoordDist(itemSpec.pos));
             itemSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
             itemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(placingColor));
@@ -581,7 +588,7 @@ namespace Gizmo {
             // this will only unapply if it was applied earlier
             gizmo.OffsetBlockOnApply();
             blockSpec.flags = uint8(Editor::BlockFlags::Free);
-            blockSpec.pos = gizmo.pos + vec3(0, 56, 0) + gizmo.GetRotatedPivotPoint();
+            blockSpec.pos = gizmo.pos + xyzOffset + gizmo.GetRotatedPivotPoint();
             blockSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
             blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
             Editor::PlaceBlocks({blockSpec}, true);

@@ -91,6 +91,8 @@ namespace Editor {
         }
     }
 
+    // misc: +0xC from air mode is like a force grid mode or something, can't pick blocks and car is placed on grid.
+
     bool GetIsBlockAirModeActive(CGameCtnEditorFree@ editor) {
         return Dev::GetOffsetUint8(editor, O_EDITOR_AIR_MODE_BOOL) > 0;
     }

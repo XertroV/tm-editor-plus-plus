@@ -31,10 +31,10 @@ namespace Editor {
 
     vec3 GetBlockLocation(BlockSpec@ block) {
         if (block.isFree) {
-            return block.pos - vec3(0, 56, 0);
+            return block.pos - GetMacroblockPosOffset();
         }
         auto coordSize = GetBlockCoordSize(block);
-        return BlockCoordAndCoordSizeToPos(block.coord, coordSize, int(block.dir2)) - vec3(0, 56, 0);
+        return BlockCoordAndCoordSizeToPos(block.coord, coordSize, int(block.dir2)) - GetMacroblockPosOffset();
     }
 
     vec3 BlockCoordAndCoordSizeToPos(nat3 bCoord, vec3 coordSize, int dir) {
@@ -49,7 +49,7 @@ namespace Editor {
         if (dir == 3) {
             coord.z += coordSize.x - 1;
         }
-        auto pos = CoordToPos(coord);
+        auto pos = CoordToPos(coord, _mapXySize, _mapbaseHeightOffset);
         return (mat4::Translate(pos) * mat4::Translate(HALF_COORD) * EulerToMat(vec3(0, CardinalDirectionToYaw(dir), 0)) * mat4::Translate(HALF_COORD * -1.) * vec3()).xyz;
     }
 

@@ -80,6 +80,7 @@ class FocusedItemTab : Tab, NudgeItemBlock {
 
 
         CopiableLabeledValue("Name", item.ItemModel.IdName);
+        CopiableLabeledValue("Collection", item.ItemModel.CollectionId_Text);
         CopiableLabeledValue("Pos", item.AbsolutePositionInMap.ToString());
         CopiableLabeledValue("P,Y,R (Deg)", MathX::ToDeg(initRot).ToString());
         CopiableLabeledValue("Coord", item.BlockUnitCoord.ToString());

@@ -81,7 +81,7 @@ namespace Editor {
                 block.pos = (transform * vec3()).xyz;
                 // block.pos = (transform * block.pos).xyz;
                 block.pyr = PitchYawRollFromRotationMatrix(mat4::Translate(block.pos * -1.) * transform);
-                block.pos += vec3(0, 56, 0);
+                block.pos += GetMacroblockPosOffset();
                 blocks.InsertLast(block);
                 newParts.blocks.InsertLast(block);
             }
@@ -93,7 +93,7 @@ namespace Editor {
                 item.pos = (transform * vec3()).xyz;
                 // item.pos = (transform * item.pos).xyz;
                 item.pyr = PitchYawRollFromRotationMatrix(mat4::Translate(item.pos * -1.) * transform);
-                item.pos += vec3(0, 56, 0);
+                item.pos += GetMacroblockPosOffset();
                 items.InsertLast(item);
                 newParts.items.InsertLast(item);
             }
@@ -126,6 +126,7 @@ namespace Editor {
         protected uint64 tmpMacroblockItemsBufLenCap = 0;
         protected uint64 tmpMacroblockSkinsBuf = 0;
         protected uint64 tmpMacroblockSkinsBufLenCap = 0;
+        protected bool tmpMacroblockIsGround = false;
         bool releaseTmpMacroblock = false;
 
         void _TempWriteToMacroblock(CGameCtnMacroBlockInfo@ macroblock) {
@@ -144,6 +145,11 @@ namespace Editor {
             auto mbSkins = tmpMacroblock.Skins;
             tmpMacroblockSkinsBuf = Dev::ReadUInt64(mbSkins.Ptr);
             tmpMacroblockSkinsBufLenCap = Dev::ReadUInt64(mbSkins.Ptr + 0x8);
+
+            tmpMacroblockIsGround = macroblock.IsGround;
+            Editor::SetMacroblockGround(macroblock, false);
+            // macroblock.Initialized = false;
+            // macroblock.Connected = false;
 
             _AllocAndWriteMemory(true);
         }
@@ -238,7 +244,8 @@ namespace Editor {
             Dev::Write(tmpMacroblock.Items.Ptr + 0x8, tmpMacroblockItemsBufLenCap);
             Dev::Write(tmpMacroblock.Skins.Ptr, tmpMacroblockSkinsBuf);
             Dev::Write(tmpMacroblock.Skins.Ptr + 0x8, tmpMacroblockSkinsBufLenCap);
-
+            SetMacroblockGround(tmpMacroblock.Nod, tmpMacroblockIsGround);
+            // tmpMacroblock.Nod.IsGround = tmpMacroblockIsGround;
             if (tmpMacroblock !is null && releaseTmpMacroblock) {
                 tmpMacroblock.Nod.MwRelease();
             }
@@ -359,7 +366,7 @@ namespace Editor {
             for (uint i = 0; i < blocks.Length; i++) {
                 auto block = blocks[i];
                 if (block.isFree) {
-                    // block.pos = block.pos; // - vec3(0, 56, 0);
+                    // block.pos = block.pos; // - GetMacroblockPosOffset();
                     block.pos.y += 8.0;
                 } else {
                     block.coord = block.coord + nat3(0, 1, 0);
@@ -370,7 +377,7 @@ namespace Editor {
                 item.coord = item.coord + nat3(0, 1, 0);
                 item.pos.y += 8.0;
                 // hmm, don't need to move pos.y
-                // item.pos.y -= 56.0;
+                // item.pos.y -= GetMacroblockHeightOffset();
             }
         }
 
@@ -451,8 +458,8 @@ namespace Editor {
         // CoordSize is size of block in coord units (e.g., `Nat3ToVec3(blockInfo.VariantBaseAir.Size)`)
         void SetCoord_AlsoPosRot(const nat3 &in _coord, vec3 coordSize, int _dir) override {
             coord = _coord;
-            pos = BlockCoordAndCoordSizeToPos(_coord, coordSize, _dir) + vec3(0, 56, 0);
-            // pos = CoordToPos(_coord) + vec3(0, 56, 0);
+            pos = BlockCoordAndCoordSizeToPos(_coord, coordSize, _dir) + GetMacroblockPosOffset();
+            // pos = CoordToPos(_coord) + GetMacroblockPosOffset();
             auto er = EditorRotation(0, 0, CGameCursorBlock::ECardinalDirEnum(_dir), CGameCursorBlock::EAdditionalDirEnum::P0deg);
             pyr = er.Euler;
             this.dir = CGameCtnBlock::ECardinalDirections(_dir);
@@ -463,7 +470,7 @@ namespace Editor {
         }
 
         void SetPosRot_AlsoCoordDir(vec3 position, vec3 pyrRotation) override {
-            pos = position + vec3(0, 56, 0);
+            pos = position + GetMacroblockPosOffset();
 
             pyr = pyrRotation;
             dir = EditorRotation(pyrRotation).Dir2;
@@ -484,7 +491,7 @@ namespace Editor {
             }
             dir = block.Direction;
             dir2 = block.Direction;
-            pos = Editor::GetBlockLocation(block) + vec3(0, 56, 0);
+            pos = Editor::GetBlockLocation(block) + GetMacroblockPosOffset();
             pyr = Editor::GetBlockRotation(block);
 
             color = block.MapElemColor;
@@ -541,6 +548,7 @@ namespace Editor {
             if (BlockInfo !is null) {
                 name = BlockInfo.IdName;
                 author = BlockInfo.Author.GetName();
+                collection = CollectionIdToIx(BlockInfo.CollectionId, BlockInfo.CollectionId_Text);
                 BlockInfo.MwAddRef();
                 EnsureValidVariant();
             }
@@ -549,7 +557,7 @@ namespace Editor {
         BlockSpecPriv(DGameCtnMacroBlockInfo_Block@ block) {
             super();
             name = block.name;
-            // collection = blah
+            collection = block.collection;
             author = block.author;
             coord = block.coord;
             dir = block.dir;
@@ -673,7 +681,7 @@ namespace Editor {
             // trace('coord match: ' + MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0)));
             // trace('dir match: ' + (dir == block.Direction));
             // trace('dir2 match: ' + (dir2 == block.Direction));
-            // trace('pos match: ' + MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)));
+            // trace('pos match: ' + MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + GetMacroblockPosOffset()));
             // trace('pyr match: ' + MathX::Vec3Eq(pyr, Editor::GetBlockRotation(block)));
             // trace('color match: ' + (color == block.MapElemColor));
             // trace('lmQual match: ' + (lmQual == block.MapElemLmQuality));
@@ -682,10 +690,10 @@ namespace Editor {
             // trace('variant match: ' + (variant == block.BlockInfoVariantIndex) + ' ' + variant + ' / ' + block.BlockInfoVariantIndex);
             // trace('flags match: ' + (flags == (block.IsGround ? BlockFlags::Ground : BlockFlags::None) | (block.IsGhostBlock() ? BlockFlags::Ghost : BlockFlags::None) | (Editor::IsBlockFree(block) ? BlockFlags::Free : BlockFlags::None)));
 
-            return name == block.BlockInfo.IdName && collection == 26 && author == block.BlockInfo.Author.GetName() &&
+            return name == block.BlockInfo.IdName && collection == CollectionIdToIx(block.CollectionId) && author == block.BlockInfo.Author.GetName() &&
                 ((isFree && Editor::IsBlockFree(block)) || MathX::Nat3Eq(coord, block.Coord - nat3(0,1,0))) &&
                 dir == block.Direction && dir2 == block.Direction &&
-                MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + vec3(0, 56, 0)) &&
+                MathX::Vec3Eq(pos, Editor::GetBlockLocation(block) + GetMacroblockPosOffset()) &&
                 // color == block.MapElemColor &&
                 // lmQual == block.MapElemLmQuality &&
                 mobilIx == block.MobilIndex &&
@@ -747,20 +755,19 @@ namespace Editor {
         }
 
         bool EnsureValidVariant() override {
-            if (BlockInfo !is null) {
-                auto origVar = variant;
-                auto origGround = isGround;
-                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                    variant = 0;
-                }
-                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                    isGround = !isGround;
-                }
-                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                    variant = origVar;
-                    isGround = origGround;
-                    return false;
-                }
+            if (BlockInfo is null) return false;
+            auto origVar = variant;
+            auto origGround = isGround;
+            if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                variant = 0;
+            }
+            if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                isGround = !isGround;
+            }
+            if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                variant = origVar;
+                isGround = origGround;
+                return false;
             }
             return true;
         }
@@ -855,13 +862,12 @@ namespace Editor {
             // @GameItem = item;
             // item.MwAddRef();
             super();
-            // collection = blah
             coord = item.BlockUnitCoord;
             SetCoordFromAssociatedBlock(Editor::GetItemsBlockAssociation(item));
             // need to offset coords by 0,1,0 and make height relative to that
             coord = coord - nat3(0, 1, 0);
             dir = CGameCtnAnchoredObject::ECardinalDirections(uint8(-1));
-            pos = Editor::GetItemLocation(item) + vec3(0, 56, 0);
+            pos = Editor::GetItemLocation(item) + GetMacroblockPosOffset();
             pyr = Editor::GetItemRotation(item);
             //if (pyr.y < NegPI) pyr.y += TAU;
             scale = item.Scale;
@@ -887,7 +893,7 @@ namespace Editor {
             // name and author are set by SetModel
             coord = PosToCoord(position) - nat3(0, 1, 0);
             dir = CGameCtnAnchoredObject::ECardinalDirections(uint8(-1));
-            pos = position + vec3(0, 56, 0);
+            pos = position + GetMacroblockPosOffset();
             pyr = pyrRotation;
             //if (pyr.y < NegPI) pyr.y += TAU;
             color = CGameCtnAnchoredObject::EMapElemColor::Default;
@@ -903,7 +909,7 @@ namespace Editor {
         ItemSpecPriv(DGameCtnMacroBlockInfo_Item@ item) {
             super();
             name = item.name;
-            // collection = blah
+            collection = item.collection;
             author = item.author;
             coord = item.coord;
             dir = item.dir;
@@ -939,10 +945,10 @@ namespace Editor {
         }
 
         bool MatchesItem(CGameCtnAnchoredObject@ item) const override {
-            bool ret = name == item.ItemModel.IdName && collection == 26 && author == item.ItemModel.Author.GetName() &&
+            bool ret = name == item.ItemModel.IdName && collection == CollectionIdToIx(item.ItemModel.CollectionId) && author == item.ItemModel.Author.GetName() &&
                 MathX::Nat3Eq(coord, item.BlockUnitCoord - nat3(0, 1, 0)) &&
                 // uint8(dir) == uint(-1) &&
-                MathX::Vec3Within(pos, Editor::GetItemLocation(item) + vec3(0, 56, 0), 0.0001) &&
+                MathX::Vec3Within(pos, Editor::GetItemLocation(item) + GetMacroblockPosOffset(), 0.0001) &&
                 scale == item.Scale &&
                 // color == item.MapElemColor && lmQual == item.MapElemLmQuality &&
                 phase == item.AnimPhaseOffset &&
@@ -955,7 +961,7 @@ namespace Editor {
         }
 
         bool MatchesItem(CGameCtnEditorScriptAnchoredObject@ item) const override {
-            return name == item.ItemModel.IdName && MathX::Vec3Eq(pos, item.Position + vec3(0, 56, 0));
+            return name == item.ItemModel.IdName && MathX::Vec3Eq(pos, item.Position + GetMacroblockPosOffset());
         }
 
         bool opEquals(const ItemSpec@ other) const override {
@@ -1053,6 +1059,7 @@ namespace Editor {
                 // during really heavy times, we get a null ptr exception
                 // can get null ptr exception here
                 author = _model.Author.GetName();
+                collection = CollectionIdToIx(_model.CollectionId, _model.CollectionId_Text);
                 Model.MwAddRef();
             }
         }

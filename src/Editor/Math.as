@@ -100,16 +100,23 @@ vec4 QuatToVec4(quat q) {
 const vec3 MAP_COORD = vec3(32., 8., 32.);
 const vec3 HALF_COORD = vec3(16., 4., 16.);
 
-vec3 CoordToPos(const nat3 &in coord) {
-    return vec3(coord.x * 32, (int(coord.y) - 8) * 8, coord.z * 32);
+// BaseHeightBase is eg 4, 14 corresponding to ExtendsBelowZero of 40 and 120.
+// -> has OffsetBlockY = true
+
+// BaseHeightOffset of 8 corresponds to ExtendsBelowZero 64
+// -> has OffsetBlockY = false
+
+
+vec3 CoordToPos(const nat3 &in coord, vec2 xySize = vec2(32, 8), float baseHeightOffset = 64) {
+    return vec3(coord.x * xySize.x, (float(coord.y) - (baseHeightOffset / xySize.y)) * xySize.y, coord.z * xySize.x);
 }
 
-vec3 CoordToPos(const int3 &in coord) {
-    return vec3(coord.x * 32, (int(coord.y) - 8) * 8, coord.z * 32);
+vec3 CoordToPos(const int3 &in coord, vec2 xySize = vec2(32, 8), float baseHeightOffset = 64) {
+    return vec3(coord.x * xySize.x, (float(coord.y) - (baseHeightOffset / xySize.y)) * xySize.y, coord.z * xySize.x);
 }
 
-vec3 CoordToPos(const vec3 &in coord) {
-    return vec3(coord.x * 32, (int(coord.y) - 8) * 8, coord.z * 32);
+vec3 CoordToPos(const vec3 &in coord, vec2 xySize = vec2(32, 8), float baseHeightOffset = 64) {
+    return vec3(coord.x * xySize.x, (float(coord.y) - (baseHeightOffset / xySize.y)) * xySize.y, coord.z * xySize.x);
 }
 
 vec3 MTCoordToPos(int3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) {
@@ -136,7 +143,7 @@ vec3 CoordDistToPos(const vec3 &in coord) {
     return vec3(coord.x * 32., coord.y * 8., coord.z * 32.);
 }
 
-nat3 PosToCoord(vec3 pos) {
+nat3 PosToCoord(vec3 pos, vec2 xySize = vec2(32, 8), float baseHeightOffset = 64) {
     return nat3(
         uint(Math::Floor(pos.x / 32.)),
         uint(Math::Floor(pos.y / 8. + 8.)),

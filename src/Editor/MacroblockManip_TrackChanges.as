@@ -347,9 +347,17 @@ namespace Editor {
             NotifyError("PlaceMacroblock: no macroblock models");
             return false;
         }
-        auto mb = pmt.GetMacroblockModelFromFilePath("Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx");
+        // auto mb = pmt.MacroblockModels[0];
+        auto mbPath = "Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx";
+        // auto mb = pmt.GetMacroblockModelFromFilePath(mbPath);
+        auto mbFid = Fids::GetGame("GameData\\" + mbPath);
+        auto mb = cast<CGameCtnMacroBlockInfo>(Fids::Preload(mbFid));
         if (mb is null) {
             NotifyError("PlaceMacroblock: failed to get macroblock model");
+            // dev_trace("Got FID: " + tostring(mbFid !is null));
+            // if (mbFid !is null) {
+            //     ExploreNod("macroblock FID", mbFid);
+            // }
             return false;
         }
         mbSpec._TempWriteToMacroblock(mb);
@@ -364,10 +372,10 @@ namespace Editor {
         if (mbSpec.Blocks.Length > 0) {
             dev_trace('mbSpec.blocks[0]');
             print(BlockSpecToDebugString(mbSpec.Blocks[0]));
+            print("MB Collection: " + mb.CollectionId_Text);
         }
 #endif
         auto placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
-        // auto placed = pmt.PlaceMacroblock_AirMode(mb, int3(24, 14, 24), CGameEditorPluginMap::ECardinalDirections::North);
         if (placed && addUndoRedoPoint) {
             dev_trace("Placed MB -> AutoSaving");
             pmt.AutoSave();
@@ -623,10 +631,7 @@ string GetSkinPath(CSystemPackDesc@ pack) {
     return pack.Name;
 }
 
-
-#if DEV
-// only when #if DEV
+// typically only used in DEV stuff
 string BlockSpecToDebugString(Editor::BlockSpec@ spec) {
-    return "BlockSpec: " + spec.name + " | " + spec.coord.ToString() + " | " + tostring(spec.dir) + " | F: " + spec.flags + " | vx: " + spec.variant + " | mv: " + spec.mobilVariant + " | mx: " + spec.mobilIx + " | g: " + spec.isGround + " | n/g/f: " + spec.isNormal + "/" + spec.isGhost + "/" + spec.isFree;
+    return "BlockSpec: " + spec.name + " | " + spec.collection + " | " + spec.coord.ToString() + " | " + tostring(spec.dir) + " | Flags: " + spec.flags + " | vx: " + spec.variant + " | mv: " + spec.mobilVariant + " | mx: " + spec.mobilIx + " | g: " + spec.isGround + " | n/g/f: " + spec.isNormal + "/" + spec.isGhost + "/" + spec.isFree;
 }
-#endif

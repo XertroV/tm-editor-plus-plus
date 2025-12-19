@@ -21,7 +21,11 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
     }
 
     string GetFavIdName() override {
-        return FocusedBlock.AsBlock().BlockInfo.IdName;
+        auto block = FocusedBlock.AsBlock();
+        if (block !is null && block.BlockInfo !is null) {
+            return block.BlockInfo.IdName;
+        }
+        return "";
     }
 
     // ! use block desc instead
@@ -95,6 +99,7 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         UI::Columns(2);
 
         CopiableLabeledValue("Type", block.BlockInfo.IdName);
+        CopiableLabeledValue("Coll.", block.BlockInfo.CollectionId_Text + Text::Format(" (%d)", block.BlockInfo.CollectionId));
         CopiableLabeledValue("Coord", block.Coord.ToString());
         CopiableLabeledValue("Pos", preDesc.Pos.ToString());
         CopiableLabeledValue("Rot", MathX::ToDeg(preDesc.Rot).ToString());

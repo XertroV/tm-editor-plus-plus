@@ -440,8 +440,40 @@ namespace Editor {
         return Dev::GetOffsetVec2(map, O_MAP_COORD_SIZE_XY);
     }
 
+    // returns a negative usually
     float GetMapExtendsBelowZero(CGameCtnChallenge@ map) {
         return Dev::GetOffsetFloat(map, O_MAP_EXTENDS_BELOW_0);
+    }
+
+    // vec3 GetMapXYSizeAndHeightOffset() {
+    //     auto map = GetApp().RootMap;
+    //     return vec3(GetMapCoordSize(map), -GetMapExtendsBelowZero(map) - 8.0);
+    // }
+
+    vec2 _mapXySize;
+    float _mapbaseHeightOffset;
+    void _getMapDetailsToCache() {
+        auto map = GetApp().RootMap;
+        _mapXySize = GetMapCoordSize(map);
+        _mapbaseHeightOffset = -GetMapExtendsBelowZero(map);
+    }
+
+    float _MbHeightOffset = -9877.0;
+    void _OnEnterEditor_ResetMbHeightOffset() {
+        _MbHeightOffset = -9877.0;
+        startnew(_getMapDetailsToCache);
+    }
+    float GetMacroblockHeightOffset() {
+        if (_MbHeightOffset == -9877.0) {
+            _MbHeightOffset = -GetMapExtendsBelowZero(GetApp().RootMap) - 8.0;
+        }
+        // return -GetMapExtendsBelowZero(GetApp().RootMap) - 8.0;
+        return _MbHeightOffset;
+    }
+
+    // Typically vec3(0, 56, 0) unless map has custom Y offset
+    vec3 GetMacroblockPosOffset() {
+        return vec3(0, GetMacroblockHeightOffset(), 0);
     }
 }
 

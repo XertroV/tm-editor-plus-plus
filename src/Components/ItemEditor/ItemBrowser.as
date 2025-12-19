@@ -473,11 +473,13 @@ class ItemModelTreeElement {
             if (biClip !is null) {
                 DrawBiClipExtra(biClip);
             }
-            MkAndDrawChildNode(blockInfo.MaterialModifier, O_BLOCKINFO_MATERIALMOD, "MaterialModifier");
             auto mmOffset = O_BLOCKINFO_MATERIALMOD;
             auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
             string mmPlacementTagsStr = ItemPlace_StringConsts::LookupJoined(mmPlacementTag);
             DrawMwId("Name", blockInfo.Id);
+            CopiableLabeledValue("Collection", blockInfo.CollectionId_Text + Text::Format(" (%d)", int(blockInfo.CollectionId)));
+
+            MkAndDrawChildNode(blockInfo.MaterialModifier, O_BLOCKINFO_MATERIALMOD, "MaterialModifier");
             // CopiableLabeledValue("Name MwID", toHex(blockInfo.Id.Value) + " > " + blockInfo.Id.GetName());
             if (isEditable) {
                 Dev::SetOffset(blockInfo, mmOffset, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
