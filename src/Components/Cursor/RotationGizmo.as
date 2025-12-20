@@ -211,6 +211,9 @@ class RotationTranslationGizmo {
     RotationTranslationGizmo@ WithBoundingBox(Editor::AABB@ bb) {
         WithMatrix(bb.mat);
         scale = bb.halfDiag.Length() * 1.333;
+        if (Math::IsNaN(scale)) {
+            dev_warn("Gizmo: WithBoundingBox: scale is NaN! bb.halfDiag: " + bb.halfDiag.ToString());
+        }
         bbHalfDiag = bb.halfDiag;
         bbMidPoint = bb.midPoint;
         this.modelOffset = bbMidPoint - bbHalfDiag; // + pivot;
@@ -427,6 +430,7 @@ class RotationTranslationGizmo {
 
     void DrawCirclesManual(vec3 objOriginPos, float _scale = 2.0) {
         if (MathX::IsNanInf(objOriginPos)) return;
+        if (MathX::IsNanInf(_scale)) dev_warn("nan scale");
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto cam = Camera::GetCurrent();
         auto camState = Editor::GetCurrentCamState(editor);
@@ -436,7 +440,10 @@ class RotationTranslationGizmo {
         float c2pLen2 = (objOriginPos - camPos).LengthSquared();
         float c2pLen = (objOriginPos - camPos).Length();
 
+        if (Math::IsNaN(cam.Fov)) dev_warn("nan cam.Fov");
         auto maxScale = GIZMO_MAX_SCALE_COEF * c2pLen * Math::Tan(Math::ToRad(cam.Fov * .5));
+        if (Math::IsNaN(maxScale)) dev_warn("nan maxScale");
+        if (Math::IsNaN(c2pLen)) dev_warn("nan c2pLen");
         _scale = Math::Min(_scale, maxScale);
         _closestRotationPoint = vec3();
         // objOriginPos -= pivotPoint;
@@ -494,6 +501,15 @@ class RotationTranslationGizmo {
             if (Math::IsNaN(worldPos.LengthSquared())) {
                 worldPos = circle[i] * _scale + objOriginPos + tmpPos;
                 worldPos2 = circle[1] * _scale + objOriginPos + tmpPos;
+#if DEV
+                if (Math::IsNaN(worldPos.LengthSquared())) {
+                    dev_trace("Gizmo: NaN in DrawCirclesManual initial worldPos: " + worldPos.ToString());
+                    dev_trace("     > objOriginPos: " + objOriginPos.ToString());
+                    dev_trace("     > tmpPos: " + tmpPos.ToString());
+                    dev_trace("     > _scale: " + _scale);
+                    dev_trace("     > circle[i]: " + circle[i].ToString());
+                }
+#endif
             }
             if (isMouseDown) {
                 isNearSide = circlesAroundIsNearSide[c][0];
@@ -506,6 +522,12 @@ class RotationTranslationGizmo {
             vec3 p1 = Camera::ToScreen(worldPos);
             lastWorldPos = worldPos;
             lastScreenPos = p1;
+#if DEV
+            if (Math::IsNaN(p1.x*p1.y) || Math::IsInf(p1.x*p1.y)) {
+                dev_trace("Gizmo: NaN/Inf in DrawCirclesManual initial p1: " + p1.ToString());
+                dev_trace("     > World pos: " + worldPos.ToString());
+            }
+#endif
             nvg::MoveTo(p1.xy);
             translateRadialDir = centerScreenPos - p1.xy;
             for (i = 0; i <= segments; i += segSkip) {
@@ -856,6 +878,9 @@ class RotationTranslationGizmo {
         auto posToScreen = Camera::ToScreen(pos);
         if (posToScreen.z >= 0) return;
         if (posToScreen.x < 20 || posToScreen.x > g_screen.x - 20 || posToScreen.y < 20 || posToScreen.y > g_screen.y - 20) return;
+
+        if (Math::IsNaN(scale)) warn("this.scale is nan");
+        if (Math::IsNaN(scaleExtraCoef)) warn("this.scaleExtraCoef is nan");
 
         DrawCirclesManual(pos, scale * scaleExtraCoef);
 #if DEV
