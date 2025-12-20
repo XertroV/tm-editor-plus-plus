@@ -364,9 +364,9 @@ namespace Editor {
         mbSpec._TempWriteToMacroblock(mb);
         dev_trace("[DEBUG] PlaceMacroblock: Replacing curr MB");
         auto prevCurrMb = Editor::ReplaceCurrentMacroblock_AddRef(editor, mb);
-        dev_trace("[DEBUG] PlaceMacroblock: TurnIntoAirMb_Unsafe; mb.IsGround=" + mb.IsGround);
-        editor.TurnIntoAirMb_Unsafe();
-        dev_trace("[DEBUG] PlaceMacroblock: Restored curr MB; mb.IsGround=" + mb.IsGround);
+        // dev_trace("[DEBUG] PlaceMacroblock: TurnIntoAirMb_Unsafe; mb.IsGround=" + mb.IsGround);
+        // editor.TurnIntoAirMb_Unsafe();
+        dev_trace("[DEBUG] PlaceMacroblock: Restoring curr MB; mb.IsGround=" + mb.IsGround);
         Editor::ReplaceCurrentMacroblock_AddRef(editor, prevCurrMb);
 
         bool forceMbColor = pmt.ForceMacroblockColor;
@@ -574,7 +574,6 @@ namespace Editor {
 
     // returns all blocks/items in map that are not in removeSource
     MacroblockSpec@ SubtractMacroblockFromMap(MacroblockSpec@ removeSource) {
-        auto grassMwIdValue = GetMwId("Grass");
         auto tree = OctTreeNode(nat3(255, 255, 255));
         // prep tree
         for (uint i = 0; i < removeSource.blocks.Length; i++) {
@@ -592,7 +591,7 @@ namespace Editor {
         BlockSpec@ blockSpec;
         ItemSpec@ itemSpec;
         for (uint i = 0; i < map.Blocks.Length; i++) {
-            if (map.Blocks[i].DescId.Value == grassMwIdValue) {
+            if (map.Blocks[i].BlockInfo.IsTerrain) {
                 continue;
             }
             @blockSpec = MakeBlockSpec(map.Blocks[i]);

@@ -144,18 +144,20 @@ vec3 CoordDistToPos(const vec3 &in coord) {
 }
 
 nat3 PosToCoord(vec3 pos, vec2 xySize = vec2(32, 8), float baseHeightOffset = 64) {
+    auto hBlocks = baseHeightOffset / 8.;
+    auto horiz = 1.0 / xySize.x;
     return nat3(
-        uint(Math::Floor(pos.x / 32.)),
-        uint(Math::Floor(pos.y / 8. + 8.)),
-        uint(Math::Floor(pos.z / 32.))
+        uint(Math::Floor(1e-8 + pos.x * horiz)),
+        uint(Math::Floor(1e-8 + pos.y / xySize.y + hBlocks)),
+        uint(Math::Floor(1e-8 + pos.z * horiz))
     );
 }
 
 int3 PosToCoordDist(vec3 pos) {
     return int3(
-        uint(Math::Floor(pos.x / 32.)),
-        uint(Math::Floor(pos.y / 8.)),
-        uint(Math::Floor(pos.z / 32.))
+        uint(Math::Floor(1e-8 + pos.x / 32.)),
+        uint(Math::Floor(1e-8 + pos.y / 8.)),
+        uint(Math::Floor(1e-8 + pos.z / 32.))
     );
 }
 

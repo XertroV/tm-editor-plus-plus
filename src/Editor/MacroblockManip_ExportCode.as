@@ -111,7 +111,7 @@ namespace Editor {
     import nat3 Int3ToNat3(int3 coord) from "Editor";
     import vec2 Nat2ToVec2(nat2 coord) from "Editor";
     import nat2 Vec2ToNat2(vec2 v) from "Editor";
-    import nat3 PosToCoord(vec3 pos) from "Editor";
+    import nat3 PosToCoord(vec3 pos, vec2 xySize = vec2(32, 8), float baseHeightOffset = 64) from "Editor";
     import int3 PosToCoordDist(vec3 pos) from "Editor";
     import vec3 MTCoordToPos(int3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
     import vec3 MTCoordToPos(nat3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";

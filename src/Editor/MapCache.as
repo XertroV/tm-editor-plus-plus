@@ -145,14 +145,15 @@ namespace Editor {
     uint64 SwapMem100 = 0;
 
     class BlockInMap : ObjInMap, IBlockInMap {
-        bool _IsClassicElseGhost;
-        bool _IsFree;
         BlockPlacementType _PlacementTy;
         vec3 _size;
         int _dir;
         uint64 _hash;
         string _hashStr;
         BlockSpec@ _spec;
+        bool _IsClassicElseGhost;
+        bool _IsFree;
+        bool _IsTerrain;
 
         BlockInMap(uint i, CGameCtnBlock@ block) {
             // dev_trace("Adding block: " + block.BlockInfo.Name);
@@ -171,6 +172,7 @@ namespace Editor {
             _color = int(block.MapElemColor);
             _Id = block.BlockInfo.Id.Value;
             _IdName = block.BlockInfo.IdName;
+            _IsTerrain = block.BlockInfo.IsTerrain;
             _size = Editor::GetBlockSize(block);
             _mat = mat4::Translate(_pos) * EulerToMat(_rot);
             _hasSkin = block.Skin !is null;
@@ -187,6 +189,7 @@ namespace Editor {
         string get_mbInstIdStr() { return _mbInstIdStr; }
         int get_color() { return _color; }
         bool get_IsFree() { return _IsFree; }
+        bool get_IsTerrain() { return _IsTerrain; }
         bool get_IsClassicElseGhost() { return _IsClassicElseGhost; }
         BlockPlacementType get_PlacementTy() { return _PlacementTy; }
         vec3 get_size() { return _size; }
@@ -553,7 +556,7 @@ namespace Editor {
 
         void AddToOctTree(BlockInMap@ b) {
             // don't add grass
-            if (b._IdName == "Grass") return;
+            if (b._IsTerrain) return;
             objsRoot.Insert(b._spec);
         }
         void AddToOctTree(ItemInMap@ b) {

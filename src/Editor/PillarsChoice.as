@@ -368,7 +368,6 @@ The types are:
         if (map is null) return;
         if (m_AutoPillars == PillarsType::None) return;
         auto nbBlocks = map.Blocks.Length;
-        auto grassId = GetMwId("Grass");
         CGameCtnBlock@ b;
         for (uint i = 0; i < nbBlocks; i++) {
             @b = map.Blocks[i];

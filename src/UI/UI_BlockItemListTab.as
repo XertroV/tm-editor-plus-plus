@@ -135,7 +135,7 @@ class BlockItemListTab : Tab {
         for (uint i = 0; i < nbBlocks; i++) {
             if (IsAnyBlocksTab) {
                 @block = GetBlock(map, i);
-                if (block.BlockInfo.Name == "Grass") {
+                if (block.BlockInfo.IsTerrain) {
                     continue;
                 }
                 csv += GetBlockCsvLine(block);
@@ -174,7 +174,7 @@ class BlockItemListTab : Tab {
             if (recheckSkip) {
                 recheckSkip = false;
                 auto block = map !is null ? GetBlock(map, 0) : null;
-                skipXZStarting = block !is null && block.BlockInfo.IdName == "Grass";
+                skipXZStarting = block !is null && block.BlockInfo.IsTerrain;
             }
             skipXZStarting = UI::Checkbox("Skip first " + sizeXZ + " blocks", skipXZStarting);
             if (!skipXZStarting) {

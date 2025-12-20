@@ -57,8 +57,6 @@ class BlockFilter {
 
 // MARK: MapVoxels
 
-const uint GRASS_ID_VAL = StrToMwIdValue_NoDep("Grass");
-
 class MapVoxels {
     int3 mapSize;
     CoordState@[][] states;
@@ -78,7 +76,7 @@ class MapVoxels {
             for (uint i = 0; i < nbBlocks; i++) {
                 auto block = map.Blocks[i];
                 if (block is null) continue;
-                if (!foundGrass && block.DescId.Value == GRASS_ID_VAL) {
+                if (!foundGrass && block.BlockInfo.IsTerrain) {
                     i += mapSize.x * mapSize.z - 1;
                     foundGrass = true;
                     continue;

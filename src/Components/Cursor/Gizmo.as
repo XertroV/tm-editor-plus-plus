@@ -832,8 +832,10 @@ MemPatcher@ PatchHandleNullVariant = MemPatcher("PatchHandleNullVariant",
 );
 
 void Gizmo_HookGetVariantGizmoCrash(uint64 r14, uint64 r10) {
-    print("Variant Ptr: " + Text::FormatPointer(r14));
-    print("Variant Ix? [r10]: " + Text::FormatPointer(r10));
+#if DEV
+    dev_trace("Variant Ptr: " + Text::FormatPointer(r14));
+    dev_trace("Variant Ix? [r10]: " + Text::FormatPointer(r10));
+#endif
     if (r14 == 0) {
         PatchHandleNullVariant.Apply();
         startnew(function() { PatchHandleNullVariant.Unapply(); });

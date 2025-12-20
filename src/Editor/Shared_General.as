@@ -89,6 +89,7 @@ namespace Editor {
         BlockSpec@ get_spec();
         bool get_HasSkin();
         bool get_IsWaypoint();
+        bool get_IsTerrain();
         bool IsStale(CGameEditorPluginMap@ pmt);
         string ToString();
         bool ReFindObj(CGameEditorPluginMap@ pmt);

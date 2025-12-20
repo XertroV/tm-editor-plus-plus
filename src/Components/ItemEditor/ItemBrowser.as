@@ -473,14 +473,35 @@ class ItemModelTreeElement {
             if (biClip !is null) {
                 DrawBiClipExtra(biClip);
             }
+
             auto mmOffset = O_BLOCKINFO_MATERIALMOD;
             auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
             string mmPlacementTagsStr = ItemPlace_StringConsts::LookupJoined(mmPlacementTag);
             DrawMwId("Name", blockInfo.Id);
-            CopiableLabeledValue("Collection", blockInfo.CollectionId_Text + Text::Format(" (%d)", int(blockInfo.CollectionId)));
 
+            CopiableLabeledValue("Collection", blockInfo.CollectionId_Text + Text::Format(" (%d)", int(blockInfo.CollectionId)));
+            // flags; note: some have no set accessor
+            UI::BeginDisabled(!isEditable);
+            blockInfo.IsAdvanced = UI::Checkbox("IsAdvanced", blockInfo.IsAdvanced);
+            UI::SameLine();
+            UI::Checkbox("IsClip", blockInfo.IsClip);
+            UI::SameLine();
+            blockInfo.IsInternal = UI::Checkbox("IsInternal", blockInfo.IsInternal);
+
+            blockInfo.IsMultiHeightPillarOrVFC = UI::Checkbox("IsMultiHeightPillarOrVFC", blockInfo.IsMultiHeightPillarOrVFC);
+            UI::SameLine();
+            blockInfo.IsPillar = UI::Checkbox("IsPillar", blockInfo.IsPillar);
+
+            UI::Checkbox("IsPodium", blockInfo.IsPodium);
+            UI::SameLine();
+            UI::Checkbox("IsRoad", blockInfo.IsRoad);
+            UI::SameLine();
+            UI::Checkbox("IsTerrain", blockInfo.IsTerrain);
+            UI::EndDisabled();
+
+            // mat modifier
             MkAndDrawChildNode(blockInfo.MaterialModifier, O_BLOCKINFO_MATERIALMOD, "MaterialModifier");
-            // CopiableLabeledValue("Name MwID", toHex(blockInfo.Id.Value) + " > " + blockInfo.Id.GetName());
+
             if (isEditable) {
                 Dev::SetOffset(blockInfo, mmOffset, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
             } else {
@@ -490,6 +511,7 @@ class ItemModelTreeElement {
                 // try { extra = string(blockInfo.MatModifierPlacementTag.Type); } catch {}
                 UI::Text("MatModiferPlacementTag: " + mmPlacementTag.ToString() + " / " + mmPlacementTagsStr);
             }
+
             MkAndDrawChildNode(blockInfo.VariantBaseGround, "VariantBaseGround");
             MkAndDrawChildNode(blockInfo.VariantBaseAir, "VariantBaseAir");
             for (uint i = 0; i < blockInfo.AdditionalVariantsGround.Length; i++) {

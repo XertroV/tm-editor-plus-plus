@@ -550,15 +550,14 @@ class Helper_ModifyMapObjCoords {
 
 	protected void MoveBlocks_Filtered() {
 		auto nbBlocksInMap = map.Blocks.Length;
-		auto grassMwIdValue = GetMwId("Grass");
 		bool seenGrass = false;
 		for (uint i = 0; i < map.Blocks.Length; i++) {
 			auto block = map.Blocks[i];
 			// skip grass
-			if (!seenGrass && block.BlockInfo.Id.Value == grassMwIdValue) {
+			if (!seenGrass && block.BlockInfo.IsTerrain) {
 				seenGrass = true;
 				auto testIx = map.Size.x * map.Size.z - 1 + i;
-				if (testIx < nbBlocksInMap && map.Blocks[testIx].BlockInfo.Id.Value == grassMwIdValue) {
+				if (testIx < nbBlocksInMap && map.Blocks[testIx].BlockInfo.IsTerrain) {
 					i = testIx;
 				}
 				continue;

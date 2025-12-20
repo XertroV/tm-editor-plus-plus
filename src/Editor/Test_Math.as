@@ -90,8 +90,27 @@ TestCase@[]@ generateMathTests() {
     ret.InsertLast(TestCase("Test_YPR_To_Quat", Test_YPR_To_Quat));
     ret.InsertLast(TestCase("Test_YPR_To_QuatAndBack", Test_YPR_To_QuatAndBack));
     ret.InsertLast(TestCase("game: Euler / Quat / Mat functions", Test_game_EulerQuatMatFunctions));
+    ret.InsertLast(TestCase("pos to coord", math_test_pos_to_coord));
     return ret;
 }
+
+
+void math_test_pos_to_coord() {
+    vec3 pos = vec3(96.0, 72.0, 128.0);
+    nat3 coord = PosToCoord(pos, vec2(32, 8), 64);
+    assert_eq(coord, nat3(3, 17, 4), "PosToCoord 32,8,64 failed " + pos.ToString());
+    vec3 pos2 = CoordToPos(coord, vec2(32, 8), 64);
+    assert_eq(pos, pos2, "CoordToPos 32,8,64 failed " + coord.ToString());
+
+    coord = PosToCoord(pos, vec2(32, 8), 40);
+    assert_eq(coord, nat3(3, 14, 4), "PosToCoord 32,8,40 failed " + pos.ToString());
+    pos2 = CoordToPos(coord, vec2(32, 8), 40);
+    assert_eq(pos, pos2, "CoordToPos 32,8,40 failed " + coord.ToString());
+
+    int3 coordDist = PosToCoordDist(pos);
+    assert_eq(coordDist, int3(3, 9, 4), "PosToCoordDist failed");
+}
+
 
 void math_test_mat4_to_quat() {
     auto m = mat4(vec4(0, -1, 0, 0), vec4(1, 0, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
@@ -236,6 +255,11 @@ void assert_eq(vec3 a, vec3 b, const string &in msg = "") {
 }
 void assert_eq(int3 a, int3 b, const string &in msg = "") {
     if (!MathX::Int3Eq(a, b)) {
+        throw("assertion failed: " + a.ToString() + " != " + b.ToString() + (msg != "" ? ", " + msg : ""));
+    }
+}
+void assert_eq(nat3 a, nat3 b, const string &in msg = "") {
+    if (!MathX::Nat3Eq(a, b)) {
         throw("assertion failed: " + a.ToString() + " != " + b.ToString() + (msg != "" ? ", " + msg : ""));
     }
 }
