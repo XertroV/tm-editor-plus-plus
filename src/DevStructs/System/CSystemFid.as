@@ -17,10 +17,11 @@ class DSystemFidFile : RawBufferElem {
 		return cast<CSystemFidFile>(Dev_GetNodFromPointer(ptr));
 	}
 
-	CMwNod@ get_FidNod() { return cast<CMwNod>(this.GetNod(0x80)); }
-	void set_FidNod(CMwNod@ value) { this.SetNod(0x80, value); }
-	uint get_ByteSize() { return (this.GetUint32(0xE8)); }
 	CSystemFidsFolder@ get_ParentFolder() { return cast<CSystemFidsFolder>(this.GetNod(0x18)); }
+	uint get_NodClassId() { return (this.GetUint32(O_FID_NodClassId)); }
+	CMwNod@ get_FidNod() { return cast<CMwNod>(this.GetNod(O_FID_Nod)); }
+	void set_FidNod(CMwNod@ value) { this.SetNod(O_FID_Nod, value); }
+	uint get_ByteSize() { return (this.GetUint32(O_FID_ByteSize)); }
 }
 
 

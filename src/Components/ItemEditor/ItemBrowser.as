@@ -674,12 +674,21 @@ class ItemModelTreeElement {
         if (StartTreeNode(name + " ::\\$f8f CSystemFidFile \\$8f8" + fid.FileName, DEFAULT_OPEN)) {
             LabeledValue("Size (KB)", fid.ByteSizeEd);
 #if SIG_DEVELOPER
+            // class id and helper
+            auto clsId = Dev_GetFidClassId(fid);
+            LabeledValue("Class ID", Text::Format("\\$fa8%08X", clsId));
+            if (UI::IsItemHovered()) {
+                auto ty = Reflection::GetType(clsId);
+                AddSimpleTooltip(ty is null ? "Unknown Type" : ty.Name);
+            }
+            // container
             LabeledValue("Container", fid.Container.FileName);
             UI::SameLine();
             if (UI::Button(Icons::Cube + "##fid-container")) {
                 ExploreNod("Container", fid.Container);
             }
 #endif
+            // load nod
             if (fid.Nod is null && UI::Button("Load Nod")) {
                 Fids::Preload(fid);
             } else {

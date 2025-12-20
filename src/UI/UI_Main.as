@@ -334,15 +334,26 @@ namespace MenuBar {
             auto mapCache = Editor::GetMapCache();
             auto inv = Editor::GetInventoryCache();
             bool hasDupes = mapCache !is null && mapCache.HasDuplicateBlocksOrItems();
+            // Menu for "Caches" (quotes are a ctrl+f helper)
             string cachesMenuLabel = !hasDupes
                 ? "Caches###Caches-menu"
                 : "Caches ("+WARNING_TRIANGLE_START+ mapCache.NbDuplicateFreeBlocks +"\\$z)###Caches-menu";
 
             // (hasDupes ? WARNING_TRIANGLE_START : "") +
             if (UI::BeginMenu(cachesMenuLabel)) {
+                if (UI::BeginMenu("Cache Stats")) {
+                    UI::TextDisabled("Blocks in Map: " + mapCache.NbBlocks);
+                    UI::TextDisabled("Items in Map: " + mapCache.NbItems);
+                    UI::Separator();
+                    UI::TextDisabled("Inventory Blocks: " + inv.NbBlocks);
+                    UI::TextDisabled("Inventory Items: " + inv.NbItems);
+                    UI::EndMenu();
+                }
+
                 if (UI::MenuItem("Refresh Map Block/Item Cache", mapCache._IsStale ? "(Stale)" : "")) {
                     mapCache.RefreshCacheSoon();
                 }
+
                 UI::AlignTextToFramePadding();
                 if (!hasDupes) {
                     UI::TextDisabled("Duplicate Blocks: " + mapCache.NbDuplicateFreeBlocks);

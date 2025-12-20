@@ -468,6 +468,12 @@ const uint32 CLSID_NPlugItemPlacement_SPlacement = Reflection::GetType("NPlugIte
 
 // 0x80
 const uint16 O_FID_Nod = GetOffset("CSystemFidFile", "Nod");
+const uint16 O_FID_NodClassId = O_FID_Nod - 0x8;
+const uint16 O_FID_ByteSize = O_FID_Nod + (0xE8 - 0x80);
+uint Dev_GetFidClassId(CSystemFidFile@ fid) {
+    return Dev::GetOffsetUint32(fid, O_FID_NodClassId);
+}
+
 
 // MARK: O Map
 
