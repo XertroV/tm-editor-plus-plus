@@ -453,9 +453,18 @@ namespace Editor {
     vec2 _mapXySize;
     float _mapbaseHeightOffset;
     void _getMapDetailsToCache() {
+        _mapbaseHeightOffset = 0.0;
         auto map = GetApp().RootMap;
-        _mapXySize = GetMapCoordSize(map);
-        _mapbaseHeightOffset = -GetMapExtendsBelowZero(map);
+        if (map !is null) {
+            _mapXySize = GetMapCoordSize(map);
+            _mapbaseHeightOffset = -GetMapExtendsBelowZero(map);
+        }
+        if (_mapbaseHeightOffset != 0.0) return;
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        auto xyh = Dev::GetOffsetVec3(editor.Cursor, O_BLOCKCURSOR_MapXYMinH);
+        _mapXySize = xyh.xy;
+        _mapbaseHeightOffset = xyh.z * -1.0;
     }
 
     float _MbHeightOffset = -9877.0;

@@ -822,6 +822,9 @@ const uint16 O_BLOCKCURSOR_SnappedLocInMap_Roll = GetOffset("CGameCursorBlock", 
 const uint16 O_BLOCKCURSOR_DrawCursor = O_BLOCKCURSOR_SnappedLocInMap_Roll + (0x1f8 - 0x184);
 // the offset used for free blocks (sometimes?) is at 0x110; it's a vec2, the second one seems to affect normal blocks (sometimes?); default: vec2(.25, 0)
 const uint16 O_BLOCKCURSOR_FreeBlockCursorOffset = GetOffset("CGameCursorBlock", "SubdivFactors") - 0xC; // 0x11C - 0x110 = 0xC
+const uint16 O_BLOCKCURSOR_BrightnessFactor = GetOffset("CGameCursorBlock", "BrightnessFactor");
+// (0x140 - 0x13C)
+const uint16 O_BLOCKCURSOR_MapXYMinH = O_BLOCKCURSOR_BrightnessFactor + 0x4;
 
 
 
@@ -1546,7 +1549,7 @@ class MultiHookHelper {
             throw("MultiHookHelper: mismatched lengths");
         }
         for (uint i = 0; i < offsets.Length; i++) {
-            hooks.InsertLast(HookHelper(pattern, offsets[i], paddings[i], functions[i], Dev::PushRegisters(0), true));
+            hooks.InsertLast(HookHelper(pattern, offsets[i], paddings[i], functions[i], Dev::PushRegisters::SSE, true));
         }
     }
 
@@ -1660,6 +1663,12 @@ class HookHelper {
 
     string FunctionName {
         get { return functionName; }
+    }
+
+    protected void _Apply() { this.Apply(); }
+    HookHelper@ WithAutoApply() {
+        startnew(CoroutineFunc(this._Apply));
+        return this;
     }
 }
 

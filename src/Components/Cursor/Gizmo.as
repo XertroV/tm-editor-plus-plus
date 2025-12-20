@@ -513,6 +513,7 @@ namespace Gizmo {
                     Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
                     Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
                     Editor::SetEditorPickedBlock(editor, null);
+                    dev_trace("gizmo deleting freeblock");
                     Editor::DeleteFreeblocks(array<CGameCtnBlock@> = {lastPickedBlock.AsBlock()});
                     Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
                     Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
@@ -579,6 +580,8 @@ namespace Gizmo {
         shouldReplaceTarget = false;
     }
 
+    // MARK: Apply
+
     void _GizmoOnApply_Params(bool setInactiveAfter = true) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) {
@@ -607,6 +610,9 @@ namespace Gizmo {
             blockSpec.pos = gizmo.pos + xyzOffset + gizmo.GetRotatedPivotPoint();
             blockSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
             blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
+            if (!blockSpec.EnsureValidVariant()) {
+                warn("Selected block model does not have variant " + tostring(blockSpec.variant));
+            }
             Editor::PlaceBlocks({blockSpec}, true);
             startnew(_AfterApply_SetBlockSkin);
         }
@@ -805,4 +811,41 @@ bool S_Gizmo_MoveCameraOnStart = true;
 bool D_Gizmo_DrawBoundingBox = false;
 #else
 bool D_Gizmo_DrawBoundingBox = false;
+#endif
+
+
+// MARK: Debug variant issues
+
+//                                          v call         v mov    v test (7)           v jz/je (2)
+const string PatternGetVariantGizmoCrash = "E8 ?? ?? ?? ?? 4C 8B F0 F6 80 74 01 00 00 02 74 07";
+HookHelper@ HookGetVariantGizmoCrash = FunctionHookHelper(
+    PatternGetVariantGizmoCrash, 0, 3,
+    "Gizmo_HookGetVariantGizmoCrash", Dev::PushRegisters::SSE, true
+).WithAutoApply();
+MemPatcher@ PatchHandleNullVariant = MemPatcher("PatchHandleNullVariant",
+    PatternGetVariantGizmoCrash,
+    {8}, {"90 90 90 90 90 90 90 90 90"}
+);
+
+void Gizmo_HookGetVariantGizmoCrash(uint64 r14, uint64 r10) {
+    print("Variant Ptr: " + Text::FormatPointer(r14));
+    print("Variant Ix? [r10]: " + Text::FormatPointer(r10));
+    if (r14 == 0) {
+        PatchHandleNullVariant.Apply();
+        startnew(function() { PatchHandleNullVariant.Unapply(); });
+
+        NotifyWarning("Detected Macroblock with invalid variant. This would normally crash the game but I am preventing the crash. The macroblock placement will likely fail or be incomplete.");
+    } else {
+        // unapply in case it's still applied from last time startnew didn't run yet.
+        // this code path is called multiple times.
+        PatchHandleNullVariant.Unapply();
+    }
+}
+
+
+#if DEV
+
+// second crash fix idea:
+// - set autoterrain length to zero
+
 #endif

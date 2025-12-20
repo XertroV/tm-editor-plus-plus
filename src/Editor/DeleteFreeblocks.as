@@ -89,25 +89,28 @@ namespace Editor {
     }
 
     uint DeleteFreeblocks(CGameCtnBlock@[]@ blocks) {
-        auto @tmpPending = pendingFreeBlocksToDelete;
-        @pendingFreeBlocksToDelete = {};
+        // auto @tmpPending = pendingFreeBlocksToDelete;
+        // @pendingFreeBlocksToDelete = {};
         for (uint i = 0; i < blocks.Length; i++) {
             pendingFreeBlocksToDelete.InsertLast(MakeBlockSpec(blocks[i]));
         }
         waitingToDeleteFreeBlocks = true;
         RunDeleteFreeBlockDetection();
         auto ret = lastFreeBlockDeletedNb;
-        @pendingFreeBlocksToDelete = tmpPending;
+        // @pendingFreeBlocksToDelete = tmpPending;
         return ret;
     }
 
     uint DeleteFreeblocks(BlockSpec@[]@ blocks) {
-        auto @tmpPending = pendingFreeBlocksToDelete;
-        @pendingFreeBlocksToDelete = blocks;
+        // auto @tmpPending = pendingFreeBlocksToDelete;
+        // @pendingFreeBlocksToDelete = blocks;
+        for (uint i = 0; i < blocks.Length; i++) {
+            pendingFreeBlocksToDelete.InsertLast(blocks[i]);
+        }
         waitingToDeleteFreeBlocks = true;
         RunDeleteFreeBlockDetection();
         auto ret = lastFreeBlockDeletedNb;
-        @pendingFreeBlocksToDelete = tmpPending;
+        // @pendingFreeBlocksToDelete = tmpPending;
         return ret;
     }
 
@@ -158,7 +161,7 @@ namespace Editor {
             Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::GhostBlock);
         }
         if (canDeleteFreeBlocks || waitingToDeleteFreeBlocks) {
-            warn("Expected free block flags to be set to false!");
+            warn("Expected free block flags to be set to false! (should have happened in hooks)");
         }
         TrackMap_OnRemoveBlock_EndAPI();
 

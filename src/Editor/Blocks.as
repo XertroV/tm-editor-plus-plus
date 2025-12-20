@@ -49,6 +49,7 @@ namespace Editor {
         if (dir == 3) {
             coord.z += coordSize.x - 1;
         }
+        if (_mapbaseHeightOffset == 0.0) _getMapDetailsToCache();
         auto pos = CoordToPos(coord, _mapXySize, _mapbaseHeightOffset);
         return (mat4::Translate(pos) * mat4::Translate(HALF_COORD) * EulerToMat(vec3(0, CardinalDirectionToYaw(dir), 0)) * mat4::Translate(HALF_COORD * -1.) * vec3()).xyz;
     }

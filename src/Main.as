@@ -12,6 +12,8 @@ void Main() {
     RegisterNewBlockCallback_Private(FarlandsHelper::FH_OnAddBlock, "FarlandsHelper::FH_OnAddBlock", 1);
     RegisterNewItemCallback_Private(FarlandsHelper::FH_OnAddItem, "FarlandsHelper::FH_OnAddItem", 1);
 
+    Editor::_getMapDetailsToCache();
+
     startnew(LoadFonts);
     // check permissions and version
     UserHasPermissions = Permissions::OpenAdvancedMapEditor();
