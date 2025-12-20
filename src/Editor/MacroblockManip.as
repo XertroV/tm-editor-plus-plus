@@ -765,14 +765,14 @@ namespace Editor {
             auto origGround = isGround;
             if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
                 variant = 0;
-            }
-            if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                isGround = !isGround;
-            }
-            if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                variant = origVar;
-                isGround = origGround;
-                return false;
+                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                    isGround = !isGround;
+                    if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                        variant = origVar;
+                        isGround = origGround;
+                        return false;
+                    }
+                }
             }
             return true;
         }

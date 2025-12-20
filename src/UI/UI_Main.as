@@ -645,6 +645,7 @@ TabGroup@ CreateItemEditorRT() {
 PickedBlockTab@ g_PickedBlockTab;
 PickedItemTab@ g_PickedItemTab;
 MapEditPropsTab@ g_MapPropsTab;
+MapThumbnailPropsTab@ g_MapThumbPropsTab;
 BI_MainTab@ g_BlocksItemsTab;
 InventorySearchTab@ g_InvSearchTab;
 NG::GraphTab@ g_GraphTab;
@@ -720,6 +721,7 @@ TabGroup@ CreateRootTabGroup() {
 
     ChangelogTab(root);
     @g_MapPropsTab = MapEditPropsTab(root);
+    @g_MapThumbPropsTab = MapThumbnailPropsTab(root);
 #if DEV
     MapExtractItems(root);
 #endif

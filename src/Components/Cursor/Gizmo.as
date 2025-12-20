@@ -607,7 +607,10 @@ namespace Gizmo {
         } else {
             // this will only unapply if it was applied earlier
             gizmo.OffsetBlockOnApply();
-            blockSpec.flags = uint8(Editor::BlockFlags::Free);
+            // blockSpec.flags = uint8(Editor::BlockFlags::Free);
+            bool isGround = blockSpec.isGround;
+            blockSpec.SetFree();
+            blockSpec.isGround = isGround;
             blockSpec.pos = gizmo.pos + xyzOffset + gizmo.GetRotatedPivotPoint();
             blockSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
             blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
@@ -834,7 +837,6 @@ void Gizmo_HookGetVariantGizmoCrash(uint64 r14, uint64 r10) {
     if (r14 == 0) {
         PatchHandleNullVariant.Apply();
         startnew(function() { PatchHandleNullVariant.Unapply(); });
-
         NotifyWarning("Detected Macroblock with invalid variant. This would normally crash the game but I am preventing the crash. The macroblock placement will likely fail or be incomplete.");
     } else {
         // unapply in case it's still applied from last time startnew didn't run yet.
