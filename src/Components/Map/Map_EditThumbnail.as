@@ -2,7 +2,7 @@
 //
 class MapThumbnailPropsTab : Tab {
     MapThumbnailPropsTab(TabGroup@ parent) {
-        super(parent, "Map Thumbnail", Icons::MapO + Icons::Camera);
+        super(parent, "Thumbnail" + NewIndicator, Icons::MapO + Icons::Camera);
         // RegisterOnEditorLoadCallback(CoroutineFunc(this.OnEnterEditor), this.tabName);
     }
 

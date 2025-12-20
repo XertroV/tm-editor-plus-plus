@@ -156,7 +156,6 @@ class MapEditPropsTab : Tab {
 
         DrawMapThumbnailLine(map);
 
-        // SameLineNewIndicator();
         UI::Text("LightMapCacheSmall (KB): " + map.LightMapCacheSmall_KBytes);
         auto mapFid = GetFidFromNod(map);
         LabeledValue("Map File Size (KB)", mapFid !is null ? mapFid.ByteSizeEd : 0);
@@ -171,7 +170,6 @@ class MapEditPropsTab : Tab {
         if (UI::IsItemHovered()) {
             AddSimpleTooltip("Editor: " + TimeFormatSecs(FromML::mappingTimeMapping) + " / Testing: " + TimeFormatSecs(FromML::mappingTimeTesting) + " / Validating: " + TimeFormatSecs(FromML::mappingTimeValidating));
         }
-        // SameLineNewIndicator();
         UI::Text("Times loaded map in editor: " + FromML::pluginLoads);
         UI::Text("Times tested/validated map: " + FromML::pgSwitches);
 

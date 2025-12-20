@@ -22,8 +22,13 @@ const int TWO_BILLION = 2000000000;
 const int TWO_MILLION = 2000000;
 
 const string NewIndicator = "\\$af3 New!";
+const string UpdatedIndicator = "\\$3fa Updated!";
 const string BetaIndicator = "\\$f80 BETA!";
 void SameLineNewIndicator() {
     UI::SameLine();
     UI::Text(NewIndicator);
+}
+void SameLineUpdatedIndicator() {
+    UI::SameLine();
+    UI::Text(UpdatedIndicator);
 }
