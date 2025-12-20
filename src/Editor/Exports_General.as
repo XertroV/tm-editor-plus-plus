@@ -63,4 +63,5 @@ namespace Editor {
 
     // map cache
     import IMapCache@ GetIMapCache() from "Editor";
+    import IInvCache@ GetIInvCache() from "Editor";
 }

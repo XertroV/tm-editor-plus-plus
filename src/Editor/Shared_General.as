@@ -5,6 +5,43 @@ namespace Editor {
         SkipClubEntirely,
     }
 
+    interface IInvCache {
+        string LoadingStatus();
+        string LoadingStatusShort();
+        uint get_NbItems();
+        uint get_NbBlocks();
+        uint get_NbMacroblocks();
+
+        const array<string>@ get_BlockNames();
+        const array<CGameCtnArticleNodeArticle@>@ get_BlockInvNodes();
+        const array<string>@ get_ItemNames();
+        const array<string>@ get_ItemPaths();
+        const array<CGameCtnArticleNodeArticle@>@ get_ItemInvNodes();
+        const dictionary@ get_ItemIndexes();
+        const dictionary@ get_BlockIndexes();
+        const array<string>@ get_BlockFolders();
+        const array<string>@ get_ItemFolders();
+        const array<string>@ get_MacroblockNames();
+        const dictionary@ get_MacroblockIndexes();
+        const array<string>@ get_MacroblockFolders();
+        const array<CGameCtnArticleNodeArticle@>@ get_MacroblockInvNodes();
+
+        bool get_IsScanningMacroblocks();
+        bool get_IsScanningItems();
+        bool get_IsScanningBlocks();
+
+        CGameCtnArticleNodeArticle@ GetByName(const string &in name, bool isItem);
+        CGameCtnArticleNodeArticle@ GetAnyByName(const string &in name);
+
+        CGameCtnArticleNodeArticle@ GetMacroblockByName(const string &in name);
+        CGameCtnArticleNodeArticle@ GetBlockByName(const string &in name);
+        CGameCtnArticleNodeArticle@ GetItemByPath(const string &in path);
+        CGameCtnArticleNodeDirectory@ GetBlockDirectory(const string &in dir);
+        CGameCtnArticleNodeDirectory@ GetItemDirectory(const string &in dir);
+        CGameCtnArticleNodeDirectory@ GetMacroblockDirectory(const string &in dir);
+        CGameCtnArticleNodeDirectory@ GetDirectory(const string &in dir, bool isItem);
+    }
+
     shared interface IMapCache {
         void RefreshCache();
         void RefreshCacheSoon();

@@ -3,6 +3,9 @@ namespace Editor {
     InventoryCache@ GetInventoryCache() {
         return _InventoryCache;
     }
+    IInvCache@ GetIInvCache() {
+        return _InventoryCache;
+    }
 
     enum InventoryRootNode {
         CrashBlocks = 0,

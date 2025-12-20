@@ -8,7 +8,7 @@ namespace Editor {
         Macroblocks = 3
     }
 
-    class InventoryCache {
+    class InventoryCache : IInvCache {
         InventoryCache() {
             RefreshCacheSoon();
             itemsFolderPrefix = Fids::GetUserFolder("Items").FullDirName;
@@ -152,8 +152,12 @@ namespace Editor {
             return cachedInvBlockNames.Length;
         }
 
-        const array<string>@ get_BlockNames() { return cachedInvBlockNames; }
+        uint get_NbMacroblocks() {
+            return cachedInvMacroblockNames.Length;
+        }
+
         // const array<string>@ get_BlockPaths() { return cachedInvBlockPaths; }
+        const array<string>@ get_BlockNames() { return cachedInvBlockNames; }
         const array<CGameCtnArticleNodeArticle@>@ get_BlockInvNodes() { return cachedInvBlockArticleNodes; }
         const array<string>@ get_ItemNames() { return cachedInvItemNames; }
         const array<string>@ get_ItemPaths() { return cachedInvItemPaths; }
@@ -162,6 +166,10 @@ namespace Editor {
         const dictionary@ get_BlockIndexes() { return cachedInvBlockIndexes; }
         const array<string>@ get_BlockFolders() { return cachedInvBlockFolders; }
         const array<string>@ get_ItemFolders() { return cachedInvItemFolders; }
+        const array<string>@ get_MacroblockNames() { return cachedInvMacroblockNames; }
+        const dictionary@ get_MacroblockIndexes() { return cachedInvMacroblockIndexes; }
+        const array<string>@ get_MacroblockFolders() { return cachedInvMacroblockFolders; }
+        const array<CGameCtnArticleNodeArticle@>@ get_MacroblockInvNodes() { return cachedInvMacroblockArticleNodes; }
 
         bool get_IsScanningMacroblocks() { return _ScanType == ScanType::Macroblocks; }
         bool get_IsScanningItems() { return _ScanType == ScanType::Items; }
