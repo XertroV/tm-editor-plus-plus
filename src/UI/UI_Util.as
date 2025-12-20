@@ -243,6 +243,18 @@ namespace UX {
     void ValuesTableRow(const string &in label, vec2 value) {
         ValuesTableRow(label, value.ToString());
     }
+
+
+    // draw text for timeout + fadeout duration.
+    void DrawTempStatusMsgWithinTimeout(const string &in text, int64 sinceLast, const vec4 &in color = cGreen, int64 timeoutMs = 1000, int64 fadeOutMs = 1000) {
+        if (sinceLast < timeoutMs + fadeOutMs) {
+            float alpha = (1.0 - float(sinceLast - timeoutMs) / float(fadeOutMs));
+            UI::SameLine();
+            UI::PushStyleColor(UI::Col::Text, vec4(color.xyz, alpha));
+            UI::Text(text);
+            UI::PopStyleColor();
+        }
+    }
 }
 
 

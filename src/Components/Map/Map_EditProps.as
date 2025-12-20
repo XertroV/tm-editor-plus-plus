@@ -153,14 +153,9 @@ class MapEditPropsTab : Tab {
         } else {
             UI::Text("map.MapInfo is null!?");
         }
-        UI::Text("Thumbnail (KB): " + map.Thumbnail_KBytes);
-        UI::SameLine();
-        UI::Text(FromML::lockedThumbnail ? Icons::Lock : Icons::Unlock);
-        UI::SameLine();
-        if (UX::SmallButton((FromML::lockedThumbnail ? "Unlock" : "Lock") + "###thumbnail-lock-btn")) {
-            ToML::SendMessage("LockThumbnail", {tostring(!FromML::lockedThumbnail)});
-        }
-        AddSimpleTooltip("When locked, the thumbnail will not be updated when the map is saved. This setting is saved as metadata on the map. Only works when the E++ Editor Plugin is active.");
+
+        DrawMapThumbnailLine(map);
+
         // SameLineNewIndicator();
         UI::Text("LightMapCacheSmall (KB): " + map.LightMapCacheSmall_KBytes);
         auto mapFid = GetFidFromNod(map);
@@ -335,6 +330,17 @@ class MapEditPropsTab : Tab {
         float extendsBelow = Editor::GetMapExtendsBelowZero(map);
         LabeledValue("Map Coord Size", coordSize.ToString());
         LabeledValue("Map Extends Below 0", Text::Format("%.1f m", extendsBelow));
+    }
+
+    void DrawMapThumbnailLine(CGameCtnChallenge@ map) {
+        UI::Text("Thumbnail (KB): " + map.Thumbnail_KBytes);
+        UI::SameLine();
+        UI::Text(FromML::lockedThumbnail ? Icons::Lock : Icons::Unlock);
+        UI::SameLine();
+        if (UX::SmallButton((FromML::lockedThumbnail ? "Unlock" : "Lock") + "###thumbnail-lock-btn")) {
+            ToML::SendMessage("LockThumbnail", {tostring(!FromML::lockedThumbnail)});
+        }
+        AddSimpleTooltip("When locked, the thumbnail will not be updated when the map is saved. This setting is saved as metadata on the map. Only works when the E++ Editor Plugin is active.");
     }
 
     void DrawMapFlags() {
