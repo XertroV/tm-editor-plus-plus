@@ -250,8 +250,12 @@ namespace Editor {
                 if (lastLineColor.LengthSquared() > 0) {
                     auto shader = cast<CPlugShaderApply>(linesTree.Shader);
                     auto shaderPass = cast<CPlugShaderPass>(Dev_GetOffsetNodSafe(shader, 0x170));
-                    auto shaderColor = Dev_GetOffsetNodSafe(shaderPass, 0x78);
-                    if (shaderColor !is null) Dev::SetOffset(shaderColor, 0x0, lastLineColor);
+                    auto shaderColor = Dev_GetOffsetNodSafe(shaderPass, 0x168); // offset was 0x78
+                    if (shaderColor is null) {
+                        // dev_trace("shaderColor was null");
+                    } else {
+                        Dev::SetOffset(shaderColor, 0x10, lastLineColor);
+                    }
                 }
                 if (lastQuadColor.LengthSquared() > 0) {
                     auto shader = cast<CPlugShaderApply>(quadsTree.Shader);

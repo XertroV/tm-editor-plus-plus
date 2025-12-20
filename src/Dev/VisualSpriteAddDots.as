@@ -446,7 +446,7 @@ void DemoRunVisLines_Main() {
     // vec3[] points;
     mat4 mat = mat4::Translate(vec3(768, 256, 768)) * mat4::Rotate(PI, RIGHT);
     vec3 pos;
-    vec4 col = vec4(1., 1., 1., 1.);
+    vec4 col = cGreen;
     auto di = Editor::DrawLinesAndQuads::GetOrCreateDrawInstance("hello-op");
     di.Reset();
     for (uint i = 0; i < pointsJ.Length; i++) {

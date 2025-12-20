@@ -173,6 +173,11 @@ CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
     if (target is null) return null;
     auto ptr = Dev::GetOffsetUint64(target, offset);
     if (Dev_PointerLooksBad(ptr)) return null;
+    try {
+        Dev::SafeReadUInt64(ptr);
+    } catch {
+        return null;
+    }
     return Dev::GetOffsetNod(target, offset);
 }
 
