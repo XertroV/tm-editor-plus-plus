@@ -360,7 +360,14 @@ namespace Editor {
             // }
             return false;
         }
+        dev_trace("[DEBUG] PlaceMacroblock: Writing to MB");
         mbSpec._TempWriteToMacroblock(mb);
+        dev_trace("[DEBUG] PlaceMacroblock: Replacing curr MB");
+        auto prevCurrMb = Editor::ReplaceCurrentMacroblock_AddRef(editor, mb);
+        dev_trace("[DEBUG] PlaceMacroblock: TurnIntoAirMb_Unsafe; mb.IsGround=" + mb.IsGround);
+        editor.TurnIntoAirMb_Unsafe();
+        dev_trace("[DEBUG] PlaceMacroblock: Restored curr MB; mb.IsGround=" + mb.IsGround);
+        Editor::ReplaceCurrentMacroblock_AddRef(editor, prevCurrMb);
 
         bool forceMbColor = pmt.ForceMacroblockColor;
         pmt.ForceMacroblockColor = false;
@@ -372,8 +379,13 @@ namespace Editor {
         if (mbSpec.Blocks.Length > 0) {
             dev_trace('mbSpec.blocks[0]');
             print(BlockSpecToDebugString(mbSpec.Blocks[0]));
-            print("MB Collection: " + mb.CollectionId_Text);
         }
+        auto bi = mb.GeneratedBlockModel;
+        if (bi !is null && bi.VariantBaseGround !is null) {
+            dev_trace("MB GeneratedBlockModel VariantBaseGround.AutoTerrains.Length=" + bi.VariantBaseGround.AutoTerrains.Length);
+        }
+        dev_trace("MB Collection: " + mb.CollectionId_Text);
+        dev_trace("placing now...");
 #endif
         auto placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
         if (placed && addUndoRedoPoint) {

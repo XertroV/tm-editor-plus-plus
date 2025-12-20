@@ -1,4 +1,12 @@
 namespace Editor {
+    // NOTE: adds a reference to current MB. Returns previous CurrentMacroBlockInfo.
+    CGameCtnMacroBlockInfo@ ReplaceCurrentMacroblock_AddRef(CGameCtnEditorFree@ editor, CGameCtnMacroBlockInfo@ mb) {
+        auto prevMBI = editor.CurrentMacroBlockInfo;
+        if (prevMBI !is null) prevMBI.MwAddRef();
+        SetSelectedMacroBlockInfo(editor, mb);
+        return prevMBI;
+    }
+
     void SetSelectedMacroBlockInfo(CGameCtnEditorFree@ editor, CGameCtnMacroBlockInfo@ mbi) {
         if (mbi is editor.CurrentMacroBlockInfo) return;
         auto prevMBI = editor.CurrentMacroBlockInfo;

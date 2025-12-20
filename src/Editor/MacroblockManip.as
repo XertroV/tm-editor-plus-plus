@@ -153,7 +153,7 @@ namespace Editor {
             tmpMacroblockCollectionId = macroblock.CollectionId;
             macroblock.CollectionId = Editor::GetMapCollectorId();
             // macroblock.Initialized = false;
-            // macroblock.Connected = false;
+            macroblock.Connected = false;
 
             _AllocAndWriteMemory(true);
         }
@@ -249,7 +249,7 @@ namespace Editor {
             Dev::Write(tmpMacroblock.Skins.Ptr, tmpMacroblockSkinsBuf);
             Dev::Write(tmpMacroblock.Skins.Ptr + 0x8, tmpMacroblockSkinsBufLenCap);
             SetMacroblockGround(tmpMacroblock.Nod, tmpMacroblockIsGround);
-            macroblock.CollectionId = tmpMacroblockCollectionId;
+            tmpMacroblock.Nod.CollectionId = tmpMacroblockCollectionId;
             // tmpMacroblock.Nod.IsGround = tmpMacroblockIsGround;
             // if (tmpMacroblock !is null && releaseTmpMacroblock) {
             //     tmpMacroblock.Nod.MwRelease();
