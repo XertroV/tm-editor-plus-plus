@@ -185,6 +185,7 @@ namespace BufferAlloc {
     }
 
     AllocdBuffer@ Alloc(uint nBytes) {
+        if (nBytes % 4 != 0) nBytes += 4 - (nBytes % 4);
         return Alloc(nBytes, 1);
     }
 

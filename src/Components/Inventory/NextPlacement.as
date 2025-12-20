@@ -111,10 +111,12 @@ bool CheckPlaceMacroblockAirMode() {
 
 [Setting hidden]
 bool S_HelpPlaceItemsOnFreeBlocks = false;
+const bool ENABLE_OLD_CHECK_PLACING_ITEM_HELPER = false;
 
 // true => block click
 // function behind S_HelpPlaceItemsOnFreeBlocks
 bool CheckPlacingItemFreeMode() {
+    if (!ENABLE_OLD_CHECK_PLACING_ITEM_HELPER) return false;
     // dev_trace('CheckPlacingItemFreeMode');
     auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
     if (!S_HelpPlaceItemsOnFreeBlocks || editor is null) return false;

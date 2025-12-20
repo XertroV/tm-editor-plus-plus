@@ -18,7 +18,9 @@ class DGameCursorItem : RawBufferElem {
 	}
 
 	float get_MagnetSnapping_LocalRotation_Deg() { return (this.GetFloat(0x1C)); }
+	// free or air mode; set at start of CursorItem::Update
 	bool get_isFreeMode() { return (this.GetBool(0x20)); }
+	void set_isFreeMode(bool value) { this.SetBool(0x20, value); }
 	iso4 get_mat() { return (this.GetIso4(0x38)); }
 	void set_mat(iso4 value) { this.SetIso4(0x38, value); }
 	vec3 get_pos() { return (this.GetVec3((0x38 + 0x24))); }

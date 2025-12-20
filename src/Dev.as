@@ -827,6 +827,8 @@ const uint16 O_BLOCKCURSOR_FreeBlockCursorOffset = GetOffset("CGameCursorBlock",
 
 // 0x1c
 const uint16 O_ITEMCURSOR_MagnetSnapLocalRotDeg = GetOffset("CGameCursorItem", "MagnetSnapping_LocalRotation_Deg");
+// 0x20
+const uint16 O_ITEMCURSOR_IN_AIR_FLAG = O_ITEMCURSOR_MagnetSnapLocalRotDeg + 0xC;
 // 0xb0
 const uint16 O_ITEMCURSOR_Helper = GetOffset("CGameCursorItem", "HelperMobil");
 

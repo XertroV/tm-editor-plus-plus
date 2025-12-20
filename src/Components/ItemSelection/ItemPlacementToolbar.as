@@ -132,6 +132,15 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 
 		UI::Separator();
 
+		bool toggleHelpPlaceOnFree = BtnToolbarHalfV(Icons::ArrowDown + Icons::SnapchatGhost + "##hpfb", "Help Place Items on Free/Ghost Blocks", ActiveToBtnStatus(S_HelpPlaceItemsOnFreeBlocks));
+		if (toggleHelpPlaceOnFree) {
+			S_HelpPlaceItemsOnFreeBlocks = !S_HelpPlaceItemsOnFreeBlocks;
+			CustomCursor::Patch_EasyPlaceItemsOnFreeBlocks_Active = S_HelpPlaceItemsOnFreeBlocks;
+		}
+
+
+		UI::Separator();
+
 		bool toggleFixTrees = BtnToolbarHalfV(Icons::Tree + Icons::ArrowUp, "Auto-Fix Rotated Trees\n(e.g., placed on Free Blocks)", ActiveToBtnStatus(VegetRandomYaw::IsActive));
 
 		// in normal mode
@@ -176,6 +185,7 @@ class CurrentItem_PlacementToolbar : ToolbarTab {
 		auto itemMode = Editor::GetItemPlacementMode(false, false);
 		isFreeGround = itemMode == Editor::ItemMode::FreeGround;
 		isNorm = itemMode == Editor::ItemMode::Normal;
+		isFree = itemMode == Editor::ItemMode::Free;
 
 		bool cNorm = this.BtnToolbarHalfV(Icons::Cube, "Normal Item Mode", ActiveToBtnStatus(isNorm));
 		bool cGround = this.BtnToolbarHalfV(Icons::Download, "Free Ground Item Mode", ActiveToBtnStatus(isFreeGround));

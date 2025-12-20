@@ -1,6 +1,20 @@
 namespace Editor {
     const uint16 O_CURSOR_SUBDIV = GetOffset("CGameCursorBlock", "Subdiv");
 
+    CGameCursorItem@ GetItemCursor(CGameCtnEditorFree@ editor = null) {
+        if (editor is null) @editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.ItemCursor;
+    }
+
+    void ItemCursor_SetAirFlag(CGameCursorItem@ cursorItem, bool value = true) {
+        Dev::SetOffset(cursorItem, O_ITEMCURSOR_IN_AIR_FLAG, uint(value ? 1 : 0));
+    }
+
+    CGameCursorBlock@ GetBlockCursor(CGameCtnEditorFree@ editor = null) {
+        if (editor is null) @editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.Cursor;
+    }
+
     CPlugTree@ GetCursorPlugTree(CGameCursorBlock@ cursor) {
         if (cursor is null || cursor.CursorBox is null || cursor.CursorBox.Mobil is null || !cursor.CursorBox.Mobil.IsVisible)
             return null;

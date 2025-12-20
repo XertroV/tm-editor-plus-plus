@@ -67,6 +67,7 @@ class CursorPosition : Tab {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             Editor::SetCursorFreeBlockOffset(editor.Cursor, 0.0);
         }
+        CustomCursor::Patch_EasyPlaceItemsOnFreeBlocks_Active = S_HelpPlaceItemsOnFreeBlocks;
     }
 
     bool get_windowOpen() override property {
@@ -576,6 +577,7 @@ class CustomCursorTab : EffectTab {
 
         S_HelpPlaceItemsOnFreeBlocks = UI::Checkbox("Help place items on free/ghost blocks", S_HelpPlaceItemsOnFreeBlocks);
         AddSimpleTooltip("\\$<\\$8f4\\$iVery helpful for checkpoints!\\$> The item will have a red box, but it will place okay.");
+        CustomCursor::Patch_EasyPlaceItemsOnFreeBlocks_Active = S_HelpPlaceItemsOnFreeBlocks;
 
         wasActive = S_EnablePromiscuousItemSnapping;
         S_EnablePromiscuousItemSnapping = UI::Checkbox("Enable Promiscuous Item Snapping", S_EnablePromiscuousItemSnapping);
@@ -1474,5 +1476,34 @@ Trackmania.exe.text+115D16D - E8 DED9D5FF           - call Trackmania.exe.text+E
         CustomCursor::NoHideCursorItemModelsPatchActive = nhcimp;
         CustomCursor::NoShowCursorItemModelsPatchActive = nscimp;
         CustomCursor::NoSetCursorVisFlagPatchActive = nscvfp;
+    }
+
+    // V3 of placement helpers for items on ghost/free blocks.
+    // This sets the "is in air" flag of the item cursor to true and NOPs the reset-to-0 part of cursor update routine.
+    bool Patch_EasyPlaceItemsOnFreeBlocks_Active {
+        get {
+            return _Hook_AfterItemCursorUpdates.IsApplied();
+        }
+        set {
+            _Hook_AfterItemCursorUpdates.SetApplied(value);
+            // if (value) Editor::ItemCursor_SetAirFlag(Editor::GetItemCursor(), true);
+        }
+    }
+
+    // // NOP the instruction that sets IsInAir flag to 0 for item cursor.
+    // const string Pattern_DisableItemCursorUpdateAirFlag = "44 89 69 20 48 8B 8E 30 06 00 00";
+    // MemPatcher@ _Patch_DisableItemCursorUpdateAirFlag = MemPatcher("DisableItemCursorUpdateAirFlag",
+    //     Pattern_DisableItemCursorUpdateAirFlag,
+    //     {0}, {"90 90 90 90"}
+    // );
+
+    HookHelper@ _Hook_AfterItemCursorUpdates = HookHelper(
+        "48 8b 8e 30 06 00 00 4c 89 6d 00 48 85 db 74 07",
+        0, 2, "CustomCursor::AfterItemCursorUpdate", Dev::PushRegisters::Basic, true
+    );
+
+    void AfterItemCursorUpdate(uint64 rcx) { // CGameCursorItem@ rcx
+        auto itemCursor = DGameCursorItem(rcx);
+        itemCursor.isFreeMode = true;
     }
 }

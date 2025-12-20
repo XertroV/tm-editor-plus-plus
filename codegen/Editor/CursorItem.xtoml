@@ -1,7 +1,8 @@
 [DGameCursorItem: SZ_CGAMECURSORITEM]
 NativeClass = CGameCursorItem
 MagnetSnapping_LocalRotation_Deg = float, 0x1C, G
-isFreeMode = bool, 0x20, G
+# free or air mode; set at start of CursorItem::Update
+isFreeMode = bool, 0x20, GS
 mat = iso4, 0x38, GS
 pos = vec3, (0x38 + 0x24), GS
 snappedBlock = CGameCtnBlock, 0x70, G
