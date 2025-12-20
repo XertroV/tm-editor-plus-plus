@@ -433,7 +433,7 @@ namespace Gizmo {
                 }
             }
 
-            if (modePlacingType == BlockOrItem::Block) {
+            if (modeTargetType == BlockOrItem::Block) {
                 blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
                 // we need to ensure the variant we want to place exists
                 if (!blockSpec.EnsureValidVariant()) {
@@ -446,7 +446,7 @@ namespace Gizmo {
 
         editor.PluginMapType.EditMode = CGameEditorPluginMap::EditMode::Place;
 
-        if (modePlacingType == BlockOrItem::Block) {
+        if (modeTargetType == BlockOrItem::Block) {
             @bb = Editor::AABB(mat4::Translate(targetPos) * mat4::Inverse(targetRot), targetSize/2., targetSize/2.);
             if (!wasInFreeBlockMode) {
                 editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
@@ -455,7 +455,7 @@ namespace Gizmo {
             yield();
             // testing
             Editor::SetCurrentBlockVariant(editor.Cursor, targetVariant);
-        } else if (modePlacingType == BlockOrItem::Item) {
+        } else if (modeTargetType == BlockOrItem::Item) {
             origPlacementSwitchPivotManually = itemSpec.Model.DefaultPlacementParam_Content.SwitchPivotManually;
             itemSpec.Model.DefaultPlacementParam_Content.SwitchPivotManually = true;
 
