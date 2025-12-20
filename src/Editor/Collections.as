@@ -76,4 +76,15 @@ namespace Editor {
         return "";
     }
 
+
+    CGameCtnChapter@ GetChapterFromGlobalCatalog(uint chapterId) {
+        auto app = GetApp();
+        for (uint i = 0; i < app.GlobalCatalog.Chapters.Length; i++) {
+            auto chapter = app.GlobalCatalog.Chapters[i];
+            if (chapter.Id.Value == chapterId) {
+                return chapter;
+            }
+        }
+        return null;
+    }
 }

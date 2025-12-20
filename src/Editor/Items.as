@@ -88,16 +88,21 @@ namespace Editor {
 
     // find an item and do not yield
     CGameItemModel@ FindItemByName(const string &in name) {
-        auto itemsCatalog = GetApp().GlobalCatalog.Chapters[3];
-        for (int i = itemsCatalog.Articles.Length - 1; i > 1; i--) {
-            auto item = itemsCatalog.Articles[i];
-            if (item.Name == name) {
-                if (item.LoadedNod is null) {
-                    item.Preload();
+        auto catalog = GetApp().GlobalCatalog;
+        // auto itemsCatalog = .Chapters[3];
+        for (uint c = 0; c < catalog.Chapters.Length; c++) {
+            auto itemsCatalog = catalog.Chapters[c];
+            for (int i = itemsCatalog.Articles.Length - 1; i > 1; i--) {
+                auto item = itemsCatalog.Articles[i];
+                if (item.Name == name) {
+                    if (item.LoadedNod is null) {
+                        item.Preload();
+                    }
+                    return cast<CGameItemModel>(item.LoadedNod);
                 }
-                return cast<CGameItemModel>(item.LoadedNod);
             }
         }
+
         return null;
     }
 
