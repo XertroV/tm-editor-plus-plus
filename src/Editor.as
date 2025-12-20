@@ -85,8 +85,8 @@ namespace Editor {
 
     uint16 O_EDITOR_AIR_MODE_BOOL {
         get {
-            // was: -0x34 = 0xBD4 - 0xC08 (GridColor)
-            auto offset = O_EDITOR_GridColor - (FLAG_GameVer2025 ? 0xBD4 : 0xBD0);
+            // 2025: 0xBDC, 2026: 0xBD0
+            auto offset = O_EDITOR_GridColor - (FLAG_GameVer2025 ? 0xBDC : 0xBD0);
             return O_EDITOR_GridColor - offset;
         }
     }
