@@ -153,7 +153,8 @@ namespace Gizmo {
         if (!IsShiftDown()) return false;
         if (!IsCtrlDown()) return false;
         // conditions met
-        if (Editor::IsInMacroblockPlacementMode(editor, false)) {
+        if (Editor::IsInMacroblockPlacementMode(editor, false)
+            || Editor::IsInCopyPasteMode(editor, false)) {
             editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::FreeBlock;
         }
         wasInFreeBlockMode = Editor::IsInFreeBlockPlacementMode(editor, false);

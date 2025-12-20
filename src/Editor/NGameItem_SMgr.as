@@ -67,7 +67,7 @@ namespace Editor {
         auto hasModel = last.GetBool(offset);
         if (!hasModel) return null;
         auto midPoint = last.GetVec3(offset + 0x4);
-        auto halfDiag = last.GetVec3(offset + 0x14);
+        auto halfDiag = last.GetVec3(offset + 0x10);
         return AABB(last.GetIso4(0x8), midPoint, halfDiag);
     }
 
@@ -83,7 +83,7 @@ namespace Editor {
                 auto hasModel = el.GetBool(offset);
                 if (!hasModel) continue;
                 auto midPoint = el.GetVec3(offset + 0x4);
-                auto halfDiag = el.GetVec3(offset + 0x14);
+                auto halfDiag = el.GetVec3(offset + 0x10);
                 return AABB(el.GetIso4(0x8), midPoint, halfDiag);
             }
         }
@@ -102,6 +102,8 @@ namespace Editor {
             this.mat = mat;
             this.midPoint = midPoint;
             this.halfDiag = halfDiag;
+            if (MathX::IsNanInf(midPoint)) warn("AABB: midPoint is NaN/Inf: " + midPoint.ToString());
+            if (MathX::IsNanInf(halfDiag)) warn("AABB: halfDiag is NaN/Inf: " + halfDiag.ToString());
         }
         AABB(const mat4 &in mat, const vec3 &in midPoint, const vec3 &in halfDiag) {
             this.mat = mat;
