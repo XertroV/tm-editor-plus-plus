@@ -106,9 +106,8 @@ class BlockVariantBrowserTab : Tab {
         // bi.Name = UI::Checkbox("Name", bi.Name);
         // bi.Name = UI::Checkbox("Name", bi.Name);
 
-        auto mmOffset = GetOffset(bi, "MatModifierPlacementTag");
-        auto mmPlacementTag = Dev::GetOffsetNat2(bi, mmOffset);
-        Dev::SetOffset(bi, mmOffset, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
+        auto mmPlacementTag = Dev::GetOffsetNat2(bi, O_BLOCKINFO_MATMODPLACEMENTTAG);
+        Dev::SetOffset(bi, O_BLOCKINFO_MATMODPLACEMENTTAG, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
         AddSimpleTooltip("Typically <3, x> where x is 0=grass, 1=dirt, 2=snow. Changes what trees can be placed on this block. \\$f80Blocks must be placed *after* changing this setting \\$z(and saving and loading the map resets the affinity of already placed blocks). Setting to random values can crash the game when entering the item editor.");
     }
 

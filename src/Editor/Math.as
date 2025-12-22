@@ -460,7 +460,7 @@ class GameQuat {
         q.w = raw.w;
     }
 
-
+    // Openplanet quat to Game quat
     GameQuat(const quat &in q) {
         this.q = vec4(q.w, q.x, q.y, q.z);
     }

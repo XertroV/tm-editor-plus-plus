@@ -153,7 +153,7 @@ namespace Editor {
             tmpMacroblockCollectionId = macroblock.CollectionId;
             macroblock.CollectionId = Editor::GetMapCollectorId();
             // macroblock.Initialized = false;
-            macroblock.Connected = false;
+            // macroblock.Connected = false;
 
             _AllocAndWriteMemory(true);
         }

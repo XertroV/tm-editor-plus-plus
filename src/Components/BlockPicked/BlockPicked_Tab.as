@@ -99,7 +99,8 @@ class FocusedBlockTab : Tab, NudgeItemBlock {
         UI::Columns(2);
 
         CopiableLabeledValue("Type", block.BlockInfo.IdName);
-        CopiableLabeledValue("Coll.", block.BlockInfo.CollectionId_Text + Text::Format(" (%d)", block.BlockInfo.CollectionId));
+        uint cId = block.BlockInfo.CollectionId;
+        CopiableLabeledValue("Coll.", block.BlockInfo.CollectionId_Text + Text::Format(" (%d; #", cId) + Editor::CollectionIdToIx(cId) + ")");
         CopiableLabeledValue("Coord", block.Coord.ToString());
         CopiableLabeledValue("Pos", preDesc.Pos.ToString());
         CopiableLabeledValue("Rot", MathX::ToDeg(preDesc.Rot).ToString());

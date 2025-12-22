@@ -120,6 +120,8 @@ namespace Editor {
     }
 
     void TrackMap_OnAddBlock(CGameCtnBlock@ block) {
+        // skip grass
+        if (block.BlockInfo.IsTerrain) return;
         blocksAddedThisFrame.InsertLast(BlockSpecPriv(block));
         if (block.Skin !is null && (block.Skin.PackDesc !is null || block.Skin.ForegroundPackDesc !is null)) {
             auto fg = block.Skin.ForegroundPackDesc !is null ? GetSkinPath(block.Skin.ForegroundPackDesc) : "";
@@ -138,6 +140,8 @@ namespace Editor {
     }
 
     void TrackMap_OnRemoveBlock(CGameCtnBlock@ block) {
+        // skip grass
+        if (block.BlockInfo.IsTerrain) return;
         auto ptr = Dev_GetPointerForNod(block);
         if (_TrackMap_RemoveBlock_IsByAPI) {
             blocksRemovedByAPIThisFrame.InsertLast(BlockSpecPriv(block));
@@ -384,7 +388,7 @@ namespace Editor {
         if (bi !is null && bi.VariantBaseGround !is null) {
             dev_trace("MB GeneratedBlockModel VariantBaseGround.AutoTerrains.Length=" + bi.VariantBaseGround.AutoTerrains.Length);
         }
-        dev_trace("MB Collection: " + mb.CollectionId_Text);
+        dev_trace("MB Collection: " + mb.CollectionId_Text + " / ID: " + mb.CollectionId);
         dev_trace("placing now...");
 #endif
         auto placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);

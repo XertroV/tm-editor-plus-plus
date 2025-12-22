@@ -1,6 +1,11 @@
 [DSceneCharVis_SMgr : 0x2b8]
 Buffer: CharModels = DCharVis_CharModels, 0x1b0, 0x40, true
 Buffer: CharViss = DSceneCharViss, 0x168, 0x700, true
+CharViss_BufAddr = uint64, 0x168, G
+CharViss_Length = uint, 0x168 + 0x8, G
+Inline: DSceneCharVis@ GetCharVisByEntId(uint entId) { auto cvs = CharViss; for (uint i = 0; i < cvs.Length; i++) { if (cvs[i].GetUint32(0) == entId) return DSceneCharVis(cvs[i]); } return null; }
+Inline: DSceneCharVis@ GetCharVisByEntId2(uint entId) { auto len = CharViss_Length; for (uint i = 0; i < len; i++) { if (GetCharVisEntId(i) == entId) return DSceneCharVis(CharViss[i]); } return null; }
+Inline: uint GetCharVisEntId(uint index) { if (index >= CharViss_Length) return 0; return Dev::ReadUInt32(Dev::ReadUInt64(CharViss_BufAddr + index * 0x8)); }
 
 [DCharVis_CharModel : 0x40]
 NativeClass = CGameCharacterModel
@@ -14,7 +19,7 @@ Inline: CSceneCharVis@ get_Nod() const { return Dev::ForceCast<CSceneCharVis@>(D
 EntID = uint, 0x0, G
 Flags = uint, 0x4, GS
 VisModel = CPlugCharVisModel, 0x8, G
-# Struct: Struct_x10 =
+Struct: AnimLink = DSceneCharVis_AnimLink, 0x10, G
 PhyModel = CPlugCharPhyModel, 0x18, G
 #
 pLoc = uint64, 0x28, G
@@ -29,5 +34,17 @@ Pos = vec3, 0x30+0x18, GS
 Vel = vec3, 0x30+0x28, GS
 WishMove = vec3, 0x30+0x3c, GS
 RotRef = quat, 0x30+0x74, GS
+RotRefV4 = vec4, 0x30+0x74, GS
 
 InternalCam = uint8, 0x255, G
+
+
+# Unknown size, but at least 0x20.
+[DSceneCharVis_AnimLink: 0x20]
+# 0x0: 03, unused
+# 0x8
+VisModel = CPlug, 0x8, G
+# 0x10: -2.0, unused
+# 0x18
+AnimModelPtr = uint64, 0x18, G
+Inline: NSceneAnim_SModel@ GetAnimModel() { auto ptr = AnimModelPtr; if (ptr == 0) return null; return Dev::ForceCast<NSceneAnim_SModel@>(Dev_GetNodFromPointer(AnimModelPtr)).Get(); }

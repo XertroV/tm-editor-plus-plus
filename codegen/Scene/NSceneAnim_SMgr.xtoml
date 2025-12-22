@@ -4,7 +4,7 @@ Buffer: Models = DSModels, 0x1a8, 0x168, true
 
 [DSModelInst : 0xe8]
 Inline: NSceneAnim_SModelInst@ get_Nod() { return Dev::ForceCast<NSceneAnim_SModelInst@>(Dev_GetNodFromPointer(ptr)).Get(); }
-Model = DSModel, 0x8, G
+Struct: Model = DSModel, 0x8, G
 # SkelPose
 SkelPose_iLod = uint8, 0x10+0, G
 # NPlugAnim::EPoseType

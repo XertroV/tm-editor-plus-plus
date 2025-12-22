@@ -43,7 +43,7 @@ class DSModelInst : RawBufferElem {
 	}
 
 	NSceneAnim_SModelInst@ get_Nod() { return Dev::ForceCast<NSceneAnim_SModelInst@>(Dev_GetNodFromPointer(ptr)).Get(); }
-	DSModel@ get_Model() { return cast<DSModel>(this.GetNod(0x8)); }
+	DSModel@ get_Model() { auto _ptr = this.GetUint64(0x8); if (_ptr == 0) return null; return DSModel(_ptr); }
 	// SkelPose
 	uint8 get_SkelPose_iLod() { return (this.GetUint8(0x10+0)); }
 	// NPlugAnim::EPoseType

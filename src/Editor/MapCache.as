@@ -270,6 +270,7 @@ namespace Editor {
         bool _IsStale = false;
 
         bool OnNewBlock(CGameCtnBlock@ block) {
+            if (block.BlockInfo.IsTerrain) return false;
             this._IsStale = true;
             if (isRefreshing || objsRoot is null) return false;
             // todo: update cache instead of marking stale

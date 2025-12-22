@@ -474,8 +474,7 @@ class ItemModelTreeElement {
                 DrawBiClipExtra(biClip);
             }
 
-            auto mmOffset = O_BLOCKINFO_MATERIALMOD;
-            auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, mmOffset);
+            auto mmPlacementTag = Dev::GetOffsetNat2(blockInfo, O_BLOCKINFO_MATMODPLACEMENTTAG);
             string mmPlacementTagsStr = ItemPlace_StringConsts::LookupJoined(mmPlacementTag);
             DrawMwId("Name", blockInfo.Id);
 
@@ -503,13 +502,13 @@ class ItemModelTreeElement {
             MkAndDrawChildNode(blockInfo.MaterialModifier, O_BLOCKINFO_MATERIALMOD, "MaterialModifier");
 
             if (isEditable) {
-                Dev::SetOffset(blockInfo, mmOffset, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
+                Dev::SetOffset(blockInfo, O_BLOCKINFO_MATMODPLACEMENTTAG, UX::InputNat2("MatModifierPlacementTag", mmPlacementTag));
             } else {
                 CopiableLabeledValue("PageName", blockInfo.PageName);
                 CopiableLabeledValue("CatalogPosition", tostring(blockInfo.CatalogPosition));
                 // works, but only returns the first type of label
                 // try { extra = string(blockInfo.MatModifierPlacementTag.Type); } catch {}
-                UI::Text("MatModiferPlacementTag: " + mmPlacementTag.ToString() + " / " + mmPlacementTagsStr);
+                UI::Text("MatModifierPlacementTag: " + mmPlacementTag.ToString() + " / " + mmPlacementTagsStr);
             }
 
             MkAndDrawChildNode(blockInfo.VariantBaseGround, "VariantBaseGround");

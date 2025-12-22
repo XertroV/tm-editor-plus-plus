@@ -34,6 +34,9 @@ class MacroblockSelectionTab : Tab {
         UI::Columns(2, "selectedmacroblockinfo", false);
 
         CopiableLabeledValue("Name", mbi.Name);
+        CopiableLabeledValue("CollectionId", tostring(mbi.CollectionId));
+        CopiableLabeledValue("CollectionId_Text", mbi.CollectionId_Text);
+
         CopiableLabeledValue("Connected", tostring(mbi.Connected));
         CopiableLabeledValue("Initialized", tostring(mbi.Initialized));
         UI::Text("S: " + BoolIcon(mbi.HasStart) + " F: " + BoolIcon(mbi.HasFinish) + " CP: " + BoolIcon(mbi.HasCheckpoint) + " ML: " + BoolIcon(mbi.HasMultilap));
