@@ -118,3 +118,5 @@ class DMetaPtr : RawBufferElem {
 	uint get_Size() { return (this.GetUint32(0xC)); }
 	uint get_ClassID() { return (this.GetUint32(0x10)); }
 }
+
+
