@@ -14,7 +14,7 @@ class DSceneCharVis_SMgr : RawBufferElem {
 	uint get_CharViss_Length() { return (this.GetUint32(0x168 + 0x8)); }
 	DSceneCharVis@ GetCharVisByEntId(uint entId) { auto cvs = CharViss; for (uint i = 0; i < cvs.Length; i++) { if (cvs[i].GetUint32(0) == entId) return DSceneCharVis(cvs[i]); } return null; }
 	DSceneCharVis@ GetCharVisByEntId2(uint entId) { auto len = CharViss_Length; for (uint i = 0; i < len; i++) { if (GetCharVisEntId(i) == entId) return DSceneCharVis(CharViss[i]); } return null; }
-	uint GetCharVisEntId(uint index) { if (index >= CharViss_Length) return 0; return Dev_ReadUInt32(Dev::ReadUInt64(CharViss_BufAddr + index * 0x8)); }
+	uint GetCharVisEntId(uint index) { if (index >= CharViss_Length) return 0; return Dev::ReadUInt32(Dev::ReadUInt64(CharViss_BufAddr + index * 0x8)); }
 	DCharVis_CharModels@ get_CharModels() { return DCharVis_CharModels(this.GetBuffer(0x1b0, 0x40, true)); }
 	DSceneCharViss@ get_CharViss() { return DSceneCharViss(this.GetBuffer(0x168, 0x700, true)); }
 }
@@ -78,7 +78,7 @@ class DSceneCharVis : RawBufferElem {
 	CPlugCharVisModel@ get_VisModel() { return cast<CPlugCharVisModel>(this.GetNod(0x8)); }
 	DSceneCharVis_AnimLink@ get_AnimLink() { auto _ptr = this.GetUint64(0x10); if (_ptr == 0) return null; return DSceneCharVis_AnimLink(_ptr); }
 	CPlugCharPhyModel@ get_PhyModel() { return cast<CPlugCharPhyModel>(this.GetNod(0x18)); }
-	// 
+	//
 	uint64 get_pLoc() { return (this.GetUint64(0x28)); }
 	uint64 get_State_Addr() { return ptr + 0x30; }
 	uint get_State_EndID() { return (this.GetUint32(0x30)); }
@@ -120,5 +120,3 @@ class DSceneCharVis_AnimLink : RawBufferElem {
 	uint64 get_AnimModelPtr() { return (this.GetUint64(0x18)); }
 	NSceneAnim_SModel@ GetAnimModel() { auto ptr = AnimModelPtr; if (ptr == 0) return null; return Dev::ForceCast<NSceneAnim_SModel@>(Dev_GetNodFromPointer(AnimModelPtr)).Get(); }
 }
-
-

@@ -852,7 +852,7 @@ namespace CreateObj {
 
         if (ptr2 > 0 && ptr2 % 8 == 0) {
             auto type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
-            auto clsId = Dev_ReadUInt32(ptr2 + 0x10);
+            auto clsId = Dev::ReadUInt32(ptr2 + 0x10);
             if (clsId == 0x2f0c8000 || type == "NPlugDyna::SPrefabConstraintParams") {
                 Dev::Write(ptr1 + 0x4, kinEntId);
             } else {
@@ -977,7 +977,7 @@ namespace CreateObjDownStar {
 
         if (ptr2 > 0 && ptr2 % 8 == 0) {
             auto type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
-            auto clsId = Dev_ReadUInt32(ptr2 + 0x10);
+            auto clsId = Dev::ReadUInt32(ptr2 + 0x10);
 
             if (clsId == 0x2f0b6000 || type == "NPlugDynaObjectModel::SInstanceParams") {
                 auto offsetCSS = GetOffset("NPlugDynaObjectModel_SInstanceParams", "CastStaticShadow");
@@ -1018,7 +1018,7 @@ namespace CreateObjDownStar {
 
         if (ptr2 > 0 && ptr2 % 8 == 0) {
             auto type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
-            auto clsId = Dev_ReadUInt32(ptr2 + 0x10);
+            auto clsId = Dev::ReadUInt32(ptr2 + 0x10);
             if (clsId == 0x2f0c8000 || type == "NPlugDyna::SPrefabConstraintParams") {
                 Dev::Write(ptr1 + 0x4, 0);
             } else {
@@ -1075,7 +1075,7 @@ namespace CreateObjDownStar {
 
         if (ptr2 > 0 && ptr2 % 8 == 0) {
             auto type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
-            auto clsId = Dev_ReadUInt32(ptr2 + 0x10);
+            auto clsId = Dev::ReadUInt32(ptr2 + 0x10);
             if (clsId == 0x2f0c8000 || type == "NPlugDyna::SPrefabConstraintParams") {
                 Dev::Write(ptr1 + 0x4, kinEntId);
             } else {
@@ -1144,7 +1144,7 @@ void SetKinConTargetIx(CPlugPrefab@ prefab, uint ix, uint kinEntId) {
 
     if (ptr2 > 0 && ptr2 % 8 == 0) {
         auto type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
-        auto clsId = Dev_ReadUInt32(ptr2 + 0x10);
+        auto clsId = Dev::ReadUInt32(ptr2 + 0x10);
         if (clsId == 0x2f0c8000 || type == "NPlugDyna::SPrefabConstraintParams") {
             Dev::Write(ptr1 + 0x4, kinEntId);
         } else {
@@ -1163,7 +1163,7 @@ void SetDynaInstanceVars(CPlugPrefab@ prefab, uint ix, bool castStaticShadow = f
 
     if (ptr2 > 0 && ptr2 % 8 == 0) {
         auto type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
-        auto clsId = Dev_ReadUInt32(ptr2 + 0x10);
+        auto clsId = Dev::ReadUInt32(ptr2 + 0x10);
         uint expectedClsId = 0x2f0b6000;
         if (clsId == expectedClsId || type == "NPlugDynaObjectModel::SInstanceParams") {
             auto offsetCSS = GetOffset("NPlugDynaObjectModel_SInstanceParams", "CastStaticShadow");

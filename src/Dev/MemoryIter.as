@@ -47,7 +47,7 @@ class MemoryIter {
 
     uint NextUint() {
         CheckPos();
-        uint value = Dev_ReadUInt32(address + posOffset);
+        uint value = Dev::ReadUInt32(address + posOffset);
         posOffset += span;
         lastIndex = index++;
         return value;

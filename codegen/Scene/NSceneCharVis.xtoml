@@ -5,7 +5,7 @@ CharViss_BufAddr = uint64, 0x168, G
 CharViss_Length = uint, 0x168 + 0x8, G
 Inline: DSceneCharVis@ GetCharVisByEntId(uint entId) { auto cvs = CharViss; for (uint i = 0; i < cvs.Length; i++) { if (cvs[i].GetUint32(0) == entId) return DSceneCharVis(cvs[i]); } return null; }
 Inline: DSceneCharVis@ GetCharVisByEntId2(uint entId) { auto len = CharViss_Length; for (uint i = 0; i < len; i++) { if (GetCharVisEntId(i) == entId) return DSceneCharVis(CharViss[i]); } return null; }
-Inline: uint GetCharVisEntId(uint index) { if (index >= CharViss_Length) return 0; return Dev_ReadUInt32(Dev::ReadUInt64(CharViss_BufAddr + index * 0x8)); }
+Inline: uint GetCharVisEntId(uint index) { if (index >= CharViss_Length) return 0; return Dev::ReadUInt32(Dev::ReadUInt64(CharViss_BufAddr + index * 0x8)); }
 
 [DCharVis_CharModel : 0x40]
 NativeClass = CGameCharacterModel

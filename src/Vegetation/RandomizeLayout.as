@@ -42,8 +42,8 @@ namespace RandomizeVegetationLayouts {
 			// +0x8 is like the number of spare entries to use from the start or something?
 			auto lenAddr = bufAddr + 0xC;
 			auto capAddr = bufAddr + 0x10;
-			auto len = Dev_ReadUInt32(lenAddr);
-			auto cap = Dev_ReadUInt32(capAddr);
+			auto len = Dev::ReadUInt32(lenAddr);
+			auto cap = Dev::ReadUInt32(capAddr);
 			auto elsAddr = Dev::ReadUInt64(bufAddr);
 			return MemoryIter(elsAddr, len, cap).WithSpan(4);
 		}
@@ -60,8 +60,8 @@ namespace RandomizeVegetationLayouts {
 			// +0x8 is like the number of spare entries to use from the start or something?
 			auto lenAddr = bufAddr + 0xC;
 			auto capAddr = bufAddr + 0x10;
-			auto len = Dev_ReadUInt32(lenAddr);
-			auto cap = Dev_ReadUInt32(capAddr);
+			auto len = Dev::ReadUInt32(lenAddr);
+			auto cap = Dev::ReadUInt32(capAddr);
 			auto elsAddr = Dev::ReadUInt64(bufAddr);
 			if (elsAddr == 0) {
 				dev_warn('FindZoneIdIndex: elsAddr == 0');
@@ -74,7 +74,7 @@ namespace RandomizeVegetationLayouts {
 			}
 			for (uint ix = 0; ix < len; ix++) {
 				auto idAddr = elsAddr + ix * 0x4;
-				auto idVal = Dev_ReadUInt32(idAddr);
+				auto idVal = Dev::ReadUInt32(idAddr);
 				if (idVal == uint(id)) {
 					return ix;
 				}
@@ -130,7 +130,7 @@ namespace RandomizeVegetationLayouts {
 				Dev_NotifyWarning("FindMgrPtr: bad pointer " + Text::FormatPointer(ptr));
 				continue;
 			}
-			auto clsId = Dev_ReadUInt32(ptr + 0x10);
+			auto clsId = Dev::ReadUInt32(ptr + 0x10);
 			if (clsId == classId) {
 				return Dev::GetOffsetUint64(iPhy, o);
 			}

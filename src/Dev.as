@@ -62,8 +62,8 @@ void Dev_WriteBytes(uint64 ptr, uint64[]@ bs) {
 }
 
 void Dev_UpdateMwSArrayCapacity(uint64 ptr, uint newSize, uint elsize, bool reduceFromFront = false) {
-    bool isExpanding = Dev_ReadUInt32(ptr + 0x8) < newSize;
-    while (Dev_ReadUInt32(ptr + 0x8) < newSize) {
+    bool isExpanding = Dev::ReadUInt32(ptr + 0x8) < newSize;
+    while (Dev::ReadUInt32(ptr + 0x8) < newSize) {
         Dev_DoubleMwSArray(ptr, elsize);
     }
     Dev_ReduceMwSArray(ptr, newSize, !isExpanding && reduceFromFront, int(elsize));
@@ -72,15 +72,15 @@ void Dev_UpdateMwSArrayCapacity(uint64 ptr, uint newSize, uint elsize, bool redu
 void Dev_ReduceMwSArray(uint64 ptr, float newSizeProp) {
     if (newSizeProp > 1.0) throw("out of range+ newSizeProp");
     if (newSizeProp < 0.0) throw("out of range- newSizeProp");
-    auto len = Dev_ReadUInt32(ptr + 0x8);
+    auto len = Dev::ReadUInt32(ptr + 0x8);
     uint32 newSize = uint32(float(len) * newSizeProp);
     newSize = Math::Min(len, newSize);
     Dev::Write(ptr + 0x8, newSize);
 }
 
 void Dev_ReduceMwSArray(uint64 ptr, uint newSize, bool reduceFromFront = false, int elSize = -1) {
-    auto len = Dev_ReadUInt32(ptr + 0x8);
-    auto capacity = Dev_ReadUInt32(ptr + 0xC);
+    auto len = Dev::ReadUInt32(ptr + 0x8);
+    auto capacity = Dev::ReadUInt32(ptr + 0xC);
     if (newSize > len) throw("only reduces");
     newSize = Math::Min(len, newSize);
     Dev::Write(ptr + 0x8, newSize);
@@ -96,7 +96,7 @@ void Dev_ReduceMwSArray(uint64 ptr, uint newSize, bool reduceFromFront = false, 
 void Dev_DoubleMwSArray(uint64 ptr, uint elSize) {
     print("Dev_DoubleMwSArray: " + Text::FormatPointer(ptr) + ", sz: " + elSize);
     // return;
-    auto len = Dev_ReadUInt32(ptr + 0x8);
+    auto len = Dev::ReadUInt32(ptr + 0x8);
     if (len == 0) return;
     auto buf = Dev::ReadUInt64(ptr);
     auto bs_len = elSize * len;
@@ -109,7 +109,7 @@ void Dev_DoubleMwSArray(uint64 ptr, uint elSize) {
     for (uint loopN = 0; loopN < mag; loopN++) {
         for (uint b = 0; b < bs_len - 1; b += 4) {
             auto offset = b + loopN * bs_len;
-            Dev::Write(newBuf + offset, Dev_ReadUInt32(buf + b));
+            Dev::Write(newBuf + offset, Dev::ReadUInt32(buf + b));
         }
     }
     Dev::Write(ptr, newBuf);
@@ -210,7 +210,7 @@ namespace NodPtrs {
 uint Dev_CastFloatToUint(float f) {
     if (NodPtrs::g_TmpPtrSpace == 0) NodPtrs::InitializeTmpPointer();
     Dev::Write(NodPtrs::g_TmpPtrSpace, f);
-    auto r = Dev_ReadUInt32(NodPtrs::g_TmpPtrSpace);
+    auto r = Dev::ReadUInt32(NodPtrs::g_TmpPtrSpace);
     Dev::Write(NodPtrs::g_TmpPtrSpace, uint64(0));
     return r;
 }
@@ -999,17 +999,17 @@ class RawBuffer {
     bool get_StructBehindPtr() { return structBehindPtr; }
 
     uint get_Length() {
-        return Dev_ReadUInt32(ptr + 0x8);
+        return Dev::ReadUInt32(ptr + 0x8);
     }
     void set_Length(uint value) {
         if (value > Capacity) throw("RawBuffer length cannot exceed capacity");
         Dev::Write(ptr + 0x8, value);
     }
     uint get_Reserved() {
-        return Dev_ReadUInt32(ptr + 0xC);
+        return Dev::ReadUInt32(ptr + 0xC);
     }
     uint get_Capacity() {
-        return Dev_ReadUInt32(ptr + 0xC);
+        return Dev::ReadUInt32(ptr + 0xC);
     }
 
     RawBufferElem@ opIndex(uint i) {
@@ -1130,7 +1130,7 @@ class RawBufferElem {
     string GetCStringWithLen(uint o) {
         CheckOffset(o, 12);
         auto strPtr = Dev::ReadUInt64(ptr + o);
-        auto strLen = Dev_ReadUInt32(ptr + o + 8);
+        auto strLen = Dev::ReadUInt32(ptr + o + 8);
         if (strPtr == 0 || strLen == 0) return "";
         return Dev::ReadCString(strPtr, strLen);
     }
@@ -1163,7 +1163,7 @@ class RawBufferElem {
     }
     string GetMwIdValue(uint o) {
         CheckOffset(o, 4);
-        return GetMwIdName(Dev_ReadUInt32(ptr + o));
+        return GetMwIdName(Dev::ReadUInt32(ptr + o));
     }
     void SetMwIdValue(uint o, const string &in value) {
         CheckOffset(o, 4);
@@ -1171,7 +1171,7 @@ class RawBufferElem {
     }
     uint32 GetUint32(uint o) {
         CheckOffset(o, 4);
-        return Dev_ReadUInt32(ptr + o);
+        return Dev::ReadUInt32(ptr + o);
     }
     void SetUint32(uint o, uint value) {
         CheckOffset(o, 4);
@@ -1447,10 +1447,10 @@ class RawBufferElem {
         RV_CopiableValue(tostring(Dev::ReadFloat(valPtr)));
     }
     void _DrawRawValueUint32(uint64 valPtr) {
-        RV_CopiableValue(Text::Format("0x%x", Dev_ReadUInt32(valPtr)));
+        RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt32(valPtr)));
     }
     void _DrawRawValueUint32D(uint64 valPtr) {
-        RV_CopiableValue(tostring(Dev_ReadUInt32(valPtr)));
+        RV_CopiableValue(tostring(Dev::ReadUInt32(valPtr)));
     }
     void _DrawRawValueUint16(uint64 valPtr) {
         RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt16(valPtr)));

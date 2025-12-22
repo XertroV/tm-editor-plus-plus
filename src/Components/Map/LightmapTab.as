@@ -118,7 +118,7 @@ class LightmapTab : Tab {
 
 
             auto bufPtr = Dev::ReadUInt64(pimpPtr + 0xA8);
-            auto bufLen = Dev_ReadUInt32(pimpPtr + 0xB0);
+            auto bufLen = Dev::ReadUInt32(pimpPtr + 0xB0);
 
 
             UI::Text("Buffer: " + bufLen);
@@ -234,10 +234,10 @@ class LightmapTab : Tab {
         UI::Indent();
 
         auto s2mPtr = Dev::ReadUInt64(ptr);
-        auto ix1 = Dev_ReadUInt32(ptr + 0x8);
-        auto unk1 = Dev_ReadUInt32(ptr + 0xC);
-        auto ix2 = Dev_ReadUInt32(ptr + 0x10);
-        auto unk2 = Dev_ReadUInt32(ptr + 0x14);
+        auto ix1 = Dev::ReadUInt32(ptr + 0x8);
+        auto unk1 = Dev::ReadUInt32(ptr + 0xC);
+        auto ix2 = Dev::ReadUInt32(ptr + 0x10);
+        auto unk2 = Dev::ReadUInt32(ptr + 0x14);
         auto cmwnodPtr = Dev::ReadUInt64(ptr + 0x18);
         auto struct1Ptr = Dev::ReadUInt64(ptr + 0x20);
         auto struct2Ptr = Dev::ReadUInt64(ptr + 0x28);
@@ -274,11 +274,11 @@ class LightmapTab : Tab {
         vec2 v2 = Dev::ReadVec2(ptr + 0xC);
         string bytesFForF7 = Dev::Read(ptr + 0x14, 0x10);
         string bytes0_1 = Dev::Read(ptr + 0x24, 0x8);
-        auto f1 = Dev_ReadUInt32(ptr + 0x2C);
+        auto f1 = Dev::ReadUInt32(ptr + 0x2C);
         string bytes0_2 = Dev::Read(ptr + 0x30, 0x20);
         string bytes110000 = Dev::Read(ptr + 0x50, 0x8);
-        auto u1 = Dev_ReadUInt32(ptr + 0x58);
-        auto u2 = Dev_ReadUInt32(ptr + 0x5C);
+        auto u1 = Dev::ReadUInt32(ptr + 0x58);
+        auto u2 = Dev::ReadUInt32(ptr + 0x5C);
 
         UI::Indent();
 
@@ -368,7 +368,7 @@ class LmMappingCache {
     void Update(CHmsLightMap@ lm) {
         auto pimpPtr = Dev::GetOffsetUint64(lm, GetOffset(lm, "m_PImp"));
         auto bufPtr = pimpPtr + O_LM_PIMP_Buf2;
-        auto bufLen = Dev_ReadUInt32(bufPtr + 0x8);
+        auto bufLen = Dev::ReadUInt32(bufPtr + 0x8);
         auto startPtr = Dev::ReadUInt64(bufPtr);
         auto objSize = SZ_LM_SPIMP_Buf2_EL;
         objs.RemoveRange(0, objs.Length);
@@ -588,7 +588,7 @@ namespace LightMapCustomRes {
     uint GetLMResolution() {
         CheckInitAddr();
         if (g_LMResPatternAddr == 0) return uint(-1);
-        return Dev_ReadUInt32(g_LMResPatternAddr + CustomLMResolutionOffset);
+        return Dev::ReadUInt32(g_LMResPatternAddr + CustomLMResolutionOffset);
     }
 
     void SetLMResolution(uint res) {

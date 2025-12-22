@@ -123,11 +123,11 @@ class MTClipGroupTrigger {
 
     uint get_Length() {
         AssertGoodPtr();
-        return Dev_ReadUInt32(ptr + o_buf_TriggerCoords + 0x8);
+        return Dev::ReadUInt32(ptr + o_buf_TriggerCoords + 0x8);
     }
     uint get_Capacity() {
         AssertGoodPtr();
-        return Dev_ReadUInt32(ptr + o_buf_TriggerCoords + 0xC);
+        return Dev::ReadUInt32(ptr + o_buf_TriggerCoords + 0xC);
     }
     uint64 get_BufferPtr() {
         AssertGoodPtr();
