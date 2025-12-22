@@ -850,7 +850,8 @@ const uint16 O_ITEMCURSOR_Helper = GetOffset("CGameCursorItem", "HelperMobil");
 const uint16 O_ITEMCURSOR_CurrentPos = O_ITEMCURSOR_MagnetSnapLocalRotDeg + 0x40;
 const uint16 O_ITEMCURSOR_CurrentModelsBuf = O_ITEMCURSOR_Helper + 0x8;
 // 0x88, snapped block ID under NSceneItemPlacement_SMgr
-const uint16 O_ITEMCURSOR_SnappedBlockPlacementZoneId = O_ITEMCURSOR_Helper - (0xB0 - 0x88);
+// 2026: same offset, but helper moved up
+const uint16 O_ITEMCURSOR_SnappedBlockPlacementZoneId = O_ITEMCURSOR_MagnetSnapLocalRotDeg + (0x88 - 0x1C);
 // const uint16 O_ITEMCURSOR_VariantOrNbMaybe = 0xC0;
 // const uint16 O_ITEMCURSOR_MaxVariantMaybe = 0xC4;
 

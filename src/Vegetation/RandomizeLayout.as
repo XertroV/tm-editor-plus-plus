@@ -99,7 +99,9 @@ namespace RandomizeVegetationLayouts {
 					if (count == 10) newIx = (ixWas + 1) % nbPlacements;
 					zone.PlacementIx = newIx;
 					lastSetPlacementIxRanomized = newIx;
-					dev_trace('AfterItemCursorPlacementZoneIdUpdated block #'+GetZoneCtnBlockMwId(zone)+' : zoneIx: ' + zoneIx + ' zone.PlacementIx: ' + ixWas + ' -> ' + zone.PlacementIx);
+#if DEV
+					// dev_trace('AfterItemCursorPlacementZoneIdUpdated block #'+GetZoneCtnBlockMwId(zone)+' : zoneIx: ' + zoneIx + ' zone.PlacementIx: ' + ixWas + ' -> ' + zone.PlacementIx);
+#endif
 				}
 			} else {
 				dev_trace('zoneIx < 0: ' + zoneIx);
