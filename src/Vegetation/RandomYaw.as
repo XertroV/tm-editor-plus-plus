@@ -530,23 +530,23 @@ namespace Murmur32 {
 		trace("R8: " + Text::FormatPointer(r8));
 		trace("Seed: " + Text::Format("0x%08x", uint(r8)));
 		trace("Block: "
-			+ Text::Format("0x%08x ", Dev::ReadUInt32(rcx))
-			+ Text::Format("0x%08x ", Dev::ReadUInt32(rcx+4))
-			+ Text::Format("0x%08x ", Dev::ReadUInt32(rcx+4*2))
-			+ Text::Format("0x%08x ", Dev::ReadUInt32(rcx+4*3))
-			+ Text::Format("0x%08x ", Dev::ReadUInt32(rcx+4*4))
-			+ Text::Format("0x%08x ", Dev::ReadUInt32(rcx+4*5))
-			+ Text::Format("0x%08x ", Dev::ReadUInt32(rcx+4*6))
+			+ Text::Format("0x%08x ", Dev_ReadUInt32(rcx))
+			+ Text::Format("0x%08x ", Dev_ReadUInt32(rcx+4))
+			+ Text::Format("0x%08x ", Dev_ReadUInt32(rcx+4*2))
+			+ Text::Format("0x%08x ", Dev_ReadUInt32(rcx+4*3))
+			+ Text::Format("0x%08x ", Dev_ReadUInt32(rcx+4*4))
+			+ Text::Format("0x%08x ", Dev_ReadUInt32(rcx+4*5))
+			+ Text::Format("0x%08x ", Dev_ReadUInt32(rcx+4*6))
 		);
 		trace("Block bytes: " + Dev::Read(rcx, 28));
 		lastSeed = uint(r8);
-		lastBlock[0] = Dev::ReadUInt32(rcx);
-		lastBlock[1] = Dev::ReadUInt32(rcx+4);
-		lastBlock[2] = Dev::ReadUInt32(rcx+4*2);
-		lastBlock[3] = Dev::ReadUInt32(rcx+4*3);
-		lastBlock[4] = Dev::ReadUInt32(rcx+4*4);
-		lastBlock[5] = Dev::ReadUInt32(rcx+4*5);
-		lastBlock[6] = Dev::ReadUInt32(rcx+4*6);
+		lastBlock[0] = Dev_ReadUInt32(rcx);
+		lastBlock[1] = Dev_ReadUInt32(rcx+4);
+		lastBlock[2] = Dev_ReadUInt32(rcx+4*2);
+		lastBlock[3] = Dev_ReadUInt32(rcx+4*3);
+		lastBlock[4] = Dev_ReadUInt32(rcx+4*4);
+		lastBlock[5] = Dev_ReadUInt32(rcx+4*5);
+		lastBlock[6] = Dev_ReadUInt32(rcx+4*6);
 
 		lastBlockF[0] = Dev::ReadFloat(rcx);
 		lastBlockF[1] = Dev::ReadFloat(rcx+4);

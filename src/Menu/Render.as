@@ -25,6 +25,7 @@ void DrawPluginsMenu_WhileInMainMenu() {
         }
         S_LoadMapsWithOldPillars = UI::Checkbox("Load maps with old pillars", S_LoadMapsWithOldPillars);
         S_AllowNonCarSportPlayerModelsEditingMap = UI::Checkbox("Do not reset the car when editing a map", S_AllowNonCarSportPlayerModelsEditingMap);
+        DrawSetLightmapMenu();
 #if SIG_DEVELOPER
         S_EnableInMapBrowser = UI::Checkbox("Enable in map browser", S_EnableInMapBrowser);
 #endif
@@ -39,6 +40,10 @@ void DrawPluginsMenu_WhileInMainMenu() {
         }
         UI::EndMenu();
     }
+}
+
+void DrawSetLightmapMenu() {
+    LightMapCustomRes::DrawMenu_PreEditor();
 }
 
 [Setting hidden]

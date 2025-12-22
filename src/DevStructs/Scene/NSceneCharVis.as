@@ -14,7 +14,7 @@ class DSceneCharVis_SMgr : RawBufferElem {
 	uint get_CharViss_Length() { return (this.GetUint32(0x168 + 0x8)); }
 	DSceneCharVis@ GetCharVisByEntId(uint entId) { auto cvs = CharViss; for (uint i = 0; i < cvs.Length; i++) { if (cvs[i].GetUint32(0) == entId) return DSceneCharVis(cvs[i]); } return null; }
 	DSceneCharVis@ GetCharVisByEntId2(uint entId) { auto len = CharViss_Length; for (uint i = 0; i < len; i++) { if (GetCharVisEntId(i) == entId) return DSceneCharVis(CharViss[i]); } return null; }
-	uint GetCharVisEntId(uint index) { if (index >= CharViss_Length) return 0; return Dev::ReadUInt32(Dev::ReadUInt64(CharViss_BufAddr + index * 0x8)); }
+	uint GetCharVisEntId(uint index) { if (index >= CharViss_Length) return 0; return Dev_ReadUInt32(Dev::ReadUInt64(CharViss_BufAddr + index * 0x8)); }
 	DCharVis_CharModels@ get_CharModels() { return DCharVis_CharModels(this.GetBuffer(0x1b0, 0x40, true)); }
 	DSceneCharViss@ get_CharViss() { return DSceneCharViss(this.GetBuffer(0x168, 0x700, true)); }
 }

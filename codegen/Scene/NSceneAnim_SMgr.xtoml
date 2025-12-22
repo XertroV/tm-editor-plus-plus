@@ -16,7 +16,7 @@ Input_Contexts_Len = uint, 0x40+0x10, G
 Input_Contexts0_Nod = CMwNod, 0x40+0x18, G
 Input_Contexts0_NodAddr = uint64, 0x40+0x18, G
 Struct: Input_Contexts0_Meta = DMetaPtr, 0x40+0x20, G
-Inline: uint get_Input_Contexts0_ClassID() { return Dev::ReadUInt32(Dev::ReadUInt64(ptr + 0x60) + 0x10); }
+Inline: uint get_Input_Contexts0_ClassID() { return Dev_ReadUInt32(Dev::ReadUInt64(ptr + 0x60) + 0x10); }
 Input_Rot = vec4, 0x40+0x38, G
 Input_Pos = vec3, 0x40+0x48, G
 Input_Vel = vec3, 0x40+0x54, G

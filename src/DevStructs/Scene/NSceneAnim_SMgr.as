@@ -55,7 +55,7 @@ class DSModelInst : RawBufferElem {
 	CMwNod@ get_Input_Contexts0_Nod() { return cast<CMwNod>(this.GetNod(0x40+0x18)); }
 	uint64 get_Input_Contexts0_NodAddr() { return (this.GetUint64(0x40+0x18)); }
 	DMetaPtr@ get_Input_Contexts0_Meta() { auto _ptr = this.GetUint64(0x40+0x20); if (_ptr == 0) return null; return DMetaPtr(_ptr); }
-	uint get_Input_Contexts0_ClassID() { return Dev::ReadUInt32(Dev::ReadUInt64(ptr + 0x60) + 0x10); }
+	uint get_Input_Contexts0_ClassID() { return Dev_ReadUInt32(Dev::ReadUInt64(ptr + 0x60) + 0x10); }
 	vec4 get_Input_Rot() { return (this.GetVec4(0x40+0x38)); }
 	vec3 get_Input_Pos() { return (this.GetVec3(0x40+0x48)); }
 	vec3 get_Input_Vel() { return (this.GetVec3(0x40+0x54)); }

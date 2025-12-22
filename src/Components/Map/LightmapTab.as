@@ -27,6 +27,7 @@ class LightmapTab : Tab {
             ExploreNod("LightMap", lm);
         }
 #endif
+        DrawLightmapDebugFlagCheckbox();
 
         if (UI::CollapsingHeader("Customize Lightmap")) {
             UI::Indent();
@@ -117,7 +118,7 @@ class LightmapTab : Tab {
 
 
             auto bufPtr = Dev::ReadUInt64(pimpPtr + 0xA8);
-            auto bufLen = Dev::ReadUInt32(pimpPtr + 0xB0);
+            auto bufLen = Dev_ReadUInt32(pimpPtr + 0xB0);
 
 
             UI::Text("Buffer: " + bufLen);
@@ -233,10 +234,10 @@ class LightmapTab : Tab {
         UI::Indent();
 
         auto s2mPtr = Dev::ReadUInt64(ptr);
-        auto ix1 = Dev::ReadUInt32(ptr + 0x8);
-        auto unk1 = Dev::ReadUInt32(ptr + 0xC);
-        auto ix2 = Dev::ReadUInt32(ptr + 0x10);
-        auto unk2 = Dev::ReadUInt32(ptr + 0x14);
+        auto ix1 = Dev_ReadUInt32(ptr + 0x8);
+        auto unk1 = Dev_ReadUInt32(ptr + 0xC);
+        auto ix2 = Dev_ReadUInt32(ptr + 0x10);
+        auto unk2 = Dev_ReadUInt32(ptr + 0x14);
         auto cmwnodPtr = Dev::ReadUInt64(ptr + 0x18);
         auto struct1Ptr = Dev::ReadUInt64(ptr + 0x20);
         auto struct2Ptr = Dev::ReadUInt64(ptr + 0x28);
@@ -273,11 +274,11 @@ class LightmapTab : Tab {
         vec2 v2 = Dev::ReadVec2(ptr + 0xC);
         string bytesFForF7 = Dev::Read(ptr + 0x14, 0x10);
         string bytes0_1 = Dev::Read(ptr + 0x24, 0x8);
-        auto f1 = Dev::ReadUInt32(ptr + 0x2C);
+        auto f1 = Dev_ReadUInt32(ptr + 0x2C);
         string bytes0_2 = Dev::Read(ptr + 0x30, 0x20);
         string bytes110000 = Dev::Read(ptr + 0x50, 0x8);
-        auto u1 = Dev::ReadUInt32(ptr + 0x58);
-        auto u2 = Dev::ReadUInt32(ptr + 0x5C);
+        auto u1 = Dev_ReadUInt32(ptr + 0x58);
+        auto u2 = Dev_ReadUInt32(ptr + 0x5C);
 
         UI::Indent();
 
@@ -367,7 +368,7 @@ class LmMappingCache {
     void Update(CHmsLightMap@ lm) {
         auto pimpPtr = Dev::GetOffsetUint64(lm, GetOffset(lm, "m_PImp"));
         auto bufPtr = pimpPtr + O_LM_PIMP_Buf2;
-        auto bufLen = Dev::ReadUInt32(bufPtr + 0x8);
+        auto bufLen = Dev_ReadUInt32(bufPtr + 0x8);
         auto startPtr = Dev::ReadUInt64(bufPtr);
         auto objSize = SZ_LM_SPIMP_Buf2_EL;
         objs.RemoveRange(0, objs.Length);
@@ -568,7 +569,7 @@ void DrawMappingOverlay(UI::Texture@ tex, vec2 imgTL, LmMappingCache@ mapping, b
 
 namespace LightMapCustomRes {
     // small function that returns 0x400, 0x800, or 0x1000 for LM resolution
-    const string LMResPattern = "85 C9 74 16 83 E9 01 74 0B 83 F9 01 75 06 B8 00 10 00 00 C3 B8 00 08 00 00 C3 B8 00 04 00 00 C3";
+    const string LMResPattern = "85 C9 74 16 83 E9 01 74 0B 83 F9 01 75 06 B8 00 10 00 00 C3 B8 00 ?? 00 00 C3 B8 00 04 00 00 C3";
     const uint CustomLMResolutionOffset = 0x15; //21
     uint CustomLMResolution = 0x800;
     uint64 g_LMResPatternAddr = 0;
@@ -587,7 +588,7 @@ namespace LightMapCustomRes {
     uint GetLMResolution() {
         CheckInitAddr();
         if (g_LMResPatternAddr == 0) return uint(-1);
-        return Dev::ReadUInt32(g_LMResPatternAddr + CustomLMResolutionOffset);
+        return Dev_ReadUInt32(g_LMResPatternAddr + CustomLMResolutionOffset);
     }
 
     void SetLMResolution(uint res) {
@@ -598,7 +599,8 @@ namespace LightMapCustomRes {
         auto origBytes = Dev::Patch(g_LMResPatternAddr + CustomLMResolutionOffset, UintToBytes(res));
         trace('Set LM res. Previous res: ' + origBytes);
         // Dev::Write(g_LMResPatternAddr + CustomLMResolutionOffset, res);
-        hasSetCustomLM = CustomLMResolution != 0x800;
+        CustomLMResolution = res;
+        hasSetCustomLM = res != 0x800;
     }
 
     void SetLMResCoro() {
@@ -625,7 +627,7 @@ namespace LightMapCustomRes {
                 params.DirSamples = UI::InputInt("DirSamples", params.DirSamples);
                 params.PntSamples = UI::InputInt("PntSamples", params.PntSamples);
                 if (TmGameVersion > "2024-06-17_16_34") {
-                    params.DepthPeelGroupMaxPerAxe = InputIntFlags("DepthPeelGroupMaxPerAxe", params.DepthPeelGroupMaxPerAxe, {4,8,16});
+                    params.DepthPeelGroupMaxPerAxe = InputIntFlags("DepthPeelGroupMaxPerAxe", params.DepthPeelGroupMaxPerAxe, {1,2,4,8,16});
                 }
             } else {
                 UI::Text("\\$999Params null!");
@@ -640,5 +642,46 @@ namespace LightMapCustomRes {
         if (hasSetCustomLM) {
             SetLMResolution(0x800);
         }
+    }
+
+
+    // a menu for plugins > E++ while in game's main menu.
+    void DrawMenu_PreEditor() {
+        if (UI::BeginMenu("Set Lightmap Resolution" + UpdatedIndicator)) {
+            UI::TextWrapped("\\$i\\$8f8Set to 1024 to GREATLY reduce load times for large maps!");
+            UI::TextWrapped("\\$i\\$f88  Don't forget to update this via E++ lightmap tab before calculating final shadows.");
+            uint currRes = GetLMResolution();
+            LabeledValue("Current LM Resolution", currRes);
+            CustomLMResolution = UI::InputInt("Custom LM Resolution", CustomLMResolution, 256);
+            CustomLMResolution = Math::Clamp(CustomLMResolution, 512, 4096*2);
+            if (UI::Button("Update LM Resolution")) {
+                SetLMResolution(CustomLMResolution);
+            }
+            UI::SameLine();
+            if (UI::Button("1024")) {
+                SetLMResolution(0x400);
+            }
+            UI::SameLine();
+            if (UI::Button("Reset")) {
+                SetLMResolution(0x800);
+            }
+
+            // todo: to add this box we need to think about how normal shadow calcs should work.
+            // todo: we ideally want to keep LM quality low until the user actually wants to calculate shadows.
+            // S_AlwaysSetSmallLightmapOutsideEditor = UI::Checkbox("Always load maps with small LM", S_AlwaysSetSmallLightmapOutsideEditor);
+            // AddSimpleTooltip("Automatically set the lightmap size to 1024 when loading into maps to prevent long shadow calculations.");
+
+            UI::EndMenu();
+        }
+        DrawLightmapDebugFlagCheckbox();
+    }
+}
+
+void DrawLightmapDebugFlagCheckbox() {
+    bool lmDebugEnabled = UI::Checkbox("Enable LM Debug Status" + NewIndicator, Editor::S_EnableLMDebugStatus);
+    AddSimpleTooltip("Shows extra details on the 'Calculating Shadows' dialog box.");
+    if (lmDebugEnabled != Editor::S_EnableLMDebugStatus) {
+        Editor::S_EnableLMDebugStatus = lmDebugEnabled;
+        Editor::UpdateLMDebugFlagFromSetting();
     }
 }

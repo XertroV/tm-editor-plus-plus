@@ -88,6 +88,8 @@ void Main() {
 
     Meta::StartWithRunContext(Meta::RunContext::AfterMainLoop, Loop_RunCtx_AfterMainLoop);
 
+    startnew(Editor::UpdateLMDebugFlagFromSetting);
+
     yield(1);
     startnew(ColorSelectionHook::SetupHooks);
     startnew(Gizmo::SetupGizmoHotkeysOnPluginStart);

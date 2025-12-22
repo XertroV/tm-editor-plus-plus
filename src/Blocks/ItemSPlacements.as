@@ -83,7 +83,7 @@ namespace Blocks {
                 // auto ptr2 = Dev::GetOffsetUint64(paramsFakeNod, 0x8);
                 if (ptr2 > 0 && !Dev_PointerLooksBad(ptr2)) {
                     // type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
-                    auto paramsClsId = Dev::ReadUInt32(ptr2 + 0x10);
+                    auto paramsClsId = Dev_ReadUInt32(ptr2 + 0x10);
                     if (paramsClsId == CLSID_NPlugItemPlacement_SPlacement) {
                         SPlacements.InsertLast(ItemSPlacement(
                             prefab.Ents[i].Location,
@@ -202,7 +202,7 @@ namespace ItemPlace_StringConsts {
             return;
         }
         auto lsaAddr = Dev::ReadUInt64(ptr);
-        auto labelStructArrayLen = Dev::ReadUInt32(ptr + 0x8);
+        auto labelStructArrayLen = Dev_ReadUInt32(ptr + 0x8);
         if (lsaAddr == 0) {
             UI::Text("LabelStructArray is null");
             return;
@@ -276,7 +276,7 @@ namespace ItemPlace_StringConsts {
         LSA_Lookup() {
             ptr = LabelStructArrayPtr;
             lsaAddr = Dev::ReadUInt64(ptr);
-            lsaLen = Dev::ReadUInt32(ptr + 0x8);
+            lsaLen = Dev_ReadUInt32(ptr + 0x8);
             kindCache.Resize(lsaLen);
             cache.Resize(lsaLen);
             CacheAll();
@@ -301,7 +301,7 @@ namespace ItemPlace_StringConsts {
                     // dev_trace("elPtr: " + Text::FormatPointer(elPtr));
                     auto elAddr = Dev::ReadUInt64(elPtr);
                     // dev_trace("elAddr: " + Text::FormatPointer(elAddr));
-                    auto strLen = Dev::ReadUInt32(elPtr + 0x8);
+                    auto strLen = Dev_ReadUInt32(elPtr + 0x8);
                     // dev_trace("strLen: " + strLen);
                     cache[k][i] = Dev::ReadCString(elAddr, strLen);
                     // dev_trace("cache[" + k + "][" + i + "]: " + cache[k][i]);
@@ -329,7 +329,7 @@ namespace ItemPlace_StringConsts {
         uint _GetValuesLen(uint kindIx) {
             if (kindIx >= lsaLen) throw("LSA_Lookup: kindIx out of range: " + kindIx);
             auto listPtr = GetListPtr(kindIx);
-            return Dev::ReadUInt32(listPtr + 0x18);
+            return Dev_ReadUInt32(listPtr + 0x18);
         }
 
         string Get(nat2 kindIx_ElIx) {
@@ -345,7 +345,7 @@ namespace ItemPlace_StringConsts {
         //     auto listPtr = GetListPtr(kindIx_ElIx.x);
         //     auto elPtr = Dev::ReadUInt64(listPtr + 0x10) + kindIx_ElIx.y * 0x10;
         //     auto elAddr = Dev::ReadUInt64(elPtr);
-        //     auto strLen = Dev::ReadUInt32(elPtr + 0x8);
+        //     auto strLen = Dev_ReadUInt32(elPtr + 0x8);
         //     return Dev::ReadCString(elAddr, strLen);
         //     // return Text::FormatPointer(elAddr);
         //     // return InsertAndReturn(kindIx_ElIx, Dev::ReadCString(elAddr, strLen));

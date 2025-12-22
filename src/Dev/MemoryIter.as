@@ -37,7 +37,7 @@ class MemoryIter {
         posOffset += count * span;
         index += count;
         lastIndex = index - 1;
-        if (posOffset >= capacity * span || posOffset < 0) throw("MemoryIter: out of bounds");
+        if (posOffset >= capacity * span || posOffset < 0) throw("MemoryIter: out of bounds; count=" + count);
         return this;
     }
 
@@ -47,7 +47,7 @@ class MemoryIter {
 
     uint NextUint() {
         CheckPos();
-        uint value = Dev::ReadUInt32(address + posOffset);
+        uint value = Dev_ReadUInt32(address + posOffset);
         posOffset += span;
         lastIndex = index++;
         return value;

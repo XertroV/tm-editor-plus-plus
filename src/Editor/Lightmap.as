@@ -43,4 +43,63 @@ namespace Editor {
     // cacheSmall goes null on place block/item
 
 
+    /*
+        Debug flag for extra LM output:
+
+        Trackmania.exe.text+C51108 - 83 B9 BC000000 00     - cmp dword ptr [rcx+000000BC],00 { 0 }
+        Trackmania.exe.text+C5110F - 0F86 68030000         - jbe Trackmania.exe.text+C5147D
+        Trackmania.exe.text+C51115 - 48 83 C1 48           - add rcx,48 { 72 }
+        Trackmania.exe.text+C51119 - 83 3D D09C3401 00     - cmp dword ptr [Trackmania.exe+1F9BDF0],00 { extra shadows debug flag (1 for debug)
+        }
+        Trackmania.exe.text+C51120 - 0F84 E3020000         - je Trackmania.exe.text+C51409
+
+        only main flag offset changed between 2024 and 2026:
+
+        83 B9 BC 00 00 00 00
+        0F 86 68 03 00 00
+        48 83 C1 48
+        83 3D D0 9C 34 01 00
+        0F 84 E3 02 00 00
+
+        83 B9 BC 00 00 00 00
+        0F 86 68 03 00 00
+        48 83 C1 48 83 3D ?? ?? ?? ?? 00 0F 84 E3 02 00 00
+    */
+
+    const string Pattern_LMDebugFlagOffset = "48 83 C1 48 83 3D ?? ?? ?? ?? 00 0F 84 E3 02 00 00";
+    uint64 Ptr_LMDebugFlagCode = 0;
+    uint64 Ptr_LMDebugFlag = 0;
+
+    void CheckInitLMDebugFlag() {
+        if (Ptr_LMDebugFlag != 0) return;
+        Ptr_LMDebugFlagCode = Dev::FindPattern(Pattern_LMDebugFlagOffset);
+        if (Ptr_LMDebugFlagCode == 0) {
+            trace("Could not find LM debug flag pattern!");
+            return;
+        }
+        Ptr_LMDebugFlagCode += 6;
+        // calculate flag address from instruction
+        int32 relOffset = Dev::ReadInt32(Ptr_LMDebugFlagCode);
+        Ptr_LMDebugFlag = Ptr_LMDebugFlagCode + 5 + relOffset;
+        trace("Found LM debug flag at " + Text::FormatPointer(Ptr_LMDebugFlag));
+    }
+
+    void SetLMDebugFlag(bool enabled) {
+        CheckInitLMDebugFlag();
+        if (Ptr_LMDebugFlag == 0) return;
+        Dev::Write(Ptr_LMDebugFlag, uint32(enabled ? 1 : 0));
+    }
+
+    uint GetLMDebugFlag() {
+        CheckInitLMDebugFlag();
+        if (Ptr_LMDebugFlag == 0) return -1;
+        return Dev_ReadUInt32(Ptr_LMDebugFlag);
+    }
+
+    [Setting hidden]
+    bool S_EnableLMDebugStatus = true;
+
+    void UpdateLMDebugFlagFromSetting() {
+        SetLMDebugFlag(S_EnableLMDebugStatus);
+    }
 }

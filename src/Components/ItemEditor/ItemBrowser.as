@@ -1426,9 +1426,9 @@ class ItemModelTreeElement {
                 auto newGameplayID = uint8(DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(origGPID)));
                 Dev::SetOffset(userMat, O_USERMATINST_GAMEPLAY_ID, newGameplayID);
                 if (colorLen == 3) {
-                    auto r = Dev::ReadUInt32(colorPtr + 0x0),
-                        g = Dev::ReadUInt32(colorPtr + 0x4),
-                        b = Dev::ReadUInt32(colorPtr + 0x8);
+                    auto r = Dev_ReadUInt32(colorPtr + 0x0),
+                        g = Dev_ReadUInt32(colorPtr + 0x4),
+                        b = Dev_ReadUInt32(colorPtr + 0x8);
                     auto col = vec3(r, g, b) / vec3(255);
                     col = UI::InputColor3("Color", col) * 255;
                     Dev::Write(colorPtr + 0x0, uint8(Math::Clamp(uint32(Math::Round(col.x)), 0, 255)));
@@ -1658,7 +1658,7 @@ class ItemModelTreeElement {
 
     void DrawLMBuffer2At(const string &in title, uint64 bufPtr) {
         if (StartTreeNode(title, true, UI::TreeNodeFlags::None)) {
-            auto bufLen = Dev::ReadUInt32(bufPtr + 0x8);
+            auto bufLen = Dev_ReadUInt32(bufPtr + 0x8);
             auto startPtr = Dev::ReadUInt64(bufPtr);
             auto objSize = SZ_LM_SPIMP_Buf2_EL;
             UI::ListClipper clip(bufLen);
@@ -1670,10 +1670,10 @@ class ItemModelTreeElement {
 
                     // Solid2Model
                     auto s2mPtr = Dev::ReadUInt64(ptr);
-                    auto ix1 = Dev::ReadUInt32(ptr + 0x8);
-                    auto unk1 = Dev::ReadUInt32(ptr + 0xC);
-                    auto ix2 = Dev::ReadUInt32(ptr + 0x10);
-                    auto unk2 = Dev::ReadUInt32(ptr + 0x14);
+                    auto ix1 = Dev_ReadUInt32(ptr + 0x8);
+                    auto unk1 = Dev_ReadUInt32(ptr + 0xC);
+                    auto ix2 = Dev_ReadUInt32(ptr + 0x10);
+                    auto unk2 = Dev_ReadUInt32(ptr + 0x14);
                     // an empty cmwnod
                     auto cmwnodPtr = Dev::ReadUInt64(ptr + 0x18);
                     // struct 1: unknown
@@ -1939,7 +1939,7 @@ class ItemModelTreeElement {
         uint32 paramsClsId;
         if (ptr2 > 0 && ptr2 % 8 == 0) {
             type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
-            paramsClsId = Dev::ReadUInt32(ptr2 + 0x10);
+            paramsClsId = Dev_ReadUInt32(ptr2 + 0x10);
             if (StartTreeNode("\\$888Params: ClsId / Type: " + Text::Format("%08x / " + type, paramsClsId),
                 true, UI::TreeNodeFlags::None
             )) {
@@ -1949,7 +1949,7 @@ class ItemModelTreeElement {
             // uint nextTypeMetadataEntry = Dev::ReadUInt64(ptr2 + 0x20);
             // if (entInfoPtr > 0 && entInfoPtr % 8 == 0) {
             //     entType = Dev::ReadCString(Dev::ReadUInt64(entInfoPtr + 0x8));
-            //     entClsId = Dev::ReadUInt32(entInfoPtr + 0x18);
+            //     entClsId = Dev_ReadUInt32(entInfoPtr + 0x18);
             //     UI::TextDisabled("ClsId / Type: " + Text::Format("%08x / " + entType, entClsId));
             // }
         }
@@ -2070,7 +2070,7 @@ void Draw_SPlacement(uint64 ptr, bool isEditable) {
 }
 
 void Draw_SPrefabConstraintParams(uint64 ptr, bool isEditable) {
-    uint dynaObjIx = Dev::ReadUInt32(ptr + 0x4);
+    uint dynaObjIx = Dev_ReadUInt32(ptr + 0x4);
     if (isEditable) {
         dynaObjIx = UI::InputInt("DynaObject Ix", dynaObjIx);
         Dev::Write(ptr + 0x4, dynaObjIx);
@@ -2089,7 +2089,7 @@ void DrawSPlacementGroup(uint64 ptr, bool isEditable = false) {
     // CopiableLabeledValue("placementsPtr", Text::FormatPointer(placementsPtr));
     auto buf = Dev_GetNodFromPointer(placementsPtr);
     // LabeledValue("buf is null", buf is null);
-    auto len = Dev::ReadUInt32(ptr + 0x8);
+    auto len = Dev_ReadUInt32(ptr + 0x8);
     // LabeledValue("Placements ptr", Text::FormatPointer(ptr));
     LabeledValue("Placements.Length", len);
     LabeledValue("Placements Type", Text::Format("0x%02x", GetPlacementGroupType(ptr)));
@@ -2110,7 +2110,7 @@ void DrawSPlacementGroup(uint64 ptr, bool isEditable = false) {
     // CopiableLabeledValue("TQs Ptr", Text::FormatPointer(tqsPtr));
     // auto tqs = Dev_GetNodFromPointer(tqsPtr);
     // LabeledValue("TQs is null", tqs is null);
-    auto nbTqs = Dev::ReadUInt32(ptr + 0x18);
+    auto nbTqs = Dev_ReadUInt32(ptr + 0x18);
     auto newNb = Draw_SPlacementGroup_TQs(tqsPtr, nbTqs, isEditable, ptr);
     // check if we need to alter array lengths
     if (isEditable && newNb < nbTqs && newNb < len) {
@@ -2182,12 +2182,12 @@ string PlacementTypeToString(uint8 type) {
 
 
 uint8 GetPlacementGroupType(uint64 placementGroupPtr) {
-    auto len = Dev::ReadUInt32(placementGroupPtr + 0x8);
+    auto len = Dev_ReadUInt32(placementGroupPtr + 0x8);
     if (len == 0) return 0;
     auto bufPtr = Dev::ReadUInt64(placementGroupPtr + 0x0);
     if (bufPtr == 0) return 0;
     // RequiredTags length
-    if (Dev::ReadUInt32(bufPtr + 0x10) < 1) return 0;
+    if (Dev_ReadUInt32(bufPtr + 0x10) < 1) return 0;
     auto innerPtr = Dev::ReadUInt64(bufPtr + 0x8);
     if (innerPtr == 0) return 0;
     // todo, look for first tag with .x=0, read .y
