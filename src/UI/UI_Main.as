@@ -101,7 +101,7 @@ void _UI_Main_Render() {
 
     if (showWindow) {
         vec2 size = vec2(800, 800);
-        vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        vec2 pos = (vec2(Display::GetWidth(), Display::GetHeight()) - size) / 2.;
         bool keepOpen = true;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::FirstUseEver);
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::FirstUseEver);
@@ -126,7 +126,7 @@ void _UI_Main_Render() {
 
     if (!Editor::IsRefreshSafe()) {
         vec2 size = vec2(300, 120);
-        vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        vec2 pos = (vec2(Display::GetWidth(), Display::GetHeight()) - size) / 2.;
         pos.y = 60;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
@@ -143,7 +143,7 @@ void _UI_Main_Render() {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         auto imIdName = ieditor.ItemModel !is null ? ieditor.ItemModel.IdName : "⚠️ ??";
         vec2 size = vec2(340, 240);
-        vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        vec2 pos = (vec2(Display::GetWidth(), Display::GetHeight()) - size) / 2.;
         pos.y = 60;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
@@ -164,7 +164,7 @@ void _UI_Main_Render() {
 
     if (CheckIfShowEppPluginReminder()) {
         vec2 size = vec2(300, 160);
-        vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        vec2 pos = (vec2(Display::GetWidth(), Display::GetHeight()) - size) / 2.;
         pos.y = 200;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);
         UI::SetNextWindowPos(int(pos.x), int(pos.y), UI::Cond::Always);
@@ -183,7 +183,7 @@ void _UI_Main_Render() {
 
     if (IsInEditor && FarlandsHelper::IsCameraInFarlands() && !dismissedCamReturnToStadium) {
         vec2 size = vec2(300, 120);
-        vec2 pos = (vec2(Draw::GetWidth(), Draw::GetHeight()) - size) / 2.;
+        vec2 pos = (vec2(Display::GetWidth(), Display::GetHeight()) - size) / 2.;
         pos.y = 100;
         pos.x += 300;
         UI::SetNextWindowSize(int(size.x), int(size.y), UI::Cond::Always);

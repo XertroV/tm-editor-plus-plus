@@ -8,7 +8,7 @@ class MaterialsListTab : Tab {
     }
 
     bool DrawWindow() override {
-        UI::SetNextWindowSize(450, Draw::GetHeight() / 2);
+        UI::SetNextWindowSize(450, Display::GetHeight() / 2);
         return Tab::DrawWindow();
     }
 

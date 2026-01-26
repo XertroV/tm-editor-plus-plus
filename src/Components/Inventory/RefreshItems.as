@@ -312,7 +312,7 @@ class ItemEmbedTab : Tab {
             msg += tostring(Reloading_Done) + " / " + Reloading_Total
                 + Text::Format(" ( %2.1f%% ) ]", float(Reloading_Done) * 100. / Reloading_Total);
             float size = 40.;
-            auto dims = Draw::MeasureString(msg, g_BigFont, size);
+            auto dims = UI::MeasureString(msg, g_BigFont, size);
             auto tl = midPos - dims/2.;
             float pad = 20.;
             auto boxTL = tl - pad;

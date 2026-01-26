@@ -184,7 +184,7 @@ void RenderEarly() {
     if (!UserHasPermissions) return;
     if (!GameVersionSafe) return;
 
-    g_screen = vec2(Draw::GetWidth(), Draw::GetHeight());
+    g_screen = vec2(Display::GetWidth(), Display::GetHeight());
     g_stdPxToScreenPx = g_screen.y / 1440.;
     Picker::RenderEarly();
 

@@ -18,7 +18,7 @@ class InventoryMainV2Tab : Tab {
     }
 
     bool DrawWindow() override {
-        if (windowOpen) UI::SetNextWindowSize(400, Draw::GetHeight() * 3/4, UI::Cond::FirstUseEver);
+        if (windowOpen) UI::SetNextWindowSize(400, Display::GetHeight() * 3/4, UI::Cond::FirstUseEver);
         return Tab::DrawWindow();
     }
 
