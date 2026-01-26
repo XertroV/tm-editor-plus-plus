@@ -1001,7 +1001,7 @@ void Map_SetDeco(CGameCtnChallenge@ map, MapDecoChoice d) {
     auto newDeco = GetDecoration(d);
     if (newDeco !is null) {
         @map.Decoration = newDeco;
-        startnew(CoroutineFuncUserdata(Map_SaveAndRevertDeco), deco);
+        startnew(Map_SaveAndRevertDeco, deco);
     }
 }
 

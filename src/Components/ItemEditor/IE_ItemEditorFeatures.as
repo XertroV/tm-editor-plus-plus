@@ -45,7 +45,7 @@ class IE_FeaturesTab : Tab {
         S_UpdateItemThumbnailAfterReload = UI::Checkbox("Automatically update the items thumbnail after a reload?", S_UpdateItemThumbnailAfterReload);
         S_AutoThumbnailDirection = (UI::InputInt("Auto Thumbnail Direction", S_AutoThumbnailDirection) + 4) % 4;
         if (UI::Button("Update thumbnail and save item")) {
-            startnew(CoroutineFunc(ItemEditor::UpdateThumbnailAndSaveItem));
+            startnew(ItemEditor::UpdateThumbnailAndSaveItem);
         }
     }
 }

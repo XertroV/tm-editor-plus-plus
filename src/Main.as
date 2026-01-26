@@ -47,7 +47,7 @@ void Main() {
 
     RegisterOnEditorStartingUpCallback(EditorPatches::OnEditorStartingUp, "EditorPatches::OnEditorStartingUp");
 
-    RegisterOnEditorStartingUpCallback(OnEditorStartingFunc(PillarsChoice::OnEditorStartingUp), "PillarsChoice::OnEditorStartingUp");
+    RegisterOnEditorStartingUpCallback(PillarsChoice::OnEditorStartingUp, "PillarsChoice::OnEditorStartingUp");
     RegisterOnEditorLoadCallback(PillarsChoice::OnEditorLoad, "PillarsChoice::OnEditorLoad");
     RegisterOnEditorUnloadCallback(PillarsChoice::OnEditorUnload, "PillarsChoice::OnEditorUnload");
     // RegisterNewBlockCallback_Private(PillarsChoice::OnBlockPlaced, "PillarsChoice::OnBlockPlaced", 0);
