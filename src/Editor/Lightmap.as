@@ -92,7 +92,7 @@ namespace Editor {
 
     uint GetLMDebugFlag() {
         CheckInitLMDebugFlag();
-        if (Ptr_LMDebugFlag == 0) return -1;
+        if (Ptr_LMDebugFlag == 0) return uint(-1);
         return Dev::ReadUInt32(Ptr_LMDebugFlag);
     }
 
