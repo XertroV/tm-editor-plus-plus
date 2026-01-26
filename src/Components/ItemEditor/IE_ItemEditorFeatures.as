@@ -33,6 +33,9 @@ class IE_FeaturesTab : Tab {
             if (fname.ToLower().EndsWith(".item.gbx")) {
                 fname = fname.SubStr(0, fname.Length - 9);
             }
+            if (fname.ToLower().EndsWith(".block.gbx")) {
+                fname = fname.SubStr(0, fname.Length - 10);
+            }
             ieditor.ItemModel.NameE = fname;
         }
     }
