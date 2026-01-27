@@ -751,7 +751,7 @@ class FavObj {
 
     void DrawList_DrawCenteredLabelText(UI::DrawList@ dl, vec2 midpoint) {
         float wrapWidth = S_IconSize.x - InvDrawVals::colGap;
-        auto nameDim = Draw::MeasureString(shortName, g_BoldFont, 14.0, wrapWidth);
+        auto nameDim = UI::MeasureString(shortName, g_BoldFont, 14.0, wrapWidth);
         auto tl = midpoint - nameDim / 2.;
         DrawList_AddTextWithStroke(dl, tl, vec4(1, 1, 1, hoverAlpha), vec4(0, 0, 0, hoverAlpha), shortName, g_BoldFont, 14.0, wrapWidth);
     }
@@ -761,10 +761,10 @@ class FavObj {
     void DrawHovered_Window() {
         vec2 mp = UI::GetMousePos();
         vec2 windowPos = vec2(
-            Draw::GetWidth() - mp.x > lastHoveredWindowDims.x + hoverBuffer
+            Display::GetWidth() - mp.x > lastHoveredWindowDims.x + hoverBuffer
                 ? mp.x + hoverBuffer
                 : mp.x - lastHoveredWindowDims.x - hoverBuffer,
-            Draw::GetHeight() - mp.y > lastHoveredWindowDims.y + hoverBuffer
+            Display::GetHeight() - mp.y > lastHoveredWindowDims.y + hoverBuffer
                 ? mp.y + hoverBuffer
                 : mp.y - lastHoveredWindowDims.y - hoverBuffer
         );

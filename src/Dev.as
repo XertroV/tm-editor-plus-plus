@@ -1757,6 +1757,7 @@ void CheckUnhookAllRegisteredHooks() {
 void Dev_AddToHookIndex(HookHelper@ hook) {}
 void Dev_AddToPatcherIndex(MemPatcher@ patcher) {}
 void Dev_DrawHookIndex() {}
+void Dev_DrawPatcherIndex() {}
 #else
 
 HookHelper@[] g_HookIndex;

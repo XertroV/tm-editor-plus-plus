@@ -144,7 +144,7 @@ namespace NG {
             } else {
                 label = name;
             }
-            textSize = Draw::MeasureString(label, g_NormFont, 16.);
+            textSize = UI::MeasureString(label, g_NormFont, 16.);
             auto yOff = size.y / 2. + 3.;
             if (alignRight) {
                 UI::SetCursorPos(startCur + pos - vec2(textSize.x + 8., yOff));
@@ -179,7 +179,7 @@ namespace NG {
             //     UI::AlignTextToFramePadding();
             //     string label = name + ": " + value;
             //     if (IsOutput) {
-            //         UI::Dummy(vec2(UI::GetContentRegionAvail().x - (Draw::MeasureString(label, g_NormFont, 16.) * g_scale).x - 16., 0.));
+            //         UI::Dummy(vec2(UI::GetContentRegionAvail().x - (UI::MeasureString(label, g_NormFont, 16.) * g_scale).x - 16., 0.));
             //         UI::SameLine();
             //     }
             //     UI::Text(label);
@@ -350,7 +350,7 @@ namespace NG {
 
         vec2 UIGetDrawSize() {
             if (uiDrawSize.LengthSquared() > 100.) return uiDrawSize;
-            titleBarSize = Draw::MeasureString(nodeName, g_NormFont, 16.);
+            titleBarSize = UI::MeasureString(nodeName, g_NormFont, 16.);
             titleBarSize.y += tbPadding.y * 2.;
             vec2 outputsSize = ioHeight * vec2(2., outputs.Length);
             vec2 inputsSize = ioHeight * vec2(2., inputs.Length);

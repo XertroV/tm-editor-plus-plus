@@ -137,5 +137,5 @@ namespace Picker {
 
 
 vec2 GetScreenVec2() {
-    return vec2(Draw::GetWidth(), Draw::GetHeight());
+    return vec2(Display::GetWidth(), Display::GetHeight());
 }

@@ -193,7 +193,7 @@ namespace MbShowGhostFree {
         mbiToFix.MwAddRef();
         mbiWasUnassigned = mbi.Id.Value == uint(-1);
         // this will be applied after generation is done
-        Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, CoroutineFunc(_Run_Fix_MacroBlock_BlockUnitCoords));
+        Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, _Run_Fix_MacroBlock_BlockUnitCoords);
         dev_trace('MbShowGhostFree: Fix_MacroBlock_BlockUnitCoords_Soon called for mbi: ' + mbi.IdName);
     }
 

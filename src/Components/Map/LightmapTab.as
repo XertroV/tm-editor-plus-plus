@@ -551,7 +551,7 @@ void DrawMappingOverlay(UI::Texture@ tex, vec2 imgTL, LmMappingCache@ mapping, b
                 auto yOffset = 34.0 * nbHovered;
                 auto textTL = imgTL + vec2(1024 + 20, yOffset);
                 auto rectTL = textTL - vec2(4);
-                auto textSize = Draw::MeasureString(item.fidFileName, g_BigFont, 26);
+                auto textSize = UI::MeasureString(item.fidFileName, g_BigFont, 26);
                 auto rectSize = textSize + vec2(8);
                 fg.AddRectFilled(vec4(rectTL, rectSize), vec4(.1, .1, .1, .9));
                 DrawList_AddTextWithStroke(fg, imgTL + vec2(1024 + 20, yOffset), vec4(1, 1, 0, 1), vec4(0), item.fidFileName, g_BigFont, 26);

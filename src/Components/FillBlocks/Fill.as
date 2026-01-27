@@ -6,7 +6,7 @@ namespace FillBlocks {
 
 
     void OnPluginLoad() {
-        AddHotkey(VirtualKey::F, true, false, false, HotkeyFunction(OnFillHotkey), "Fill Selection");
+        AddHotkey(VirtualKey::F, true, false, false, OnFillHotkey, "Fill Selection");
     }
 
     EditorRotation@ fillCursorRot;
