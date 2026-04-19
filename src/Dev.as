@@ -1832,3 +1832,10 @@ void Dev_DrawPatcherIndex() {
 uint Dev_ReadUInt32(uint64 ptr) {
     return Dev::SafeReadUInt32(ptr);
 }
+
+namespace Editor {
+    // Public wrapper so dependent plugins can turn a nod handle into a raw uint64 pointer.
+    uint64 GetNodPointer(CMwNod@ nod) {
+        return Dev_GetPointerForNod(nod);
+    }
+}

@@ -10,4 +10,7 @@ namespace Editor {
 
     // EXPERIMENTAL! May require the item model to have been placed in the map before calling
     import void SetAO_ItemModel(CGameCtnAnchoredObject@ ao, CGameItemModel@ itemModel) from "Editor";
+
+    // Turn a CMwNod@ into its raw uint64 pointer for use with Dev::SafeRead*.
+    import uint64 GetNodPointer(CMwNod@ nod) from "Editor";
 }
