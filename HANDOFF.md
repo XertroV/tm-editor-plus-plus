@@ -216,6 +216,56 @@ Implication: the wrapper holds a `CGameCtnAnchoredObject*` at some internal offs
 
 Revised recommendation: **option B** with careful `MwRelease` old / `MwAddRef` new discipline. Option D is not worth pursuing further unless we discover `pmt.SetItemSkin` does validation we want replicated. Option C (MLHook) remains viable as a fallback that uses only the public API, at the cost of a dependency + timing coupling.
 
+### Option B — draft implementation (ready to paste, not yet wired)
+
+Two reads already exist and are proven: `Editor::GetItemBGSkin` / `GetItemFGSkin` at `src/Editor/Items.as:256-261` use the same 0x98/0xA0 offsets. That confirms the offsets are correct, so writes at the same offsets hit the right memory.
+
+Writer in `src/Editor/Items.as` (new function, add after `GetItemFGSkin`):
+
+```angelscript
+// Option B raw item skin write. Requires user sign-off before wiring.
+// Writes strong refs to the anchored object's BG/FG skin pack-desc slots,
+// releasing any previous skin and addref'ing the new one. A null new skin
+// clears the slot.
+void SetItemSkinsRaw(CGameCtnAnchoredObject@ item, CSystemPackDesc@ newBg, CSystemPackDesc@ newFg) {
+    if (item is null) return;
+    auto oldBg = GetItemBGSkin(item);
+    auto oldFg = GetItemFGSkin(item);
+    if (newBg !is oldBg) {
+        if (newBg !is null) newBg.MwAddRef();
+        Dev::SetOffset(item, O_ANCHOREDOBJ_BGSKIN_PACKDESC, newBg);
+        if (oldBg !is null) oldBg.MwRelease();
+    }
+    if (newFg !is oldFg) {
+        if (newFg !is null) newFg.MwAddRef();
+        Dev::SetOffset(item, O_ANCHOREDOBJ_FGSKIN_PACKDESC, newFg);
+        if (oldFg !is null) oldFg.MwRelease();
+    }
+}
+```
+
+Export in `src/Editor/Exports_General.as` (add near `GetItemBGSkin`/`GetItemFGSkin` imports at line 75-76):
+
+```angelscript
+import void SetItemSkinsRaw(CGameCtnAnchoredObject@ item, CSystemPackDesc@ newBg, CSystemPackDesc@ newFg) from "Editor";
+```
+
+MCP wiring in `tm-control-mcp`: swap the `pmt.SetItemSkin(s)` call in `SkinSupport.as:ApplyNamedMacroblockItemSkin` (around line 138) for `Editor::SetItemSkinsRaw(mapItem, bgPd, fgPd)` where `mapItem` comes from `map.AnchoredObjects[baseIx + itemIx]`. The `FindScriptItemForMapItem` branch becomes unused for this path.
+
+Pack-desc construction for skin URLs: existing MCP code resolves the URL via `Fids` / `GameFidsFolder` (same pattern `pmt.SetItemSkin` internally uses). Need to verify `SkinSupport.as` already has this resolver; if not, mirror the existing block skin URL→pack-desc path used at macroblock block-skin application.
+
+Live smoke after wiring:
+1. `E++ ./build.sh dev` then `tm-control-mcp ./build.sh dev`.
+2. Place a macroblock with one `LightCube2m` item and a `Skins\Stadium\LightColors\Pink.dds` skin target.
+3. Read back via `GetRecentItems` — `hasSkin=true`, `bgSkin` reflecting the resolved path.
+4. Repeat for FG and for both simultaneously.
+5. Save-reload-reopen map, confirm skin persists (catches "setter wrote memory but not map serialization" failure shape).
+6. Undo/redo (`Ctrl+Z`/`Ctrl+Y`) — confirm undo doesn't crash (we haven't touched undo buffers, so this should just not restore the previous skin; acceptable if documented).
+
+Known risk points:
+- `CSystemPackDesc` might not participate in the standard `CMwRefCounted` refcount protocol — if it's a plain node with manual lifetime, the `MwAddRef`/`MwRelease` calls could leak or double-free. Verify by peeking at `GetItemBGSkin` results' refcount before/after `pmt.SetItemSkin` calls in a Manialink context (or via MLHook probe).
+- Writing through `Dev::SetOffset` to a nod handle — confirm the overload used accepts a `CMwNod@` cast and writes the 8-byte pointer, not a type id or wrapped handle. `SetItemMbInstId` at `Items.as:267-269` uses the int overload; the nod overload is separate.
+
 ### Pending export wiring
 - E++ `14fd851`: `Editor::RefreshInventoryCache()` export to let MCP rescan cache mid-session (user-added items).
 - MCP `60723e8`: `RefreshInventory` tool wiring that export. Requires an E++ `./build.sh dev` rebuild before MCP `./build.sh dev`, otherwise MCP will fail to link the new symbol.
