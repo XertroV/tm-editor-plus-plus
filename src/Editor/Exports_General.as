@@ -74,4 +74,7 @@ namespace Editor {
 
     import CSystemPackDesc@ GetItemBGSkin(CGameCtnAnchoredObject@ item) from "Editor";
     import CSystemPackDesc@ GetItemFGSkin(CGameCtnAnchoredObject@ item) from "Editor";
+    import void SetItemSkinsRaw(CGameCtnAnchoredObject@ item, CSystemPackDesc@ newBg, CSystemPackDesc@ newFg) from "Editor";
+    // Returned pack-desc is addref'd by E++; caller must MwRelease after storing it.
+    import CSystemPackDesc@ GetPackDesc(const string &in fileOrUrl) from "Editor";
 }

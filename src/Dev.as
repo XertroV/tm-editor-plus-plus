@@ -780,6 +780,10 @@ const uint16 O_ANCHOREDOBJ_FGSKIN_PACKDESC = O_ANCHOREDOBJ_SKIN_SCALE + 0x20;
 // c8
 const uint16 O_ANCHOREDOBJ_WAYPOINTPROP = GetOffset("CGameCtnAnchoredObject", "WaypointSpecialProperty");
 const uint16 O_ANCHOREDOBJ_MACROBLOCKINSTID = O_ANCHOREDOBJ_WAYPOINTPROP - 0x4; // 0xC4
+// matches Ghidra FUN_14100e480: item change counter bumped by SetItemSkins
+const uint16 O_ANCHOREDOBJ_CHANGE_COUNTER = 0x170;
+// matches Ghidra FUN_14100e480: CSystemPackDesc "loaded" flag set to 4 on skin install
+const uint16 O_PACKDESC_LOADED_FLAG = 0x98;
 
 // CGameCtnBlock offsets in src/Editor/Blocks.as
 

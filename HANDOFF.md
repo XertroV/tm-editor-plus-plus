@@ -194,9 +194,11 @@ python3 tools/call.py GetEditorSelectionState '{}'
 5. Continue documenting new experiments in `research/MacroblockPlacePatchExperiments.md`.
 6. If `tm-control-mcp` appears to fail compilation, first check whether the log line is stale. The confirmed clean rebuild to compare against is the `tm-control-mcp ./build.sh dev` run after the raw item-skin fallback was removed.
 
-## Task #2 Decision Point (open)
+## Task #2 Decision Point (RESOLVED)
 
-With `pmt.Items` confirmed Manialink-gated and `map.AnchoredObjects` confirmed as the authoritative read source (user-validated 2026-04-20), the design reduces to four options. Each needs user sign-off before task #4 can proceed.
+**User signed off on option B at 2026-04-20 04:13 AEST. Implemented, live-smoked, and committed.**
+
+With `pmt.Items` confirmed Manialink-gated and `map.AnchoredObjects` confirmed as the authoritative read source (user-validated 2026-04-20), the design reduced to four options.
 
 - **Option A — requires-Manialink documentation.** Keep `SkinSupport.as` applier unchanged; document that the feature needs a Manialink context alive in the editor. Cheapest; no code risk. User-facing gotcha: invisible skin failures in normal MCP use.
 - **Option B — raw pack-desc offset write.** Add `Editor::SetItemSkinsRaw(CGameCtnAnchoredObject@, CSystemPackDesc@, CSystemPackDesc@)` that writes `O_ANCHOREDOBJ_BGSKIN_PACKDESC` (0x98) and `O_ANCHOREDOBJ_FGSKIN_PACKDESC` (0xA0) via `Dev::SetOffset`, with `MwRelease` old / `MwAddRef` new for ref-count correctness. Offsets are already scaffolded in `src/Dev.as:778-779`. Risk: incorrect refcounting → use-after-free or leak; packdesc construction from URL needs validation parity with `pmt.SetItemSkin`. Previously rejected per early HANDOFF trap note #3.
@@ -344,3 +346,17 @@ Known risk points:
 ### Pending export wiring
 - E++ `14fd851`: `Editor::RefreshInventoryCache()` export to let MCP rescan cache mid-session (user-added items).
 - MCP `60723e8`: `RefreshInventory` tool wiring that export. Requires an E++ `./build.sh dev` rebuild before MCP `./build.sh dev`, otherwise MCP will fail to link the new symbol.
+
+### Option B live smoke result (2026-04-20 AutoSave editor)
+
+Smoke plan executed against a live editor on `AutoSave` (2305 blocks / 1 item baseline):
+
+1. `AddItemToNamedMacroblock smoke-option-b` + `PlaceNamedMacroblock`: placed one `LightCube2m` at `(1200,72,620)` with BG skin `Skins\Stadium\LightColors\Pink.dds`. `skinApplication.ok=true`, `actualSkin.hasSkin=true`, `bgSkin` reflected.
+2. `AddItemToNamedMacroblock smoke-option-b-bgfg` + `PlaceNamedMacroblock`: placed one `LightCube2m` at `(1220,72,620)` with BG `Pink.dds` + FG `Marine.dds`. `skinApplication.ok=true`, both `bgSkin` and `fgSkin` reflected in readback.
+3. `GetRecentItems` independently confirmed `hasSkin=true` plus correct BG/FG on the placed items.
+4. `RemoveRecentItems` with `forceBufferFallback=true` cleaned up (non-undo-safe, consistent with prior buffer fallback behavior when `pmt.Items.Length==0`). Map returned to 2305 blocks / 1 item.
+5. Screenshot `ScreenShot31.jpg` captured during the test.
+
+Not yet tested (can be follow-ups if wanted):
+- Save-reload-reopen persistence.
+- Undo/redo of skin application (expected to be limited because we bypassed the engine's undo path — acceptable by earlier scoping).
