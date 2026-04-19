@@ -209,6 +209,13 @@ With `pmt.Items` confirmed Manialink-gated and `map.AnchoredObjects` confirmed a
 3. Wrapper lifetime — if the game allocates wrappers from a pool, constructing our own outside that pool may break pool invariants.
 4. Safest shape is probably: probe first via option C's MLHook harness (one-shot, no production coupling), read the real wrapper bytes, **then** choose between option B (if wrapper has a backing pointer) or option D proper (if wrapper is just Position+ItemModel and SetItemSkin matches by field equality).
 
+### Ghidra finding (2026-04-20, task #6)
+Class `CGameCtnEditorScriptAnchoredObject` is registered by `FUN_1400cefa0` with size **0x28 (40 bytes)**, parent `CMwNod`, class id `0x3159000`. Both script fields `Position` and `ItemModel` are declared `const` in Openplanet.h — classic read-only *projection* pattern. A 0x28-byte wrapper cannot hold both a vec3 Position (12B) and an ItemModel pointer (8B) as in-place storage alongside CMwNod base (≥0x10) without a backing pointer; more importantly the `const` qualifier means they're getter-backed, not stored fields.
+
+Implication: the wrapper holds a `CGameCtnAnchoredObject*` at some internal offset (likely 0x10 or 0x18), and `pmt.SetItemSkin` dereferences that backing pointer. Constructing our own wrapper therefore requires: (a) the wrapper vtable address, (b) the backing-pointer offset, (c) `CMwNod`/`CMwRefCounted` initialization, and (d) the real `CGameCtnAnchoredObject*` to embed. At that point option D is option B with extra steps — writing `O_ANCHOREDOBJ_BGSKIN_PACKDESC` / `O_ANCHOREDOBJ_FGSKIN_PACKDESC` directly on the anchored object is strictly simpler and avoids wrapper lifetime/pool concerns.
+
+Revised recommendation: **option B** with careful `MwRelease` old / `MwAddRef` new discipline. Option D is not worth pursuing further unless we discover `pmt.SetItemSkin` does validation we want replicated. Option C (MLHook) remains viable as a fallback that uses only the public API, at the cost of a dependency + timing coupling.
+
 ### Pending export wiring
 - E++ `14fd851`: `Editor::RefreshInventoryCache()` export to let MCP rescan cache mid-session (user-added items).
 - MCP `60723e8`: `RefreshInventory` tool wiring that export. Requires an E++ `./build.sh dev` rebuild before MCP `./build.sh dev`, otherwise MCP will fail to link the new symbol.
