@@ -385,8 +385,15 @@ Nadeo translation-key format documented in `research/MenuManialinkLayers.md`: UT
 - **`ListKnownMenuRoutes`** now returns `{topLevel, subpages}` with verified hierarchical subpage paths.
 - **Click-routing model clarified.** Clicks on `component-navigation-item` frames dispatch `ComponentNavigation::C_EventType_NavigateMouse` into the page's *own* `***Main***` script (not `Trackmania.Title.Pack.Gbx` directly). The script does `Select(Event.To, ...)` and switches on `_Control.ControlId`. So the "click handler" is a plain script function on the page — not reachable via SendCustomEvent from outside.
 
+### Further menu work (MCP commits `b6c25eb`, `b158d76`)
+
+- **`BackToMainMenu` tool.** Thin wrapper over `app.BackToMainMenu()`; async unwind, poll `GetMode` until `"Menu"` to confirm. Needed because the older `ControlValidation{requestLeavePlayground}` is editor-only and errors out of a live race.
+- **Enriched `GetMode`.** Now returns `{mode, mapName?, mapUid?, selfHosted?}`. `selfHosted = app.PlaygroundScript !is null` (user-confirmed: `PlaygroundScript != null` ⇒ solo or self-hosted server; matchmaking client is null). `mapName`/`mapUid` come from `app.RootMap` / `app.RootMap.MapInfo`. Use this as the detection primitive for "did a Router_Push cascade into a playground."
+- **`SetMenuPage` history slot.** Accepts a third JSON string `history` (default `"{}"`), which maps onto slot 2 of the Router_Push MLHook event payload. Covers the `defaultExtraArgs` shape from `tm-menu-page-manager` (`{"SaveHistory":true,"ResetPreviousPagesDisplayed":true,"HidePreviousPage":true, ...}`). Not yet smoked against a route that visibly changes behavior based on these flags.
+- **`/solo/campaigndisplay` side-effect documented.** Live-observed 2026-04-20: pushing this route silently auto-loaded the active campaign map (`Spring 2026 - 01`) and transitioned into Race mode. `Page_CampaignDisplay` rendered briefly before cascading. Documented in `tm-control-mcp` `src/Guides.as` (menu-navigation guide) and `research/MenuManialinkLayers.md` ("Routes with side-effects"). Rule of thumb: routes selecting a *single* thing (campaign/replay/match) may auto-enter; list/settings routes are safe.
+
 ### Still-open follow-ups on menu navigation
 
-- Some subpages (e.g. `/solo/campaigndisplay`) expect structured `extra` payloads like `["Campaign" => ...]`. Current `SetMenuPage` passes only an empty `"{}"`. Investigation needed on whether the MLHook event queue slot is parsed into those extras, and what JSON/ManiaScript shape works.
+- Structured `extra` payload shape. `SetMenuPage` now accepts `extra`/`history` as raw JSON strings, but we haven't confirmed whether `/solo/campaigndisplay` will render without auto-loading when given an `extra` like `{"Campaign":"<different-or-empty>"}`. Risky to smoke because of the side-effect above; pair with `GetMode` polling + `BackToMainMenu` unwind.
 - Buttons whose handler doesn't call `Router_Push` (e.g. `button-ubi-connect` on /home, which sets `State.Task_ShowUbisoftConnect = True`) still need the click-synthesis path to be automatable. Options: synthesized mouse input, or injecting a Manialink script fragment that calls the page's own `Select(Control, Popup)`.
 
