@@ -185,6 +185,25 @@ for pluginSrc in ${pluginSources[@]}; do
         elif [[ "$_remote_reload_exit_code" != "0" ]]; then
           _colortext16 yellow "⚠ Warning: tm-remote-build reported an error; check Openplanet.log.\n"
         fi
+        if [[ "${EPP_RELOAD_CONTROL_MCP:-1}" == "1" && -d "$PLUGINS_DIR/tm-control-mcp" ]]; then
+          _colortext16 green "🔁 Reloading tm-control-mcp after ${PLUGIN_NAME}...\n"
+          _control_reload_log="$(mktemp)"
+          set +e
+          timeout --foreground "$REMOTE_RELOAD_TIMEOUT" tm-remote-build load folder tm-control-mcp -op OpenplanetNext "${_remote_host_args[@]}" -d "$OP_DATA_DIR" \
+            -l "${EPP_REMOTE_LOG_DONE_LIMIT:-3}" \
+            -i "${EPP_REMOTE_LOG_CHECK_INTERVAL:-0.5}" 2>&1 | tee "$_control_reload_log"
+          _control_reload_exit_code="${PIPESTATUS[0]}"
+          if [[ "$_control_reload_exit_code" == "0" ]] && grep -Eq "ERROR:tm_remote_build|Problem commanding" "$_control_reload_log"; then
+            _control_reload_exit_code=1
+          fi
+          set -e
+          rm -f "$_control_reload_log"
+          if [[ "$_control_reload_exit_code" == "124" ]]; then
+            _colortext16 yellow "⚠ Warning: tm-control-mcp reload timed out after ${REMOTE_RELOAD_TIMEOUT}; check Openplanet.log.\n"
+          elif [[ "$_control_reload_exit_code" != "0" ]]; then
+            _colortext16 yellow "⚠ Warning: tm-control-mcp reload reported an error; check Openplanet.log.\n"
+          fi
+        fi
       else
         _colortext16 yellow "⚠ Warning: tm-remote-build not found; skipping RemoteBuild reload.\n"
       fi
