@@ -378,8 +378,15 @@ Verified against a live TM session on `/home` and `/create`:
 
 Nadeo translation-key format documented in `research/MenuManialinkLayers.md`: UTF-8 bytes `C2 91` and `C2 92` wrap keys of the form `\u0092|Prefix|Text` or `\u0091<fallback>\u0091\u0092|Prefix|Text`. `_StripTranslationPrefix` in `src/ManialinkIntrospection.as` normalizes all observed shapes.
 
-### Still unsolved
+### Solved 2026-04-20 (tm-control-mcp commit `1cbea14`)
 
-- **Simulating a click on a `component-navigation-item`.** `Focus()` on the Frame doesn't latch (Frame isn't a focus target). `Router_Push` with a button's controlId as a payload does not work. The click handler lives in the Nadeo `MainMenu.Script.txt` inside `Trackmania.Title.Pack.Gbx`; we need either (a) a GBX-Script dumper (check NadeoToolkit / GBXFunctions in Openplanet) or (b) an MLHook event type that the game already listens for when a button is clicked.
-- `/mapeditorsettings` and other sub-page routes still render blank when pushed from outside the parent page's click flow. Same root cause class: the parent's handler does more than emit a bare `Router_Push`.
+- **Hierarchical route paths.** `Router_Push` accepts the full hierarchical path. `/mapeditorsettings` renders blank because no such route exists; the actual Track editor button calls `Router_Router::Push(This, "/create/mapeditorsettings")`. `SetMenuPage {"route":"/create/mapeditorsettings"}` now renders `Page_MapEditorSettings` correctly. Verified: `/create/mapeditorsettings`, `/create/garage`, `/create/edit-replay`, `/create/server-review`, `/settings`, `/profile`.
+- **New tool: `GetLayerXml {layerIndex, find?|offset?, ...}`** — grep or slice a layer's `ManialinkPageUtf8` without dumping the full 10-120 KB XML. Primary tool for reverse-engineering handler wiring. The breakthrough came from grepping Page_Create (layer 21, ~51 KB) for `Router_Router::Push` and finding every destination path inside the page's own `Select()` switch.
+- **`ListKnownMenuRoutes`** now returns `{topLevel, subpages}` with verified hierarchical subpage paths.
+- **Click-routing model clarified.** Clicks on `component-navigation-item` frames dispatch `ComponentNavigation::C_EventType_NavigateMouse` into the page's *own* `***Main***` script (not `Trackmania.Title.Pack.Gbx` directly). The script does `Select(Event.To, ...)` and switches on `_Control.ControlId`. So the "click handler" is a plain script function on the page — not reachable via SendCustomEvent from outside.
+
+### Still-open follow-ups on menu navigation
+
+- Some subpages (e.g. `/solo/campaigndisplay`) expect structured `extra` payloads like `["Campaign" => ...]`. Current `SetMenuPage` passes only an empty `"{}"`. Investigation needed on whether the MLHook event queue slot is parsed into those extras, and what JSON/ManiaScript shape works.
+- Buttons whose handler doesn't call `Router_Push` (e.g. `button-ubi-connect` on /home, which sets `State.Task_ShowUbisoftConnect = True`) still need the click-synthesis path to be automatable. Options: synthesized mouse input, or injecting a Manialink script fragment that calls the page's own `Select(Control, Popup)`.
 
