@@ -428,17 +428,17 @@ namespace Editor {
             NotifyError("PlaceMacroblock: no macroblock models");
             return false;
         }
-        // auto mb = pmt.MacroblockModels[0];
-        auto mbPath = "Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx";
-        // auto mb = pmt.GetMacroblockModelFromFilePath(mbPath);
-        auto mbFid = Fids::GetGame("GameData\\" + mbPath);
-        auto mb = cast<CGameCtnMacroBlockInfo>(Fids::Preload(mbFid));
+        auto mbPath = Editor::GetDonorMacroblockPath();
+        // Prefer the plugin-map lookup; Fids::GetGame("GameData\\...") works for
+        // Stadium assets but not for non-Stadium envs where the macroblock is
+        // loaded dynamically into the editor inventory.
+        CGameCtnMacroBlockInfo@ mb = pmt.GetMacroblockModelFromFilePath(mbPath);
         if (mb is null) {
-            NotifyError("PlaceMacroblock: failed to get macroblock model");
-            // dev_trace("Got FID: " + tostring(mbFid !is null));
-            // if (mbFid !is null) {
-            //     ExploreNod("macroblock FID", mbFid);
-            // }
+            auto mbFid = Fids::GetGame("GameData\\" + mbPath);
+            @mb = cast<CGameCtnMacroBlockInfo>(Fids::Preload(mbFid));
+        }
+        if (mb is null) {
+            NotifyError("PlaceMacroblock: failed to get macroblock model: " + mbPath);
             return false;
         }
         dev_trace("[DEBUG] PlaceMacroblock: Writing to MB");

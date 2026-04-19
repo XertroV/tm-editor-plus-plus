@@ -112,7 +112,7 @@ namespace Editor {
     void UpdateNewlyAddedItems(CGameCtnEditorFree@ editor) {
         auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
 
-        auto macroblock = pmt.GetMacroblockModelFromFilePath("Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx");
+        auto macroblock = pmt.GetMacroblockModelFromFilePath(Editor::GetDonorMacroblockPath());
         trace('UpdateNewlyAddedItems macroblock is null: ' + (macroblock is null));
         Event::DisableOnBlockItemCB();
         auto placed = pmt.PlaceMacroblock_NoDestruction(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
