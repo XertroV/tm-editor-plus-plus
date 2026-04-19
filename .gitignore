@@ -2,3 +2,4 @@ ignore.*.as
 *.zip
 src/Editor/LibWebP.as
 *.back
+Trackmani*.exe
