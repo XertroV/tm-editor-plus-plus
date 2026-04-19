@@ -381,8 +381,13 @@ namespace Gizmo {
             targetPos = Editor::GetBlockLocation(b);
             targetRot = Editor::GetBlockRotationMatrix(b);
             targetSize = Editor::GetBlockSize(b);
-            targetVariant = blockSpec.variant;
             placingColor = CGameEditorPluginMap::EMapElemColor(int(b.MapElemColor));
+            if (!blockSpec.EnsureValidVariant()) {
+                Dev_NotifyWarning("Picked block model does not have a valid variant");
+                IsActive = false;
+                return;
+            }
+            targetVariant = blockSpec.variant;
         } else {
             CGameCtnAnchoredObject@ item2;
             if (lastPickedItem is null || (@item2 = lastPickedItem.AsItem()) is null) {
@@ -647,7 +652,7 @@ namespace Gizmo {
         blockSpec.isGhost = false;
         blockSpec.variant = forcedVariant;
         blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
-        blockSpec.EnsureValidVariant();
+        if (!blockSpec.EnsureValidVariant()) return false;
 
         auto size = Editor::GetBlockSize(blockInfo);
         auto macroblockOffset = Editor::GetMacroblockPosOffset();
