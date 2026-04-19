@@ -90,10 +90,9 @@ find_crash_windows() {
 }
 
 trackmania_pids() {
-  local proc arg normalized comm has_tm_arg argv0
+  local proc arg normalized has_tm_arg argv0
   for proc in /proc/[0-9]*; do
     [[ -r "$proc/cmdline" ]] || continue
-    comm="$(tr '[:upper:]' '[:lower:]' < "$proc/comm" 2>/dev/null || true)"
     has_tm_arg=0
     argv0=""
     while IFS= read -r -d '' arg; do
@@ -107,9 +106,7 @@ trackmania_pids() {
         has_tm_arg=1
       fi
     done < "$proc/cmdline"
-    if [[ "$argv0" == "trackmania.exe" || "$argv0" == */trackmania.exe ]]; then
-      basename "$proc"
-    elif [[ "$has_tm_arg" == "1" && ( "$comm" == "mainthread" || "$comm" == "trackmania.exe" ) ]]; then
+    if [[ "$argv0" == "trackmania.exe" || "$argv0" == */trackmania.exe || "$has_tm_arg" == "1" ]]; then
       basename "$proc"
     fi
   done
