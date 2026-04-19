@@ -33,6 +33,10 @@ namespace Editor {
         return cast<CGameItemModel>(node.GetCollectorNod());
     }
 
+    void RefreshInventoryCache() {
+        _InventoryCache.RefreshCacheSoon();
+    }
+
     enum InventoryRootNode {
         CrashBlocks = 0,
         Blocks = 1,

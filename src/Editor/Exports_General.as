@@ -70,6 +70,7 @@ namespace Editor {
     import string GetInventoryItemPath(uint ix) from "Editor";
     import bool IsInventoryScanningItems() from "Editor";
     import CGameItemModel@ GetInventoryItemModelByPath(const string &in path) from "Editor";
+    import void RefreshInventoryCache() from "Editor";
 
     import CSystemPackDesc@ GetItemBGSkin(CGameCtnAnchoredObject@ item) from "Editor";
     import CSystemPackDesc@ GetItemFGSkin(CGameCtnAnchoredObject@ item) from "Editor";
