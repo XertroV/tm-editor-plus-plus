@@ -360,3 +360,26 @@ Smoke plan executed against a live editor on `AutoSave` (2305 blocks / 1 item ba
 Not yet tested (can be follow-ups if wanted):
 - Save-reload-reopen persistence.
 - Undo/redo of skin application (expected to be limited because we bypassed the engine's undo path — acceptable by earlier scoping).
+
+## Menu-introspection progress (2026-04-20, tm-control-mcp)
+
+New MCP tools on master of tm-control-mcp after `7caa77b Add high-level menu-button search tools`:
+
+- `FindMenuButtons` — flat, cross-layer list of visible nav buttons (default class `component-navigation-item`) with resolved `displayText`. Returns `{layerIndex, layerName, controlId, classes, absPos, size, label, displayText}`.
+- `FindControlsByClass { classPattern, substring? }` — cross-layer class search.
+- `FindControlsByLabel { substring, caseInsensitive? }` — cross-layer label text search.
+
+Plus the existing introspection tools (`GetUILayers`, `GetLayerTree`, `ListMenuManialinkControls`, `FocusMenuControl`).
+
+Verified against a live TM session on `/home` and `/create`:
+
+- `/home` → Play / Clubs / Create / Settings / Ubisoft Connect buttons surfaced by ID + displayText.
+- `/create` → Track editor / Track review / Garage / Replay editor / Back buttons surfaced.
+
+Nadeo translation-key format documented in `research/MenuManialinkLayers.md`: UTF-8 bytes `C2 91` and `C2 92` wrap keys of the form `\u0092|Prefix|Text` or `\u0091<fallback>\u0091\u0092|Prefix|Text`. `_StripTranslationPrefix` in `src/ManialinkIntrospection.as` normalizes all observed shapes.
+
+### Still unsolved
+
+- **Simulating a click on a `component-navigation-item`.** `Focus()` on the Frame doesn't latch (Frame isn't a focus target). `Router_Push` with a button's controlId as a payload does not work. The click handler lives in the Nadeo `MainMenu.Script.txt` inside `Trackmania.Title.Pack.Gbx`; we need either (a) a GBX-Script dumper (check NadeoToolkit / GBXFunctions in Openplanet) or (b) an MLHook event type that the game already listens for when a button is clicked.
+- `/mapeditorsettings` and other sub-page routes still render blank when pushed from outside the parent page's click flow. Same root cause class: the parent's handler does more than emit a bare `Router_Push`.
+
