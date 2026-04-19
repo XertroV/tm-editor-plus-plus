@@ -196,11 +196,18 @@ python3 tools/call.py GetEditorSelectionState '{}'
 
 ## Task #2 Decision Point (open)
 
-With `pmt.Items` confirmed Manialink-gated and `map.AnchoredObjects` confirmed as the authoritative read source (user-validated 2026-04-20), the design reduces to three options. Each needs user sign-off before task #4 can proceed.
+With `pmt.Items` confirmed Manialink-gated and `map.AnchoredObjects` confirmed as the authoritative read source (user-validated 2026-04-20), the design reduces to four options. Each needs user sign-off before task #4 can proceed.
 
 - **Option A — requires-Manialink documentation.** Keep `SkinSupport.as` applier unchanged; document that the feature needs a Manialink context alive in the editor. Cheapest; no code risk. User-facing gotcha: invisible skin failures in normal MCP use.
 - **Option B — raw pack-desc offset write.** Add `Editor::SetItemSkinsRaw(CGameCtnAnchoredObject@, CSystemPackDesc@, CSystemPackDesc@)` that writes `O_ANCHOREDOBJ_BGSKIN_PACKDESC` (0x98) and `O_ANCHOREDOBJ_FGSKIN_PACKDESC` (0xA0) via `Dev::SetOffset`, with `MwRelease` old / `MwAddRef` new for ref-count correctness. Offsets are already scaffolded in `src/Dev.as:778-779`. Risk: incorrect refcounting → use-after-free or leak; packdesc construction from URL needs validation parity with `pmt.SetItemSkin`. Previously rejected per early HANDOFF trap note #3.
-- **Option C — Manialink activation probe.** Investigate whether Openplanet can force a transient Manialink script context to populate `pmt.Items` for one frame, then apply via public API. Unknown viability; would take a short investigation (search `CGameManialinkScriptHandler`/`CGameEditorMapScriptClip` trigger points). Safest public-API route if viable.
+- **Option C — MLHook-gated public API.** Piggyback on `"Editor_Angelscript_Cb"` via `MLHook::HookMLEventsByType`; inside the callback, `pmt.Items` is populated and `pmt.SetItemSkin(s)` is legal. Reference implementation: `tm-item-placement-toolbox/HookEditorML.as` (CheckItemsNodPool). Adds MLHook as a dependency and couples item-skin ops to a timing window, but uses 100% public API surface and no raw writes.
+- **Option D — construct our own `CGameCtnEditorScriptAnchoredObject` wrapper.** User hint, 2026-04-20: "small class, has like 2 fields." Openplanet.h:6360-6369 confirms script-visible fields are `const vec3 Position` and `CGameItemModel* const ItemModel`, both inherit `CMwNod`. Approach: allocate a wrapper (copy vtable from a real one if any exist; otherwise need to locate the constructor), populate Position + ItemModel to point at a real `CGameCtnAnchoredObject`, pass to `pmt.SetItemSkin(s)`. Risk: we don't yet know if `SetItemSkin` matches real items by `(Position, ItemModel)` lookup or by an internal backing pointer on the wrapper; if backing-pointer, option D reduces to option B plus more surface area.
+
+### Option D — open investigation questions
+1. Full wrapper layout at the byte level. Requires a one-shot MLHook probe to dump bytes `0x08..0x40` of a live `pmt.Items[0]` and correlate with known `CGameCtnAnchoredObject` addresses from `map.AnchoredObjects`.
+2. `pmt.SetItemSkin` matching logic — Ghidra on `CSmEditorPluginMapType::SetItemSkin` to confirm whether it dereferences a backing pointer on the wrapper or looks up the real item by Position/ItemModel.
+3. Wrapper lifetime — if the game allocates wrappers from a pool, constructing our own outside that pool may break pool invariants.
+4. Safest shape is probably: probe first via option C's MLHook harness (one-shot, no production coupling), read the real wrapper bytes, **then** choose between option B (if wrapper has a backing pointer) or option D proper (if wrapper is just Position+ItemModel and SetItemSkin matches by field equality).
 
 ### Pending export wiring
 - E++ `14fd851`: `Editor::RefreshInventoryCache()` export to let MCP rescan cache mid-session (user-added items).
