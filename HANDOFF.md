@@ -313,6 +313,12 @@ void BumpMapSkinChangeCounter(CGameEditorPluginMapMapType@ pmt) {
 
 Note: the "mark new skin loaded" flag write at pack-desc offset 0x98 is required for visual application — without it, the skin doesn't render. The anchored-object change counter bump at 0x170 is required for save persistence and the editor's modified-flag. The map-level counter bump is reachable but more awkward since E++'s `Dev::` helpers operate on nod handles, not raw addresses; it can be deferred if initial smoke shows save/visual work without it.
 
+### Cross-binary stability check (2026-04-20)
+Searched `Trackmania-2025-01-14.exe` for `CGameCtnEditorScriptAnchoredObject`, `SetItemSkin`, `BgSkinFileName`, `FgSkinFileName` — **all absent**. The item-skin wrapper + setter API is a post-Jan-2025 addition. This means:
+- No cross-version stability proof possible for these specific offsets; option B targets the current binary only.
+- Not a practical concern because the feature didn't exist on older builds, so there are no older users of it to break.
+- E++ `src/Dev.as:778-779` derived the 0x98/0xA0 offsets from the current binary. `Editor::GetItemBGSkin`/`GetItemFGSkin` at `src/Editor/Items.as:256-261` read these offsets live and return real values, which independently confirms correctness.
+
 Export in `src/Editor/Exports_General.as` (add near `GetItemBGSkin`/`GetItemFGSkin` imports at line 75-76):
 
 ```angelscript
