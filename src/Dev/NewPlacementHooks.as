@@ -262,22 +262,28 @@ namespace PlacementHooks {
 #endif
 #if WINDOWS_WINE
         trace("OnAddBlockHook, wine detected.");
-        if (rdx < 0xffffff) {
-            // pointer looks bad
+        if (Dev_PointerLooksBad(rdx)) {
+            _Log::Trace("OnAddBlockHook_RdxRdi ignoring bad rdx: " + Text::FormatPointer(rdx));
             return;
         }
 #else
-        if (rdx < 0x1000FFFF || rdx > 0xFFF0000FFFF) {
-            // pointer looks bad
+        if (Dev_PointerLooksBad(rdx)) {
+            _Log::Trace("OnAddBlockHook_RdxRdi ignoring bad rdx: " + Text::FormatPointer(rdx));
             return;
         }
 #endif
-        auto vtablePtr = Dev::ReadUInt64(rdx);
+        uint64 vtablePtr = 0;
+        try {
+            vtablePtr = Dev::SafeReadUInt64(rdx);
+        } catch {
+            _Log::Trace("OnAddBlockHook_RdxRdi failed reading vtable from rdx: " + Text::FormatPointer(rdx));
+            return;
+        }
         if (!VTables::CheckVTable(vtablePtr, VTables::CGameCtnBlock)) {
             _Log::Trace("Got bad vtable ptr: " + Text::FormatPointer(vtablePtr));
             return;
         }
-        _Log::Debug("VTable Addr: " + Text::FormatPointer(Dev::ReadUInt64(rdx)));
+        _Log::Debug("VTable Addr: " + Text::FormatPointer(vtablePtr));
         auto nod = Dev_GetNodFromPointer(rdx);
         _Log::Debug("OnAddBlockHook_RdxRdi got nod.");
 

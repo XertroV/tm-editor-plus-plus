@@ -64,4 +64,9 @@ namespace Editor {
     // map cache
     import IMapCache@ GetIMapCache() from "Editor";
     import IInvCache@ GetIInvCache() from "Editor";
+    import uint GetInventoryNbItems() from "Editor";
+    import string GetInventoryItemName(uint ix) from "Editor";
+    import string GetInventoryItemPath(uint ix) from "Editor";
+    import bool IsInventoryScanningItems() from "Editor";
+    import CGameItemModel@ GetInventoryItemModelByPath(const string &in path) from "Editor";
 }

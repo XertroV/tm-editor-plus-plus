@@ -127,15 +127,15 @@ namespace Editor {
         protected uint64 tmpMacroblockSkinsBuf = 0;
         protected uint64 tmpMacroblockSkinsBufLenCap = 0;
         protected bool tmpMacroblockIsGround = false;
+        protected bool tmpMacroblockInitialized = false;
+        protected bool tmpMacroblockConnected = false;
+        protected bool tmpMacroblockStateSaved = false;
         bool releaseTmpMacroblock = false;
         uint tmpMacroblockCollectionId;
 
         void _TempWriteToMacroblock(CGameCtnMacroBlockInfo@ macroblock) {
             @tmpMacroblock = DGameCtnMacroBlockInfo(macroblock);
-            releaseTmpMacroblock = Reflection::GetRefCount(macroblock) > 1;
-            if (releaseTmpMacroblock) {
-                macroblock.MwAddRef();
-            }
+            tmpMacroblockStateSaved = false;
 
             auto mbBlocks = tmpMacroblock.Blocks;
             tmpMacroblockBlocksBuf = Dev::ReadUInt64(mbBlocks.Ptr);
@@ -148,12 +148,20 @@ namespace Editor {
             tmpMacroblockSkinsBufLenCap = Dev::ReadUInt64(mbSkins.Ptr + 0x8);
 
             tmpMacroblockIsGround = macroblock.IsGround;
-            Editor::SetMacroblockGround(macroblock, false);
-
+            tmpMacroblockInitialized = macroblock.Initialized;
+            tmpMacroblockConnected = macroblock.Connected;
             tmpMacroblockCollectionId = macroblock.CollectionId;
+            tmpMacroblockStateSaved = true;
+
+            releaseTmpMacroblock = Reflection::GetRefCount(macroblock) > 1;
+            if (releaseTmpMacroblock) {
+                macroblock.MwAddRef();
+            }
+
+            Editor::SetMacroblockGround(macroblock, false);
             macroblock.CollectionId = Editor::GetMapCollectorId();
-            // macroblock.Initialized = false;
-            // macroblock.Connected = false;
+            macroblock.Initialized = false;
+            macroblock.Connected = false;
 
             _AllocAndWriteMemory(true);
         }
@@ -236,11 +244,19 @@ namespace Editor {
         }
 
         void _RestoreMacroblock() {
-            if (tmpWriteBuf is null) {
+            if (tmpMacroblock is null) {
                 warn("_RestoreMacroblock called without _TempWriteToMacroblock");
                 return;
             }
             _UnallocMemory();
+
+            if (!tmpMacroblockStateSaved) {
+                warn("_RestoreMacroblock called before donor state was fully saved");
+                @tmpMacroblock = null;
+                releaseTmpMacroblock = false;
+                tmpMacroblockStateSaved = false;
+                return;
+            }
 
             Dev::Write(tmpMacroblock.Blocks.Ptr, tmpMacroblockBlocksBuf);
             Dev::Write(tmpMacroblock.Blocks.Ptr + 0x8, tmpMacroblockBlocksBufLenCap);
@@ -250,12 +266,15 @@ namespace Editor {
             Dev::Write(tmpMacroblock.Skins.Ptr + 0x8, tmpMacroblockSkinsBufLenCap);
             SetMacroblockGround(tmpMacroblock.Nod, tmpMacroblockIsGround);
             tmpMacroblock.Nod.CollectionId = tmpMacroblockCollectionId;
+            tmpMacroblock.Nod.Initialized = tmpMacroblockInitialized;
+            tmpMacroblock.Nod.Connected = tmpMacroblockConnected;
             // tmpMacroblock.Nod.IsGround = tmpMacroblockIsGround;
             // if (tmpMacroblock !is null && releaseTmpMacroblock) {
             //     tmpMacroblock.Nod.MwRelease();
             // }
             @tmpMacroblock = null;
             releaseTmpMacroblock = false;
+            tmpMacroblockStateSaved = false;
         }
 
 
@@ -763,18 +782,27 @@ namespace Editor {
             if (BlockInfo is null) return false;
             auto origVar = variant;
             auto origGround = isGround;
-            if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                variant = 0;
-                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                    isGround = !isGround;
-                    if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                        variant = origVar;
-                        isGround = origGround;
-                        return false;
-                    }
-                }
+            if (int(variant) < 0 || Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                if (TryUseFirstValidVariant(origGround)) return true;
+                if (TryUseFirstValidVariant(!origGround)) return true;
+                variant = origVar;
+                isGround = origGround;
+                return false;
             }
             return true;
+        }
+
+        bool TryUseFirstValidVariant(bool ground) {
+            isGround = ground;
+            variant = 0;
+            if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) !is null) return true;
+
+            auto maxVariantIx = ground ? BlockInfo.AdditionalVariantsGround.Length : BlockInfo.AdditionalVariantsAir.Length;
+            for (uint i = 1; i <= maxVariantIx; i++) {
+                variant = i;
+                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) !is null) return true;
+            }
+            return false;
         }
 
         void TranslateCoords(int3 coordDist, bool updateBoth = false) override {

@@ -71,6 +71,9 @@ void Main() {
     Editor::SetupApplySkinsCBs();
     CustomSelection::OnPluginLoad();
     FillBlocks::OnPluginLoad();
+#if DEV
+    MacroblockPlaceDiag::OnPluginLoad();
+#endif
 
     Blocks::RegisterCallbacks(); // mostly to do with item SPlacements
     VegetRandomYaw::SetupCallbacks(); // for fixing trees on free blocks

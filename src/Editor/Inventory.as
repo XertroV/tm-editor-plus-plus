@@ -7,6 +7,32 @@ namespace Editor {
         return _InventoryCache;
     }
 
+    uint GetInventoryNbItems() {
+        return _InventoryCache.NbItems;
+    }
+
+    string GetInventoryItemName(uint ix) {
+        auto names = _InventoryCache.ItemNames;
+        if (ix >= names.Length) return "";
+        return names[ix];
+    }
+
+    string GetInventoryItemPath(uint ix) {
+        auto paths = _InventoryCache.ItemPaths;
+        if (ix >= paths.Length) return "";
+        return paths[ix];
+    }
+
+    bool IsInventoryScanningItems() {
+        return _InventoryCache.IsScanningItems;
+    }
+
+    CGameItemModel@ GetInventoryItemModelByPath(const string &in path) {
+        auto node = _InventoryCache.GetItemByPath(path);
+        if (node is null) return null;
+        return cast<CGameItemModel>(node.GetCollectorNod());
+    }
+
     enum InventoryRootNode {
         CrashBlocks = 0,
         Blocks = 1,

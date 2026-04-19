@@ -423,7 +423,11 @@ namespace Gizmo {
                 if (modePlacingType == BlockOrItem::Block) {
                     blockSpec.SetBlockInfo(placingBlockModel);
                     blockSpec.variant = targetVariant;
-                    blockSpec.EnsureValidVariant();
+                    if (blockSpec.EnsureValidVariant()) {
+                        targetVariant = blockSpec.variant;
+                    } else {
+                        Dev_NotifyWarning("Selected block model does not have variant " + tostring(blockSpec.variant));
+                    }
                 } else {
                     @placingItemModel = editor.CurrentItemModel;
                     itemSpec.SetModel(placingItemModel);
@@ -438,6 +442,8 @@ namespace Gizmo {
                 // we need to ensure the variant we want to place exists
                 if (!blockSpec.EnsureValidVariant()) {
                     Dev_NotifyWarning("Selected block model does not have variant " + tostring(blockSpec.variant));
+                } else {
+                    targetVariant = blockSpec.variant;
                 }
             } else {
                 itemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(placingColor));
@@ -615,7 +621,8 @@ namespace Gizmo {
             blockSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
             blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
             if (!blockSpec.EnsureValidVariant()) {
-                warn("Selected block model does not have variant " + tostring(blockSpec.variant));
+                NotifyError("Cannot apply gizmo: selected block model does not have a valid variant");
+                return;
             }
             Editor::PlaceBlocks({blockSpec}, true);
             startnew(_AfterApply_SetBlockSkin);
@@ -626,8 +633,42 @@ namespace Gizmo {
         // startnew(DisableGizmoInAsync, uint64(1));
     }
 
+#if DEV
+    bool Dev_RunApplyBlock(CGameCtnBlockInfo@ blockInfo, const vec3 &in targetPos, uint forcedVariant = 0) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null || editor.PluginMapType is null || blockInfo is null) return false;
+
+        auto beforeBlocks = editor.Challenge.Blocks.Length;
+        modePlacingType = BlockOrItem::Block;
+        placingColor = editor.PluginMapType.NextMapElemColor;
+        @blockSpec = Editor::BlockSpecPriv(blockInfo, targetPos, vec3());
+        blockSpec.SetFree();
+        blockSpec.isGround = false;
+        blockSpec.isGhost = false;
+        blockSpec.variant = forcedVariant;
+        blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
+        blockSpec.EnsureValidVariant();
+
+        auto size = Editor::GetBlockSize(blockInfo);
+        auto macroblockOffset = Editor::GetMacroblockPosOffset();
+        auto targetMat = mat4::Translate(targetPos - macroblockOffset);
+        auto targetBb = Editor::AABB(targetMat, size / 2., size / 2.);
+        @gizmo = RotationTranslationGizmo("dev-gizmo-apply").WithBoundingBox(targetBb).WithPlacingType(BlockOrItem::Block);
+
+        try {
+            _GizmoOnApply_Params(false);
+        } catch {
+            warn("[MB-E3-DIAG] gizmo apply exception: " + getExceptionInfo());
+        }
+
+        @gizmo = null;
+        @blockSpec = null;
+        return editor.Challenge.Blocks.Length > beforeBlocks;
+    }
+#endif
+
     void _AfterApply_SetBlockSkin() {
-        if (blockSpec.skin !is null) {
+        if (blockSpec !is null && blockSpec.skin !is null) {
             auto skin = blockSpec.skin;
             @blockSpec.skin = null;
             @skin.block = blockSpec;
