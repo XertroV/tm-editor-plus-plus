@@ -193,3 +193,15 @@ python3 tools/call.py GetEditorSelectionState '{}'
 4. Keep using default autofocus for visible placements unless the user asks otherwise.
 5. Continue documenting new experiments in `research/MacroblockPlacePatchExperiments.md`.
 6. If `tm-control-mcp` appears to fail compilation, first check whether the log line is stale. The confirmed clean rebuild to compare against is the `tm-control-mcp ./build.sh dev` run after the raw item-skin fallback was removed.
+
+## Task #2 Decision Point (open)
+
+With `pmt.Items` confirmed Manialink-gated and `map.AnchoredObjects` confirmed as the authoritative read source (user-validated 2026-04-20), the design reduces to three options. Each needs user sign-off before task #4 can proceed.
+
+- **Option A — requires-Manialink documentation.** Keep `SkinSupport.as` applier unchanged; document that the feature needs a Manialink context alive in the editor. Cheapest; no code risk. User-facing gotcha: invisible skin failures in normal MCP use.
+- **Option B — raw pack-desc offset write.** Add `Editor::SetItemSkinsRaw(CGameCtnAnchoredObject@, CSystemPackDesc@, CSystemPackDesc@)` that writes `O_ANCHOREDOBJ_BGSKIN_PACKDESC` (0x98) and `O_ANCHOREDOBJ_FGSKIN_PACKDESC` (0xA0) via `Dev::SetOffset`, with `MwRelease` old / `MwAddRef` new for ref-count correctness. Offsets are already scaffolded in `src/Dev.as:778-779`. Risk: incorrect refcounting → use-after-free or leak; packdesc construction from URL needs validation parity with `pmt.SetItemSkin`. Previously rejected per early HANDOFF trap note #3.
+- **Option C — Manialink activation probe.** Investigate whether Openplanet can force a transient Manialink script context to populate `pmt.Items` for one frame, then apply via public API. Unknown viability; would take a short investigation (search `CGameManialinkScriptHandler`/`CGameEditorMapScriptClip` trigger points). Safest public-API route if viable.
+
+### Pending export wiring
+- E++ `14fd851`: `Editor::RefreshInventoryCache()` export to let MCP rescan cache mid-session (user-added items).
+- MCP `60723e8`: `RefreshInventory` tool wiring that export. Requires an E++ `./build.sh dev` rebuild before MCP `./build.sh dev`, otherwise MCP will fail to link the new symbol.
