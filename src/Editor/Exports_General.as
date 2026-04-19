@@ -60,6 +60,7 @@ namespace Editor {
     import void SetCurrentPivot(CGameCtnEditorFree@ editor, uint pivot) from "Editor";
 
     import bool IsGizmoActive() from "Editor";
+    import bool Dev_RunGizmoApplyBlock(CGameCtnBlockInfo@ blockInfo, const vec3 &in targetPos, uint forcedVariant = 0) from "Editor";
 
     // map cache
     import IMapCache@ GetIMapCache() from "Editor";

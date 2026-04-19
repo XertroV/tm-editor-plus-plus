@@ -847,6 +847,16 @@ namespace Gizmo {
     }
 }
 
+namespace Editor {
+    bool Dev_RunGizmoApplyBlock(CGameCtnBlockInfo@ blockInfo, const vec3 &in targetPos, uint forcedVariant = 0) {
+#if DEV
+        return Gizmo::Dev_RunApplyBlock(blockInfo, targetPos, forcedVariant);
+#else
+        return false;
+#endif
+    }
+}
+
 // MARK: Settings
 
 [Setting hidden]
