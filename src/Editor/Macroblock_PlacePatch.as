@@ -9,7 +9,7 @@ const string Pattern_MacroblockCanPlacePatch = "F2 0F 11 84 24 A0 00 00 00 41 FF
 MemPatcher@ Patch_MacroblockCanPlace = MemPatcher("MacroblockCanPlacePatch",
     Pattern_MacroblockCanPlacePatch,
     {14}, {"90 90 90 90 90 90"}
-);
+).AutoLoad();
 
 
 /*
