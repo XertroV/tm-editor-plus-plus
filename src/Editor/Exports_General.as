@@ -62,6 +62,25 @@ namespace Editor {
     import bool IsGizmoActive() from "Editor";
     import bool Dev_RunGizmoApplyBlock(CGameCtnBlockInfo@ blockInfo, const vec3 &in targetPos, uint forcedVariant = 0) from "Editor";
 
+    // DEV random-fuzz placement. Returns count of successful placements (block+item).
+    // Counters and state live in E++ and can be read via the getters below.
+    import uint Dev_RunRandomFuzz(const vec3 &in bbMin, const vec3 &in bbMax, uint iterations, float blockRatio) from "Editor";
+    import uint Dev_RandomFuzz_GetIterations() from "Editor";
+    import uint Dev_RandomFuzz_GetAttemptedBlock() from "Editor";
+    import uint Dev_RandomFuzz_GetAttemptedItem() from "Editor";
+    import uint Dev_RandomFuzz_GetPlacedBlock() from "Editor";
+    import uint Dev_RandomFuzz_GetPlacedItem() from "Editor";
+    import uint Dev_RandomFuzz_GetSkippedNoInv() from "Editor";
+    import uint Dev_RandomFuzz_GetSkippedBadModel() from "Editor";
+    import uint Dev_RandomFuzz_GetSkippedVariant() from "Editor";
+    import uint Dev_RandomFuzz_GetExceptions() from "Editor";
+    import string Dev_RandomFuzz_GetFirstException() from "Editor";
+    import string Dev_RandomFuzz_GetCollection() from "Editor";
+    import uint Dev_RandomFuzz_GetBlocksBefore() from "Editor";
+    import uint Dev_RandomFuzz_GetBlocksAfter() from "Editor";
+    import uint Dev_RandomFuzz_GetItemsBefore() from "Editor";
+    import uint Dev_RandomFuzz_GetItemsAfter() from "Editor";
+
     // map cache
     import IMapCache@ GetIMapCache() from "Editor";
     import IInvCache@ GetIInvCache() from "Editor";
