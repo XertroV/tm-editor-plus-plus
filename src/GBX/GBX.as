@@ -342,11 +342,11 @@ shared class ParseLogger {
 
     void parse_push(const string &in type) {
         _parseStack.InsertLast(type);
-        parseStack = string::Join(_parseStack, " > ");
+        parseStack = Text::Join(_parseStack, " > ");
     }
     void parse_pop() {
         _parseStack.RemoveLast();
-        parseStack = string::Join(_parseStack, " > ");
+        parseStack = Text::Join(_parseStack, " > ");
     }
     void parse_pop_all() {
         _parseStack.RemoveRange(0, _parseStack.Length);

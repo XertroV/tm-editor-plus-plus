@@ -13,7 +13,7 @@ void ExportItemSpectators(uint64 tqsPtr, uint nbTqs) {
         auto pos = Dev::ReadVec3(tqsPtr + i * elSize + 0x10);
         szTQs.InsertLast(_ExportQuatPos(rot, pos));
     }
-    auto csv = string::Join(szTQs, "\n");
+    auto csv = Text::Join(szTQs, "\n");
     try {
         IO::File outf(SPECTATORS_FOLDER + "Export.csv", IO::FileMode::Write);
         outf.Write(csv);
@@ -23,7 +23,7 @@ void ExportItemSpectators(uint64 tqsPtr, uint nbTqs) {
 }
 
 const string _ExportQuatPos(vec4 q, vec3 p) {
-    return string::Join({
+    return Text::Join({
         HighPrecisionFloat(q.x),
         HighPrecisionFloat(q.y),
         HighPrecisionFloat(q.z),
