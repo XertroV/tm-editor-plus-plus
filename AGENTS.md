@@ -10,3 +10,4 @@
 - Useful `tm-control-mcp` growth path: editor camera get/set/focus, autofocus after placement, inventory list/search/filter, selection of inventory blocks/items, and in-memory named macroblocks that can be transformed/copied/applied. Prefer reusing E++ exports/math for camera and macroblock transforms.
 - Openplanet sometimes refuses to reload E++ with a false "shared class definition changed" style error even when the definitions did not change. Stopping/starting the script engine does not clear it; the only known recovery is a full game restart. Treat this as a distinct Openplanet/E++ reload-state bug, not as direct evidence that the current code change is bad.
 - Openplanet script exceptions normally kill only the coroutine they happen in. They do not require a plugin reload unless the exception occurred in the UI coroutine or the plugin was otherwise left in bad state.
+- When fixing bugs, use tdd where possible and verify the test passes automatically.
