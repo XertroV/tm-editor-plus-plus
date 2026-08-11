@@ -86,7 +86,8 @@ namespace Gizmo {
         if (gizmo !is null) gizmo.CleanUp();
         @gizmo = null;
 
-        if (itemSpec !is null) {
+        if (itemSpec !is null && itemSpec.Model !is null
+            && itemSpec.Model.DefaultPlacementParam_Content !is null) {
             itemSpec.Model.DefaultPlacementParam_Content.SwitchPivotManually = origPlacementSwitchPivotManually;
         }
 
@@ -279,12 +280,17 @@ namespace Gizmo {
 
     void CyclePivot() {
         if (modeTargetType == BlockOrItem::Block) {
+            if (gizmo is null || bb is null) return;
             if (gizmo.pivotPoint.LengthSquared() < 0.01) {
                 ApplyPivot(bb.halfDiag);
             } else {
                 ApplyPivot(vec3());
             }
         } else {
+            if (itemSpec is null || itemSpec.Model is null
+                || itemSpec.Model.DefaultPlacementParam_Content is null || gizmo is null) {
+                return;
+            }
             auto pp = itemSpec.Model.DefaultPlacementParam_Content;
             if (pp.PivotPositions.Length > 1) {
                 lastAppliedPivotIx = (lastAppliedPivotIx + 1) % pp.PivotPositions.Length;
@@ -292,7 +298,7 @@ namespace Gizmo {
             } else {
                 lastAppliedPivotIx = uint(-1);
                 if (gizmo.pivotPoint.LengthSquared() < 0.01) {
-                    ApplyPivot(bb.halfDiag - lastAppliedPivot);
+                    ApplyPivot(bb !is null ? bb.halfDiag - lastAppliedPivot : vec3());
                 } else {
                     ApplyPivot(vec3());
                 }
@@ -435,9 +441,19 @@ namespace Gizmo {
                     }
                 } else {
                     @placingItemModel = editor.CurrentItemModel;
+                    if (placingItemModel is null) {
+                        NotifyWarning("Gizmo: no item selected to place");
+                        IsActive = false;
+                        return;
+                    }
                     itemSpec.SetModel(placingItemModel);
                     itemSpec.variantIx = Editor::GetCurrentItemVariant(editor);
                     auto pp = placingItemModel.DefaultPlacementParam_Content;
+                    if (pp is null) {
+                        NotifyWarning("Gizmo: selected item has no placement params");
+                        IsActive = false;
+                        return;
+                    }
                     itemSpec.pivotPos = pp.PivotPositions.Length == 0 ? vec3() : pp.PivotPositions[Editor::GetCurrentPivot(editor) % pp.PivotPositions.Length];
                 }
             }
@@ -514,6 +530,41 @@ namespace Gizmo {
         if (bb is null) {
             IsActive = false;
             return;
+        }
+
+        // Abort cleanly when place-type specs/models are missing (e.g. ghost mode
+        // with no pick, RMB place-item without a selected item model, or models
+        // with null DefaultPlacementParam_Content). Previously NPE'd at
+        // WithPlacementParams / apply itemSpec.isFlying.
+        if (modePlacingType == BlockOrItem::Item) {
+            if (itemSpec is null || placingItemModel is null
+                || placingItemModel.DefaultPlacementParam_Content is null) {
+                NotifyWarning("Gizmo: no item to place (nothing picked / no item selected)");
+                dev_trace("Gizmo abort: item place missing spec/model/placementParam"
+                    + " itemSpecNull=" + (itemSpec is null)
+                    + " modelNull=" + (placingItemModel is null)
+                    + " target=" + tostring(modeTargetType)
+                    + " placing=" + tostring(modePlacingType)
+                    + " replace=" + shouldReplaceTarget);
+                @itemSpec = null;
+                IsActive = false;
+                return;
+            }
+        } else {
+            if (blockSpec is null || placingBlockModel is null) {
+                // placingBlockModel may be null if we only have blockSpec.BlockInfo
+                if (blockSpec is null || blockSpec.BlockInfo is null) {
+                    NotifyWarning("Gizmo: no block to place (nothing picked / no block selected)");
+                    dev_trace("Gizmo abort: block place missing spec/model"
+                        + " blockSpecNull=" + (blockSpec is null)
+                        + " target=" + tostring(modeTargetType)
+                        + " placing=" + tostring(modePlacingType)
+                        + " replace=" + shouldReplaceTarget);
+                    @blockSpec = null;
+                    IsActive = false;
+                    return;
+                }
+            }
         }
 
         if (shouldReplaceTarget) {
@@ -651,6 +702,12 @@ namespace Gizmo {
             .WithPlacingType(modePlacingType);
 
         if (modePlacingType == BlockOrItem::Item) {
+            if (placingItemModel is null || placingItemModel.DefaultPlacementParam_Content is null) {
+                // Defensive: should have aborted above; never NPE here.
+                NotifyWarning("Gizmo: item model has no placement params");
+                IsActive = false;
+                return;
+            }
             gizmo.WithPlacementParams(placingItemModel.DefaultPlacementParam_Content);
             // gizmo.pivotPoint = lastAppliedPivot;
         } else if (modePlacingType == BlockOrItem::Block) {
@@ -703,10 +760,25 @@ namespace Gizmo {
             IsActive = false;
             return;
         }
+        if (gizmo is null) {
+            NotifyWarning("Gizmo: apply with no active gizmo");
+            IsActive = false;
+            return;
+        }
         // auto coordSizeXY = Editor::GetMapCoordSize(editor.Challenge);
         // auto hOffset = -Editor::GetMapExtendsBelowZero(editor.Challenge) - coordSizeXY.y;
         auto xyzOffset = Editor::GetMacroblockPosOffset();
         if (modePlacingType == BlockOrItem::Item) {
+            if (itemSpec is null) {
+                NotifyWarning("Gizmo: cannot apply — no item spec (empty / aborted setup)");
+                if (setInactiveAfter) IsActive = false;
+                return;
+            }
+            if (itemSpec.Model is null) {
+                NotifyWarning("Gizmo: cannot apply — item model is null");
+                if (setInactiveAfter) IsActive = false;
+                return;
+            }
             dev_trace("Applying gizmo item: ");
             dev_trace("   lastAppliedPivot: " + lastAppliedPivot.ToString());
             dev_trace("   gizmo.placementParamOffset: " + gizmo.placementParamOffset.ToString());
@@ -719,6 +791,11 @@ namespace Gizmo {
             itemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(placingColor));
             Editor::PlaceItems({itemSpec}, true);
         } else {
+            if (blockSpec is null) {
+                NotifyWarning("Gizmo: cannot apply — no block spec (empty / aborted setup)");
+                if (setInactiveAfter) IsActive = false;
+                return;
+            }
             // this will only unapply if it was applied earlier
             gizmo.OffsetBlockOnApply();
             // blockSpec.flags = uint8(Editor::BlockFlags::Free);
