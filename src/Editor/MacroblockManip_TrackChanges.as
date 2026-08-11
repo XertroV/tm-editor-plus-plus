@@ -627,6 +627,15 @@ namespace Editor {
         } catch {
             NotifyWarning("DeleteMacroblock: exception removing donor macroblock: " + getExceptionInfo());
         }
+#if DEV
+        // Forensics + optional AnchorData RemoveItem prototype while donor still
+        // holds the temp-written item buffer. No-op outside DEV builds.
+        {
+            bool engineRemoved = removed;
+            removed = MacroblockItemDeleteDiag::OnDeleteMacroblockResult(mbSpec, mb, editor, removed);
+            if (removed && !engineRemoved && addUndoRedoPoint) pmt.AutoSave();
+        }
+#endif
         try {
             mbSpec._RestoreMacroblock();
         } catch {
