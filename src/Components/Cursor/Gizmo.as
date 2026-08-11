@@ -596,9 +596,10 @@ namespace Gizmo {
                     for (int i = int(map.AnchoredObjects.Length) - 1; i >= 0; i--) {
                         if (map.AnchoredObjects[i] is targetItem) {
                             Editor::TrackMap_OnRemoveItem(targetItem);
-                            map.AnchoredObjects.RemoveAt(i);
+                            // MwFastBuffer supports RemoveRange, not array::RemoveAt
+                            map.AnchoredObjects.RemoveRange(i, 1);
                             removed = map.AnchoredObjects.Length < itemsBefore;
-                            dev_trace("Gizmo item delete via AnchoredObjects.RemoveAt(" + i + ") removed=" + removed);
+                            dev_trace("Gizmo item delete via AnchoredObjects.RemoveRange(" + i + ",1) removed=" + removed);
                             break;
                         }
                     }
