@@ -56,7 +56,8 @@ namespace Fixes {
 
     bool _ModelPtrLooksOk(uint64 p) {
         if (p < 0x10000) return false;
-        if (p > 0x00007FFFFFFFFFFFull) return false;
+        // Reject non-canonical user-space pointers without ull suffix (AS).
+        if ((p >> 48) != 0) return false;
         return true;
     }
 
