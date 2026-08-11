@@ -441,6 +441,36 @@ namespace MacroblockItemDeleteDiag {
         _LogSpecVsMapMatches(mbSpec, editor);
 
         if (!removed) {
+            _Emit("engine RemoveMacroblock missed — trying Initialized/Connected restore then remove");
+            // _TempWriteToMacroblock forces Initialized=false Connected=false.
+            // Native item-bearing inventory MBs are init=true conn=true. Hypothesis:
+            // RemoveMacroblock may require those flags (place still works without).
+            if (mb !is null) {
+                bool prevInit = mb.Initialized;
+                bool prevConn = mb.Connected;
+                mb.Initialized = true;
+                mb.Connected = true;
+                uint before = editor.Challenge !is null ? editor.Challenge.AnchoredObjects.Length : 0;
+                bool r = false;
+                try {
+                    r = editor.PluginMapType.RemoveMacroblock(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
+                } catch {
+                    _Emit("  init/conn restore remove EX: " + getExceptionInfo());
+                }
+                uint after = editor.Challenge !is null ? editor.Challenge.AnchoredObjects.Length : 0;
+                _Emit("  after init=true conn=true: ret=" + r
+                    + " items " + before + "->" + after
+                    + " (was init=" + prevInit + " conn=" + prevConn + ")");
+                if (after < before) {
+                    removed = true;
+                    _Emit("init/conn restore REMOVE SUCCEEDED");
+                } else {
+                    // leave flags true for subsequent variant tries; restore not needed mid-forensics
+                }
+            }
+        }
+
+        if (!removed) {
             _Emit("engine RemoveMacroblock missed — trying remove variants");
             if (TryRemoveVariants(mb, editor)) {
                 _Emit("remove VARIANT SUCCEEDED");

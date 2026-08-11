@@ -623,8 +623,19 @@ namespace Editor {
             auto dmb = DGameCtnMacroBlockInfo(mb);
             dev_trace("DeleteMacroblock: donor=" + mb.IdName
                 + " nb blocks/items/skins: " + dmb.Blocks.Length + "/" + dmb.Items.Length + "/" + dmb.Skins.Length);
+            // _TempWriteToMacroblock forces Initialized=false / Connected=false so
+            // TurnIntoAirMb_Unsafe can rebuild placement state. PlaceMacroblock_AirMode
+            // tolerates that; RemoveMacroblock does NOT — it no-ops on items (and
+            // sometimes blocks) while both flags are false. Native inventory MBs that
+            // contain items are always init=true conn=true. RE dump 2026-08-11:
+            // setting both true immediately before remove makes RemoveMacroblock
+            // return true and drop AnchoredObjects.Length. _RestoreMacroblock still
+            // puts the original flag values back afterward.
+            mb.Initialized = true;
+            mb.Connected = true;
             removed = pmt.RemoveMacroblock(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
-            dev_trace("DeleteMacroblock: RemoveMacroblock returned " + removed);
+            dev_trace("DeleteMacroblock: RemoveMacroblock returned " + removed
+                + " (after init/conn=true)");
             if (removed && addUndoRedoPoint) pmt.AutoSave();
         } catch {
             NotifyWarning("DeleteMacroblock: exception removing donor macroblock: " + getExceptionInfo());
