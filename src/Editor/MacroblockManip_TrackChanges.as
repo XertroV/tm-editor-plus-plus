@@ -546,9 +546,10 @@ namespace Editor {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (mbSpec is null || editor is null || editor.PluginMapType is null) return false;
         auto pmt = editor.PluginMapType;
-        // Match PlaceMacroblock donor selection. MacroblockModels[0] is not
-        // reliable (wrong env / empty inventory entry) and causes silent no-ops
-        // for item+block deletes that go through RemoveMacroblock.
+        // Match PlaceMacroblock donor selection + regeneration. Without regen,
+        // RemoveMacroblock often no-ops for items (and some blocks) on non-Stadium
+        // envs even though temp-write succeeds — gizmo item replace then leaves
+        // duplicates. Same donor path as place.
         auto mbPath = Editor::GetDonorMacroblockPath();
         CGameCtnMacroBlockInfo@ mb = pmt.GetMacroblockModelFromFilePath(mbPath);
         if (mb is null) {
@@ -576,9 +577,52 @@ namespace Editor {
             return false;
         }
 
+        // Regenerate donor generated-state after temp-write (same as PlaceMacroblock).
+        // Skip-regen path left RemoveMacroblock returning true/false without
+        // matching map items on BlueBay/GreenCoast.
+        bool regenerated = false;
+        CGameCtnMacroBlockInfo@ prevCurrMb = null;
+        try {
+            @prevCurrMb = Editor::ReplaceCurrentMacroblock_AddRef(editor, mb);
+        } catch {
+            NotifyWarning("DeleteMacroblock: exception selecting donor macroblock: " + getExceptionInfo());
+            try {
+                mbSpec._RestoreMacroblock();
+            } catch {
+                warn("DeleteMacroblock: exception restoring donor after selection failure: " + getExceptionInfo());
+            }
+            return false;
+        }
+        try {
+            editor.TurnIntoAirMb_Unsafe();
+            regenerated = true;
+        } catch {
+            NotifyWarning("DeleteMacroblock: exception regenerating donor macroblock: " + getExceptionInfo());
+        }
+        bool restoredCurrMb = RestoreCurrentMacroblockAfterDonor(editor, prevCurrMb);
+        ReleaseIfNonNull(prevCurrMb);
+        @prevCurrMb = null;
+        if (!regenerated || !restoredCurrMb) {
+            try {
+                mbSpec._RestoreMacroblock();
+            } catch {
+                warn("DeleteMacroblock: exception restoring donor after regen failure: " + getExceptionInfo());
+            }
+            if (!regenerated) {
+                NotifyWarning("DeleteMacroblock: failed to regenerate donor macroblock");
+            } else {
+                NotifyWarning("DeleteMacroblock: failed to restore current macroblock after donor regen");
+            }
+            return false;
+        }
+
         bool removed = false;
         try {
+            auto dmb = DGameCtnMacroBlockInfo(mb);
+            dev_trace("DeleteMacroblock: donor=" + mb.IdName
+                + " nb blocks/items/skins: " + dmb.Blocks.Length + "/" + dmb.Items.Length + "/" + dmb.Skins.Length);
             removed = pmt.RemoveMacroblock(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
+            dev_trace("DeleteMacroblock: RemoveMacroblock returned " + removed);
             if (removed && addUndoRedoPoint) pmt.AutoSave();
         } catch {
             NotifyWarning("DeleteMacroblock: exception removing donor macroblock: " + getExceptionInfo());

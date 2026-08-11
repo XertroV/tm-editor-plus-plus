@@ -535,6 +535,12 @@ namespace Gizmo {
                     // (via SetBlockInfo / gizmo setup) can rewrite variant/ground
                     // flags so the temp-written MB no longer matches the original,
                     // leaving it on the map and producing a duplicate on apply.
+                    //
+                    // Set placement mode first (freeblock path already did). On
+                    // BlueBay, first RemoveBlockSafe after a cold pick sometimes
+                    // no-ops if mode is still FreeBlock/Item from a prior tool.
+                    Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Block);
+                    Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
                     bool removed = false;
                     CGameCtnBlock@ targetBlock = lastPickedBlock !is null ? lastPickedBlock.AsBlock() : null;
                     if (targetBlock !is null) {
