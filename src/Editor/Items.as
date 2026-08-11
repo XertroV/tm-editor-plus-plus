@@ -110,10 +110,17 @@ namespace Editor {
        May not work for >10 items, but seems fine.
     */
     void UpdateNewlyAddedItems(CGameCtnEditorFree@ editor) {
+        if (editor is null) {
+            NotifyError("UpdateNewlyAddedItems: editor is null");
+            return;
+        }
         auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
-
-        auto macroblock = pmt.GetMacroblockModelFromFilePath(Editor::GetDonorMacroblockPath());
-        trace('UpdateNewlyAddedItems macroblock is null: ' + (macroblock is null));
+        if (pmt is null) {
+            NotifyError("UpdateNewlyAddedItems: editor plugin map type is null");
+            return;
+        }
+        auto macroblock = Editor::ResolveDonorMacroblock(editor, "UpdateNewlyAddedItems");
+        if (macroblock is null) return;
         Event::DisableOnBlockItemCB();
         auto placed = pmt.PlaceMacroblock_NoDestruction(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
         trace('UpdateNewlyAddedItems placed: ' + placed);

@@ -424,23 +424,8 @@ namespace Editor {
             return false;
         }
         auto pmt = editor.PluginMapType;
-        if (pmt.MacroblockModels.Length == 0) {
-            NotifyError("PlaceMacroblock: no macroblock models");
-            return false;
-        }
-        auto mbPath = Editor::GetDonorMacroblockPath();
-        // Prefer the plugin-map lookup; Fids::GetGame("GameData\\...") works for
-        // Stadium assets but not for non-Stadium envs where the macroblock is
-        // loaded dynamically into the editor inventory.
-        CGameCtnMacroBlockInfo@ mb = pmt.GetMacroblockModelFromFilePath(mbPath);
-        if (mb is null) {
-            auto mbFid = Fids::GetGame("GameData\\" + mbPath);
-            @mb = cast<CGameCtnMacroBlockInfo>(Fids::Preload(mbFid));
-        }
-        if (mb is null) {
-            NotifyError("PlaceMacroblock: failed to get macroblock model: " + mbPath);
-            return false;
-        }
+        CGameCtnMacroBlockInfo@ mb = Editor::ResolveDonorMacroblock(editor, "PlaceMacroblock");
+        if (mb is null) return false;
         dev_trace("[DEBUG] PlaceMacroblock: Writing to MB");
 #if DEV
         LogMacroblockDonorDebug(mb, "before-tempwrite");
@@ -552,20 +537,8 @@ namespace Editor {
         // RemoveMacroblock often no-ops for items (and some blocks) on non-Stadium
         // envs even though temp-write succeeds — gizmo item replace then leaves
         // duplicates. Same donor path as place.
-        auto mbPath = Editor::GetDonorMacroblockPath();
-        CGameCtnMacroBlockInfo@ mb = pmt.GetMacroblockModelFromFilePath(mbPath);
-        if (mb is null) {
-            auto mbFid = Fids::GetGame("GameData\\" + mbPath);
-            @mb = cast<CGameCtnMacroBlockInfo>(Fids::Preload(mbFid));
-        }
-        if (mb is null && pmt.MacroblockModels.Length > 0) {
-            @mb = pmt.MacroblockModels[0];
-            NotifyWarning("DeleteMacroblock: falling back to MacroblockModels[0] (" + mb.IdName + "); preferred donor missing: " + mbPath);
-        }
-        if (mb is null) {
-            NotifyWarning("DeleteMacroblock: no donor macroblock available");
-            return false;
-        }
+        CGameCtnMacroBlockInfo@ mb = Editor::ResolveDonorMacroblock(editor, "DeleteMacroblock");
+        if (mb is null) return false;
         Editor::QueueFreeBlockDeletionFromMB(mbSpec);
         try {
             mbSpec._TempWriteToMacroblock(mb);

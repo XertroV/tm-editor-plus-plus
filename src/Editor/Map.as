@@ -507,15 +507,59 @@ namespace Editor {
 
     string GetDonorMacroblockPath() {
         auto map = GetApp().RootMap;
-        if (map is null) return kDonorStadium;
+        if (map is null || map.Collection is null) return "";
         string collName = string(map.CollectionName);
         if (collName == "Stadium")    return kDonorStadium;
         if (collName == "RedIsland")  return kDonorRedIsland;
         if (collName == "GreenCoast") return kDonorGreenCoast;
         if (collName == "BlueBay")    return kDonorBlueBay;
         if (collName == "WhiteShore") return kDonorWhiteShore;
-        warn("No donor macroblock configured for collection '" + collName + "'; falling back to Stadium (placement will likely crash).");
-        return kDonorStadium;
+        return "";
+    }
+
+    CGameCtnMacroBlockInfo@ ResolveDonorMacroblock(CGameCtnEditorFree@ editor, const string &in operation) {
+        auto map = GetApp().RootMap;
+        if (editor is null || editor.PluginMapType is null || map is null || map.Collection is null) {
+            NotifyError(operation + ": cannot resolve donor without an active map editor and collection");
+            return null;
+        }
+
+        string collName = string(map.CollectionName);
+        string mbPath = GetDonorMacroblockPath();
+        if (mbPath == "") {
+            NotifyError(operation + ": no donor macroblock configured for collection '" + collName + "'; refusing unsafe macroblock operation");
+            return null;
+        }
+
+        CGameCtnMacroBlockInfo@ mb = null;
+        try {
+            @mb = editor.PluginMapType.GetMacroblockModelFromFilePath(mbPath);
+            if (mb is null) {
+                auto mbFid = Fids::GetGame("GameData\\" + mbPath);
+                @mb = cast<CGameCtnMacroBlockInfo>(Fids::Preload(mbFid));
+            }
+        } catch {
+            NotifyError(operation + ": exception loading donor macroblock '" + mbPath + "': " + getExceptionInfo());
+            return null;
+        }
+
+        if (mb is null) {
+            NotifyError(operation + ": failed to load donor macroblock for collection '" + collName + "': " + mbPath);
+            return null;
+        }
+
+        uint expectedCollectionId = GetMapCollectorId();
+        if (expectedCollectionId == 0 || mb.CollectionId != expectedCollectionId) {
+            NotifyError(operation + ": donor collection mismatch for '" + mbPath
+                + "' (map=" + collName + "/" + expectedCollectionId
+                + ", donor=" + mb.CollectionId_Text + "/" + mb.CollectionId
+                + "); refusing unsafe macroblock operation");
+            return null;
+        }
+
+        dev_trace(operation + ": resolved donor '" + mbPath + "' for collection "
+            + collName + "/" + expectedCollectionId);
+        return mb;
     }
 }
 
