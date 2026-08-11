@@ -108,16 +108,15 @@ namespace Gizmo {
         if (origModeWasItem) {
             Editor::SetItemPlacementMode(origItemPlacementMode);
         }
-        // After item gizmo (delete/replace), ItemCursor.CurrentModels can keep
-        // drawing stuck slots (ghost poles). Force-show then flush via item
-        // mode bounce (undo never touches this buffer).
+        // Gizmo forces UseSnappedLoc=true every frame; leave it on and item
+        // previews can trail half a block (~16m) away from the cursor.
+        if (editor !is null && editor.Cursor !is null) {
+            editor.Cursor.UseSnappedLoc = false;
+        }
+        // Soft placement bounce only — never HelperMobil.Hide / len=0.
         if (editor !is null && (origModeWasItem || modePlacingType == BlockOrItem::Item
             || modeTargetType == BlockOrItem::Item)) {
-            if (editor.ItemCursor !is null) {
-                Fixes::ClearGhostItemDraws(editor.ItemCursor);
-            }
             Fixes::ScheduleGhostItemFlush();
-            // Restore modes after flush coro may race — also restore here.
             if (origModeWasItem) {
                 Editor::SetItemPlacementMode(origItemPlacementMode);
             }
@@ -230,18 +229,10 @@ namespace Gizmo {
         }
         bool isItem = modePlacingType == BlockOrItem::Item;
         CustomCursor::NoSetCursorVisFlagPatchActive = !isItem;
-        // Item gizmo used to force NoHideCursorItemModels for the whole session.
-        // That can leave magnet-snap / cursor preview meshes after the real AO
-        // is deleted (pure scene phantom; not in AnchoredObjects). Only enable
-        // NoHide after setup delete has cleared cursor draws.
-        if (isItem) {
-            CustomCursor::NoHideCursorItemModelsPatchActive = false;
-            if (editor.ItemCursor !is null) {
-                Fixes::ClearCursorItemSceneDraws(editor.ItemCursor);
-                Fixes::RestoreCursorItemPrimaryDraw(editor.ItemCursor);
-            }
-            CustomCursor::NoHideCursorItemModelsPatchActive = true;
-        }
+        // Keep item preview visible during gizmo; clear patches on exit.
+        // Do NOT HelperMobil.Hide / zero CurrentModels here — that left
+        // trail phantoms (~half-block offsets) on every cursor update.
+        if (isItem) CustomCursor::NoHideCursorItemModelsPatchActive = true;
         CustomCursor::NoShowCursorItemModelsPatchActive = !isItem;
 
         desiredGizmoPlaceMode = origPlaceMode;
