@@ -206,12 +206,6 @@ namespace Fixes {
         dev_trace("SoftPlacementBounceOnly done");
     }
 
-    // Mid-gizmo: only force-show capacity (no Hide, no len=0).
-    uint ClearGhostItemDraws(CGameCursorItem@ itemCursor) {
-        if (itemCursor is null) return 0;
-        return ForceShowCapacityModels(itemCursor);
-    }
-
     void ScheduleGhostItemFlush() {
         startnew(_SoftPlacementBounceOnly);
     }

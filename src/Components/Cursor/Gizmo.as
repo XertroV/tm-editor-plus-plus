@@ -749,9 +749,7 @@ namespace Gizmo {
                                 + " Apply may stack another — check map.");
                         }
                     }
-                    if (editor.ItemCursor !is null) {
-                        Fixes::ClearGhostItemDraws(editor.ItemCursor);
-                    }
+                    // No mid-setup ForceShow / Hide — exit bounce handles item cursor.
                 }
                 @lastPickedItem = null;
             }
