@@ -530,7 +530,38 @@ namespace Gizmo {
                     Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
                     Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
                 } else {
-                    Editor::DeleteBlocksAndItems({blockSpec}, {});
+                    // Normal/ghost: delete via the live map block. Do not rely on
+                    // blockSpec for RemoveMacroblock matching — EnsureValidVariant
+                    // (via SetBlockInfo / gizmo setup) can rewrite variant/ground
+                    // flags so the temp-written MB no longer matches the original,
+                    // leaving it on the map and producing a duplicate on apply.
+                    bool removed = false;
+                    CGameCtnBlock@ targetBlock = lastPickedBlock !is null ? lastPickedBlock.AsBlock() : null;
+                    if (targetBlock !is null) {
+                        auto pmt = editor.PluginMapType;
+                        auto coord = Nat3ToInt3(targetBlock.Coord);
+                        Editor::TrackMap_OnRemoveBlock_BeginAPI();
+                        removed = pmt.RemoveBlockSafe(targetBlock.BlockInfo, coord, targetBlock.Direction);
+                        if (!removed) {
+                            removed = pmt.RemoveBlock(coord);
+                        }
+                        Editor::TrackMap_OnRemoveBlock_EndAPI();
+                        if (!removed) {
+                            removed = Editor::DeleteBlocks({targetBlock});
+                        }
+                    }
+                    if (!removed) {
+                        removed = Editor::DeleteBlocksAndItems({blockSpec}, {});
+                    }
+                    if (!removed) {
+                        NotifyWarning("Gizmo: failed to delete original block; apply may leave a duplicate");
+                        dev_trace("Gizmo normal-block delete failed; name=" + blockSpec.name
+                            + " flags=" + blockSpec.flags
+                            + " vx=" + blockSpec.variant
+                            + " coord=" + blockSpec.coord.ToString());
+                    } else {
+                        dev_trace("Gizmo deleted normal/ghost block");
+                    }
                 }
                 yield();
             } else {
