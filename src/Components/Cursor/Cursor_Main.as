@@ -1449,6 +1449,7 @@ Trackmania.exe.text+115D16D - E8 DED9D5FF           - call Trackmania.exe.text+E
 
 
     void TriggerUpdateCursorItemModels(CGameCtnEditorFree@ editor) {
+        if (editor is null) return;
         // cache and deactivate patches -- there's a visual bug where models aren't cleared (but no block/item exists)
         bool nhcimp = CustomCursor::NoHideCursorItemModelsPatchActive;
         bool nscimp = CustomCursor::NoShowCursorItemModelsPatchActive;
@@ -1457,26 +1458,59 @@ Trackmania.exe.text+115D16D - E8 DED9D5FF           - call Trackmania.exe.text+E
         CustomCursor::NoShowCursorItemModelsPatchActive = false;
         CustomCursor::NoSetCursorVisFlagPatchActive = false;
         // cache state
-        auto origItemMode = Editor::GetItemPlacementMode();
+        auto origItemMode = Editor::GetItemPlacementMode(false, false);
         auto origPlacement = Editor::GetPlacementMode(editor);
         auto origEditMode = Editor::GetEditMode(editor);
-        // trigger update via changing placement mode
+
+        // 1) FreeBlock <-> Ghost bounce (forces cursor model rebuild)
+        Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
         if (origPlacement != CGameEditorPluginMap::EPlaceMode::FreeBlock) {
-            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
             Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
         } else {
-            Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
             Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::GhostBlock);
         }
-        // done, return to original state
+
+        // 2) Item placement mode cycle — rebuilds NSceneItemPlacement zones /
+        //    stuck meshes after API item delete (gizmo replace leaves a ghost
+        //    pole/bush even when AnchoredObjects count is correct). Manual
+        //    Normal/FreeGround/Free cycling is the known user workaround.
+        Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Item);
+        Editor::SetItemPlacementMode(Editor::ItemMode::Normal, false);
+        Editor::SetItemPlacementMode(Editor::ItemMode::FreeGround, false);
+        Editor::SetItemPlacementMode(Editor::ItemMode::Free, false);
+        if (origItemMode != Editor::ItemMode::None) {
+            Editor::SetItemPlacementMode(origItemMode, false);
+        } else {
+            Editor::SetItemPlacementMode(Editor::ItemMode::Normal, false);
+        }
+
+        // restore original placement/edit
         Editor::SetEditMode(editor, origEditMode);
-        Editor::SetItemPlacementMode(origItemMode);
         Editor::SetPlacementMode(editor, origPlacement);
+        if (origItemMode != Editor::ItemMode::None
+            && Editor::IsInAnyItemPlacementMode(editor, false)) {
+            Editor::SetItemPlacementMode(origItemMode, false);
+        }
         // restore patches
         CustomCursor::NoHideCursorItemModelsPatchActive = nhcimp;
         CustomCursor::NoShowCursorItemModelsPatchActive = nscimp;
         CustomCursor::NoSetCursorVisFlagPatchActive = nscvfp;
     }
+
+    // Public alias: clear stale item/cursor meshes after API delete or on reload.
+    void RefreshStaleItemVisuals(CGameCtnEditorFree@ editor) {
+        TriggerUpdateCursorItemModels(editor);
+    }
+
+    void _RefreshStaleItemVisualsOnPluginStart() {
+        // Wait a frame so editor/cursor exist after RemoteBuild reload.
+        yield();
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        dev_trace("RefreshStaleItemVisuals on plugin start");
+        RefreshStaleItemVisuals(editor);
+    }
+
 
     // V3 of placement helpers for items on ghost/free blocks.
     // This sets the "is in air" flag of the item cursor to true and NOPs the reset-to-0 part of cursor update routine.

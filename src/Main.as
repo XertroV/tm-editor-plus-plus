@@ -27,6 +27,7 @@ void Main() {
 
     if (GetApp().Editor !is null) {
         startnew(Editor::CacheMaterials);
+        startnew(CustomCursor::_RefreshStaleItemVisualsOnPluginStart);
     }
 
     startnew(UpdateEditorPlugin);
@@ -134,6 +135,8 @@ void OnEnabled() {
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
     CustomCursorRotations::BeforeAfterCursorUpdateHook.Apply();
+    // Clear stuck item/cursor meshes left from prior session (gizmo delete ghosts).
+    startnew(CustomCursor::_RefreshStaleItemVisualsOnPluginStart);
 }
 
 void OnDestroyed() { Unload(true); }

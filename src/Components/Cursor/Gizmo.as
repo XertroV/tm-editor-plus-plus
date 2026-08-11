@@ -108,6 +108,18 @@ namespace Gizmo {
         if (origModeWasItem) {
             Editor::SetItemPlacementMode(origItemPlacementMode);
         }
+        // After item gizmo (delete/replace), cursor/zone meshes can stay at the
+        // old item pose. Patches are off above — bounce modes to clear ghosts.
+        if (editor !is null && (origModeWasItem || modePlacingType == BlockOrItem::Item
+            || modeTargetType == BlockOrItem::Item)) {
+            CustomCursor::RefreshStaleItemVisuals(editor);
+            if (origModeWasItem) {
+                Editor::SetItemPlacementMode(origItemPlacementMode);
+            }
+            if (Editor::GetPlacementMode(editor) != origPlaceMode) {
+                Editor::SetPlacementMode(editor, origPlaceMode);
+            }
+        }
         _IsActive = false;
     }
 
@@ -689,8 +701,15 @@ namespace Gizmo {
                 } else {
                     dev_trace("Gizmo deleted item via " + deleteMethod
                         + "; itemsNow=" + (map !is null ? map.AnchoredObjects.Length : 0));
-                    @lastPickedItem = null;
+                    // Engine delete drops AnchoredObjects but can leave cursor /
+                    // NSceneItemPlacement meshes at the old pose (ghost pole).
+                    // Bounce placement modes while patches are still off later
+                    // on exit; clear now so gizmo doesn't keep showing the ghost.
+                    CustomCursor::RefreshStaleItemVisuals(editor);
                 }
+                // Clear pick so the editor doesn't keep a dangling pick visual.
+                try { editor.PickedObject = null; } catch {}
+                @lastPickedItem = null;
             }
             dev_trace("Gizmo deleted target");
         }
