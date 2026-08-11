@@ -2,49 +2,29 @@
 
 ### Changelog (user-facing)
 
+**Map Properties — Race Objectives (new)**
+- **Clones** (`TMObjective_NbClones`): set clone-mode count (0 = off; presets 0/1/3/5). Enables racing against ghost copies of yourself.
+- Light **medal times** edit (Author/Gold/Silver/Bronze ms).
+- **Laps**: NbLaps write + experimental IsLapRace toggle (save map to persist).
+
 **Gizmo**
-- **Item gizmo delete/replace actually removes the original item** again (engine match works after donor write).
-- **Block gizmo delete/replace** no longer leaves the original block behind on apply.
-- **Cancel after replace** restores the deleted block/item without crashing the game.
-- Safer empty/missing picks: validate item model + placement params before use; clamp pivot index.
-- Warns if a delete “succeeds” but something is still at the old position (possible twin / wrong match).
-- Clears stuck cursor snap state on gizmo exit (reduces offset previews after gizmo).
+- Item gizmo delete/replace removes the original item again (engine match after donor write).
+- Block gizmo delete more reliable after placement-mode cold picks.
+- Cancel after block gizmo no longer freezes/crashes the game.
+- Leftover twin items after gizmo: warning instead of silent ghosts.
+- Early null guards when gizmo target/model is missing.
 
-**Placement / multi-env**
-- Macroblock/free placement more reliable across environments (per-env donors for Stadium, BlueBay, GreenCoast, WhiteShore, RedIsland path).
-- Hardening against bad freeblock variants (e.g. sentinel/invalid variant no longer bricks gizmo apply).
-- Clearer warnings when place/delete macroblock operations fail.
-
-**Fixes tab**
-- Restored: **Test Mode click does nothing**, **All Inputs Blocked**, baked-block dirty-flag patch.
-- **Reset cursor + patches** — clears NoHide/snap stuck state after gizmo experiments.
-- **Fix capacity ghosts (expand)** — contiguous, validated ItemCursor capacity slots only; then swap item once.
-- Scene-only leftover meshes (map count already correct) still need leave/re-enter editor — no safe one-click clear yet.
-
-**Compatibility**
-- Restored `string::Join` so the plugin compiles on current Openplanet builds.
-- RELEASE builds expose no-op stubs for DEV fuzz APIs so dependents bind cleanly without shipping fuzz placement.
-
-**Known limitation**
-- Rare **visual-only** item “ghosts” after magnet/gizmo (no map entry) may still appear; undo/delete of map items won’t remove them. Leave the editor or start a new map to clear. Do not mass-Hide HelperMobil (made cursor trails worse).
-
----
+**Map / placement backend**
+- Fail-closed **donor macroblock** resolution (no Stadium fail-open, no random Models[0] on delete).
+- Safer ItemCursor capacity expand (validated contiguous prefix only).
+- Fixes tab: restored Test Mode / All Inputs Blocked / baked dirty recoveries.
 
 ### Backend / technical
-
-- **Item `RemoveMacroblock`:** restore donor `Initialized=true` + `Connected=true` after temp-write/regen before remove.
-- **Banned crash paths kept out of gizmo:** `AnchoredObjects.RemoveRange`, post-delete `UpdateNewlyAddedItems`.
-- Item gizmo delete: live engine path + donor pin; no ItemDesc-float→`CSceneMobil` casts.
-- Block gizmo cancel: deactivate first, **defer `Undo` one frame**, skip placement bounce during map restore.
-- `ForceShowCapacityModels`: stop at first invalid slot; `Dev_PointerLooksBad` + vtable/refcount + `CGameItemModel` + `MwAddRef`.
-- `RandomFuzz`: DEV implements; **RELEASE stubs** for `Dev_RunRandomFuzz` + getters (same export surface).
-- Placement hooks: Wine bad-pointer guards; freeblock sentinel variant repair; per-env Air donors.
-- Exports: `IInvCache` shared; `SetItemSkinsRaw` / inventory refresh.
-- DEV: item-delete forensics, gizmo apply diagnostic, random placement fuzz.
-- Research: E26 gizmo item-delete crash; E27 scene phantoms (archived under `research/archive/`).
+- `Editor::ResolveDonorMacroblock` shared by place/delete/UpdateNewlyAddedItems.
+- `Editor::Get/SetMapNbClones` (+ laps helpers); MapInfo offset write (const API).
+- RELEASE stubs for DEV fuzz exports (same ABI both builds).
+- Research: E28 camera double-tick freeze banned; empty EditNewMap decoration prompt.
 
 ### Verify
-- Place/remove free blocks & items via Editor++ MCP path
-- `RunGizmoApplyBlock`, tilted freeblock batch, small random fuzz (DEV)
-- Camera math / focus / autofocus suites
-- Live **RELEASE** define reload compiles and loads; DEV restore clean
+- WhiteShore: place/remove block+item, gizmo apply, fuzz, camera math/focus, autofocus soak ×5 (no double-tick).
+- NbClones set 0/1/3/5 readback OK via MCP ControlMapObjectives.
