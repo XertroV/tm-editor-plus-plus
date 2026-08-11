@@ -149,7 +149,7 @@ namespace MacroblockItemDeleteDiag {
                         + " posNear=" + MathX::Vec3Within(spec.pos, expectPos, 0.0001)
                         + " posDist2=" + (spec.pos - expectPos).LengthSquared()
                         + " pyrSpec=" + _V3(spec.pyr) + " pyrMap=" + _V3(rot)
-                        + " angClose=" + AnglesVeryClose(spec.pyr, rot)
+                        + " angClose=" + Editor::AnglesVeryClose(spec.pyr, rot)
                         + " scaleEq=" + (spec.scale == item.Scale)
                         + " flySpec=" + spec.isFlying + " flyMap=" + (item.IsFlying ? 1 : 0)
                         + " varEq=" + (spec.variantIx == item.IVariant)
