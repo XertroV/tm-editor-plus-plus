@@ -541,7 +541,11 @@ namespace Gizmo {
                         auto pmt = editor.PluginMapType;
                         auto coord = Nat3ToInt3(targetBlock.Coord);
                         Editor::TrackMap_OnRemoveBlock_BeginAPI();
-                        removed = pmt.RemoveBlockSafe(targetBlock.BlockInfo, coord, targetBlock.Direction);
+                        removed = pmt.RemoveBlockSafe(
+                            targetBlock.BlockInfo,
+                            coord,
+                            CGameEditorPluginMap::ECardinalDirections(int(targetBlock.Direction))
+                        );
                         if (!removed) {
                             removed = pmt.RemoveBlock(coord);
                         }
