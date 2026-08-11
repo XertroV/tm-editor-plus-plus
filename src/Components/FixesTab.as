@@ -6,6 +6,17 @@ class FixesTab : Tab {
 
     string suggestionPrefix = "\\$i\\$fda " + Icons::ExclamationTriangle + "  Suggestions:  ";
 
+    void TextFixesDesc(const string &in s) {
+        UI::PushStyleColor(UI::Col::Text, vec4(0.85, 0.85, 0.75, 1));
+        UI::TextWrapped(s);
+        UI::PopStyleColor();
+    }
+
+    bool ProactiveCollapsingHeader(const string &in label, bool condition) {
+        UI::SetNextItemOpen(condition, condition ? UI::Cond::Always : UI::Cond::Appearing);
+        return UI::CollapsingHeader(label);
+    }
+
     void DrawInner() override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) {
@@ -13,7 +24,25 @@ class FixesTab : Tab {
             return;
         }
 
+        UI::TextWrapped("\\$iNote: these sections auto-expand when they are detected to be relevant.");
         UI::TextWrapped("Targeted recoveries. Prefer map/engine ops over scene hacks.");
+
+        auto mtst = editor.PluginMapType.EnableMapTypeStartTest && Editor::IsInTestPlacementMode(editor);
+        auto eicp = editor.PluginMapType.EnableEditorInputsCustomProcessing;
+
+        if (ProactiveCollapsingHeader("Test Mode: Click does nothing", mtst)) {
+            TextFixesDesc("If you can't enter test mode -- click does nothing. (Not sure why this happens, but this seems to fix it.)");
+            UI::Text("Editor.PluginMapType.EnableMapTypeStartTest: " + BoolIcon(mtst, false));
+            editor.PluginMapType.EnableMapTypeStartTest = UI::Checkbox("EnableMapTypeStartTest", mtst);
+            if (mtst) UI::Text(suggestionPrefix + "Set to false and try again");
+        }
+
+        if (ProactiveCollapsingHeader("All Inputs Blocked", eicp)) {
+            TextFixesDesc("When inputs don't work. (Note: gizmo mode will re-enable it.)");
+            UI::Text("Editor.PluginMapType.EnableEditorInputsCustomProcessing: " + BoolIcon(eicp, false));
+            editor.PluginMapType.EnableEditorInputsCustomProcessing = UI::Checkbox("EnableEditorInputsCustomProcessing", eicp);
+            if (eicp) UI::Text(suggestionPrefix + "Set to false and try again");
+        }
 
         if (UI::CollapsingHeader("Cursor / camera stuck" + NewIndicator)) {
             TextFixesDesc("After gizmo or ghost experiments the cursor can keep UseSnappedLoc, NoHide patches, or a bad item matrix — looks like offset previews (~16m = half block) that trail on hover.");
@@ -24,12 +53,12 @@ class FixesTab : Tab {
         }
 
         if (UI::CollapsingHeader("Gizmo + 'Ghost' Items" + NewIndicator)) {
-            TextFixesDesc("Class A: multi-model ItemCursor ghosts (road snap) — expand capacity then swap item. Class B: pure scene phantom (no map AO) — leave/re-enter editor; do not mass-Hide HelperMobil (that made trails worse).");
+            TextFixesDesc("Class A: multi-model ItemCursor ghosts (road snap) — expand contiguous validated capacity slots then swap item. Class B: pure scene phantom (no map AO) — leave/re-enter editor; do not mass-Hide HelperMobil.");
             UI::TextWrapped("If map item count is correct and delete/undo of AOs does not remove the mesh, it is a scene phantom. Safe recovery: Reset cursor, then leave editor / new map.");
             if (UI::Button(Icons::Wrench + Icons::SnapchatGhost + "  Fix capacity ghosts (expand)")) {
                 Fixes::FixGhostItems(editor.ItemCursor);
             }
-            AddSimpleTooltip("Only expands CurrentModels when len<cap with valid models. Then swap item once.");
+            AddSimpleTooltip("Only expands a contiguous prefix of CurrentModels when len<cap with validated models. Then swap item once.");
             UI::SameLine();
             if (UI::Button(Icons::List + " Dump ItemCursor models")) {
                 Fixes::DumpItemCursorModels(editor.ItemCursor);
@@ -37,13 +66,16 @@ class FixesTab : Tab {
         }
 
         UI::SeparatorText("Misc");
-        UI::TextWrapped(suggestionPrefix + "Keep \"Help place items on free/ghost blocks\" off while testing gizmo/magnet snaps if previews look wrong.");
-    }
 
-    void TextFixesDesc(const string &in s) {
-        UI::PushStyleColor(UI::Col::Text, vec4(0.85, 0.85, 0.75, 1));
-        UI::TextWrapped(s);
-        UI::PopStyleColor();
+        if (UI::CollapsingHeader("Do not update baked blocks in map file")) {
+            UI::TextWrapped("Map[\".Size\"-0x4] is a flag for whether baked blocks should be recalculated (whether the map is dirty).");
+            UI::TextWrapped("This patch will \\$<\\$fda\\$iprevent\\$> setting the dirty flag.");
+            UI::TextWrapped("It might help with block placement lag on large maps.");
+            Editor::MapBakedBlocksDirtyFlag::IsActive = UI::Checkbox("Patch: Disable Dirty Flag", Editor::MapBakedBlocksDirtyFlag::IsActive);
+            UI::Text("Active: " + BoolIcon(Editor::MapBakedBlocksDirtyFlag::IsActive));
+        }
+
+        UI::TextWrapped(suggestionPrefix + "Keep \"Help place items on free/ghost blocks\" off while testing gizmo/magnet snaps if previews look wrong.");
     }
 }
 
@@ -56,8 +88,33 @@ namespace Fixes {
 
     bool _ModelPtrLooksOk(uint64 p) {
         if (p < 0x10000) return false;
-        // Reject non-canonical user-space pointers without ull suffix (AS).
         if ((p >> 48) != 0) return false;
+        if (Dev_PointerLooksBad(p)) return false;
+        return true;
+    }
+
+    // Contiguous validated model at slot i, or fail closed.
+    bool _ValidateItemCursorModelSlot(uint64 bufPtr, uint i, bool addRef) {
+        uint64 el = bufPtr + i * ITEM_DESC_EL_SIZE;
+        uint64 modelPtr = Dev::ReadUInt64(el + 0x8);
+        if (!_ModelPtrLooksOk(modelPtr)) return false;
+        try {
+            auto vTable = Dev::SafeReadUInt64(modelPtr);
+            auto refCount = Dev::SafeReadUInt32(modelPtr + 0x10);
+            if (refCount == 0 || Dev::BaseAddress() > vTable || vTable > Dev::BaseAddressEnd()) {
+                return false;
+            }
+        } catch {
+            return false;
+        }
+        auto model = Dev_GetNodFromPointer(modelPtr);
+        if (model is null) return false;
+        if (cast<CGameItemModel>(model) is null) return false;
+        if (addRef) {
+            model.MwAddRef();
+            // Zero skin refs (not refcounted) like the pre-rewrite FixGhost path.
+            Dev::Write(el + 0x50, uint64(0));
+        }
         return true;
     }
 
@@ -82,7 +139,8 @@ namespace Fixes {
             uint64 modelPtr = Dev::ReadUInt64(el + 0x8);
             vec3 pos = Dev::ReadVec3(el + 0x70);
             string modelName = "?";
-            if (_ModelPtrLooksOk(modelPtr)) {
+            bool ok = _ValidateItemCursorModelSlot(bufPtr, i, false);
+            if (ok) {
                 try {
                     auto nod = Dev_GetNodFromPointer(modelPtr);
                     auto im = cast<CGameItemModel>(nod);
@@ -91,7 +149,7 @@ namespace Fixes {
                     modelName = "bad";
                 }
             } else {
-                modelName = "null";
+                modelName = "invalid";
             }
             bool drawn = u1 != ITEM_DESC_NOT_DRAWN;
             dev_trace("  [" + i + "] drawn=" + drawn + " u1=0x" + Text::Format("%08x", u1)
@@ -102,6 +160,7 @@ namespace Fixes {
     }
 
     // Expand capacity slots that already have models so the user can swap-item to flush.
+    // Contiguous prefix only: stop at first invalid slot (never skip gaps).
     // Does NOT Hide HelperMobil and does NOT zero len (that left trail phantoms).
     uint ForceShowCapacityModels(CGameCursorItem@ itemCursor) {
         if (itemCursor is null) return 0;
@@ -111,15 +170,17 @@ namespace Fixes {
         uint64 bufPtr = Dev::GetOffsetUint64(itemCursor, O_ITEMCURSOR_CurrentModelsBuf);
         uint32 len = Dev::GetOffsetUint32(itemCursor, O_ITEMCURSOR_CurrentModelsBuf + 0x8);
         uint32 cap = Dev::GetOffsetUint32(itemCursor, O_ITEMCURSOR_CurrentModelsBuf + 0xC);
-        if (bufPtr == 0 || cap == 0) return 0;
+        if (bufPtr == 0 || cap == 0 || len >= cap) return 0;
 
         uint32 newLen = len;
         uint extra = 0;
         uint walkN = Math::Min(cap, 64);
         for (uint i = len; i < walkN; i++) {
+            if (!_ValidateItemCursorModelSlot(bufPtr, i, true)) {
+                // Fail closed: do not extend past a bad / empty slot.
+                break;
+            }
             uint64 el = bufPtr + i * ITEM_DESC_EL_SIZE;
-            uint64 modelPtr = Dev::ReadUInt64(el + 0x8);
-            if (!_ModelPtrLooksOk(modelPtr)) continue;
             Dev::Write(el + 0x0, ITEM_DESC_DRAWN);
             newLen = i + 1;
             extra++;
@@ -151,7 +212,7 @@ namespace Fixes {
                 ;
             return;
         }
-        TempNvgText("No capacity ghosts (len==cap).\nScene phantoms need: Reset cursor, or leave editor.\nDo not spam HelperMobil.Hide.")
+        TempNvgText("No capacity ghosts (len==cap or no contiguous valid models).\nScene phantoms need: Reset cursor, or leave editor.\nDo not spam HelperMobil.Hide.")
             .WithFontSize(34.0 * g_stdPxToScreenPx)
             .WithPosOffset(vec2(0, -g_screen.y * 0.2))
             .WithCols(Math::Lerp(cOrange, cWhite, 0.7), cBlack)
@@ -168,7 +229,6 @@ namespace Fixes {
         CustomCursor::NoShowCursorItemModelsPatchActive = false;
         CustomCursor::NoSetCursorVisFlagPatchActive = false;
 
-        // Drop any stuck exclusive owner (gizmo name etc.)
         if (!CursorControl::IsExclusiveControlAvailable()) {
             string owner = CursorControl::CurrentOwner;
             if (owner.Length > 0) {
@@ -185,13 +245,11 @@ namespace Fixes {
 
         if (editor.Cursor !is null) {
             editor.Cursor.UseSnappedLoc = false;
-            // Keep free pos usable for items; zero custom PYR
             CustomCursorRotations::cursorCustomPYR = vec3();
             editor.Cursor.Pitch = 0;
             editor.Cursor.Roll = 0;
         }
 
-        // Soft bounce placement modes so item cursor rebuilds without Hide
         startnew(_SoftPlacementBounceOnly);
         Notify("Cursor + patches reset (NoHide off, UseSnappedLoc=false)");
         dev_trace("ResetCursorAndPatches done");

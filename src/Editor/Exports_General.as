@@ -62,8 +62,8 @@ namespace Editor {
     import bool IsGizmoActive() from "Editor";
     import bool Dev_RunGizmoApplyBlock(CGameCtnBlockInfo@ blockInfo, const vec3 &in targetPos, uint forcedVariant = 0) from "Editor";
 
-    // DEV random-fuzz placement. Returns count of successful placements (block+item).
-    // Counters and state live in E++ and can be read via the getters below.
+    // Random-fuzz placement (DEV implements; RELEASE stubs no-op). Same export
+    // surface either way so dependents bind cleanly.
     import uint Dev_RunRandomFuzz(const vec3 &in bbMin, const vec3 &in bbMax, uint iterations, float blockRatio) from "Editor";
     import uint Dev_RandomFuzz_GetIterations() from "Editor";
     import uint Dev_RandomFuzz_GetAttemptedBlock() from "Editor";

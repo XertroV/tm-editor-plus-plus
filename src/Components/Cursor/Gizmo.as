@@ -509,8 +509,21 @@ namespace Gizmo {
             // testing
             Editor::SetCurrentBlockVariant(editor.Cursor, targetVariant);
         } else if (modeTargetType == BlockOrItem::Item) {
-            origPlacementSwitchPivotManually = itemSpec.Model.DefaultPlacementParam_Content.SwitchPivotManually;
-            itemSpec.Model.DefaultPlacementParam_Content.SwitchPivotManually = true;
+            // Validate before any placement-param / pivot derefs.
+            if (itemSpec is null || itemSpec.Model is null
+                || itemSpec.Model.DefaultPlacementParam_Content is null
+                || itemSpec.Model.DefaultPlacementParam_Content.PlacementClass is null) {
+                NotifyWarning("Gizmo: no item to place (nothing picked / missing placement params)");
+                dev_trace("Gizmo abort early: item target missing model/placement"
+                    + " itemSpecNull=" + (itemSpec is null)
+                    + " modelNull=" + (itemSpec is null || itemSpec.Model is null));
+                @itemSpec = null;
+                IsActive = false;
+                return;
+            }
+            auto placeParams = itemSpec.Model.DefaultPlacementParam_Content;
+            origPlacementSwitchPivotManually = placeParams.SwitchPivotManually;
+            placeParams.SwitchPivotManually = true;
 
             editor.PluginMapType.PlaceMode = CGameEditorPluginMap::EPlaceMode::Item;
             CustomCursorRotations::SetCustomPYRAndCursor(itemSpec.pyr, editor.Cursor);
@@ -524,13 +537,14 @@ namespace Gizmo {
                 // we need to account for the items pivot and default pivot
                 lastAppliedPivot = itemSpec.pivotPos * -1;
                 lastAppliedPivotIx = 0;
-                auto pickedModel = itemSpec.Model;
-                // ? why did we default to the first pivot? we had the pivot above.
-                if (pickedModel.DefaultPlacementParam_Content.PivotPositions.Length > 0) {
-                    lastAppliedPivot = pickedModel.DefaultPlacementParam_Content.PivotPositions[Editor::GetCurrentPivot(editor)];
+                // normalize pivot index before indexing
+                if (placeParams.PivotPositions.Length > 0) {
+                    uint pivIx = Editor::GetCurrentPivot(editor);
+                    if (pivIx >= placeParams.PivotPositions.Length) pivIx = 0;
+                    lastAppliedPivot = placeParams.PivotPositions[pivIx];
                 }
 
-                itemSpec.Model.DefaultPlacementParam_Content.PlacementClass.CurVariant = itemSpec.variantIx;
+                placeParams.PlacementClass.CurVariant = itemSpec.variantIx;
 
                 auto bbOrigPos = bb.pos;
                 // main bb to use to set cursor // mat4::Inverse

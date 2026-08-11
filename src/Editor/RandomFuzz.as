@@ -197,4 +197,27 @@ namespace Editor {
     uint Dev_RandomFuzz_GetItemsBefore()      { return _fuzzLastItemsBefore; }
     uint Dev_RandomFuzz_GetItemsAfter()       { return _fuzzLastItemsAfter; }
 }
+#else
+// RELEASE stubs: same export surface as DEV so importers (tm-control-mcp) bind,
+// but fuzz is a no-op outside DEV builds.
+namespace Editor {
+    uint Dev_RunRandomFuzz(const vec3 &in bbMin, const vec3 &in bbMax, uint iterations, float blockRatio) {
+        return 0;
+    }
+    uint Dev_RandomFuzz_GetIterations()       { return 0; }
+    uint Dev_RandomFuzz_GetAttemptedBlock()   { return 0; }
+    uint Dev_RandomFuzz_GetAttemptedItem()    { return 0; }
+    uint Dev_RandomFuzz_GetPlacedBlock()      { return 0; }
+    uint Dev_RandomFuzz_GetPlacedItem()       { return 0; }
+    uint Dev_RandomFuzz_GetSkippedNoInv()     { return 0; }
+    uint Dev_RandomFuzz_GetSkippedBadModel()  { return 0; }
+    uint Dev_RandomFuzz_GetSkippedVariant()   { return 0; }
+    uint Dev_RandomFuzz_GetExceptions()       { return 0; }
+    string Dev_RandomFuzz_GetFirstException() { return ""; }
+    string Dev_RandomFuzz_GetCollection()     { return ""; }
+    uint Dev_RandomFuzz_GetBlocksBefore()     { return 0; }
+    uint Dev_RandomFuzz_GetBlocksAfter()      { return 0; }
+    uint Dev_RandomFuzz_GetItemsBefore()      { return 0; }
+    uint Dev_RandomFuzz_GetItemsAfter()       { return 0; }
+}
 #endif
