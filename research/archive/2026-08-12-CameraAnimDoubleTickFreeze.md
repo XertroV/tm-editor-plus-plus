@@ -79,3 +79,7 @@ If step 6–7 freeze with a multi-tick design, **revert** and document here.
 - Master table: **E28**
 - Cancel crash (different): E27 / `research/archive/2026-04-22-GizmoItemScenePhantoms.md`
 - Freeblock delete path is separately heavy (`Resetting map changes`); avoid stacking unproven camera experiments on top of it.
+
+## Follow-on (post-restart menu)
+
+While reopening BlueBay after the freeze, agent called `EditNewMap` with `environment=BlueBay` and **`decoration=""`**, which surfaces the decoration/vista prompt. See `research/archive/2026-08-12-EditNewMapEmptyDecorationPrompt.md`.
