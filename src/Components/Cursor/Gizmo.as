@@ -383,7 +383,7 @@ namespace Gizmo {
             targetSize = Editor::GetBlockSize(b);
             placingColor = CGameEditorPluginMap::EMapElemColor(int(b.MapElemColor));
             if (!blockSpec.EnsureValidVariant()) {
-                Dev_NotifyWarning("Picked block model does not have a valid variant");
+                NotifyWarning("Picked block model does not have a valid variant");
                 IsActive = false;
                 return;
             }
@@ -431,7 +431,7 @@ namespace Gizmo {
                     if (blockSpec.EnsureValidVariant()) {
                         targetVariant = blockSpec.variant;
                     } else {
-                        Dev_NotifyWarning("Selected block model does not have variant " + tostring(blockSpec.variant));
+                        NotifyWarning("Selected block model does not have variant " + tostring(blockSpec.variant));
                     }
                 } else {
                     @placingItemModel = editor.CurrentItemModel;
@@ -446,7 +446,7 @@ namespace Gizmo {
                 blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
                 // we need to ensure the variant we want to place exists
                 if (!blockSpec.EnsureValidVariant()) {
-                    Dev_NotifyWarning("Selected block model does not have variant " + tostring(blockSpec.variant));
+                    NotifyWarning("Selected block model does not have variant " + tostring(blockSpec.variant));
                 } else {
                     targetVariant = blockSpec.variant;
                 }
