@@ -707,8 +707,9 @@ namespace Gizmo {
                     // on exit; clear now so gizmo doesn't keep showing the ghost.
                     CustomCursor::RefreshStaleItemVisuals(editor);
                 }
-                // Clear pick so the editor doesn't keep a dangling pick visual.
-                try { editor.PickedObject = null; } catch {}
+                // Clear local pick handle. Don't write editor.PickedObject =
+                // null (AS type error); SetEditorPickedNod requires non-null.
+                // Placement bounce above should drop pick visuals.
                 @lastPickedItem = null;
             }
             dev_trace("Gizmo deleted target");
