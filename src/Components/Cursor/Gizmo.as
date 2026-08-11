@@ -575,17 +575,17 @@ namespace Gizmo {
                 }
                 yield();
             } else {
-                // Items: engine delete only (NudgeItemBlock pattern).
-                // Do NOT:
-                //  - AnchoredObjects.RemoveRange (UAF: scene still holds the nod)
-                //  - UpdateNewlyAddedItems after delete (crashed 2026-08-11 AV@null+0xF0
-                //    on next PlaceItems after buffer-remove + dummy place/remove)
-                //  - MwRelease PickedObject blindly (can free a still-referenced nod)
+                // Items: try engine delete first (NudgeItemBlock pattern).
+                // If RemoveMacroblock no-ops (common on BlueBay/non-Stadium for
+                // items even after donor regen — MCP RemoveRecentItems proves
+                // deleted=false method=DeleteItems), fall back to buffer remove.
                 //
-                // DeleteItems/DeleteBlocksAndItems go through RemoveMacroblock and
-                // properly detach the visual. Prefer a fresh ItemSpecPriv from the
-                // live item (same as nudge), with MwAddRef so the nod stays valid
-                // through the delete call.
+                // Do NOT call UpdateNewlyAddedItems after buffer remove — that
+                // crashed 2026-08-11 (AV null+0xF0 on next PlaceItems). See
+                // research/archive/2026-08-11-GizmoItemDeleteCrash.md.
+                // Buffer remove may leave the mesh visible until apply rebuilds
+                // the scene; that is preferable to a native crash or permanent
+                // duplicate.
                 Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Item);
                 Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
                 bool removed = false;
@@ -604,7 +604,6 @@ namespace Gizmo {
                     } else if (removed) {
                         deleteMethod = "DeleteBlocksAndItems(liveSpec)";
                     }
-                    // Fallback: DeleteItems(live array) rebuilds specs internally
                     if (!removed) {
                         removed = Editor::DeleteItems({targetItem});
                         yield();
@@ -614,7 +613,6 @@ namespace Gizmo {
                             deleteMethod = "DeleteItems";
                         }
                     }
-                    // Fallback: pre-built itemSpec from gizmo setup
                     if (!removed && itemSpec !is null) {
                         removed = Editor::DeleteBlocksAndItems({}, {itemSpec});
                         yield();
@@ -622,6 +620,19 @@ namespace Gizmo {
                             removed = false;
                         } else if (removed) {
                             deleteMethod = "DeleteBlocksAndItems(itemSpec)";
+                        }
+                    }
+                    // Buffer fallback: undo-unsafe, may lag visually until apply.
+                    if (!removed && map !is null) {
+                        for (int i = int(map.AnchoredObjects.Length) - 1; i >= 0; i--) {
+                            if (map.AnchoredObjects[i] is targetItem) {
+                                Editor::TrackMap_OnRemoveItem(targetItem);
+                                map.AnchoredObjects.RemoveRange(i, 1);
+                                removed = map.AnchoredObjects.Length < itemsBefore;
+                                if (removed) deleteMethod = "AnchoredObjects.RemoveRange";
+                                dev_trace("Gizmo item buffer RemoveRange(" + i + ",1) removed=" + removed);
+                                break;
+                            }
                         }
                     }
                     targetItem.MwRelease();
