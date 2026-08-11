@@ -328,34 +328,37 @@ class MapEditPropsTab : Tab {
     int m_DraftNbLaps = -1;
     int m_DraftIsLapRace = -1; // -1 unset, 0/1 bool
 
+    // Compact preset pill; returns true if clicked. `selected` draws active style.
+    bool ObjPresetBtn(const string &in label, bool selected) {
+        if (selected) {
+            UI::PushStyleColor(UI::Col::Button, vec4(0.20, 0.45, 0.80, 1));
+            UI::PushStyleColor(UI::Col::ButtonHovered, vec4(0.28, 0.55, 0.90, 1));
+            UI::PushStyleColor(UI::Col::ButtonActive, vec4(0.15, 0.38, 0.70, 1));
+        }
+        // Fixed width pills so 0/1/3/5 and icon align (no CalcTextSize on this OP).
+        bool clicked = UI::Button(label, vec2(36, 0));
+        if (selected) UI::PopStyleColor(3);
+        return clicked;
+    }
+
+    string FormatMedalMs(int ms) {
+        if (ms < 0) return "unset";
+        return Time::Format(uint(ms), true, true, true, false);
+    }
+
     void DrawRaceObjectivesProps(CGameCtnChallenge@ map) {
         UI::SeparatorText("Race Objectives");
 
-        // Medals are editable via map.TMObjective_* (writable API) — light edit only.
-        UI::TextDisabled("Medals (ms; -1 = unset)");
-        int at = int(map.TMObjective_AuthorTime);
-        int gold = int(map.TMObjective_GoldTime);
-        int silver = int(map.TMObjective_SilverTime);
-        int bronze = int(map.TMObjective_BronzeTime);
-        UI::SetNextItemWidth(100);
-        at = UI::InputInt("Author##obj-at", at);
-        UI::SameLine();
-        UI::SetNextItemWidth(100);
-        gold = UI::InputInt("Gold##obj-g", gold);
-        UI::SameLine();
-        UI::SetNextItemWidth(100);
-        silver = UI::InputInt("Silver##obj-s", silver);
-        UI::SameLine();
-        UI::SetNextItemWidth(100);
-        bronze = UI::InputInt("Bronze##obj-b", bronze);
-        if (uint(at) != map.TMObjective_AuthorTime) map.TMObjective_AuthorTime = uint(at);
-        if (uint(gold) != map.TMObjective_GoldTime) map.TMObjective_GoldTime = uint(gold);
-        if (uint(silver) != map.TMObjective_SilverTime) map.TMObjective_SilverTime = uint(silver);
-        if (uint(bronze) != map.TMObjective_BronzeTime) map.TMObjective_BronzeTime = uint(bronze);
+        // Medals: read-only (use Medals Editor / similar plugins to edit safely).
+        UI::TextDisabled("Medals (read-only; -1 = unset)");
+        UI::Text("Author: " + FormatMedalMs(int(map.TMObjective_AuthorTime))
+            + "   Gold: " + FormatMedalMs(int(map.TMObjective_GoldTime))
+            + "   Silver: " + FormatMedalMs(int(map.TMObjective_SilverTime))
+            + "   Bronze: " + FormatMedalMs(int(map.TMObjective_BronzeTime)));
+        AddSimpleTooltip("Medal times are not edited here — special validation rules apply. Use a dedicated medals plugin.");
 
         UI::Separator();
 
-        // Sync drafts from live map when unset or map changed.
         uint liveClones = Editor::GetMapNbClones(map);
         uint liveLaps = Editor::GetMapNbLaps(map);
         bool liveIsLap = Editor::GetMapIsLapRace(map);
@@ -363,19 +366,22 @@ class MapEditPropsTab : Tab {
         if (m_DraftNbLaps < 0) m_DraftNbLaps = int(liveLaps);
         if (m_DraftIsLapRace < 0) m_DraftIsLapRace = liveIsLap ? 1 : 0;
 
+        // ── Clones ──────────────────────────────────────────────
         UI::Text("Clones (TMObjective_NbClones)");
-        AddSimpleTooltip("0 = normal race. >0 enables clone mode (ghosts of yourself). Written via MapInfo offset (const API). Save map to persist. Max 64.");
-        UI::SetNextItemWidth(120);
+        AddSimpleTooltip("0 = normal race. >0 enables clone mode (ghost copies of yourself).\nSave map to persist. Max 64.\nNote: the stock editor validation UI may not refresh until you reopen it / save-reload — E++ writes MapInfo directly.");
+
+        UI::SetNextItemWidth(90);
         m_DraftNbClones = Math::Clamp(UI::InputInt("##nb-clones", m_DraftNbClones), 0, 64);
         UI::SameLine();
-        if (UX::SmallButton("0##cl")) m_DraftNbClones = 0;
+        if (ObjPresetBtn("0##cl-p", m_DraftNbClones == 0)) m_DraftNbClones = 0;
         UI::SameLine();
-        if (UX::SmallButton("1##cl")) m_DraftNbClones = 1;
+        if (ObjPresetBtn("1##cl-p", m_DraftNbClones == 1)) m_DraftNbClones = 1;
         UI::SameLine();
-        if (UX::SmallButton("3##cl")) m_DraftNbClones = 3;
+        if (ObjPresetBtn("3##cl-p", m_DraftNbClones == 3)) m_DraftNbClones = 3;
         UI::SameLine();
-        if (UX::SmallButton("5##cl")) m_DraftNbClones = 5;
+        if (ObjPresetBtn("5##cl-p", m_DraftNbClones == 5)) m_DraftNbClones = 5;
         UI::SameLine();
+
         bool clonesDirty = uint(m_DraftNbClones) != liveClones;
         UI::BeginDisabled(!clonesDirty);
         if (UI::Button("Apply Clones")) {
@@ -388,24 +394,68 @@ class MapEditPropsTab : Tab {
         }
         UI::EndDisabled();
         UI::SameLine();
-        UI::TextDisabled("live: " + tostring(liveClones) + (liveClones > 0 ? " (clone mode on)" : " (off)"));
+        if (clonesDirty) {
+            UI::TextDisabled("unapplied: " + m_DraftNbClones + "  (live " + liveClones
+                + (liveClones > 0 ? " on" : " off") + ")");
+        } else {
+            UI::TextDisabled("live: " + tostring(liveClones) + (liveClones > 0 ? " (on)" : " (off)"));
+        }
 
+        // ── Laps ────────────────────────────────────────────────
         UI::Text("Laps");
-        AddSimpleTooltip("NbLaps / IsLapRace are const in the Openplanet API; written via offsets like other map props.");
-        bool draftLap = m_DraftIsLapRace != 0;
-        draftLap = UI::Checkbox("Lap race##is-lap", draftLap);
-        m_DraftIsLapRace = draftLap ? 1 : 0;
+        AddSimpleTooltip("Disabled = not a lap race.\n0 = multilap without showing lap count.\n1 = shows 1/1.\n3 = three laps.\nOr set a custom count. Writes Challenge + MapInfo. Save map to persist.");
+
+        // Presets: disabled / 0 / 1 / 3
+        bool draftIsLap = m_DraftIsLapRace != 0;
+        bool selDisabled = !draftIsLap;
+        bool sel0 = draftIsLap && m_DraftNbLaps == 0;
+        bool sel1 = draftIsLap && m_DraftNbLaps == 1;
+        bool sel3 = draftIsLap && m_DraftNbLaps == 3;
+
+        if (ObjPresetBtn(Icons::Ban + "##lap-off", selDisabled)) {
+            m_DraftIsLapRace = 0;
+        }
+        AddSimpleTooltip("Disabled — not a lap race");
         UI::SameLine();
-        UI::BeginDisabled(!draftLap);
-        UI::SetNextItemWidth(80);
-        m_DraftNbLaps = Math::Clamp(UI::InputInt("Nb laps##nb-laps", m_DraftNbLaps), 1, 99);
+        if (ObjPresetBtn("0##lap-p", sel0)) {
+            m_DraftIsLapRace = 1;
+            m_DraftNbLaps = 0;
+        }
+        AddSimpleTooltip("Multilap, hide lap counter (NbLaps=0)");
+        UI::SameLine();
+        if (ObjPresetBtn("1##lap-p", sel1)) {
+            m_DraftIsLapRace = 1;
+            m_DraftNbLaps = 1;
+        }
+        AddSimpleTooltip("Lap race showing 1/1");
+        UI::SameLine();
+        if (ObjPresetBtn("3##lap-p", sel3)) {
+            m_DraftIsLapRace = 1;
+            m_DraftNbLaps = 3;
+        }
+        AddSimpleTooltip("3 laps");
+        UI::SameLine();
+
+        UI::BeginDisabled(m_DraftIsLapRace == 0);
+        UI::SetNextItemWidth(70);
+        int lapsIn = m_DraftIsLapRace == 0 ? int(liveLaps) : m_DraftNbLaps;
+        lapsIn = UI::InputInt("##nb-laps-custom", lapsIn);
+        if (m_DraftIsLapRace != 0) m_DraftNbLaps = Math::Clamp(lapsIn, 0, 99);
         UI::EndDisabled();
         UI::SameLine();
-        bool lapsDirty = (m_DraftIsLapRace != 0) != liveIsLap || uint(m_DraftNbLaps) != liveLaps;
+        UI::TextDisabled("Nb laps");
+        UI::SameLine();
+
+        bool lapsDirty = (m_DraftIsLapRace != 0) != liveIsLap
+            || (m_DraftIsLapRace != 0 && uint(m_DraftNbLaps) != liveLaps);
         UI::BeginDisabled(!lapsDirty);
         if (UI::Button("Apply Laps")) {
-            bool ok = Editor::SetMapIsLapRace(map, m_DraftIsLapRace != 0);
-            if (m_DraftIsLapRace != 0) ok = Editor::SetMapNbLaps(map, uint(m_DraftNbLaps)) && ok;
+            bool ok;
+            if (m_DraftIsLapRace == 0) {
+                ok = Editor::SetMapLapMode(map, false);
+            } else {
+                ok = Editor::SetMapLapMode(map, true, uint(m_DraftNbLaps));
+            }
             if (ok) NotifySuccess("Lap settings applied (save map to persist)");
             else NotifyWarning("Lap settings write may have partially failed — check live values.");
             m_DraftNbLaps = int(Editor::GetMapNbLaps(map));
@@ -413,19 +463,30 @@ class MapEditPropsTab : Tab {
         }
         UI::EndDisabled();
         UI::SameLine();
-        UI::TextDisabled("live: " + (liveIsLap ? (tostring(liveLaps) + " laps") : "not lap race"));
+        if (lapsDirty) {
+            string draftDesc = m_DraftIsLapRace == 0
+                ? "disabled"
+                : (tostring(m_DraftNbLaps) + " laps");
+            string liveDesc = liveIsLap
+                ? (tostring(liveLaps) + " laps")
+                : "not lap race";
+            UI::TextDisabled("unapplied: " + draftDesc + "  (live " + liveDesc + ")");
+        } else {
+            UI::TextDisabled("live: " + (liveIsLap ? (tostring(liveLaps) + " laps") : "not lap race"));
+        }
 
 #if DEV
         if (UI::CollapsingHeader("Objectives RE dump")) {
             auto info = map.MapInfo;
             UI::Text("MapInfo.NbClones=" + (info is null ? "null" : tostring(info.TMObjective_NbClones)));
-            UI::Text("g_MapNbClonesRelOff=" + tostring(Editor::g_MapNbClonesRelOff));
-            uint16 oAT = Editor::O_MAP_TMObjective_AuthorTime;
-            string dump = "";
-            for (uint i = 0; i < 12; i++) {
-                dump += Text::Format("%02x", i * 4) + ":" + tostring(Dev::GetOffsetUint32(map, oAT + i * 4)) + " ";
-            }
-            UI::TextWrapped(dump);
+            UI::Text("MapInfo.NbLaps=" + (info is null ? "null" : tostring(info.TMObjective_NbLaps))
+                + " IsLap=" + (info is null ? "?" : tostring(info.TMObjective_IsLapRace)));
+            UI::Text("Challenge.NbLaps=" + map.TMObjective_NbLaps + " IsLap=" + tostring(map.TMObjective_IsLapRace));
+            UI::Text("offs infoNbClones=0x" + Text::Format("%x", Editor::g_OffMapInfoNbClones)
+                + " infoNbLaps=0x" + Text::Format("%x", Editor::g_OffMapInfoNbLaps)
+                + " infoIsLap=0x" + Text::Format("%x", Editor::g_OffMapInfoIsLapRace));
+            UI::Text("offs chNbLaps=0x" + Text::Format("%x", Editor::g_OffMapNbLaps)
+                + " chIsLap=0x" + Text::Format("%x", Editor::g_OffMapIsLapRace));
         }
 #endif
     }

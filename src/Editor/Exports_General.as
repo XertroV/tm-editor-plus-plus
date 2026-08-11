@@ -88,6 +88,7 @@ namespace Editor {
     import bool GetMapIsLapRace(CGameCtnChallenge@ map) from "Editor";
     import bool SetMapNbLaps(CGameCtnChallenge@ map, uint nbLaps) from "Editor";
     import bool SetMapIsLapRace(CGameCtnChallenge@ map, bool isLap) from "Editor";
+    import bool SetMapLapMode(CGameCtnChallenge@ map, bool isLap, uint nbLaps = 0) from "Editor";
 
     // map cache
     import IMapCache@ GetIMapCache() from "Editor";
