@@ -668,15 +668,12 @@ namespace Gizmo {
 
                 // Capture target pose before delete for leftover checks.
                 vec3 targetPos = vec3(0);
-                string targetName = "";
                 bool haveTargetPos = false;
                 if (targetItem !is null) {
                     targetPos = targetItem.AbsolutePositionInMap;
-                    if (targetItem.ItemModel !is null) targetName = targetItem.ItemModel.IdName;
                     haveTargetPos = true;
                 } else if (itemSpec !is null) {
                     targetPos = itemSpec.pos;
-                    targetName = itemSpec.name;
                     haveTargetPos = true;
                 }
 
