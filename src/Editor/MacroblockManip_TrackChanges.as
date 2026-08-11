@@ -541,8 +541,23 @@ namespace Editor {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (mbSpec is null || editor is null || editor.PluginMapType is null) return false;
         auto pmt = editor.PluginMapType;
-        if (pmt.MacroblockModels.Length == 0) return false;
-        auto mb = pmt.MacroblockModels[0];
+        // Match PlaceMacroblock donor selection. MacroblockModels[0] is not
+        // reliable (wrong env / empty inventory entry) and causes silent no-ops
+        // for item+block deletes that go through RemoveMacroblock.
+        auto mbPath = Editor::GetDonorMacroblockPath();
+        CGameCtnMacroBlockInfo@ mb = pmt.GetMacroblockModelFromFilePath(mbPath);
+        if (mb is null) {
+            auto mbFid = Fids::GetGame("GameData\\" + mbPath);
+            @mb = cast<CGameCtnMacroBlockInfo>(Fids::Preload(mbFid));
+        }
+        if (mb is null && pmt.MacroblockModels.Length > 0) {
+            @mb = pmt.MacroblockModels[0];
+            warn("DeleteMacroblock: falling back to MacroblockModels[0] (" + mb.IdName + "); preferred donor missing: " + mbPath);
+        }
+        if (mb is null) {
+            warn("DeleteMacroblock: no donor macroblock available");
+            return false;
+        }
         Editor::QueueFreeBlockDeletionFromMB(mbSpec);
         try {
             mbSpec._TempWriteToMacroblock(mb);

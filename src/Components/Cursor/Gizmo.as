@@ -569,9 +569,50 @@ namespace Gizmo {
                 }
                 yield();
             } else {
+                // Items: prefer live DeleteItems; itemSpec RemoveMacroblock can
+                // silently no-op (donor/match issues), leaving the original and
+                // producing a duplicate on apply (same symptom as B1 for blocks).
                 Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Item);
                 Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
-                Editor::DeleteBlocksAndItems({}, {itemSpec});
+                bool removed = false;
+                CGameCtnAnchoredObject@ targetItem = lastPickedItem !is null ? lastPickedItem.AsItem() : null;
+                auto map = editor.Challenge;
+                uint itemsBefore = map !is null ? map.AnchoredObjects.Length : 0;
+                if (targetItem !is null) {
+                    removed = Editor::DeleteItems({targetItem});
+                    if (map !is null && map.AnchoredObjects.Length >= itemsBefore) {
+                        // DeleteItems returned true but count didn't drop, or returned false.
+                        removed = false;
+                    }
+                }
+                if (!removed && itemSpec !is null) {
+                    removed = Editor::DeleteBlocksAndItems({}, {itemSpec});
+                    if (map !is null && map.AnchoredObjects.Length >= itemsBefore) {
+                        removed = false;
+                    }
+                }
+                // Last resort: direct buffer remove by identity (undo-unsafe).
+                if (!removed && targetItem !is null && map !is null) {
+                    for (int i = int(map.AnchoredObjects.Length) - 1; i >= 0; i--) {
+                        if (map.AnchoredObjects[i] is targetItem) {
+                            Editor::TrackMap_OnRemoveItem(targetItem);
+                            map.AnchoredObjects.RemoveAt(i);
+                            removed = map.AnchoredObjects.Length < itemsBefore;
+                            dev_trace("Gizmo item delete via AnchoredObjects.RemoveAt(" + i + ") removed=" + removed);
+                            break;
+                        }
+                    }
+                }
+                if (!removed) {
+                    NotifyWarning("Gizmo: failed to delete original item; apply may leave a duplicate");
+                    dev_trace("Gizmo item delete failed; itemsBefore=" + itemsBefore
+                        + " itemsNow=" + (map !is null ? map.AnchoredObjects.Length : 0)
+                        + " targetNull=" + (targetItem is null)
+                        + " itemSpecNull=" + (itemSpec is null));
+                } else {
+                    dev_trace("Gizmo deleted item");
+                    @lastPickedItem = null;
+                }
             }
             dev_trace("Gizmo deleted target");
         }
