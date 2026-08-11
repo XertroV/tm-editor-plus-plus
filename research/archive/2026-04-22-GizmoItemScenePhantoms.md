@@ -81,9 +81,17 @@ Intended as class C clear (`a0c1b17`).
 
 Gizmo loop forces `UseSnappedLoc = true` each frame. If exit doesn’t clear it, item previews can stick to a bad snapped matrix (half-block offsets).
 
-**Mitigation:** On gizmo inactive, set `editor.Cursor.UseSnappedLoc = false` and soft bounce placement modes only.
+**Mitigation:** On gizmo inactive, set `editor.Cursor.UseSnappedLoc = false` and soft bounce placement modes only **for item gizmo targets**.
 
-### 4. Banned paths (from E26 / crash archive)
+### 4. Block gizmo cancel + Undo + placement bounce (native crash)
+
+**Observed 2026-04-22:** User gizmo’d a block (replace deletes at setup), cancelled. Log: delete OK → cancel `Undo()` floods `OnAddBlockHook` / `OnItemPlaced` → `SoftPlacementBounceOnly` (FreeBlock↔Ghost↔Item) → `Resetting map changes` → **TM dead**.
+
+**Cause:** `OnGoInactive` scheduled item-cursor bounce when `origModeWasItem` even for **block** gizmo; bounce raced map undo restore.
+
+**Mitigation:** Bounce only if `modePlacingType`/`modeTargetType` is Item; on cancel set skip-flush, deactivate first, **defer Undo one frame**.
+
+### 5. Banned paths (from E26 / crash archive)
 
 - `AnchoredObjects.RemoveRange` after gizmo delete  
 - `UpdateNewlyAddedItems` after partial/buffer delete → PlaceItems AV null+0xF0  

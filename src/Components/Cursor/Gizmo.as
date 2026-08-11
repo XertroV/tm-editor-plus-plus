@@ -49,6 +49,9 @@ namespace Gizmo {
     const string gizmoControlName = "Gizmo";
 
     bool _IsActive = false;
+    // Set before IsActive=false on cancel so OnGoInactive does not bounce
+    // placement modes in the same breath as Undo restore.
+    bool s_SkipGhostFlushOnDeactivate = false;
 
     bool get_IsActive() {
         return _IsActive;
@@ -113,9 +116,12 @@ namespace Gizmo {
         if (editor !is null && editor.Cursor !is null) {
             editor.Cursor.UseSnappedLoc = false;
         }
-        // Soft placement bounce only — never HelperMobil.Hide / len=0.
-        if (editor !is null && (origModeWasItem || modePlacingType == BlockOrItem::Item
-            || modeTargetType == BlockOrItem::Item)) {
+        // Item-target gizmo only: soft bounce. Never bounce on block gizmo exit
+        // (esp. cancel+Undo) — FreeBlock/Ghost/Item thrash during map restore
+        // can native-crash. Also skip if cancel deferred-undo is pending.
+        if (editor !is null
+            && !s_SkipGhostFlushOnDeactivate
+            && (modePlacingType == BlockOrItem::Item || modeTargetType == BlockOrItem::Item)) {
             Fixes::ScheduleGhostItemFlush();
             if (origModeWasItem) {
                 Editor::SetItemPlacementMode(origItemPlacementMode);
@@ -124,6 +130,7 @@ namespace Gizmo {
                 Editor::SetPlacementMode(editor, origPlaceMode);
             }
         }
+        s_SkipGhostFlushOnDeactivate = false;
         _IsActive = false;
     }
 
@@ -921,17 +928,37 @@ namespace Gizmo {
 
     void _GizmoOnCancel() {
         if (!IsActive) return;
-        bool hadGizmo = gizmo !is null;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) {
             IsActive = false;
             return;
         }
-        if (hadGizmo && shouldReplaceTarget) {
-            editor.PluginMapType.Undo();
+        // Replace setup already deleted the target. Cancel must Undo to restore.
+        // Do NOT Undo while still active and then bounce placement modes in
+        // OnGoInactive (native crash: FreeBlock/Ghost/Item thrash mid-restore).
+        bool needUndo = shouldReplaceTarget;
+        s_SkipGhostFlushOnDeactivate = true;
+        if (editor.PluginMapType !is null) {
+            editor.PluginMapType.EnableEditorInputsCustomProcessing = false;
         }
-        if (editor !is null) editor.PluginMapType.EnableEditorInputsCustomProcessing = false;
-        IsActive = false;
+        IsActive = false; // OnGoInactive cleanup first (no mode bounce)
+        if (needUndo) {
+            startnew(_DeferredCancelUndo);
+        }
+    }
+
+    void _DeferredCancelUndo() {
+        // Let gizmo cleanup / exclusive control release settle one frame.
+        yield();
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null || editor.PluginMapType is null) return;
+        try {
+            editor.PluginMapType.Undo();
+            dev_trace("Gizmo cancel: deferred Undo done");
+        } catch {
+            dev_trace("Gizmo cancel: Undo failed: " + getExceptionInfo());
+            NotifyWarning("Gizmo cancel: Undo failed — map may be missing the deleted block/item");
+        }
     }
 
     void DisableGizmoInAsync(uint64 frames) {
