@@ -49,6 +49,9 @@ namespace Gizmo {
     const string gizmoControlName = "Gizmo";
 
     bool _IsActive = false;
+    // Set before IsActive=false on cancel so OnGoInactive does not bounce
+    // placement modes in the same breath as Undo restore.
+    bool s_SkipGhostFlushOnDeactivate = false;
 
     bool get_IsActive() {
         return _IsActive;
@@ -86,7 +89,8 @@ namespace Gizmo {
         if (gizmo !is null) gizmo.CleanUp();
         @gizmo = null;
 
-        if (itemSpec !is null) {
+        if (itemSpec !is null && itemSpec.Model !is null
+            && itemSpec.Model.DefaultPlacementParam_Content !is null) {
             itemSpec.Model.DefaultPlacementParam_Content.SwitchPivotManually = origPlacementSwitchPivotManually;
         }
 
@@ -107,6 +111,26 @@ namespace Gizmo {
         if (origModeWasItem) {
             Editor::SetItemPlacementMode(origItemPlacementMode);
         }
+        // Gizmo forces UseSnappedLoc=true every frame; leave it on and item
+        // previews can trail half a block (~16m) away from the cursor.
+        if (editor !is null && editor.Cursor !is null) {
+            editor.Cursor.UseSnappedLoc = false;
+        }
+        // Item-target gizmo only: soft bounce. Never bounce on block gizmo exit
+        // (esp. cancel+Undo) — FreeBlock/Ghost/Item thrash during map restore
+        // can native-crash. Also skip if cancel deferred-undo is pending.
+        if (editor !is null
+            && !s_SkipGhostFlushOnDeactivate
+            && (modePlacingType == BlockOrItem::Item || modeTargetType == BlockOrItem::Item)) {
+            Fixes::ScheduleGhostItemFlush();
+            if (origModeWasItem) {
+                Editor::SetItemPlacementMode(origItemPlacementMode);
+            }
+            if (Editor::GetPlacementMode(editor) != origPlaceMode) {
+                Editor::SetPlacementMode(editor, origPlaceMode);
+            }
+        }
+        s_SkipGhostFlushOnDeactivate = false;
         _IsActive = false;
     }
 
@@ -212,6 +236,9 @@ namespace Gizmo {
         }
         bool isItem = modePlacingType == BlockOrItem::Item;
         CustomCursor::NoSetCursorVisFlagPatchActive = !isItem;
+        // Keep item preview visible during gizmo; clear patches on exit.
+        // Do NOT HelperMobil.Hide / zero CurrentModels here — that left
+        // trail phantoms (~half-block offsets) on every cursor update.
         if (isItem) CustomCursor::NoHideCursorItemModelsPatchActive = true;
         CustomCursor::NoShowCursorItemModelsPatchActive = !isItem;
 
@@ -279,12 +306,17 @@ namespace Gizmo {
 
     void CyclePivot() {
         if (modeTargetType == BlockOrItem::Block) {
+            if (gizmo is null || bb is null) return;
             if (gizmo.pivotPoint.LengthSquared() < 0.01) {
                 ApplyPivot(bb.halfDiag);
             } else {
                 ApplyPivot(vec3());
             }
         } else {
+            if (itemSpec is null || itemSpec.Model is null
+                || itemSpec.Model.DefaultPlacementParam_Content is null || gizmo is null) {
+                return;
+            }
             auto pp = itemSpec.Model.DefaultPlacementParam_Content;
             if (pp.PivotPositions.Length > 1) {
                 lastAppliedPivotIx = (lastAppliedPivotIx + 1) % pp.PivotPositions.Length;
@@ -292,7 +324,7 @@ namespace Gizmo {
             } else {
                 lastAppliedPivotIx = uint(-1);
                 if (gizmo.pivotPoint.LengthSquared() < 0.01) {
-                    ApplyPivot(bb.halfDiag - lastAppliedPivot);
+                    ApplyPivot(bb !is null ? bb.halfDiag - lastAppliedPivot : vec3());
                 } else {
                     ApplyPivot(vec3());
                 }
@@ -381,8 +413,13 @@ namespace Gizmo {
             targetPos = Editor::GetBlockLocation(b);
             targetRot = Editor::GetBlockRotationMatrix(b);
             targetSize = Editor::GetBlockSize(b);
-            targetVariant = blockSpec.variant;
             placingColor = CGameEditorPluginMap::EMapElemColor(int(b.MapElemColor));
+            if (!blockSpec.EnsureValidVariant()) {
+                NotifyWarning("Picked block model does not have a valid variant");
+                IsActive = false;
+                return;
+            }
+            targetVariant = blockSpec.variant;
         } else {
             CGameCtnAnchoredObject@ item2;
             if (lastPickedItem is null || (@item2 = lastPickedItem.AsItem()) is null) {
@@ -423,12 +460,26 @@ namespace Gizmo {
                 if (modePlacingType == BlockOrItem::Block) {
                     blockSpec.SetBlockInfo(placingBlockModel);
                     blockSpec.variant = targetVariant;
-                    blockSpec.EnsureValidVariant();
+                    if (blockSpec.EnsureValidVariant()) {
+                        targetVariant = blockSpec.variant;
+                    } else {
+                        NotifyWarning("Selected block model does not have variant " + tostring(blockSpec.variant));
+                    }
                 } else {
                     @placingItemModel = editor.CurrentItemModel;
+                    if (placingItemModel is null) {
+                        NotifyWarning("Gizmo: no item selected to place");
+                        IsActive = false;
+                        return;
+                    }
                     itemSpec.SetModel(placingItemModel);
                     itemSpec.variantIx = Editor::GetCurrentItemVariant(editor);
                     auto pp = placingItemModel.DefaultPlacementParam_Content;
+                    if (pp is null) {
+                        NotifyWarning("Gizmo: selected item has no placement params");
+                        IsActive = false;
+                        return;
+                    }
                     itemSpec.pivotPos = pp.PivotPositions.Length == 0 ? vec3() : pp.PivotPositions[Editor::GetCurrentPivot(editor) % pp.PivotPositions.Length];
                 }
             }
@@ -437,7 +488,9 @@ namespace Gizmo {
                 blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
                 // we need to ensure the variant we want to place exists
                 if (!blockSpec.EnsureValidVariant()) {
-                    Dev_NotifyWarning("Selected block model does not have variant " + tostring(blockSpec.variant));
+                    NotifyWarning("Selected block model does not have variant " + tostring(blockSpec.variant));
+                } else {
+                    targetVariant = blockSpec.variant;
                 }
             } else {
                 itemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(placingColor));
@@ -505,6 +558,41 @@ namespace Gizmo {
             return;
         }
 
+        // Abort cleanly when place-type specs/models are missing (e.g. ghost mode
+        // with no pick, RMB place-item without a selected item model, or models
+        // with null DefaultPlacementParam_Content). Previously NPE'd at
+        // WithPlacementParams / apply itemSpec.isFlying.
+        if (modePlacingType == BlockOrItem::Item) {
+            if (itemSpec is null || placingItemModel is null
+                || placingItemModel.DefaultPlacementParam_Content is null) {
+                NotifyWarning("Gizmo: no item to place (nothing picked / no item selected)");
+                dev_trace("Gizmo abort: item place missing spec/model/placementParam"
+                    + " itemSpecNull=" + (itemSpec is null)
+                    + " modelNull=" + (placingItemModel is null)
+                    + " target=" + tostring(modeTargetType)
+                    + " placing=" + tostring(modePlacingType)
+                    + " replace=" + shouldReplaceTarget);
+                @itemSpec = null;
+                IsActive = false;
+                return;
+            }
+        } else {
+            if (blockSpec is null || placingBlockModel is null) {
+                // placingBlockModel may be null if we only have blockSpec.BlockInfo
+                if (blockSpec is null || blockSpec.BlockInfo is null) {
+                    NotifyWarning("Gizmo: no block to place (nothing picked / no block selected)");
+                    dev_trace("Gizmo abort: block place missing spec/model"
+                        + " blockSpecNull=" + (blockSpec is null)
+                        + " target=" + tostring(modeTargetType)
+                        + " placing=" + tostring(modePlacingType)
+                        + " replace=" + shouldReplaceTarget);
+                    @blockSpec = null;
+                    IsActive = false;
+                    return;
+                }
+            }
+        }
+
         if (shouldReplaceTarget) {
             editor.PluginMapType.AutoSave();
             dev_trace("Gizmo deleting target");
@@ -519,13 +607,153 @@ namespace Gizmo {
                     Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
                     Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
                 } else {
-                    Editor::DeleteBlocksAndItems({blockSpec}, {});
+                    // Normal/ghost: delete via the live map block. Do not rely on
+                    // blockSpec for RemoveMacroblock matching — EnsureValidVariant
+                    // (via SetBlockInfo / gizmo setup) can rewrite variant/ground
+                    // flags so the temp-written MB no longer matches the original,
+                    // leaving it on the map and producing a duplicate on apply.
+                    //
+                    // Set placement mode first (freeblock path already did). On
+                    // BlueBay, first RemoveBlockSafe after a cold pick sometimes
+                    // no-ops if mode is still FreeBlock/Item from a prior tool.
+                    Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Block);
+                    Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+                    bool removed = false;
+                    CGameCtnBlock@ targetBlock = lastPickedBlock !is null ? lastPickedBlock.AsBlock() : null;
+                    if (targetBlock !is null) {
+                        auto pmt = editor.PluginMapType;
+                        auto coord = Nat3ToInt3(targetBlock.Coord);
+                        Editor::TrackMap_OnRemoveBlock_BeginAPI();
+                        removed = pmt.RemoveBlockSafe(
+                            targetBlock.BlockInfo,
+                            coord,
+                            CGameEditorPluginMap::ECardinalDirections(int(targetBlock.Direction))
+                        );
+                        if (!removed) {
+                            removed = pmt.RemoveBlock(coord);
+                        }
+                        Editor::TrackMap_OnRemoveBlock_EndAPI();
+                        if (!removed) {
+                            removed = Editor::DeleteBlocks({targetBlock});
+                        }
+                    }
+                    if (!removed) {
+                        removed = Editor::DeleteBlocksAndItems({blockSpec}, {});
+                    }
+                    if (!removed) {
+                        NotifyWarning("Gizmo: failed to delete original block; apply may leave a duplicate");
+                        dev_trace("Gizmo normal-block delete failed; name=" + blockSpec.name
+                            + " flags=" + blockSpec.flags
+                            + " vx=" + blockSpec.variant
+                            + " coord=" + blockSpec.coord.ToString());
+                    } else {
+                        dev_trace("Gizmo deleted normal/ghost block");
+                    }
                 }
                 yield();
             } else {
+                // Items: NudgeItemBlock pattern ONLY.
+                // NEVER AnchoredObjects.RemoveRange — drops the map entry while
+                // the scene graph still holds the nod → UAF. First gizmo can
+                // "work"; second place/gizmo hits AV null+0xF0 (LogCrash *B9D61D).
+                // NEVER UpdateNewlyAddedItems after a partial delete either.
+                // Prefer leaving a duplicate (with NotifyWarning) over a crash.
                 Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Item);
                 Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
-                Editor::DeleteBlocksAndItems({}, {itemSpec});
+                bool removed = false;
+                string deleteMethod = "none";
+                CGameCtnAnchoredObject@ targetItem = lastPickedItem !is null ? lastPickedItem.AsItem() : null;
+                auto map = editor.Challenge;
+                uint itemsBefore = map !is null ? map.AnchoredObjects.Length : 0;
+
+                // Capture target pose before delete for leftover checks.
+                vec3 targetPos = vec3(0);
+                string targetName = "";
+                bool haveTargetPos = false;
+                if (targetItem !is null) {
+                    targetPos = targetItem.AbsolutePositionInMap;
+                    if (targetItem.ItemModel !is null) targetName = targetItem.ItemModel.IdName;
+                    haveTargetPos = true;
+                } else if (itemSpec !is null) {
+                    targetPos = itemSpec.pos;
+                    targetName = itemSpec.name;
+                    haveTargetPos = true;
+                }
+
+                if (targetItem !is null) {
+                    // Pin while we build specs / call delete (same as Nudge).
+                    targetItem.MwAddRef();
+                    auto liveSpec = Editor::ItemSpecPriv(targetItem);
+                    removed = Editor::DeleteBlocksAndItems({}, {liveSpec});
+                    yield();
+                    if (map !is null && map.AnchoredObjects.Length >= itemsBefore) {
+                        removed = false;
+                    } else if (removed) {
+                        deleteMethod = "DeleteBlocksAndItems(liveSpec)";
+                    }
+                    if (!removed) {
+                        removed = Editor::DeleteItems({targetItem});
+                        yield();
+                        if (map !is null && map.AnchoredObjects.Length >= itemsBefore) {
+                            removed = false;
+                        } else if (removed) {
+                            deleteMethod = "DeleteItems";
+                        }
+                    }
+                    if (!removed && itemSpec !is null) {
+                        removed = Editor::DeleteBlocksAndItems({}, {itemSpec});
+                        yield();
+                        if (map !is null && map.AnchoredObjects.Length >= itemsBefore) {
+                            removed = false;
+                        } else if (removed) {
+                            deleteMethod = "DeleteBlocksAndItems(itemSpec)";
+                        }
+                    }
+                    targetItem.MwRelease();
+                } else if (itemSpec !is null) {
+                    removed = Editor::DeleteBlocksAndItems({}, {itemSpec});
+                    yield();
+                    if (map !is null && map.AnchoredObjects.Length >= itemsBefore) {
+                        removed = false;
+                    } else if (removed) {
+                        deleteMethod = "DeleteBlocksAndItems(itemSpec-only)";
+                    }
+                }
+
+                if (!removed) {
+                    NotifyWarning("Gizmo: failed to delete original item; apply may leave a duplicate");
+                    dev_trace("Gizmo item delete failed; itemsBefore=" + itemsBefore
+                        + " itemsNow=" + (map !is null ? map.AnchoredObjects.Length : 0)
+                        + " targetNull=" + (targetItem is null)
+                        + " itemSpecNull=" + (itemSpec is null));
+                } else {
+                    dev_trace("Gizmo deleted item via " + deleteMethod
+                        + "; itemsNow=" + (map !is null ? map.AnchoredObjects.Length : 0));
+                    // Count dropped, but magnet-snap / similar pillars can make
+                    // RemoveMacroblock match the WRONG item — original pose stays.
+                    // Also pure scene phantoms won't show here (no AO).
+                    if (haveTargetPos && map !is null) {
+                        uint leftovers = 0;
+                        for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
+                            auto ao = map.AnchoredObjects[i];
+                            if (ao is null) continue;
+                            if ((ao.AbsolutePositionInMap - targetPos).LengthSquared() > 0.01) continue;
+                            leftovers++;
+                            dev_trace("Gizmo item delete leftover AO[" + i + "] pos="
+                                + ao.AbsolutePositionInMap.ToString()
+                                + " name=" + (ao.ItemModel !is null ? ao.ItemModel.IdName : "?"));
+                        }
+                        if (leftovers > 0) {
+                            NotifyWarning("Gizmo: deleted something, but " + leftovers
+                                + " item(s) still at the old position (possible wrong match / twin)."
+                                + " Apply may stack another — check map.");
+                        }
+                    }
+                    if (editor.ItemCursor !is null) {
+                        Fixes::ClearGhostItemDraws(editor.ItemCursor);
+                    }
+                }
+                @lastPickedItem = null;
             }
             dev_trace("Gizmo deleted target");
         }
@@ -537,6 +765,12 @@ namespace Gizmo {
             .WithPlacingType(modePlacingType);
 
         if (modePlacingType == BlockOrItem::Item) {
+            if (placingItemModel is null || placingItemModel.DefaultPlacementParam_Content is null) {
+                // Defensive: should have aborted above; never NPE here.
+                NotifyWarning("Gizmo: item model has no placement params");
+                IsActive = false;
+                return;
+            }
             gizmo.WithPlacementParams(placingItemModel.DefaultPlacementParam_Content);
             // gizmo.pivotPoint = lastAppliedPivot;
         } else if (modePlacingType == BlockOrItem::Block) {
@@ -589,10 +823,25 @@ namespace Gizmo {
             IsActive = false;
             return;
         }
+        if (gizmo is null) {
+            NotifyWarning("Gizmo: apply with no active gizmo");
+            IsActive = false;
+            return;
+        }
         // auto coordSizeXY = Editor::GetMapCoordSize(editor.Challenge);
         // auto hOffset = -Editor::GetMapExtendsBelowZero(editor.Challenge) - coordSizeXY.y;
         auto xyzOffset = Editor::GetMacroblockPosOffset();
         if (modePlacingType == BlockOrItem::Item) {
+            if (itemSpec is null) {
+                NotifyWarning("Gizmo: cannot apply — no item spec (empty / aborted setup)");
+                if (setInactiveAfter) IsActive = false;
+                return;
+            }
+            if (itemSpec.Model is null) {
+                NotifyWarning("Gizmo: cannot apply — item model is null");
+                if (setInactiveAfter) IsActive = false;
+                return;
+            }
             dev_trace("Applying gizmo item: ");
             dev_trace("   lastAppliedPivot: " + lastAppliedPivot.ToString());
             dev_trace("   gizmo.placementParamOffset: " + gizmo.placementParamOffset.ToString());
@@ -605,6 +854,11 @@ namespace Gizmo {
             itemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(placingColor));
             Editor::PlaceItems({itemSpec}, true);
         } else {
+            if (blockSpec is null) {
+                NotifyWarning("Gizmo: cannot apply — no block spec (empty / aborted setup)");
+                if (setInactiveAfter) IsActive = false;
+                return;
+            }
             // this will only unapply if it was applied earlier
             gizmo.OffsetBlockOnApply();
             // blockSpec.flags = uint8(Editor::BlockFlags::Free);
@@ -615,7 +869,8 @@ namespace Gizmo {
             blockSpec.pyr = EulerFromRotationMatrix(mat4::Inverse(gizmo.rot));
             blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
             if (!blockSpec.EnsureValidVariant()) {
-                warn("Selected block model does not have variant " + tostring(blockSpec.variant));
+                NotifyError("Cannot apply gizmo: selected block model does not have a valid variant");
+                return;
             }
             Editor::PlaceBlocks({blockSpec}, true);
             startnew(_AfterApply_SetBlockSkin);
@@ -626,8 +881,42 @@ namespace Gizmo {
         // startnew(DisableGizmoInAsync, uint64(1));
     }
 
+#if DEV
+    bool Dev_RunApplyBlock(CGameCtnBlockInfo@ blockInfo, const vec3 &in targetPos, uint forcedVariant = 0) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null || editor.PluginMapType is null || blockInfo is null) return false;
+
+        auto beforeBlocks = editor.Challenge.Blocks.Length;
+        modePlacingType = BlockOrItem::Block;
+        placingColor = editor.PluginMapType.NextMapElemColor;
+        @blockSpec = Editor::BlockSpecPriv(blockInfo, targetPos, vec3());
+        blockSpec.SetFree();
+        blockSpec.isGround = false;
+        blockSpec.isGhost = false;
+        blockSpec.variant = forcedVariant;
+        blockSpec.color = CGameCtnBlock::EMapElemColor(int(placingColor));
+        if (!blockSpec.EnsureValidVariant()) return false;
+
+        auto size = Editor::GetBlockSize(blockInfo);
+        auto macroblockOffset = Editor::GetMacroblockPosOffset();
+        auto targetMat = mat4::Translate(targetPos - macroblockOffset);
+        auto targetBb = Editor::AABB(targetMat, size / 2., size / 2.);
+        @gizmo = RotationTranslationGizmo("dev-gizmo-apply").WithBoundingBox(targetBb).WithPlacingType(BlockOrItem::Block);
+
+        try {
+            _GizmoOnApply_Params(false);
+        } catch {
+            warn("[MB-E3-DIAG] gizmo apply exception: " + getExceptionInfo());
+        }
+
+        @gizmo = null;
+        @blockSpec = null;
+        return editor.Challenge.Blocks.Length > beforeBlocks;
+    }
+#endif
+
     void _AfterApply_SetBlockSkin() {
-        if (blockSpec.skin !is null) {
+        if (blockSpec !is null && blockSpec.skin !is null) {
             auto skin = blockSpec.skin;
             @blockSpec.skin = null;
             @skin.block = blockSpec;
@@ -639,17 +928,37 @@ namespace Gizmo {
 
     void _GizmoOnCancel() {
         if (!IsActive) return;
-        bool hadGizmo = gizmo !is null;
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) {
             IsActive = false;
             return;
         }
-        if (hadGizmo && shouldReplaceTarget) {
-            editor.PluginMapType.Undo();
+        // Replace setup already deleted the target. Cancel must Undo to restore.
+        // Do NOT Undo while still active and then bounce placement modes in
+        // OnGoInactive (native crash: FreeBlock/Ghost/Item thrash mid-restore).
+        bool needUndo = shouldReplaceTarget;
+        s_SkipGhostFlushOnDeactivate = true;
+        if (editor.PluginMapType !is null) {
+            editor.PluginMapType.EnableEditorInputsCustomProcessing = false;
         }
-        if (editor !is null) editor.PluginMapType.EnableEditorInputsCustomProcessing = false;
-        IsActive = false;
+        IsActive = false; // OnGoInactive cleanup first (no mode bounce)
+        if (needUndo) {
+            startnew(_DeferredCancelUndo);
+        }
+    }
+
+    void _DeferredCancelUndo() {
+        // Let gizmo cleanup / exclusive control release settle one frame.
+        yield();
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null || editor.PluginMapType is null) return;
+        try {
+            editor.PluginMapType.Undo();
+            dev_trace("Gizmo cancel: deferred Undo done");
+        } catch {
+            dev_trace("Gizmo cancel: Undo failed: " + getExceptionInfo());
+            NotifyWarning("Gizmo cancel: Undo failed — map may be missing the deleted block/item");
+        }
     }
 
     void DisableGizmoInAsync(uint64 frames) {
@@ -803,6 +1112,16 @@ namespace Gizmo {
     UI::InputBlocking Hotkey_SwapMode() {
         if (IsActive) gizmo.SwapMode();
         return UI::InputBlocking::DoNothing;
+    }
+}
+
+namespace Editor {
+    bool Dev_RunGizmoApplyBlock(CGameCtnBlockInfo@ blockInfo, const vec3 &in targetPos, uint forcedVariant = 0) {
+#if DEV
+        return Gizmo::Dev_RunApplyBlock(blockInfo, targetPos, forcedVariant);
+#else
+        return false;
+#endif
     }
 }
 

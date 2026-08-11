@@ -5,7 +5,7 @@ namespace Editor {
         SkipClubEntirely,
     }
 
-    interface IInvCache {
+    shared interface IInvCache {
         string LoadingStatus();
         string LoadingStatusShort();
         uint get_NbItems();

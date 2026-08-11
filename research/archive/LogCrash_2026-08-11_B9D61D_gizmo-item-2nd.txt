@@ -1,0 +1,182 @@
+[Win32] CmdLine="S:\steamapps\common\Trackmania\Trackmania.exe"  -upc_steam_free_package_id 62710 -uplay_steam_mode
+[Sys]  BuildInfo   : date=2026-02-02_17_51 git=128149-c7d05ad2551 GameVersion=3.3.0
+[Sys]  Defines     : TrackmaniaStandalone .
+[Sys]  Shaders     : GitHash=AFCBE82FEB0B7ECB, GitVersion=0
+[Sys] Minimum app. @ = 0x0000000000010000
+[Sys] Maximum app. @ = 0x00007ffffffeffff
+[Sys] Base app. @    = 0x0000000140000000
+[Sys] Time since init: 0h 0mn 0s 282ms
+[Sys] Os = Microsoft Windows 7(Service Pack 1) 64b
+[Sys] Cpu = AMD Ryzen 7 255 w/ Radeon 780M Graphics @ 3 792MHz (bench)   (Nb=16)
+[Sys] SSE2 = 1  x64=1 exe=x64
+[Sys] Physical memory = 62 054 Mb
+[Sys] ExeChecksum = 0x60CB2302
+[Sys] Time since init: 0h 0mn 0s 282ms
+[Sys] ---- GlobalMemoryStatus(Startup) ----
+[Sys] MemoryLoad = 51%
+[Sys]                Total Mb  /    Free Mb
+[Sys]   Physical =  62 054 Mb  /  29 822 Mb
+[Sys]   PageFile = 124 107 Mb  /  47 922 Mb
+[Sys]   Virtual@ = 134 217 728 Mb  / 134 217 603 Mb
+[Sys] ----------------------------
+[Sys] ---- GlobalMemoryStatus(Now) ----
+[Sys] MemoryLoad = 51%
+[Sys]                Total Mb  /    Free Mb
+[Sys]   Physical =  62 054 Mb  /  29 822 Mb
+[Sys]   PageFile = 124 107 Mb  /  47 922 Mb
+[Sys]   Virtual@ = 134 217 728 Mb  / 134 217 603 Mb
+[Sys] ----------------------------
+[Sys] ---- ProcessMemoryStatus ----
+[Sys] PagefileUsage      =      80MB
+[Sys] PeakPagefileUsage  =      80MB
+[Sys] WorkingSetSize     =     137MB
+[Sys] PeakWorkingSetSize =     163MB
+[Sys] ----------------------------
+[Sys] Largest committed free block size = 0 Kb
+[Net] SSL version=OpenSSL 1.1.1t+quic  7 Feb 2023 (OpenSSL 1.1.1t+quic  7 Feb 2023)
+[Net] HTTP: curl_version=7.75.0-DEV(7.75.0-DEV), ssl_version=OpenSSL/1.1.1t, ares_version=. features: 121029D
+[Updater] Previous dataintegrity check: 2026/02/16 23:21:04
+[GameDataPacks] installed zip:  Maniaplanet_Flags.zip (2026/01/29 19:38:15, 6 173 870 bytes)
+[GameDataPacks] installed zip:  Translations.zip (2026/02/12 05:12:32, 3 008 671 bytes)
+[GameDataPacks] installed zip:  Maniaplanet_Live.zip (2026/01/29 19:37:45, 1 706 297 bytes)
+[GameDataPacks] installed pack: Maniaplanet.pak (2026/01/29 19:40:01, 177 287 752 bytes, F62FCB2B6ECAE23851A5D19FE544D694626C3D2CC114AF66E24B532136CEEF75)
+[Sys] Gpu Adapter 0: (0x1002,0x1900) "AMD Radeon 780M Graphics (RADV PHOENIX)", 4 Outputs, 22 050MB dedicated video, 0MB dedicated system, 11 025MB shared system
+[Sys] Gpu Adapter 0 selected.
+[Sys] Gpu Memory Video MBytes = 22 050
+[Sys] Gpu Memory   Agp MBytes = 11 025
+[Sys] "AMD Radeon 780M Graphics (RADV PHOENIX)"(0x1002,0x1900)
+[Sys] Gpu Memory guessing the dedicated is really faster (card)
+[Sys] Windows GDI resolution = 3 440x1 440x32b
+[Sys] Command line: 
+[Sys] Shaders binary link success. using ':data:\Packs\GpuCache_D3D11_SM5.zip'.
+[Audio] Initialized, using device 'OpenAL Soft', sources = 232+24, EFX enabled. 
+[Audio] OpenAl dll version: 0.0.0.0
+[Audio] ALC version: 1.1
+[Audio] AL Version: 1.1 ALSOFT 1.23.99, Vendor: OpenAL Community, Renderer: OpenAL Soft
+[Audio] AL Extensions: AL_EXT_ALAW AL_EXT_BFORMAT AL_EXT_debug AL_EXT_direct_context AL_EXT_DOUBLE AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_MULAW AL_EXT_MULAW_BFORMAT AL_EXT_MULAW_MCFORMATS AL_EXT_OFFSET AL_EXT_source_distance_model AL_EXT_SOURCE_RADIUS AL_EXT_STATIC_BUFFER AL_EXT_STEREO_ANGLES AL_LOKI_quadriphonic AL_SOFT_bformat_ex AL_SOFTX_bformat_hoa AL_SOFT_block_alignment AL_SOFT_buffer_length_query AL_SOFT_callback_buffer AL_SOFTX_convolution_effect AL_SOFT_deferred_updates AL_SOFT_direct_channels AL_SOFT_direct_channels_remix AL_SOFT_effect_target AL_SOFT_events AL_SOFT_gain_clamp_ex AL_SOFTX_hold_on_disconnect AL_SOFT_loop_points AL_SOFTX_map_buffer AL_SOFT_MSADPCM AL_SOFT_source_latency AL_SOFT_source_length AL_SOFTX_source_panning AL_SOFT_source_resampler AL_SOFT_source_spatialize AL_SOFT_source_start_delay AL_SOFT_UHJ AL_SOFT_UHJ_ex
+[Sys] Gpu Adapter 0: (0x1002,0x1900) "AMD Radeon 780M Graphics (RADV PHOENIX)", 4 Outputs, 22 050MB dedicated video, 0MB dedicated system, 11 025MB shared system
+[Sys] Gpu Adapter 0 selected.
+[Sys] Cannot find graphics driver in list: 
+[Dx11] DeviceCreated on "AMD Radeon 780M Graphics (RADV PHOENIX)" (22 050MB dedicated video + 0MB dedicated system + 11 025MB shared system)
+[Dx11] FeatureLevel=11.0
+[Sys] Time is 21h 47mn 20s 121ms
+[Hms] MemoryAgpUseFactor=0
+[Hms] GeometryQuality=|GeometryQuality|Very Nice
+[Hms] CPlugTreeVisualMip::s_ScaleZ_SysConfig = 1
+[Hms] MinScreenHeightScale (SysConfig)       = 1
+[Hms] ShaderQuality=|ShaderQuality|Very Fast
+[Hms] TextureQuality=|TexturesQuality|Low
+[Hms] Shadows=|Shadows|High
+[Hms] FilterAnisoQ=|MaxFiltering|Bilinear
+[Hms] LightMapSizeMax=0
+[Hms] SyncFrameCount=4 294 967 295
+[Hms] MultiSampling=None, deferred= 0
+[Hms] Filtering: autoscale=1, dyn=1, enabled=1, temporalupscale=0
+[Hms] Autores=10
+[Hms] MemoryAgpUseFactor=0
+[Hms] GeometryQuality=|GeometryQuality|Very Nice
+[Hms] CPlugTreeVisualMip::s_ScaleZ_SysConfig = 1
+[Hms] MinScreenHeightScale (SysConfig)       = 0.667
+[Hms] ShaderQuality=|ShaderQuality|Very Fast
+[Hms] TextureQuality=|TexturesQuality|Low
+[Hms] Shadows=|Shadows|High
+[Hms] FilterAnisoQ=|MaxFiltering|Bilinear
+[Hms] LightMapSizeMax=0
+[Hms] SyncFrameCount=4 294 967 295
+[Hms] MultiSampling=None, deferred= 0
+[Hms] Filtering: autoscale=1, dyn=0, enabled=1, temporalupscale=0
+[Hms] Autores=10
+[Game] Starting game... 
+[Game] using masterserver: :443
+[Net] UbiServices 2022.Release.56 enabled
+[Net] UbiServices applicationId=86263886-327a-4328-ac69-527f0d20a237 build=202602021751 version=Full sku=PC-WW
+[Net] UbiServices configured
+[Net] UbiServices initialized
+[VoiceChat.dll]DLL loaded successfully
+[Game] starting game.
+[GameDataPacks] installed zip:  Maniaplanet_Skins.zip (2026/01/29 19:38:31, 232 081 131 bytes)
+[GameDataPacks] installed zip:  Maniaplanet_Extras.zip (2026/01/29 19:38:15, 2 408 176 bytes)
+[GameDataPacks] installed pack: Titles.pak (2026/01/29 19:39:49, 1 480 904 bytes, 8E726EE7B138C0E025DD5DC32FB77CE13C9529F25B9EA9AA40FE82285479B4F9)
+[Maniaplanet] loading title Trackmania, version= 2026-02-02-11_18 (1F36B6B83D005068416948121402FF5D9BFA49885B862F13E1104E50197BC0FE)
+[Maniaplanet]     from :data:\Packs\Trackmania.Title.Pack.Gbx (2026/02/12 05:12:32, 1F36B6B83D005068416948121402FF5D9BFA49885B862F13E1104E50197BC0FE)
+[GameDataPacks] installed zip:  Stadium_Skins.zip (2026/01/29 19:39:33, 2 194 677 bytes)
+[GameDataPacks] installed zip:  Maniaplanet_Painter.zip (2026/01/29 19:37:51, 3 618 305 bytes)
+[GameDataPacks] installed pack: GreenCoast.pak (2026/02/12 05:12:33, 597 146 056 bytes, 5012256D9A1D3A2ED4237777C679B363C9AB86697B936F30BCD18E7417478CE9)
+[GameDataPacks] installed pack: BlueBay.pak (2026/02/12 05:12:33, 555 686 792 bytes, E54EE111685C4AFC2E8250C7D086597BC48A4B1E69604B44E6548F44BBFA1DA8)
+[GameDataPacks] installed pack: RedIsland.pak (2026/02/12 05:12:33, 813 332 104 bytes, AEC3F346EECD60C480E33ABDF71C7981C69A49AFECBF575829215B5061C8F03F)
+[GameDataPacks] installed pack: WhiteShore.pak (2026/02/12 05:12:33, 430 999 560 bytes, 8BB64F84DE19FC6B7EDD87A2096AA84973DD3EC603FDFB32E6BFB5FDBB96F946)
+[GameDataPacks] installed pack: Stadium.pak (2026/02/12 05:12:33, 1 754 026 248 bytes, 5ECA8EB720C4A485D4659D73E24723949E6FB7D6B132FCC6934F721AA3FDF9DC)
+[GameDataPacks] installed pack: Skins_Stadium.pak (2026/01/29 19:40:01, 277 110 976 bytes, E05FA0A9507DEFEFE85D1CD578CD44F865A6CB98E243A879ED97DF47C5CCB541)
+[GameDataPacks] installed pack: Skins_StadiumPrestige.pak (2026/02/12 05:12:29, 1 005 749 704 bytes, 258BC1359798D3D8FE7F77EB6F77935C50777EE8BD77B5507767792B3B1753D5)
+[GameDataPacks] installed pack: Maniaplanet_ModelsSport.pak (2026/02/12 05:12:27, 129 448 392 bytes, D5125284EA71F51A64D32F257E921732F00EC18B7034895935D7AC53355D8D78)
+[GameDataPacks] installed pack: Maniaplanet_Core.pak (2026/01/29 19:39:17, 35 308 552 bytes, 377D67B1506CD7193CAE14A32F12AD75778C56ED423D11B2A94E2821462C45B9)
+[Game] Loading title Trackmania
+[Game] main menu.
+[Hms] MemoryAgpUseFactor=0
+[Hms] GeometryQuality=|GeometryQuality|Very Nice
+[Hms] CPlugTreeVisualMip::s_ScaleZ_SysConfig = 1
+[Hms] MinScreenHeightScale (SysConfig)       = 0.667
+[Hms] FilterAnisoQ=|MaxFiltering|Bilinear
+[Hms] LightMapSizeMax=0
+[Hms] SyncFrameCount=4 294 967 295
+[Hms] MultiSampling=None, deferred= 0
+[Hms] Filtering: autoscale=1, dyn=0, enabled=1, temporalupscale=0
+[Hms] Autores=10
+[Game] exec MenuResult: 12
+[Game] init challenge 'Unnamed', 'Unassigned', env= BlueBay, deco= Day64
+!!!!!!!!!!!!!!!!!!!
+RtlUnhandledExceptionFilter call catched:
+--- ExceptionWin32 catched ---
+GbxGame
+date=2026-02-02_17_51 git=128149-c7d05ad2551 GameVersion=3.3.0
+[Sys] Time since init: 0h 14mn 52s 87ms
+[Sys] ---- GlobalMemoryStatus(Startup) ----
+[Sys] MemoryLoad = 51%
+[Sys]                Total Mb  /    Free Mb
+[Sys]   Physical =  62 054 Mb  /  29 822 Mb
+[Sys]   PageFile = 124 107 Mb  /  47 922 Mb
+[Sys]   Virtual@ = 134 217 728 Mb  / 134 217 603 Mb
+[Sys] ----------------------------
+[Sys] ---- GlobalMemoryStatus(Now) ----
+[Sys] MemoryLoad = 53%
+[Sys]                Total Mb  /    Free Mb
+[Sys]   Physical =  62 054 Mb  /  28 657 Mb
+[Sys]   PageFile = 124 107 Mb  /  41 266 Mb
+[Sys]   Virtual@ = 134 217 728 Mb  / 134 217 583 Mb
+[Sys] ----------------------------
+[Sys] ---- ProcessMemoryStatus ----
+[Sys] PagefileUsage      =   1 707MB
+[Sys] PeakPagefileUsage  =   1 707MB
+[Sys] WorkingSetSize     =     146MB
+[Sys] PeakWorkingSetSize =   1 364MB
+[Sys] ----------------------------
+[Sys] Largest committed free block size = 0 Kb
+[Dx11] DeviceCreated on "AMD Radeon 780M Graphics (RADV PHOENIX)" (22 050MB dedicated video + 0MB dedicated system + 11 025MB shared system)
+[Dx11] FeatureLevel=11.0
+[Sys] Time is 22h 2mn 8s 267ms
+Win32 Exception : Access violation
+	=>Occured at address 0x0000000140B9D61D
+	The thread tried to read from the invalid address (data) 0x00000000000000F0
+	rax=0000000304426980   rbx=000000000010E150   rcx=0000000000000000   rdx=0000000000272C30
+	rsi=00000002EDA268D0   rdi=0000000000272AD0   r08=0000000303065088   r09=0000000000000000
+	r10=0000000303065090   r11=000000007FFF0000   r12=0000000000000004   r13=0000000303065070
+	r14=000000000010E180   r15=0000000000000000   rbp=000000000010E010   rsp=000000000010DF10   rip=0000000140B9D61D
+	Called from address 0x0000000140B9DF8A
+	Called from address 0x0000000140B9E342
+	Called from address 0x0000000140C0CB51
+	Called from address 0x0000000140C0CCBD
+	Called from address 0x0000000140F961CE
+	Called from address 0x0000000140F960BA
+	Called from address 0x00006FFFFAE43AB1
+	Called from address 0x00006FFFFB44DBE8
+	Called from address 0x00006FFFFB4619C8
+	Called from address 0x00006FFFFB450AE2
+	Called from address 0x00006FFFFB44FDA9
+	Called from address 0x00006FFFFAE4233C
+	Called from address 0x00006FFFFAE48DAD
+	Called from address 0x00006FFFFAD51FC8
+	Called from address 0x00000000013901B3
+End of stack...
+[Sys] Time is 22h 2mn 8s 268ms
+
+Crash in "Openplanet.dll" detected => warn user

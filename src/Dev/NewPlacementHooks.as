@@ -101,6 +101,29 @@ namespace PlacementHooks {
         // OnGetCursorRotation.Unapply();
     }
 
+    // Wine-safe pointer validation shared by placement hooks. Matches the
+    // E15 OnAddBlockHook guard (Dev_PointerLooksBad + SafeReadUInt64 + vtable
+    // check) so the rest of the hook family can't dereference a bad pointer
+    // delivered by native placement callbacks in cross-collection edits.
+    bool _ValidatePlacementPtr(uint64 ptr, const string &in hookName, uint64 expectedVTable) {
+        if (Dev_PointerLooksBad(ptr)) {
+            _Log::Trace(hookName + " ignoring bad ptr: " + Text::FormatPointer(ptr));
+            return false;
+        }
+        uint64 vtablePtr = 0;
+        try {
+            vtablePtr = Dev::SafeReadUInt64(ptr);
+        } catch {
+            _Log::Trace(hookName + " failed reading vtable from ptr: " + Text::FormatPointer(ptr));
+            return false;
+        }
+        if (!VTables::CheckVTable(vtablePtr, expectedVTable)) {
+            _Log::Trace(hookName + " bad vtable ptr: " + Text::FormatPointer(vtablePtr));
+            return false;
+        }
+        return true;
+    }
+
     void After_CGameCtnEditorPluginMap_Update_PreScript_EmitEvent() {
         if (!IsInEditor) {
             warn_every_60_s("After_CGameCtnEditorPluginMap_Update_PreScript: called outside editor! (this is a bug)");
@@ -124,6 +147,7 @@ namespace PlacementHooks {
         }
         // item at rbx
         dev_trace("OnSetItemFgSkin_rbx: " + Text::FormatPointer(rbx));
+        if (!_ValidatePlacementPtr(rbx, "OnSetItemFgSkin_rbx", VTables::CGameCtnAnchoredObject)) return;
         auto nod = Dev_GetNodFromPointer(rbx);
         if (nod is null) {
             dev_trace("OnSetItemFgSkin: null item");
@@ -145,6 +169,7 @@ namespace PlacementHooks {
         }
         // item at rbx
         dev_trace("OnSetItemBgSkin_rbx: " + Text::FormatPointer(rbx));
+        if (!_ValidatePlacementPtr(rbx, "OnSetItemBgSkin_rbx", VTables::CGameCtnAnchoredObject)) return;
         auto nod = Dev_GetNodFromPointer(rbx);
         if (nod is null) {
             dev_trace("OnSetItemBgSkin: null item");
@@ -166,6 +191,7 @@ namespace PlacementHooks {
         }
         // block at r14
         dev_trace("OnSetBlockSkin_r14: " + Text::FormatPointer(r14));
+        if (!_ValidatePlacementPtr(r14, "OnSetBlockSkin_r14", VTables::CGameCtnBlock)) return;
         auto nod = Dev_GetNodFromPointer(r14);
         if (nod is null) {
             dev_trace("OnSetBlockSkin: null block");
@@ -186,6 +212,7 @@ namespace PlacementHooks {
             return;
         }
         dev_trace("OnBlockDeleted! rdx: " + Text::FormatPointer(rdx));
+        if (!_ValidatePlacementPtr(rdx, "OnBlockDeleted_Rdx", VTables::CGameCtnBlock)) return;
         auto nod = Dev_GetNodFromPointer(rdx);
         if (nod is null) {
             dev_trace("OnBlockDeleted_Rdx rdx nod null");
@@ -208,6 +235,7 @@ namespace PlacementHooks {
             return;
         }
         dev_trace("OnItemDeleted! rdx: " + Text::FormatPointer(rdx));
+        if (!_ValidatePlacementPtr(rdx, "OnItemDeleted_Rdx", VTables::CGameCtnAnchoredObject)) return;
         auto nod = Dev_GetNodFromPointer(rdx);
         if (nod is null) {
             dev_trace("OnItemDeleted_Rdx rdx nod null");
@@ -236,6 +264,7 @@ namespace PlacementHooks {
         //     dev_trace("rbx != rdx: " + Text::FormatPointer(rbx) + " != " + Text::FormatPointer(rdx));
         // }
         // often they are not equal, in this case rbx is correct
+        if (!_ValidatePlacementPtr(rbx, "OnItemPlaced_RbxRdx", VTables::CGameCtnAnchoredObject)) return;
         auto nod = Dev_GetNodFromPointer(rbx);
         if (nod is null) {
             dev_trace("OnItemPlaced_RbxRdx rbx nod null");
@@ -262,22 +291,28 @@ namespace PlacementHooks {
 #endif
 #if WINDOWS_WINE
         trace("OnAddBlockHook, wine detected.");
-        if (rdx < 0xffffff) {
-            // pointer looks bad
+        if (Dev_PointerLooksBad(rdx)) {
+            _Log::Trace("OnAddBlockHook_RdxRdi ignoring bad rdx: " + Text::FormatPointer(rdx));
             return;
         }
 #else
-        if (rdx < 0x1000FFFF || rdx > 0xFFF0000FFFF) {
-            // pointer looks bad
+        if (Dev_PointerLooksBad(rdx)) {
+            _Log::Trace("OnAddBlockHook_RdxRdi ignoring bad rdx: " + Text::FormatPointer(rdx));
             return;
         }
 #endif
-        auto vtablePtr = Dev::ReadUInt64(rdx);
+        uint64 vtablePtr = 0;
+        try {
+            vtablePtr = Dev::SafeReadUInt64(rdx);
+        } catch {
+            _Log::Trace("OnAddBlockHook_RdxRdi failed reading vtable from rdx: " + Text::FormatPointer(rdx));
+            return;
+        }
         if (!VTables::CheckVTable(vtablePtr, VTables::CGameCtnBlock)) {
             _Log::Trace("Got bad vtable ptr: " + Text::FormatPointer(vtablePtr));
             return;
         }
-        _Log::Debug("VTable Addr: " + Text::FormatPointer(Dev::ReadUInt64(rdx)));
+        _Log::Debug("VTable Addr: " + Text::FormatPointer(vtablePtr));
         auto nod = Dev_GetNodFromPointer(rdx);
         _Log::Debug("OnAddBlockHook_RdxRdi got nod.");
 

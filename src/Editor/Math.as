@@ -38,6 +38,16 @@ bool AnglesVeryClose(const vec3 &in a, const vec3 &in b) {
     //        Math::Abs(NormalizeAngle(a.z - b.z)) < 0.0001;
 }
 
+// Qualified aliases so call sites can write Editor::AnglesVeryClose (copy-paste friendly).
+namespace Editor {
+    bool AnglesVeryClose(const quat &in q1, const quat &in q2, bool allowConjugate = false) {
+        return ::AnglesVeryClose(q1, q2, allowConjugate);
+    }
+    bool AnglesVeryClose(const vec3 &in a, const vec3 &in b) {
+        return ::AnglesVeryClose(a, b);
+    }
+}
+
 // shared float CardinalDirectionToYaw(int dir) {
 //     // n:0, e:1, s:2, w:3
 //     return -Math::PI/2. * float(dir) + (dir >= 2 ? TAU : 0);

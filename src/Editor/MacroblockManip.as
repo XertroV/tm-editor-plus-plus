@@ -127,15 +127,15 @@ namespace Editor {
         protected uint64 tmpMacroblockSkinsBuf = 0;
         protected uint64 tmpMacroblockSkinsBufLenCap = 0;
         protected bool tmpMacroblockIsGround = false;
+        protected bool tmpMacroblockInitialized = false;
+        protected bool tmpMacroblockConnected = false;
+        protected bool tmpMacroblockStateSaved = false;
         bool releaseTmpMacroblock = false;
         uint tmpMacroblockCollectionId;
 
         void _TempWriteToMacroblock(CGameCtnMacroBlockInfo@ macroblock) {
             @tmpMacroblock = DGameCtnMacroBlockInfo(macroblock);
-            releaseTmpMacroblock = Reflection::GetRefCount(macroblock) > 1;
-            if (releaseTmpMacroblock) {
-                macroblock.MwAddRef();
-            }
+            tmpMacroblockStateSaved = false;
 
             auto mbBlocks = tmpMacroblock.Blocks;
             tmpMacroblockBlocksBuf = Dev::ReadUInt64(mbBlocks.Ptr);
@@ -148,12 +148,32 @@ namespace Editor {
             tmpMacroblockSkinsBufLenCap = Dev::ReadUInt64(mbSkins.Ptr + 0x8);
 
             tmpMacroblockIsGround = macroblock.IsGround;
-            Editor::SetMacroblockGround(macroblock, false);
-
+            tmpMacroblockInitialized = macroblock.Initialized;
+            tmpMacroblockConnected = macroblock.Connected;
             tmpMacroblockCollectionId = macroblock.CollectionId;
+            tmpMacroblockStateSaved = true;
+
+            // Pin the donor for the duration of the temp-write. The old
+            // `GetRefCount > 1` gate skipped AddRef when rc==1 (Models[] only)
+            // and never Release'd when rc was 0 — both are wrong:
+            //   rc < 1 : zombie / not owned; refuse rather than mutate.
+            //   rc >= 1: always MwAddRef here and MwRelease in _RestoreMacroblock
+            //            so our hold is balanced regardless of who else refs it.
+            // (The matching MwRelease was previously commented out, so the >1
+            //  path also leaked a ref on every Place/DeleteMacroblock.)
+            int donorRc = Reflection::GetRefCount(macroblock);
+            if (donorRc < 1) {
+                throw("MacroblockSpecPriv._TempWriteToMacroblock: donor refcount="
+                    + donorRc + " (expected >= 1). Refusing temp-write on a "
+                    + "possibly-freed CGameCtnMacroBlockInfo.");
+            }
+            macroblock.MwAddRef();
+            releaseTmpMacroblock = true;
+
+            Editor::SetMacroblockGround(macroblock, false);
             macroblock.CollectionId = Editor::GetMapCollectorId();
-            // macroblock.Initialized = false;
-            // macroblock.Connected = false;
+            macroblock.Initialized = false;
+            macroblock.Connected = false;
 
             _AllocAndWriteMemory(true);
         }
@@ -236,11 +256,19 @@ namespace Editor {
         }
 
         void _RestoreMacroblock() {
-            if (tmpWriteBuf is null) {
+            if (tmpMacroblock is null) {
                 warn("_RestoreMacroblock called without _TempWriteToMacroblock");
                 return;
             }
             _UnallocMemory();
+
+            if (!tmpMacroblockStateSaved) {
+                warn("_RestoreMacroblock called before donor state was fully saved");
+                @tmpMacroblock = null;
+                releaseTmpMacroblock = false;
+                tmpMacroblockStateSaved = false;
+                return;
+            }
 
             Dev::Write(tmpMacroblock.Blocks.Ptr, tmpMacroblockBlocksBuf);
             Dev::Write(tmpMacroblock.Blocks.Ptr + 0x8, tmpMacroblockBlocksBufLenCap);
@@ -250,12 +278,17 @@ namespace Editor {
             Dev::Write(tmpMacroblock.Skins.Ptr + 0x8, tmpMacroblockSkinsBufLenCap);
             SetMacroblockGround(tmpMacroblock.Nod, tmpMacroblockIsGround);
             tmpMacroblock.Nod.CollectionId = tmpMacroblockCollectionId;
+            tmpMacroblock.Nod.Initialized = tmpMacroblockInitialized;
+            tmpMacroblock.Nod.Connected = tmpMacroblockConnected;
             // tmpMacroblock.Nod.IsGround = tmpMacroblockIsGround;
-            // if (tmpMacroblock !is null && releaseTmpMacroblock) {
-            //     tmpMacroblock.Nod.MwRelease();
-            // }
+            // Balance the MwAddRef from _TempWriteToMacroblock before dropping
+            // the script handle (which may Release again on its own).
+            if (releaseTmpMacroblock) {
+                tmpMacroblock.Nod.MwRelease();
+            }
             @tmpMacroblock = null;
             releaseTmpMacroblock = false;
+            tmpMacroblockStateSaved = false;
         }
 
 
@@ -763,18 +796,27 @@ namespace Editor {
             if (BlockInfo is null) return false;
             auto origVar = variant;
             auto origGround = isGround;
-            if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                variant = 0;
-                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                    isGround = !isGround;
-                    if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
-                        variant = origVar;
-                        isGround = origGround;
-                        return false;
-                    }
-                }
+            if (int(variant) < 0 || Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) is null) {
+                if (TryUseFirstValidVariant(origGround)) return true;
+                if (TryUseFirstValidVariant(!origGround)) return true;
+                variant = origVar;
+                isGround = origGround;
+                return false;
             }
             return true;
+        }
+
+        bool TryUseFirstValidVariant(bool ground) {
+            isGround = ground;
+            variant = 0;
+            if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) !is null) return true;
+
+            auto maxVariantIx = ground ? BlockInfo.AdditionalVariantsGround.Length : BlockInfo.AdditionalVariantsAir.Length;
+            for (uint i = 1; i <= maxVariantIx; i++) {
+                variant = i;
+                if (Editor::GetBlockInfoVariant(BlockInfo, variant, isGround) !is null) return true;
+            }
+            return false;
         }
 
         void TranslateCoords(int3 coordDist, bool updateBoth = false) override {

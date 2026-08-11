@@ -27,6 +27,7 @@ void Main() {
 
     if (GetApp().Editor !is null) {
         startnew(Editor::CacheMaterials);
+        startnew(CustomCursor::_RefreshStaleItemVisualsOnPluginStart);
     }
 
     startnew(UpdateEditorPlugin);
@@ -71,6 +72,9 @@ void Main() {
     Editor::SetupApplySkinsCBs();
     CustomSelection::OnPluginLoad();
     FillBlocks::OnPluginLoad();
+#if DEV
+    MacroblockPlaceDiag::OnPluginLoad();
+#endif
 
     Blocks::RegisterCallbacks(); // mostly to do with item SPlacements
     VegetRandomYaw::SetupCallbacks(); // for fixing trees on free blocks
@@ -131,6 +135,8 @@ void OnEnabled() {
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
     CustomCursorRotations::BeforeAfterCursorUpdateHook.Apply();
+    // Safe light refresh only (no FixGhostItems / mobil Hide on reload).
+    startnew(CustomCursor::_RefreshStaleItemVisualsOnPluginStart);
 }
 
 void OnDestroyed() { Unload(true); }

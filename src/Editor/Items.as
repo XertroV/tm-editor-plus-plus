@@ -112,7 +112,7 @@ namespace Editor {
     void UpdateNewlyAddedItems(CGameCtnEditorFree@ editor) {
         auto pmt = cast<CSmEditorPluginMapType>(editor.PluginMapType);
 
-        auto macroblock = pmt.GetMacroblockModelFromFilePath("Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx");
+        auto macroblock = pmt.GetMacroblockModelFromFilePath(Editor::GetDonorMacroblockPath());
         trace('UpdateNewlyAddedItems macroblock is null: ' + (macroblock is null));
         Event::DisableOnBlockItemCB();
         auto placed = pmt.PlaceMacroblock_NoDestruction(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
@@ -258,6 +258,36 @@ namespace Editor {
     }
     CSystemPackDesc@ GetItemFGSkin(CGameCtnAnchoredObject@ item) {
         return cast<CSystemPackDesc>(Dev::GetOffsetNod(item, O_ANCHOREDOBJ_FGSKIN_PACKDESC));
+    }
+
+    // Raw item skin writer matching CSmEditorPluginMapType::SetItemSkins
+    // (Ghidra FUN_14100e480). Public pmt.SetItemSkin is Manialink-gated via
+    // CGameCtnEditorScriptAnchoredObject wrappers; this writes the same
+    // memory directly without needing the wrapper pool to be populated.
+    // Pass null to clear a skin slot; skips writes when new == old to
+    // avoid refcount churn. No-ops if item is null.
+    void SetItemSkinsRaw(CGameCtnAnchoredObject@ item, CSystemPackDesc@ newBg, CSystemPackDesc@ newFg) {
+        if (item is null) return;
+        auto oldBg = GetItemBGSkin(item);
+        auto oldFg = GetItemFGSkin(item);
+        bool bgChanged = (newBg !is oldBg);
+        bool fgChanged = (newFg !is oldFg);
+        if (!bgChanged && !fgChanged) return;
+
+        if (bgChanged) {
+            if (newBg !is null) newBg.MwAddRef();
+            Dev::SetOffset(item, O_ANCHOREDOBJ_BGSKIN_PACKDESC, newBg);
+            if (oldBg !is null) oldBg.MwRelease();
+        }
+        if (fgChanged) {
+            if (newFg !is null) newFg.MwAddRef();
+            Dev::SetOffset(item, O_ANCHOREDOBJ_FGSKIN_PACKDESC, newFg);
+            if (oldFg !is null) oldFg.MwRelease();
+        }
+        if (newBg !is null) Dev::SetOffset(newBg, O_PACKDESC_LOADED_FLAG, uint32(4));
+        if (newFg !is null) Dev::SetOffset(newFg, O_PACKDESC_LOADED_FLAG, uint32(4));
+        uint32 counter = Dev::GetOffsetUint32(item, O_ANCHOREDOBJ_CHANGE_COUNTER);
+        Dev::SetOffset(item, O_ANCHOREDOBJ_CHANGE_COUNTER, counter + 1);
     }
 
     int GetItemMbInstId(CGameCtnAnchoredObject@ item) {

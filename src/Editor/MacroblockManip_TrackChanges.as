@@ -339,6 +339,83 @@ namespace Editor {
     bool PlaceItems(ItemSpec@[]@ items, bool addUndoRedoPoint = false) {
         return PlaceMacroblock(MacroblockSpecPriv(array<BlockSpec@> = {}, items), addUndoRedoPoint);
     }
+
+#if DEV
+    string _DiagPtr(uint64 ptr) {
+        return Text::FormatPointer(ptr) + "/bad=" + tostring(Dev_PointerLooksBad(ptr));
+    }
+
+    void LogMacroblockDonorDebug(CGameCtnMacroBlockInfo@ mb, const string &in phase) {
+        if (mb is null) {
+            warn("[MB-E3-DIAG] donor " + phase + ": null macroblock");
+            return;
+        }
+
+        uint16 hasMultilapOffset = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap");
+        uint16 blocksOffset = O_MACROBLOCK_BLOCKSBUF;
+        uint16 skinsOffset = O_MACROBLOCK_SKINSBUF;
+        uint16 itemsOffset = O_MACROBLOCK_ITEMSBUF;
+
+        dev_trace("[MB-E3-DIAG] donor " + phase
+            + "; mbPtr=" + _DiagPtr(Dev_GetPointerForNod(mb))
+            + "; refCount=" + Reflection::GetRefCount(mb)
+            + "; init=" + mb.Initialized
+            + "; connected=" + mb.Connected
+            + "; isGround=" + mb.IsGround
+            + "; collection=" + mb.CollectionId
+            + "; canPlacePatch=" + Patch_MacroblockCanPlace.IsApplied);
+        dev_trace("[MB-E3-DIAG] pointer settings"
+            + "; BASE_ADDR_END=" + Text::FormatPointer(BASE_ADDR_END)
+            + "; HAS_Z_DRIVE_WINE_INDICATOR=" + HAS_Z_DRIVE_WINE_INDICATOR
+            + "; S_ForceDisableLinuxWineCheck=" + S_ForceDisableLinuxWineCheck
+            + "; S_ReducedPointerSizeCheck=" + S_ReducedPointerSizeCheck);
+        dev_trace("[MB-E3-DIAG] macroblock offsets"
+            + "; HasMultilap=" + Text::Format("0x%03x", hasMultilapOffset)
+            + "; BlocksBuf=" + Text::Format("0x%03x", blocksOffset)
+            + "; SkinsBuf=" + Text::Format("0x%03x", skinsOffset)
+            + "; ItemsBuf=" + Text::Format("0x%03x", itemsOffset)
+            + "; GeneratedBlockInfo=" + Text::Format("0x%03x", O_MACROBLOCKINFO_GeneratedBlockInfo)
+            + "; IsGround=" + Text::Format("0x%03x", O_MACROBLOCKINFO_IsGround));
+        dev_trace("[MB-E3-DIAG] buffer fields"
+            + "; blocks.ptr=" + _DiagPtr(Dev::GetOffsetUint64(mb, blocksOffset))
+            + "; blocks.len=" + Dev::GetOffsetUint32(mb, blocksOffset + 0x8)
+            + "; blocks.cap=" + Dev::GetOffsetUint32(mb, blocksOffset + 0xC)
+            + "; skins.ptr=" + _DiagPtr(Dev::GetOffsetUint64(mb, skinsOffset))
+            + "; skins.len=" + Dev::GetOffsetUint32(mb, skinsOffset + 0x8)
+            + "; skins.cap=" + Dev::GetOffsetUint32(mb, skinsOffset + 0xC)
+            + "; items.ptr=" + _DiagPtr(Dev::GetOffsetUint64(mb, itemsOffset))
+            + "; items.len=" + Dev::GetOffsetUint32(mb, itemsOffset + 0x8)
+            + "; items.cap=" + Dev::GetOffsetUint32(mb, itemsOffset + 0xC));
+
+        for (uint off = 0x120; off <= 0x1A0; off += 0x20) {
+            dev_trace("[MB-E3-DIAG] raw "
+                + Text::Format("0x%03x", off) + "=" + _DiagPtr(Dev::GetOffsetUint64(mb, off))
+                + " " + Text::Format("0x%03x", off + 0x8) + "=" + _DiagPtr(Dev::GetOffsetUint64(mb, off + 0x8))
+                + " " + Text::Format("0x%03x", off + 0x10) + "=" + _DiagPtr(Dev::GetOffsetUint64(mb, off + 0x10))
+                + " " + Text::Format("0x%03x", off + 0x18) + "=" + _DiagPtr(Dev::GetOffsetUint64(mb, off + 0x18)));
+        }
+    }
+#endif
+
+    bool RestoreCurrentMacroblockAfterDonor(CGameCtnEditorFree@ editor, CGameCtnMacroBlockInfo@ prevCurrMb) {
+        CGameCtnMacroBlockInfo@ replacedMb = null;
+        try {
+            @replacedMb = Editor::ReplaceCurrentMacroblock_AddRef(editor, prevCurrMb);
+            ReleaseIfNonNull(replacedMb);
+            return true;
+        } catch {
+            warn("PlaceMacroblock: exception restoring current macroblock: " + getExceptionInfo());
+        }
+
+        try {
+            Editor::SetSelectedMacroBlockInfo(editor, prevCurrMb);
+            return true;
+        } catch {
+            warn("PlaceMacroblock: fallback current macroblock restore failed: " + getExceptionInfo());
+        }
+        return false;
+    }
+
     bool PlaceMacroblock(MacroblockSpec@ macroblock, bool addUndoRedoPoint = false) {
         auto mbSpec = cast<MacroblockSpecPriv>(macroblock);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
@@ -351,57 +428,118 @@ namespace Editor {
             NotifyError("PlaceMacroblock: no macroblock models");
             return false;
         }
-        // auto mb = pmt.MacroblockModels[0];
-        auto mbPath = "Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx";
-        // auto mb = pmt.GetMacroblockModelFromFilePath(mbPath);
-        auto mbFid = Fids::GetGame("GameData\\" + mbPath);
-        auto mb = cast<CGameCtnMacroBlockInfo>(Fids::Preload(mbFid));
+        auto mbPath = Editor::GetDonorMacroblockPath();
+        // Prefer the plugin-map lookup; Fids::GetGame("GameData\\...") works for
+        // Stadium assets but not for non-Stadium envs where the macroblock is
+        // loaded dynamically into the editor inventory.
+        CGameCtnMacroBlockInfo@ mb = pmt.GetMacroblockModelFromFilePath(mbPath);
         if (mb is null) {
-            NotifyError("PlaceMacroblock: failed to get macroblock model");
-            // dev_trace("Got FID: " + tostring(mbFid !is null));
-            // if (mbFid !is null) {
-            //     ExploreNod("macroblock FID", mbFid);
-            // }
+            auto mbFid = Fids::GetGame("GameData\\" + mbPath);
+            @mb = cast<CGameCtnMacroBlockInfo>(Fids::Preload(mbFid));
+        }
+        if (mb is null) {
+            NotifyError("PlaceMacroblock: failed to get macroblock model: " + mbPath);
             return false;
         }
         dev_trace("[DEBUG] PlaceMacroblock: Writing to MB");
-        mbSpec._TempWriteToMacroblock(mb);
+#if DEV
+        LogMacroblockDonorDebug(mb, "before-tempwrite");
+#endif
+        try {
+            mbSpec._TempWriteToMacroblock(mb);
+        } catch {
+            NotifyWarning("PlaceMacroblock: exception temp-writing donor macroblock: " + getExceptionInfo());
+            try {
+                mbSpec._RestoreMacroblock();
+            } catch {
+                warn("PlaceMacroblock: exception restoring donor macroblock after temp-write failure: " + getExceptionInfo());
+            }
+            return false;
+        }
+#if DEV
+        LogMacroblockDonorDebug(mb, "after-tempwrite");
+#endif
+        dev_trace("[DEBUG] PlaceMacroblock: after temp-write: init=" + mb.Initialized + ", connected=" + mb.Connected + ", isGround=" + mb.IsGround + ", collection=" + mb.CollectionId + ", canPlacePatch=" + Patch_MacroblockCanPlace.IsApplied);
+
+        bool regenerated = false;
         dev_trace("[DEBUG] PlaceMacroblock: Replacing curr MB");
-        auto prevCurrMb = Editor::ReplaceCurrentMacroblock_AddRef(editor, mb);
-        // dev_trace("[DEBUG] PlaceMacroblock: TurnIntoAirMb_Unsafe; mb.IsGround=" + mb.IsGround);
-        // editor.TurnIntoAirMb_Unsafe();
+        CGameCtnMacroBlockInfo@ prevCurrMb = null;
+        try {
+            @prevCurrMb = Editor::ReplaceCurrentMacroblock_AddRef(editor, mb);
+        } catch {
+            NotifyWarning("PlaceMacroblock: exception selecting donor macroblock: " + getExceptionInfo());
+            try {
+                mbSpec._RestoreMacroblock();
+            } catch {
+                warn("PlaceMacroblock: exception restoring donor macroblock after selection failure: " + getExceptionInfo());
+            }
+            return false;
+        }
+        try {
+            dev_trace("[DEBUG] PlaceMacroblock: TurnIntoAirMb_Unsafe; mb.IsGround=" + mb.IsGround);
+            editor.TurnIntoAirMb_Unsafe();
+            dev_trace("[DEBUG] PlaceMacroblock: after TurnIntoAirMb_Unsafe: init=" + mb.Initialized + ", connected=" + mb.Connected + ", isGround=" + mb.IsGround + ", collection=" + mb.CollectionId);
+            regenerated = true;
+        } catch {
+            NotifyWarning("PlaceMacroblock: exception regenerating donor macroblock: " + getExceptionInfo());
+        }
         dev_trace("[DEBUG] PlaceMacroblock: Restoring curr MB; mb.IsGround=" + mb.IsGround);
-        Editor::ReplaceCurrentMacroblock_AddRef(editor, prevCurrMb);
+        bool restoredCurrMb = RestoreCurrentMacroblockAfterDonor(editor, prevCurrMb);
+        ReleaseIfNonNull(prevCurrMb);
+        @prevCurrMb = null;
+        if (!regenerated || !restoredCurrMb) {
+            try {
+                mbSpec._RestoreMacroblock();
+            } catch {
+                warn("PlaceMacroblock: exception restoring donor macroblock after regeneration failure: " + getExceptionInfo());
+            }
+            if (!regenerated) {
+                NotifyWarning("PlaceMacroblock: failed to regenerate donor macroblock");
+            } else if (!restoredCurrMb) {
+                NotifyWarning("PlaceMacroblock: failed to restore current macroblock after donor regen");
+            }
+            return false;
+        }
 
         bool forceMbColor = pmt.ForceMacroblockColor;
         pmt.ForceMacroblockColor = false;
+        bool placed = false;
 
-        trace('wrote mb spec to mb: ' + mb.IdName);
-        auto dmb = DGameCtnMacroBlockInfo(mb);
-        trace('nb blocks/items/skins: ' + dmb.Blocks.Length + "/" + dmb.Items.Length + "/" + dmb.Skins.Length);
+        try {
+            trace('wrote mb spec to mb: ' + mb.IdName);
+            auto dmb = DGameCtnMacroBlockInfo(mb);
+            trace('nb blocks/items/skins: ' + dmb.Blocks.Length + "/" + dmb.Items.Length + "/" + dmb.Skins.Length);
 #if DEV
-        if (mbSpec.Blocks.Length > 0) {
-            dev_trace('mbSpec.blocks[0]');
-            print(BlockSpecToDebugString(mbSpec.Blocks[0]));
-        }
-        auto bi = mb.GeneratedBlockModel;
-        if (bi !is null && bi.VariantBaseGround !is null) {
-            dev_trace("MB GeneratedBlockModel VariantBaseGround.AutoTerrains.Length=" + bi.VariantBaseGround.AutoTerrains.Length);
-        }
-        dev_trace("MB Collection: " + mb.CollectionId_Text + " / ID: " + mb.CollectionId);
-        dev_trace("placing now...");
+            if (mbSpec.Blocks.Length > 0) {
+                dev_trace('mbSpec.blocks[0]');
+                print(BlockSpecToDebugString(mbSpec.Blocks[0]));
+            }
+            auto bi = mb.GeneratedBlockModel;
+            if (bi !is null && bi.VariantBaseGround !is null) {
+                dev_trace("MB GeneratedBlockModel VariantBaseGround.AutoTerrains.Length=" + bi.VariantBaseGround.AutoTerrains.Length);
+            }
+            dev_trace("MB Collection: " + mb.CollectionId_Text + " / ID: " + mb.CollectionId);
+            dev_trace("placing now...");
+            // Place-vs-delete forensics: snapshot donor item buffer after regen
+            MacroblockItemDeleteDiag::OnPlaceMacroblockPrePlace(mbSpec, mb);
 #endif
-        auto placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
-        if (placed && addUndoRedoPoint) {
-            dev_trace("Placed MB -> AutoSaving");
-            pmt.AutoSave();
+            placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
+            if (placed && addUndoRedoPoint) {
+                dev_trace("Placed MB -> AutoSaving");
+                pmt.AutoSave();
+            }
+        } catch {
+            NotifyWarning("PlaceMacroblock: exception placing donor macroblock: " + getExceptionInfo());
         }
-        mbSpec._RestoreMacroblock();
+        try {
+            mbSpec._RestoreMacroblock();
+        } catch {
+            warn("PlaceMacroblock: exception restoring donor macroblock: " + getExceptionInfo());
+        }
+        pmt.ForceMacroblockColor = forceMbColor;
         dev_trace("PlaceMacroblock returning: " + placed);
 
         // todo: skins?
-
-        pmt.ForceMacroblockColor = forceMbColor;
 
         return placed;
     }
@@ -410,13 +548,112 @@ namespace Editor {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (mbSpec is null || editor is null || editor.PluginMapType is null) return false;
         auto pmt = editor.PluginMapType;
-        if (pmt.MacroblockModels.Length == 0) return false;
-        auto mb = pmt.MacroblockModels[0];
+        // Match PlaceMacroblock donor selection + regeneration. Without regen,
+        // RemoveMacroblock often no-ops for items (and some blocks) on non-Stadium
+        // envs even though temp-write succeeds — gizmo item replace then leaves
+        // duplicates. Same donor path as place.
+        auto mbPath = Editor::GetDonorMacroblockPath();
+        CGameCtnMacroBlockInfo@ mb = pmt.GetMacroblockModelFromFilePath(mbPath);
+        if (mb is null) {
+            auto mbFid = Fids::GetGame("GameData\\" + mbPath);
+            @mb = cast<CGameCtnMacroBlockInfo>(Fids::Preload(mbFid));
+        }
+        if (mb is null && pmt.MacroblockModels.Length > 0) {
+            @mb = pmt.MacroblockModels[0];
+            NotifyWarning("DeleteMacroblock: falling back to MacroblockModels[0] (" + mb.IdName + "); preferred donor missing: " + mbPath);
+        }
+        if (mb is null) {
+            NotifyWarning("DeleteMacroblock: no donor macroblock available");
+            return false;
+        }
         Editor::QueueFreeBlockDeletionFromMB(mbSpec);
-        mbSpec._TempWriteToMacroblock(mb);
-        auto removed = pmt.RemoveMacroblock(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
-        if (removed && addUndoRedoPoint) pmt.AutoSave();
-        mbSpec._RestoreMacroblock();
+        try {
+            mbSpec._TempWriteToMacroblock(mb);
+        } catch {
+            NotifyWarning("DeleteMacroblock: exception temp-writing donor macroblock: " + getExceptionInfo());
+            try {
+                mbSpec._RestoreMacroblock();
+            } catch {
+                warn("DeleteMacroblock: exception restoring donor macroblock after temp-write failure: " + getExceptionInfo());
+            }
+            return false;
+        }
+
+        // Regenerate donor generated-state after temp-write (same as PlaceMacroblock).
+        // Skip-regen path left RemoveMacroblock returning true/false without
+        // matching map items on BlueBay/GreenCoast.
+        bool regenerated = false;
+        CGameCtnMacroBlockInfo@ prevCurrMb = null;
+        try {
+            @prevCurrMb = Editor::ReplaceCurrentMacroblock_AddRef(editor, mb);
+        } catch {
+            NotifyWarning("DeleteMacroblock: exception selecting donor macroblock: " + getExceptionInfo());
+            try {
+                mbSpec._RestoreMacroblock();
+            } catch {
+                warn("DeleteMacroblock: exception restoring donor after selection failure: " + getExceptionInfo());
+            }
+            return false;
+        }
+        try {
+            editor.TurnIntoAirMb_Unsafe();
+            regenerated = true;
+        } catch {
+            NotifyWarning("DeleteMacroblock: exception regenerating donor macroblock: " + getExceptionInfo());
+        }
+        bool restoredCurrMb = RestoreCurrentMacroblockAfterDonor(editor, prevCurrMb);
+        ReleaseIfNonNull(prevCurrMb);
+        @prevCurrMb = null;
+        if (!regenerated || !restoredCurrMb) {
+            try {
+                mbSpec._RestoreMacroblock();
+            } catch {
+                warn("DeleteMacroblock: exception restoring donor after regen failure: " + getExceptionInfo());
+            }
+            if (!regenerated) {
+                NotifyWarning("DeleteMacroblock: failed to regenerate donor macroblock");
+            } else {
+                NotifyWarning("DeleteMacroblock: failed to restore current macroblock after donor regen");
+            }
+            return false;
+        }
+
+        bool removed = false;
+        try {
+            auto dmb = DGameCtnMacroBlockInfo(mb);
+            dev_trace("DeleteMacroblock: donor=" + mb.IdName
+                + " nb blocks/items/skins: " + dmb.Blocks.Length + "/" + dmb.Items.Length + "/" + dmb.Skins.Length);
+            // _TempWriteToMacroblock forces Initialized=false / Connected=false so
+            // TurnIntoAirMb_Unsafe can rebuild placement state. PlaceMacroblock_AirMode
+            // tolerates that; RemoveMacroblock does NOT — it no-ops on items (and
+            // sometimes blocks) while both flags are false. Native inventory MBs that
+            // contain items are always init=true conn=true. RE dump 2026-08-11:
+            // setting both true immediately before remove makes RemoveMacroblock
+            // return true and drop AnchoredObjects.Length. _RestoreMacroblock still
+            // puts the original flag values back afterward.
+            mb.Initialized = true;
+            mb.Connected = true;
+            removed = pmt.RemoveMacroblock(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
+            dev_trace("DeleteMacroblock: RemoveMacroblock returned " + removed
+                + " (after init/conn=true)");
+            if (removed && addUndoRedoPoint) pmt.AutoSave();
+        } catch {
+            NotifyWarning("DeleteMacroblock: exception removing donor macroblock: " + getExceptionInfo());
+        }
+#if DEV
+        // Forensics + optional AnchorData RemoveItem prototype while donor still
+        // holds the temp-written item buffer. No-op outside DEV builds.
+        {
+            bool engineRemoved = removed;
+            removed = MacroblockItemDeleteDiag::OnDeleteMacroblockResult(mbSpec, mb, editor, removed);
+            if (removed && !engineRemoved && addUndoRedoPoint) pmt.AutoSave();
+        }
+#endif
+        try {
+            mbSpec._RestoreMacroblock();
+        } catch {
+            warn("DeleteMacroblock: exception restoring donor macroblock: " + getExceptionInfo());
+        }
         return removed;
     }
     bool SetSkins(SetSkinSpec@[]@ skins) {

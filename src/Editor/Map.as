@@ -490,6 +490,33 @@ namespace Editor {
         if (map is null || map.Collection is null) return 0;
         return map.Collection.CollectionId;
     }
+
+    // Donor macroblock file paths per environment.
+    // E++ temp-writes synthetic Blocks/Items/Skins buffers into this donor and
+    // calls TurnIntoAirMb_Unsafe to rebuild its internal placement state. The
+    // donor MUST be native to the editor's collection: using a Stadium donor
+    // in a non-Stadium editor crashes PlaceMacroblock_AirMode in native code
+    // because env-keyed resources (terrain/scenery) fail to resolve.
+    const string kDonorStadium    = "Stadium\\Macroblocks\\LightSculpture\\Spring\\FlowerWhiteSmall.Macroblock.Gbx";
+    // Air-variant donors avoid the AutoTerrains conflict that blocks
+    // PlaceMacroblock_AirMode when a Ground-variant donor is used.
+    const string kDonorRedIsland   = "RedIsland\\GamepadEditor\\Structures\\Main\\StructureBase\\Air.Macroblock.Gbx";
+    const string kDonorGreenCoast  = "GreenCoast\\GamepadEditor\\Structures\\Main\\StructureBase\\Air.Macroblock.Gbx";
+    const string kDonorBlueBay     = "BlueBay\\GamepadEditor\\Structures\\Main\\StructureBase\\Air.Macroblock.Gbx";
+    const string kDonorWhiteShore  = "WhiteShore\\GamepadEditor\\Structures\\Main\\StructureBase\\Air.Macroblock.Gbx";
+
+    string GetDonorMacroblockPath() {
+        auto map = GetApp().RootMap;
+        if (map is null) return kDonorStadium;
+        string collName = string(map.CollectionName);
+        if (collName == "Stadium")    return kDonorStadium;
+        if (collName == "RedIsland")  return kDonorRedIsland;
+        if (collName == "GreenCoast") return kDonorGreenCoast;
+        if (collName == "BlueBay")    return kDonorBlueBay;
+        if (collName == "WhiteShore") return kDonorWhiteShore;
+        warn("No donor macroblock configured for collection '" + collName + "'; falling back to Stadium (placement will likely crash).");
+        return kDonorStadium;
+    }
 }
 
 /*

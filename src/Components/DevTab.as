@@ -131,6 +131,16 @@ class DevMiscTab : Tab {
         UI::Separator();
 
 #if DEV
+        if (UI::Button("Run Macroblock E3 Placement Pair")) {
+            startnew(CoroutineFunc(MacroblockPlaceDiag::RunPair));
+        }
+        UI::Text("Hotkey: Ctrl + Alt + F9");
+        if (UI::Button("Run Macroblock E3 Gizmo Pair")) {
+            startnew(CoroutineFunc(MacroblockPlaceDiag::RunGizmoPair));
+        }
+        UI::Text("Hotkey: Ctrl + Alt + F11");
+        UI::Separator();
+
         if (UI::Button("Create and Explore Test Vehicle Item")) {
             @testVehicleItem = Editor::CreateTestVehicleItem();
         }

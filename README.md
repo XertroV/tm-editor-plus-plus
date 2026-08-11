@@ -32,6 +32,9 @@ Code/issues: [https://github.com/XertroV/tm-editor-plus-plus](https://github.com
 
 GL HF
 
+Tools:
+- `tools/openplanet_recent_exception.py` prints the newest exception-ish block from `~/OpenplanetNext/Openplanet.log` and accepts `--engine`, `--level`, `--source`/`--plugin`, `--field NAME=VALUE`, `--contains TEXT`, `--context`, `--count`, `--all`, and `--include-repeats`. Field aliases include `engine`/`runtime`, `level`, `time`/`timestamp`, and `source`/`plugin`; numeric field indexes also work.
+
 todo:
 - add 'luck' param to placed items (bmx22c)
 - add mass apply property
