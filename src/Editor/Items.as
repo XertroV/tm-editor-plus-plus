@@ -122,10 +122,14 @@ namespace Editor {
         auto macroblock = Editor::ResolveDonorMacroblock(editor, "UpdateNewlyAddedItems");
         if (macroblock is null) return;
         Event::DisableOnBlockItemCB();
-        auto placed = pmt.PlaceMacroblock_NoDestruction(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
-        trace('UpdateNewlyAddedItems placed: ' + placed);
-        bool removed = pmt.RemoveMacroblock(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
-        trace('UpdateNewlyAddedItems removed: ' + removed);
+        try {
+            auto placed = pmt.PlaceMacroblock_NoDestruction(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
+            trace('UpdateNewlyAddedItems placed: ' + placed);
+            bool removed = pmt.RemoveMacroblock(macroblock, int3(0, 24, 0), CGameEditorPluginMap::ECardinalDirections::North);
+            trace('UpdateNewlyAddedItems removed: ' + removed);
+        } catch {
+            warn("UpdateNewlyAddedItems: exception during place/remove: " + getExceptionInfo());
+        }
         Event::EnableOnBlockItemCB();
     }
 

@@ -549,7 +549,11 @@ namespace Editor {
         }
 
         uint expectedCollectionId = GetMapCollectorId();
-        if (expectedCollectionId == 0 || mb.CollectionId != expectedCollectionId) {
+        // Prefer collection-id match when both sides report a real id. If the
+        // donor still has CollectionId=0 (uninitialized metadata), trust the
+        // path table (already collection-specific) rather than false-rejecting.
+        if (expectedCollectionId != 0 && mb.CollectionId != 0
+            && mb.CollectionId != expectedCollectionId) {
             NotifyError(operation + ": donor collection mismatch for '" + mbPath
                 + "' (map=" + collName + "/" + expectedCollectionId
                 + ", donor=" + mb.CollectionId_Text + "/" + mb.CollectionId
