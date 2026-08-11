@@ -572,33 +572,50 @@ namespace Gizmo {
                 // Items: prefer live DeleteItems; itemSpec RemoveMacroblock can
                 // silently no-op (donor/match issues), leaving the original and
                 // producing a duplicate on apply (same symptom as B1 for blocks).
+                //
+                // Also: buffer-only remove can drop AnchoredObjects.Length while
+                // the mesh stays visible until the next engine rebuild (e.g. apply
+                // PlaceItems). Force a post-delete visual sync so the original
+                // disappears *before* the interactive gizmo, matching blocks.
                 Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Item);
                 Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+                // Clear pick so the engine is not holding a live ref to the target.
+                if (editor.PickedObject !is null) {
+                    editor.PickedObject.MwRelease();
+                    Dev::SetOffset(editor, GetOffset(editor, "PickedObject"), uint64(0));
+                }
                 bool removed = false;
+                string deleteMethod = "none";
                 CGameCtnAnchoredObject@ targetItem = lastPickedItem !is null ? lastPickedItem.AsItem() : null;
                 auto map = editor.Challenge;
                 uint itemsBefore = map !is null ? map.AnchoredObjects.Length : 0;
                 if (targetItem !is null) {
                     removed = Editor::DeleteItems({targetItem});
+                    yield();
                     if (map !is null && map.AnchoredObjects.Length >= itemsBefore) {
-                        // DeleteItems returned true but count didn't drop, or returned false.
                         removed = false;
+                    } else if (removed) {
+                        deleteMethod = "DeleteItems";
                     }
                 }
                 if (!removed && itemSpec !is null) {
+                    uint beforeSpec = map !is null ? map.AnchoredObjects.Length : 0;
                     removed = Editor::DeleteBlocksAndItems({}, {itemSpec});
-                    if (map !is null && map.AnchoredObjects.Length >= itemsBefore) {
+                    yield();
+                    if (map !is null && map.AnchoredObjects.Length >= beforeSpec) {
                         removed = false;
+                    } else if (removed) {
+                        deleteMethod = "DeleteBlocksAndItems";
                     }
                 }
-                // Last resort: direct buffer remove by identity (undo-unsafe).
+                // Last resort: direct buffer remove by identity (undo-unsafe; needs visual sync).
                 if (!removed && targetItem !is null && map !is null) {
                     for (int i = int(map.AnchoredObjects.Length) - 1; i >= 0; i--) {
                         if (map.AnchoredObjects[i] is targetItem) {
                             Editor::TrackMap_OnRemoveItem(targetItem);
-                            // MwFastBuffer supports RemoveRange, not array::RemoveAt
                             map.AnchoredObjects.RemoveRange(i, 1);
                             removed = map.AnchoredObjects.Length < itemsBefore;
+                            if (removed) deleteMethod = "AnchoredObjects.RemoveRange";
                             dev_trace("Gizmo item delete via AnchoredObjects.RemoveRange(" + i + ",1) removed=" + removed);
                             break;
                         }
@@ -611,7 +628,18 @@ namespace Gizmo {
                         + " targetNull=" + (targetItem is null)
                         + " itemSpecNull=" + (itemSpec is null));
                 } else {
-                    dev_trace("Gizmo deleted item");
+                    // Force the editor to rebuild item visuals from AnchoredObjects
+                    // so the original mesh is gone before the gizmo is shown.
+                    // Avoid RefreshBlocksAndItems here: it Undo/Redos and would
+                    // restore the AutoSave checkpoint that still has the item.
+                    try {
+                        Editor::UpdateNewlyAddedItems(editor);
+                    } catch {
+                        warn("Gizmo: UpdateNewlyAddedItems after item delete failed: " + getExceptionInfo());
+                    }
+                    yield();
+                    dev_trace("Gizmo deleted item via " + deleteMethod
+                        + "; itemsNow=" + (map !is null ? map.AnchoredObjects.Length : 0));
                     @lastPickedItem = null;
                 }
             }
