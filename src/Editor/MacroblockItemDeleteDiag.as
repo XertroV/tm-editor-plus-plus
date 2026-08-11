@@ -262,6 +262,164 @@ namespace MacroblockItemDeleteDiag {
         return itemsAfter < itemsBefore;
     }
 
+    // --- place vs delete donor snapshots ---
+    string g_lastPlaceDonorSummary = "";
+    string g_lastPlaceDonorItem0 = "";
+    string g_lastPlaceSpec0 = "";
+    uint64 g_lastPlaceAtMs = 0;
+
+    string _DonorSummary(CGameCtnMacroBlockInfo@ mb) {
+        if (mb is null) return "donor:null";
+        auto dmb = DGameCtnMacroBlockInfo(mb);
+        return "id=" + mb.IdName
+            + " init=" + mb.Initialized
+            + " connected=" + mb.Connected
+            + " isGround=" + mb.IsGround
+            + " coll=" + mb.CollectionId + "/" + mb.CollectionId_Text
+            + " rc=" + Reflection::GetRefCount(mb)
+            + " nb=" + dmb.Blocks.Length + "/" + dmb.Items.Length + "/" + dmb.Skins.Length;
+    }
+
+    string _RawItemHead(DGameCtnMacroBlockInfo_Item@ di) {
+        // First 0x40 bytes as hex for binary place/delete diffs
+        if (di is null) return "raw:null";
+        string h = "raw0..3f=";
+        for (uint off = 0; off < 0x40; off += 4) {
+            h += Text::Format("%08x", di.GetUint32(off));
+            if (off + 4 < 0x40) h += " ";
+        }
+        return h;
+    }
+
+    // Call from PlaceMacroblock after regen, before PlaceMacroblock_AirMode.
+    void OnPlaceMacroblockPrePlace(Editor::MacroblockSpecPriv@ mbSpec, CGameCtnMacroBlockInfo@ mb) {
+        if (mbSpec is null || mbSpec.Items.Length == 0) return;
+        g_lastPlaceAtMs = Time::Now;
+        g_lastPlaceDonorSummary = _DonorSummary(mb);
+        auto dmb = DGameCtnMacroBlockInfo(mb);
+        if (dmb.Items.Length > 0) {
+            auto di = dmb.Items.GetItem(0);
+            g_lastPlaceDonorItem0 = _DonorItemLine(di, 0) + " | " + _RawItemHead(di);
+        } else {
+            g_lastPlaceDonorItem0 = "donor items empty at place-pre";
+        }
+        g_lastPlaceSpec0 = _SpecLine(mbSpec.Items[0], "placeSpec[0]");
+        _Emit("======== item-place donor snapshot ========");
+        _Emit("place-pre " + g_lastPlaceDonorSummary);
+        _Emit(g_lastPlaceDonorItem0);
+        _Emit(g_lastPlaceSpec0);
+        _Emit("======== end place snapshot ========");
+    }
+
+    void _DiffPlaceVsDeleteDonor(CGameCtnMacroBlockInfo@ mb, Editor::MacroblockSpecPriv@ mbSpec) {
+        if (g_lastPlaceAtMs == 0) {
+            _Emit("place-vs-delete: no prior place snapshot this session");
+            return;
+        }
+        string delSum = _DonorSummary(mb);
+        string delItem0 = "";
+        auto dmb = DGameCtnMacroBlockInfo(mb);
+        if (dmb.Items.Length > 0) {
+            auto di = dmb.Items.GetItem(0);
+            delItem0 = _DonorItemLine(di, 0) + " | " + _RawItemHead(di);
+        } else {
+            delItem0 = "donor items empty at delete";
+        }
+        string delSpec0 = mbSpec.Items.Length > 0 ? _SpecLine(mbSpec.Items[0], "delSpec[0]") : "delSpec empty";
+        _Emit("place-vs-delete ageMs=" + (Time::Now - g_lastPlaceAtMs));
+        _Emit("PLACE sum: " + g_lastPlaceDonorSummary);
+        _Emit("DEL   sum: " + delSum);
+        _Emit("PLACE item0: " + g_lastPlaceDonorItem0);
+        _Emit("DEL   item0: " + delItem0);
+        _Emit("PLACE spec0: " + g_lastPlaceSpec0);
+        _Emit("DEL   spec0: " + delSpec0);
+        bool sumEq = g_lastPlaceDonorSummary == delSum;
+        bool itemEq = g_lastPlaceDonorItem0 == delItem0;
+        // Compare ignoring "donor[0]" tag noise — full string eq is fine
+        _Emit("place-vs-delete equal? summary=" + sumEq + " item0=" + itemEq);
+    }
+
+    // Try alternate RemoveMacroblock APIs / coords / dirs. Stops on first count drop.
+    bool TryRemoveVariants(CGameCtnMacroBlockInfo@ mb, CGameCtnEditorFree@ editor) {
+        if (mb is null || editor is null || editor.PluginMapType is null || editor.Challenge is null) {
+            return false;
+        }
+        auto pmt = editor.PluginMapType;
+        auto map = editor.Challenge;
+        uint before = map.AnchoredObjects.Length;
+
+        // name, callable via try
+        int3[] coords = {
+            int3(0, 1, 0),   // PlaceMacroblock_AirMode / current delete
+            int3(0, 24, 0),  // UpdateNewlyAddedItems dummy
+            int3(0, 0, 0),
+            int3(1, 1, 1)
+        };
+        CGameEditorPluginMap::ECardinalDirections[] dirs = {
+            CGameEditorPluginMap::ECardinalDirections::North,
+            CGameEditorPluginMap::ECardinalDirections::East,
+            CGameEditorPluginMap::ECardinalDirections::South,
+            CGameEditorPluginMap::ECardinalDirections::West
+        };
+
+        // Variant matrix — keep small: primary coord × North for each API, then expand if needed
+        for (uint ci = 0; ci < coords.Length; ci++) {
+            auto c = coords[ci];
+            string cs = c.x + "," + c.y + "," + c.z;
+
+            // 1) RemoveMacroblock (already tried at 0,1,0 North — still probe other coords)
+            if (!(ci == 0)) {
+                bool r = false;
+                try { r = pmt.RemoveMacroblock(mb, c, CGameEditorPluginMap::ECardinalDirections::North); } catch {
+                    _Emit("  variant RemoveMacroblock(" + cs + ",N) EX: " + getExceptionInfo());
+                }
+                uint after = map.AnchoredObjects.Length;
+                _Emit("  variant RemoveMacroblock(" + cs + ",N) ret=" + r + " items " + before + "->" + after);
+                if (after < before) return true;
+            }
+
+            // 2) RemoveMacroblock_NoTerrain
+            {
+                bool r = false;
+                try { r = pmt.RemoveMacroblock_NoTerrain(mb, c, CGameEditorPluginMap::ECardinalDirections::North); } catch {
+                    _Emit("  variant NoTerrain(" + cs + ",N) EX: " + getExceptionInfo());
+                }
+                uint after = map.AnchoredObjects.Length;
+                _Emit("  variant NoTerrain(" + cs + ",N) ret=" + r + " items " + before + "->" + after);
+                if (after < before) return true;
+            }
+
+            // 3) RemoveMacroblock_NoTerrain_NoUnvalidate
+            {
+                bool r = false;
+                try { r = pmt.RemoveMacroblock_NoTerrain_NoUnvalidate(mb, c, CGameEditorPluginMap::ECardinalDirections::North); } catch {
+                    _Emit("  variant NoTerrain_NoUnvalidate(" + cs + ",N) EX: " + getExceptionInfo());
+                }
+                uint after = map.AnchoredObjects.Length;
+                _Emit("  variant NoTerrain_NoUnvalidate(" + cs + ",N) ret=" + r + " items " + before + "->" + after);
+                if (after < before) return true;
+            }
+        }
+
+        // Dir sweep on NoTerrain at (0,1,0) only
+        for (uint di = 0; di < dirs.Length; di++) {
+            if (di == 0) continue; // North already tried
+            bool r = false;
+            try {
+                r = pmt.RemoveMacroblock_NoTerrain(mb, int3(0, 1, 0), dirs[di]);
+            } catch {
+                _Emit("  variant NoTerrain(0,1,0,dir=" + di + ") EX: " + getExceptionInfo());
+                continue;
+            }
+            uint after = map.AnchoredObjects.Length;
+            _Emit("  variant NoTerrain(0,1,0,dir=" + di + ") ret=" + r + " items " + before + "->" + after);
+            if (after < before) return true;
+        }
+
+        _Emit("TryRemoveVariants: no variant dropped item count");
+        return false;
+    }
+
     // Single entry from DeleteMacroblock. Logs forensics; may try RemoveItem.
     // Returns possibly-updated `removed`.
     bool OnDeleteMacroblockResult(
@@ -279,10 +437,21 @@ namespace MacroblockItemDeleteDiag {
             + " specs blocks/items=" + mbSpec.Blocks.Length + "/" + mbSpec.Items.Length
             + " donorPath=" + Editor::GetDonorMacroblockPath());
         _LogDonorItems(mb);
+        _DiffPlaceVsDeleteDonor(mb, mbSpec);
         _LogSpecVsMapMatches(mbSpec, editor);
 
         if (!removed) {
-            _Emit("engine RemoveMacroblock missed — trying AnchorData RemoveItem prototype");
+            _Emit("engine RemoveMacroblock missed — trying remove variants");
+            if (TryRemoveVariants(mb, editor)) {
+                _Emit("remove VARIANT SUCCEEDED");
+                removed = true;
+            } else {
+                _Emit("remove variants all missed");
+            }
+        }
+
+        if (!removed) {
+            _Emit("trying AnchorData RemoveItem prototype");
             bool viaAnchor = TryRemoveViaAnchorData(mbSpec, editor);
             if (viaAnchor) {
                 _Emit("AnchorData RemoveItem SUCCEEDED (prototype B)");
@@ -291,7 +460,7 @@ namespace MacroblockItemDeleteDiag {
                 _Emit("AnchorData RemoveItem did not remove any items");
             }
         } else {
-            _Emit("engine remove succeeded; skipping AnchorData prototype");
+            _Emit("remove already succeeded; skipping further prototypes");
         }
         _Emit("======== end forensics removed=" + removed + " ========");
         return removed;

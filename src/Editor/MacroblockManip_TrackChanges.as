@@ -520,6 +520,8 @@ namespace Editor {
             }
             dev_trace("MB Collection: " + mb.CollectionId_Text + " / ID: " + mb.CollectionId);
             dev_trace("placing now...");
+            // Place-vs-delete forensics: snapshot donor item buffer after regen
+            MacroblockItemDeleteDiag::OnPlaceMacroblockPrePlace(mbSpec, mb);
 #endif
             placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
             if (placed && addUndoRedoPoint) {
