@@ -448,7 +448,7 @@ namespace Editor {
         try {
             mbSpec._TempWriteToMacroblock(mb);
         } catch {
-            warn("PlaceMacroblock: exception temp-writing donor macroblock: " + getExceptionInfo());
+            NotifyWarning("PlaceMacroblock: exception temp-writing donor macroblock: " + getExceptionInfo());
             try {
                 mbSpec._RestoreMacroblock();
             } catch {
@@ -467,7 +467,7 @@ namespace Editor {
         try {
             @prevCurrMb = Editor::ReplaceCurrentMacroblock_AddRef(editor, mb);
         } catch {
-            warn("PlaceMacroblock: exception selecting donor macroblock: " + getExceptionInfo());
+            NotifyWarning("PlaceMacroblock: exception selecting donor macroblock: " + getExceptionInfo());
             try {
                 mbSpec._RestoreMacroblock();
             } catch {
@@ -481,7 +481,7 @@ namespace Editor {
             dev_trace("[DEBUG] PlaceMacroblock: after TurnIntoAirMb_Unsafe: init=" + mb.Initialized + ", connected=" + mb.Connected + ", isGround=" + mb.IsGround + ", collection=" + mb.CollectionId);
             regenerated = true;
         } catch {
-            warn("PlaceMacroblock: exception regenerating donor macroblock: " + getExceptionInfo());
+            NotifyWarning("PlaceMacroblock: exception regenerating donor macroblock: " + getExceptionInfo());
         }
         dev_trace("[DEBUG] PlaceMacroblock: Restoring curr MB; mb.IsGround=" + mb.IsGround);
         bool restoredCurrMb = RestoreCurrentMacroblockAfterDonor(editor, prevCurrMb);
@@ -492,6 +492,11 @@ namespace Editor {
                 mbSpec._RestoreMacroblock();
             } catch {
                 warn("PlaceMacroblock: exception restoring donor macroblock after regeneration failure: " + getExceptionInfo());
+            }
+            if (!regenerated) {
+                NotifyWarning("PlaceMacroblock: failed to regenerate donor macroblock");
+            } else if (!restoredCurrMb) {
+                NotifyWarning("PlaceMacroblock: failed to restore current macroblock after donor regen");
             }
             return false;
         }
@@ -522,7 +527,7 @@ namespace Editor {
                 pmt.AutoSave();
             }
         } catch {
-            warn("PlaceMacroblock: exception placing donor macroblock: " + getExceptionInfo());
+            NotifyWarning("PlaceMacroblock: exception placing donor macroblock: " + getExceptionInfo());
         }
         try {
             mbSpec._RestoreMacroblock();
@@ -552,17 +557,17 @@ namespace Editor {
         }
         if (mb is null && pmt.MacroblockModels.Length > 0) {
             @mb = pmt.MacroblockModels[0];
-            warn("DeleteMacroblock: falling back to MacroblockModels[0] (" + mb.IdName + "); preferred donor missing: " + mbPath);
+            NotifyWarning("DeleteMacroblock: falling back to MacroblockModels[0] (" + mb.IdName + "); preferred donor missing: " + mbPath);
         }
         if (mb is null) {
-            warn("DeleteMacroblock: no donor macroblock available");
+            NotifyWarning("DeleteMacroblock: no donor macroblock available");
             return false;
         }
         Editor::QueueFreeBlockDeletionFromMB(mbSpec);
         try {
             mbSpec._TempWriteToMacroblock(mb);
         } catch {
-            warn("DeleteMacroblock: exception temp-writing donor macroblock: " + getExceptionInfo());
+            NotifyWarning("DeleteMacroblock: exception temp-writing donor macroblock: " + getExceptionInfo());
             try {
                 mbSpec._RestoreMacroblock();
             } catch {
@@ -576,7 +581,7 @@ namespace Editor {
             removed = pmt.RemoveMacroblock(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
             if (removed && addUndoRedoPoint) pmt.AutoSave();
         } catch {
-            warn("DeleteMacroblock: exception removing donor macroblock: " + getExceptionInfo());
+            NotifyWarning("DeleteMacroblock: exception removing donor macroblock: " + getExceptionInfo());
         }
         try {
             mbSpec._RestoreMacroblock();
