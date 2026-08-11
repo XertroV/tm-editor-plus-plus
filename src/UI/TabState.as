@@ -80,7 +80,7 @@ namespace TabState {
 
         parts.InsertLast("}");
         // Json::ToFile(TabStateJsonFilePath, root, false);
-        _lastJsonDebug = Text::Join(parts, "\n");
+        _lastJsonDebug = string::Join(parts, "\n");
         WriteFile(TabStateJsonFilePath, _lastJsonDebug.Replace("\n", ""));
 #if DEV
         // _lastJsonDebug = Json::Write(root, true);

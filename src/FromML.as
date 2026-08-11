@@ -101,7 +101,7 @@ namespace ToML {
         auto layer = pluginPMT.UILayers[0];
         auto nonceParts = layer.ManialinkPageUtf8.Split(TIMENOW_DELIM);
         nonceParts[1] = tostring(Time::Now);
-        auto eventParts = Text::Join(nonceParts, TIMENOW_DELIM).Split(EVENTS_DELIM);
+        auto eventParts = string::Join(nonceParts, TIMENOW_DELIM).Split(EVENTS_DELIM);
         string eventsStr = '[';
         for (uint i = 0; i < queued.Length; i++) {
             dev_trace("adding msg of type " + queued[i].type);
@@ -109,7 +109,7 @@ namespace ToML {
         }
         eventsStr += ']';
         eventParts[1] = eventsStr;
-        layer.ManialinkPageUtf8 = Text::Join(eventParts, EVENTS_DELIM);
+        layer.ManialinkPageUtf8 = string::Join(eventParts, EVENTS_DELIM);
         // dev_trace("Set new page ML: " + layer.ManialinkPageUtf8);
         queued.RemoveRange(0, queued.Length);
     }

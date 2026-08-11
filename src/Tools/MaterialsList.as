@@ -51,7 +51,7 @@ class MaterialsListTab : Tab {
             for (uint i = 0; i < files.Length; i++) {
                 names.InsertLast(FID_GetListName(files[i], false));
             }
-            IO::SetClipboard(Text::Join(names, "\n"));
+            IO::SetClipboard(string::Join(names, "\n"));
             Notify("Copied " + names.Length + " material paths to clipboard.");
         }
 
