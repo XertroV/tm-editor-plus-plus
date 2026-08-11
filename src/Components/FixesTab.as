@@ -32,18 +32,16 @@ class FixesTab : Tab {
         }
 
         if (UI::CollapsingHeader("Gizmo + 'Ghost' Items" + NewIndicator)) {
-            TextFixesDesc("Ghost poles after gizmo are usually leftover ItemCursor multi-model draws — not map items. Undo will not remove them.");
-            UI::TextWrapped("This expands ItemCursor.CurrentModels to capacity (road-snap style), then you swap to another item and back to flush.");
-            UI::TextWrapped("If expand reports nothing to do: select ROAD SIGNS + SNAP TO ROAD, or leave/re-enter the editor.");
+            TextFixesDesc("Two kinds: (A) multi-model cursor ghosts after road snap — expand+swap. (B) pure scene phantom after failed magnet click + gizmo delete of the real AO — clear cursor draws.");
+            UI::TextWrapped("If map item count is already correct and undo/delete of AOs does not remove the mesh, use this button (scene path).");
             if (UI::Button(Icons::Wrench + Icons::SnapchatGhost + "  Fix 'Ghost' Items Now")) {
                 Fixes::FixGhostItems(editor.ItemCursor);
             }
-            AddSimpleTooltip("Expand capacity model slots. Then swap item once to finish.");
+            AddSimpleTooltip("Expand capacity models if any; else clear cursor scene draws via HelperMobil.Hide + not-drawn flags.");
             UI::SameLine();
             if (UI::Button(Icons::List + " Dump ItemCursor models")) {
                 Fixes::DumpItemCursorModels(editor.ItemCursor);
             }
-            AddSimpleTooltip("Log CurrentModels len/cap/slots to Openplanet.log (safe).");
         }
 
         UI::SeparatorText("Misc");
@@ -160,13 +158,73 @@ namespace Fixes {
         return extra;
     }
 
+    // Pure scene phantoms (no AnchoredObject): often leftover cursor/magnet
+    // preview draws after a failed snap click + later delete of the real AO.
+    // Safe ops only: known offsets, HelperMobil.Hide/Show API — never cast
+    // ItemDesc matrix floats as nods (that crashed openplanet.dll).
+    void ClearCursorItemSceneDraws(CGameCursorItem@ itemCursor) {
+        if (itemCursor is null) return;
+        CustomCursor::NoHideCursorItemModelsPatchActive = false;
+        CustomCursor::NoShowCursorItemModelsPatchActive = false;
+
+        uint64 bufPtr = Dev::GetOffsetUint64(itemCursor, O_ITEMCURSOR_CurrentModelsBuf);
+        uint32 len = Dev::GetOffsetUint32(itemCursor, O_ITEMCURSOR_CurrentModelsBuf + 0x8);
+        uint32 cap = Dev::GetOffsetUint32(itemCursor, O_ITEMCURSOR_CurrentModelsBuf + 0xC);
+        if (bufPtr != 0 && cap > 0) {
+            uint walkN = Math::Min(cap, 64);
+            for (uint i = 0; i < walkN; i++) {
+                // u1 = not drawn (documented). Do not touch model ptrs (refcount).
+                Dev::Write(bufPtr + i * ITEM_DESC_EL_SIZE + 0x0, ITEM_DESC_NOT_DRAWN);
+            }
+            // len=0 so engine draws no cursor item models this frame
+            Dev::SetOffset(itemCursor, O_ITEMCURSOR_CurrentModelsBuf + 0x8, uint32(0));
+            dev_trace("ClearCursorItemSceneDraws: marked " + walkN
+                + " slots not-drawn; wasLen=" + len + " cap=" + cap);
+        }
+
+        try {
+            auto dci = DGameCursorItem(itemCursor);
+            auto helper = dci.helperMobil;
+            if (helper !is null) {
+                helper.Hide();
+                if (helper.Item !is null) {
+                    try { helper.Item.IsVisible = false; } catch {}
+                }
+                dev_trace("ClearCursorItemSceneDraws: HelperMobil.Hide()");
+            }
+        } catch {
+            dev_trace("ClearCursorItemSceneDraws: HelperMobil failed: " + getExceptionInfo());
+        }
+    }
+
+    void RestoreCursorItemPrimaryDraw(CGameCursorItem@ itemCursor) {
+        if (itemCursor is null) return;
+        uint64 bufPtr = Dev::GetOffsetUint64(itemCursor, O_ITEMCURSOR_CurrentModelsBuf);
+        if (bufPtr == 0) return;
+        uint64 modelPtr = Dev::ReadUInt64(bufPtr + 0x8);
+        if (_ModelPtrLooksOk(modelPtr)) {
+            Dev::Write(bufPtr + 0x0, ITEM_DESC_DRAWN);
+            Dev::SetOffset(itemCursor, O_ITEMCURSOR_CurrentModelsBuf + 0x8, uint32(1));
+        }
+        try {
+            auto dci = DGameCursorItem(itemCursor);
+            auto helper = dci.helperMobil;
+            if (helper !is null) {
+                helper.Show();
+                if (helper.Item !is null) {
+                    try { helper.Item.IsVisible = true; } catch {}
+                }
+            }
+        } catch {}
+    }
+
     void FixGhostItems(CGameCursorItem@ itemCursor) {
-        // ghost items come from the item cursor multi-model buffer (road snap).
-        // Sometimes not cleared after gizmo. Expand capacity then user swaps item.
+        // Two classes:
+        // A) Capacity multi-model ghosts (len < cap with models) → expand + swap
+        // B) Pure scene phantom (no AO, cap==len) → clear draw flags + HelperMobil.Hide
         //
         // SAFETY: do NOT cast ItemDesc 0x10-0x68 as nod pointers (matrix floats).
-        // do NOT HelperMobil.Hide/Show on reload (crashed openplanet.dll).
-        // do NOT auto-run this on plugin start.
+        // do NOT auto-run on plugin start.
         if (itemCursor is null) {
             NotifyWarning("FixGhostItems: ItemCursor is null");
             return;
@@ -176,31 +234,53 @@ namespace Fixes {
 
         DumpItemCursorModels(itemCursor);
         uint extra = ForceShowCapacityModels(itemCursor);
-        if (extra == 0) {
-            TempNvgText("FixGhostItems: nothing to expand (len==cap or no capacity models).\nTry ROAD SIGNS + SNAP TO ROAD, or leave/re-enter editor.")
-                .WithFontSize(36.0 * g_stdPxToScreenPx)
-                .WithPosOffset(vec2(0, -g_screen.y * 0.2))
-                .WithCols(Math::Lerp(cOrange, cWhite, 0.7), cRed)
+        if (extra > 0) {
+            TempNvgText("Showing +" + extra + " ghost items. Swap items to finish.")
+                .WithFontSize(40.0 * g_stdPxToScreenPx)
+                .WithPosOffset(vec2(0, -g_screen.y * 0.25))
+                .WithCols(Math::Lerp(cGreen, cWhite, 0.7), cBlack)
                 .WithDurationMs(5000)
                 ;
             return;
         }
-        TempNvgText("Showing +" + extra + " ghost items. Swap items to finish.")
-            .WithFontSize(40.0 * g_stdPxToScreenPx)
-            .WithPosOffset(vec2(0, -g_screen.y * 0.25))
+
+        // Class B: scene phantom / stuck cursor draw with nothing to expand
+        ClearCursorItemSceneDraws(itemCursor);
+        startnew(_FixGhostScenePhantomFlush);
+        TempNvgText("Cleared cursor item draws (scene phantom path).\nIf still visible: leave editor or toggle item once.")
+            .WithFontSize(36.0 * g_stdPxToScreenPx)
+            .WithPosOffset(vec2(0, -g_screen.y * 0.2))
             .WithCols(Math::Lerp(cGreen, cWhite, 0.7), cBlack)
             .WithDurationMs(5000)
             ;
     }
 
-    // Mid-gizmo safe: expand capacity only (no mode bounce, no Hide).
-    uint ClearGhostItemDraws(CGameCursorItem@ itemCursor) {
-        if (itemCursor is null) return 0;
+    void _FixGhostScenePhantomFlush() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null) return;
+        yield();
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
-        return ForceShowCapacityModels(itemCursor);
+        CustomCursor::NoShowCursorItemModelsPatchActive = false;
+        if (editor.ItemCursor !is null) {
+            ClearCursorItemSceneDraws(editor.ItemCursor);
+        }
+        CustomCursor::TriggerUpdateCursorItemModels(editor);
+        yield();
+        if (editor.ItemCursor !is null) {
+            RestoreCursorItemPrimaryDraw(editor.ItemCursor);
+            DumpItemCursorModels(editor.ItemCursor);
+        }
+        dev_trace("FixGhostScenePhantomFlush done");
     }
 
-    // Soft flush after gizmo exit: placement bounce only (no mobil Hide).
+    // Mid-gizmo safe: clear scene draws without mode bounce.
+    uint ClearGhostItemDraws(CGameCursorItem@ itemCursor) {
+        if (itemCursor is null) return 0;
+        ClearCursorItemSceneDraws(itemCursor);
+        return 1;
+    }
+
+    // Soft flush after gizmo exit.
     void ScheduleGhostItemFlush() {
         startnew(_SoftPlacementBounceFlush);
     }
@@ -210,8 +290,14 @@ namespace Fixes {
         if (editor is null) return;
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
         CustomCursor::NoShowCursorItemModelsPatchActive = false;
-        // Reuse existing safe bounce (no HelperMobil.Hide)
+        if (editor.ItemCursor !is null) {
+            ClearCursorItemSceneDraws(editor.ItemCursor);
+        }
         CustomCursor::TriggerUpdateCursorItemModels(editor);
+        yield();
+        if (editor.ItemCursor !is null) {
+            RestoreCursorItemPrimaryDraw(editor.ItemCursor);
+        }
         dev_trace("SoftPlacementBounceFlush done");
     }
 }

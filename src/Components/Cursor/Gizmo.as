@@ -230,7 +230,18 @@ namespace Gizmo {
         }
         bool isItem = modePlacingType == BlockOrItem::Item;
         CustomCursor::NoSetCursorVisFlagPatchActive = !isItem;
-        if (isItem) CustomCursor::NoHideCursorItemModelsPatchActive = true;
+        // Item gizmo used to force NoHideCursorItemModels for the whole session.
+        // That can leave magnet-snap / cursor preview meshes after the real AO
+        // is deleted (pure scene phantom; not in AnchoredObjects). Only enable
+        // NoHide after setup delete has cleared cursor draws.
+        if (isItem) {
+            CustomCursor::NoHideCursorItemModelsPatchActive = false;
+            if (editor.ItemCursor !is null) {
+                Fixes::ClearCursorItemSceneDraws(editor.ItemCursor);
+                Fixes::RestoreCursorItemPrimaryDraw(editor.ItemCursor);
+            }
+            CustomCursor::NoHideCursorItemModelsPatchActive = true;
+        }
         CustomCursor::NoShowCursorItemModelsPatchActive = !isItem;
 
         desiredGizmoPlaceMode = origPlaceMode;
