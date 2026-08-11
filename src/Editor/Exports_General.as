@@ -81,6 +81,14 @@ namespace Editor {
     import uint Dev_RandomFuzz_GetItemsBefore() from "Editor";
     import uint Dev_RandomFuzz_GetItemsAfter() from "Editor";
 
+    // Map race objectives (clones / laps). NbClones is const on MapInfo API — set via offset.
+    import uint GetMapNbClones(CGameCtnChallenge@ map) from "Editor";
+    import bool SetMapNbClones(CGameCtnChallenge@ map, uint nbClones) from "Editor";
+    import uint GetMapNbLaps(CGameCtnChallenge@ map) from "Editor";
+    import bool GetMapIsLapRace(CGameCtnChallenge@ map) from "Editor";
+    import bool SetMapNbLaps(CGameCtnChallenge@ map, uint nbLaps) from "Editor";
+    import bool SetMapIsLapRace(CGameCtnChallenge@ map, bool isLap) from "Editor";
+
     // map cache
     import IMapCache@ GetIMapCache() from "Editor";
     import IInvCache@ GetIInvCache() from "Editor";
