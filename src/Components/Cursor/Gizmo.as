@@ -657,6 +657,20 @@ namespace Gizmo {
                 auto map = editor.Challenge;
                 uint itemsBefore = map !is null ? map.AnchoredObjects.Length : 0;
 
+                // Capture target pose before delete for leftover checks.
+                vec3 targetPos = vec3(0);
+                string targetName = "";
+                bool haveTargetPos = false;
+                if (targetItem !is null) {
+                    targetPos = targetItem.AbsolutePositionInMap;
+                    if (targetItem.ItemModel !is null) targetName = targetItem.ItemModel.IdName;
+                    haveTargetPos = true;
+                } else if (itemSpec !is null) {
+                    targetPos = itemSpec.pos;
+                    targetName = itemSpec.name;
+                    haveTargetPos = true;
+                }
+
                 if (targetItem !is null) {
                     // Pin while we build specs / call delete (same as Nudge).
                     targetItem.MwAddRef();
@@ -706,16 +720,30 @@ namespace Gizmo {
                 } else {
                     dev_trace("Gizmo deleted item via " + deleteMethod
                         + "; itemsNow=" + (map !is null ? map.AnchoredObjects.Length : 0));
-                    // Re-attach capacity model slots so hide can reclaim them.
-                    // Full flush runs on gizmo exit (ScheduleGhostItemFlush) —
-                    // do not bounce placement mid-setup.
+                    // Count dropped, but magnet-snap / similar pillars can make
+                    // RemoveMacroblock match the WRONG item — original pose stays.
+                    // Also pure scene phantoms won't show here (no AO).
+                    if (haveTargetPos && map !is null) {
+                        uint leftovers = 0;
+                        for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
+                            auto ao = map.AnchoredObjects[i];
+                            if (ao is null) continue;
+                            if ((ao.AbsolutePositionInMap - targetPos).LengthSquared() > 0.01) continue;
+                            leftovers++;
+                            dev_trace("Gizmo item delete leftover AO[" + i + "] pos="
+                                + ao.AbsolutePositionInMap.ToString()
+                                + " name=" + (ao.ItemModel !is null ? ao.ItemModel.IdName : "?"));
+                        }
+                        if (leftovers > 0) {
+                            NotifyWarning("Gizmo: deleted something, but " + leftovers
+                                + " item(s) still at the old position (possible wrong match / twin)."
+                                + " Apply may stack another — check map.");
+                        }
+                    }
                     if (editor.ItemCursor !is null) {
                         Fixes::ClearGhostItemDraws(editor.ItemCursor);
                     }
                 }
-                // Clear local pick handle. Don't write editor.PickedObject =
-                // null (AS type error); SetEditorPickedNod requires non-null.
-                // Placement bounce above should drop pick visuals.
                 @lastPickedItem = null;
             }
             dev_trace("Gizmo deleted target");
