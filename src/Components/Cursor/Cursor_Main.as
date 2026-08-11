@@ -1497,27 +1497,6 @@ Trackmania.exe.text+115D16D - E8 DED9D5FF           - call Trackmania.exe.text+E
         CustomCursor::NoSetCursorVisFlagPatchActive = nscvfp;
     }
 
-    // Public alias: clear stale item/cursor meshes after API delete or on reload.
-    void RefreshStaleItemVisuals(CGameCtnEditorFree@ editor) {
-        TriggerUpdateCursorItemModels(editor);
-    }
-
-    void _RefreshStaleItemVisualsOnPluginStart() {
-        // Wait a frame so editor/cursor exist after RemoteBuild reload.
-        yield();
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null) return;
-        // SAFETY: do NOT run FixGhostItems / HelperMobil.Hide / nod-casts from
-        // matrix floats on plugin start — that crashed openplanet.dll on reload.
-        // Only a light placement bounce (optional) + dump for diagnosis.
-        dev_trace("RefreshStaleItemVisuals on plugin start (safe path)");
-        if (editor.ItemCursor !is null) {
-            Fixes::DumpItemCursorModels(editor.ItemCursor);
-        }
-        // Light bounce only — no Hide/Show on scene mobils
-        RefreshStaleItemVisuals(editor);
-    }
-
 
     // V3 of placement helpers for items on ghost/free blocks.
     // This sets the "is in air" flag of the item cursor to true and NOPs the reset-to-0 part of cursor update routine.
