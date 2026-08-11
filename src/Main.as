@@ -135,7 +135,7 @@ void OnEnabled() {
     Editor::OnPluginLoadSetUpMapThumbnailHook();
     SetUpEditMapIntercepts();
     CustomCursorRotations::BeforeAfterCursorUpdateHook.Apply();
-    // Clear stuck item/cursor meshes left from prior session (gizmo delete ghosts).
+    // Safe light refresh only (no FixGhostItems / mobil Hide on reload).
     startnew(CustomCursor::_RefreshStaleItemVisualsOnPluginStart);
 }
 

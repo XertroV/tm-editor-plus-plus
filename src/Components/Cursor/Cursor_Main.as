@@ -1507,12 +1507,15 @@ Trackmania.exe.text+115D16D - E8 DED9D5FF           - call Trackmania.exe.text+E
         yield();
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
-        dev_trace("RefreshStaleItemVisuals on plugin start");
+        // SAFETY: do NOT run FixGhostItems / HelperMobil.Hide / nod-casts from
+        // matrix floats on plugin start — that crashed openplanet.dll on reload.
+        // Only a light placement bounce (optional) + dump for diagnosis.
+        dev_trace("RefreshStaleItemVisuals on plugin start (safe path)");
         if (editor.ItemCursor !is null) {
-            Fixes::FixGhostItems(editor.ItemCursor);
-        } else {
-            RefreshStaleItemVisuals(editor);
+            Fixes::DumpItemCursorModels(editor.ItemCursor);
         }
+        // Light bounce only — no Hide/Show on scene mobils
+        RefreshStaleItemVisuals(editor);
     }
 
 
