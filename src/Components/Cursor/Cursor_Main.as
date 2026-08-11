@@ -1508,7 +1508,11 @@ Trackmania.exe.text+115D16D - E8 DED9D5FF           - call Trackmania.exe.text+E
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
         dev_trace("RefreshStaleItemVisuals on plugin start");
-        RefreshStaleItemVisuals(editor);
+        if (editor.ItemCursor !is null) {
+            Fixes::FixGhostItems(editor.ItemCursor);
+        } else {
+            RefreshStaleItemVisuals(editor);
+        }
     }
 
 

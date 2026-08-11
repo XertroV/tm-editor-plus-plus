@@ -108,11 +108,16 @@ namespace Gizmo {
         if (origModeWasItem) {
             Editor::SetItemPlacementMode(origItemPlacementMode);
         }
-        // After item gizmo (delete/replace), cursor/zone meshes can stay at the
-        // old item pose. Patches are off above — bounce modes to clear ghosts.
+        // After item gizmo (delete/replace), ItemCursor.CurrentModels can keep
+        // drawing stuck slots (ghost poles). Force-show then flush via item
+        // mode bounce (undo never touches this buffer).
         if (editor !is null && (origModeWasItem || modePlacingType == BlockOrItem::Item
             || modeTargetType == BlockOrItem::Item)) {
-            CustomCursor::RefreshStaleItemVisuals(editor);
+            if (editor.ItemCursor !is null) {
+                Fixes::ClearGhostItemDraws(editor.ItemCursor);
+            }
+            Fixes::ScheduleGhostItemFlush();
+            // Restore modes after flush coro may race — also restore here.
             if (origModeWasItem) {
                 Editor::SetItemPlacementMode(origItemPlacementMode);
             }
@@ -701,11 +706,12 @@ namespace Gizmo {
                 } else {
                     dev_trace("Gizmo deleted item via " + deleteMethod
                         + "; itemsNow=" + (map !is null ? map.AnchoredObjects.Length : 0));
-                    // Engine delete drops AnchoredObjects but can leave cursor /
-                    // NSceneItemPlacement meshes at the old pose (ghost pole).
-                    // Bounce placement modes while patches are still off later
-                    // on exit; clear now so gizmo doesn't keep showing the ghost.
-                    CustomCursor::RefreshStaleItemVisuals(editor);
+                    // Re-attach capacity model slots so hide can reclaim them.
+                    // Full flush runs on gizmo exit (ScheduleGhostItemFlush) —
+                    // do not bounce placement mid-setup.
+                    if (editor.ItemCursor !is null) {
+                        Fixes::ClearGhostItemDraws(editor.ItemCursor);
+                    }
                 }
                 // Clear local pick handle. Don't write editor.PickedObject =
                 // null (AS type error); SetEditorPickedNod requires non-null.
