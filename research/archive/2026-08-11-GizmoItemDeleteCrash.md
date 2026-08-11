@@ -66,3 +66,20 @@ Prefer a yellow `NotifyWarning` + possible duplicate over a native crash.
 - `7325361` — introduced visual-sync path (reverted behavior in `63dac57`)
 - `189974d` / `6c96de8` — earlier B2 buffer fallback
 - `63dac57` — crash fix
+
+## Second crash (same AV, ~22:02) — buffer RemoveRange confirmed
+
+User: first item gizmo OK; second crashed. Same LogCrash `*B9D61D` (AV null+0xF0).
+
+Root cause class: **`AnchoredObjects.RemoveRange` is unsafe** for live editor items.
+Scene graph keeps the nod; buffer drop + later place/gizmo UAF. First op can
+appear to work; second detonates.
+
+Also fixed donor pin in `MacroblockSpecPriv._TempWriteToMacroblock`:
+- Old: `releaseTmpMacroblock = GetRefCount(mb) > 1` then conditional AddRef;
+  matching MwRelease was **commented out** → leak on rc>1, no pin on rc==1,
+  silent use on rc==0.
+- New: refuse rc<1 (throw); always MwAddRef; always MwRelease in `_RestoreMacroblock`.
+
+Gizmo item delete: **Nudge-only** (engine DeleteBlocksAndItems/DeleteItems). No
+buffer RemoveRange. Prefer NotifyWarning + possible duplicate over crash.

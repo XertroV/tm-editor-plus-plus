@@ -153,10 +153,22 @@ namespace Editor {
             tmpMacroblockCollectionId = macroblock.CollectionId;
             tmpMacroblockStateSaved = true;
 
-            releaseTmpMacroblock = Reflection::GetRefCount(macroblock) > 1;
-            if (releaseTmpMacroblock) {
-                macroblock.MwAddRef();
+            // Pin the donor for the duration of the temp-write. The old
+            // `GetRefCount > 1` gate skipped AddRef when rc==1 (Models[] only)
+            // and never Release'd when rc was 0 — both are wrong:
+            //   rc < 1 : zombie / not owned; refuse rather than mutate.
+            //   rc >= 1: always MwAddRef here and MwRelease in _RestoreMacroblock
+            //            so our hold is balanced regardless of who else refs it.
+            // (The matching MwRelease was previously commented out, so the >1
+            //  path also leaked a ref on every Place/DeleteMacroblock.)
+            int donorRc = Reflection::GetRefCount(macroblock);
+            if (donorRc < 1) {
+                throw("MacroblockSpecPriv._TempWriteToMacroblock: donor refcount="
+                    + donorRc + " (expected >= 1). Refusing temp-write on a "
+                    + "possibly-freed CGameCtnMacroBlockInfo.");
             }
+            macroblock.MwAddRef();
+            releaseTmpMacroblock = true;
 
             Editor::SetMacroblockGround(macroblock, false);
             macroblock.CollectionId = Editor::GetMapCollectorId();
@@ -269,9 +281,11 @@ namespace Editor {
             tmpMacroblock.Nod.Initialized = tmpMacroblockInitialized;
             tmpMacroblock.Nod.Connected = tmpMacroblockConnected;
             // tmpMacroblock.Nod.IsGround = tmpMacroblockIsGround;
-            // if (tmpMacroblock !is null && releaseTmpMacroblock) {
-            //     tmpMacroblock.Nod.MwRelease();
-            // }
+            // Balance the MwAddRef from _TempWriteToMacroblock before dropping
+            // the script handle (which may Release again on its own).
+            if (releaseTmpMacroblock) {
+                tmpMacroblock.Nod.MwRelease();
+            }
             @tmpMacroblock = null;
             releaseTmpMacroblock = false;
             tmpMacroblockStateSaved = false;

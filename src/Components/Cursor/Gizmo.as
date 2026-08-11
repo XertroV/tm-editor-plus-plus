@@ -575,17 +575,12 @@ namespace Gizmo {
                 }
                 yield();
             } else {
-                // Items: try engine delete first (NudgeItemBlock pattern).
-                // If RemoveMacroblock no-ops (common on BlueBay/non-Stadium for
-                // items even after donor regen — MCP RemoveRecentItems proves
-                // deleted=false method=DeleteItems), fall back to buffer remove.
-                //
-                // Do NOT call UpdateNewlyAddedItems after buffer remove — that
-                // crashed 2026-08-11 (AV null+0xF0 on next PlaceItems). See
-                // research/archive/2026-08-11-GizmoItemDeleteCrash.md.
-                // Buffer remove may leave the mesh visible until apply rebuilds
-                // the scene; that is preferable to a native crash or permanent
-                // duplicate.
+                // Items: NudgeItemBlock pattern ONLY.
+                // NEVER AnchoredObjects.RemoveRange — drops the map entry while
+                // the scene graph still holds the nod → UAF. First gizmo can
+                // "work"; second place/gizmo hits AV null+0xF0 (LogCrash *B9D61D).
+                // NEVER UpdateNewlyAddedItems after a partial delete either.
+                // Prefer leaving a duplicate (with NotifyWarning) over a crash.
                 Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Item);
                 Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
                 bool removed = false;
@@ -595,6 +590,7 @@ namespace Gizmo {
                 uint itemsBefore = map !is null ? map.AnchoredObjects.Length : 0;
 
                 if (targetItem !is null) {
+                    // Pin while we build specs / call delete (same as Nudge).
                     targetItem.MwAddRef();
                     auto liveSpec = Editor::ItemSpecPriv(targetItem);
                     removed = Editor::DeleteBlocksAndItems({}, {liveSpec});
@@ -620,19 +616,6 @@ namespace Gizmo {
                             removed = false;
                         } else if (removed) {
                             deleteMethod = "DeleteBlocksAndItems(itemSpec)";
-                        }
-                    }
-                    // Buffer fallback: undo-unsafe, may lag visually until apply.
-                    if (!removed && map !is null) {
-                        for (int i = int(map.AnchoredObjects.Length) - 1; i >= 0; i--) {
-                            if (map.AnchoredObjects[i] is targetItem) {
-                                Editor::TrackMap_OnRemoveItem(targetItem);
-                                map.AnchoredObjects.RemoveRange(i, 1);
-                                removed = map.AnchoredObjects.Length < itemsBefore;
-                                if (removed) deleteMethod = "AnchoredObjects.RemoveRange";
-                                dev_trace("Gizmo item buffer RemoveRange(" + i + ",1) removed=" + removed);
-                                break;
-                            }
                         }
                     }
                     targetItem.MwRelease();
