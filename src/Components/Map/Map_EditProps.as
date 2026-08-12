@@ -437,7 +437,8 @@ class MapEditPropsTab : Tab {
         UI::SameLine();
 
         UI::BeginDisabled(m_DraftIsLapRace == 0);
-        UI::SetNextItemWidth(70);
+        // InputInt width includes ± steppers; need room for 3 digits in the field.
+        UI::SetNextItemWidth(120);
         int lapsIn = m_DraftIsLapRace == 0 ? int(liveLaps) : m_DraftNbLaps;
         lapsIn = UI::InputInt("##nb-laps-custom", lapsIn);
         if (m_DraftIsLapRace != 0) m_DraftNbLaps = Math::Clamp(lapsIn, 0, 99);
