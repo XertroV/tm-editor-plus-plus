@@ -2,29 +2,29 @@
 
 ### Changelog (user-facing)
 
-**Map Properties — Race Objectives (new)**
-- **Clones** (`TMObjective_NbClones`): set clone-mode count (0 = off; presets 0/1/3/5). Enables racing against ghost copies of yourself.
-- Light **medal times** edit (Author/Gold/Silver/Bronze ms).
-- **Laps**: NbLaps write + experimental IsLapRace toggle (save map to persist).
+#### Map Properties — Race Objectives (new)
+- **Clones** (`TMObjective_NbClones`): set clone-mode ghost count (0 = off; presets 0/1/3/5; max 64). Save map to persist.
+- **Laps**: disable / 0 (multilap, hide counter) / 1 / 3 presets + custom Nb laps (0–99). Wider input for 3-digit values.
+- **Medals**: read-only display only (use a dedicated medals plugin to edit safely).
+- Draft vs live: gray **unapplied** hint when the field does not match the map yet; **Apply** writes.
+- Stock editor validation UI may not refresh until you reopen it / save-reload — data on the map is still updated.
 
-**Gizmo**
-- Item gizmo delete/replace removes the original item again (engine match after donor write).
-- Block gizmo delete more reliable after placement-mode cold picks.
-- Cancel after block gizmo no longer freezes/crashes the game.
-- Leftover twin items after gizmo: warning instead of silent ghosts.
-- Early null guards when gizmo target/model is missing.
+#### Macroblock donors (safety)
+- **Fail-closed donor resolve** for place/delete paths: no Stadium fail-open, no `MacroblockModels[0]` handout when the environment donor is missing/incompatible.
+- Soft collection-id check; item placement always re-enables callbacks after temp-disable.
 
-**Map / placement backend**
-- Fail-closed **donor macroblock** resolution (no Stadium fail-open, no random Models[0] on delete).
-- Safer ItemCursor capacity expand (validated contiguous prefix only).
-- Fixes tab: restored Test Mode / All Inputs Blocked / baked dirty recoveries.
+#### Prior harden pack (still in this cut)
+- Item/block gizmo delete harden, cancel crash fix, leftover-AO warn
+- RELEASE fuzz export stubs (ABI stable)
+- Safer ForceShow / Fixes tab restore / gizmo early null guards
+- `string::Join` fix
 
 ### Backend / technical
-- `Editor::ResolveDonorMacroblock` shared by place/delete/UpdateNewlyAddedItems.
-- `Editor::Get/SetMapNbClones` (+ laps helpers); MapInfo offset write (const API).
-- RELEASE stubs for DEV fuzz exports (same ABI both builds).
-- Research: E28 camera double-tick freeze banned; empty EditNewMap decoration prompt.
+- `Editor::Get/SetMapNbClones`, `Get/SetMapNbLaps`, `Get/SetMapIsLapRace`, `SetMapLapMode` — MapInfo offset writes for const API fields; MapInfo is IsLapRace source of truth; Challenge NbLaps also written.
+- `Editor::ResolveDonorMacroblock` shared fail-closed path.
+- Research notes: E28 camera double-tick freeze (never ship), empty `EditNewMap` decoration prompt, NbClones RE.
+- MCP: `ControlMapObjectives` get/set (tm-control-mcp companion).
 
-### Verify
-- WhiteShore: place/remove block+item, gizmo apply, fuzz, camera math/focus, autofocus soak ×5 (no double-tick).
-- NbClones set 0/1/3/5 readback OK via MCP ControlMapObjectives.
+### Notes
+- Version string remains `0.8.99999999a` (letter suffix; manual GH release).
+- Save map after changing clones/laps for durability across reload.
