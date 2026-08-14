@@ -117,7 +117,7 @@ namespace Editor {
     import string SpikePlaceVehiclePreview() from "Editor";
     import string SpikeDumpTestVehicleCursor() from "Editor";
     import string SpikeLeaveTestMode() from "Editor";
-    import string SpikeEnterGizmoOnLatestStart() from "Editor";
+    import string SpikeEnterGizmoOnLatestStart(int blockIndex = -1, int itemIndex = -1) from "Editor";
     import string SpikeExitGizmo() from "Editor";
     import string SpikeSetKeepVehiclePatch(bool on) from "Editor";
     import string SpikeEnterTestAtLatestStart() from "Editor";

@@ -232,9 +232,32 @@ namespace Editor {
         report["placeModeName"] = tostring(editor.PluginMapType.PlaceMode);
         if (editor.Challenge !is null) {
             report["startSpawns"] = DumpStartBlockSpawns(editor.Challenge);
+            report["spawnItems"] = DumpSpawnItems(editor.Challenge);
         }
 
         return Json::Write(report);
+    }
+
+    Json::Value DumpSpawnItems(CGameCtnChallenge@ map) {
+        Json::Value arr = Json::Array();
+        if (map is null) return arr;
+        uint n = 0;
+        for (int i = int(map.AnchoredObjects.Length) - 1; i >= 0 && n < 8; i--) {
+            auto ao = map.AnchoredObjects[i];
+            if (ao is null || ao.ItemModel is null) continue;
+            Json::Value row = Json::Object();
+            row["name"] = ao.ItemModel.IdName;
+            row["pos"] = ao.AbsolutePositionInMap.ToString();
+            row["waypointType"] = tostring(ao.ItemModel.WaypointType);
+            auto cie = cast<CGameCommonItemEntityModel>(ao.ItemModel.EntityModel);
+            row["cieNull"] = cie is null;
+            if (cie !is null) {
+                row["spawnLoc"] = vec3(cie.SpawnLoc.tx, cie.SpawnLoc.ty, cie.SpawnLoc.tz).ToString();
+            }
+            arr.Add(row);
+            n++;
+        }
+        return arr;
     }
 
     Json::Value DumpStartBlockSpawns(CGameCtnChallenge@ map) {
@@ -249,6 +272,7 @@ namespace Editor {
             row["pos"] = GetBlockLocation(b).ToString();
             row["isGround"] = b.IsGround;
             row["varIx"] = int(b.BlockInfoVariantIndex);
+            row["edNoRespawn"] = b.BlockInfo.EdNoRespawn;
             row["variants"] = DumpBlockInfoSpawns(b.BlockInfo);
             arr.Add(row);
             n++;
@@ -356,7 +380,7 @@ namespace Editor {
         return Json::Write(report);
     }
 
-    string SpikeEnterGizmoOnLatestStart() {
+    string SpikeEnterGizmoOnLatestStart(int blockIndex = -1, int itemIndex = -1) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null || editor.Challenge is null) throw("not in map editor");
         if (Gizmo::IsActive) Gizmo::IsActive = false;
@@ -364,7 +388,30 @@ namespace Editor {
         Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
         Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
 
-        auto start = FindLatestStartBlock(editor.Challenge);
+        CGameCtnBlock@ start;
+        if (blockIndex >= 0 && uint(blockIndex) < editor.Challenge.Blocks.Length) {
+            @start = editor.Challenge.Blocks[blockIndex];
+        } else {
+            @start = FindLatestStartBlock(editor.Challenge);
+        }
+        if (itemIndex >= 0) {
+            if (uint(itemIndex) >= editor.Challenge.AnchoredObjects.Length) throw("item index out of range");
+            auto ao = editor.Challenge.AnchoredObjects[itemIndex];
+            @lastPickedItem = ReferencedNod(ao);
+            lastPickedType = BlockOrItem::Item;
+            @lastPickedItemBB = null;
+            UpdatePickedItemCachedValues();
+            Gizmo::shouldReplaceTarget = true;
+            Gizmo::IsActive = true;
+            Json::Value ir = Json::Object();
+            ir["requested"] = true;
+            ir["gizmoActive"] = Gizmo::IsActive;
+            ir["picked"] = ao.ItemModel !is null ? ao.ItemModel.IdName : "?";
+            ir["pickedPos"] = ao.AbsolutePositionInMap.ToString();
+            ir["inTest"] = IsInTestPlacementMode(editor);
+            ir["placeMode"] = int(editor.PluginMapType.PlaceMode);
+            return Json::Write(ir);
+        }
         if (start is null) throw("no Start/StartFinish block");
         @lastPickedBlock = ReferencedNod(start);
         UpdatePickedBlockCachedValues();
@@ -429,6 +476,9 @@ namespace Editor {
 
     mat4 GetStartSpawnLocalMat(CGameCtnBlock@ b) {
         if (b is null) return SpawnLocalMatFromVariant(null);
+        if (b.BlockInfo !is null && b.BlockInfo.EdNoRespawn) {
+            return mat4::Translate(vec3(0, FreeBlockCursorLocalUp(), 0));
+        }
         auto biv = GetBlockInfoVariant(b);
         if (biv is null && b.BlockInfo !is null) @biv = GetBlockVariantAny(b.BlockInfo);
         return SpawnLocalMatFromVariant(biv);
@@ -438,10 +488,12 @@ namespace Editor {
         if (bi is null) return false;
         auto wt = bi.EdWaypointType;
         // Finish-only is not a vehicle spawn; multilap StartFinish is.
+        if (wt == CGameCtnBlockInfo::EWayPointType::Finish) return false;
+        // No-respawn CPs (circle checkpoints): flying respawn at block origin, no fixed SpawnTrans.
+        if (bi.EdNoRespawn) return wt != CGameCtnBlockInfo::EWayPointType::None;
         if (wt == CGameCtnBlockInfo::EWayPointType::Start
             || wt == CGameCtnBlockInfo::EWayPointType::StartFinish
             || wt == CGameCtnBlockInfo::EWayPointType::Checkpoint) return true;
-        if (wt == CGameCtnBlockInfo::EWayPointType::Finish) return false;
         auto biv = GetBlockVariantAny(bi);
         if (biv is null) return false;
         if (biv.SpawnModel !is null) return true;
@@ -449,6 +501,8 @@ namespace Editor {
     }
 
     mat4 GetSpawnLocalMatFromInfo(CGameCtnBlockInfo@ bi) {
+        // No-respawn CPs respawn at the block origin (flying respawn), not SpawnTrans.
+        if (bi !is null && bi.EdNoRespawn) return mat4::Translate(vec3(0, FreeBlockCursorLocalUp(), 0));
         if (bi is null) return SpawnLocalMatFromVariant(null);
         return SpawnLocalMatFromVariant(GetBlockVariantAny(bi));
     }
@@ -466,6 +520,7 @@ namespace Editor {
         return t.LengthSquared() > 0.0001;
     }
 
+    // Official gate items have no EntityModel; the vehicle spawns at the item origin.
     mat4 GetSpawnLocalMatFromItem(CGameItemModel@ im) {
         if (im is null) return mat4::Identity();
         auto cie = cast<CGameCommonItemEntityModel>(im.EntityModel);
