@@ -105,4 +105,8 @@ namespace Editor {
     import void SetItemSkinsRaw(CGameCtnAnchoredObject@ item, CSystemPackDesc@ newBg, CSystemPackDesc@ newFg) from "Editor";
     // Returned pack-desc is addref'd by E++; caller must MwRelease after storing it.
     import CSystemPackDesc@ GetPackDesc(const string &in fileOrUrl) from "Editor";
+
+    // Item model EntityModelEdition (issue #28): transform surface materials to
+    // matids, then null the EME safely. Empty string return = success.
+    import string NullifyItemModelEME(CGameItemModel@ item, bool notify = false) from "Editor";
 }

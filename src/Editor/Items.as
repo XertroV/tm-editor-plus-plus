@@ -309,6 +309,75 @@ namespace Editor {
         Dev::SetOffset(item, O_ANCHOREDOBJ_MACROBLOCKINSTID, id);
     }
 
+    // Issue #28: null an item model's EntityModelEdition safely.
+    // Surfaces with materials left dangling after a raw EME zero crash the game
+    // on save/placement, so first transform Materials -> MatIds on every surface
+    // reachable from EntityModel (default + variants), then null the EME via
+    // handle assignment (releases the old nod). Returns an error string on
+    // refusal (empty string = success).
+    string NullifyItemModelEME(CGameItemModel@ item, bool notify = false) {
+        if (item is null) return "item is null";
+        if (item.EntityModelEdition is null) return "EntityModelEdition is already null";
+        // Guard: with no EntityModel the item has nothing to fall back on —
+        // nullifying EME would leave an empty item. (Editing the mesh in the
+        // Mesh Manipulator and exiting restores EntityModel.)
+        if (item.EntityModel is null) {
+            if (notify) NotifyWarning("Not nullifying: EntityModel is null — the item would have no model left. "
+                + "Edit the mesh in the Mesh Manipulator first (exiting it restores EntityModel).");
+            return "EntityModel is null — item would be empty; not nullifying";
+        }
+
+        uint nbTransformed = 0;
+        uint nbChecked = 0;
+        try {
+            auto em = cast<CGameCommonItemEntityModel>(item.EntityModel);
+            nbTransformed += TransformSurfacesForItemSave(em, nbChecked);
+            auto varList = cast<NPlugItem_SVariantList>(item.EntityModel);
+            if (varList !is null) {
+                for (uint i = 0; i < varList.Variants.Length; i++) {
+                    auto vem = cast<CGameCommonItemEntityModel>(varList.Variants[i].EntityModel);
+                    nbTransformed += TransformSurfacesForItemSave(vem, nbChecked);
+                }
+            }
+        } catch {
+            if (notify) NotifyWarning("TransformMaterialsToMatIds pass failed: " + getExceptionInfo()
+                + "\nProceeding to nullify anyway — save may crash if surfaces still have materials.");
+        }
+
+        // Raw-zero the EME pointer WITHOUT releasing (leaks the nod, but the
+        // item editor holds raw display refs to the crystal — a MwRelease here
+        // is a use-after-free that crashes the next render frame). Matches the
+        // pre-existing button semantics; save-crash safety comes from the
+        // materials transform above.
+        Dev::SetOffset(item, O_ITEM_MODEL_EntityModelEdition, uint64(0));
+
+        // Refresh the editor's live mesh references so it stops drawing the
+        // (now detached) EME crystal (matches IE_ManipulateMeshes proven path).
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor !is null && ieditor.ItemModel is item) {
+            ieditor.AddEmptyMesh();
+        }
+
+        trace('Nullified itemModel.EME (transformed ' + nbTransformed + '/' + nbChecked + ' surfaces)');
+        if (notify) NotifySuccess("Nullified EntityModelEdition; transformed materials on " + nbTransformed
+            + "/" + nbChecked + " surfaces. Save the item now.");
+        return "";
+    }
+
+    uint TransformSurfacesForItemSave(CGameCommonItemEntityModel@ em, uint &out nbChecked) {
+        if (em is null) return 0;
+        uint nbTransformed = 0;
+        auto staticObj = cast<CPlugStaticObjectModel>(em.StaticObject);
+        if (staticObj !is null && staticObj.Shape !is null) {
+            nbChecked++;
+            if (staticObj.Shape.MaterialIds.Length == 0 && staticObj.Shape.Materials.Length > 0) {
+                TransformMaterialsToMatIds(staticObj.Shape);
+                nbTransformed++;
+            }
+        }
+        return nbTransformed;
+    }
+
     // // test; Stadium\\Blah
     // void LoadItemInInventoryFromPath(CGameCtnEditorFree@ editor, const string &in path) {
     //     auto pmt = editor.PluginMapType;

@@ -115,54 +115,8 @@ class ItemModel {
     // every surface reachable from EntityModel (default + variants) first, then
     // null the EME via handle assignment so the old nod is released properly.
     void NullifyEMEAndTransformSurfaces() {
-        if (item is null || item.EntityModelEdition is null) return;
-        // Guard: with no EntityModel the item has nothing to fall back on —
-        // nullifying EME would leave an empty item. (Editing the mesh in the
-        // Mesh Manipulator and exiting restores EntityModel.)
-        if (item.EntityModel is null) {
-            NotifyWarning("Not nullifying: EntityModel is null — the item would have no model left. "
-                + "Edit the mesh in the Mesh Manipulator first (exiting it restores EntityModel).");
-            return;
-        }
-
-        uint nbTransformed = 0;
-        uint nbChecked = 0;
-        try {
-            // default entity model
-            auto em = cast<CGameCommonItemEntityModel>(item.EntityModel);
-            nbTransformed += TransformSurfacesForItemSave(em, nbChecked);
-            // variant entity models
-            auto varList = cast<NPlugItem_SVariantList>(item.EntityModel);
-            if (varList !is null) {
-                for (uint i = 0; i < varList.Variants.Length; i++) {
-                    auto vem = cast<CGameCommonItemEntityModel>(varList.Variants[i].EntityModel);
-                    nbTransformed += TransformSurfacesForItemSave(vem, nbChecked);
-                }
-            }
-        } catch {
-            NotifyWarning("TransformMaterialsToMatIds pass failed: " + getExceptionInfo()
-                + "\nProceeding to nullify anyway — save may crash if surfaces still have materials.");
-        }
-
-        // handle assignment releases the old EME correctly (refcount)
-        @item.EntityModelEdition = null;
-        trace('Nullified itemModel.EME (transformed ' + nbTransformed + '/' + nbChecked + ' surfaces)');
-        NotifySuccess("Nullified EntityModelEdition; transformed materials on " + nbTransformed
-            + "/" + nbChecked + " surfaces. Save the item now.");
-    }
-
-    uint TransformSurfacesForItemSave(CGameCommonItemEntityModel@ em, uint &out nbChecked) {
-        if (em is null) return 0;
-        uint nbTransformed = 0;
-        auto staticObj = cast<CPlugStaticObjectModel>(em.StaticObject);
-        if (staticObj !is null && staticObj.Shape !is null) {
-            nbChecked++;
-            if (staticObj.Shape.MaterialIds.Length == 0 && staticObj.Shape.Materials.Length > 0) {
-                Editor::TransformMaterialsToMatIds(staticObj.Shape);
-                nbTransformed++;
-            }
-        }
-        return nbTransformed;
+        if (item is null) return;
+        Editor::NullifyItemModelEME(item, /*notify=*/true);
     }
 
     void DrawEMTree() {
