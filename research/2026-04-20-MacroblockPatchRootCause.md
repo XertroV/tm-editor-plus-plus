@@ -13,8 +13,10 @@ in `src/Editor/Macroblock_PlacePatch.as`. That made some synthetic placements
 appear to work, but it also let an internally inconsistent donor continue into
 `PlaceMacroBlock`, where repeated placement could crash.
 
-The current fix is to make the donor valid enough that `CanPlace` accepts it
-naturally, with `Patch_MacroblockCanPlace.IsApplied=false`.
+The current approach regenerates donor state so `CanPlace` accepts it naturally.
+The `CanPlace` bypass patch (`Patch_MacroblockCanPlace`) is still auto-loaded in
+the shipped code as of `0.8.99999999a` — both paths coexist. The regeneration
+fix is what makes placement safe; the patch is a fallback for edge cases.
 
 ## Root Cause
 
@@ -81,8 +83,11 @@ Relevant current code:
 - `src/Editor/MacroblockManip_TrackChanges.as` selects the donor as the current
   macroblock, calls `TurnIntoAirMb_Unsafe()`, restores the previous current
   macroblock, places via `PlaceMacroblock_AirMode`, then cleans up.
-- `src/Editor/Macroblock_PlacePatch.as` still defines the patch, but it is no
-  longer the fix path and is not globally auto-loaded.
+- `src/Editor/Macroblock_PlacePatch.as` still defines the patch, and as of
+  `0.8.99999999a` it **is still auto-loaded** (`.AutoLoad()` at line 12). The
+  donor-regeneration path (steps 1–8 above) makes the bypass unnecessary for
+  well-formed synthetic placements, but the patch remains active as a safety net
+  for edge cases. Both coexist in the shipped code.
 
 ## Why The Global Bypass Was Dangerous
 

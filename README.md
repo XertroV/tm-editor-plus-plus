@@ -2,7 +2,7 @@
 
 Current features:
 
-- Edit map properties, including height
+- Edit map properties, including height and race objectives (clones, laps, medals read-only)
 - See all blocks and items with details, and focus the cam on them, delete normal/ghost blocks
 - Create quick-access windows for folders of blocks/items
 - QoL improvements for the cursor, incl reset and manual set
@@ -20,6 +20,7 @@ Current features:
 - Randomizer: various properties of blocks and items
 - Dev Info: access to convenient utilities and previously hidden properties of blocks and items
 - Create unique custom items via 'Mesh Manipulator' (in the Item Editor)
+- Macroblock placement and deletion via exported API (safe donor resolution, fail-closed on incompatible environments)
 
 
 License: Public Domain

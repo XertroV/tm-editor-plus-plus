@@ -17,7 +17,11 @@ Trackmania race maps expose `CGameCtnChallengeInfo.TMObjective_NbClones` (const 
 
 ## Laps
 
-`TMObjective_NbLaps` writable via Challenge offset (`0xac`). `IsLapRace` offset (`0xa8`) write may not stick / API may recompute — treat as experimental.
+`TMObjective_NbLaps` writable via Challenge offset (`0xac`). `IsLapRace` offset
+(`0xa8`) write on Challenge often does not stick — `MapInfo.TMObjective_IsLapRace`
+is the reliable source of truth for enable/disable (see UI polish section below).
+`SetMapNbLaps` writes both Challenge + MapInfo; `SetMapLapMode` applies both in
+one call. `nbLaps=0` + `IsLapRace=true` is valid (multilap, hide counter).
 
 ## UI
 

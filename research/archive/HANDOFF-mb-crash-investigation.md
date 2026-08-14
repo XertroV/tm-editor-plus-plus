@@ -15,7 +15,7 @@ Use plugin builds through `./build.sh dev`. E++ dev builds automatically try to 
 
 ## Latest Commits
 
-E++ branch: `mb-crash-investigation`
+E++ branch: `master` (was `mb-crash-investigation`, merged via PR #36 `9acd9d3`)
 
 - `c59128c Repair gizmo setup variant before cursor selection`
 - `f29a419 Harden Trackmania crash restart PID detection`
