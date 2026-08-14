@@ -476,9 +476,6 @@ namespace Editor {
 
     mat4 GetStartSpawnLocalMat(CGameCtnBlock@ b) {
         if (b is null) return SpawnLocalMatFromVariant(null);
-        if (b.BlockInfo !is null && b.BlockInfo.EdNoRespawn) {
-            return mat4::Translate(vec3(0, FreeBlockCursorLocalUp(), 0));
-        }
         auto biv = GetBlockInfoVariant(b);
         if (biv is null && b.BlockInfo !is null) @biv = GetBlockVariantAny(b.BlockInfo);
         return SpawnLocalMatFromVariant(biv);
@@ -489,8 +486,10 @@ namespace Editor {
         auto wt = bi.EdWaypointType;
         // Finish-only is not a vehicle spawn; multilap StartFinish is.
         if (wt == CGameCtnBlockInfo::EWayPointType::Finish) return false;
-        // No-respawn CPs (circle checkpoints): flying respawn at block origin, no fixed SpawnTrans.
-        if (bi.EdNoRespawn) return wt != CGameCtnBlockInfo::EWayPointType::None;
+        // No-respawn (EdNoRespawn): flying respawn only — test mode doesn't snap,
+        // so there is no meaningful spawn pose to preview. Custom blocks inherit
+        // this flag from their donor; authors must clear it to get a SpawnTrans car.
+        if (bi.EdNoRespawn) return false;
         if (wt == CGameCtnBlockInfo::EWayPointType::Start
             || wt == CGameCtnBlockInfo::EWayPointType::StartFinish
             || wt == CGameCtnBlockInfo::EWayPointType::Checkpoint) return true;
@@ -501,8 +500,6 @@ namespace Editor {
     }
 
     mat4 GetSpawnLocalMatFromInfo(CGameCtnBlockInfo@ bi) {
-        // No-respawn CPs respawn at the block origin (flying respawn), not SpawnTrans.
-        if (bi !is null && bi.EdNoRespawn) return mat4::Translate(vec3(0, FreeBlockCursorLocalUp(), 0));
         if (bi is null) return SpawnLocalMatFromVariant(null);
         return SpawnLocalMatFromVariant(GetBlockVariantAny(bi));
     }
