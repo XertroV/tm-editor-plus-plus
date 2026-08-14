@@ -390,11 +390,14 @@ namespace Editor {
         DoItemEditorAction(ieditor, ItemEditorAction::SaveItem);
     }
 
-    // Leave the item editor back to the map editor (same action as the UI back button).
+    // Leave the item editor back to the map editor. Uses the native
+    // CGameEditorItem::Exit() — same as SaveLoad.as:218 / RefreshItems.as:252.
+    // (The ItemEditorAction::LeaveItemEditor offset action pops a save dialog
+    // instead of exiting cleanly.)
     void LeaveCurrentItemEditor() {
         auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
         if (ieditor is null) throw("not in the item editor");
-        DoItemEditorAction(ieditor, ItemEditorAction::LeaveItemEditor);
+        ieditor.Exit();
     }
 
     // // test; Stadium\\Blah
