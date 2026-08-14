@@ -1,6 +1,6 @@
 ## Editor++ 0.8.99999999a
 
-### Changelog (user-facing)
+### Changelog
 
 #### Map Properties — Race Objectives (new)
 - **Clones** (`TMObjective_NbClones`): set clone-mode ghost count (0 = off; presets 0/1/3/5; max 64). Save map to persist.
