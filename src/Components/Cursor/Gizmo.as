@@ -80,6 +80,7 @@ namespace Gizmo {
     }
 
     void OnGoInactive() {
+        Editor::SpikeClearVehiclePreview();
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
         CustomCursor::NoShowCursorItemModelsPatchActive = false;
         CustomCursor::NoSetCursorVisFlagPatchActive = false;
@@ -285,6 +286,7 @@ namespace Gizmo {
                 Editor::SetCurrentPivot(editor, 0);
             }
             Editor::SetAllCursorMat(gizmo.GetCursorMat());
+            Editor::SpikeFollowVehiclePreview(gizmo.GetCursorMat());
             yield();
         }
         IsActive = false;
@@ -495,6 +497,15 @@ namespace Gizmo {
             } else {
                 itemSpec.color = CGameCtnAnchoredObject::EMapElemColor(int(placingColor));
             }
+        }
+
+        // LMB: gizmos the start itself. RMB: only if the *placing* inventory
+        // block has a spawn (start/CP/custom SpawnTrans) — otherwise nowhere to draw.
+        if (shouldReplaceTarget && b !is null && Editor::BlockInfoHasSpawn(b.BlockInfo)) {
+            Editor::SpikeEnsureVehiclePreviewForBlock(b);
+        } else if (!shouldReplaceTarget && Editor::BlockInfoHasSpawn(placingBlockModel) && b !is null) {
+            auto spawnLocal = Editor::GetSpawnLocalMatFromInfo(placingBlockModel);
+            Editor::SpikeEnsureVehiclePreviewAt(Editor::GetBlockMatrix(b) * spawnLocal, spawnLocal);
         }
 
         editor.PluginMapType.EditMode = CGameEditorPluginMap::EditMode::Place;
@@ -796,6 +807,8 @@ namespace Gizmo {
 
         editor.PluginMapType.NextMapElemColor = placingColor;
         Editor::SetAllCursorMat(gizmo.GetCursorMat());
+        Editor::SpikeBindVehiclePreviewToCursor(gizmo.GetCursorMat());
+        Editor::SpikeFollowVehiclePreview(gizmo.GetCursorMat());
         IsActive = true;
         // auto lookUv = Editor::DirToLookUvFromCamera(bb.pos);
         auto lookUv = Editor::GetCurrentCamState(editor).LookUV;

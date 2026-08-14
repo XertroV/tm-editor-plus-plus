@@ -90,9 +90,70 @@ Some items have an editor-helper prefab. `IE_DuplicateMesh` notes "Unsure if CPl
 
 ## Live checks this session
 
-- Game in editor. Inventory has GateStart* items. No CarSport/Car items in the E++ item cache (expected).
-- Did **not** place CarSport during gizmo (would need a DEV FID-place helper; existing one is `#if DEV` UI-only).
-- Did **not** verify live `SetItemLocation` on a vehicle item updates the scene every frame.
+- User placed a free `RoadTechStart` at `<684, 227, 460>` (rotated). Camera was already on it.
+- `CGameCtnBlockInfoVariant.SpawnModel` is **null** on both ground/air 0th variants and via `O_BLOCKINFOVAR_SPAWNMODEL` offset. Official road starts may store spawn elsewhere (or identity = block matrix).
+- FID-load of `CarSport.Item.Gbx` **works** (`IdName=CarSport`).
+- `PlaceItems` / `PlaceMacroblock` **rejects** it: item collection is Vehicles/`10003`, stadium donor is collection 9. Log: `PlaceMacroblock returning: false`. Cloning an existing item spec and swapping the model does not help.
+- Switched placement to `EPlaceMode::Test` and set cursor to the start — native vehicle cursor **does** enter test mode (`enteredTestMode: true`). Visual confirmation is on the user.
+
+## Revised verdict
+
+Showing a car at a start is easy **in Test mode** (native). Turning the official vehicle *item* into a map item via E++ PlaceItems is **not** viable (wrong collection). A gizmo-owned preview therefore needs one of:
+
+1. Drive/keep a Test-mode vehicle cursor without giving up gizmo exclusive control (hard; that's the original conflict).
+2. A different visual: HelperMobil / scene mobil with the car mesh, not a map item.
+3. DrawLines bbox (ugly).
+
+## Live snap dump (user snapped test-mode vehicle)
+
+Before (free-fly) and after (snapped) both go through `VehicleState::GetAllVis` + `ItemCursor.pos`.
+
+Snapped (camera on the flying `RoadTechStart` at `<684, 227, 460>`):
+
+| | xyz |
+|---|---|
+| start block origin | 684, 227, 460 |
+| VehicleVis[0] / ItemCursor.pos | **701.383, 231.555, 473.896** |
+| delta (spawn - origin) | **+17.383, +4.555, +13.896** (~22.7 m) |
+
+- `ItemCursor.snappedGlobalIx` stayed **-1**. Test-mode start snap is **not** item-magnet snap.
+- `visCount=1`; vis pose **equals** ItemCursor.pos/mat (same floats).
+- `displayed[0].model=CarSport`, `u1=7`, helperMobil present, ItemDesc matrix translation is 0 (pose lives on the cursor/vis, not the desc).
+- Ground leftover vis at y=8.5 was seen when the cursor left the start; ignore that for spawn.
+
+**Implication for a gizmo preview:** we do not need PlaceItems. Official spawn is **`CGameCtnBlockInfoVariant.SpawnTrans`** (`<16, 2, 16>` on RoadTechStart; yaw/pitch/roll 0). `SpawnModel` stays null. World pose = `GetBlockMatrix(block) * (SpawnTrans + freeblock cursor Y)`. Live follow: vis rotation from `GetCursorMat()`, position `cpos + Inverse(cursorRot)*spawn` (cursor rot is inverted vs block).
+
+## Keep-vehicle-state patch (live)
+
+`research/extra-vehicles.txt` site is unique in current `Trackmania.exe` (file `0xebd97c`, live `0x140EBE57C`):
+
+`74 39 48 89 5C 24 40 48 8B 5C 24 20 48 89 7C 24 48 8B F8 90 83 3B FF`
+
+`je` → `jmp` (`74` → `EB`) via `VehicleKeepState` MemPatcher.
+
+Measured with `VehicleState::GetAllVis` / MCP `ListVehicleVis` (not eyeballs):
+
+| step | placeMode | gizmo | visCount | vis xyz |
+|---|---|---|---|---|
+| snapped in Test | Test | no | 1 | 701.383, 231.555, 473.896 |
+| leave Test, **no** patch | FreeBlock | no | **0** | — |
+| leave Test, **patch on** | FreeBlock | no | **1** | same pose |
+| enter gizmo on start (RMB-keep) | **Block** | **yes** | **1** | same pose |
+
+First gizmo enter used LMB-replace (`shouldReplaceTarget=true`) and **deleted** the flying `RoadTechStart`. Replaced it at the same pose. Spike now uses `shouldReplaceTarget=false`.
+
+So: a Test-mode VehicleVis can survive leaving Test **and** survive gizmo exclusive Block-mode control, if that je is patched. That is the missing half of approach B.
+
+**Not done / do not ship:**
+
+- Writing vis iso4 while gizmo is up (nudge helper exists, not live-tested — MCP died).
+- Whether the vis is actually *drawn* vs just enumerated (tooling says the vis exists).
+- Enable/disable the patch across: test-from-start, ghost record, MediaTracker in/out, place block/item, gizmo on many block/item kinds. User flagged this as required before calling it done. **Not run yet.**
+- Patch is a one-byte game hook. Treat as DEV spike. Unapply on plugin unload (`MemPatcher` dtor).
+
+## MCP note this session
+
+`tm-control-mcp` compile started failing with duplicate `Json::Value@` symbols (`FocusCamera`, named-macroblock tools, …) after a file-split (`EditorOptional.as` + extractions). Socket down. Do not rebuild MCP from E++ work until that split compiles.
 
 ## Open questions before coding
 

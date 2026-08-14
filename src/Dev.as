@@ -259,13 +259,12 @@ CMwNod@ Dev_GetNodFromPointer(uint64 ptr) {
     // return Dev_GetArbitraryNodAt(ptr);
     // ! testing
     if (HAS_Z_DRIVE_WINE_INDICATOR && !S_ForceDisableLinuxWineCheck) {
-        print("get nod from ptr: " + Text::FormatPointer(ptr));
         if (ptr < 0x1000000 || (IS_MEMORY_ALWAYS_ALIGNED && ptr % 8 != 0) || ptr >> 48 > 0) {
-            print("get nod from ptr failed: " + Text::FormatPointer(ptr));
+            dev_trace("get nod from ptr failed: " + Text::FormatPointer(ptr));
             return null;
         }
     } else if (ptr < 0xFFFFFFFF || (IS_MEMORY_ALWAYS_ALIGNED && ptr % 8 != 0) || ptr >> 48 > 0) {
-        print("get nod from ptr failed: " + Text::FormatPointer(ptr));
+        dev_trace("get nod from ptr failed: " + Text::FormatPointer(ptr));
         return null;
     }
     return Dev_GetArbitraryNodAt(ptr);

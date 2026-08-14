@@ -113,4 +113,13 @@ namespace Editor {
     import void SaveCurrentItemEditorItem() from "Editor";
     // Leave the item editor back to the map editor.
     import void LeaveCurrentItemEditor() from "Editor";
+    // Issue #35 spike: place CarSport at latest start-block spawn. JSON string report.
+    import string SpikePlaceVehiclePreview() from "Editor";
+    import string SpikeDumpTestVehicleCursor() from "Editor";
+    import string SpikeLeaveTestMode() from "Editor";
+    import string SpikeEnterGizmoOnLatestStart() from "Editor";
+    import string SpikeExitGizmo() from "Editor";
+    import string SpikeSetKeepVehiclePatch(bool on) from "Editor";
+    import string SpikeEnterTestAtLatestStart() from "Editor";
+    import string SpikeNudgeKeptVehicle(float dy) from "Editor";
 }
