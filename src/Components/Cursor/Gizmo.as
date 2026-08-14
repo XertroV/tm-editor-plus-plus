@@ -38,6 +38,9 @@ const vec3& AxisToVecForRot(Axis a) {
 bool S_Gizmo_ApplyBlockOffset = true;
 
 [Setting hidden]
+bool S_Gizmo_ShowVehiclePreview = true;
+
+[Setting hidden]
 bool S_Gizmo_InvertApplyModifier = false;
 
 namespace Gizmo {
@@ -499,13 +502,18 @@ namespace Gizmo {
             }
         }
 
-        // LMB: gizmos the start itself. RMB: only if the *placing* inventory
-        // block has a spawn (start/CP/custom SpawnTrans) — otherwise nowhere to draw.
-        if (shouldReplaceTarget && b !is null && Editor::BlockInfoHasSpawn(b.BlockInfo)) {
-            Editor::SpikeEnsureVehiclePreviewForBlock(b);
-        } else if (!shouldReplaceTarget && Editor::BlockInfoHasSpawn(placingBlockModel) && b !is null) {
-            auto spawnLocal = Editor::GetSpawnLocalMatFromInfo(placingBlockModel);
-            Editor::SpikeEnsureVehiclePreviewAt(Editor::GetBlockMatrix(b) * spawnLocal, spawnLocal);
+        if (S_Gizmo_ShowVehiclePreview) {
+            if (shouldReplaceTarget && b !is null && Editor::BlockInfoHasSpawn(b.BlockInfo)) {
+                Editor::SpikeEnsureVehiclePreviewForBlock(b);
+            } else if (!shouldReplaceTarget && Editor::BlockInfoHasSpawn(placingBlockModel) && b !is null) {
+                auto spawnLocal = Editor::GetSpawnLocalMatFromInfo(placingBlockModel);
+                Editor::SpikeEnsureVehiclePreviewAt(Editor::GetBlockMatrix(b) * spawnLocal, spawnLocal);
+            } else if (placingItemModel !is null && Editor::ItemModelHasSpawn(placingItemModel)) {
+                auto spawnLocal = Editor::GetSpawnLocalMatFromItem(placingItemModel);
+                mat4 host = itemMat;
+                if (b !is null) host = Editor::GetBlockMatrix(b);
+                Editor::SpikeEnsureVehiclePreviewAt(host * spawnLocal, spawnLocal);
+            }
         }
 
         editor.PluginMapType.EditMode = CGameEditorPluginMap::EditMode::Place;

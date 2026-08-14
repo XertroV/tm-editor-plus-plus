@@ -436,7 +436,12 @@ namespace Editor {
 
     bool BlockInfoHasSpawn(CGameCtnBlockInfo@ bi) {
         if (bi is null) return false;
-        if (bi.EdWaypointType != CGameCtnBlockInfo::EWayPointType::None) return true;
+        auto wt = bi.EdWaypointType;
+        // Finish-only is not a vehicle spawn; multilap StartFinish is.
+        if (wt == CGameCtnBlockInfo::EWayPointType::Start
+            || wt == CGameCtnBlockInfo::EWayPointType::StartFinish
+            || wt == CGameCtnBlockInfo::EWayPointType::Checkpoint) return true;
+        if (wt == CGameCtnBlockInfo::EWayPointType::Finish) return false;
         auto biv = GetBlockVariantAny(bi);
         if (biv is null) return false;
         if (biv.SpawnModel !is null) return true;
@@ -446,6 +451,26 @@ namespace Editor {
     mat4 GetSpawnLocalMatFromInfo(CGameCtnBlockInfo@ bi) {
         if (bi is null) return SpawnLocalMatFromVariant(null);
         return SpawnLocalMatFromVariant(GetBlockVariantAny(bi));
+    }
+
+    bool ItemModelHasSpawn(CGameItemModel@ im) {
+        if (im is null) return false;
+        auto wt = im.WaypointType;
+        if (wt == EGameItemWaypointType::Start
+            || wt == EGameItemWaypointType::StartFinish
+            || wt == EGameItemWaypointType::Checkpoint) return true;
+        if (wt == EGameItemWaypointType::Finish) return false;
+        auto cie = cast<CGameCommonItemEntityModel>(im.EntityModel);
+        if (cie is null) return false;
+        vec3 t = vec3(cie.SpawnLoc.tx, cie.SpawnLoc.ty, cie.SpawnLoc.tz);
+        return t.LengthSquared() > 0.0001;
+    }
+
+    mat4 GetSpawnLocalMatFromItem(CGameItemModel@ im) {
+        if (im is null) return mat4::Identity();
+        auto cie = cast<CGameCommonItemEntityModel>(im.EntityModel);
+        if (cie is null) return mat4::Identity();
+        return mat4(cie.SpawnLoc);
     }
 
     bool IsStartLikeBlock(CGameCtnBlock@ b) {
@@ -483,6 +508,7 @@ namespace Editor {
     }
 
     void SpikeFollowVehiclePreview(const mat4 &in cursorMat) {
+        if (!S_Gizmo_ShowVehiclePreview) return;
         if (!g_haveSpawnLocal) return;
         // Cursor rot is Inverse(blockRot) (AABB / SetAllCursorMat). SpawnTrans is in
         // block-local (GetBlockMatrix) space. Rotation follows the cursor; translation

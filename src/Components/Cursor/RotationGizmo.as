@@ -1058,6 +1058,8 @@ class RotationTranslationGizmo {
             // S_Gizmo_ApplyBlockOffset = UI::Checkbox("Apply Block Offset of 0.25", S_Gizmo_ApplyBlockOffset);
             // AddSimpleTooltip("The cursor for freeblocks is raised up 0.25, so this will apply a -0.25 offset when starting the gizmo. \\$<\\$i\\$f80HOWEVER,\\$> this is somewhat inconsistent. This setting allows you to disable the feature.");
             S_Gizmo_MoveCameraOnStart = UI::Checkbox("Move Camera when Starting Gizmo", S_Gizmo_MoveCameraOnStart);
+            S_Gizmo_ShowVehiclePreview = UI::Checkbox("Show vehicle on starts/CPs", S_Gizmo_ShowVehiclePreview);
+            AddSimpleTooltip("When gizmosing a block or item that has a spawn point, show a stadium car at that spawn. Default on.");
 
 #if DEV
             UI::SeparatorText("Debug");
