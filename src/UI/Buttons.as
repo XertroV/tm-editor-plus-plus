@@ -58,11 +58,12 @@ namespace UX {
         bool clicked = UI::Button(label);
         if (small) PopSmall();
         if (armed) UI::PopStyleColor(3);
-        // "Click again to confirm" in warning color + bold via manialink-ish codes
-        // (escaped $ so Openplanet text render shows them: \$<\$o\$f80...\$>).
+        // "Click again to confirm" in warning color + italic via manialink-ish codes
+        // (escaped $ so Openplanet text render shows them: \$<\$i\$f80...\$>).
+        // NB: $o (bold) is a no-op in Openplanet UI text — use $i (italic).
         AddSimpleTooltip(tooltip.Length > 0
-            ? (armed ? "\\$<\\$o\\$f80Click again to confirm.\\$> " + tooltip : tooltip)
-            : (armed ? "\\$<\\$o\\$f80Click again to confirm.\\$>" : ""));
+            ? (armed ? "\\$<\\$i\\$f80Click again to confirm.\\$> " + tooltip : tooltip)
+            : (armed ? "\\$<\\$i\\$f80Click again to confirm.\\$>" : ""));
         if (clicked) {
             if (armed) {
                 g_DangerConfirmId = "";
