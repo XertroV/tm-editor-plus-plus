@@ -146,10 +146,33 @@ So: a Test-mode VehicleVis can survive leaving Test **and** survive gizmo exclus
 
 **Not done / do not ship:**
 
-- Writing vis iso4 while gizmo is up (nudge helper exists, not live-tested — MCP died).
-- Whether the vis is actually *drawn* vs just enumerated (tooling says the vis exists).
-- Enable/disable the patch across: test-from-start, ghost record, MediaTracker in/out, place block/item, gizmo on many block/item kinds. User flagged this as required before calling it done. **Not run yet.**
-- Patch is a one-byte game hook. Treat as DEV spike. Unapply on plugin unload (`MemPatcher` dtor).
+- ~~Writing vis iso4 while gizmo is up~~ (done — follows cursor every tick).
+- ~~Crash gauntlet~~ — **run 2026-08-15, all PASS** (below).
+- ~~Ghost record / MediaTracker in/out~~ — still manual-only.
+
+## Crash gauntlet (2026-08-15, all PASS, game alive throughout)
+
+Via MCP on live editor (map `Gauntlet35`); `alive` = GetMode ok after each step.
+
+| # | Step | Result |
+|---|---|---|
+| 1 | patch ON explicit | ok |
+| 2 | test at start → leave test | vis kept at spawn, alive |
+| 3 | gizmo enter/exit on start | vis follows cursor; exit hides vis, alive |
+| 4 | place block + place item (patch on) | ok, alive |
+| 5 | delete block + delete item (patch on) | ok, alive |
+| 6 | SaveMapAs with patch on + vis | saved, alive |
+| 7 | patch OFF → ON toggle | ok, alive |
+| 8 | leave test with patch OFF | vis dropped (native), alive |
+| 9 | Undo → Redo tools (patch on, vis kept) | ok, vis persisted |
+| 10 | 5 rapid ON/OFF toggle cycles | alive |
+| 11 | final gizmo cycle | clean exit, alive |
+| 12 | E++ plugin reload with patch on | loaded, alive |
+| 13 | post-reload dump | gizmo off, place FreeBlock |
+| 14 | Undo/Redo again post-reload | ok, alive |
+| 15 | plugin reload **mid-gizmo** | gizmo auto-inactive (OnGoInactive), alive |
+
+No exceptions in Openplanet.log tied to KeepVehicleState; no crashes.
 
 ## MCP note this session
 
