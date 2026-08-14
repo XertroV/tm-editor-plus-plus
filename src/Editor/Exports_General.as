@@ -109,4 +109,8 @@ namespace Editor {
     // Item model EntityModelEdition (issue #28): transform surface materials to
     // matids, then null the EME safely. Empty string return = success.
     import string NullifyItemModelEME(CGameItemModel@ item, bool notify = false) from "Editor";
+    // Save the item currently open in the item editor (same path as UI Save).
+    import void SaveCurrentItemEditorItem() from "Editor";
+    // Leave the item editor back to the map editor.
+    import void LeaveCurrentItemEditor() from "Editor";
 }

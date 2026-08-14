@@ -378,6 +378,25 @@ namespace Editor {
         return nbTransformed;
     }
 
+    // Issue #28 companion: save the item currently open in the item editor.
+    // Errors (throw) if no item editor / item unsaved. Drives the same
+    // ItemEditorAction::SaveItem path as the UI Save button.
+    void SaveCurrentItemEditorItem() {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null) throw("not in the item editor");
+        if (ieditor.ItemModel is null || ieditor.ItemModel.IdName == "Unassigned") {
+            throw("item has never been saved (IdName is Unassigned); save it manually first");
+        }
+        DoItemEditorAction(ieditor, ItemEditorAction::SaveItem);
+    }
+
+    // Leave the item editor back to the map editor (same action as the UI back button).
+    void LeaveCurrentItemEditor() {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null) throw("not in the item editor");
+        DoItemEditorAction(ieditor, ItemEditorAction::LeaveItemEditor);
+    }
+
     // // test; Stadium\\Blah
     // void LoadItemInInventoryFromPath(CGameCtnEditorFree@ editor, const string &in path) {
     //     auto pmt = editor.PluginMapType;
