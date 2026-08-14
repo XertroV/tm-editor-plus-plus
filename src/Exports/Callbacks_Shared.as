@@ -15,7 +15,7 @@ namespace Editor {
         shared funcdef void IEppExtension_OnKill(IEppExtension@ extension);
 
         // To use this class, inherit from it and set the callback handles you want to use. Leave the others null.
-        // Then, call Editor::Callbacks::RegisterExtension(myExtension) to register it.
+        // Then, call Editor::Callbacks::Exts::RegisterExtension(myExtension) to register it.
         // Handles to callback functions must be set at this time for them to be registered for callback.
         shared class IEppExtension {
             // if not set to the name of the
