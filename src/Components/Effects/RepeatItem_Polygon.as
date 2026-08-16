@@ -189,6 +189,12 @@ namespace Repeat {
         return PolygonPreset::Custom;
     }
 
+    // Custom is sticky. Named presets rematch or fall back to Custom when n/k/shape drift.
+    PolygonPreset SyncPolygonPreset(PolygonPreset current, PolygonShape shape, int n, int k) {
+        if (current == PolygonPreset::Custom) return PolygonPreset::Custom;
+        return MatchPolygonPreset(shape, n, k);
+    }
+
     [Setting hidden]
     PolygonShape poly_Shape = PolygonShape::Regular;
     [Setting hidden]
@@ -289,7 +295,7 @@ namespace Repeat {
                 UI::TextWrapped("Per edge includes vertices. 1 = vertices only.");
             }
 
-            poly_Preset = MatchPolygonPreset(poly_Shape, poly_N, poly_Shape == PolygonShape::Star ? poly_K : 1);
+            poly_Preset = SyncPolygonPreset(poly_Preset, poly_Shape, poly_N, poly_Shape == PolygonShape::Star ? poly_K : 1);
 
             UpdateMatrices();
             DrawHelpers(false);

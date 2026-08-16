@@ -13,6 +13,8 @@ TestCase@[]@ generateRepeatPolygonTests() {
     ret.InsertLast(TestCase("r=0 all poses on center", poly_test_radius0_center));
     ret.InsertLast(TestCase("keep +Y is world +Y", poly_test_keep_y));
     ret.InsertLast(TestCase("outward +X is radial", poly_test_outward_x));
+    ret.InsertLast(TestCase("custom preset stays custom on hex params", poly_test_custom_stays));
+    ret.InsertLast(TestCase("named preset drifts to custom when n changes", poly_test_preset_drifts));
     return ret;
 }
 
@@ -112,6 +114,22 @@ void poly_test_outward_x() {
     // vertex 0 is +X; outward +X should be +X
     repeat_assert_vec3_near(poly_mat_x(mats[0]).Normalized(), vec3(1, 0, 0), 1e-4, "out +X");
     repeat_assert_vec3_near(repeat_mat_y(mats[0]).Normalized(), vec3(0, 1, 0), 1e-4, "out +Y up");
+}
+
+void poly_test_custom_stays() {
+    auto next = Repeat::SyncPolygonPreset(Repeat::PolygonPreset::Custom, Repeat::PolygonShape::Regular, 6, 1);
+    assert_eq(int(next), int(Repeat::PolygonPreset::Custom), "custom + hex params stays custom");
+    next = Repeat::SyncPolygonPreset(Repeat::PolygonPreset::Custom, Repeat::PolygonShape::Regular, 5, 1);
+    assert_eq(int(next), int(Repeat::PolygonPreset::Custom), "custom + pentagon params stays custom");
+}
+
+void poly_test_preset_drifts() {
+    auto stay = Repeat::SyncPolygonPreset(Repeat::PolygonPreset::Hexagon, Repeat::PolygonShape::Regular, 6, 1);
+    assert_eq(int(stay), int(Repeat::PolygonPreset::Hexagon), "hexagon + n=6 stays");
+    auto named = Repeat::SyncPolygonPreset(Repeat::PolygonPreset::Hexagon, Repeat::PolygonShape::Regular, 5, 1);
+    assert_eq(int(named), int(Repeat::PolygonPreset::Pentagon), "hexagon + n=5 matches pentagon");
+    auto drift = Repeat::SyncPolygonPreset(Repeat::PolygonPreset::Hexagon, Repeat::PolygonShape::Regular, 9, 1);
+    assert_eq(int(drift), int(Repeat::PolygonPreset::Custom), "hexagon + n=9 becomes custom");
 }
 
 #endif
