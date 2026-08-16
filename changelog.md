@@ -1,5 +1,11 @@
 # 0.8.99999999a
 
+## Plugin API — Macroblock Recorder exports (new, #39)
+
+- `MacroblockRecorder` can now be driven by dependent plugins (e.g. MCP tool packs) instead of only via the E++ toolbar UI.
+- New `Components/Macroblocks/MacroblockRecorder_Export.as` exports: `StartRecording()`, `StopRecording(cancel)`, `ResumeRecording()`, status getters (`IsActive`, `HasExisting`, `ActiveRecordingIsEmpty`, `IsActiveAndNonEmpty`, `ActiveRec_NbBlocks/Items`, `CompletedRec_NbBlocks/Items`), and `GetRecordingMB()` (returns the shared `Editor::MacroblockSpec` base type).
+- Coroutine note: `StopRecording(false)` returns immediately — the transfer to the copy-paste macroblock runs in a background coroutine (exclusive cursor control + yields); safe from MainLoop, poll `HasExisting`/`CompletedRec_*` for completion.
+
 ## Gizmo — Vehicle preview on starts/CPs (new, #35)
 
 - While gizmoing a block/item with a spawn point (start, start-finish, checkpoint), a stadium car appears at the spawn pose and follows the gizmo live — no more flipping Test ↔ Gizmo to fine-tune placement.
