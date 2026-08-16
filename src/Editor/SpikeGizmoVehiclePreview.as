@@ -11,8 +11,12 @@ namespace Editor {
             @fid = Fids::GetFidsFile(Fids::GetGameFolder(""), SPIKE_VEHICLE_FID);
         }
         if (fid is null) return null;
+        // same as ItemEditor's GetModelFromSource(CSystemFidFile@)
         return cast<CGameItemModel>(Fids::Preload(fid));
     }
+
+    // #35 review: prefer PluginMapType's waypoint list over a hand-rolled
+    // backwards scan (also covers multilap). TODO when productionizing.
 
     CGameCtnBlock@ FindLatestStartBlock(CGameCtnChallenge@ map) {
         if (map is null) return null;
@@ -28,128 +32,7 @@ namespace Editor {
         return null;
     }
 
-    uint DeleteSpikeVehicleItemsNear(CGameCtnChallenge@ map, vec3 pos) {
-        if (map is null) return 0;
-        Editor::ItemSpec@[] toDel;
-        for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
-            auto ao = map.AnchoredObjects[i];
-            if (ao is null || ao.ItemModel is null) continue;
-            if (ao.ItemModel.IdName.Contains("CarSport") == false) continue;
-            if ((ao.AbsolutePositionInMap - pos).LengthSquared() > 1.0) continue;
-            toDel.InsertLast(MakeItemSpec(ao));
-        }
-        if (toDel.Length == 0) return 0;
-        Editor::BlockSpec@[] noBlocks;
-        DeleteBlocksAndItems(noBlocks, toDel);
-        return toDel.Length;
-    }
-
-    // Returns a JSON object string. empty-ish on hard fail (also throws).
-    string SpikePlaceVehiclePreview() {
-        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (editor is null || editor.Challenge is null) throw("not in map editor");
-        auto map = editor.Challenge;
-
-        Json::Value report = Json::Object();
-        auto start = FindLatestStartBlock(map);
-        if (start is null) throw("no Start/StartFinish block on map");
-
-        report["blockName"] = start.BlockInfo.IdName;
-        report["blockWp"] = tostring(start.BlockInfo.EdWaypointType);
-        report["blockPos"] = IsBlockFree(start) ? "free" : "grid";
-        vec3 bpos = GetBlockLocation(start);
-        vec3 brot = GetBlockRotation(start);
-        report["blockLocation"] = bpos.ToString();
-        report["blockRot"] = brot.ToString();
-
-        auto biv = GetBlockInfoVariant(start);
-        report["variantNull"] = biv is null;
-        report["blockIsGround"] = start.IsGround;
-        CPlugSpawnModel@ sm = null;
-        if (biv !is null) {
-            @sm = biv.SpawnModel;
-            if (sm is null) {
-                @sm = cast<CPlugSpawnModel>(Dev::GetOffsetNod(biv, O_BLOCKINFOVAR_SPAWNMODEL));
-                report["spawnViaOffset"] = sm !is null;
-            }
-        }
-        // also probe the other ground/air 0th variant — free starts often report IsGround=false
-        if (sm is null && start.BlockInfo !is null) {
-            auto other = GetBlockInfoVariant(start.BlockInfo, 0, !start.IsGround);
-            if (other !is null) {
-                @sm = other.SpawnModel;
-                if (sm is null) @sm = cast<CPlugSpawnModel>(Dev::GetOffsetNod(other, O_BLOCKINFOVAR_SPAWNMODEL));
-                if (sm !is null) report["spawnFromOtherGroundness"] = true;
-            }
-        }
-        report["spawnModelNull"] = sm is null;
-
-        mat4 world = GetBlockMatrix(start);
-        string spawnSource = "blockMatrixOnly";
-        if (sm !is null) {
-            report["spawnLocTx"] = sm.Loc.tx;
-            report["spawnLocTy"] = sm.Loc.ty;
-            report["spawnLocTz"] = sm.Loc.tz;
-            report["defaultGravitySpawn"] = sm.DefaultGravitySpawn.ToString();
-            world = GetBlockMatrix(start) * mat4(sm.Loc);
-            spawnSource = "blockMatrix*SpawnModel.Loc";
-        }
-        report["spawnSource"] = spawnSource;
-
-        vec3 pos = vec3(world.tx, world.ty, world.tz);
-        vec3 pyr = PitchYawRollFromRotationMatrix(world);
-        report["vehiclePos"] = pos.ToString();
-        report["vehiclePyr"] = pyr.ToString();
-        report["x"] = pos.x;
-        report["y"] = pos.y;
-        report["z"] = pos.z;
-
-        auto im = LoadOfficialCarSportItem();
-        if (im is null) throw("failed to FID-load " + SPIKE_VEHICLE_FID);
-        report["carModel"] = im.IdName;
-        report["carName"] = im.Name;
-
-        uint deleted = DeleteSpikeVehicleItemsNear(map, pos);
-        report["deletedOld"] = int(deleted);
-
-        Editor::ItemSpec@ spec;
-        if (map.AnchoredObjects.Length > 0 && map.AnchoredObjects[0] !is null) {
-            // proven DEV path: clone an existing item spec, swap model
-            @spec = MakeItemSpec(map.AnchoredObjects[0]);
-            auto priv = cast<ItemSpecPriv>(spec);
-            if (priv !is null) priv.SetModel(im);
-            else @spec.Model = im;
-            spec.pos = pos;
-            spec.pyr = pyr;
-            spec.isFlying = 1;
-            spec.name = SPIKE_VEHICLE_NAME;
-            report["placePath"] = "cloneExistingItemSpec";
-        } else {
-            @spec = MakeItemSpec(im, pos, pyr);
-            spec.isFlying = 1;
-            spec.name = SPIKE_VEHICLE_NAME;
-            report["placePath"] = "MakeItemSpec(model,pos,pyr)";
-        }
-        Editor::ItemSpec@[] items;
-        items.InsertLast(spec);
-        bool placed = PlaceItems(items, false);
-        report["placed"] = placed;
-        report["itemsAfter"] = int(map.AnchoredObjects.Length);
-        if (!placed) {
-            report["placeFailHint"] = "PlaceMacroblock returned false; CarSport collection is Vehicles/10003, stadium donor will not accept it";
-        }
-
-        // Visual: native test-mode vehicle cursor at the start (this is what the reporter already uses).
-        Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Test);
-        Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
-        Editor::SetAllCursorPos(bpos);
-        report["enteredTestMode"] = Editor::IsInTestPlacementMode(editor);
-
-        Notify("issue35 spike: " + (placed ? "placed CarSport at spawn" : "PlaceItems failed")
-            + " (" + spawnSource + "); test-mode cursor at start");
-        return Json::Write(report);
-    }
-
+#if DEV
     string SpikeDumpTestVehicleCursor() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null || editor.ItemCursor is null) throw("no ItemCursor");
@@ -238,6 +121,7 @@ namespace Editor {
         return Json::Write(report);
     }
 
+#endif
     Json::Value DumpSpawnItems(CGameCtnChallenge@ map) {
         Json::Value arr = Json::Array();
         if (map is null) return arr;
@@ -571,10 +455,6 @@ namespace Editor {
         mat4 spawnRot = mat4::Translate(spawn * -1.) * g_spawnLocal;
         vec3 visPos = cpos + (mat4::Inverse(crot) * spawn).xyz;
         SpikeWriteVisWorld(mat4::Translate(visPos) * crot * spawnRot);
-    }
-
-    void SpikeBindVehiclePreviewToCursor(const mat4 &in cursorMat) {
-        SpikeFollowVehiclePreview(cursorMat);
     }
 
     void SpikeHideAllVis() {

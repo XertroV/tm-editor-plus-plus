@@ -815,7 +815,6 @@ namespace Gizmo {
 
         editor.PluginMapType.NextMapElemColor = placingColor;
         Editor::SetAllCursorMat(gizmo.GetCursorMat());
-        Editor::SpikeBindVehiclePreviewToCursor(gizmo.GetCursorMat());
         Editor::SpikeFollowVehiclePreview(gizmo.GetCursorMat());
         IsActive = true;
         // auto lookUv = Editor::DirToLookUvFromCamera(bb.pos);

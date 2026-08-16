@@ -2,8 +2,7 @@
 // Build with `./build.sh dev` (defines DEV). Release builds export nothing from here.
 #if DEV
 namespace Editor {
-    // Issue #35 spike: place CarSport at latest start-block spawn. JSON string report.
-    import string SpikePlaceVehiclePreview() from "Editor";
+    // Issue #35 spike: JSON report helpers used via Exports_Dev (DEV builds only).
     import string SpikeDumpTestVehicleCursor() from "Editor";
     import string SpikeLeaveTestMode() from "Editor";
     import string SpikeEnterGizmoOnLatestStart(int blockIndex = -1, int itemIndex = -1) from "Editor";
