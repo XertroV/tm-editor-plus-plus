@@ -1,5 +1,7 @@
-// Issue #35 spike: place official CarSport item at the latest start block's spawn pose.
-// Not a feature — answers "does the car appear, and which spawn field do official starts use?"
+// Issue #35: vehicle preview while gizmosing blocks/items with a spawn point.
+// Spawn source: CGameCtnBlockInfoVariant.SpawnTrans (+SpawnPitch/Yaw/Roll) for blocks,
+// CGameCommonItemEntityModel.SpawnLoc for items, item origin for gate-style items.
+// Spike* JSON helpers remain for DEV/MCP tooling.
 
 namespace Editor {
     const string SPIKE_VEHICLE_FID = "GameData/Vehicles/Items/Cars/CarSport.Item.Gbx";
@@ -15,10 +17,16 @@ namespace Editor {
         return cast<CGameItemModel>(Fids::Preload(fid));
     }
 
-    // #35 review: prefer PluginMapType's waypoint list over a hand-rolled
-    // backwards scan (also covers multilap). TODO when productionizing.
-
-    CGameCtnBlock@ FindLatestStartBlock(CGameCtnChallenge@ map) {
+    // Native PMT helpers (GetStartBlockCount/GetStartLineBlock) cover the common
+    // single-start case; the backwards scan remains only as a dev-tooling fallback
+    // for maps with multiple starts (native API has no indexed start accessor).
+    CGameCtnBlock@ FindLatestStartBlock(CGameCtnEditorFree@ editor) {
+        if (editor is null || editor.PluginMapType is null) return null;
+        auto pmt = editor.PluginMapType;
+        if (pmt.GetStartBlockCount(true) == 1) {
+            return pmt.GetStartLineBlock();
+        }
+        auto map = editor.Challenge;
         if (map is null) return null;
         for (int i = int(map.Blocks.Length) - 1; i >= 0; i--) {
             auto b = map.Blocks[i];
@@ -211,7 +219,7 @@ namespace Editor {
         if (editor is null || editor.Challenge is null) throw("not in map editor");
         Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Test);
         Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
-        auto start = FindLatestStartBlock(editor.Challenge);
+        auto start = FindLatestStartBlock(editor);
         vec3 pos = vec3();
         if (start !is null) pos = (GetBlockMatrix(start) * GetStartSpawnLocal(start)).xyz;
         Editor::SetAllCursorPos(pos);
@@ -276,7 +284,7 @@ namespace Editor {
         if (blockIndex >= 0 && uint(blockIndex) < editor.Challenge.Blocks.Length) {
             @start = editor.Challenge.Blocks[blockIndex];
         } else {
-            @start = FindLatestStartBlock(editor.Challenge);
+            @start = FindLatestStartBlock(editor);
         }
         if (itemIndex >= 0) {
             if (uint(itemIndex) >= editor.Challenge.AnchoredObjects.Length) throw("item index out of range");
