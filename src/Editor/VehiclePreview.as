@@ -107,7 +107,9 @@ namespace VehiclePreview {
         return best;
     }
 
-    void WriteVisWorld(const mat4 &in world) {
+    // Place the preview car at `world`: pick the nearest kept vis (usually the one
+    // EnsureAt parked at the spawn) and overwrite its pose matrix.
+    void WritePickedPreviewVisWorld(const mat4 &in world) {
         auto vis = PickPreviewVis(vec3(world.tx, world.ty, world.tz));
         if (vis is null || vis.AsyncState is null) return;
         Dev::SetOffset(vis.AsyncState, O_VISSTATE_Mat, iso4(world));
@@ -124,7 +126,7 @@ namespace VehiclePreview {
         vec3 spawn = vec3(g_spawnLocal.tx, g_spawnLocal.ty, g_spawnLocal.tz);
         mat4 spawnRot = mat4::Translate(spawn * -1.) * g_spawnLocal;
         vec3 visPos = cpos + (mat4::Inverse(crot) * spawn).xyz;
-        WriteVisWorld(mat4::Translate(visPos) * crot * spawnRot);
+        WritePickedPreviewVisWorld(mat4::Translate(visPos) * crot * spawnRot);
     }
 
     void HideAllVis() {
