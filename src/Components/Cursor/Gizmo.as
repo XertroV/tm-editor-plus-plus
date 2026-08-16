@@ -508,7 +508,7 @@ namespace Gizmo {
             } else if (!shouldReplaceTarget && VehiclePreview::HasSpawn(placingBlockModel) && b !is null) {
                 auto spawnLocal = VehiclePreview::SpawnLocalMat(placingBlockModel);
                 VehiclePreview::EnsureAt(Editor::GetBlockMatrix(b) * spawnLocal, spawnLocal);
-            } else if (placingItemModel !is null && Editor::ItemModelHasSpawn(placingItemModel)) {
+            } else if (placingItemModel !is null && VehiclePreview::HasSpawn(placingItemModel)) {
                 auto spawnLocal = VehiclePreview::SpawnLocalMat(placingItemModel);
                 mat4 host = itemMat;
                 if (b !is null) host = Editor::GetBlockMatrix(b);
