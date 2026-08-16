@@ -7,6 +7,19 @@ namespace Editor {
     dictionary _CollectionIdToIx;
     bool InitializedCollectionIdMap = false;
 
+    // Load an official (GameData) item model by FID path, e.g.
+    // "GameData/Vehicles/Items/Cars/CarSport.Item.Gbx". Falls back to a fids-file
+    // lookup in the game folder (some environments lack the fast path).
+    CGameItemModel@ GetModelFromGameFid(const string &in fidPath) {
+        CSystemFidFile@ fid = Fids::GetGame(fidPath);
+        if (fid is null) {
+            @fid = Fids::GetFidsFile(Fids::GetGameFolder(""), fidPath);
+        }
+        if (fid is null) return null;
+        return cast<CGameItemModel>(Fids::Preload(fid));
+    }
+
+
     uint CollectionIdToIx(uint collectionId, const string &in collectionName = "") {
         if (!InitializedCollectionIdMap) {
             RunInitializeCollectionIdMap();
