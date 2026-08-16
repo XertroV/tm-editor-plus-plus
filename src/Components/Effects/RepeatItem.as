@@ -23,10 +23,7 @@ namespace Repeat {
         void DrawInner() override {
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
             UI::TextWrapped("Copy and repeat items with a modification applied.\nCtrl+hover an item to select it for repetition.");
-            UI::SetNextItemOpen(true, UI::Cond::Appearing);
-            if (UI::CollapsingHeader("Warnings and Info")) {
-                UI::TextWrapped("Places copies with the same PlaceItems path as the gizmo (flying, undoable). Large counts are applied in batches of 256 — undo once per batch.");
-            }
+            UI::TextWrapped("Large counts are applied in batches of 256 — undo once per batch.");
             CGameCtnAnchoredObject@ selected = null;
             if (lastPickedItem !is null) {
                 @selected = lastPickedItem.AsItem();
@@ -115,7 +112,7 @@ namespace Repeat {
         }
 
         void RunItemCreation(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem) override {
-            mat4[] poses;
+            mat4[] poses = array<mat4>(nbRepetitions);
             mat4 base = itemToWorld * itemOffset * internalT * itemToIterBase;
             mat4 baseRot = itemOffsetRot * internalTRot * itemToIterBaseRot;
             mat4 back3 = itemToIterBaseInv * internalTInv * itemOffsetInv;
@@ -124,7 +121,7 @@ namespace Repeat {
                 baseRot = baseRot * wi_RotMat;
                 vec3 pos3 = (base * back3 * vec3()).xyz;
                 vec3 rotV = PitchYawRollFromRotationMatrix(baseRot * itemToIterBaseInv * internalTInv);
-                poses.InsertLast(mat4::Translate(pos3) * EulerToMat(rotV));
+                poses[i] = mat4::Translate(pos3) * EulerToMat(rotV);
             }
             PlaceRepeatedItemsAsync(editor, origItem, poses);
         }
