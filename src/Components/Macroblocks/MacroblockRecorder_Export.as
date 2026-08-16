@@ -1,19 +1,21 @@
 // Export surface for the Macroblock Recorder (issue #39).
 // Host implementation: Components/Macroblocks/MacroblockRecorder.as
 //
-// COROUTINE NOTE: StopRecording(false) finishes the recording and transfers it
-// to the editor's copy-paste macroblock via OnFinishedRecording_Async, which
-// requests exclusive cursor control and yields repeatedly. Like other
-// editor-driving exports, call from a coroutine, not MainLoop.
+// StopRecording(false) returns immediately; the transfer to the editor's
+// copy-paste macroblock runs in a background coroutine (exclusive cursor
+// control + yields over several frames) — safe to call from MainLoop. Poll
+// HasExisting / CompletedRec_* to observe completion.
 
 namespace MacroblockRecorder {
     // Start a new recording (warns and no-ops if one is already active).
     import void StartRecording() from "Editor";
     // Stop the active recording. cancel = true discards it; cancel = false
-    // finishes it and moves it to the editor's copy-paste macroblock (async --
-    // see the coroutine note above).
+    // finishes it and moves it to the editor's copy-paste macroblock in a
+    // background coroutine (see note above).
     import void StopRecording(bool cancel) from "Editor";
     // Resume the last completed recording (e.g. to add more blocks/items).
+    // Silently no-ops if a recording is already active; warns if there is
+    // nothing to resume.
     import void ResumeRecording() from "Editor";
 
     // Status getters:
