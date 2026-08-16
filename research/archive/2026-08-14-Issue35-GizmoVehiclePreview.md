@@ -186,9 +186,28 @@ Via MCP on live editor (map `Gauntlet35`); `alive` = GetMode ok after each step.
 
 No exceptions in Openplanet.log tied to KeepVehicleState; no crashes.
 
-## MCP note this session
+## Re-find recipe after a game update (keep-vehicle patch)
 
-`tm-control-mcp` compile started failing with duplicate `Json::Value@` symbols (`FocusCamera`, named-macroblock tools, …) after a file-split (`EditorOptional.as` + extractions). Socket down. Do not rebuild MCP from E++ work until that split compiles.
+Function: `FUN_140ebe560` — strided release loop over 0x28-byte slots, guard
+`cmp [rbx], -1` (`83 3B FF`), one release callee, 3 callers (thin wrapper
+`FUN_140ebe5c0` + two large teardown functions). It has a TWIN
+(`FUN_140ebe500` @ `0x140EBE51C`, disp `0x3B`) with near-identical bytes —
+a wildcarded `74 ??` matches the twin FIRST and silently patches the wrong
+site (this broke the feature 2026-08-16; fixed by keeping disp `0x39` concrete).
+
+Recipe (x-left Ghidra MCP bridge, ~2 min):
+1. Import/refresh-analyze the new exe in the `tm2020-headless` project.
+2. `/search_byte_patterns` the loosened form `74 ?? 48 89 5C 24 40 … 83 3B FF` → expect exactly 2 hits (the twins).
+3. Decompile both; pick the 0x28-stride / `cmp -1` one; read the new je displacement.
+4. Re-search the new concrete form (`74 <disp> …`) → must be exactly 1 hit.
+5. Append it via the `string[] patterns` MemPatcher overload (multi-version support); a miss is fail-safe (feature off, `Pattern(s) not found` in log, no crash).
+
+More robust alternative if the twin pattern proves fragile: match the stable
+caller context around the `E8 rel32` call into this function, decode the rel32
+at runtime, compute the callee address, verify its prologue, patch the guard
+inside. Not implemented anywhere in the repo yet.
+
+## MCP note this session
 
 ## Open questions before coding
 
