@@ -150,6 +150,7 @@ namespace VehiclePreview {
         VehicleKeepState::Applied = true;
         HideAllVis();
         vec3 guess = vec3(spawnWorld.tx, spawnWorld.ty, spawnWorld.tz);
+        dev_trace("VP: ParkAt enter test @ " + guess.ToString());
 
         Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::Test);
         Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
@@ -159,6 +160,9 @@ namespace VehiclePreview {
         auto vis = PickPreviewVis(guess);
         if (vis is null) {
             @vis = GetMostRecentVis();
+            dev_trace("VP: ParkAt pick=null, recent=" + (vis is null ? "null" : "found"));
+        } else {
+            dev_trace("VP: ParkAt pick found vis");
         }
         if (vis !is null && vis.AsyncState !is null) {
             Dev::SetOffset(vis.AsyncState, O_VISSTATE_Mat, iso4(spawnWorld));
@@ -176,11 +180,14 @@ namespace VehiclePreview {
     }
 
     bool EnsureForBlock(CGameCtnBlock@ b) {
-        if (b is null || b.BlockInfo is null || !HasSpawn(b.BlockInfo)) return false;
+        dev_trace("VP: EnsureForBlock " + (b is null || b.BlockInfo is null ? "null" : b.BlockInfo.IdName));
+        if (b is null || b.BlockInfo is null || !HasSpawn(b.BlockInfo)) { dev_trace("VP: no spawn -> skip"); return false; }
         auto local = SpawnLocalMat(b);
         g_spawnLocal = local;
         g_haveSpawnLocal = true;
-        return ParkAt(Editor::GetBlockMatrix(b) * local);
+        bool ok = ParkAt(Editor::GetBlockMatrix(b) * local);
+        dev_trace("VP: ParkAt -> " + ok);
+        return ok;
     }
 }
 }
