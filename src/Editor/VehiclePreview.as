@@ -144,6 +144,24 @@ namespace VehiclePreview {
         HideAllVis();
     }
 
+    // When the user visits Test mode themselves (no gizmo owning the preview),
+    // the kept vis would linger after they leave. Clear it on the way out.
+    void _OnPlacementModeChanged(CGameEditorPluginMap::EPlaceMode newMode) {
+        if (Gizmo::IsActive) return;
+        if (newMode == CGameEditorPluginMap::EPlaceMode::Test) return;
+        if (!VehicleKeepState::Applied) return;
+        Clear();
+        dev_trace("VP: auto-cleared kept vis on user placement-mode change");
+    }
+
+    bool g_cbRegistered = false;
+
+    void EnsureCallbacks() {
+        if (g_cbRegistered) return;
+        g_cbRegistered = true;
+        RegisterPlacementModeChangedCallback(ProcessNewPlacementMode(_OnPlacementModeChanged), "VehiclePreviewAutoClear");
+    }
+
     bool ParkAt(const mat4 &in spawnWorld) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return false;
@@ -174,12 +192,14 @@ namespace VehiclePreview {
     }
 
     bool EnsureAt(const mat4 &in spawnWorld, const mat4 &in spawnLocal) {
+        EnsureCallbacks();
         g_spawnLocal = spawnLocal;
         g_haveSpawnLocal = true;
         return ParkAt(spawnWorld);
     }
 
     bool EnsureForBlock(CGameCtnBlock@ b) {
+        EnsureCallbacks();
         dev_trace("VP: EnsureForBlock " + (b is null || b.BlockInfo is null ? "null" : b.BlockInfo.IdName));
         if (b is null || b.BlockInfo is null || !HasSpawn(b.BlockInfo)) { dev_trace("VP: no spawn -> skip"); return false; }
         auto local = SpawnLocalMat(b);
