@@ -293,7 +293,7 @@ class MapEditPropsTab : Tab {
         UI::SeparatorText("Vehicle");
 
         S_ShowVehicleTestWindow = UI::Checkbox("Show choice of vehicle when testing?", S_ShowVehicleTestWindow);
-        AddSimpleTooltip("When placing a car to test the map, show a window that allows you to choose between different vehicles.");
+        AddSimpleTooltip("When you enter test mode, show a window for choosing the vehicle. Only shows in test mode, not when validating. Note: the choice is saved on the map (it persists and applies to validation too).");
 
         if (UI::CollapsingHeader("Map Vehicle Properties")) {
             UI::Indent();
