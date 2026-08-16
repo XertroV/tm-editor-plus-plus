@@ -17,6 +17,7 @@ namespace Repeat {
             super(p, "Repeat Items", Icons::Magic + Icons::Repeat + Icons::Tree);
             MatrixIter(Children);
             GridRepeat(Children);
+            SphereRepeat(Children);
         }
 
         void DrawInner() override {
@@ -24,8 +25,7 @@ namespace Repeat {
             UI::TextWrapped("Copy and repeat items with a modification applied.\nCtrl+hover an item to select it for repetition.");
             UI::SetNextItemOpen(true, UI::Cond::Appearing);
             if (UI::CollapsingHeader("Warnings and Info")) {
-                UI::TextWrapped("\\$f80Warning!\\$z This tool uses an experimental method of item creation. \\$8f0I believe it is safe, including using undo,\\$z however, there is a risk of a crash upon saving. That said, autosaves seem to save fine (albeit sometimes with a bugged thumbnail). Please exercise caution. \\$8f0Completely reloading the map will remove the possibility of a crash due to these items!");
-                UI::TextWrapped("\\$f80Note:\\$z Shadow calculations might fail with a message about duplicate BlockIds -- if this happens, save and reload the map and it will be fixed.");
+                UI::TextWrapped("Places copies with the same PlaceItems path as the gizmo (flying, undoable). Large counts are applied in batches of 256 — undo once per batch.");
             }
             CGameCtnAnchoredObject@ selected = null;
             if (lastPickedItem !is null) {
@@ -115,41 +115,18 @@ namespace Repeat {
         }
 
         void RunItemCreation(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem) override {
+            mat4[] poses;
             mat4 base = itemToWorld * itemOffset * internalT * itemToIterBase;
             mat4 baseRot = itemOffsetRot * internalTRot * itemToIterBaseRot;
-
-            mat4 back1 = itemToIterBaseInv;
-            mat4 back2 = back1 * internalTInv;
-            mat4 back3 = back2 * itemOffsetInv;
-
-            auto origPos = origItem.AbsolutePositionInMap;
-            auto origRot = Editor::GetItemRotation(origItem);
-
+            mat4 back3 = itemToIterBaseInv * internalTInv * itemOffsetInv;
             for (int i = 0; i < nbRepetitions; i++) {
                 base = base * worldIteration;
                 baseRot = baseRot * wi_RotMat;
-                auto m = base * back3;
-
-                vec3 pos3 = (m * vec3()).xyz;
-
-                auto rotV = PitchYawRollFromRotationMatrix(baseRot * itemToIterBaseInv * internalTInv);
-                origItem.AbsolutePositionInMap = pos3;
-                origItem.Pitch = rotV.x;
-                origItem.Yaw = rotV.y;
-                origItem.Roll = rotV.z;
-                auto newItem = Editor::DuplicateAndAddItem(editor, origItem, false);
-
-                // // doenst work for more than like 10-12 items
-                // if (i % 10 == 0) {
-                //     UpdateNewlyAddedItems(editor);
-                // }
+                vec3 pos3 = (base * back3 * vec3()).xyz;
+                vec3 rotV = PitchYawRollFromRotationMatrix(baseRot * itemToIterBaseInv * internalTInv);
+                poses.InsertLast(mat4::Translate(pos3) * EulerToMat(rotV));
             }
-
-            origItem.AbsolutePositionInMap = origPos;
-            Editor::SetItemRotation(origItem, origRot);
-
-            Editor::UpdateNewlyAddedItems(editor);
-            editor.PluginMapType.AutoSave();
+            PlaceRepeatedItemsAsync(editor, origItem, poses);
         }
 
         void DrawControls(CGameCtnEditorFree@ editor) override {
@@ -283,6 +260,95 @@ namespace Repeat {
             nvg::ClosePath();
         }
     }
+
+    const uint PLACE_CHUNK = 256;
+
+    void PlaceRepeatedItemsAsync(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem, const mat4[]@ poses) {
+        if (editor is null || origItem is null || origItem.ItemModel is null) {
+            NotifyWarning("Repeat Items: nothing to place (no item selected).");
+            return;
+        }
+        auto job = RepeatPlaceJob();
+        @job.editor = editor;
+        @job.orig = ReferencedNod(origItem);
+        if (poses !is null) {
+            for (uint i = 0; i < poses.Length; i++) job.poses.InsertLast(poses[i]);
+        }
+        startnew(CoroutineFuncUserdata(Repeat_PlaceJobEntry), job);
+    }
+
+    void PlaceRepeatedItemsFromJob(RepeatPlaceJob@ job) {
+        if (job is null) return;
+        auto origItem = job.orig !is null ? job.orig.AsItem() : null;
+        if (origItem is null) {
+            NotifyError("Repeat Items: source item disappeared before place.");
+            return;
+        }
+        try {
+            PlaceRepeatedItems(job.editor, origItem, job.poses);
+        } catch {
+            NotifyError("Repeat Items: " + getExceptionInfo());
+        }
+    }
+
+    bool PlaceRepeatedItems(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem, const mat4[]@ poses) {
+        if (editor is null || origItem is null || origItem.ItemModel is null) return false;
+        if (poses is null || poses.Length == 0) return true;
+        Editor::ItemSpec@ tmpl = Editor::MakeItemSpec(origItem);
+        if (tmpl is null) {
+            NotifyError("Repeat Items: failed to snapshot source item.");
+            return false;
+        }
+        vec3 mbOff = Editor::GetMacroblockPosOffset();
+        vec3 origWorld = origItem.AbsolutePositionInMap;
+        Editor::ItemSpec@[] specs;
+        for (uint i = 0; i < poses.Length; i++) {
+            vec3 worldPos = (poses[i] * vec3()).xyz;
+            if (ShouldSkipRepeatPose(worldPos, origWorld)) continue;
+            auto spec = tmpl.Duplicate();
+            spec.pos = worldPos + mbOff;
+            spec.pyr = PitchYawRollFromRotationMatrix(poses[i]);
+            spec.SetCoordAndFlying();
+            specs.InsertLast(spec);
+        }
+        if (specs.Length == 0) {
+            NotifyWarning("Repeat Items: all poses were on the source item.");
+            return true;
+        }
+        bool ok = true;
+        uint placed = 0;
+        for (uint i = 0; i < specs.Length; i += PLACE_CHUNK) {
+            Editor::ItemSpec@[] batch;
+            uint end = Math::Min(i + PLACE_CHUNK, specs.Length);
+            for (uint j = i; j < end; j++) batch.InsertLast(specs[j]);
+            bool chunkOk = false;
+            try {
+                chunkOk = Editor::PlaceItems(batch, true);
+            } catch {
+                NotifyError("Repeat Items place failed: " + getExceptionInfo());
+                return false;
+            }
+            if (!chunkOk) {
+                NotifyWarning("Repeat Items: PlaceItems returned false at " + placed + "/" + specs.Length);
+                ok = false;
+                break;
+            }
+            placed += batch.Length;
+            yield();
+        }
+        if (ok) Notify("Repeat Items: placed " + placed + " items.");
+        return ok;
+    }
+}
+
+class RepeatPlaceJob {
+    CGameCtnEditorFree@ editor;
+    ReferencedNod@ orig;
+    mat4[] poses;
+}
+
+void Repeat_PlaceJobEntry(ref@ r) {
+    Repeat::PlaceRepeatedItemsFromJob(cast<RepeatPlaceJob>(r));
 }
 
 class RepeatMethod : Tab {
@@ -338,25 +404,7 @@ class RepeatMethod : Tab {
     mat4[] matricies;
 
     void RunItemCreation(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem) {
-        auto origPos = origItem.AbsolutePositionInMap;
-        auto origRot = Editor::GetItemRotation(origItem);
-
-        for (uint i = 0; i < matricies.Length; i++) {
-            auto rotV = PitchYawRollFromRotationMatrix(matricies[i]);
-            origItem.AbsolutePositionInMap = (matricies[i] * vec3()).xyz;
-            origItem.Pitch = rotV.x;
-            origItem.Yaw = rotV.y;
-            origItem.Roll = rotV.z;
-            auto newItem = Editor::DuplicateAndAddItem(editor, origItem, false);
-            // would need to manually call this if we didn't set these on the orig item
-            // Event::OnNewItem(newItem);
-        }
-
-        origItem.AbsolutePositionInMap = origPos;
-        Editor::SetItemRotation(origItem, origRot);
-
-        Editor::UpdateNewlyAddedItems(editor);
-        editor.PluginMapType.AutoSave();
+        Repeat::PlaceRepeatedItemsAsync(editor, origItem, matricies);
     }
 
     void DrawControls(CGameCtnEditorFree@ editor) {
@@ -567,11 +615,17 @@ class GridRepeat : RepeatMethod {
         } else {
             UpdateMatrices();
             DrawHelpers(false);
-            int nbCreating = matricies.Length - 1;
+            vec3 origWorld = vec3();
+            if (lastPickedItem !is null && lastPickedItem.AsItem() !is null) {
+                origWorld = lastPickedItem.AsItem().AbsolutePositionInMap;
+            }
+            int nbCreating = int(Repeat::CountPlaceablePoses(matricies, origWorld));
 
+            UI::BeginDisabled(lastPickedItem is null);
             if (UI::Button(Text::Format("Create %d Items", nbCreating))) {
                 RunItemCreation(editor, lastPickedItem.AsItem());
             }
+            UI::EndDisabled();
         }
     }
 
