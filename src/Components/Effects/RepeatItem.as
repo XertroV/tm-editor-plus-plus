@@ -263,14 +263,21 @@ namespace Repeat {
 
     const uint PLACE_CHUNK = 256;
 
+    // Snapshot the source on the click stack (Gizmo-style). Do not keep a live
+    // origItem nod across startnew / PlaceItems yields.
     void PlaceRepeatedItemsAsync(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem, const mat4[]@ poses) {
         if (editor is null || origItem is null || origItem.ItemModel is null) {
             NotifyWarning("Repeat Items: nothing to place (no item selected).");
             return;
         }
+        Editor::ItemSpec@ tmpl = Editor::MakeItemSpec(origItem);
+        if (tmpl is null) {
+            NotifyError("Repeat Items: failed to snapshot source item.");
+            return;
+        }
         auto job = RepeatPlaceJob();
-        @job.editor = editor;
-        @job.orig = ReferencedNod(origItem);
+        @job.tmpl = tmpl;
+        job.origWorld = origItem.AbsolutePositionInMap;
         if (poses !is null) {
             for (uint i = 0; i < poses.Length; i++) job.poses.InsertLast(poses[i]);
         }
@@ -278,29 +285,18 @@ namespace Repeat {
     }
 
     void PlaceRepeatedItemsFromJob(RepeatPlaceJob@ job) {
-        if (job is null) return;
-        auto origItem = job.orig !is null ? job.orig.AsItem() : null;
-        if (origItem is null) {
-            NotifyError("Repeat Items: source item disappeared before place.");
-            return;
-        }
+        if (job is null || job.tmpl is null) return;
         try {
-            PlaceRepeatedItems(job.editor, origItem, job.poses);
+            PlaceRepeatedItems(job.tmpl, job.origWorld, job.poses);
         } catch {
             NotifyError("Repeat Items: " + getExceptionInfo());
         }
     }
 
-    bool PlaceRepeatedItems(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ origItem, const mat4[]@ poses) {
-        if (editor is null || origItem is null || origItem.ItemModel is null) return false;
+    bool PlaceRepeatedItems(Editor::ItemSpec@ tmpl, const vec3 &in origWorld, const mat4[]@ poses) {
+        if (tmpl is null) return false;
         if (poses is null || poses.Length == 0) return true;
-        Editor::ItemSpec@ tmpl = Editor::MakeItemSpec(origItem);
-        if (tmpl is null) {
-            NotifyError("Repeat Items: failed to snapshot source item.");
-            return false;
-        }
         vec3 mbOff = Editor::GetMacroblockPosOffset();
-        vec3 origWorld = origItem.AbsolutePositionInMap;
         Editor::ItemSpec@[] specs;
         for (uint i = 0; i < poses.Length; i++) {
             vec3 worldPos = (poses[i] * vec3()).xyz;
@@ -318,6 +314,11 @@ namespace Repeat {
         bool ok = true;
         uint placed = 0;
         for (uint i = 0; i < specs.Length; i += PLACE_CHUNK) {
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor is null) {
+                NotifyError("Repeat Items: editor gone during place.");
+                return false;
+            }
             Editor::ItemSpec@[] batch;
             uint end = Math::Min(i + PLACE_CHUNK, specs.Length);
             for (uint j = i; j < end; j++) batch.InsertLast(specs[j]);
@@ -342,8 +343,8 @@ namespace Repeat {
 }
 
 class RepeatPlaceJob {
-    CGameCtnEditorFree@ editor;
-    ReferencedNod@ orig;
+    Editor::ItemSpec@ tmpl;
+    vec3 origWorld;
     mat4[] poses;
 }
 
