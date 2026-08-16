@@ -236,7 +236,15 @@ namespace Editor {
         auto mbInsts = DGameCtnChallenge(editor.Challenge).MacroblockInstances;
         auto minInst = mbInsts.Length;
         if (minInst > 0) {
-            minInst = mbInsts.GetMacroblock(minInst - 1).InstId;
+            // best-effort seed for the delete-group id: the raw macroblock-instances
+            // buffer can hold stale/short entries (e.g. after an aborted recorder
+            // transfer) whose element read throws — keep minInst = Length then.
+            try {
+                auto lastInst = mbInsts.GetMacroblock(minInst - 1);
+                if (lastInst !is null) minInst = lastInst.InstId;
+            } catch {
+                dev_trace("MacroblockInstances read failed while seeding freeblock delete id; using length");
+            }
         }
         auto mbInstId = Math::Rand(minInst + 1000, 100000000);
         CGameCtnBlock@[] blocks;
