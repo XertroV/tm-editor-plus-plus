@@ -20,12 +20,29 @@
 - **Fail-closed donor resolve** for place/delete paths: no Stadium fail-open, no `MacroblockModels[0]` handout when the environment donor is missing/incompatible.
 - Soft collection-id check; item placement always re-enables callbacks after temp-disable.
 
-## Prior harden pack (still in this cut)
+## Gizmo — crash fixes & hardening
 
-- Item/block gizmo delete harden, cancel crash fix, leftover-AO warn
-- RELEASE fuzz export stubs (ABI stable)
-- Safer ForceShow / Fixes tab restore / gizmo early null guards
-- `string::Join` fix
+- **Block-gizmo cancel crash fixed** (#36): cancel no longer `Undo()`s while the gizmo is still active (mode-bounce race that could kill TM) — deactivate first, defer undo one frame, no placement bounce for non-item targets.
+- Ghost/phantom items after gizmo use or plugin reload: cursor scene draws cleared safely (no more treating ItemDesc matrix floats as scene nods — that was a reload crash), capacity slots force-shown with validated models only, stops at first bad slot.
+- Warning when an item delete leaves an anchored object at the same position (magnet-snap twins / apply stacking now visible).
+- Cursor snap resets on gizmo exit; gizmo item setup validates model/placement before derefs; setup variant repaired before cursor selection; macroblock sentinel variants fixed.
+
+## Item Browser — Nullify EntityModelEdition (crash fix, #28)
+
+- Untransformed entity-model materials were the save-crash: all surfaces (default + variant entity models) are now transformed to material IDs **before** nulling EME.
+- Null guards on the item's EntityModel; EME zeroed via raw offset, not handle assignment.
+- The button is now a **danger-confirm**: first click arms it (red, "click again to confirm"), second click within 5 s fires.
+
+## Fixes tab
+
+- Restore controls for Test Mode, Inputs Blocked, and baked dirty state.
+- Safer force-show of capacity models (vtable/refcount/type checks per slot).
+
+## Misc
+
+- Fix #32: `RegisterExtension` declaration was in the wrong namespace — extension scripts now bind.
+- Test-vehicle window tooltip clarified (#11): the window only shows in test mode (not validating), but the chosen vehicle is saved on the map and applies to validation too.
+- New tooling/MCP exports: `SaveCurrentItemEditorItem`, `LeaveCurrentItemEditor` (native editor `Exit()`).
 
 # 0.8.999999996
 
