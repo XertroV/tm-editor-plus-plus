@@ -18,6 +18,7 @@ namespace Repeat {
             MatrixIter(Children);
             GridRepeat(Children);
             SphereRepeat(Children);
+            PolygonRepeat(Children);
         }
 
         void DrawInner() override {
