@@ -16,6 +16,8 @@ namespace VehiclePreview {
         return Dev::GetOffsetFloat(editor.Cursor, O_BLOCKCURSOR_FreeBlockCursorOffset);
     }
 
+    // Build the block-local spawn pose from a variant's SpawnTrans + SpawnPitch/Yaw/Roll,
+    // raised by the free-block cursor Y so the car sits with the preview.
     mat4 SpawnLocalMatFromVariant(CGameCtnBlockInfoVariant@ biv) {
         float up = FreeBlockCursorLocalUp();
         if (biv is null) return mat4::Translate(vec3(16, 2 + up, 16));
@@ -23,6 +25,7 @@ namespace VehiclePreview {
             * EulerToMat(vec3(biv.SpawnPitch, biv.SpawnYaw, biv.SpawnRoll));
     }
 
+    // Block-local spawn pose of a placed block (its current or any variant).
     mat4 SpawnLocalMat(CGameCtnBlock@ b) {
         if (b is null) return SpawnLocalMatFromVariant(null);
         auto biv = Editor::GetBlockInfoVariant(b);
@@ -30,6 +33,7 @@ namespace VehiclePreview {
         return SpawnLocalMatFromVariant(biv);
     }
 
+    // Does this block type have a vehicle spawn worth previewing?
     bool HasSpawn(CGameCtnBlockInfo@ bi) {
         if (bi is null) return false;
         auto wt = bi.EdWaypointType;
@@ -48,11 +52,13 @@ namespace VehiclePreview {
         return biv.SpawnTrans.LengthSquared() > 0.0001;
     }
 
+    // Block-local spawn pose from the block type's default variant.
     mat4 SpawnLocalMat(CGameCtnBlockInfo@ bi) {
         if (bi is null) return SpawnLocalMatFromVariant(null);
         return SpawnLocalMatFromVariant(Editor::GetBlockVariantAny(bi));
     }
 
+    // Does this item have a vehicle spawn worth previewing? (start/CP items, or non-zero SpawnLoc)
     bool HasSpawn(CGameItemModel@ im) {
         if (im is null) return false;
         auto wt = im.WaypointType;
@@ -115,6 +121,8 @@ namespace VehiclePreview {
         Dev::SetOffset(vis.AsyncState, O_VISSTATE_Mat, iso4(world));
     }
 
+    // Re-pose the kept vis every tick so the car rides the gizmo cursor using the
+    // stored spawn-local pose.
     void Follow(const mat4 &in cursorMat) {
         if (!S_Gizmo_ShowVehiclePreview) return;
         if (!g_haveSpawnLocal) return;
@@ -129,6 +137,7 @@ namespace VehiclePreview {
         WritePickedPreviewVisWorld(mat4::Translate(visPos) * crot * spawnRot);
     }
 
+    // Park every existing vis far below the map so only the newly kept one shows.
     void HideAllVis() {
         auto scene = GetApp().GameScene;
         if (scene is null) return;
@@ -140,6 +149,7 @@ namespace VehiclePreview {
         }
     }
 
+    // Gizmo teardown: forget the spawn, un-apply the keep patch, hide the vis.
     void Clear() {
         g_haveSpawnLocal = false;
         VehicleKeepState::Applied = false;
@@ -158,12 +168,16 @@ namespace VehiclePreview {
 
     bool g_cbRegistered = false;
 
+    // Register the auto-clear callback once (first preview use).
     void EnsureCallbacks() {
         if (g_cbRegistered) return;
         g_cbRegistered = true;
         RegisterPlacementModeChangedCallback(ProcessNewPlacementMode(_OnPlacementModeChanged), "VehiclePreviewAutoClear");
     }
 
+    // Create the kept vis at `spawnWorld`: apply the keep patch, hop through Test
+    // mode at the spawn (the game spawns a vehicle there), snap it to the exact
+    // pose, then restore FreeBlock — the patched teardown keeps it alive.
     bool ParkAt(const mat4 &in spawnWorld) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return false;
@@ -190,9 +204,14 @@ namespace VehiclePreview {
 
         Editor::SetPlacementMode(editor, CGameEditorPluginMap::EPlaceMode::FreeBlock);
         Editor::SetEditMode(editor, CGameEditorPluginMap::EditMode::Place);
+        // The patch stays applied for the whole gizmo session: the game's reaper
+        // collects the kept vis within ~0.5s if we unpatch while the gizmo runs
+        // (verified live 2026-08-16). Gizmo::OnGoInactive -> VehiclePreview::Clear()
+        // un-applies it when the session ends.
         return true;
     }
 
+    // Entry point for items/known spawn matrices: remember the local pose and park at its world pose.
     bool EnsureAt(const mat4 &in spawnWorld, const mat4 &in spawnLocal) {
         EnsureCallbacks();
         g_spawnLocal = spawnLocal;
@@ -200,6 +219,7 @@ namespace VehiclePreview {
         return ParkAt(spawnWorld);
     }
 
+    // Entry point for blocks: spawn check, local pose from the variant, park at its world pose.
     bool EnsureForBlock(CGameCtnBlock@ b) {
         EnsureCallbacks();
         dev_trace("VP: EnsureForBlock " + (b is null || b.BlockInfo is null ? "null" : b.BlockInfo.IdName));
