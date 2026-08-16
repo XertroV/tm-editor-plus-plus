@@ -2,6 +2,7 @@
 // spawn-field dumps. Not compiled into release builds.
 #if DEV
 namespace Editor {
+namespace DevTest {
     // Native PMT helpers (GetStartBlockCount/GetStartLineBlock) cover the common
     // single-start case; the backwards scan remains only as a dev-tooling fallback
     // for maps with multiple starts (native API has no indexed start accessor).
@@ -335,5 +336,6 @@ namespace Editor {
         return biv.SpawnTrans;
     }
 
+    }
 }
 #endif

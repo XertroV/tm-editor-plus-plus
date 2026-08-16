@@ -1,8 +1,9 @@
-// Issue #35: vehicle preview while gizmosing blocks/items with a spawn point.
+// Issue #35: vehicle preview while gizmoing blocks/items with a spawn point.
 // Spawn source: CGameCtnBlockInfoVariant.SpawnTrans (+SpawnPitch/Yaw/Roll) for blocks,
 // CGameCommonItemEntityModel.SpawnLoc for items, item origin for gate-style items.
 // Mechanics: the keep-vehicle patch (VehicleKeepState) parks a test-mode vehicle vis
 // at the spawn pose; Follow() re-poses it from the gizmo cursor every tick.
+namespace Editor {
 namespace VehiclePreview {
     bool g_haveSpawnLocal = false;
     mat4 g_spawnLocal = mat4::Identity();
@@ -12,7 +13,7 @@ namespace VehiclePreview {
     float FreeBlockCursorLocalUp() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null || editor.Cursor is null) return 0.25;
-        return Dev::GetOffsetVec3(editor.Cursor, O_BLOCKCURSOR_FreeBlockCursorOffset).x;
+        return Dev::GetOffsetFloat(editor.Cursor, O_BLOCKCURSOR_FreeBlockCursorOffset);
     }
 
     mat4 SpawnLocalMatFromVariant(CGameCtnBlockInfoVariant@ biv) {
@@ -74,19 +75,31 @@ namespace VehiclePreview {
     }
 
 
+    // Most recently added vis — test mode appends, so the kept car is last.
+    CSceneVehicleVis@ GetMostRecentVis() {
+        auto scene = GetApp().GameScene;
+        if (scene is null) return null;
+        auto viss = VehicleState::GetAllVis(scene);
+        for (int i = int(viss.Length) - 1; i >= 0; i--) {
+            if (viss[i] !is null && viss[i].AsyncState !is null) return viss[i];
+        }
+        return null;
+    }
+
+    // Nearest non-hidden vis to nearPos; ties resolve to the most recent.
     CSceneVehicleVis@ PickPreviewVis(vec3 nearPos) {
         auto scene = GetApp().GameScene;
         if (scene is null) return null;
         auto viss = VehicleState::GetAllVis(scene);
         CSceneVehicleVis@ best = null;
         float bestD = 1e20;
-        for (uint i = 0; i < viss.Length; i++) {
+        for (int i = int(viss.Length) - 1; i >= 0; i--) {
             auto vis = viss[i];
             if (vis is null || vis.AsyncState is null) continue;
             auto mat = Dev::GetOffsetIso4(vis.AsyncState, O_VISSTATE_Mat);
             if (mat.ty < -1000.0) continue;
             float d = (vec3(mat.tx, mat.ty, mat.tz) - nearPos).LengthSquared();
-            if (d < bestD) {
+            if (d <= bestD) {
                 bestD = d;
                 @best = vis;
             }
@@ -145,16 +158,7 @@ namespace VehiclePreview {
 
         auto vis = PickPreviewVis(guess);
         if (vis is null) {
-            auto scene = GetApp().GameScene;
-            if (scene !is null) {
-                auto viss = VehicleState::GetAllVis(scene);
-                for (uint i = 0; i < viss.Length; i++) {
-                    if (viss[i] !is null && viss[i].AsyncState !is null) {
-                        @vis = viss[i];
-                        break;
-                    }
-                }
-            }
+            @vis = GetMostRecentVis();
         }
         if (vis !is null && vis.AsyncState !is null) {
             Dev::SetOffset(vis.AsyncState, O_VISSTATE_Mat, iso4(spawnWorld));
@@ -178,4 +182,5 @@ namespace VehiclePreview {
         g_haveSpawnLocal = true;
         return ParkAt(Editor::GetBlockMatrix(b) * local);
     }
+}
 }
