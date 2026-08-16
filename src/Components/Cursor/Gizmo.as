@@ -83,7 +83,7 @@ namespace Gizmo {
     }
 
     void OnGoInactive() {
-        Editor::ClearVehiclePreview();
+        VehiclePreview::Clear();
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
         CustomCursor::NoShowCursorItemModelsPatchActive = false;
         CustomCursor::NoSetCursorVisFlagPatchActive = false;
@@ -289,7 +289,7 @@ namespace Gizmo {
                 Editor::SetCurrentPivot(editor, 0);
             }
             Editor::SetAllCursorMat(gizmo.GetCursorMat());
-            Editor::FollowVehiclePreview(gizmo.GetCursorMat());
+            VehiclePreview::Follow(gizmo.GetCursorMat());
             yield();
         }
         IsActive = false;
@@ -503,16 +503,16 @@ namespace Gizmo {
         }
 
         if (S_Gizmo_ShowVehiclePreview) {
-            if (shouldReplaceTarget && b !is null && Editor::BlockInfoHasSpawn(b.BlockInfo)) {
-                Editor::EnsureVehiclePreviewForBlock(b);
-            } else if (!shouldReplaceTarget && Editor::BlockInfoHasSpawn(placingBlockModel) && b !is null) {
-                auto spawnLocal = Editor::GetSpawnLocalMatFromInfo(placingBlockModel);
-                Editor::EnsureVehiclePreviewAt(Editor::GetBlockMatrix(b) * spawnLocal, spawnLocal);
+            if (shouldReplaceTarget && b !is null && VehiclePreview::HasSpawn(b.BlockInfo)) {
+                VehiclePreview::EnsureForBlock(b);
+            } else if (!shouldReplaceTarget && VehiclePreview::HasSpawn(placingBlockModel) && b !is null) {
+                auto spawnLocal = VehiclePreview::SpawnLocalMat(placingBlockModel);
+                VehiclePreview::EnsureAt(Editor::GetBlockMatrix(b) * spawnLocal, spawnLocal);
             } else if (placingItemModel !is null && Editor::ItemModelHasSpawn(placingItemModel)) {
-                auto spawnLocal = Editor::GetSpawnLocalMatFromItem(placingItemModel);
+                auto spawnLocal = VehiclePreview::SpawnLocalMat(placingItemModel);
                 mat4 host = itemMat;
                 if (b !is null) host = Editor::GetBlockMatrix(b);
-                Editor::EnsureVehiclePreviewAt(host * spawnLocal, spawnLocal);
+                VehiclePreview::EnsureAt(host * spawnLocal, spawnLocal);
             }
         }
 
@@ -815,7 +815,7 @@ namespace Gizmo {
 
         editor.PluginMapType.NextMapElemColor = placingColor;
         Editor::SetAllCursorMat(gizmo.GetCursorMat());
-        Editor::FollowVehiclePreview(gizmo.GetCursorMat());
+        VehiclePreview::Follow(gizmo.GetCursorMat());
         IsActive = true;
         // auto lookUv = Editor::DirToLookUvFromCamera(bb.pos);
         auto lookUv = Editor::GetCurrentCamState(editor).LookUV;
