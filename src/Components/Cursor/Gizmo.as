@@ -83,7 +83,7 @@ namespace Gizmo {
     }
 
     void OnGoInactive() {
-        Editor::SpikeClearVehiclePreview();
+        Editor::ClearVehiclePreview();
         CustomCursor::NoHideCursorItemModelsPatchActive = false;
         CustomCursor::NoShowCursorItemModelsPatchActive = false;
         CustomCursor::NoSetCursorVisFlagPatchActive = false;
@@ -289,7 +289,7 @@ namespace Gizmo {
                 Editor::SetCurrentPivot(editor, 0);
             }
             Editor::SetAllCursorMat(gizmo.GetCursorMat());
-            Editor::SpikeFollowVehiclePreview(gizmo.GetCursorMat());
+            Editor::FollowVehiclePreview(gizmo.GetCursorMat());
             yield();
         }
         IsActive = false;
@@ -504,15 +504,15 @@ namespace Gizmo {
 
         if (S_Gizmo_ShowVehiclePreview) {
             if (shouldReplaceTarget && b !is null && Editor::BlockInfoHasSpawn(b.BlockInfo)) {
-                Editor::SpikeEnsureVehiclePreviewForBlock(b);
+                Editor::EnsureVehiclePreviewForBlock(b);
             } else if (!shouldReplaceTarget && Editor::BlockInfoHasSpawn(placingBlockModel) && b !is null) {
                 auto spawnLocal = Editor::GetSpawnLocalMatFromInfo(placingBlockModel);
-                Editor::SpikeEnsureVehiclePreviewAt(Editor::GetBlockMatrix(b) * spawnLocal, spawnLocal);
+                Editor::EnsureVehiclePreviewAt(Editor::GetBlockMatrix(b) * spawnLocal, spawnLocal);
             } else if (placingItemModel !is null && Editor::ItemModelHasSpawn(placingItemModel)) {
                 auto spawnLocal = Editor::GetSpawnLocalMatFromItem(placingItemModel);
                 mat4 host = itemMat;
                 if (b !is null) host = Editor::GetBlockMatrix(b);
-                Editor::SpikeEnsureVehiclePreviewAt(host * spawnLocal, spawnLocal);
+                Editor::EnsureVehiclePreviewAt(host * spawnLocal, spawnLocal);
             }
         }
 
@@ -815,7 +815,7 @@ namespace Gizmo {
 
         editor.PluginMapType.NextMapElemColor = placingColor;
         Editor::SetAllCursorMat(gizmo.GetCursorMat());
-        Editor::SpikeFollowVehiclePreview(gizmo.GetCursorMat());
+        Editor::FollowVehiclePreview(gizmo.GetCursorMat());
         IsActive = true;
         // auto lookUv = Editor::DirToLookUvFromCamera(bb.pos);
         auto lookUv = Editor::GetCurrentCamState(editor).LookUV;

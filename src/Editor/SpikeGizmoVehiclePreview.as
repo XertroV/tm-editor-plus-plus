@@ -437,13 +437,13 @@ namespace Editor {
         return best;
     }
 
-    void SpikeWriteVisWorld(const mat4 &in world) {
+    void WriteVisWorld(const mat4 &in world) {
         auto vis = PickPreviewVis(vec3(world.tx, world.ty, world.tz));
         if (vis is null || vis.AsyncState is null) return;
         Dev::SetOffset(vis.AsyncState, O_VISSTATE_Mat, iso4(world));
     }
 
-    void SpikeFollowVehiclePreview(const mat4 &in cursorMat) {
+    void FollowVehiclePreview(const mat4 &in cursorMat) {
         if (!S_Gizmo_ShowVehiclePreview) return;
         if (!g_haveSpawnLocal) return;
         // Cursor rot is Inverse(blockRot) (AABB / SetAllCursorMat). SpawnTrans is in
@@ -454,10 +454,10 @@ namespace Editor {
         vec3 spawn = vec3(g_spawnLocal.tx, g_spawnLocal.ty, g_spawnLocal.tz);
         mat4 spawnRot = mat4::Translate(spawn * -1.) * g_spawnLocal;
         vec3 visPos = cpos + (mat4::Inverse(crot) * spawn).xyz;
-        SpikeWriteVisWorld(mat4::Translate(visPos) * crot * spawnRot);
+        WriteVisWorld(mat4::Translate(visPos) * crot * spawnRot);
     }
 
-    void SpikeHideAllVis() {
+    void HideAllVis() {
         auto scene = GetApp().GameScene;
         if (scene is null) return;
         auto viss = VehicleState::GetAllVis(scene);
@@ -468,17 +468,17 @@ namespace Editor {
         }
     }
 
-    void SpikeClearVehiclePreview() {
+    void ClearVehiclePreview() {
         g_haveSpawnLocal = false;
         VehicleKeepState::Applied = false;
-        SpikeHideAllVis();
+        HideAllVis();
     }
 
-    bool SpikeParkVisAt(const mat4 &in spawnWorld) {
+    bool ParkVisAt(const mat4 &in spawnWorld) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return false;
         VehicleKeepState::Applied = true;
-        SpikeHideAllVis();
+        HideAllVis();
         vec3 guess = vec3(spawnWorld.tx, spawnWorld.ty, spawnWorld.tz);
         g_lastVisPos = guess;
 
@@ -509,17 +509,17 @@ namespace Editor {
         return true;
     }
 
-    bool SpikeEnsureVehiclePreviewAt(const mat4 &in spawnWorld, const mat4 &in spawnLocal) {
+    bool EnsureVehiclePreviewAt(const mat4 &in spawnWorld, const mat4 &in spawnLocal) {
         g_spawnLocal = spawnLocal;
         g_haveSpawnLocal = true;
-        return SpikeParkVisAt(spawnWorld);
+        return ParkVisAt(spawnWorld);
     }
 
-    bool SpikeEnsureVehiclePreviewForBlock(CGameCtnBlock@ b) {
+    bool EnsureVehiclePreviewForBlock(CGameCtnBlock@ b) {
         if (b is null || b.BlockInfo is null || !BlockInfoHasSpawn(b.BlockInfo)) return false;
         auto local = GetStartSpawnLocalMat(b);
         g_spawnLocal = local;
         g_haveSpawnLocal = true;
-        return SpikeParkVisAt(GetBlockMatrix(b) * local);
+        return ParkVisAt(GetBlockMatrix(b) * local);
     }
 }
