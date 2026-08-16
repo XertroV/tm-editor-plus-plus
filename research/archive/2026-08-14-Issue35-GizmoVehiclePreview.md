@@ -1,14 +1,26 @@
 # Issue #35 — Vehicle preview while Gizmo is on a Start/Checkpoint
 
-Date: 2026-08-14. Issue: https://github.com/XertroV/tm-editor-plus-plus/issues/35
+Date: 2026-08-14 (implemented 2026-08-16). Issue: https://github.com/XertroV/tm-editor-plus-plus/issues/35
 
 Reporter wants the test-mode "vehicle snaps to start/CP on hover" visual while using the E++ Gizmo, so they don't have to flip Test ↔ Gizmo to fine-tune placement.
 
 ## Verdict
 
-**Possible.** Best path is a gizmo-owned flying preview item using the official vehicle item + the start/CP item's `SpawnLoc`. Native Test-mode cursor is the visual they already have, but it fights Gizmo exclusive control.
+**Implemented** (PR #37 review series). Final architecture:
 
-Not implemented — this note is the investigation only.
+- `src/Editor/VehiclePreview.as` — `namespace Editor::VehiclePreview`: `HasSpawn` (block/item overloads), `SpawnLocalMat` (block/info/item), `EnsureForBlock`/`EnsureAt`, `Follow`, `Clear`, `GetMostRecentVis`.
+- `src/Dev/VehiclePreviewSpike.as` — `Editor::DevTest::` MCP tooling (`Spike*` JSON helpers, spawn dumps), whole-file `#if DEV`.
+- `src/Components/Cursor/VehicleKeepState.as` — one-byte `je→jmp` keep-patch so the test-mode vehicle vis survives leaving `EPlaceMode::Test`. Pattern wildcarded (`74 ??`), verified unique in the live exe (`0x140EBE51C`), crash gauntlet 15/15 PASS, annotated decomp in PR #37.
+- Spawn source of truth: `CGameCtnBlockInfoVariant.SpawnTrans` (+`SpawnPitch/Yaw/Roll`) for blocks, `CGameCommonItemEntityModel.SpawnLoc` for items, item origin for gate-style items; plus live freeblock-cursor Y (`Dev::GetOffsetFloat`, default 0.25).
+- `EdNoRespawn` blocks (circle CPs, flying respawn) → no preview; Finish-only → no preview.
+- Setting: "Show vehicle on starts/CPs" in RotationGizmo settings (default on).
+
+Not done / do not ship:
+
+- Ghost record / MediaTracker integration (manual paths remain).
+- Multilap StartFinish live-verified only via the E-start block; no dedicated multilap map test.
+
+Original investigation below.
 
 ## What the game already does
 

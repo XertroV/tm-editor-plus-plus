@@ -1,5 +1,12 @@
 # 0.8.99999999a
 
+## Gizmo — Vehicle preview on starts/CPs (new, #35)
+
+- While gizmoing a block/item with a spawn point (start, start-finish, checkpoint), a stadium car appears at the spawn pose and follows the gizmo live — no more flipping Test ↔ Gizmo to fine-tune placement.
+- Spawn pose read from the block variant's `SpawnTrans` (or item `SpawnLoc`); no-respawn checkpoints and finish-only blocks show no car (matches test-mode behaviour).
+- Toggle: RotationGizmo settings → "Show vehicle on starts/CPs" (default on).
+- DEV-only: keep-vehicle memory patch + MCP testing hooks (`Editor::DevTest`) are compiled out of release builds.
+
 ## Map Properties — Race Objectives (new)
 
 - **Clones** (`TMObjective_NbClones`): set clone-mode ghost count (0 = off; presets 0/1/3/5; max 64). Save map to persist.
