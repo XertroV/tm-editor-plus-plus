@@ -102,20 +102,36 @@ namespace Editor {
 
     // MARK: Zone resolution + fake nod templates
 
-    // Resolves zone id names to live zone nods of the map's collection
-    // (zone nods are shared per collection; CompleteZoneList has them all).
+    // Resolves zone id names to live zone nods. Zone nods are shared per
+    // collection; the map's genealogy grid is the reliable name source
+    // (CompleteZoneList zone ids did not resolve names like "VoidToDirt"
+    // on RedIsland, so it is only a fallback).
     class ZoneNodResolver {
         protected dictionary@ byName = dictionary();
         bool ok = false;
 
         ZoneNodResolver() {
             auto map = GetApp().RootMap;
-            if (map is null || map.Collection is null) return;
-            auto zones = map.Collection.CompleteZoneList;
-            for (uint i = 0; i < zones.Length; i++) {
-                auto zone = zones[i];
-                if (zone is null) continue;
-                byName.Set(zone.ZoneId.GetName(), @zone);
+            if (map is null) return;
+            auto cells = DGameCtnChallenge(map).TerrainGenealogies;
+            for (uint i = 0; i < cells.Length; i++) {
+                auto gen = cells.GetTerrainCell(i).Nod;
+                if (gen is null) continue;
+                for (uint j = 0; j < gen.Zones.Length; j++) {
+                    auto zone = gen.Zones[j];
+                    if (zone is null) continue;
+                    string name = zone.ZoneId.GetName();
+                    if (name.Length > 0 && !byName.Exists(name)) byName.Set(name, @zone);
+                }
+            }
+            if (map.Collection !is null) {
+                auto zones = map.Collection.CompleteZoneList;
+                for (uint i = 0; i < zones.Length; i++) {
+                    auto zone = zones[i];
+                    if (zone is null) continue;
+                    string name = zone.ZoneId.GetName();
+                    if (name.Length > 0 && !byName.Exists(name)) byName.Set(name, @zone);
+                }
             }
             ok = true;
         }
