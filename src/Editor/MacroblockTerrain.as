@@ -78,7 +78,7 @@ namespace Editor {
         auto maxCoord = spec.GetMaxBlockCoords();
         if (maxCoord.x < minCoord.x || maxCoord.z < minCoord.z) return;
         auto cells = DGameCtnChallenge(map).TerrainGenealogies;
-        int3 size = map.Size;
+        int3 size = Nat3ToInt3(map.Size);
         string defaultSig = GetMapDefaultGenealogySignature(cells);
         uint captured = 0;
         for (int z = minCoord.z; z <= maxCoord.z; z++) {
