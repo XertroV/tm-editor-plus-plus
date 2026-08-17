@@ -403,7 +403,21 @@ namespace Editor {
     //     return Mood::Whatever;
     // }
 
+    // False when +0x2D0 is not a FastArray (null ptr, huge len, cap<len).
+    // Reading MbName/GetMwIdValue through that junk is an Openplanet.dll crash.
+    bool MapMacroblockInfosLookValid(CGameCtnChallenge@ map) {
+        if (map is null) return false;
+        uint64 ptr = Dev::GetOffsetUint64(map, O_MAP_MACROBLOCK_INFOS);
+        uint len = Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0x8);
+        uint cap = Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0xC);
+        if (ptr == 0) return len == 0;
+        if (len > 100000) return false;
+        if (cap < len) return false;
+        return true;
+    }
+
     uint GetNbMacroblocks(CGameCtnChallenge@ map) {
+        if (!MapMacroblockInfosLookValid(map)) return 0;
         return Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0x8);
     }
 

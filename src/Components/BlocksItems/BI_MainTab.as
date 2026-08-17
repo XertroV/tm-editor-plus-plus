@@ -853,7 +853,8 @@ class MacroblocksBITab : Tab {
         if (map is null) return;
         BI_DrawCacheRefreshMsg();
         auto mbs = Editor::GetMapMacroblocks(map);
-        if (mbs.Length == 0) {
+        uint nb = Editor::GetNbMacroblocks(map);
+        if (nb == 0) {
             UI::Text("No macroblocks found.");
             return;
         }
@@ -861,8 +862,9 @@ class MacroblocksBITab : Tab {
         auto @mbCache = mapCache.Macroblocks;
         Editor::ObjInMap@ obj;
         array<Editor::ObjInMap@>@ objs;
-        for (uint i = 0; i < mbs.Length; i++) {
+        for (uint i = 0; i < nb; i++) {
             auto mb = mbs.GetMacroblock(i);
+            if (mb is null) continue;
             if (mbCache.Exists(tostring(mb.InstId))) {
                 @objs = cast<array<Editor::ObjInMap@>>(mbCache[tostring(mb.InstId)]);
                 if (objs !is null) {

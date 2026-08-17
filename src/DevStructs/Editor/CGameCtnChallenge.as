@@ -27,7 +27,9 @@ class DGameCtnChallenge_Macroblocks : RawBuffer {
 		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
 	}
 	DGameCtnChallenge_Macroblock@ GetMacroblock(uint i) {
-		return DGameCtnChallenge_Macroblock(this[i]);
+		auto el = this[i];
+		if (el is null) return null;
+		return DGameCtnChallenge_Macroblock(el);
 	}
 }
 
