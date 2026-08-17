@@ -236,7 +236,9 @@ namespace Editor {
         auto mbInsts = DGameCtnChallenge(editor.Challenge).MacroblockInstances;
         auto minInst = mbInsts.Length;
         if (minInst > 0) {
-            minInst = mbInsts.GetMacroblock(minInst - 1).InstId;
+            // can be stale
+            auto lastInst = mbInsts.GetMacroblock(minInst - 1);
+            if (lastInst !is null) minInst = lastInst.InstId;
         }
         auto mbInstId = Math::Rand(minInst + 1000, 100000000);
         CGameCtnBlock@[] blocks;

@@ -50,6 +50,7 @@ class CustomSelectionMgr {
             case CGameEditorPluginMap::EPlaceMode::Block:
             case CGameEditorPluginMap::EPlaceMode::GhostBlock:
             case CGameEditorPluginMap::EPlaceMode::FreeBlock:
+            case CGameEditorPluginMap::EPlaceMode::Terraform:
                 return Editor::GetSelectedBlockSize(editor);
             case CGameEditorPluginMap::EPlaceMode::Item:
                 return Editor::GetSelectedItemSize(editor);

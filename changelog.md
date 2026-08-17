@@ -1,5 +1,9 @@
 # 0.8.99999999a
 
+## Plugin API — selected terrain block (new)
+
+- Track inventory-selected terrain (`CursorTerrainBlockModel`) the same way as blocks/items/macroblocks. `GetSelectedBlockInfo` returns it in `EPlaceMode::Terraform`; new `GetSelectedTerrainBlockInfo` / `IsInTerrainPlacementMode` exports.
+
 ## Plugin API — Macroblock Recorder exports (new, #39)
 
 - `MacroblockRecorder` can now be driven by dependent plugins (e.g. MCP tool packs) instead of only via the E++ toolbar UI.

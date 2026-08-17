@@ -33,6 +33,8 @@ ProcessNewSelectedItem@[] selectedItemChangedCbs;
 string[] selectedItemChangedCbNames;
 ProcessNewSelectedBlock@[] selectedBlockChangedCbs;
 string[] selectedBlockChangedCbNames;
+ProcessNewSelectedBlock@[] selectedTerrainBlockChangedCbs;
+string[] selectedTerrainBlockChangedCbNames;
 ProcessNewSelectedMacroblock@[] selectedMacroblockChangedCbs;
 string[] selectedMacroblockChangedCbNames;
 ProcessNewSelectedMacroblock@[] copyPasteMacroblockChangedCbs;
@@ -174,6 +176,13 @@ void RegisterSelectedBlockChangedCallback(ProcessNewSelectedBlock@ f, const stri
     if (f !is null) {
         selectedBlockChangedCbs.InsertLast(f);
         selectedBlockChangedCbNames.InsertLast(name);
+    }
+}
+
+void RegisterSelectedTerrainBlockChangedCallback(ProcessNewSelectedBlock@ f, const string &in name) {
+    if (f !is null) {
+        selectedTerrainBlockChangedCbs.InsertLast(f);
+        selectedTerrainBlockChangedCbNames.InsertLast(name);
     }
 }
 
@@ -423,6 +432,13 @@ namespace Event {
         // Editor::Callbacks::Exts::Run_OnNewSelectedBlock(blockModel);
         _Log::Trace("Finished OnSelectedBlockChanged");
     }
+    void OnSelectedTerrainBlockChanged(CGameCtnBlockInfo@ blockModel) {
+        _Log::Trace("Running OnSelectedTerrainBlockChanged");
+        for (uint i = 0; i < selectedTerrainBlockChangedCbs.Length; i++) {
+            selectedTerrainBlockChangedCbs[i](blockModel);
+        }
+        _Log::Trace("Finished OnSelectedTerrainBlockChanged");
+    }
     void OnSelectedMacroblockChanged(CGameCtnMacroBlockInfo@ mbInfo) {
         _Log::Trace("Running OnSelectedMacroblockChanged");
         for (uint i = 0; i < selectedMacroblockChangedCbs.Length; i++) {
@@ -578,6 +594,7 @@ uint m_LastNbItems = 0;
 
 uint _lastSelectedBlockInfoId = 0;
 uint _lastSelectedGhostBlockInfoId = 0;
+uint _lastSelectedTerrainBlockInfoId = 0;
 uint _lastSelectedMacroBlockInfoId = 0;
 uint _lastSelectedItemModelId = 0;
 CGameCtnMacroBlockInfo@ _lastCopyPasteMacroBlockInfo = null;
@@ -610,6 +627,16 @@ void CheckForNewSelectedGhostBlock(CGameCtnEditorFree@ editor) {
     if (bi.Id.Value != _lastSelectedGhostBlockInfoId) {
         _lastSelectedGhostBlockInfoId = bi.Id.Value;
         Event::OnSelectedBlockChanged(bi);
+    }
+}
+
+void CheckForNewSelectedTerrainBlock(CGameCtnEditorFree@ editor) {
+    if (editor is null) return;
+    auto bi = GetCursorTerrainBlockModel(editor);
+    if (bi is null) return;
+    if (bi.Id.Value != _lastSelectedTerrainBlockInfoId) {
+        _lastSelectedTerrainBlockInfoId = bi.Id.Value;
+        Event::OnSelectedTerrainBlockChanged(bi);
     }
 }
 

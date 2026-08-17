@@ -7,6 +7,10 @@ namespace Editor {
     import void SetIsBlockAirModeActive(CGameCtnEditorFree@ editor, bool active) from "Editor";
     import uint GetCurrentBlockVariant(CGameCursorBlock@ cursor) from "Editor";
 
+    // Set the editor cursor to a world position (block cursor free pos, coord, snapped loc; item cursor pos)
+    import void SetAllCursorPos(vec3 pos) from "Editor";
+    import nat3 PosToCoord(vec3 pos) from "Editor";
+
     // None = 0, Normal = 1, FreeGround = 2, Free = 3
     import int GetItemPlacementModeInt(bool checkEditMode = true, bool checkPlacementMode = true) from "Editor";
     // None = 0, Normal = 1, FreeGround = 2, Free = 3
@@ -26,6 +30,7 @@ namespace Editor {
     import bool IsInGhostBlockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) from "Editor";
     import bool IsInFreeBlockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) from "Editor";
     import bool IsInGhostOrFreeBlockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) from "Editor";
+    import bool IsInTerrainPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) from "Editor";
     import bool IsInTestPlacementMode(CGameCtnEditorFree@ editor) from "Editor";
     import bool IsInAnyItemPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) from "Editor";
     import bool IsInAnyFreePlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) from "Editor";
@@ -36,6 +41,7 @@ namespace Editor {
 
     // other util functions from Editor.as
     import CGameCtnBlockInfo@ GetSelectedBlockInfo(CGameCtnEditorFree@ editor) from "Editor";
+    import CGameCtnBlockInfo@ GetSelectedTerrainBlockInfo(CGameCtnEditorFree@ editor) from "Editor";
     import vec3 GetSelectedBlockSize(CGameCtnEditorFree@ editor) from "Editor";
     // Note: This is only accurate for compass aligned items with no pitch/roll.
     import vec3 GetSelectedItemSizeFromCursor(CGameCtnEditorFree@ editor) from "Editor";

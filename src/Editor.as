@@ -10,6 +10,7 @@ void UpdateEditorWatchers(CGameCtnEditorFree@ editor) {
     CheckForNewSelectedItem(editor);
     CheckForNewSelectedBlock(editor);
     CheckForNewSelectedGhostBlock(editor);
+    CheckForNewSelectedTerrainBlock(editor);
     CheckForNewSelectedMacroblock(editor);
     CheckForNewCopyPasteMacroblock(editor);
     CheckPlacementMode(editor);
@@ -287,6 +288,11 @@ namespace Editor {
         return false;
     }
 
+    bool IsInTerrainPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
+        if (checkEditMode && !IsInPlacementMode(editor)) return false;
+        return GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Terraform;
+    }
+
     bool IsInNormBlockPlacementMode(CGameCtnEditorFree@ editor, bool checkEditMode = true) {
         if (checkEditMode && !IsInPlacementMode(editor)) return false;
         return GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Block;
@@ -421,8 +427,19 @@ namespace Editor {
                 return selectedGhostBlockInfo;
             case CGameEditorPluginMap::EPlaceMode::FreeBlock:
                 return selectedGhostBlockInfo;
+            case CGameEditorPluginMap::EPlaceMode::Terraform:
+                return selectedTerrainBlockInfo;
         }
         return selectedBlockInfo;
+    }
+
+    // Is a CGameCtnBlockInfoFrontier (always?)
+    CGameCtnBlockInfo@ GetSelectedTerrainBlockInfo(CGameCtnEditorFree@ editor) {
+        if (selectedTerrainBlockInfo !is null) {
+            auto bi = selectedTerrainBlockInfo.AsBlockInfo();
+            if (bi !is null) return bi;
+        }
+        return GetCursorTerrainBlockModel(editor);
     }
 
     CGameCtnBlockInfo@ GetSelectedBlockInfo(CGameCtnEditorFree@ editor) {

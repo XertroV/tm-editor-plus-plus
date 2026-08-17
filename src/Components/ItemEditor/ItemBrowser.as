@@ -2541,6 +2541,17 @@ class GhostBlockModelBrowserTab : BlockModelBrowserTab {
     }
 }
 
+class TerrainBlockModelBrowserTab : BlockModelBrowserTab {
+    TerrainBlockModelBrowserTab(TabGroup@ p) {
+        super(p, "Terrain Block Browser");
+    }
+
+    CGameCtnBlockInfo@ GetBlockInfo() override {
+        if (selectedTerrainBlockInfo is null) return null;
+        return selectedTerrainBlockInfo.AsBlockInfo();
+    }
+}
+
 
 
 
