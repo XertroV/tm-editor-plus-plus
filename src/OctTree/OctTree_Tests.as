@@ -9,8 +9,7 @@ void OctTree_Assert(bool cond, const string &in msg) {
 
 void OctTree_ApplyWorldYFloor(OctTreeNode@ tree) {
     tree.min.y = -100;
-    tree.midp = (tree.max + tree.min) / 2.;
-    tree.halfDiagDist = (tree.max - tree.min).Length() / 2.;
+    tree.UpdateBounds();
 }
 
 // Insert/Remove/Contains must walk OctTreePoint.point (world), not spec.pos.

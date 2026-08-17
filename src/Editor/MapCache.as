@@ -489,10 +489,9 @@ namespace Editor {
             loadProgress = 0;
             loadTotal = 0;
             @objsRoot = OctTreeNode(map.Size);
-            // Live floor + slack (issue 06). Also overrides a stale shared ctor body.
+            // update min to be map depth and some buffer
             objsRoot.min.y = GetMapExtendsBelowZero(map) - 40.0;
-            objsRoot.midp = (objsRoot.max + objsRoot.min) / 2.;
-            objsRoot.halfDiagDist = (objsRoot.max - objsRoot.min).Length() / 2.;
+            objsRoot.UpdateBounds();
             auto myNonce = ++lastRefreshNonce;
             _IsStale = false;
             isRefreshing = true;

@@ -706,7 +706,7 @@ namespace Gizmo {
                     _targetPos = targetItem.AbsolutePositionInMap;
                     haveTargetPos = true;
                 } else if (itemSpec !is null) {
-                    _targetPos = itemSpec.pos;
+                    _targetPos = itemSpec.pos - Editor::GetMacroblockPosOffset();
                     haveTargetPos = true;
                 }
 

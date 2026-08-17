@@ -52,12 +52,15 @@ shared class OctTreeRegion {
     vec3 min;
     vec3 midp;
     float halfDiagDist;
-    float halfDiagDistSq;
     bool isNode = false;
 
     OctTreeRegion(vec3 &in min, vec3 &in max) {
         this.min = min;
         this.max = max;
+        UpdateBounds();
+    }
+
+    void UpdateBounds() {
         midp = (max + min) / 2.;
         halfDiagDist = (max - min).Length() / 2.;
     }
@@ -144,7 +147,6 @@ shared class OctTreeNode : OctTreeRegion {
         max = vec3(mapSize.x, mapSize.y, mapSize.z) * vec3(32, 8, 32);
         super(min, max);
         isNode = true;
-        midp = (max + min) / 2.;
         @parent = null;
         depth = 0;
     }
