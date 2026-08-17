@@ -47,6 +47,24 @@ elif [[ -z "$EPP_CODEGEN_EXISTS" ]]; then
   sleep 2
 fi
 
+# Static check via openplanet-lsp (catches AS compile errors before staging/reload).
+# Exits nonzero on errors; warnings (e.g. pre-existing signed/unsigned) don't fail.
+if [[ "${EPP_SKIP_LSP:-0}" != "1" ]]; then
+  if command -v openplanet-lsp >/dev/null 2>&1; then
+    _colortext16 green "🔍 Running openplanet-lsp check"
+    set +e
+    openplanet-lsp check --format plain .
+    _lsp_exit_code=$?
+    set -e
+    if [[ "$_lsp_exit_code" != "0" ]]; then
+      _colortext16 red "⚠ Error: openplanet-lsp reported errors (see above). Fix them or run with EPP_SKIP_LSP=1 to bypass."
+      exit 1
+    fi
+  else
+    _colortext16 yellow "⚠ Warning: openplanet-lsp not found. Skipping static check."
+  fi
+fi
+
 
 
 pluginSources=( 'src' )
