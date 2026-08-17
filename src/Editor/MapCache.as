@@ -13,9 +13,7 @@ namespace Editor {
     }
 
     void RefreshMapCacheSoon() {
-        if (IsMapCacheStale()) {
-            _MapCache.RefreshCacheSoon();
-        }
+        _MapCache.RefreshCacheSoon();
     }
 
     class ObjInMap {
@@ -31,6 +29,7 @@ namespace Editor {
         mat4 _mat;
         int _mbInstId = -1;
         string _mbInstIdStr = "-1";
+        uint64 _objPtr;
 
         ObjInMap(uint index) {
             ix = index;
@@ -60,6 +59,7 @@ namespace Editor {
 
         ItemInMap(uint i, CGameCtnAnchoredObject@ item) {
             super(i);
+            _objPtr = Dev_GetPointerForNod(item);
             @_spec = MakeItemSpec(item);
             _pos = item.AbsolutePositionInMap;
             _rot = Editor::GetItemRotation(item);
@@ -158,6 +158,7 @@ namespace Editor {
         BlockInMap(uint i, CGameCtnBlock@ block) {
             // dev_trace("Adding block: " + block.BlockInfo.Name);
             super(i);
+            _objPtr = Dev_GetPointerForNod(block);
             @_spec = MakeBlockSpec(block);
             _pos = Editor::GetBlockLocation(block);
             _rot = Editor::GetBlockRotation(block);
@@ -265,47 +266,161 @@ namespace Editor {
             RegisterBlockDeletedCallback(ProcessBlock(this.OnDelBlock), "MapCache del block");
             RegisterNewItemCallback(ProcessItem(this.OnNewItem), "MapCache add item");
             RegisterItemDeletedCallback(ProcessItem(this.OnDelItem), "MapCache del item");
+            startnew(CoroutineFunc(this.WatchForDesync));
         }
         bool isRefreshing = false;
         bool _IsStale = false;
+        bool _IsDesynced = false;
+        bool hasCompletedRefresh = false;
+        uint lastDesyncNotifyTime = 0;
+
+        bool IsTerrainBlock(CGameCtnBlock@ block) {
+            return block !is null && block.BlockInfo !is null && block.BlockInfo.IsTerrain;
+        }
 
         bool OnNewBlock(CGameCtnBlock@ block) {
-            if (block.BlockInfo.IsTerrain) return false;
-            this._IsStale = true;
-            if (isRefreshing || objsRoot is null) return false;
-            // todo: update cache instead of marking stale
-            objsRoot.Insert(MakeBlockSpec(block));
-            // AddBlock(BlockInMap(_Blocks.Length, block));
+            if (IsTerrainBlock(block)) return false;
+            if (isRefreshing || objsRoot is null) {
+                _IsStale = true;
+                return false;
+            }
+            if (GetBlockByObjPtr(Dev_GetPointerForNod(block)) !is null) return false;
+            AddBlock(BlockInMap(_Blocks.Length, block));
             return false;
         }
         bool OnDelBlock(CGameCtnBlock@ block) {
-            this._IsStale = true;
-            if (isRefreshing || objsRoot is null) return false;
-            // todo: update cache instead of marking stale
-            if (!objsRoot.Remove(MakeBlockSpec(block))) {
-                warn("Failed to remove block from oct tree!");
+            bool terrain = IsTerrainBlock(block);
+            if (isRefreshing || objsRoot is null) {
+                if (!terrain) _IsStale = true;
+                return false;
+            }
+            auto bim = FindBlockForLive(block);
+            if (bim is null) {
+                if (terrain) return false;
+                RecoverFromDesync("block delete missed cache row");
+                return false;
+            }
+            if (!RemoveBlock(bim) && !terrain) {
+                RecoverFromDesync("block delete failed to remove");
             }
             return false;
         }
         bool OnNewItem(CGameCtnAnchoredObject@ item) {
-            this._IsStale = true;
-            if (isRefreshing || objsRoot is null) return false;
-            // todo: update cache instead of marking stale
-            // ! item models can be null sometimes? leaving editor after editing custom item no save
-            if (item.ItemModel !is null) {
-                objsRoot.Insert(MakeItemSpec(item));
+            if (item.ItemModel is null) {
+                _IsStale = true;
+                return false;
             }
-            // AddItem(ItemInMap(_Items.Length, item));
+            if (isRefreshing || objsRoot is null) {
+                _IsStale = true;
+                return false;
+            }
+            if (GetItemByObjPtr(Dev_GetPointerForNod(item)) !is null) return false;
+            AddItem(ItemInMap(_Items.Length, item));
             return false;
         }
         bool OnDelItem(CGameCtnAnchoredObject@ item) {
-            this._IsStale = true;
-            if (isRefreshing || objsRoot is null) return false;
-            // todo: update cache instead of marking stale
-            if (!objsRoot.Remove(MakeItemSpec(item))) {
-                warn("Failed to remove item from oct tree!");
+            if (isRefreshing || objsRoot is null) {
+                _IsStale = true;
+                return false;
+            }
+            auto iim = FindItemForLive(item);
+            if (iim is null) {
+                RecoverFromDesync("item delete missed cache row");
+                return false;
+            }
+            if (!RemoveItem(iim)) {
+                RecoverFromDesync("item delete failed to remove");
             }
             return false;
+        }
+
+        string ObjPtrKey(uint64 ptr) {
+            return Text::FormatPointer(ptr);
+        }
+
+        BlockInMap@ GetBlockByObjPtr(uint64 ptr) {
+            if (ptr == 0) return null;
+            string key = ObjPtrKey(ptr);
+            if (!_BlocksByObjPtr.Exists(key)) return null;
+            return cast<BlockInMap@>(_BlocksByObjPtr[key]);
+        }
+
+        ItemInMap@ GetItemByObjPtr(uint64 ptr) {
+            if (ptr == 0) return null;
+            string key = ObjPtrKey(ptr);
+            if (!_ItemsByObjPtr.Exists(key)) return null;
+            return cast<ItemInMap@>(_ItemsByObjPtr[key]);
+        }
+
+        BlockInMap@ FindBlockForLive(CGameCtnBlock@ block) {
+            uint64 ptr = Dev_GetPointerForNod(block);
+            if (ptr > 0) return GetBlockByObjPtr(ptr);
+            for (uint i = 0; i < _Blocks.Length; i++) {
+                if (_Blocks[i].Matches(block)) return _Blocks[i];
+            }
+            return null;
+        }
+
+        ItemInMap@ FindItemForLive(CGameCtnAnchoredObject@ item) {
+            uint64 ptr = Dev_GetPointerForNod(item);
+            if (ptr > 0) return GetItemByObjPtr(ptr);
+            for (uint i = 0; i < _Items.Length; i++) {
+                if (_Items[i].Matches(item)) return _Items[i];
+            }
+            return null;
+        }
+
+        void RegisterObjPtr(BlockInMap@ b) {
+            if (b is null || b._objPtr == 0) return;
+            @_BlocksByObjPtr[ObjPtrKey(b._objPtr)] = b;
+        }
+
+        void RegisterObjPtr(ItemInMap@ b) {
+            if (b is null || b._objPtr == 0) return;
+            @_ItemsByObjPtr[ObjPtrKey(b._objPtr)] = b;
+        }
+
+        void UnregisterObjPtr(BlockInMap@ b) {
+            if (b is null || b._objPtr == 0) return;
+            _BlocksByObjPtr.Delete(ObjPtrKey(b._objPtr));
+        }
+
+        void UnregisterObjPtr(ItemInMap@ b) {
+            if (b is null || b._objPtr == 0) return;
+            _ItemsByObjPtr.Delete(ObjPtrKey(b._objPtr));
+        }
+
+        void RecoverFromDesync(const string &in reason) {
+            _IsStale = true;
+            _IsDesynced = true;
+            if (isRefreshing) return;
+            uint now = Time::Now;
+            if (now - lastDesyncNotifyTime >= 1000) {
+                lastDesyncNotifyTime = now;
+                NotifyWarning("Map cache out of sync (" + reason + "). Refreshing.");
+            }
+            RefreshCacheSoon();
+        }
+
+        bool LiveCacheCountsMatch() {
+            auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+            if (editor is null || editor.PluginMapType is null) return true;
+            auto pmt = editor.PluginMapType;
+            if (pmt.Map is null) return true;
+            uint live = pmt.ClassicBlocks.Length + pmt.GhostBlocks.Length + pmt.Map.AnchoredObjects.Length;
+            uint cached = _Blocks.Length + _Items.Length;
+            return live == cached;
+        }
+
+        void WatchForDesync() {
+            while (true) {
+                yield();
+                sleep(1000);
+                if (!hasCompletedRefresh || isRefreshing || objsRoot is null) continue;
+                if (!LiveCacheCountsMatch()) {
+                    RecoverFromDesync("live vs cache counts");
+                }
+            }
         }
 
         uint loadProgress = 0;
@@ -357,6 +472,14 @@ namespace Editor {
         dictionary Macroblocks;
 
         uint lastRefreshNonce = 0;
+
+        // Newer refresh owns the flags; only the current nonce may clear them.
+        protected void AbortRefresh(uint myNonce) {
+            if (myNonce != lastRefreshNonce) return;
+            isRefreshing = false;
+            _IsStale = true;
+        }
+
         void RefreshCache() {
             // if (isRefreshing) return;
             auto app = GetApp();
@@ -366,6 +489,10 @@ namespace Editor {
             loadProgress = 0;
             loadTotal = 0;
             @objsRoot = OctTreeNode(map.Size);
+            // Live floor + slack (issue 06). Also overrides a stale shared ctor body.
+            objsRoot.min.y = GetMapExtendsBelowZero(map) - 40.0;
+            objsRoot.midp = (objsRoot.max + objsRoot.min) / 2.;
+            objsRoot.halfDiagDist = (objsRoot.max - objsRoot.min).Length() / 2.;
             auto myNonce = ++lastRefreshNonce;
             _IsStale = false;
             isRefreshing = true;
@@ -373,6 +500,8 @@ namespace Editor {
             _BlockIdNameMap.DeleteAll();
             _BlocksByHash.DeleteAll();
             _ItemsByHash.DeleteAll();
+            _BlocksByObjPtr.DeleteAll();
+            _ItemsByObjPtr.DeleteAll();
             Macroblocks.DeleteAll();
             _Items.RemoveRange(0, _Items.Length);
             _Blocks.RemoveRange(0, _Blocks.Length);
@@ -391,17 +520,18 @@ namespace Editor {
             NbDuplicateFreeBlocks = 0;
             NbDuplicateItems = 0;
             yield();
-            if (myNonce != lastRefreshNonce) return;
+            if (myNonce != lastRefreshNonce) { AbortRefresh(myNonce); return; }
             auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-            if (editor is null) return;
+            if (editor is null) { AbortRefresh(myNonce); return; }
             auto pmt = editor.PluginMapType;
+            if (pmt is null) { AbortRefresh(myNonce); return; }
 
             loadTotal = pmt.ClassicBlocks.Length + pmt.GhostBlocks.Length + pmt.Map.AnchoredObjects.Length;
 
             trace('Caching map ClassicBlocks...');
             for (uint i = 0; i < pmt.ClassicBlocks.Length; i++) {
-                if (myNonce != lastRefreshNonce) return;
-                if (GetApp().Editor is null) return;
+                if (myNonce != lastRefreshNonce) { AbortRefresh(myNonce); return; }
+                if (GetApp().Editor is null) { AbortRefresh(myNonce); return; }
                 // if (myNonce != lastRefreshNonce) return;
                 AddBlock(BlockInMap(i, pmt.ClassicBlocks[i]));
                 CheckPause("MapCache::CachingClassicBlocks");
@@ -412,52 +542,56 @@ namespace Editor {
             yield();
             trace('Caching map GhostBlocks...');
             if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
-                || editor.PluginMapType is null) return;
+                || editor.PluginMapType is null) { AbortRefresh(myNonce); return; }
             for (uint i = 0; i < pmt.GhostBlocks.Length; i++) {
                 CheckPause("MapCache::CachingGhostBlocks");
                 if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
                     || editor.PluginMapType is null) break;
-                if (myNonce != lastRefreshNonce) return;
-                if (GetApp().Editor is null) return;
-                if (myNonce != lastRefreshNonce) return;
+                if (myNonce != lastRefreshNonce) { AbortRefresh(myNonce); return; }
+                if (GetApp().Editor is null) { AbortRefresh(myNonce); return; }
+                if (myNonce != lastRefreshNonce) { AbortRefresh(myNonce); return; }
                 AddBlock(BlockInMap(i, pmt.GhostBlocks[i]));
             }
             yield();
             yield();
             trace('Caching map items...');
             if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
-                || editor.PluginMapType is null) return;
+                || editor.PluginMapType is null) { AbortRefresh(myNonce); return; }
             for (uint i = 0; i < pmt.Map.AnchoredObjects.Length; i++) {
                 CheckPause("MapCache::CachingMapItems");
                 if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
                     || editor.PluginMapType is null) break;
-                if (myNonce != lastRefreshNonce) return;
-                if (GetApp().Editor is null) return;
-                if (myNonce != lastRefreshNonce) return;
+                if (myNonce != lastRefreshNonce) { AbortRefresh(myNonce); return; }
+                if (GetApp().Editor is null) { AbortRefresh(myNonce); return; }
+                if (myNonce != lastRefreshNonce) { AbortRefresh(myNonce); return; }
                 if (pmt.Map.AnchoredObjects[i].ItemModel is null) {
                     warn('MapCache: Item '+i+' model is null!');
                     continue;
                 }
                 AddItem(ItemInMap(i, pmt.Map.AnchoredObjects[i]));
             }
+            if ((@editor = cast<CGameCtnEditorFree>(GetApp().Editor)) is null
+                || editor.PluginMapType is null) { AbortRefresh(myNonce); return; }
             trace('Caching map complete. Indexing...');
             yield();
             yield();
             // todo
-            if (myNonce != lastRefreshNonce) return;
+            if (myNonce != lastRefreshNonce) { AbortRefresh(myNonce); return; }
             ItemTypes.SortAsc();
             yield();
-            if (myNonce != lastRefreshNonce) return;
+            if (myNonce != lastRefreshNonce) { AbortRefresh(myNonce); return; }
             BlockTypes.SortAsc();
             yield();
-            if (myNonce != lastRefreshNonce) return;
+            if (myNonce != lastRefreshNonce) { AbortRefresh(myNonce); return; }
             ItemTypesLower.SortAsc();
             yield();
-            if (myNonce != lastRefreshNonce) return;
+            if (myNonce != lastRefreshNonce) { AbortRefresh(myNonce); return; }
             BlockTypesLower.SortAsc();
             lastRefreshNonce++;
             isRefreshing = false;
             _IsStale = false;
+            _IsDesynced = false;
+            hasCompletedRefresh = true;
         }
 
         bool HasDuplicateBlocks() {
@@ -474,6 +608,8 @@ namespace Editor {
         dictionary _BlockIdNameMap;
         dictionary _BlocksByHash;
         dictionary _ItemsByHash;
+        dictionary _BlocksByObjPtr;
+        dictionary _ItemsByObjPtr;
         string[] BlockTypes;
         string[] ItemTypes;
         string[] BlockTypesLower;
@@ -486,8 +622,9 @@ namespace Editor {
         uint NbDuplicateItems = 0;
 
         void AddBlock(BlockInMap@ b) {
-            loadProgress++;
+            if (isRefreshing) loadProgress++;
             _Blocks.InsertLast(b);
+            RegisterObjPtr(b);
             AddToMacroblock(b);
             AddToOctTree(b);
             if (b.IsWaypoint) _WaypointBlocks.InsertLast(b);
@@ -516,18 +653,21 @@ namespace Editor {
             GetBlocksByType(b._IdName).InsertLast(b);
         }
 
-        void RemoveBlock(BlockInMap@ b) {
-            RemoveBlockFromArray(b, _Blocks);
+        bool RemoveBlock(BlockInMap@ b) {
+            bool ok = true;
+            if (!RemoveBlockFromArray(b, _Blocks)) ok = false;
             if (b.HasSkin) RemoveBlockFromArray(b, _SkinnedBlocks);
             if (b.IsWaypoint) RemoveBlockFromArray(b, _WaypointBlocks);
             auto @blocks = cast<array<BlockInMap@>>(_BlockIdNameMap[b._IdName]);
-            RemoveBlockFromArray(b, blocks);
-            if (blocks.Length == 0) {
-                auto idIx = BlockTypes.Find(b._IdName);
-                if (idIx != -1) BlockTypes.RemoveAt(idIx);
-                idIx = BlockTypesLower.Find(b._IdName.ToLower());
-                if (idIx != -1) BlockTypesLower.RemoveAt(idIx);
-                _BlockIdNameMap.Delete(b._IdName);
+            if (blocks !is null) {
+                RemoveBlockFromArray(b, blocks);
+                if (blocks.Length == 0) {
+                    auto idIx = BlockTypes.Find(b._IdName);
+                    if (idIx != -1) BlockTypes.RemoveAt(idIx);
+                    idIx = BlockTypesLower.Find(b._IdName.ToLower());
+                    if (idIx != -1) BlockTypesLower.RemoveAt(idIx);
+                    _BlockIdNameMap.Delete(b._IdName);
+                }
             }
             if (_BlocksByHash.Exists(b._hashStr)) {
                 auto dupes = cast<BlockInMap@[]>(_BlocksByHash[b._hashStr]);
@@ -544,24 +684,60 @@ namespace Editor {
                     }
                 }
             }
+            if (!RemoveFromOctTree(b)) ok = false;
+            UnregisterObjPtr(b);
+            return ok;
         }
 
-        void RemoveBlockFromArray(BlockInMap@ b, array<BlockInMap@>@ arr) {
+        bool RemoveBlockFromArray(BlockInMap@ b, array<BlockInMap@>@ arr) {
+            if (arr is null) {
+                warn("Could not find block to remove");
+                return false;
+            }
             auto ix = arr.FindByRef(b);
             if (ix == -1) {
                 warn("Could not find block to remove");
-                return;
+                return false;
             }
             arr.RemoveAt(ix);
+            return true;
         }
 
         void AddToOctTree(BlockInMap@ b) {
             // don't add grass
             if (b._IsTerrain) return;
-            objsRoot.Insert(b._spec);
+            if (objsRoot is null) return;
+            auto p = OctTreePoint(b._spec);
+            p.point = b._pos;
+            objsRoot.Insert(p);
         }
         void AddToOctTree(ItemInMap@ b) {
-            objsRoot.Insert(b._spec);
+            if (objsRoot is null) return;
+            auto p = OctTreePoint(b._spec);
+            p.point = b._pos;
+            objsRoot.Insert(p);
+        }
+
+        bool RemoveFromOctTree(BlockInMap@ b) {
+            if (b._IsTerrain) return true;
+            if (objsRoot is null) return false;
+            auto p = OctTreePoint(b._spec);
+            p.point = b._pos;
+            if (!objsRoot.Remove(p)) {
+                warn("Failed to remove block from oct tree!");
+                return false;
+            }
+            return true;
+        }
+        bool RemoveFromOctTree(ItemInMap@ b) {
+            if (objsRoot is null) return false;
+            auto p = OctTreePoint(b._spec);
+            p.point = b._pos;
+            if (!objsRoot.Remove(p)) {
+                warn("Failed to remove item from oct tree!");
+                return false;
+            }
+            return true;
         }
 
         BlockInMap@[]@ GetBlocksByHash(const string &in blockHash) {
@@ -579,8 +755,9 @@ namespace Editor {
         }
 
         void AddItem(ItemInMap@ b) {
-            loadProgress++;
+            if (isRefreshing) loadProgress++;
             _Items.InsertLast(b);
+            RegisterObjPtr(b);
             AddToMacroblock(b);
             AddToOctTree(b);
             if (b.IsWaypoint) _WaypointItems.InsertLast(b);
@@ -606,29 +783,40 @@ namespace Editor {
             }
         }
 
-        void RemoveItem(ItemInMap@ b) {
-            RemoveItemFromArray(b, _Items);
+        bool RemoveItem(ItemInMap@ b) {
+            bool ok = true;
+            if (!RemoveItemFromArray(b, _Items)) ok = false;
             if (b.HasSkin) RemoveItemFromArray(b, _SkinnedItems);
             if (b.IsWaypoint) RemoveItemFromArray(b, _WaypointItems);
             auto @items = cast<array<ItemInMap@>>(_ItemIdNameMap[b._IdName]);
-            RemoveItemFromArray(b, items);
-            if (items.Length == 0) {
-                auto idIx = ItemTypes.Find(b._IdName);
-                if (idIx != -1) ItemTypes.RemoveAt(idIx);
-                idIx = ItemTypesLower.Find(b._IdName.ToLower());
-                if (idIx != -1) ItemTypesLower.RemoveAt(idIx);
-                _ItemIdNameMap.Delete(b._IdName);
+            if (items !is null) {
+                RemoveItemFromArray(b, items);
+                if (items.Length == 0) {
+                    auto idIx = ItemTypes.Find(b._IdName);
+                    if (idIx != -1) ItemTypes.RemoveAt(idIx);
+                    idIx = ItemTypesLower.Find(b._IdName.ToLower());
+                    if (idIx != -1) ItemTypesLower.RemoveAt(idIx);
+                    _ItemIdNameMap.Delete(b._IdName);
+                }
             }
             // todo: remove from duplicates
+            if (!RemoveFromOctTree(b)) ok = false;
+            UnregisterObjPtr(b);
+            return ok;
         }
 
-        void RemoveItemFromArray(ItemInMap@ b, array<ItemInMap@>@ arr) {
+        bool RemoveItemFromArray(ItemInMap@ b, array<ItemInMap@>@ arr) {
+            if (arr is null) {
+                warn("Could not find item to remove");
+                return false;
+            }
             auto ix = arr.FindByRef(b);
             if (ix == -1) {
                 warn("Could not find item to remove");
-                return;
+                return false;
             }
             arr.RemoveAt(ix);
+            return true;
         }
 
         protected void AddToMacroblock(ObjInMap@ b) {
@@ -666,6 +854,14 @@ namespace Editor {
 
         bool IsStale() {
             return _IsStale;
+        }
+
+        bool get_IsRefreshing() {
+            return isRefreshing;
+        }
+
+        bool get_IsDesynced() {
+            return _IsDesynced;
         }
 
         uint get_LoadProgress() {

@@ -700,13 +700,13 @@ namespace Gizmo {
                 uint itemsBefore = map !is null ? map.AnchoredObjects.Length : 0;
 
                 // Capture target pose before delete for leftover checks.
-                vec3 targetPos = vec3(0);
+                vec3 _targetPos = vec3(0);
                 bool haveTargetPos = false;
                 if (targetItem !is null) {
-                    targetPos = targetItem.AbsolutePositionInMap;
+                    _targetPos = targetItem.AbsolutePositionInMap;
                     haveTargetPos = true;
                 } else if (itemSpec !is null) {
-                    targetPos = itemSpec.pos;
+                    _targetPos = itemSpec.pos;
                     haveTargetPos = true;
                 }
 
@@ -767,7 +767,7 @@ namespace Gizmo {
                         for (uint i = 0; i < map.AnchoredObjects.Length; i++) {
                             auto ao = map.AnchoredObjects[i];
                             if (ao is null) continue;
-                            if ((ao.AbsolutePositionInMap - targetPos).LengthSquared() > 0.01) continue;
+                            if ((ao.AbsolutePositionInMap - _targetPos).LengthSquared() > 0.01) continue;
                             leftovers++;
                             dev_trace("Gizmo item delete leftover AO[" + i + "] pos="
                                 + ao.AbsolutePositionInMap.ToString()

@@ -3,7 +3,7 @@ shared class OctTree {
     OctTreeNode@ root;
 
     OctTree(vec3 &in mapSize = vec3(48, 255, 48)) {
-        @root = OctTreeNode(null, 0, vec3(0, 0, 0), mapSize * vec3(32, 8, 32));
+        @root = OctTreeNode(null, 0, vec3(0, -100, 0), mapSize * vec3(32, 8, 32));
     }
 
     void Insert(const vec3 &in point) {
@@ -140,7 +140,7 @@ shared class OctTreeNode : OctTreeRegion {
     array<OctTreePoint@> points;
 
     OctTreeNode(nat3 &in mapSize = nat3(48, 255, 48)) {
-        min = vec3(0, 0, 0);
+        min = vec3(0, -100, 0);
         max = vec3(mapSize.x, mapSize.y, mapSize.z) * vec3(32, 8, 32);
         super(min, max);
         isNode = true;
@@ -231,7 +231,7 @@ shared class OctTreeNode : OctTreeRegion {
             }
             return false;
         } else {
-            return children[PointToIx(block.pos)].Contains(block);
+            return children[PointToIx(block.pos - vec3(0, 56, 0))].Contains(block);
         }
     }
 
@@ -245,7 +245,7 @@ shared class OctTreeNode : OctTreeRegion {
             }
             return false;
         } else {
-            return children[PointToIx(item.pos)].Contains(item);
+            return children[PointToIx(item.pos - vec3(0, 56, 0))].Contains(item);
         }
     }
 
@@ -324,7 +324,7 @@ shared class OctTreeNode : OctTreeRegion {
 
     bool Remove(Editor::BlockSpec@ block) {
         if (block is null) return false;
-        auto point = block.pos;
+        auto point = block.pos - vec3(0, 56, 0);
         if (children.Length == 0) {
             for (uint i = 0; i < points.Length; i++) {
                 if (points[i].block !is null && points[i].block == block) {
@@ -344,7 +344,7 @@ shared class OctTreeNode : OctTreeRegion {
 
     bool Remove(Editor::ItemSpec@ item) {
         if (item is null) return false;
-        auto point = item.pos;
+        auto point = item.pos - vec3(0, 56, 0);
         if (children.Length == 0) {
             for (uint i = 0; i < points.Length; i++) {
                 if (points[i].item !is null && points[i].item == item) {
@@ -493,7 +493,7 @@ shared class OctTreeNode : OctTreeRegion {
                 Subdivide();
             }
         } else {
-            children[PointToIx(block.pos)].Insert(block);
+            children[PointToIx(block.pos - vec3(0, 56, 0))].Insert(block);
         }
         totalPoints++;
     }
@@ -506,7 +506,7 @@ shared class OctTreeNode : OctTreeRegion {
                 Subdivide();
             }
         } else {
-            children[PointToIx(item.pos)].Insert(item);
+            children[PointToIx(item.pos - vec3(0, 56, 0))].Insert(item);
         }
         totalPoints++;
     }

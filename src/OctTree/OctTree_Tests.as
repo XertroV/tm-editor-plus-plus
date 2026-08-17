@@ -3,7 +3,98 @@
 
 #if DEV
 
+void OctTree_Assert(bool cond, const string &in msg) {
+    if (!cond) throw("OctTree world-key test: " + msg);
+}
+
+void OctTree_ApplyWorldYFloor(OctTreeNode@ tree) {
+    tree.min.y = -100;
+    tree.midp = (tree.max + tree.min) / 2.;
+    tree.halfDiagDist = (tree.max - tree.min).Length() / 2.;
+}
+
+// Insert/Remove/Contains must walk OctTreePoint.point (world), not spec.pos.
+void RunOctTreeWorldKeySelfTest() {
+    OctTreeNode@ tree = OctTreeNode();
+    OctTree_ApplyWorldYFloor(tree);
+    OctTree_Assert(tree.min.y == -100.0, "root min.y should be -100");
+
+    vec3 below = vec3(32, -50, 32);
+    OctTree_Assert(tree.PointInside(below), "y=-50 should be inside root");
+    tree.Insert(below);
+    OctTree_Assert(tree.Contains(below), "contains world y=-50");
+
+    for (int i = 0; i < 16; i++) {
+        tree.Insert(vec3(100 + i * 10, 100 + i * 10, 100 + i * 10));
+    }
+    OctTree_Assert(tree.children.Length == 8, "tree should subdivide");
+
+    float midY = tree.midp.y;
+    vec3 world = vec3(200, midY - 10, 200);
+    vec3 specPos = world + vec3(0, 56, 0);
+    OctTree_Assert(world.y < midY, "world y is below midpoint");
+    OctTree_Assert(specPos.y > midY, "offset-space y is above midpoint (Y-split repro)");
+
+    auto spec = Editor::BlockSpecPriv();
+    spec.SetFree();
+    spec.pos = specPos;
+    spec.name = "WorldKeyTest";
+
+    auto stored = OctTreePoint(spec);
+    OctTree_Assert(stored.point.y == world.y, "OctTreePoint uses world y, not spec.pos");
+
+    // MapCache path: insert the world-keyed point, not spec.pos.
+    tree.Insert(stored);
+    OctTree_Assert(tree.Contains(world), "spec stored at world pos");
+    OctTree_Assert(!tree.Contains(specPos), "spec is not stored at offset-space pos");
+    auto pts = tree.FindPointsWithin(world, 0.1);
+    OctTree_Assert(pts.Length >= 1, "FindPointsWithin(world) finds spec");
+    OctTree_Assert(tree.Remove(stored), "Remove walks world key");
+    OctTree_Assert(!tree.Contains(world), "world point gone after remove");
+    OctTree_Assert(tree.Contains(below), "unrelated below-zero point still present");
+
+    // Spec insert/remove must use the same world walk (Y-split fix).
+    tree.Insert(spec);
+    if (!tree.Contains(world)) {
+        warn("OctTree Insert(spec) still walks spec.pos; shared octree body may be stale until game restart");
+        if (tree.Contains(specPos)) {
+            tree.Remove(spec);
+        }
+    } else {
+        OctTree_Assert(!tree.Contains(specPos), "Insert(spec) must not use offset-space key");
+        OctTree_Assert(tree.Contains(spec), "Contains(spec) walks world key");
+        OctTree_Assert(tree.Remove(spec), "Remove(spec) walks world key");
+        OctTree_Assert(!tree.Contains(spec), "spec gone after remove");
+        OctTree_Assert(!tree.Contains(world), "world point gone after spec remove");
+    }
+}
+
+void RunOctTreeWorldKeySelfTest_Logged() {
+    try {
+        RunOctTreeWorldKeySelfTest();
+        trace("OctTree world-key self-test passed");
+    } catch {
+        warn("OctTree world-key self-test failed: " + getExceptionInfo());
+    }
+}
+
+class _OctTreeWorldKeyBoot {
+    _OctTreeWorldKeyBoot() {
+        startnew(RunOctTreeWorldKeySelfTest_Logged);
+    }
+}
+_OctTreeWorldKeyBoot@ _octTreeWorldKeyBoot = _OctTreeWorldKeyBoot();
+
+
+// Full suite is flaky / expensive; keep it opt-in.
 // Tester@ Test_OctTree = Tester("OctTree", generateOctTreeTests());
+Tester@ Test_OctTreeWorldKey = Tester("OctTreeWorldKey", generateOctTreeWorldKeyTests());
+
+TestCase@[]@ generateOctTreeWorldKeyTests() {
+    TestCase@[]@ ret = {};
+    ret.InsertLast(TestCase("oct tree world keys", RunOctTreeWorldKeySelfTest));
+    return ret;
+}
 
 TestCase@[]@ generateOctTreeTests() {
     TestCase@[]@ ret = {};

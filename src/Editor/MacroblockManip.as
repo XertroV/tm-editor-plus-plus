@@ -761,8 +761,8 @@ namespace Editor {
             // trace('variant match: ' + (variant == other.variant) + ' ' + variant + ' / ' + other.variant);
             // trace('flags match: ' + (flags == other.flags));
 
-            auto o2 = cast <BlockSpecPriv>(other);
-            if (ObjPtr > 0 && o2 !is null && o2.ObjPtr == ObjPtr && name == other.name) return true;
+            auto o2 = cast<BlockSpecPriv>(other);
+            if (ObjPtr > 0 && o2 !is null && o2.ObjPtr > 0 && ObjPtr == o2.ObjPtr) return true;
 
             return name == other.name && collection == other.collection && author == other.author &&
                 MathX::Nat3Eq(coord, other.coord) && dir == other.dir && dir2 == other.dir2 &&
@@ -1030,7 +1030,9 @@ namespace Editor {
             // trace('variantIx match: ' + (variantIx == other.variantIx));
 
             if (other is null) return false;
-            return other !is null && name == other.name && collection == other.collection && author == other.author &&
+            auto o2 = cast<ItemSpecPriv>(other);
+            if (ObjPtr > 0 && o2 !is null && o2.ObjPtr > 0 && ObjPtr == o2.ObjPtr) return true;
+            return name == other.name && collection == other.collection && author == other.author &&
                 MathX::Nat3Eq(coord, other.coord) &&
                 // uint8(dir) == uint8(other.dir) && // maybe ignore dir, can be ff or other
                 MathX::Vec3Eq(pos, other.pos) &&

@@ -46,6 +46,9 @@ namespace Editor {
         void RefreshCache();
         void RefreshCacheSoon();
         bool IsStale();
+        // Unpublished: status fields live on MapCache
+        // bool get_IsRefreshing();
+        // bool get_IsDesynced();
         bool HasDuplicateBlocks();
         bool HasDuplicateItems();
         bool HasDuplicateBlocksOrItems();
