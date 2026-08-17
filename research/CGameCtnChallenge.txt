@@ -3,8 +3,9 @@ launchedcps: 0x200 (clipAmb + x28)
 LM Struct: size - 0x20
 0x238
 
-macroblock infos: anchoredObjs + x20
-0x2b8; buf of (int (index?), mwid (macroblock path/name))
+macroblock infos: anchoredObjs + x28  (was +x20 / 0x2c8; live+Ghidra 2026-08-18 → 0x2d0)
+see research/2026-08-18-MacroblockInfos-Offset.md
+0x2d0; buf of (int InstId, mwid name)
 
 MapInfo + 0x10 = 0x308
 +0x00 buf

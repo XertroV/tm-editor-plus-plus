@@ -546,7 +546,7 @@ const uint16 O_LIGHTMAPCACHE_PIMP = GetOffset("CHmsLightMap", "m_PImp");
 
 // 0x2a8
 const uint16 O_MAP_ANCHOREDOBJS = GetOffset("CGameCtnChallenge", "AnchoredObjects");
-const uint16 O_MAP_MACROBLOCK_INFOS = O_MAP_ANCHOREDOBJS + 0x20; // 0x2c8
+const uint16 O_MAP_MACROBLOCK_INFOS = O_MAP_ANCHOREDOBJS + 0x28; // 0x2d0
 
 // 0x2f0
 const uint16 O_MAP_CHALLENGEPARAMS = GetOffset("CGameCtnChallenge", "ChallengeParameters");
