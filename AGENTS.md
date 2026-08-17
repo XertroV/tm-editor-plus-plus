@@ -12,3 +12,11 @@
 - Openplanet script exceptions normally kill only the coroutine they happen in. They do not require a plugin reload unless the exception occurred in the UI coroutine or the plugin was otherwise left in bad state.
 - When fixing bugs, use tdd where possible and verify the test passes automatically.
 - MemPatcher patterns must be **verified unique against a live game instance** before shipping (pattern-scan the running exe; more than one hit = make the pattern stricter or re-anchor). Prefer minimal patterns with `??` wildcards on any offset that can shift between game versions (relative displacements, absolute addresses), keeping concrete only the bytes that define the site. See existing `MemPatcher` uses for examples.
+- When using Ghidra (e.g. via `research/ghidra_api.sh`), follow Ghidra etiquette so the next agent can pick up the DB:
+  - Rename functions you understand (`FUN_*` is a leftover, not a name).
+  - Name and type arguments and key locals where the decompiler will keep them.
+  - Update data structs (create/fix fields at real offsets; do not leave packed-from-zero stubs).
+  - Plate-comment non-obvious findings on the function (what the offset is, what it is not).
+  - Always pass `program=Trackmania.exe` when TrackmaniaServer is also open.
+  - Save the project before you stop (`GET /save_all_programs`).
+- When adding new features or fixing bugs, keep your diff minimal where possible. No unnecessary changes. 
