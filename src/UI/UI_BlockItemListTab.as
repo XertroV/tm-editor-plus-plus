@@ -57,6 +57,8 @@ class BlockItemListTab : Tab {
     bool useBakedBlocks = false;
     BIListTabType ty = BIListTabType::Blocks;
     bool IsAnyBlocksTab = true;
+    bool allowSkipTerrainPrefix = true;
+    bool excludeTerrainFromCsv = true;
 
     BlockItemListTab(TabGroup@ p, const string &in title, const string &in icon, BIListTabType ty) {
         super(p, title, icon);
@@ -135,7 +137,7 @@ class BlockItemListTab : Tab {
         for (uint i = 0; i < nbBlocks; i++) {
             if (IsAnyBlocksTab) {
                 @block = GetBlock(map, i);
-                if (block.BlockInfo.IsTerrain) {
+                if (block.BlockInfo.IsTerrain && excludeTerrainFromCsv) {
                     continue;
                 }
                 csv += GetBlockCsvLine(block);
@@ -169,7 +171,7 @@ class BlockItemListTab : Tab {
 
         autoscroll = UI::Checkbox("Autoscroll", autoscroll);
 
-        if (IsAnyBlocksTab && nbBlocks > sizeXZ) {
+        if (IsAnyBlocksTab && allowSkipTerrainPrefix && nbBlocks > sizeXZ) {
             UI::SameLine();
             if (recheckSkip) {
                 recheckSkip = false;
@@ -185,7 +187,7 @@ class BlockItemListTab : Tab {
         }
 
         UI::SameLine();
-        if (UI::Button("Copy CSV (excl grass)")) {
+        if (UI::Button(excludeTerrainFromCsv ? "Copy CSV (excl grass)" : "Copy CSV")) {
             CopyCSV(map, nbBlocks);
         }
 
@@ -215,7 +217,7 @@ class BlockItemListTab : Tab {
                 if (clip.DisplayEnd == nbBlocksToDraw) sawLast = true;
                 for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
                     UI::PushID(i);
-                    DrawObjectInfo(map, nbBlocksToSkip + i);
+                    DrawObjectInfo(map, nbBlocksToSkip + uint(i));
                     UI::PopID();
                 }
             }

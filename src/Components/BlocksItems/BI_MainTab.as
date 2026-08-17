@@ -12,6 +12,7 @@ class BI_MainTab : Tab {
         ViewSkinnedItemsTab(Children);
         ViewClassicBlocksTab(Children);
         ViewGhostBlocksTab(Children);
+        ViewTerrainBlocksTab(Children);
         @g_DuplicateFreeBlocks_SubTab = ViewDuplicateFreeBlocksTab(Children);
         @g_DuplicateItems_SubTab = ViewDuplicateItemsTab(Children);
         WaypointsBITab(Children);
@@ -57,6 +58,25 @@ class ViewGhostBlocksTab : ViewAllBlocksTab {
     CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return editor.PluginMapType.GhostBlocks[i];
+    }
+}
+
+class ViewTerrainBlocksTab : ViewAllBlocksTab {
+    ViewTerrainBlocksTab(TabGroup@ p) {
+        super(p, "Terrain", Icons::Cubes, BIListTabType::Blocks);
+        allowSkipTerrainPrefix = false;
+        excludeTerrainFromCsv = false;
+        nbCols = 9;
+    }
+
+    uint GetNbObjects(CGameCtnChallenge@ map) override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.PluginMapType.TerrainBlocks.Length;
+    }
+
+    CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.PluginMapType.TerrainBlocks[i];
     }
 }
 
