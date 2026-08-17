@@ -844,53 +844,29 @@ class WaypointItemsTab : ViewAllItemsTab, WaypointCommonTab {
 }
 
 class MacroblocksBITab : Tab {
-    // DrawInner runs every frame; only spam Openplanet.log for the first two.
-    int m_mbTabDbgFrames = 0;
-
     MacroblocksBITab(TabGroup@ p) {
         super(p, "Macroblocks", Icons::Cubes + Icons::Tree);
     }
 
     void DrawInner() override {
-        bool dbg = m_mbTabDbgFrames < 2;
-        if (dbg) m_mbTabDbgFrames++;
-        if (dbg) trace("[MB-TAB] DrawInner enter frame=" + m_mbTabDbgFrames);
         auto map = GetApp().RootMap;
-        if (map is null) {
-            if (dbg) trace("[MB-TAB] DrawInner map=null");
-            return;
-        }
-        if (dbg) trace("[MB-TAB] DrawInner before BI_DrawCacheRefreshMsg/GetMapCache");
+        if (map is null) return;
         BI_DrawCacheRefreshMsg();
-        if (dbg) trace("[MB-TAB] DrawInner before GetNbMacroblocks");
         uint nb = Editor::GetNbMacroblocks(map);
-        if (dbg) trace("[MB-TAB] DrawInner before GetMapMacroblocks nb=" + nb);
         auto mbs = Editor::GetMapMacroblocks(map);
         if (nb == 0) {
-            if (dbg) trace("[MB-TAB] DrawInner empty/invalid; skip loop");
             UI::Text("No macroblocks found.");
             return;
         }
-        if (dbg) trace("[MB-TAB] DrawInner before GetMapCache.Macroblocks");
         auto mapCache = Editor::GetMapCache();
         auto @mbCache = mapCache.Macroblocks;
         Editor::ObjInMap@ obj;
         array<Editor::ObjInMap@>@ objs;
         for (uint i = 0; i < nb; i++) {
-            bool rowDbg = dbg && i < 3;
-            if (rowDbg) trace("[MB-TAB] before GetMapMacroblockLogged i=" + i + " nb=" + nb);
-            auto mb = Editor::GetMapMacroblockLogged(mbs, i, rowDbg);
-            if (mb is null) {
-                if (rowDbg) trace("[MB-TAB] GetMapMacroblockLogged i=" + i + " -> null");
-                continue;
-            }
-            if (rowDbg) trace("[MB-TAB] before InstId i=" + i + " mb.Ptr=" + Text::FormatPointer(mb.Ptr));
+            auto mb = Editor::GetMapMacroblock(mbs, i);
+            if (mb is null) continue;
             int instId = mb.InstId;
-            if (rowDbg) trace("[MB-TAB] InstId=" + instId + " before MbMwId");
-            uint mbMwId = mb.MbMwId;
-            // Skip MbName/GetMwIdValue: that native path crashed OP on 0x400249b5.
-            string mbName = Text::Format("0x%08x", mbMwId);
-            if (rowDbg) trace("[MB-TAB] MbMwId=" + mbName + " (name skipped)");
+            string mbName = Editor::MwIdNameSafe(mb.MbMwId);
             if (mbCache.Exists(tostring(instId))) {
                 @objs = cast<array<Editor::ObjInMap@>>(mbCache[tostring(instId)]);
                 if (objs !is null) {
