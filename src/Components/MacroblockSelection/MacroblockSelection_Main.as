@@ -42,6 +42,17 @@ class MacroblockSelectionTab : Tab {
         UI::Text("S: " + BoolIcon(mbi.HasStart) + " F: " + BoolIcon(mbi.HasFinish) + " CP: " + BoolIcon(mbi.HasCheckpoint) + " ML: " + BoolIcon(mbi.HasMultilap));
         AddSimpleTooltip("S = HasStart, F = HasFinish, CP = HasCheckpoint, ML = HasMultilap");
         CopiableLabeledValue("IsGround", tostring(mbi.IsGround));
+        {
+            auto dmbi = DGameCtnMacroBlockInfo(mbi);
+            CopiableLabeledValue("AutoTerrains", "" + dmbi.AutoTerrains.Length);
+            if (mbi.GeneratedBlockInfo !is null && mbi.GeneratedBlockInfo.VariantGround !is null) {
+                auto vg = mbi.GeneratedBlockInfo.VariantGround;
+                CopiableLabeledValue("Variant AutoTerrains", "" + vg.AutoTerrains.Length);
+                CopiableLabeledValue("AT PlaceType", tostring(vg.AutoTerrainPlaceType));
+                CopiableLabeledValue("AT HeightOffset", "" + vg.AutoTerrainHeightOffset);
+                CopiableLabeledValue("AT WithFrontiers", tostring(vg.AutoTerrainWithFrontiers));
+            }
+        }
         // does not work
 #if DEV
         UI::SameLine();
@@ -330,6 +341,38 @@ void DrawMBContents(CGameCtnMacroBlockInfo@ mbi) {
                 UI::Separator();
                 item.DrawResearchView();
 #endif
+                UI::Separator();
+                UI::PopID();
+            }
+        }
+        UI::TreePop();
+    }
+
+    auto terrainsBuf = RawBuffer(mbi, O_MACROBLOCK_AUTOTERRAINSBUF, SZ_CTNAUTOTERRAIN, true);
+    len = terrainsBuf.Length;
+    if (UI::TreeNode("Terrains: " + len + "###mbTerrainsBuf")) {
+        UI::ListClipper clip(len);
+        while (clip.Step()) {
+            for (int i = clip.DisplayStart; i < clip.DisplayEnd; i++) {
+                auto at = DGameCtnAutoTerrain(terrainsBuf[i]);
+                UI::PushID(i);
+#if DEV
+                CopiableLabeledPtr(at.Ptr);
+#endif
+                CopiableLabeledValue("Offset", int3(at.OffsetX, at.OffsetY, at.OffsetZ).ToString());
+                auto gen = at.Genealogy;
+                if (gen is null) {
+                    UI::Text("Genealogy: null");
+                } else {
+                    CopiableLabeledValue("Dir / CurIx", uint(gen.Dir) + " / " + gen.CurrentIndex);
+                    CopiableLabeledValue("Base/Bot/Top", "" + gen.BaseHeight + " / " + gen.BottomHeight + " / " + gen.TopHeight);
+                    string zones = "";
+                    for (uint j = 0; j < gen.ZoneIds.Length; j++) {
+                        if (j > 0) zones += ", ";
+                        zones += gen.ZoneIds[j].GetName() + "@" + gen.ZoneHeights[j];
+                    }
+                    CopiableLabeledValue("Zones", zones);
+                }
                 UI::Separator();
                 UI::PopID();
             }

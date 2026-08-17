@@ -15,11 +15,15 @@ namespace MacroblockRecorder {
 	[Setting hidden]
 	bool S_RecordMB_Save_AutoNameAndSave = false;
 	[Setting hidden]
+	bool S_RecordMB_RecordTerrain = true;
+	[Setting hidden]
 	Editor::AlignWithinBlock S_RecordMB_AlignWithinBlock = Editor::AlignWithinBlock::None;
 
 	void DrawSettings() {
         MacroblockRecorder::S_RecordMB_ForceAir = UI::Checkbox("Set all Blocks to Air", MacroblockRecorder::S_RecordMB_ForceAir);
         MacroblockRecorder::S_RecordMB_ForceFree = UI::Checkbox("Convert all Blocks to Free", MacroblockRecorder::S_RecordMB_ForceFree);
+        MacroblockRecorder::S_RecordMB_RecordTerrain = UI::Checkbox("Record Terrain (from map)", MacroblockRecorder::S_RecordMB_RecordTerrain);
+        AddSimpleTooltip("Captures the map terrain under the recorded region into the macroblock. Placement applies the terrain via a ground-mode donor pass.");
         MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction = UI::Checkbox("Save Macroblock after Construction", MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction);
         MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave = UI::Checkbox("Automate Save (to _epp_tmp.Macroblock.Gbx)", MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave);
 	}
@@ -59,6 +63,16 @@ namespace MacroblockRecorder {
 	uint get_CompletedRec_NbItems() {
 		if (recordedMB is null) return 0;
 		return recordedMB.Items.Length;
+	}
+
+	uint get_ActiveRec_NbTerrains() {
+		if (recordingMB is null) return 0;
+		return recordingMB.terrains.Length;
+	}
+
+	uint get_CompletedRec_NbTerrains() {
+		if (recordedMB is null) return 0;
+		return recordedMB.terrains.Length;
 	}
 
 	Editor::MacroblockSpec@ GetRecordingMB() {
@@ -210,6 +224,13 @@ namespace MacroblockRecorder {
 
 	void OnFinishedRecording() {
 		@recordedMB = recordingMB;
+		if (S_RecordMB_RecordTerrain) {
+			try {
+				Editor::CaptureTerrainIntoSpec(recordedMB);
+			} catch {
+				warn("MacroblockRecorder: terrain capture failed: " + getExceptionInfo());
+			}
+		}
 		startnew(OnFinishedRecording_Async);
 	}
 
@@ -330,7 +351,13 @@ namespace MacroblockRecorder {
 		if (_manipulating.GeneratedBlockInfo !is null) {
 			// do this after we change placement mode too.
 			if (_manipulating.GeneratedBlockInfo.VariantGround !is null) {
-				_manipulating.GeneratedBlockInfo.VariantGround.AutoTerrainPlaceType = CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType::DoNotPlace;
+				// when the recording captured terrain, keep terrain enabled for
+				// manual pastes of the constructed macroblock (Force mirrors the
+				// native terrain-example sample); otherwise suppress it as before
+				bool hasTerrain = recordedMB !is null && recordedMB.terrains.Length > 0;
+				_manipulating.GeneratedBlockInfo.VariantGround.AutoTerrainPlaceType = hasTerrain
+					? CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType::Force
+					: CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType::DoNotPlace;
 			}
 		} else {
 			Dev_NotifyWarning("MacroblockRecorder: Generated block info is null");

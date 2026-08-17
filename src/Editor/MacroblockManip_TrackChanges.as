@@ -521,6 +521,12 @@ namespace Editor {
         } catch {
             warn("PlaceMacroblock: exception restoring donor macroblock: " + getExceptionInfo());
         }
+        // terrain needs ground-mode placement, so it runs as a second donor
+        // pass (terrain-only) after the air-mode blocks/items pass
+        if (mbSpec.terrains.Length > 0) {
+            dev_trace("PlaceMacroblock: placing terrain (" + mbSpec.terrains.Length + " cells) via ground donor pass");
+            Editor::PlaceMacroblockTerrain(mbSpec);
+        }
         pmt.ForceMacroblockColor = forceMbColor;
         dev_trace("PlaceMacroblock returning: " + placed);
 

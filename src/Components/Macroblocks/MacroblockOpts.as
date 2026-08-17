@@ -65,10 +65,16 @@ class MacroblockOptsTab : Tab {
             if (hasExistingRec) {
                 UI::SameLine();
                 if (UI::ButtonColored("Resume Recording", .3, .6, .5)) MacroblockRecorder::ResumeRecording();
+                if (MacroblockRecorder::CompletedRec_NbTerrains > 0) {
+                    UI::Text("Last recording: " + MacroblockRecorder::CompletedRec_NbBlocks + " blocks, "
+                        + MacroblockRecorder::CompletedRec_NbItems + " items, "
+                        + MacroblockRecorder::CompletedRec_NbTerrains + " terrains");
+                }
             }
         } else if (mbRecActive) {
             UI::Text("# Blocks: " + MacroblockRecorder::recordingMB.blocks.Length);
             UI::Text("# Items: " + MacroblockRecorder::recordingMB.items.Length);
+            UI::Text("# Terrains: " + MacroblockRecorder::ActiveRec_NbTerrains);
 #if DEV
             UI::Text("# Skins: " + MacroblockRecorder::recordingMB.skins.Length);
 #endif

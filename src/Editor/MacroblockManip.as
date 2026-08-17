@@ -32,6 +32,11 @@ namespace Editor {
             for (uint i = 0; i < mbItems.Length; i++) {
                 items.InsertLast(ItemSpecPriv(mbItems[i]));
             }
+            auto mbAutoTerrains = dmb.AutoTerrains;
+            for (uint i = 0; i < mbAutoTerrains.Length; i++) {
+                auto ts = TerrainSpecFromAutoTerrain(mbAutoTerrains.GetDGameCtnAutoTerrain(i).Nod);
+                if (ts !is null) terrains.InsertLast(ts);
+            }
         }
 
         MacroblockSpecPriv(MemoryBuffer@ buf) {
@@ -66,6 +71,18 @@ namespace Editor {
             for (uint i = 0; i < itemCount; i++) {
                 items.InsertLast(ItemSpecPriv(buf));
             }
+
+            // terrain chunk is optional (absent in buffers written before terrain support)
+            if (buf.GetPosition() + 6 <= buf.GetSize()) {
+                magic = buf.ReadUInt32();
+                if (magic != MAGIC_TERRAINS) {
+                    throw("Invalid magic for terrains: " + Text::Format("0x%08x", magic));
+                }
+                uint16 terrainCount = buf.ReadUInt16();
+                for (uint i = 0; i < terrainCount; i++) {
+                    terrains.InsertLast(TerrainSpec(buf));
+                }
+            }
             return this;
         }
 
@@ -98,6 +115,19 @@ namespace Editor {
                 newParts.items.InsertLast(item);
             }
             // todo: skins
+            auto mbAutoTerrains = mb.AutoTerrains;
+            if (mbAutoTerrains.Length > 0) {
+                int3 coordDelta = Nat3ToInt3(PosToCoord(position));
+                if (rotation.LengthSquared() > 0.0001) {
+                    warn("AddMacroblock: terrain offsets are not rotated; terrain may be misplaced");
+                }
+                for (uint i = 0; i < mbAutoTerrains.Length; i++) {
+                    auto ts = TerrainSpecFromAutoTerrain(mbAutoTerrains.GetDGameCtnAutoTerrain(i).Nod);
+                    if (ts is null) continue;
+                    ts.offset += coordDelta;
+                    terrains.InsertLast(ts);
+                }
+            }
             return newParts;
         }
 
@@ -126,14 +156,27 @@ namespace Editor {
         protected uint64 tmpMacroblockItemsBufLenCap = 0;
         protected uint64 tmpMacroblockSkinsBuf = 0;
         protected uint64 tmpMacroblockSkinsBufLenCap = 0;
+        protected uint64 tmpMacroblockAutoTerrainsBuf = 0;
+        protected uint64 tmpMacroblockAutoTerrainsBufLenCap = 0;
+        protected uint64 tmpVariantAutoTerrainsBuf = 0;
+        protected uint64 tmpVariantAutoTerrainsBufLenCap = 0;
+        protected int tmpVariantATHeightOffset = 0;
+        protected uint tmpVariantATPlaceType = 0;
+        protected uint8 tmpVariantATWithFrontiers = 0;
+        protected bool tmpVariantStateSaved = false;
+        protected bool tmpWroteTerrain = false;
         protected bool tmpMacroblockIsGround = false;
         protected bool tmpMacroblockInitialized = false;
         protected bool tmpMacroblockConnected = false;
         protected bool tmpMacroblockStateSaved = false;
         bool releaseTmpMacroblock = false;
         uint tmpMacroblockCollectionId;
+        // subtracted from terrain offsets when writing entries into the donor
+        // (terrain specs carry absolute map coords; donor entries are relative
+        // to the ground-placement coord)
+        int3 terrainWriteOrigin = int3(0);
 
-        void _TempWriteToMacroblock(CGameCtnMacroBlockInfo@ macroblock) {
+        void _TempWriteToMacroblock(CGameCtnMacroBlockInfo@ macroblock, bool forGroundTerrain = false) {
             @tmpMacroblock = DGameCtnMacroBlockInfo(macroblock);
             tmpMacroblockStateSaved = false;
 
@@ -146,6 +189,21 @@ namespace Editor {
             auto mbSkins = tmpMacroblock.Skins;
             tmpMacroblockSkinsBuf = Dev::ReadUInt64(mbSkins.Ptr);
             tmpMacroblockSkinsBufLenCap = Dev::ReadUInt64(mbSkins.Ptr + 0x8);
+            auto mbAutoTerrains = tmpMacroblock.AutoTerrains;
+            tmpMacroblockAutoTerrainsBuf = Dev::ReadUInt64(mbAutoTerrains.Ptr);
+            tmpMacroblockAutoTerrainsBufLenCap = Dev::ReadUInt64(mbAutoTerrains.Ptr + 0x8);
+            tmpVariantStateSaved = false;
+            tmpWroteTerrain = false;
+            if (macroblock.GeneratedBlockInfo !is null && macroblock.GeneratedBlockInfo.VariantGround !is null) {
+                auto dvg = DGameCtnBlockInfoVariantGround(macroblock.GeneratedBlockInfo.VariantGround);
+                auto vatBuf = dvg.AutoTerrainsBuf;
+                tmpVariantAutoTerrainsBuf = Dev::ReadUInt64(vatBuf.Ptr);
+                tmpVariantAutoTerrainsBufLenCap = Dev::ReadUInt64(vatBuf.Ptr + 0x8);
+                tmpVariantATHeightOffset = dvg.AutoTerrainHeightOffset;
+                tmpVariantATPlaceType = uint(dvg.AutoTerrainPlaceType);
+                tmpVariantATWithFrontiers = dvg.AutoTerrainWithFrontiers;
+                tmpVariantStateSaved = true;
+            }
 
             tmpMacroblockIsGround = macroblock.IsGround;
             tmpMacroblockInitialized = macroblock.Initialized;
@@ -170,7 +228,9 @@ namespace Editor {
             macroblock.MwAddRef();
             releaseTmpMacroblock = true;
 
-            Editor::SetMacroblockGround(macroblock, false);
+            // ground-mode (terrain) placements need a ground donor; air placements
+            // keep the historical behavior of forcing air
+            Editor::SetMacroblockGround(macroblock, forGroundTerrain);
             macroblock.CollectionId = Editor::GetMapCollectorId();
             macroblock.Initialized = false;
             macroblock.Connected = false;
@@ -207,6 +267,42 @@ namespace Editor {
                 cast<ItemSpecPriv>(items[i]).WriteToMemory(itemEl);
             }
 
+            uint terrainsWritten = 0;
+            uint64 atPtrsPtr = 0;
+            if (terrains.Length > 0) {
+                auto resolver = ZoneNodResolver();
+                uint64 atTemplate = FindLiveAutoTerrainTemplatePtr();
+                uint64 genTemplate = GetLiveGenealogyTemplatePtr();
+                if (!resolver.ok || atTemplate == 0 || genTemplate == 0) {
+                    NotifyWarning("Macroblock terrain: cannot resolve zone nods or nod templates (resolver ok: "
+                        + resolver.ok + ", atTemplate: " + Text::FormatPointer(atTemplate)
+                        + ", genTemplate: " + Text::FormatPointer(genTemplate) + "); skipping terrain write");
+                } else {
+                    auto atPtrs = tmpWriteBuf.GetPtrVAlloc(0x8 * terrains.Length);
+                    atPtrsPtr = atPtrs.ptr;
+                    for (uint i = 0; i < terrains.Length; i++) {
+                        auto ts = terrains[i];
+                        uint nb = ts.zoneNames.Length;
+                        if (nb == 0) continue;
+                        auto atEl = tmpWriteBuf.GetPtrVAlloc(SZ_CTNAUTOTERRAIN);
+                        auto genEl = tmpWriteBuf.GetPtrVAlloc(SZ_CTNZONEGENEALOGY);
+                        auto zonesBuf = tmpWriteBuf.GetPtrVAlloc(0x8 * nb);
+                        auto heightsBuf = tmpWriteBuf.GetPtrVAlloc(0x4 * nb);
+                        auto idsBuf = tmpWriteBuf.GetPtrVAlloc(0x4 * nb);
+                        auto relTs = ts.Duplicate();
+                        relTs.offset = ts.offset - terrainWriteOrigin;
+                        try {
+                            WriteTerrainEntryToMemory(relTs, atEl.ptr, genEl.ptr, zonesBuf.ptr, heightsBuf.ptr, idsBuf.ptr,
+                                resolver, atTemplate, genTemplate);
+                            atPtrs.Write(atEl.ptr);
+                            terrainsWritten++;
+                        } catch {
+                            warn("Macroblock terrain: entry " + i + " failed: " + getExceptionInfo());
+                        }
+                    }
+                }
+            }
+
             if (writeToMb) {
                 Dev::Write(tmpMacroblock.Blocks.Ptr, blocksPtrs.ptr);
                 Dev::Write(tmpMacroblock.Blocks.Ptr + 0x8, nat2(blocks.Length));
@@ -214,6 +310,26 @@ namespace Editor {
                 Dev::Write(tmpMacroblock.Items.Ptr + 0x8, nat2(items.Length));
                 Dev::Write(tmpMacroblock.Skins.Ptr, skinsPtrs.ptr);
                 Dev::Write(tmpMacroblock.Skins.Ptr + 0x8, nat2(skins.Length));
+                if (terrainsWritten > 0) {
+                    tmpWroteTerrain = true;
+                    // authoritative terrain list for macroblock placement (mb+0x1F8)
+                    Dev::Write(tmpMacroblock.AutoTerrains.Ptr, atPtrsPtr);
+                    Dev::Write(tmpMacroblock.AutoTerrains.Ptr + 0x8, nat2(terrainsWritten));
+                    // variant copy mirror (used by removal / ground-block placement)
+                    if (tmpVariantStateSaved) {
+                        auto vgNod = tmpMacroblock.Nod.GeneratedBlockInfo.VariantGround;
+                        if (vgNod !is null) {
+                            auto dvg = DGameCtnBlockInfoVariantGround(vgNod);
+                            auto vatBuf = dvg.AutoTerrainsBuf;
+                            Dev::Write(vatBuf.Ptr, atPtrsPtr);
+                            Dev::Write(vatBuf.Ptr + 0x8, nat2(terrainsWritten));
+                            // mirror the only known-good native sample (terrain-example)
+                            dvg.AutoTerrainHeightOffset = 1;
+                            dvg.AutoTerrainPlaceType = CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType::Force;
+                            dvg.AutoTerrainWithFrontiers = 1;
+                        }
+                    }
+                }
             }
         }
 
@@ -227,6 +343,11 @@ namespace Editor {
             size += items.Length * (0x8 + SZ_MACROBLOCK_ITEMSBUFEL);
             // need skins * (0x8 + SZ_MACROBLOCK_SKINSBUFEL)
             size += skins.Length * (0x8 + SZ_MACROBLOCK_SKINSBUFEL);
+            // need terrains * (0x8 ptr + AutoTerrain + ZoneGenealogy + per-zone ptr/height/id)
+            size += terrains.Length * (0x8 + SZ_CTNAUTOTERRAIN + SZ_CTNZONEGENEALOGY);
+            for (uint i = 0; i < terrains.Length; i++) {
+                size += terrains[i].zoneNames.Length * 0x10;
+            }
 
             return size;
         }
@@ -252,6 +373,12 @@ namespace Editor {
 
 
         void _UnallocMemory() {
+            // terrain write bufs hold fake nods the async terrain apply may still
+            // read after restore; leak them (bounded) instead of freeing
+            if (tmpWroteTerrain && tmpWriteBuf !is null) {
+                LeakTerrainWriteBuf(tmpWriteBuf);
+                tmpWroteTerrain = false;
+            }
             @tmpWriteBuf = null;
         }
 
@@ -276,6 +403,20 @@ namespace Editor {
             Dev::Write(tmpMacroblock.Items.Ptr + 0x8, tmpMacroblockItemsBufLenCap);
             Dev::Write(tmpMacroblock.Skins.Ptr, tmpMacroblockSkinsBuf);
             Dev::Write(tmpMacroblock.Skins.Ptr + 0x8, tmpMacroblockSkinsBufLenCap);
+            Dev::Write(tmpMacroblock.AutoTerrains.Ptr, tmpMacroblockAutoTerrainsBuf);
+            Dev::Write(tmpMacroblock.AutoTerrains.Ptr + 0x8, tmpMacroblockAutoTerrainsBufLenCap);
+            if (tmpVariantStateSaved) {
+                auto vgNod = tmpMacroblock.Nod.GeneratedBlockInfo.VariantGround;
+                if (vgNod !is null) {
+                    auto dvg = DGameCtnBlockInfoVariantGround(vgNod);
+                    auto vatBuf = dvg.AutoTerrainsBuf;
+                    Dev::Write(vatBuf.Ptr, tmpVariantAutoTerrainsBuf);
+                    Dev::Write(vatBuf.Ptr + 0x8, tmpVariantAutoTerrainsBufLenCap);
+                    dvg.AutoTerrainHeightOffset = tmpVariantATHeightOffset;
+                    dvg.AutoTerrainPlaceType = CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType(tmpVariantATPlaceType);
+                    dvg.AutoTerrainWithFrontiers = tmpVariantATWithFrontiers;
+                }
+            }
             SetMacroblockGround(tmpMacroblock.Nod, tmpMacroblockIsGround);
             tmpMacroblock.Nod.CollectionId = tmpMacroblockCollectionId;
             tmpMacroblock.Nod.Initialized = tmpMacroblockInitialized;
@@ -334,6 +475,16 @@ namespace Editor {
                 chunks.InsertLast(chunk);
             }
             return chunks;
+        }
+
+        int3 GetMinTerrainCoords() {
+            int3 minCoord = int3(2147483647);
+            for (uint i = 0; i < terrains.Length; i++) {
+                if (terrains[i].offset.x < minCoord.x) minCoord.x = terrains[i].offset.x;
+                if (terrains[i].offset.y < minCoord.y) minCoord.y = terrains[i].offset.y;
+                if (terrains[i].offset.z < minCoord.z) minCoord.z = terrains[i].offset.z;
+            }
+            return minCoord;
         }
 
         int3 GetMinBlockCoords() override {
@@ -435,6 +586,9 @@ namespace Editor {
             for (uint i = 0; i < skins.Length; i++) {
                 newMb.skins.InsertLast((skins[i]).Duplicate());
             }
+            for (uint i = 0; i < terrains.Length; i++) {
+                newMb.terrains.InsertLast((terrains[i]).Duplicate());
+            }
             return newMb;
         }
     }
@@ -442,6 +596,7 @@ namespace Editor {
     const uint32 MAGIC_BLOCKS = 0x734b4c42;
     const uint32 MAGIC_SKINS = 0x734e4b53;
     const uint32 MAGIC_ITEMS = 0x734d5449;
+    const uint32 MAGIC_TERRAINS = 0x734e5254;
 
     // MARK: BlockSpec
 
