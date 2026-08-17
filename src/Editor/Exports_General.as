@@ -7,8 +7,7 @@ namespace Editor {
     import void SetIsBlockAirModeActive(CGameCtnEditorFree@ editor, bool active) from "Editor";
     import uint GetCurrentBlockVariant(CGameCursorBlock@ cursor) from "Editor";
 
-    // Editor/Cursor.as — cursor placement (used by external plugins to point
-    // the editor cursor at a world position).
+    // Set the editor cursor to a world position (block cursor free pos, coord, snapped loc; item cursor pos)
     import void SetAllCursorPos(vec3 pos) from "Editor";
     import nat3 PosToCoord(vec3 pos) from "Editor";
 
