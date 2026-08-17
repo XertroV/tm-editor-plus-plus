@@ -880,6 +880,21 @@ const uint16 SZ_MACROBLOCK_ITEMSBUFEL = 0xC0;
 const uint16 SZ_MACROBLOCK_SKINSBUFEL = 0x18;
 const uint16 SZ_CTNMACROBLOCK = 0x248;
 
+// MARK: O MB terrain
+// 0x148 + 0xB0 = 0x1F8 — authoritative AutoTerrains buffer for macroblock placement (research/MacroblockTerrain.md)
+const uint16 O_MACROBLOCK_AUTOTERRAINSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0xB0;
+// map terrain genealogy grid: one CGameCtnZoneGenealogy@ per XZ cell; 0x2C8 + 0xC8 = 0x390
+const uint16 O_MAP_TERRAIN_GENEALOGY_GRID = GetOffset("CGameCtnChallenge", "BlockStock") + 0xC8;
+// CGameCtnBlockInfoVariantGround terrain members (variant copy of AutoTerrains)
+const uint16 O_VARIANTGROUND_AUTOTERRAINS = GetOffset("CGameCtnBlockInfoVariantGround", "AutoTerrains");
+const uint16 O_VARIANTGROUND_AT_HEIGHTOFFSET = GetOffset("CGameCtnBlockInfoVariantGround", "AutoTerrainHeightOffset");
+const uint16 O_VARIANTGROUND_AT_PLACETYPE = GetOffset("CGameCtnBlockInfoVariantGround", "AutoTerrainPlaceType");
+const uint16 O_VARIANTGROUND_AT_WITHFRONTIERS = GetOffset("CGameCtnBlockInfoVariantGround", "AutoTerrainWithFrontiers");
+const uint16 SZ_CTNAUTOTERRAIN = 0x30;
+const uint16 SZ_CTNZONEGENEALOGY = 0x78;
+const uint16 SZ_CTNZONE = 0x40;
+const uint16 SZ_CTNBLOCKINFOVARIANTGROUND = 0x288;
+
 
 const uint16 SZ_CPlugVisualIndexedTriangles = 0x190; // 400
 const uint16 SZ_CPlugVisualQuads = 0x180; // 384

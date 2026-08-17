@@ -76,11 +76,30 @@ class DGameCtnMacroBlockInfo : RawBufferElem {
 		return cast<CGameCtnMacroBlockInfo>(Dev_GetNodFromPointer(ptr));
 	}
 
+	// 0x1D0/0x1D8: zone-list struct ptrs (null for small macroblocks; used by the full-map-size gated path)
+	uint64 get_ZoneListStructA() { return (this.GetUint64(0x1D0)); }
+	void set_ZoneListStructA(uint64 value) { this.SetUint64(0x1D0, value); }
+	uint64 get_ZoneListStructB() { return (this.GetUint64(0x1D8)); }
+	void set_ZoneListStructB(uint64 value) { this.SetUint64(0x1D8, value); }
+	int get_TerrainGridSizeX() { return (this.GetInt32(0x1E0)); }
+	void set_TerrainGridSizeX(int value) { this.SetInt32(0x1E0, value); }
+	int get_TerrainGridSizeY() { return (this.GetInt32(0x1E4)); }
+	void set_TerrainGridSizeY(int value) { this.SetInt32(0x1E4, value); }
+	int get_TerrainGridSizeZ() { return (this.GetInt32(0x1E8)); }
+	void set_TerrainGridSizeZ(int value) { this.SetInt32(0x1E8, value); }
+	int get_unk1EC() { return (this.GetInt32(0x1EC)); }
+	void set_unk1EC(int value) { this.SetInt32(0x1EC, value); }
+	int get_unk1F0() { return (this.GetInt32(0x1F0)); }
+	void set_unk1F0(int value) { this.SetInt32(0x1F0, value); }
+	int get_unk1F4() { return (this.GetInt32(0x1F4)); }
+	void set_unk1F4(int value) { this.SetInt32(0x1F4, value); }
 	// offset: 0x150
 	DGameCtnMacroBlockInfo_Blocks@ get_Blocks() { return DGameCtnMacroBlockInfo_Blocks(this.GetBuffer(O_MACROBLOCK_BLOCKSBUF, SZ_MACROBLOCK_BLOCKSBUFEL, true)); }
 	DGameCtnMacroBlockInfo_Skins@ get_Skins() { return DGameCtnMacroBlockInfo_Skins(this.GetBuffer(O_MACROBLOCK_SKINSBUF, SZ_MACROBLOCK_SKINSBUFEL, true)); }
 	// 
 	DGameCtnMacroBlockInfo_Items@ get_Items() { return DGameCtnMacroBlockInfo_Items(this.GetBuffer(O_MACROBLOCK_ITEMSBUF, SZ_MACROBLOCK_ITEMSBUFEL, true)); }
+	// offset: 0x1F8 — authoritative terrain list for macroblock placement (see research/MacroblockTerrain.md)
+	DGameCtnAutoTerrains@ get_AutoTerrains() { return DGameCtnAutoTerrains(this.GetBuffer(O_MACROBLOCK_AUTOTERRAINSBUF, SZ_CTNAUTOTERRAIN, true)); }
 }
 
 class DGameCtnMacroBlockInfo_Blocks : RawBuffer {
@@ -109,6 +128,16 @@ class DGameCtnMacroBlockInfo_Items : RawBuffer {
 	}
 	DGameCtnMacroBlockInfo_Item@ GetItem(uint i) {
 		return DGameCtnMacroBlockInfo_Item(this[i]);
+	}
+}
+
+
+class DGameCtnAutoTerrains : RawBuffer {
+	DGameCtnAutoTerrains(RawBuffer@ buf) {
+		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
+	}
+	DGameCtnAutoTerrain@ GetDGameCtnAutoTerrain(uint i) {
+		return DGameCtnAutoTerrain(this[i]);
 	}
 }
 
@@ -196,6 +225,148 @@ class DGameCtnMacroBlockInfo_Item : RawBufferElem {
 	void set_FGSkin(CSystemPackDesc@ value) { this.SetNod(0xA8, value); }
 	CGameItemModel@ get_Model() { return cast<CGameItemModel>(this.GetNod(0xB0)); }
 	void set_Model(CGameItemModel@ value) { this.SetNod(0xB0, value); }
+}
+
+
+// CGameCtnAutoTerrain (0x03120000); offsets live-verified, see research/MacroblockTerrain.md
+class DGameCtnAutoTerrain : RawBufferElem {
+	DGameCtnAutoTerrain(RawBufferElem@ el) {
+		if (el.ElSize != SZ_CTNAUTOTERRAIN) throw("invalid size for DGameCtnAutoTerrain");
+		super(el.Ptr, el.ElSize);
+	}
+	DGameCtnAutoTerrain(uint64 ptr) {
+		super(ptr, SZ_CTNAUTOTERRAIN);
+	}
+	DGameCtnAutoTerrain(CGameCtnAutoTerrain@ nod) {
+		if (nod is null) throw("not a CGameCtnAutoTerrain");
+		super(Dev_GetPointerForNod(nod), SZ_CTNAUTOTERRAIN);
+	}
+	CGameCtnAutoTerrain@ get_Nod() {
+		return cast<CGameCtnAutoTerrain>(Dev_GetNodFromPointer(ptr));
+	}
+
+	int get_refCount() { return (this.GetInt32(0x10)); }
+	void set_refCount(int value) { this.SetInt32(0x10, value); }
+	int get_OffsetX() { return (this.GetInt32(0x18)); }
+	void set_OffsetX(int value) { this.SetInt32(0x18, value); }
+	int get_OffsetY() { return (this.GetInt32(0x1C)); }
+	void set_OffsetY(int value) { this.SetInt32(0x1C, value); }
+	int get_OffsetZ() { return (this.GetInt32(0x20)); }
+	void set_OffsetZ(int value) { this.SetInt32(0x20, value); }
+	CGameCtnZoneGenealogy@ get_Genealogy() { return cast<CGameCtnZoneGenealogy>(this.GetNod(0x28)); }
+	void set_Genealogy(CGameCtnZoneGenealogy@ value) { this.SetNod(0x28, value); }
+}
+
+
+// CGameCtnZoneGenealogy (0x0311D000); offsets live-verified, see research/MacroblockTerrain.md
+class DGameCtnZoneGenealogy : RawBufferElem {
+	DGameCtnZoneGenealogy(RawBufferElem@ el) {
+		if (el.ElSize != SZ_CTNZONEGENEALOGY) throw("invalid size for DGameCtnZoneGenealogy");
+		super(el.Ptr, el.ElSize);
+	}
+	DGameCtnZoneGenealogy(uint64 ptr) {
+		super(ptr, SZ_CTNZONEGENEALOGY);
+	}
+	DGameCtnZoneGenealogy(CGameCtnZoneGenealogy@ nod) {
+		if (nod is null) throw("not a CGameCtnZoneGenealogy");
+		super(Dev_GetPointerForNod(nod), SZ_CTNZONEGENEALOGY);
+	}
+	CGameCtnZoneGenealogy@ get_Nod() {
+		return cast<CGameCtnZoneGenealogy>(Dev_GetNodFromPointer(ptr));
+	}
+
+	CGameCtnZone@ get_CurrentZone() { return cast<CGameCtnZone>(this.GetNod(0x18)); }
+	void set_CurrentZone(CGameCtnZone@ value) { this.SetNod(0x18, value); }
+	uint get_CurrentIndex() { return (this.GetUint32(0x40)); }
+	void set_CurrentIndex(uint value) { this.SetUint32(0x40, value); }
+	uint get_Dir() { return (this.GetUint32(0x44)); }
+	void set_Dir(uint value) { this.SetUint32(0x44, value); }
+	uint get_CurrentZoneId() { return (this.GetUint32(0x58)); }
+	void set_CurrentZoneId(uint value) { this.SetUint32(0x58, value); }
+	int get_BaseHeight() { return (this.GetInt32(0x5C)); }
+	void set_BaseHeight(int value) { this.SetInt32(0x5C, value); }
+	int get_BottomHeight() { return (this.GetInt32(0x60)); }
+	void set_BottomHeight(int value) { this.SetInt32(0x60, value); }
+	int get_TopHeight() { return (this.GetInt32(0x64)); }
+	void set_TopHeight(int value) { this.SetInt32(0x64, value); }
+	DGameCtnZones@ get_Zones() { return DGameCtnZones(this.GetBuffer(0x20, SZ_CTNZONE, true)); }
+	DInt32s@ get_ZoneHeights() { return DInt32s(this.GetBuffer(0x30, 0x4, false)); }
+	DMwIds@ get_ZoneIds() { return DMwIds(this.GetBuffer(0x48, 0x4, false)); }
+}
+
+class DGameCtnZones : RawBuffer {
+	DGameCtnZones(RawBuffer@ buf) {
+		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
+	}
+	DGameCtnZone@ GetDGameCtnZone(uint i) {
+		return DGameCtnZone(this[i]);
+	}
+}
+
+
+class DInt32s : RawBuffer {
+	DInt32s(RawBuffer@ buf) {
+		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
+	}
+	DInt32@ GetDInt32(uint i) {
+		return DInt32(this[i]);
+	}
+}
+
+
+class DMwIds : RawBuffer {
+	DMwIds(RawBuffer@ buf) {
+		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
+	}
+	DMwId@ GetDMwId(uint i) {
+		return DMwId(this[i]);
+	}
+}
+
+class DGameCtnZone : RawBufferElem {
+	DGameCtnZone(RawBufferElem@ el) {
+		if (el.ElSize != SZ_CTNZONE) throw("invalid size for DGameCtnZone");
+		super(el.Ptr, el.ElSize);
+	}
+	DGameCtnZone(uint64 ptr) {
+		super(ptr, SZ_CTNZONE);
+	}
+	DGameCtnZone(CGameCtnZone@ nod) {
+		if (nod is null) throw("not a CGameCtnZone");
+		super(Dev_GetPointerForNod(nod), SZ_CTNZONE);
+	}
+	CGameCtnZone@ get_Nod() {
+		return cast<CGameCtnZone>(Dev_GetNodFromPointer(ptr));
+	}
+
+}
+
+
+class DInt32 : RawBufferElem {
+	DInt32(RawBufferElem@ el) {
+		if (el.ElSize != 0x4) throw("invalid size for DInt32");
+		super(el.Ptr, el.ElSize);
+	}
+	DInt32(uint64 ptr) {
+		super(ptr, 0x4);
+	}
+
+	int get_Value() { return (this.GetInt32(0x0)); }
+	void set_Value(int value) { this.SetInt32(0x0, value); }
+}
+
+
+class DMwId : RawBufferElem {
+	DMwId(RawBufferElem@ el) {
+		if (el.ElSize != 0x4) throw("invalid size for DMwId");
+		super(el.Ptr, el.ElSize);
+	}
+	DMwId(uint64 ptr) {
+		super(ptr, 0x4);
+	}
+
+	uint get_Value() { return (this.GetUint32(0x0)); }
+	void set_Value(uint value) { this.SetUint32(0x0, value); }
 }
 
 
