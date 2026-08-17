@@ -91,16 +91,26 @@ void UpdatePickedBlockCachedValues() {
 
 ReferencedNod@ selectedBlockInfo;
 ReferencedNod@ selectedGhostBlockInfo;
+ReferencedNod@ selectedTerrainBlockInfo;
 // the most recent block info selected, regardless of mode
 ReferencedNod@ selectedBlockInfoAny;
 ReferencedNod@ selectedItemModel;
 ReferencedNod@ selectedMacroBlockInfo;
+
+CGameCtnBlockInfo@ GetCursorTerrainBlockModel(CGameCtnEditorFree@ editor) {
+    if (editor is null || editor.PluginMapType is null) return null;
+    auto bi = editor.PluginMapType.CursorTerrainBlockModel;
+    if (bi !is null) return bi;
+    if (editor.PluginMapType.Cursor !is null) return editor.PluginMapType.Cursor.TerrainBlockModel;
+    return null;
+}
 
 void ClearSelectedOnEditorUnload() {
     @lastPickedItem = null;
     @lastPickedBlock = null;
     @selectedBlockInfo = null;
     @selectedGhostBlockInfo = null;
+    @selectedTerrainBlockInfo = null;
     @selectedItemModel = null;
     @selectedMacroBlockInfo = null;
     @selectedBlockInfoAny = null;
@@ -110,18 +120,21 @@ void UpdateSelectedBlockItem(CGameCtnEditorFree@ editor) {
     if (editor is null) {
         @selectedBlockInfo = null;
         @selectedGhostBlockInfo = null;
+        @selectedTerrainBlockInfo = null;
         @selectedItemModel = null;
         @selectedMacroBlockInfo = null;
         @selectedBlockInfoAny = null;
         return;
     }
 
+    auto terrainBi = GetCursorTerrainBlockModel(editor);
     if (selectedBlockInfo is null && editor.CurrentBlockInfo !is null) @selectedBlockInfo = ReferencedNod(editor.CurrentBlockInfo);
     if (selectedGhostBlockInfo is null && editor.CurrentGhostBlockInfo !is null) @selectedGhostBlockInfo = ReferencedNod(editor.CurrentGhostBlockInfo);
+    if (selectedTerrainBlockInfo is null && terrainBi !is null) @selectedTerrainBlockInfo = ReferencedNod(terrainBi);
     if (selectedItemModel is null && editor.CurrentItemModel !is null) @selectedItemModel = ReferencedNod(editor.CurrentItemModel);
     if (selectedMacroBlockInfo is null && editor.CurrentMacroBlockInfo !is null) @selectedMacroBlockInfo = ReferencedNod(editor.CurrentMacroBlockInfo);
     auto selectedBIAny = Editor::GetSelectedBlockInfo(editor);
-    if (selectedBlockInfoAny is null && selectedBIAny !is null) @selectedBlockInfoAny = ReferencedNod(Editor::GetSelectedBlockInfo(editor));
+    if (selectedBlockInfoAny is null && selectedBIAny !is null) @selectedBlockInfoAny = ReferencedNod(selectedBIAny);
 
     if (editor.CurrentBlockInfo !is null) {
         if (selectedBlockInfo.UpdateNod(editor.CurrentBlockInfo)) {
@@ -132,6 +145,13 @@ void UpdateSelectedBlockItem(CGameCtnEditorFree@ editor) {
     if (editor.CurrentGhostBlockInfo !is null) {
         if (selectedGhostBlockInfo.UpdateNod(editor.CurrentGhostBlockInfo)) {
             selectedBlockInfoAny.UpdateNod(editor.CurrentGhostBlockInfo);
+        }
+    }
+    if (terrainBi !is null) {
+        if (selectedTerrainBlockInfo.UpdateNod(terrainBi)) {
+            if (Editor::GetPlacementMode(editor) == CGameEditorPluginMap::EPlaceMode::Terraform) {
+                // could update selectedBlockInfoAny
+            }
         }
     }
     if (editor.CurrentItemModel !is null) {

@@ -14,8 +14,8 @@ class BlockVariantBrowserTab : Tab {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null) return;
 
-        if (!Editor::IsInBlockPlacementMode(editor, false)) {
-            UI::Text("Enter block placement mode");
+        if (!Editor::IsInBlockPlacementMode(editor, false) && !Editor::IsInTerrainPlacementMode(editor, false)) {
+            UI::Text("Enter block or terrain placement mode");
             return;
         }
 

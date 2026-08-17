@@ -9,6 +9,7 @@ class BlockSelectionTab : Tab {
         BlockVariantBrowserTab(Children);
         NormalBlockModelBrowserTab(Children);
         GhostBlockModelBrowserTab(Children);
+        TerrainBlockModelBrowserTab(Children);
         // ClipsInspectorTab(Children);
     }
 
@@ -29,6 +30,9 @@ class BlockSelectionTab : Tab {
         if (IsInGhostMode) {
             return selectedGhostBlockInfo;
         }
+        if (IsInTerrainMode) {
+            return selectedTerrainBlockInfo;
+        }
         return selectedBlockInfo;
     }
 
@@ -36,6 +40,12 @@ class BlockSelectionTab : Tab {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         auto pmt = editor.PluginMapType;
         return pmt.PlaceMode == CGameEditorPluginMap::EPlaceMode::GhostBlock;
+    }
+
+    bool get_IsInTerrainMode() {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null || editor.PluginMapType is null) return false;
+        return editor.PluginMapType.PlaceMode == CGameEditorPluginMap::EPlaceMode::Terraform;
     }
 
     void _HeadingLeft() override {
