@@ -1,5 +1,13 @@
 # 0.8.99999999a
 
+## Map cache (in-editor block/item index)
+
+- The in-map block/item cache now updates on place/delete instead of going stale until a manual refresh. Identity is the live nod pointer (two identical free blocks stay distinct).
+- Octree queries use world positions (fixes misses near height split planes). Tree floor follows the map’s below-zero extent plus slack.
+- If live map counts disagree with the cache, a warning is shown and the cache rebuilds.
+- Plugin API (`IMapCache`): `IsRefreshing` / `IsDesynced`. `RefreshMapCacheSoon()` always starts a rebuild. Unused `Index` stub removed.
+- Gizmo leftover-item warning compares world pose (no longer overwrites apply `targetPos`).
+
 ## Plugin API — selected terrain block (new)
 
 - Track inventory-selected terrain (`CursorTerrainBlockModel`) the same way as blocks/items/macroblocks. `GetSelectedBlockInfo` returns it in `EPlaceMode::Terraform`; new `GetSelectedTerrainBlockInfo` / `IsInTerrainPlacementMode` exports.
