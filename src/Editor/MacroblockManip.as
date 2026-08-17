@@ -165,6 +165,10 @@ namespace Editor {
         protected uint8 tmpVariantATWithFrontiers = 0;
         protected bool tmpVariantStateSaved = false;
         protected bool tmpWroteTerrain = false;
+        // how many terrain entries the last _AllocAndWriteMemory actually wrote
+        // (0 when templates/zones could not be resolved); read by
+        // PlaceMacroblockTerrain to avoid ground-placing an empty donor
+        uint lastTerrainsWritten = 0;
         protected bool tmpMacroblockIsGround = false;
         protected bool tmpMacroblockInitialized = false;
         protected bool tmpMacroblockConnected = false;
@@ -268,6 +272,7 @@ namespace Editor {
             }
 
             uint terrainsWritten = 0;
+            lastTerrainsWritten = 0;
             uint64 atPtrsPtr = 0;
             if (terrains.Length > 0) {
                 auto resolver = ZoneNodResolver();
@@ -300,6 +305,7 @@ namespace Editor {
                             warn("Macroblock terrain: entry " + i + " failed: " + getExceptionInfo());
                         }
                     }
+                    lastTerrainsWritten = terrainsWritten;
                 }
             }
 

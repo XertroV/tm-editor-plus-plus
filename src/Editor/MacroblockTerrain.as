@@ -228,10 +228,12 @@ namespace Editor {
 
     // The most common cell BaseHeight across the map grid = ground base.
     // Native ground macroblocks only place at placementY = groundBase - 1.
+    // Returns -1 when the grid can't be read (callers must abort placement).
     int GetMapGroundBaseHeight() {
         auto map = GetApp().RootMap;
-        if (map is null) return 1;
+        if (map is null) return -1;
         auto cells = DGameCtnChallenge(map).TerrainGenealogies;
+        if (cells.Length == 0) return -1;
         dictionary counts;
         int64 bestCount = 0;
         int best = 1;
@@ -280,11 +282,33 @@ namespace Editor {
             }
             return false;
         }
+        if (tspec.lastTerrainsWritten == 0) {
+            // nothing was written (missing templates/zones); do NOT ground-place
+            // an empty donor — native ground placement with a stale/empty donor
+            // crashed the game on 2026-08-18 (Openplanet.dll AV)
+            NotifyWarning("PlaceMacroblockTerrain: 0 terrain entries written; aborting ground placement");
+            try {
+                tspec._RestoreMacroblock();
+            } catch {
+                warn("PlaceMacroblockTerrain: exception restoring donor after empty write: " + getExceptionInfo());
+            }
+            return false;
+        }
+        int groundBase = GetMapGroundBaseHeight();
+        if (groundBase < 1) {
+            NotifyWarning("PlaceMacroblockTerrain: could not determine map ground base height; aborting ground placement");
+            try {
+                tspec._RestoreMacroblock();
+            } catch {
+                warn("PlaceMacroblockTerrain: exception restoring donor after ground-base failure: " + getExceptionInfo());
+            }
+            return false;
+        }
         // mirror the DeleteMacroblock finding: ground-mode calls no-op while
         // Initialized/Connected are false (temp-write clears them)
         mb.Initialized = true;
         mb.Connected = true;
-        int3 placeCoord = int3(minCoord.x, GetMapGroundBaseHeight() - 1, minCoord.z);
+        int3 placeCoord = int3(minCoord.x, groundBase - 1, minCoord.z);
         bool placed = false;
         dev_trace("PlaceMacroblockTerrain: ground-placing donor at " + placeCoord.ToString()
             + " with " + tspec.terrains.Length + " terrain cells");
