@@ -844,37 +844,63 @@ class WaypointItemsTab : ViewAllItemsTab, WaypointCommonTab {
 }
 
 class MacroblocksBITab : Tab {
+    // DrawInner runs every frame; only spam Openplanet.log for the first two.
+    int m_mbTabDbgFrames = 0;
+
     MacroblocksBITab(TabGroup@ p) {
         super(p, "Macroblocks", Icons::Cubes + Icons::Tree);
     }
 
     void DrawInner() override {
+        bool dbg = m_mbTabDbgFrames < 2;
+        if (dbg) m_mbTabDbgFrames++;
+        if (dbg) trace("[MB-TAB] DrawInner enter frame=" + m_mbTabDbgFrames);
         auto map = GetApp().RootMap;
-        if (map is null) return;
+        if (map is null) {
+            if (dbg) trace("[MB-TAB] DrawInner map=null");
+            return;
+        }
+        if (dbg) trace("[MB-TAB] DrawInner before BI_DrawCacheRefreshMsg/GetMapCache");
         BI_DrawCacheRefreshMsg();
-        auto mbs = Editor::GetMapMacroblocks(map);
+        if (dbg) trace("[MB-TAB] DrawInner before GetNbMacroblocks");
         uint nb = Editor::GetNbMacroblocks(map);
+        if (dbg) trace("[MB-TAB] DrawInner before GetMapMacroblocks nb=" + nb);
+        auto mbs = Editor::GetMapMacroblocks(map);
         if (nb == 0) {
+            if (dbg) trace("[MB-TAB] DrawInner empty/invalid; skip loop");
             UI::Text("No macroblocks found.");
             return;
         }
+        if (dbg) trace("[MB-TAB] DrawInner before GetMapCache.Macroblocks");
         auto mapCache = Editor::GetMapCache();
         auto @mbCache = mapCache.Macroblocks;
         Editor::ObjInMap@ obj;
         array<Editor::ObjInMap@>@ objs;
         for (uint i = 0; i < nb; i++) {
-            auto mb = mbs.GetMacroblock(i);
-            if (mb is null) continue;
-            if (mbCache.Exists(tostring(mb.InstId))) {
-                @objs = cast<array<Editor::ObjInMap@>>(mbCache[tostring(mb.InstId)]);
+            bool rowDbg = dbg && i < 3;
+            if (rowDbg) trace("[MB-TAB] before GetMapMacroblockLogged i=" + i + " nb=" + nb);
+            auto mb = Editor::GetMapMacroblockLogged(mbs, i, rowDbg);
+            if (mb is null) {
+                if (rowDbg) trace("[MB-TAB] GetMapMacroblockLogged i=" + i + " -> null");
+                continue;
+            }
+            if (rowDbg) trace("[MB-TAB] before InstId i=" + i + " mb.Ptr=" + Text::FormatPointer(mb.Ptr));
+            int instId = mb.InstId;
+            if (rowDbg) trace("[MB-TAB] InstId=" + instId + " before MbMwId");
+            uint mbMwId = mb.MbMwId;
+            if (rowDbg) trace("[MB-TAB] MbMwId=" + Text::Format("0x%08x", mbMwId) + " before MbName/GetMwIdValue");
+            string mbName = mb.MbName;
+            if (rowDbg) trace("[MB-TAB] MbName=" + mbName);
+            if (mbCache.Exists(tostring(instId))) {
+                @objs = cast<array<Editor::ObjInMap@>>(mbCache[tostring(instId)]);
                 if (objs !is null) {
                     if (objs.Length > 0) {
-                        if (UX::SmallButton(Icons::Eye + "##" + mb.InstId)) {
+                        if (UX::SmallButton(Icons::Eye + "##" + instId)) {
                             Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(objs[0]._pos), objs[0]._pos, 120.);
                         }
                         UI::SameLine();
                     }
-                    if (UI::TreeNode(tostring(mb.InstId) + ". " + mb.MbName + " ("+objs.Length+")")) {
+                    if (UI::TreeNode(tostring(instId) + ". " + mbName + " ("+objs.Length+")")) {
                         for (uint j = 0; j < objs.Length; j++) {
                             @obj = objs[j];
                             auto item = cast<Editor::ItemInMap>(objs[j]);
@@ -895,7 +921,7 @@ class MacroblocksBITab : Tab {
             } else {
                 UI::Text("MB objects not found in cache.");
                 UI::SameLine();
-                if (UX::SmallButton(Icons::Refresh + "##refresh-cache-mb-" + mb.InstId)) {
+                if (UX::SmallButton(Icons::Refresh + "##refresh-cache-mb-" + instId)) {
                     Editor::GetMapCache().RefreshCacheSoon();
                 }
             }

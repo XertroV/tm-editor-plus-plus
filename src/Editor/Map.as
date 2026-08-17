@@ -406,23 +406,71 @@ namespace Editor {
     // False when +0x2D0 is not a FastArray (null ptr, huge len, cap<len).
     // Reading MbName/GetMwIdValue through that junk is an Openplanet.dll crash.
     bool MapMacroblockInfosLookValid(CGameCtnChallenge@ map) {
-        if (map is null) return false;
+        if (map is null) {
+            trace("[MB-TAB] LookValid map=null");
+            return false;
+        }
+        trace("[MB-TAB] LookValid before read off=" + Text::Format("0x%03x", O_MAP_MACROBLOCK_INFOS));
         uint64 ptr = Dev::GetOffsetUint64(map, O_MAP_MACROBLOCK_INFOS);
         uint len = Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0x8);
         uint cap = Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0xC);
-        if (ptr == 0) return len == 0;
-        if (len > 100000) return false;
-        if (cap < len) return false;
-        return true;
+        bool ok = true;
+        string why = "ok";
+        if (ptr == 0 && len != 0) { ok = false; why = "null-ptr nonzero-len"; }
+        else if (len > 100000) { ok = false; why = "len>100000"; }
+        else if (cap < len) { ok = false; why = "cap<len"; }
+        trace("[MB-TAB] LookValid ptr=" + Text::FormatPointer(ptr) + " len=" + len + " cap=" + cap + " valid=" + ok + " why=" + why);
+        return ok;
     }
 
     uint GetNbMacroblocks(CGameCtnChallenge@ map) {
-        if (!MapMacroblockInfosLookValid(map)) return 0;
-        return Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0x8);
+        trace("[MB-TAB] GetNbMacroblocks enter");
+        if (!MapMacroblockInfosLookValid(map)) {
+            trace("[MB-TAB] GetNbMacroblocks -> 0 (invalid)");
+            return 0;
+        }
+        uint n = Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0x8);
+        trace("[MB-TAB] GetNbMacroblocks -> " + n);
+        return n;
     }
 
     DGameCtnChallenge_Macroblocks@ GetMapMacroblocks(CGameCtnChallenge@ map) {
-        return DGameCtnChallenge(map).MacroblockInstances;
+        trace("[MB-TAB] GetMapMacroblocks before LookValid");
+        bool valid = MapMacroblockInfosLookValid(map);
+        trace("[MB-TAB] GetMapMacroblocks before DGameCtnChallenge wrap valid=" + tostring(valid));
+        auto wrapped = DGameCtnChallenge(map).MacroblockInstances;
+        if (wrapped is null) {
+            trace("[MB-TAB] GetMapMacroblocks wrapper=null");
+        } else {
+            trace("[MB-TAB] GetMapMacroblocks before Length ptr=" + Text::FormatPointer(wrapped.Ptr));
+            uint rawLen = wrapped.Length;
+            trace("[MB-TAB] GetMapMacroblocks rawLen=" + rawLen);
+        }
+        return wrapped;
+    }
+
+    // Logged + null-safe: generated GetMacroblock NPEs on this[i]==null (el.ElSize).
+    DGameCtnChallenge_Macroblock@ GetMapMacroblockLogged(DGameCtnChallenge_Macroblocks@ mbs, uint i, bool dbg) {
+        if (dbg) trace("[MB-TAB] GetMapMacroblockLogged i=" + i + " before null/Length");
+        if (mbs is null) {
+            if (dbg) trace("[MB-TAB] GetMapMacroblockLogged mbs=null");
+            return null;
+        }
+        if (dbg) trace("[MB-TAB] GetMapMacroblockLogged before Length");
+        uint len = mbs.Length;
+        if (dbg) trace("[MB-TAB] GetMapMacroblockLogged Length=" + len + " i=" + i);
+        if (i >= len) {
+            if (dbg) trace("[MB-TAB] GetMapMacroblockLogged oob");
+            return null;
+        }
+        if (dbg) trace("[MB-TAB] GetMapMacroblockLogged before GetElement");
+        auto el = mbs.GetElement(i);
+        if (el is null) {
+            if (dbg) trace("[MB-TAB] GetMapMacroblockLogged GetElement=null");
+            return null;
+        }
+        if (dbg) trace("[MB-TAB] GetMapMacroblockLogged el.Ptr=" + Text::FormatPointer(el.Ptr) + " ElSize=" + el.ElSize + " before ctor");
+        return DGameCtnChallenge_Macroblock(el);
     }
 
     // MARK: Matrix
