@@ -202,6 +202,10 @@ namespace Editor {
         Dev_WriteBytes(genElPtr, Dev_ReadBytes(genTemplatePtr, SZ_CTNZONEGENEALOGY));
         Dev::Write(atElPtr + 0x10, uint(0x00010000));
         Dev::Write(genElPtr + 0x10, uint(0x00010000));
+        // real macroblock genealogies have zeros at 0x68..0x78; the map-cell
+        // template can carry map-specific data there
+        Dev::Write(genElPtr + 0x68, uint64(0));
+        Dev::Write(genElPtr + 0x70, uint64(0));
         // CGameCtnAutoTerrain: OffsetX/Y/Z @ 0x18/0x1C/0x20, Genealogy @ 0x28
         Dev::Write(atElPtr + 0x18, uint(ts.offset.x));
         Dev::Write(atElPtr + 0x1C, uint(ts.offset.y));
@@ -209,7 +213,6 @@ namespace Editor {
         Dev::Write(atElPtr + 0x28, genElPtr);
         // CGameCtnZoneGenealogy: zones/heights/ids + scalars
         uint nb = ts.zoneNames.Length;
-        uint curIx = Math::Min(ts.currentIndex, nb - 1);
         CGameCtnZone@ curZone = null;
         for (uint i = 0; i < nb; i++) {
             auto zone = resolver.Find(ts.zoneNames[i]);
@@ -217,8 +220,10 @@ namespace Editor {
             Dev::Write(zonesBufPtr + i * 0x8, Dev_GetPointerForNod(zone));
             Dev::Write(heightsBufPtr + i * 0x4, uint(ts.zoneHeights[i]));
             Dev::Write(idsBufPtr + i * 0x4, zone.ZoneId.Value);
-            if (i == curIx) @curZone = zone;
+            if (i == nb - 1) @curZone = zone;
         }
+        // CurrentZone is the top zone of the stack (verified on a real
+        // macroblock entry: CurrentZone == zones[1] with CurrentIndex == 0)
         Dev::Write(genElPtr + 0x18, Dev_GetPointerForNod(curZone));
         WriteMwFastBufferHeader(genElPtr + 0x20, zonesBufPtr, nb);
         WriteMwFastBufferHeader(genElPtr + 0x30, heightsBufPtr, nb);
@@ -326,13 +331,24 @@ namespace Editor {
         mb.Connected = true;
         int3 placeCoord = int3(minCoord.x, groundBase - 1, minCoord.z);
         bool placed = false;
+        auto gbi = mb.GeneratedBlockInfo;
+        dev_trace("PlaceMacroblockTerrain: donor GeneratedBlockInfo=" + (gbi !is null)
+            + " VariantBaseGround=" + (gbi !is null && gbi.VariantBaseGround !is null)
+            + " mbAutoTerrainsLen=" + DGameCtnMacroBlockInfo(mb).AutoTerrains.Length);
+        bool canPlace = false;
+        try {
+            canPlace = pmt.CanPlaceMacroblock(mb, placeCoord, CGameEditorPluginMap::ECardinalDirections::North);
+        } catch {
+            warn("PlaceMacroblockTerrain: CanPlaceMacroblock exception: " + getExceptionInfo());
+        }
         dev_trace("PlaceMacroblockTerrain: ground-placing donor at " + placeCoord.ToString()
-            + " with " + tspec.terrains.Length + " terrain cells");
+            + " with " + tspec.terrains.Length + " terrain cells; canPlace=" + canPlace);
         try {
             placed = pmt.PlaceMacroblock(mb, placeCoord, CGameEditorPluginMap::ECardinalDirections::North);
         } catch {
             NotifyWarning("PlaceMacroblockTerrain: exception placing donor macroblock: " + getExceptionInfo());
         }
+        dev_trace("PlaceMacroblockTerrain: PlaceMacroblock returned " + placed);
         // terrain apply is async (~1s) and reads mb+0x1F8; delay the restore
         _terrainPlaceRestoreQueue.InsertLast(tspec);
         if (_terrainPlaceRestoreQueue.Length == 1) startnew(TerrainDonorRestoreLoop);

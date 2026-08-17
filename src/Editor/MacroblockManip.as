@@ -165,6 +165,9 @@ namespace Editor {
         protected uint8 tmpVariantATWithFrontiers = 0;
         protected bool tmpVariantStateSaved = false;
         protected bool tmpWroteTerrain = false;
+        // terrain buffers are only written for the ground-mode terrain pass;
+        // the air pass must not carry terrain (air-mode + AutoTerrains = crash)
+        protected bool tmpWriteTerrain = false;
         // how many terrain entries the last _AllocAndWriteMemory actually wrote
         // (0 when templates/zones could not be resolved); read by
         // PlaceMacroblockTerrain to avoid ground-placing an empty donor
@@ -198,6 +201,7 @@ namespace Editor {
             tmpMacroblockAutoTerrainsBufLenCap = Dev::ReadUInt64(mbAutoTerrains.Ptr + 0x8);
             tmpVariantStateSaved = false;
             tmpWroteTerrain = false;
+            tmpWriteTerrain = forGroundTerrain;
             if (macroblock.GeneratedBlockInfo !is null && macroblock.GeneratedBlockInfo.VariantGround !is null) {
                 auto dvg = DGameCtnBlockInfoVariantGround(macroblock.GeneratedBlockInfo.VariantGround);
                 auto vatBuf = dvg.AutoTerrainsBuf;
@@ -274,7 +278,7 @@ namespace Editor {
             uint terrainsWritten = 0;
             lastTerrainsWritten = 0;
             uint64 atPtrsPtr = 0;
-            if (terrains.Length > 0) {
+            if (tmpWriteTerrain && terrains.Length > 0) {
                 auto resolver = ZoneNodResolver();
                 uint64 atTemplate = FindLiveAutoTerrainTemplatePtr();
                 uint64 genTemplate = GetLiveGenealogyTemplatePtr();

@@ -888,9 +888,9 @@ class MacroblocksBITab : Tab {
             int instId = mb.InstId;
             if (rowDbg) trace("[MB-TAB] InstId=" + instId + " before MbMwId");
             uint mbMwId = mb.MbMwId;
-            if (rowDbg) trace("[MB-TAB] MbMwId=" + Text::Format("0x%08x", mbMwId) + " before MbName/GetMwIdValue");
-            string mbName = mb.MbName;
-            if (rowDbg) trace("[MB-TAB] MbName=" + mbName);
+            // Skip MbName/GetMwIdValue: that native path crashed OP on 0x400249b5.
+            string mbName = Text::Format("0x%08x", mbMwId);
+            if (rowDbg) trace("[MB-TAB] MbMwId=" + mbName + " (name skipped)");
             if (mbCache.Exists(tostring(instId))) {
                 @objs = cast<array<Editor::ObjInMap@>>(mbCache[tostring(instId)]);
                 if (objs !is null) {
