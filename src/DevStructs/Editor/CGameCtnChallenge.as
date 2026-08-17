@@ -18,6 +18,8 @@ class DGameCtnChallenge : RawBufferElem {
 	}
 
 	DGameCtnChallenge_Macroblocks@ get_MacroblockInstances() { return DGameCtnChallenge_Macroblocks(this.GetBuffer(O_MAP_MACROBLOCK_INFOS, 0x8, false)); }
+	// offset: 0x390 — one CGameCtnZoneGenealogy@ per XZ cell (len = sizeX*sizeZ); see research/MacroblockTerrain.md
+	DGameCtnChallenge_TerrainCells@ get_TerrainGenealogies() { return DGameCtnChallenge_TerrainCells(this.GetBuffer(O_MAP_TERRAIN_GENEALOGY_GRID, SZ_CTNZONEGENEALOGY, true)); }
 }
 
 class DGameCtnChallenge_Macroblocks : RawBuffer {
@@ -29,8 +31,38 @@ class DGameCtnChallenge_Macroblocks : RawBuffer {
 	}
 }
 
+
+class DGameCtnChallenge_TerrainCells : RawBuffer {
+	DGameCtnChallenge_TerrainCells(RawBuffer@ buf) {
+		super(buf.Ptr, buf.ElSize, buf.StructBehindPtr);
+	}
+	DGameCtnChallenge_TerrainCell@ GetTerrainCell(uint i) {
+		return DGameCtnChallenge_TerrainCell(this[i]);
+	}
+}
+
 // unk = uint64, 0x4d0
 // unk = uint64, 0x368
+class DGameCtnChallenge_TerrainCell : RawBufferElem {
+	DGameCtnChallenge_TerrainCell(RawBufferElem@ el) {
+		if (el.ElSize != SZ_CTNZONEGENEALOGY) throw("invalid size for DGameCtnChallenge_TerrainCell");
+		super(el.Ptr, el.ElSize);
+	}
+	DGameCtnChallenge_TerrainCell(uint64 ptr) {
+		super(ptr, SZ_CTNZONEGENEALOGY);
+	}
+	DGameCtnChallenge_TerrainCell(CGameCtnZoneGenealogy@ nod) {
+		if (nod is null) throw("not a CGameCtnZoneGenealogy");
+		super(Dev_GetPointerForNod(nod), SZ_CTNZONEGENEALOGY);
+	}
+	CGameCtnZoneGenealogy@ get_Nod() {
+		return cast<CGameCtnZoneGenealogy>(Dev_GetNodFromPointer(ptr));
+	}
+
+	DGameCtnZoneGenealogy@ AsGenealogyStruct() { return DGameCtnZoneGenealogy(this.Ptr); }
+}
+
+
 class DGameCtnChallenge_Macroblock : RawBufferElem {
 	DGameCtnChallenge_Macroblock(RawBufferElem@ el) {
 		if (el.ElSize != 0x8) throw("invalid size for DGameCtnChallenge_Macroblock");

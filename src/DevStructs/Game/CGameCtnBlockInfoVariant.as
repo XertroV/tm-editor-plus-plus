@@ -29,6 +29,35 @@ class DGameCtnBlockInfos : RawBuffer {
 	}
 }
 
+// Terrain members at +0x250.. (variant copy of AutoTerrains; used by removal/ground-block placement,
+// NOT by macroblock placement — see research/MacroblockTerrain.md). Wrapper DGameCtnAutoTerrains
+// and element DGameCtnAutoTerrain are generated from codegen/Editor/Macroblocks.xtoml.
+class DGameCtnBlockInfoVariantGround : RawBufferElem {
+	DGameCtnBlockInfoVariantGround(RawBufferElem@ el) {
+		if (el.ElSize != SZ_CTNBLOCKINFOVARIANTGROUND) throw("invalid size for DGameCtnBlockInfoVariantGround");
+		super(el.Ptr, el.ElSize);
+	}
+	DGameCtnBlockInfoVariantGround(uint64 ptr) {
+		super(ptr, SZ_CTNBLOCKINFOVARIANTGROUND);
+	}
+	DGameCtnBlockInfoVariantGround(CGameCtnBlockInfoVariantGround@ nod) {
+		if (nod is null) throw("not a CGameCtnBlockInfoVariantGround");
+		super(Dev_GetPointerForNod(nod), SZ_CTNBLOCKINFOVARIANTGROUND);
+	}
+	CGameCtnBlockInfoVariantGround@ get_Nod() {
+		return cast<CGameCtnBlockInfoVariantGround>(Dev_GetNodFromPointer(ptr));
+	}
+
+	DGameCtnAutoTerrains@ get_AutoTerrainsBuf() { return DGameCtnAutoTerrains(this.GetBuffer(O_VARIANTGROUND_AUTOTERRAINS, SZ_CTNAUTOTERRAIN, true)); }
+	int get_AutoTerrainHeightOffset() { return (this.GetInt32(O_VARIANTGROUND_AT_HEIGHTOFFSET)); }
+	void set_AutoTerrainHeightOffset(int value) { this.SetInt32(O_VARIANTGROUND_AT_HEIGHTOFFSET, value); }
+	CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType get_AutoTerrainPlaceType() { return CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType(this.GetUint32(O_VARIANTGROUND_AT_PLACETYPE)); }
+	void set_AutoTerrainPlaceType(CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType value) { this.SetUint32(O_VARIANTGROUND_AT_PLACETYPE, value); }
+	uint8 get_AutoTerrainWithFrontiers() { return (this.GetUint8(O_VARIANTGROUND_AT_WITHFRONTIERS)); }
+	void set_AutoTerrainWithFrontiers(uint8 value) { this.SetUint8(O_VARIANTGROUND_AT_WITHFRONTIERS, value); }
+}
+
+
 class DGameCtnBlockInfo : RawBufferElem {
 	DGameCtnBlockInfo(RawBufferElem@ el) {
 		if (el.ElSize != SZ_CTNBLOCKINFO) throw("invalid size for DGameCtnBlockInfo");
