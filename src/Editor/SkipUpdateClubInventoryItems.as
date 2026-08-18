@@ -48,18 +48,25 @@ namespace Editor {
         nextEditorLoadInvPatch = ty;
     }
 
+    InvPatchType TakeInvPatchForThisLoad() {
+        auto ty = nextEditorLoadInvPatch;
+        nextEditorLoadInvPatch = S_InvPatchTy;
+        return ty;
+    }
+
     // should only be called once from OnEditorStartingUp
     void BeforeEditorLoad_CheckShouldEnableInventoryPatch() {
-        if (nextEditorLoadInvPatch == InvPatchType::SkipClubUpdateCheck) {
+        auto ty = TakeInvPatchForThisLoad();
+        if (ty == InvPatchType::SkipClubUpdateCheck) {
             EditorPatches::SkipClubFavItemUpdate_IsApplied = true;
-        } else if (nextEditorLoadInvPatch == InvPatchType::SkipClubEntirely) {
+        } else if (ty == InvPatchType::SkipClubEntirely) {
             EditorPatches::DisableClubItems_IsApplied = true;
         } else {
             EditorPatches::DisableClubItems_IsApplied = false;
             EditorPatches::SkipClubFavItemUpdate_IsApplied = false;
         }
         startnew(UnpatchEditorPatchesAfterEditorLoad);
-        nextEditorLoadInvPatch = InvPatchType::None;
+        trace("InvPatch this load: " + InvPatchMenuStr(ty) + " (setting=" + InvPatchMenuStr(S_InvPatchTy) + ")");
     }
 
     void UnpatchEditorPatchesAfterEditorLoad() {
