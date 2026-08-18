@@ -89,7 +89,7 @@ Terrain application:
 1. `CGameCtnMacroBlockInfo_HasTerrainContent` (0x140bab940): true iff mb+0x200 > 0 (else scans for ground blocks).
 2. `CGameCtnEditorCommon_ApplyAutoTerrains_GroundVariant` (0x141180030): per entry — rotate offset by dir (`..._GetAutoTerrainOffset` 0x140d21490), per-cell can-place (0x140f40500), build target genealogy: truncate current cell genealogy at base + append entry zones[1..] (`CGameCtnZoneGenealogy_AddZone` 0x140d2b100; heights derive from zone defs, e.g. DirtCliff16=+16), set current zone/index/dir (0x140d2aed0). Uses variant+0x260 (AutoTerrainHeightOffset) in height validation.
 3. `CGameCtnEditorCommon_ApplyTargetGenealogiesToGrid` (0x141186700) writes the map grid (+0x390).
-4. `CGameCtnEditorCommon_RebuildTerrainFromGenealogies` (0x141181e70) regenerates terrain blocks (Water → DirtCliff8 etc.) and frontier/transition zones (with `AutoTerrainWithFrontiers`).
+4. `CGameCtnEditorCommon_PlaceSolution` (0x141181e70, profile `CGameCtnEditorCommon::PlaceSolution`; formerly annotated RebuildTerrainFromGenealogies) regenerates terrain blocks (Water → DirtCliff8 etc.) and frontier/transition zones (with `AutoTerrainWithFrontiers`).
 5. Frontier cells get merged/transition genealogies on the fly; `dir`/`currentIndex` may be rewritten at borders.
 
 Map terrain grid access: `CGameCtnChallenge_GetCellGenealogyByIndex` (0x140b9d2a0) → map+0x390 buffer; `..._GetCellGenealogyAtCoord` (0x140b9d2e0).
@@ -147,7 +147,7 @@ Helpers in this repo:
 
 ## Ghidra annotations (saved to the x-left project)
 
-- Renamed ~35 functions: script wrappers (`MSWrap_CGameEditorPluginMap_*`), cores (`CGameEditorPluginMap_PlaceMacroblock_Core`, `..._NoTerrain_Core`, `..._RemoveMacroblock_Core`, `..._CanPlaceMacroblock_Core`), `CGameCtnEditorCommon_PlaceMacroBlock`, `..._CanPlaceMacroBlock`, `..._ApplyAutoTerrains_GroundVariant`, `..._AirVariant`, `..._ApplyTargetGenealogiesToGrid`, `..._RebuildTerrainFromGenealogies`, `..._PlaceTerrainFrontierBlocks`, `..._GetTargetGenealogy`, `..._RemoveMacroBlockImpl`, `CGameCtnChallenge_GetCellGenealogy*`, `CGameCtnBlockInfoVariantGround_*` accessors, `CGameCtnMacroBlockInfo_HasTerrainContent`, `CGameCtnZoneGenealogy_*` (Ctor/CopyFrom/AddZone/SetCurrent), `Register_CGameCtnAutoTerrain_Class03120000`, etc.
+- Renamed ~35 functions: script wrappers (`MSWrap_CGameEditorPluginMap_*`), cores (`CGameEditorPluginMap_PlaceMacroblock_Core`, `..._NoTerrain_Core`, `..._RemoveMacroblock_Core`, `..._CanPlaceMacroblock_Core`), `CGameCtnEditorCommon_PlaceMacroBlock`, `..._CanPlaceMacroBlock`, `..._ApplyAutoTerrains_GroundVariant`, `..._AirVariant`, `..._ApplyTargetGenealogiesToGrid`, `..._PlaceSolution`, `..._PlaceTerrainFrontierBlocks`, `..._GetTargetGenealogy`, `..._RemoveMacroBlockImpl`, `CGameCtnChallenge_GetCellGenealogy*`, `CGameCtnBlockInfoVariantGround_*` accessors, `CGameCtnMacroBlockInfo_HasTerrainContent`, `CGameCtnZoneGenealogy_*` (Ctor/CopyFrom/AddZone/SetCurrent), `Register_CGameCtnAutoTerrain_Class03120000`, etc.
 - Structs: `CGameCtnAutoTerrain` (0x30), `CGameCtnZoneGenealogy` (0x78), `CGameCtnMacroBlockInfo_Terrain` (sparse, terrain fields).
 - Plate comments on the key apply/placement functions with verified semantics.
 - Program saved.
@@ -203,6 +203,14 @@ xtoml syntax recap (from existing files):
 ### Notes / risks
 - Nod elements are a solved pattern in this codebase (see `DGameCtnBlockInfos`/`DGameCtnBlockInfo`): `Buffer: ... true` + element struct with `NativeClass` — AutoTerrains/Zones follow it verbatim.
 - Do NOT hand-edit `src/DevStructs/**` except as a stopgap; prefer fixing the xtoml + regenerating.
+
+## Engine apply + CanPlace patch (2026-08-18, Ghidra pass 2)
+
+Patch site (`MacroblockCanPlacePatch`) = `CGameCtnEditorCommon::CanPlaceMacroBlock` @ 0x141164E90. Decompiled flow: compat check → variant family count (`VariantMobilFamilyA_GetCount` = family+0x20) → if 0 and ground variant has AutoTerrains, still run the final validator (vtable+0x268 = `CanPlaceTerrainFrontierBlocks`) → JZ at 0x14116503D returns false; **the patch NOPs that JZ, forcing true**. Terrain-only macroblocks (0 blocks, 199 AutoTerrains) always hit the validator, so the patch specifically masks terrain-placement rejections for them.
+
+`PlaceMacroBlock` @ 0x141166180 terrain section: gated by `mb+0x12C`, `CGameCtnMacroBlockInfo_HasTerrainContent`, `CheckAutoTerrainPlaceType(groundVariant,1,0)`; calls `ApplyAutoTerrains_GroundVariant(editor, groundVariant, &coord, dir, flags=1)`. flags=1 makes the per-cell check `CGameCtnBlockInfoVariantGround_ValidateAutoTerrainCell` (0x140F40500) early-out true — **the native apply does not skip individual cells**. Per entry it builds a target genealogy (copy cell genealogy truncated at base, append entry zones[1..], SetCurrent), then `ApplyTargetGenealogiesToGrid` creates an async BuildTerrain job: if `BuildTerrainJob_AddTargetGenealogy` sets the abort out-flag for any cell, the WHOLE job returns 0 and placement aborts (placed=false); otherwise `BuildTerrainJob_Commit` queues the async rebuild. Engine-side apply is therefore all-or-nothing per job; the partial terraforms seen live (8–21 cells) are interrupted async rebuilds (E++ reloads, undo), not engine per-cell rejection. Corollary: the patch is not proven to break applies (live patch on/off difference was confounded with region history/reload timing), but it does make canPlace lie on genuinely rejected spots.
+
+Renamed: ProfileScope_Enter/Exit (0x140117690/0x1401176A0 — used by every scope-logged function), ValidateAutoTerrainCell, VariantMobilFamilyA_GetCount, IsMacroblockCompatibleWithMap, TerrainCellRange_FromCoords, BuildTerrainJob_Ctor/InitRegion/AddTargetGenealogy/Commit. Plate comment on CanPlaceMacroBlock. Project saved.
 
 ## Open questions
 
