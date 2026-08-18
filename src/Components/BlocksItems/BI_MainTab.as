@@ -240,6 +240,10 @@ class ViewAllBlocksTab : BlockItemListTab {
     void DeleteBlockSoon(ref@ ref) {
         CGameCtnBlock@ block = cast<CGameCtnBlock>(ref);
         if (block is null) return;
+        if (block.BlockInfo !is null && block.BlockInfo.IsTerrain) {
+            Editor::ResetTerrainCell(block);
+            return;
+        }
         Editor::DeleteBlocks({block}, true);
         if (Editor::HasPendingFreeBlocksToDelete()) {
             Meta::StartWithRunContext(Meta::RunContext::MainLoop, Editor::RunDeleteFreeBlockDetection);
