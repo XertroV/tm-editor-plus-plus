@@ -11,6 +11,16 @@ MemPatcher@ Patch_MacroblockCanPlace = MemPatcher("MacroblockCanPlacePatch",
     {14}, {"90 90 90 90 90 90"}
 ).AutoLoad();
 
+namespace Editor {
+namespace DevTest {
+    // Dev toggle for A/B testing placement behavior with/without the patch.
+    bool SetMacroblockCanPlacePatch(bool on) {
+        Patch_MacroblockCanPlace.IsApplied = on;
+        return Patch_MacroblockCanPlace.IsApplied;
+    }
+}
+}
+
 
 /*
 Trackmania.exe.text+1161D61 - 49 8B 06              - mov rax,[r14]
