@@ -107,7 +107,8 @@ for pluginSrc in ${pluginSources[@]}; do
 
   function buildPlugin {
     # 7z a ./$BUILD_NAME ./fonts ./$pluginSrc/* ./LICENSE ./README.md
-    7z a ./$BUILD_NAME ./$pluginSrc/* ./LICENSE ./README.md
+    # Keep *_Test.as / *_Tests.as out of the .op; they still stage in folder/dev builds.
+    7z a ./$BUILD_NAME ./$pluginSrc/* ./LICENSE ./README.md '-xr!*_Test.as' '-xr!*_Tests.as'
 
     cp -v $BUILD_NAME $RELEASE_NAME
     cp -v $RELEASE_NAME editor.op
