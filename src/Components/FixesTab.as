@@ -75,6 +75,14 @@ class FixesTab : Tab {
             UI::Text("Active: " + BoolIcon(Editor::MapBakedBlocksDirtyFlag::IsActive));
         }
 
+        if (UI::CollapsingHeader("Force all models skinnable (test)")) {
+            UI::TextWrapped("Makes IsBlockModelSkinnable / IsItemModelSkinnable / SetItemSkin treat every collector as skinnable, including custom items. Off by default.");
+            UI::TextWrapped("Does not add TVScreen materials — a URL will attach, but only Screen-like meshes will show it. Vanilla skin picker should open on custom items while this is on.");
+            Editor::ForceCollectorSkinnable::IsActive = UI::Checkbox("Patch: Force all models skinnable", Editor::ForceCollectorSkinnable::IsActive);
+            UI::Text("Active: " + BoolIcon(Editor::ForceCollectorSkinnable::IsActive));
+            UI::TextDisabled("Site 0x14100f610; unique 2026-08-21 (Ghidra + live).");
+        }
+
         UI::TextWrapped(suggestionPrefix + "Keep \"Help place items on free/ghost blocks\" off while testing gizmo/magnet snaps if previews look wrong.");
     }
 }
