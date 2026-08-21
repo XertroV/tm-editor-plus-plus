@@ -104,6 +104,10 @@ namespace Editor {
     import string GetInventoryItemPath(uint ix) from "Editor";
     import bool IsInventoryScanningItems() from "Editor";
     import CGameItemModel@ GetInventoryItemModelByPath(const string &in path) from "Editor";
+    import CGameCtnBlockInfo@ GetInventoryBlockInfoByName(const string &in name) from "Editor";
+    import CPlugGameSkin@ GetItemModelGameSkin(CGameItemModel@ model) from "Editor";
+    import CPlugGameSkin@ GetBlockInfoGameSkin(CGameCtnBlockInfo@ info) from "Editor";
+    import void SetItemModelGameSkin(CGameItemModel@ model, CPlugGameSkin@ skin) from "Editor";
     import void RefreshInventoryCache() from "Editor";
 
     import CSystemPackDesc@ GetItemBGSkin(CGameCtnAnchoredObject@ item) from "Editor";
@@ -119,4 +123,6 @@ namespace Editor {
     import void SaveCurrentItemEditorItem() from "Editor";
     // Leave the item editor back to the map editor.
     import void LeaveCurrentItemEditor() from "Editor";
+    // Magic save+reload; starts a coroutine (returns immediately).
+    import void SaveAndReloadItemEditorAsync() from "Editor";
 }
