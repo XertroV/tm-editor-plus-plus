@@ -176,6 +176,32 @@ Magic save+reload (`saveAndReload`): file `Items/BlimpTV.Item.gbx` 868981 → 87
 
 File strings include `Ad2x1Screen.Material.Gbx` and `Any\Advertisement2x1\`. Display on hull after place + pack-desc still untested.
 
+## GameSkin write vs load (BlimpTV, same session)
+
+Official `TechnicsScreen2x1Straight` GameSkin has **no root `CSystemFid`** (`rootFid` empty). Children do (`Ad2x1Screen.dds`, `.Material.Gbx`). There is no `Advertisement2x1.GameSkin.Gbx` to reference.
+
+With `AllowCrossTreeFidRefs` + `HasArchetypeRef` on, a **single** IE save (confirm SaveAs + overwrite) grew the file 870107 → 870324 and wrote GameSkin table strings: `*Image+`, `Stadium\Media\Texture\Image\Ad2x1Screen.dds`, `Ad2x1Screen/`, `Any\Advertisement\`. Vanilla already inlines a no-fid GameSkin; no extra write patch.
+
+`saveAndReload` then **saves again after reopen**, which writes the GameSkin-less reloaded model back over the file.
+
+Reload-only from that 870324 file: `materials[]` still Ad2x1, `SkinDirNameCustom` still set, **`+0xA0` still null**. The inlined GameSkin is in the GBX but item load does not put it back on the collector. That is the remaining bottleneck (not “cannot inline”).
+
+## Why BlimpTV `sceneSkin.solid` stays 0 (Ghidra)
+
+Not GameSkin, not `materials[]`, not pack-desc. Play-mode BlimpTV has all three; ClassicSkin ran (`isDefaultEmpty=false`). The clone never happens because of the **vis-root type**.
+
+`NSceneItem_UpdateVisAndSkins` (`0x141081910`) will apply skins to prefab / `CGameCommonItemEntityModel` (`0x2E027000`) / `CPlugStaticObjectModel`. `FUN_1410816d0` returns BlimpTV’s **EntityModel** (`CGameCommonItemEntityModel`), not the Solid2 inside it.
+
+`CreateImage` then calls ClassicSkin bind+0x18 `ClassicSkin_ApplyToVisModel` (`0x1405a89c0`):
+
+- `FUN_1405ab380` unwraps **StaticObject → Mesh** and two other wrappers. It does **not** unwrap `CGameCommonItemEntityModel`.
+- Apply itself handles **Solid2** (`CopyWithSourceFid`) and **Prefab** (recurse ents). It does **not** handle `CGameCommonItemEntityModel`.
+- Result: apply returns 0 → `SImage+0x10 = 0`.
+
+Official `Screen1x1`: `FUN_1410816d0` returns the variant’s **CPlugPrefab**. Apply recurses to Solid2 and clones. Same ClassicSkin class; different vis-root type.
+
+TVScreen apply (`0x1405a9b90`) is Prefab/Solid2-only too. Construction implication: wrap the blimp mesh in a prefab (or make vis root the StaticObject/Solid2). Ghidra plate-commented / saved 2026-08-22.
+
 ## Open
 
-BlimpTV / ZeroFids customs: vis has the URL pack-desc and the right ClassicSkin/Parallax SSkin, but never clones a solid because `materials[]` is empty. BlimpTV hull slot 5 is also not actually Ad2x1. Next construction (not done): throwaway copy that (a) puts a real `Ad2x1Screen` nod on the hull slot and (b) exposes it on `materials[]` / `+0x208` without AutoSave-embedding the live item — or ship a ScreenUrlLoad-style item whose mesh already has `Ad*Screen` on `materials[]`. Cross-tree GBX gate still blocks persisting those official material fids in a User `.Item.Gbx` unless the allow-cross-tree patch is on.
+Play-mode BlimpTV now has GameSkin + `materials[]` + URL + ClassicSkin. `solid` stays 0 because ClassicSkin apply does not unwrap `CGameCommonItemEntityModel`. Next: wrap mesh in a `CPlugPrefab` (or equivalent vis-root) and re-check `sceneSkin.solid`.
