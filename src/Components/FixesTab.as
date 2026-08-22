@@ -83,6 +83,17 @@ class FixesTab : Tab {
             UI::TextDisabled("Site 0x14100f610; unique 2026-08-21 (Ghidra + live).");
         }
 
+#if DEV
+        if (UI::CollapsingHeader("Allow vanilla fid-refs in User GBX")) {
+            UI::TextWrapped("Lets item save and map embed keep nod-refs to GameData files (official .GameSkin.Gbx / .Material.Gbx). Vanilla rejects those as cross-tree and shows \"Could not save the file\" / the embed warning. Two sites, one toggle: skip the reject, and build those fids with the same-tree folder walker (not orphan nodes). Off by default. Cold-load of a file written with reject-only was an AV; leave this off until a save+reopen probe passes.");
+            UI::Text("Site found: " + BoolIcon(Editor::AllowCrossTreeFidRefs::SiteFound));
+            UI::SameLine();
+            UI::Text("Active: " + BoolIcon(Editor::AllowCrossTreeFidRefs::IsActive));
+            Editor::AllowCrossTreeFidRefs::IsActive = UI::Checkbox("Patch: allow cross-tree fid-refs", Editor::AllowCrossTreeFidRefs::IsActive);
+            UI::TextDisabled("0x140901d3d JZ→JMP reject + 0x140901dfc JZ→JMP build; unique 2026-08-22 (Ghidra + PE).");
+        }
+#endif
+
         UI::TextWrapped(suggestionPrefix + "Keep \"Help place items on free/ghost blocks\" off while testing gizmo/magnet snaps if previews look wrong.");
     }
 }

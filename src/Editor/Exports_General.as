@@ -106,6 +106,7 @@ namespace Editor {
     import CGameItemModel@ GetInventoryItemModelByPath(const string &in path) from "Editor";
     import CGameCtnBlockInfo@ GetInventoryBlockInfoByName(const string &in name) from "Editor";
     import CPlugGameSkin@ GetItemModelGameSkin(CGameItemModel@ model) from "Editor";
+    import uint32 ItemNameToMwId(const string &in name) from "Editor";
     import CPlugGameSkin@ GetBlockInfoGameSkin(CGameCtnBlockInfo@ info) from "Editor";
     import void SetItemModelGameSkin(CGameItemModel@ model, CPlugGameSkin@ skin) from "Editor";
     import void RefreshInventoryCache() from "Editor";
@@ -125,4 +126,14 @@ namespace Editor {
     import void LeaveCurrentItemEditor() from "Editor";
     // Magic save+reload; starts a coroutine (returns immediately).
     import void SaveAndReloadItemEditorAsync() from "Editor";
+    import void ReloadCurrentItemEditorItemAsync() from "Editor";
+    import void SaveItemAsEditorAsync(const string &in path) from "Editor";
+    import void ZeroCurrentItemModelFids(bool pushMatMod = true) from "Editor";
+    import void ZeroCurrentItemModelFidsKeepMaterials(bool pushMatMod = true) from "Editor";
+    import bool GetHasArchetypeRefPatch() from "Editor";
+    import void SetHasArchetypeRefPatch(bool value) from "Editor";
+    import bool GetHasArchetypeRefPatchSiteFound() from "Editor";
+    import bool GetAllowCrossTreeFidRefsPatch() from "Editor";
+    import void SetAllowCrossTreeFidRefsPatch(bool value) from "Editor";
+    import bool GetAllowCrossTreeFidRefsPatchSiteFound() from "Editor";
 }
