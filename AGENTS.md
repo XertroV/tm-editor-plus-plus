@@ -4,6 +4,7 @@
 - Before inventing a new Openplanet pattern, search the local plugin library under `~/src/openplanet/my-plugins`; most needed game/editor flows already exist in one of the plugins.
 - When a live game-control capability is needed for this project, extend `~/src/openplanet/my-plugins/tm-control-mcp` and call it through MCP instead of treating the step as manual.
 - `~/src/openplanet/my-plugins/tm-control-mcp/tools/call.py` returns compact JSON by default. Use `--pretty` only when humans need indented output. It preflights for a real Wine/Proton `Trackmania.exe` argv0 and returns JSON errors for missing game, refused socket, timeout/freeze, empty reply, and malformed reply.
+- After a Trackmania crash, relaunch with `tm-launch-direct --wait` (log `/tmp/tm-launch-direct.log`). Do not pass `--kill-upc` unless a Uplay re-login is intended. Then wait for MCP and reload the map; do not sit idle for a manual start.
 - When placing blocks/items through MCP during live validation, leave `autofocus` and `autofocusDistance` at their tool defaults unless the test specifically requires otherwise. The user likes watching the camera move, and it also provides useful visual feedback.
 - Keep macroblock placement experiments recorded in `research/MacroblockPlacePatchExperiments.md` with the master table updated first.
 - `tm-control-mcp` is the working control bridge. The older `mcp-tm` / `tm-mcptm` prototype is not part of the active path unless explicitly revived.
@@ -13,4 +14,5 @@
 - When fixing bugs, use tdd where possible and verify the test passes automatically.
 - MemPatcher patterns must be **verified unique against a live game instance** before shipping (pattern-scan the running exe; more than one hit = make the pattern stricter or re-anchor). Prefer minimal patterns with `??` wildcards on any offset that can shift between game versions (relative displacements, absolute addresses), keeping concrete only the bytes that define the site. See existing `MemPatcher` uses for examples.
 - Ghidra how-to (tunnel, API, uniqueness scan, etiquette): [`research/Ghidra.md`](research/Ghidra.md) (always read this before RE work). Always pass `program=Trackmania.exe`. Rename / plate-comment / save (`GET /save_all_programs`) before you stop.
-- When adding new features or fixing bugs, keep your diff minimal where possible. No unnecessary changes. 
+- When adding new features or fixing bugs, keep your diff minimal where possible. No unnecessary changes.
+- Live kinematic hat vis after map load (AO-less CreateInst, not E++ KinVis scrub). Map-resident donor: `CreatePrefabInst place=false`. Cold User GBX: same plus UserInst promote (`0x1404caa30` / `PromoteUserInsts`; now auto in `userItem` CreateInst). Recipe: [`../spike-live-add-kinematic-ao/research/2026-08-23-live-createinst-vis.md`](../spike-live-add-kinematic-ao/research/2026-08-23-live-createinst-vis.md). 
