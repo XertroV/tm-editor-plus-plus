@@ -6,6 +6,7 @@ namespace ItemEditor {
 
     // save the item under this path
     void SaveItemAs(const string &in path) {
+        if (path.Length == 0) throw("empty path");
         auto frame = GetDialogSaveAs();
         if (frame is null) {
             auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
