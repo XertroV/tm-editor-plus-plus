@@ -2,7 +2,7 @@
 
 Ghidra trace of how an instance pack-desc (`CGameCtnAnchoredObject+0x98/+0xA0`) becomes a picture on a Stadium Screen, and why a ZeroFids custom `ScreenDemo1x1` stays on the default green TM logo. Addresses verified 2026-08-22 against `Trackmania.exe` @ `0x140000000`. DB renamed / plate-commented / saved (`GET /save_all_programs`).
 
-Related: [`ScreenUrlSkins.md`](ScreenUrlSkins.md) (editor API, GameSkin persist, live tests). Logger / bound-skin dump: `src/TvScreenLog/` (AllSkins at `NPlugSkinnedModel` SMgr `DAT_141fa9ea8+0x70`, count `+0x78`; bind class at SSkin+0x38). Inspect also reports `placed.boundSkins`. **Read-side source of truth is `SImage*` at NSceneItem record `+0x128`**, not AllSkins (see below).
+Related: [`ScreenUrlSkins.md`](ScreenUrlSkins.md) (editor API, GameSkin persist, live tests). Later live table + embed/AutoSave notes: [`2026-08-22-ScreenUrlLive.md`](2026-08-22-ScreenUrlLive.md). Logger / bound-skin dump: `src/TvScreenLog/` (AllSkins at `NPlugSkinnedModel` SMgr `DAT_141fa9ea8+0x70`, count `+0x78`; bind class at SSkin+0x38). Inspect reports `placed.boundSkins` and `placed.sceneSkin`. **Read-side source of truth is `SImage*` at NSceneItem record `+0x128`**, not AllSkins (see below).
 
 ## Short answers
 
@@ -10,7 +10,7 @@ Related: [`ScreenUrlSkins.md`](ScreenUrlSkins.md) (editor API, GameSkin persist,
 |---|---|
 | Who consumes AO `+0x98/+0xA0`? | `CGameCtnAnchoredObject_BuildSceneItemSpawnParams` (`0x140d8db10`) copies them to spawn-params `+0x48/+0x50`. They become `SSkin+0x10/+0x18`. |
 | Does runtime bind consult the catalog / `article+0x118`? | **No.** Catalog is editor-side only (`IsCollectorModelSkinnable`, named-skin path resolve). |
-| Why does official `Screen1x1` show a URL and the custom item not? | `CreateSkinInstance` (`0x1405aa640`) looks for **`Skin.json`** in the GameSkin pack. Hit → TVScreen SkinModel → `ApplyBlockDispInMulInsideVideoSourceOverride`. Miss → ClassicSkin fallback → green TM logo. |
+| Why does official `Screen1x1` show a URL and the custom item not? | Static trace: `CreateSkinInstance` (`0x1405aa640`) Skin.json miss → ClassicSkin. **Live correction:** official JPEG URL vis is ClassicSkin **with a cloned solid** (`SImage+0x10 != 0`). ClassicSkin has a `"VideoSource"` named bind. Custom often shares that ClassicSkin/Parallax SSkin but `solid==0` → default green TM. |
 | Why does poking collector MwId to `Screen1x1` fix display? | Load-time article preload installs the **file-backed** official GameSkin (the one whose pack has `Skin.json`) onto `ItemModel+0xA0`. The bind itself never reads MwId. |
 | No-patch custom recipe (predicted, not live-tested) | File-backed `*.GameSkin.Gbx` at `+0xA0` whose pack contains TVScreen `Skin.json`, plus instance pack-desc + vis refresh (`AO+0x170`). |
 
@@ -73,7 +73,7 @@ Decisive branch: `CreateSkinInstance` (`0x1405aa640`), `param_6==0` path.
              TVScreen class id comes from 0x1405a9760
 ```
 
-If SkinModel resolves to ClassicSkin, **only the ClassicSkin bind matches**. `ApplyBlockDispInMulInsideVideoSourceOverride` never runs and the face keeps the default green TM logo. A TVScreen SkinModel (what official `Any\Advertisement1x1\` GameSkin declares via `Skin.json`) is what makes the URL display.
+If SkinModel resolves to ClassicSkin, **only the ClassicSkin bind matches**. TVScreen `ApplyBlockDispInMulInsideVideoSourceOverride` does not run. Live, official JPEG URLs **are** ClassicSkin and still show the image via ClassicSkin’s `"VideoSource"` named bind **when `SImage+0x10` is a cloned solid**. A Skin.json miss is therefore not sufficient to explain the custom green TM logo. A TVScreen SkinModel (official Advertisement pack `Skin.json`, or `green.zip` Parallax) is what makes the Parallax/TVScreen apply run.
 
 `ApplyBlockDispInMulInsideVideoSourceOverride` (`0x1405a9b90`, bind-entry +0x18, registered by `RegisterBindTVScreen` `0x1405aca70`): clones the item’s `CPlugSolid2Model` and writes the VideoSource texture (runtime table `DAT_141fa9108+0x130[i]`, paired by `PairBlockDispInMulInsideRuntimeParams` `0x1405aab50`) into the **`MulInside` / `MulInside1` semantic slots** of the matching material (float at material+0x128 ≈ entry float **and** MwId match). The object bound is the cloned solid’s material slots. No catalog article.
 
@@ -170,3 +170,9 @@ NSceneItem SMgr: slot `DAT_14207f414` (`0x141080ca0`); `smgr = *(scene+0x10+slot
 `SImage == 0` → none (not built, or Classic/empty path). `sskin == *(SMgr+0x80)` → default empty TVScreen (green TM). Bind: `apply = *(*(SSkin+0x38)+0x18)` — `0x1405a9b90` TVScreen, `0x1405a8260` ClassicSkin, `0x1405a50a0` Manialink. **`SSkin+0x20` owner is often 0**; match packs `SSkin+0x10/+0x18` to `AO+0x98/+0xA0`. Stale if `inst+4 != AO+0x170`.
 
 NPlugSkinnedModel SMgr `DAT_141fa9ea8`: AllImages `+0x60/+0x68`, AllSkins `+0x70/+0x78`, default TVScreen `+0x80`. Pattern: `48 8B 3D ?? ?? ?? ?? 48 8B 5F 80` @ `0x1405aaee0`.
+
+Live dump: walk `NGameItem_SMgr` (GameScene manager list; slot 27 is not `GameScene+0x10+27*8`) and match `rec+0x70 == AO`. pack-epp `placed.sceneSkin`. AllImages-by-pack-desc is ambiguous when several items share one pack.
+
+## Later live (SkinUrlDemo3)
+
+Official imgur: ClassicSkin + cloned solid + cartoon. Official `green.zip`: Parallax + cloned solid + chevron. Unique custom: same binds, usually `solid==0`, face = default TM. User `Skin.json` (`ClassId: TVScreen`) as GameSkin fid did not switch URL items to TVScreen. Aliasing `materials[]` / clearing UserInsts made AutoSave embed fail (cross-tree fid-ref); disk Item.Gbx unchanged. Full table: [`2026-08-22-ScreenUrlLive.md`](2026-08-22-ScreenUrlLive.md).

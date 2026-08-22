@@ -2,7 +2,7 @@
 
 How Trackmania decides which blocks/items can show a custom image or video from a URL (`png`/`jpg`/`webp`/`webm`/…), and where that is gated. Reverse-engineered in Ghidra (`Trackmania.exe`) 2026-08-21.
 
-Runtime vis bind (who consumes AO `+0x98`, `Skin.json` gate, why MwId poke works): [`2026-08-22-ScreenUrlVisBind.md`](2026-08-22-ScreenUrlVisBind.md).
+Runtime vis bind (who consumes AO `+0x98`, `Skin.json` gate, why MwId poke works): [`2026-08-22-ScreenUrlVisBind.md`](2026-08-22-ScreenUrlVisBind.md). Later live table (`sceneSkin` / solid / embed warning): [`2026-08-22-ScreenUrlLive.md`](2026-08-22-ScreenUrlLive.md). User-folder GBX cannot keep vanilla GameSkin/material fid-refs: [`2026-08-22-GbxFidRefSave.md`](2026-08-22-GbxFidRefSave.md).
 
 ## Short answers
 
@@ -240,7 +240,7 @@ A **custom** item does **not** need `CGameItemModel+0xA0` written into `.Item.Gb
 
 Vanilla `SetItemSkin` / picker still refuse the custom item (catalog miss). No MemPatcher. `HasArchetypeRef` / `ForceCollectorSkinnable` off.
 
-**Boundary:** `.Item.Gbx` never embeds collector `+0xA0`. Official Screen *items* get GameSkin from the collection catalog. Zeroing fids is required to *save* a Nadeo Screen as custom (otherwise "Couldn't save the file"); that converts `materials[]` to UserInsts and is the vis path that does **not** bind instance pack-desc URLs.
+**Boundary:** `.Item.Gbx` never embeds collector `+0xA0`. Official Screen *items* get GameSkin from the collection catalog. Zeroing fids is required to *save* a Nadeo Screen as custom (otherwise "Couldn't save the file"); that converts `materials[]` to UserInsts and is the vis path that does **not** bind instance pack-desc URLs. Why a User item cannot keep a nod-ref to vanilla `.GameSkin.Gbx` / materials (cross-tree gate, same writer as map embed): [`2026-08-22-GbxFidRefSave.md`](2026-08-22-GbxFidRefSave.md).
 
 **Demo map:** `Documents/Trackmania/Maps/SkinUrlDemo.Map.Gbx`. Custom item `Items/ScreenDemo1x1.Item.Gbx`. Instance pack-desc URLs persist on the map (wikimedia PNG and later `https://i.imgur.com/CMDF3HW.jpeg`). Runtime GameSkin is `Any\Advertisement1x1\` with `b0=0`. **Display on the custom item is not working** — see the 2026-08-22 front-face retest below. Earlier editor shots that looked like a URL on `ScreenDemo1x1` were the paneled `ScreenBack` (camera on −Z).
 
