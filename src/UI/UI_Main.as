@@ -448,7 +448,7 @@ namespace MenuBar {
 
 #if SIG_DEVELOPER
             if (UI::BeginMenu("Dev")) {
-                if (UI::MenuItem(Icons::Cube + " Editor"))
+                if (UI::MenuItem(Icons::Cube + " Editor") && GetApp().Editor !is null)
                     ExploreNod(GetApp().Editor);
                 CGameCtnEditorFree@ editor;
                 if (IsInEditor || IsInItemEditor) {
