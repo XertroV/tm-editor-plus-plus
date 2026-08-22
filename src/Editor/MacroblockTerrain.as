@@ -355,6 +355,57 @@ namespace Editor {
         return placed;
     }
 
+    // Reset a terrain rect to the collection default (WaterHill on RedIsland).
+    // Script API: PluginMapType.RemoveTerrainBlocks. RE: wrapper at 0x140f9a2e0
+    // calls PlaceTerraformRect with no block model, which writes the map's
+    // default genealogy. y may be 0 (script coord convert clamps neg Y).
+    bool ResetTerrainRect(int3 start, int3 end) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null || editor.PluginMapType is null) return false;
+        return editor.PluginMapType.RemoveTerrainBlocks(start, end);
+    }
+
+    bool IsCollectionDefaultTerrainName(const string &in name) {
+        // todo: other envs (stadium has grass, etc)
+        return name == "WaterHill" || name == "Water" || name == "Grass" || name == "Lake" || name == "Sea";
+    }
+
+    // RemoveTerrainBlocks peels one genealogy layer per call (cliff -> dirt ->
+    // WaterHill). Repeat until the collection default.
+    bool ResetTerrainCoord(int3 c) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null || editor.PluginMapType is null) return false;
+        auto pmt = editor.PluginMapType;
+        bool any = false;
+        for (uint i = 0; i < 16; i++) {
+            if (!pmt.RemoveTerrainBlocks(c, c)) return any;
+            any = true;
+            auto b = pmt.GetBlock(c);
+            if (b is null) @b = pmt.GetBlock(int3(c.x, 0, c.z));
+            if (b is null || b.BlockInfo is null) return true;
+            if (IsCollectionDefaultTerrainName(b.BlockInfo.IdName)) return true;
+            c = Nat3ToInt3(Editor::GetBlockCoord(b));
+        }
+        return any;
+    }
+
+    bool ResetTerrainCell(CGameCtnBlock@ block) {
+        if (block is null) return false;
+        return ResetTerrainCoord(Nat3ToInt3(Editor::GetBlockCoord(block)));
+    }
+
+    // Reset every captured (non-default) cell in a macroblock spec.
+    bool ResetTerrainFromSpec(MacroblockSpec@ spec) {
+        auto mbSpec = cast<MacroblockSpecPriv>(spec);
+        if (mbSpec is null) return false;
+        if (mbSpec.terrains.Length == 0) return true;
+        bool ok = true;
+        for (uint i = 0; i < mbSpec.terrains.Length; i++) {
+            if (!ResetTerrainCoord(mbSpec.terrains[i].offset)) ok = false;
+        }
+        return ok;
+    }
+
     void TerrainDonorRestoreLoop() {
         while (_terrainPlaceRestoreQueue.Length > 0) {
             sleep(2000);

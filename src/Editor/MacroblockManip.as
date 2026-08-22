@@ -72,7 +72,8 @@ namespace Editor {
                 items.InsertLast(ItemSpecPriv(buf));
             }
 
-            // terrain chunk is optional (absent in buffers written before terrain support)
+            // Optional TRNs chunk: pre-terrain writers omit it entirely. That
+            // absence is the compat signal — do not require a version byte.
             if (buf.GetPosition() + 6 <= buf.GetSize()) {
                 magic = buf.ReadUInt32();
                 if (magic != MAGIC_TERRAINS) {
@@ -484,6 +485,17 @@ namespace Editor {
             if (chunk.Length > 0) {
                 chunks.InsertLast(chunk);
             }
+            // Terrains are not split: apply once with the first chunk (or a
+            // terrain-only chunk when the spec has no blocks/items).
+            if (terrains.Length > 0) {
+                if (chunks.Length == 0) {
+                    chunks.InsertLast(MacroblockSpecPriv());
+                }
+                auto dest = cast<MacroblockSpec>(chunks[0]);
+                for (uint i = 0; i < terrains.Length; i++) {
+                    dest.terrains.InsertLast(terrains[i]);
+                }
+            }
             return chunks;
         }
 
@@ -606,6 +618,8 @@ namespace Editor {
     const uint32 MAGIC_BLOCKS = 0x734b4c42;
     const uint32 MAGIC_SKINS = 0x734e4b53;
     const uint32 MAGIC_ITEMS = 0x734d5449;
+    // "TRNs" — optional trailing chunk. Pre-terrain payloads omit it; that
+    // absence is the version signal (no handshake / leading version byte).
     const uint32 MAGIC_TERRAINS = 0x734e5254;
 
     // MARK: BlockSpec
@@ -1511,6 +1525,10 @@ namespace TestNetworkBufMacroblockStuff {
         TestCase@[]@ ret = {};
         ret.InsertLast(TestCase("buf vec3 wr", test_vec3_buf_wr));
         ret.InsertLast(TestCase("buf nat3 wr", test_nat3_buf_rw));
+        ret.InsertLast(TestCase("mb spec no terrain is old bytes", test_mbspec_omit_empty_trns));
+        ret.InsertLast(TestCase("mb spec terrain roundtrip", test_mbspec_terrain_roundtrip));
+        ret.InsertLast(TestCase("mb spec read old payload", test_mbspec_read_pre_terrain));
+        ret.InsertLast(TestCase("mb spec add/chunk keep terrain", test_mbspec_add_and_chunk_terrain));
         return ret;
     }
 
@@ -1556,6 +1574,106 @@ namespace TestNetworkBufMacroblockStuff {
         assert_eq(v.x, i.x, "x");
         assert_eq(v.y, i.y, "y");
         assert_eq(v.z, i.z, "z");
+    }
+
+    MemoryBuffer@ WriteEmptyPreTerrainMb() {
+        auto buf = MemoryBuffer();
+        buf.Write(Editor::MAGIC_BLOCKS);
+        buf.Write(uint16(0));
+        buf.Write(Editor::MAGIC_SKINS);
+        buf.Write(uint16(0));
+        buf.Write(Editor::MAGIC_ITEMS);
+        buf.Write(uint16(0));
+        return buf;
+    }
+
+    Editor::TerrainSpec@ MakeTestTerrainSpec() {
+        auto ts = Editor::TerrainSpec();
+        ts.offset = int3(3, 0, 7);
+        ts.zoneNames.InsertLast("VoidToDirt");
+        ts.zoneNames.InsertLast("DirtCliff8");
+        ts.zoneHeights.InsertLast(0);
+        ts.zoneHeights.InsertLast(8);
+        ts.currentIndex = 1;
+        ts.dir = 2;
+        ts.baseHeight = 0;
+        ts.bottomHeight = 0;
+        ts.topHeight = 8;
+        return ts;
+    }
+
+    void AssertTerrainEq(Editor::TerrainSpec@ a, Editor::TerrainSpec@ b, const string &in msg) {
+        assert_eq(a.offset, b.offset, msg + " offset");
+        assert_eq(int(a.zoneNames.Length), int(b.zoneNames.Length), msg + " zone count");
+        for (uint i = 0; i < a.zoneNames.Length; i++) {
+            if (a.zoneNames[i] != b.zoneNames[i]) {
+                throw("assertion failed: zone name[" + i + "] " + a.zoneNames[i] + " != " + b.zoneNames[i] + ", " + msg);
+            }
+            assert_eq(a.zoneHeights[i], b.zoneHeights[i], msg + " height[" + i + "]");
+        }
+        assert_eq(int(a.currentIndex), int(b.currentIndex), msg + " currentIndex");
+        assert_eq(int(a.dir), int(b.dir), msg + " dir");
+        assert_eq(a.baseHeight, b.baseHeight, msg + " base");
+        assert_eq(a.bottomHeight, b.bottomHeight, msg + " bottom");
+        assert_eq(a.topHeight, b.topHeight, msg + " top");
+    }
+
+    void test_mbspec_omit_empty_trns() {
+        auto mb = Editor::MakeMacroblockSpec();
+        auto buf = MemoryBuffer();
+        mb.WriteToNetworkBuffer(buf);
+        auto expected = WriteEmptyPreTerrainMb();
+        assert_eq(int(buf.GetSize()), int(expected.GetSize()), "size");
+        buf.Seek(0);
+        expected.Seek(0);
+        for (uint i = 0; i < buf.GetSize(); i++) {
+            uint8 a = buf.ReadUInt8();
+            uint8 b = expected.ReadUInt8();
+            if (a != b) {
+                throw("assertion failed: byte[" + i + "] 0x" + Text::Format("%02x", a) + " != 0x" + Text::Format("%02x", b));
+            }
+        }
+    }
+
+    void test_mbspec_terrain_roundtrip() {
+        auto mb = Editor::MakeMacroblockSpec();
+        mb.terrains.InsertLast(MakeTestTerrainSpec());
+        auto buf = MemoryBuffer();
+        mb.WriteToNetworkBuffer(buf);
+        if (buf.GetSize() < 6) {
+            throw("expected TRNs chunk, buffer too small: " + buf.GetSize());
+        }
+        buf.Seek(0);
+        auto got = Editor::MacroblockSpecFromBuf(buf);
+        assert_eq(int(got.terrains.Length), 1, "terrain count");
+        AssertTerrainEq(mb.terrains[0], got.terrains[0], "roundtrip");
+        // rewrite of decoded spec must keep TRNs
+        auto buf2 = MemoryBuffer();
+        got.WriteToNetworkBuffer(buf2);
+        assert_eq(int(buf.GetSize()), int(buf2.GetSize()), "rewrite size");
+    }
+
+    void test_mbspec_read_pre_terrain() {
+        auto buf = WriteEmptyPreTerrainMb();
+        buf.Seek(0);
+        auto got = Editor::MacroblockSpecFromBuf(buf);
+        assert_eq(int(got.blocks.Length), 0, "blocks");
+        assert_eq(int(got.items.Length), 0, "items");
+        assert_eq(int(got.terrains.Length), 0, "terrains");
+    }
+
+    void test_mbspec_add_and_chunk_terrain() {
+        auto src = Editor::MakeMacroblockSpec();
+        src.terrains.InsertLast(MakeTestTerrainSpec());
+        auto dest = Editor::MakeMacroblockSpec();
+        dest.AddMacroblock(src);
+        assert_eq(int(dest.terrains.Length), 1, "add terrains");
+        AssertTerrainEq(src.terrains[0], dest.terrains[0], "add");
+
+        auto chunks = dest.CreateChunks(32);
+        assert_eq(int(chunks.Length), 1, "chunk count");
+        assert_eq(int(chunks[0].terrains.Length), 1, "chunk terrains");
+        AssertTerrainEq(src.terrains[0], chunks[0].terrains[0], "chunk");
     }
 #endif
 

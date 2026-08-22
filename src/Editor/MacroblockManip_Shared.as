@@ -244,10 +244,14 @@ namespace Editor {
             for (uint i = 0; i < items.Length; i++) {
                 size += items[i].CalcSize();
             }
-            size += 4; // magic
-            size += 2; // terrain count
-            for (uint i = 0; i < terrains.Length; i++) {
-                size += terrains[i].CalcSize();
+            // terrains chunk is omitted when empty (backwards compatibility).
+            // the chunk is the version flag.
+            if (terrains.Length > 0) {
+                size += 4; // magic
+                size += 2; // terrain count
+                for (uint i = 0; i < terrains.Length; i++) {
+                    size += terrains[i].CalcSize();
+                }
             }
             return size;
         }
@@ -321,11 +325,14 @@ namespace Editor {
                 items[i].WriteToNetworkBuffer(buf);
             }
 
+            // terrains chunk is omitted when empty (backwards compatibility).
             // 0x734e5254 = "TRNs"
-            buf.Write(MAGIC_TERRAINS);
-            buf.Write(uint16(terrains.Length));
-            for (uint i = 0; i < terrains.Length; i++) {
-                terrains[i].WriteToNetworkBuffer(buf);
+            if (terrains.Length > 0) {
+                buf.Write(MAGIC_TERRAINS);
+                buf.Write(uint16(terrains.Length));
+                for (uint i = 0; i < terrains.Length; i++) {
+                    terrains[i].WriteToNetworkBuffer(buf);
+                }
             }
         }
 
@@ -340,11 +347,15 @@ namespace Editor {
             return {this};
         }
 
-        // Does not clone block and item specs! This will add all blocks and items from the other macroblock to this one.
+        // Does not clone block, item, or terrain specs! This will add all
+        // blocks, items, and terrains from the other macroblock to this one.
         void AddMacroblock(MacroblockSpec@ macroblock) {
             // todo: handle skins
             AddBlocks(macroblock.blocks);
             AddItems(macroblock.items);
+            for (uint i = 0; i < macroblock.terrains.Length; i++) {
+                terrains.InsertLast(macroblock.terrains[i]);
+            }
         }
 
         NewMbParts@ AddMacroblock(CGameCtnMacroBlockInfo@ macroblock, const vec3 &in position, const vec3 &in rotation) {

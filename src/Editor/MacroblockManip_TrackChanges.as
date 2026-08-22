@@ -615,6 +615,14 @@ namespace Editor {
             removed = pmt.RemoveMacroblock(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
             dev_trace("DeleteMacroblock: RemoveMacroblock returned " + removed
                 + " (after init/conn=true)");
+            // MB donors often lack the variant AutoTerrains copy that
+            // RemoveMacroblock uses to reset cells. Always reset captured
+            // terrain via RemoveTerrainBlocks (becomes collection default).
+            if (mbSpec.HasTerrain()) {
+                bool terrainReset = Editor::ResetTerrainFromSpec(mbSpec);
+                dev_trace("DeleteMacroblock: ResetTerrainFromSpec=" + terrainReset);
+                if (terrainReset) removed = true;
+            }
             if (removed && addUndoRedoPoint) pmt.AutoSave();
         } catch {
             NotifyWarning("DeleteMacroblock: exception removing donor macroblock: " + getExceptionInfo());
