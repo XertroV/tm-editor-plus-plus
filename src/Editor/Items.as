@@ -411,10 +411,54 @@ namespace Editor {
         startnew(ItemEditor::SaveAndReloadItem);
     }
 
+    void ReloadCurrentItemEditorItemCoro() {
+        ItemEditor::ReloadItem(false);
+    }
+
+    // Reopen the current item from disk. Does not save first.
+    void ReloadCurrentItemEditorItemAsync() {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null) throw("not in the item editor");
+        if (ieditor.ItemModel is null || ieditor.ItemModel.IdName == "Unassigned") {
+            throw("item has never been saved (IdName is Unassigned); save it manually first");
+        }
+        startnew(ReloadCurrentItemEditorItemCoro);
+    }
+
+    // Save the open item under a new path (ItemEditor::SaveItemAs dialog flow).
+    // Yields through save dialogs — runs in its own coroutine.
+    void SaveItemAsEditorAsync(const string &in path) {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null) throw("not in the item editor");
+        if (path.Length == 0) throw("empty path");
+        startnew(ItemEditor::SaveItemAs, path);
+    }
+
+    // Zero fids on the item-editor model so a Nadeo item can be saved as custom.
+    void ZeroCurrentItemModelFids(bool pushMatMod = true) {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null || ieditor.ItemModel is null) throw("not in the item editor");
+        MeshDuplication::ZeroFidsOfItemModel_Wrapper(ieditor.ItemModel, pushMatMod);
+    }
+
+    // Like ZeroCurrentItemModelFids but leaves Solid2 materials[] (does not
+    // convert to UserInst). URL/TVScreen vis walks that buffer.
+    void ZeroCurrentItemModelFidsKeepMaterials(bool pushMatMod = true) {
+        auto ieditor = cast<CGameEditorItem>(GetApp().Editor);
+        if (ieditor is null || ieditor.ItemModel is null) throw("not in the item editor");
+        MeshDuplication::g_KeepMaterials = true;
+        MeshDuplication::ZeroFidsOfItemModel_Wrapper(ieditor.ItemModel, pushMatMod);
+        MeshDuplication::g_KeepMaterials = false;
+    }
+
     CGameCtnBlockInfo@ GetInventoryBlockInfoByName(const string &in name) {
         auto node = GetInventoryCache().GetBlockByName(name);
         if (node is null) return null;
         return cast<CGameCtnBlockInfo>(node.GetCollectorNod());
+    }
+
+    uint32 ItemNameToMwId(const string &in name) {
+        return GetMwId(name);
     }
 
     CPlugGameSkin@ GetItemModelGameSkin(CGameItemModel@ model) {

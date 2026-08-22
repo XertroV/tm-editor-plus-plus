@@ -9,6 +9,11 @@ namespace MeshDuplication {
         return true;
     }
 
+    // When true, ZeroFids keeps CPlugMaterial in materials[] (0xC8) and does
+    // not synthesize UserInsts. Needed for skin investigations.
+    // todo: improve ergonomics. only used in 1 place atm so not a big deal but should be fixed.
+    bool g_KeepMaterials = false;
+
     CPlugGameSkinAndFolder@ matMod = null;
     void PushMaterialModifier(CPlugGameSkinAndFolder@ mm) {
         if (matMod !is null) throw('already have a material modifier');
@@ -207,6 +212,26 @@ namespace MeshDuplication {
         }
     }
 
+    // Write a full NPlugPrefab_SEntRef (0x50) to the prefab. model fid deliberately omitted. MwAddRef on model; never MwRelease.
+    void WriteEntRef(CPlugPrefab@ prefab, uint entityIx, CMwNod@ model, const quat &in q, const vec3 &in trans, int lodGroupId = 0) {
+        if (prefab is null) throw("WriteEntRef: prefab is null");
+        if (entityIx >= prefab.Ents.Length) throw("WriteEntRef: entityIx out of range");
+        auto ents = Dev::GetOffsetNod(prefab, O_PREFAB_ENTS);
+        if (ents is null) throw("WriteEntRef: Ents buffer is null");
+        uint base = SZ_ENT_REF * entityIx;
+        for (uint o = 0; o < SZ_ENT_REF; o += 4) {
+            Dev::SetOffset(ents, base + o, uint32(0));
+        }
+        if (model !is null) model.MwAddRef();
+        Dev::SetOffset(ents, base + O_ENTREF_MODEL, model);
+        Dev::SetOffset(ents, base + O_ENTREF_MODELFID, uint64(0));
+        Dev::SetOffset(ents, base + O_ENTREF_PARAMS, uint64(0));
+        Dev::SetOffset(ents, base + O_ENTREF_PARAMS + 8, uint64(0));
+        Dev::SetOffset(ents, base + O_ENTREF_LODGROUPID, lodGroupId);
+        prefab.Ents[entityIx].Location.Quat = q;
+        prefab.Ents[entityIx].Location.Trans = trans;
+    }
+
     void SetEntRefModel(CPlugPrefab@ prefab, int entityIx, CMwNod@ nod) {
         if (nod !is null)
             nod.MwAddRef();
@@ -273,7 +298,11 @@ namespace MeshDuplication {
             ZeroNodFid(tgaFile);
         }
         FixLightsOnMesh(mesh);
-        FixMatsOnMesh(mesh);
+        if (g_KeepMaterials) {
+            ZeroFidsOnSolid2Materials(mesh);
+        } else {
+            FixMatsOnMesh(mesh);
+        }
 // #if DEV
 //         return;
 // #endif
@@ -652,6 +681,16 @@ namespace MeshDuplication {
         }
     }
 
+
+    void ZeroFidsOnSolid2Materials(CPlugSolid2Model@ mesh) {
+        if (mesh is null) return;
+        auto buf = Dev::GetOffsetNod(mesh, O_SOLID2MODEL_MATERIALS_BUF);
+        uint nb = Dev::GetOffsetUint32(mesh, O_SOLID2MODEL_MATERIALS_BUF + 0x8);
+        for (uint i = 0; i < nb; i++) {
+            auto mat = cast<CPlugMaterial>(Dev::GetOffsetNod(buf, i * 0x8));
+            if (mat !is null) ZeroNodFid(mat);
+        }
+    }
 
     void FixMatsOnMesh(CPlugSolid2Model@ mesh) {
         if (mesh is null) return;
