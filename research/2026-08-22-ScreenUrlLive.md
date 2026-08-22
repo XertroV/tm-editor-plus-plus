@@ -205,3 +205,44 @@ TVScreen apply (`0x1405a9b90`) is Prefab/Solid2-only too. Construction implicati
 ## Open
 
 Play-mode BlimpTV now has GameSkin + `materials[]` + URL + ClassicSkin. `solid` stays 0 because ClassicSkin apply does not unwrap `CGameCommonItemEntityModel`. Next: wrap mesh in a `CPlugPrefab` (or equivalent vis-root) and re-check `sceneSkin.solid`.
+
+## BlimpPrefab-test-4 requirements (Stad2 / Stad3, 2026-08-22 later)
+
+Incremental. Each row is live-tested. “Need” = required for `sceneSkin.solid != 0` on this custom hull (not merely for editor pack-desc write).
+
+| # | Requirement | Status on `-4` now | Sufficient? |
+|---|---|---|---|
+| 1 | Prefab vis-root (not `CGameCommonItemEntityModel`) | yes (`CPlugPrefab`, 1 StaticObject ent) | **no** — wrap got ClassicSkin to *run*, not to clone |
+| 2 | Instance pack-desc (imgur URL) | yes (UI skin applied to all blimps; same `Right+000A.webm` FG) | **no** — `recBg` set |
+| 3 | File-backed GameSkin at `ItemModel+0xA0` (`Ad2x1Screen.dds` + `.Material.Gbx`) | yes after IE save + load (2 fids) | **no** |
+| 4 | `materials[]` populated (`+0xC8`) | yes (live alias; 8 slots) | **no** |
+| 5 | Official `Ad2x1Screen.Material.Gbx` **nod** (not just filename) | yes — same ptr as official `Screen2x1` slot 1 (`0x2FE34B960`) | **no** |
+| 6 | Share official `SSkin` | yes — same `0x2F7421200` as `Screen2x1` | **no** — official `SImage` clones, blimp `SImage` does not |
+| 7 | Zero `customMaterials` + UserInsts (official save layout) | **yes now** (cleared live; still 0 on Stad3) | **no** — `solid` still 0 |
+| 8 | Official screen *mesh* (Trims / Ad2x1 / ScreenBack, `UserInsts=0`) | no — 8-slot blender hull | **this is the remaining gap** |
+
+Stad3 snapshot (`SkinUrlDemo-Stad3`):
+
+| i | Item | `nbMat` / `nbCust` / `nbUser` | bind | `solid` |
+|---|---|---|---|---|
+| 6,7,9 | `-4` | 8 / **0** / **0** | ClassicSkin, shared official `SSkin` | **0** (shared `SImage`) |
+| 8 | official `Screen2x1` | 3 / 0 / 0 | same `SSkin` | **nonzero** |
+| 5 | `-3` | 0 / 8 / 8 | `sImage=0` | none |
+
+`colorOnly` does not rebuild vis (same `SImage`). AutoSave/undoRedo still banned (embed / collector remap).
+
+Ghidra names added this pass (`Trackmania.exe`, saved): `NSceneItem_GetEntityVisRoot` `0x1410816d0`, `SkinApply_UnwrapStaticObjectOrWrappers` `0x1405ab380`, `CPlugSolid2Model_FindMaterialIndexByCanonicalFid` `0x1405a3ac0`, `CPlugSolid2Model_CopyLightsBufPtrs` `0x1405a3a50`, `ClassicSkin_RemapMaterialFromApplyContext` `0x1405a85e0`, `ClassicSkin_BindMulInsideParamsOnMaterial` `0x1405a85f0`, `CSystemFid_FollowAliasOrSelf` `0x1408f9320`.
+
+Next construction: second prefab ent = official `Screen2x1` mesh via `WriteEntRef` (inventory model, no official SEntRef memcpy), posed on the TV face.
+
+## Why `-4` `solid` stays 0 (Ghidra + live, Stad3)
+
+`ClassicSkin_ApplyToVisModel` (asm, not the mixed-up decompiler `param_1[7]` story):
+
+1. `CreateImage` (`0x1405ab760`) calls apply with `SkinModel = SSkin+0x40`. Live shared `SSkin 0x2F7421200`: `SkinModel+0x38 = Ad2x1Screen.Material.Gbx` fid `0x6617C7F8`.
+2. Both official and `-4` `SImage+0x08` are **CPlugPrefab** (vtable `CPlugPrefab_Construct`). Official prefab has a GameData fid (`2x1.Prefab.Gbx`); `-4` prefab fid is 0. That fid-preload `CPlug` branch is **skipped** when `SkinModel+0x38 != 0`. Both go Prefab-recurse → StaticObject unwrap → Solid2.
+3. Solid2 + `SkinModel+0x38 != 0`: `CPlugSolid2Model_FindMaterialIndexByCanonicalFid(solid, SkinModel+0x38)`. Miss (`-1`) or `ClassicSkin_RemapMaterialFromApplyContext` == 0 → **return 0**. Hit → `CopyWithSourceFid` and `SImage+0x10` = cloned prefab.
+4. Live Solid2 materials: official 3 (Trims / **same Ad2x1 nod** / ScreenBack); `-4` 8 including that same Ad2x1 nod + fid. `fid+0x98 = 0`, so FindIndex **would hit** on `-4` *now*.
+5. First `CreateImage` for `-4` ran when `materials[]` was **empty** (UserInst load). FindIndex `-1` → apply 0. `SImage` is interned by `(sourcePrefab, SSkin)` at SMgr+0xE8 (`GetOrCreateImage` returns the cached nod and **does not re-apply**). All three `-4` AOs share that cached `SImage 0x2F73F4B68` with `solid=0`, including after alias, clear UserInsts, UI skin, and Stad3.
+
+So “not working currently” is a **cached failed apply**, not a proof that the Solid2 path cannot clone this hull. A new ItemModel/prefab pointer (Save-As `-5` with `materials[]` already populated) forces a new cache entry. Second official-screen ent is still the robust vis-root if a fresh apply still returns 0.

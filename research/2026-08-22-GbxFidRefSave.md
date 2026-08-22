@@ -99,10 +99,13 @@ A prior walk can also fill *"textures or skins which do not belong to the game n
 
 ## Patch / flag options
 
-Shipped (off by default): `Editor::AllowCrossTreeFidRefs` (`src/Editor/AllowCrossTreeFidRefs.as`).
+Shipped (off by default): `Editor::AllowCrossTreeFidRefs` (`src/Editor/AllowCrossTreeFidRefs.as`). One toggle, two sites:
 
-- Site `0x140901d3d` `CMP RAX,R14` / `JZ` same-tree. Offset 3: `74 21` → `EB 21` (always take the OK increment). Unique 2026-08-22: 1 Ghidra, 1 PE (`0x90113d`), 1 live `0x140901d3d`.
-- UI: Fixes tab “Allow vanilla fid-refs in User GBX”; item-editor Dev tab same toggle.
+- **Reject** `0x140901d3d` `CMP RAX,R14` / `JZ` same-tree. Offset 3: `74 21` → `EB 21`. Unique 2026-08-22: 1 Ghidra, 1 PE, 1 live.
+- **Build** `0x140901dfc` `JZ` `FUN_140901b40` → `JMP` so GameData fids use the same-tree folder walker (name + parent), not `FUN_140901ae0` orphans. Unique 2026-08-22: 1 Ghidra `0x140901df2`, 1 on-disk PE. Live uniqueness still to confirm when the game is up.
+- Reject-only (first site alone) produced a RefTable that cold-load AVs in `CSystemFids_FindChildFidByIdentity` (`[NULL+0x20]`). SkinUrlDemo5 embed BlimpTV (17:18) hit that; Demo4 opened fine (older embed).
+- G2 (save + reopen / map embed of a **new** file written with **both** sites) is not proven yet. Leave the toggle off until that probe.
+- UI: Fixes tab + item-editor Dev tab, same toggle.
 - MCP: `tm-mcp-pack-epp.ControlItemEditor action=allowCrossTreeFidRefsPatch [active]`.
 - Affects every write through this helper (item save, map embed / AutoSave, prefab, …).
 
