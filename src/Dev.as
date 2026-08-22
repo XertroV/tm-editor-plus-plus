@@ -812,8 +812,12 @@ const uint16 O_BLOCKVAR_WATER_BUF = O_BLOCKVAR_COMPOUNDLOC + 0x30;
 
 const uint16 O_PREFAB_ENTS = GetOffset("CPlugPrefab", "Ents");
 const uint32 SZ_ENT_REF = 0x50;
+const uint16 O_ENTREF_MODEL = GetOffset("NPlugPrefab_SEntRef", "Model");
 const uint16 O_ENTREF_MODELFID = GetOffset("NPlugPrefab_SEntRef", "ModelFid");
 const uint16 O_ENTREF_PARAMS = GetOffset("NPlugPrefab_SEntRef", "Params");
+const uint16 O_ENTREF_LOCATION = GetOffset("NPlugPrefab_SEntRef", "Location");
+const uint16 O_ENTREF_LODGROUPID = GetOffset("NPlugPrefab_SEntRef", "LodGroupId");
+const uint16 O_ENTREF_NAME = GetOffset("NPlugPrefab_SEntRef", "Name");
 
 const uint16 O_VARLIST_VARIANTS = GetOffset("NPlugItem_SVariantList", "Variants");
 const uint32 SZ_VARLIST_VARIANT = 0x28;
