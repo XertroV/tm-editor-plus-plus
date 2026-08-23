@@ -59,8 +59,12 @@ List endpoints: `GET /mcp/schema` (large). Useful ones:
 | `GET /get_xrefs_to` / `GET /get_function_callers` | Callers (use `address=`, not `function=`) |
 | `POST /disassemble_bytes` | Body: `start_address`, `end_address` or `length` |
 | `POST /rename_function_by_address` | Body: `function_address`, `new_name` |
-| `POST /set_plate_comment` | Function header comment |
+| `POST /set_plate_comment` | Body: `address`, `comment` (not `function_address`) |
 | `POST /set_disassembly_comment` | EOL at an instruction |
+| `POST /create_enum` | Body: `name`, `values` map, `size` |
+| `POST /create_struct` / `POST /recreate_struct` | Body: `name`, `fields` `[{name,type}]`, `size`. **`offset` is ignored** — pack sequentially with explicit `byte[N]` pads so fields land at real offsets. `force:true` to replace. Pointer fields: use `void *` (typed `Foo *` sometimes becomes 4 bytes). |
+| `POST /set_function_prototype` | Body: `function_address`, `prototype`, `calling_convention`. Member fns: `__thiscall`. Then `POST /set_function_this_type` with `this_type` (`CGameCtnArticle *`) so the decompiler uses a typed `this`. Prototype name does not rename. |
+| `POST /set_global` | Atomic name+type+plate for a data address. Name must be `g_` + Hungarian (`dw`/`n`/`p`/`sz`/`ab`/`pfn`) + descriptor. Prefer this over `rename_data`. |
 | `GET /save_all_programs` | Persist. Do this before you stop. |
 
 `/get_function_callers` wants `address=` or `name=`. `function=` is rejected.

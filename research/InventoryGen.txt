@@ -9,6 +9,7 @@ called by: CGameCtnApp::GameState_LocalLoop
 
 CGameCtnEditorCommonInterface_CreateHierarchy
 - creates inventory hierarchy
+- custom-item *order*: research/2026-08-24-CustomItemInventoryOrder.md
 
 
 

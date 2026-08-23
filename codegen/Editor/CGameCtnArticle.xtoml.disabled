@@ -1,0 +1,58 @@
+# CGameCtnArticle + inventory tree nodes.
+# Offsets from live GetTypeInfo 2026-08-24 (Openplanet Reflection).
+# Unreflected fields from research/2026-08-24-CustomItemInventoryOrder.md.
+# Methods (IsLoaded, Preload, Purge, NameOrDisplayName, IdentId, CollectionId,
+# CollectionId_Text, IdentAuthor, IsDirectory, GetCollectorNod, CreateNewDirectory,
+# HasChildDirectory, HasChildArticle) have offset 0xFFFF and are not mapped.
+
+[DGameCtnArticle: SZ_CTNARTICLE]
+NativeClass = CGameCtnArticle
+CollectorFid = CSystemFidFile, O_ARTICLE_CollectorFid, G
+# unreflected uint16; high half of catalog sort key
+SortKeyHi = uint16, O_ARTICLE_SortKeyHi, GS
+LoadedNod = CMwNod, O_ARTICLE_LoadedNod, GS
+BitmapIcon = CPlugBitmap, O_ARTICLE_BitmapIcon, G
+NbAvailableMax = uint, O_ARTICLE_NbAvailableMax, GS
+NbAvailableCurrent = uint, O_ARTICLE_NbAvailableCurrent, GS
+AmountString = string, O_ARTICLE_AmountString, GS
+Name = string, O_ARTICLE_Name, GS
+DisplayName = string, O_ARTICLE_DisplayName, GS
+PageName = string, O_ARTICLE_PageName, GS
+# MwFastBuffer of path segments split from PageName on '/'; Custom tree uses this
+Inline: DStrings@ get_PathSegments() { return DStrings(this.GetBuffer(O_ARTICLE_PathSegmentsBuf, 0x10, false)); }
+CatalogSortKey = uint64, O_ARTICLE_CatalogSortKey, GS
+# 0=Normal, 1=In_Map, 2=From_Club (Openplanet ArticleDataLocation)
+ArticleDataLocation = uint, O_ARTICLE_ArticleDataLocation, GS
+BlockItem_ItemModelArticle = CGameCtnArticle, O_ARTICLE_BlockItem_ItemModelArticle, GS
+GameSkin = CPlugGameSkin, O_ARTICLE_GameSkin, GS
+# unreflected; filled by CGameCtnArticle_ResolveItemType
+ItemType = uint, O_ARTICLE_ItemType, GS
+
+[DGameCtnArticleNode: SZ_CTNARTICLENODE]
+NativeClass = CGameCtnArticleNode
+ParentNode = CGameCtnArticleNodeDirectory, O_ARTICLENODE_ParentNode, G
+Name = string, O_ARTICLENODE_Name, GS
+# NodeName is a reflected alias of Name
+Inline: string get_NodeName() { return Name; }
+Inline: void set_NodeName(const string &in value) { Name = value; }
+Inline: DGameCtnArticleNodeArticle@ AsArticleNode() { return DGameCtnArticleNodeArticle(this.Ptr); }
+Inline: DGameCtnArticleNodeDirectory@ AsDirectory() { return DGameCtnArticleNodeDirectory(this.Ptr); }
+
+[DGameCtnArticleNodeArticle: SZ_CTNARTICLENODEARTICLE]
+NativeClass = CGameCtnArticleNodeArticle
+ParentNode = CGameCtnArticleNodeDirectory, O_ARTICLENODE_ParentNode, G
+Name = string, O_ARTICLENODE_Name, GS
+Inline: string get_NodeName() { return Name; }
+Inline: void set_NodeName(const string &in value) { Name = value; }
+Article = CGameCtnArticle, O_ARTICLENODEARTICLE_Article, GS
+
+[DGameCtnArticleNodeDirectory: SZ_CTNARTICLENODEDIR]
+NativeClass = CGameCtnArticleNodeDirectory
+ParentNode = CGameCtnArticleNodeDirectory, O_ARTICLENODE_ParentNode, G
+Name = string, O_ARTICLENODE_Name, GS
+Inline: string get_NodeName() { return Name; }
+Inline: void set_NodeName(const string &in value) { Name = value; }
+# MwFastBuffer<CGameCtnArticleNode@>; inventory UI walks this in order
+Buffer: ChildNodes = DGameCtnArticleNodes, O_ARTICLENODEDIR_ChildNodes, SZ_CTNARTICLENODE, true
+# unreflected; research/2026-08-24-CustomItemInventoryOrder.md
+FolderFlags = uint, O_ARTICLENODEDIR_FolderFlags, GS

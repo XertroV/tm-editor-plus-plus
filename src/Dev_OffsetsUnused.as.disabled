@@ -1,0 +1,30 @@
+// MARK: O Article / inventory nodes
+// Live GetTypeInfo 2026-08-24: Article 0x130, Node 0x48, NodeArticle 0x48, NodeDirectory 0x70.
+const uint16 SZ_CTNARTICLE = Reflection::GetType("CGameCtnArticle").Size;
+const uint16 SZ_CTNARTICLENODE = Reflection::GetType("CGameCtnArticleNode").Size;
+const uint16 SZ_CTNARTICLENODEARTICLE = Reflection::GetType("CGameCtnArticleNodeArticle").Size;
+const uint16 SZ_CTNARTICLENODEDIR = Reflection::GetType("CGameCtnArticleNodeDirectory").Size;
+
+const uint16 O_ARTICLE_CollectorFid = GetOffset("CGameCtnArticle", "CollectorFid");
+const uint16 O_ARTICLE_LoadedNod = GetOffset("CGameCtnArticle", "LoadedNod");
+const uint16 O_ARTICLE_BitmapIcon = GetOffset("CGameCtnArticle", "BitmapIcon");
+const uint16 O_ARTICLE_NbAvailableMax = GetOffset("CGameCtnArticle", "NbAvailableMax");
+const uint16 O_ARTICLE_NbAvailableCurrent = GetOffset("CGameCtnArticle", "NbAvailableCurrent");
+const uint16 O_ARTICLE_AmountString = GetOffset("CGameCtnArticle", "AmountString");
+const uint16 O_ARTICLE_Name = GetOffset("CGameCtnArticle", "Name");
+const uint16 O_ARTICLE_DisplayName = GetOffset("CGameCtnArticle", "DisplayName");
+const uint16 O_ARTICLE_PageName = GetOffset("CGameCtnArticle", "PageName");
+const uint16 O_ARTICLE_ArticleDataLocation = GetOffset("CGameCtnArticle", "ArticleDataLocation");
+const uint16 O_ARTICLE_BlockItem_ItemModelArticle = GetOffset("CGameCtnArticle", "BlockItem_ItemModelArticle");
+const uint16 O_ARTICLE_GameSkin = GetOffset("CGameCtnArticle", "GameSkin");
+// unreflected; Catalog_AddArticle CONCAT24(article+0x64, index)
+const uint16 O_ARTICLE_SortKeyHi = O_ARTICLE_LoadedNod - 0x1C; // 0x64
+const uint16 O_ARTICLE_PathSegmentsBuf = O_ARTICLE_PageName + 0x10; // 0xE0
+const uint16 O_ARTICLE_CatalogSortKey = O_ARTICLE_PageName + 0x20; // 0xF0
+const uint16 O_ARTICLE_ItemType = O_ARTICLE_GameSkin + 0x10; // 0x128
+
+const uint16 O_ARTICLENODE_ParentNode = GetOffset("CGameCtnArticleNode", "ParentNode");
+const uint16 O_ARTICLENODE_Name = GetOffset("CGameCtnArticleNode", "Name");
+const uint16 O_ARTICLENODEARTICLE_Article = GetOffset("CGameCtnArticleNodeArticle", "Article");
+const uint16 O_ARTICLENODEDIR_ChildNodes = GetOffset("CGameCtnArticleNodeDirectory", "ChildNodes");
+const uint16 O_ARTICLENODEDIR_FolderFlags = O_ARTICLENODEDIR_ChildNodes + 0x20; // 0x68

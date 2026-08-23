@@ -1205,6 +1205,10 @@ class RawBufferElem {
         CheckOffset(o, 2);
         return Dev::ReadUInt16(ptr + o);
     }
+    void SetUint16(uint o, uint16 value) {
+        CheckOffset(o, 2);
+        Dev::Write(ptr + o, value);
+    }
     uint8 GetUint8(uint o) {
         CheckOffset(o, 1);
         return Dev::ReadUInt8(ptr + o);

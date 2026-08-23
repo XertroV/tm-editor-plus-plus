@@ -1,0 +1,98 @@
+#if DEV
+namespace Editor {
+    Tester@ Test_CGameCtnArticle = Tester("CGameCtnArticle", generateCGameCtnArticleTests());
+
+    TestCase@[]@ generateCGameCtnArticleTests() {
+        TestCase@[]@ ret = {};
+        ret.InsertLast(TestCase("article sizes match live reflection", article_sizes_match));
+        ret.InsertLast(TestCase("article exposed offsets match GetTypeInfo", article_exposed_offsets));
+        ret.InsertLast(TestCase("article unreflected offsets stay anchored", article_unreflected_offsets));
+        ret.InsertLast(TestCase("article node offsets match GetTypeInfo", article_node_offsets));
+        return ret;
+    }
+
+    void article_sizes_match() {
+        assert(SZ_CTNARTICLE == 0x130, "CGameCtnArticle size 0x130");
+        assert(SZ_CTNARTICLENODE == 0x48, "CGameCtnArticleNode size 0x48");
+        assert(SZ_CTNARTICLENODEARTICLE == 0x48, "CGameCtnArticleNodeArticle size 0x48");
+        assert(SZ_CTNARTICLENODEDIR == 0x70, "CGameCtnArticleNodeDirectory size 0x70");
+    }
+
+    void article_exposed_offsets() {
+        assert(O_ARTICLE_CollectorFid == 0x18, "CollectorFid +0x18");
+        assert(O_ARTICLE_LoadedNod == 0x80, "LoadedNod +0x80");
+        assert(O_ARTICLE_BitmapIcon == 0x88, "BitmapIcon +0x88");
+        assert(O_ARTICLE_NbAvailableMax == 0x90, "NbAvailableMax +0x90");
+        assert(O_ARTICLE_NbAvailableCurrent == 0x94, "NbAvailableCurrent +0x94");
+        assert(O_ARTICLE_AmountString == 0xA0, "AmountString +0xA0");
+        assert(O_ARTICLE_Name == 0xB0, "Name +0xB0");
+        assert(O_ARTICLE_DisplayName == 0xC0, "DisplayName +0xC0");
+        assert(O_ARTICLE_PageName == 0xD0, "PageName +0xD0");
+        assert(O_ARTICLE_ArticleDataLocation == 0xF8, "ArticleDataLocation +0xF8");
+        assert(O_ARTICLE_BlockItem_ItemModelArticle == 0x108, "BlockItem_ItemModelArticle +0x108");
+        assert(O_ARTICLE_GameSkin == 0x118, "GameSkin +0x118");
+    }
+
+    void article_unreflected_offsets() {
+        assert(O_ARTICLE_SortKeyHi == 0x64, "SortKeyHi +0x64");
+        assert(O_ARTICLE_PathSegmentsBuf == 0xE0, "PathSegments +0xE0");
+        assert(O_ARTICLE_CatalogSortKey == 0xF0, "CatalogSortKey +0xF0");
+        assert(O_ARTICLE_ItemType == 0x128, "ItemType +0x128");
+        assert(O_ARTICLENODEDIR_FolderFlags == 0x68, "FolderFlags +0x68");
+    }
+
+    void article_node_offsets() {
+        assert(O_ARTICLENODE_ParentNode == 0x18, "ParentNode +0x18");
+        assert(O_ARTICLENODE_Name == 0x20, "Name +0x20");
+        assert(O_ARTICLENODEARTICLE_Article == 0x30, "Article +0x30");
+        assert(O_ARTICLENODEDIR_ChildNodes == 0x48, "ChildNodes +0x48");
+        assert(GetOffset("CGameCtnArticleNode", "NodeName") == O_ARTICLENODE_Name, "NodeName aliases Name");
+        assert(GetOffset("CGameCtnArticleNodeDirectory", "Children") == O_ARTICLENODEDIR_ChildNodes, "Children aliases ChildNodes");
+    }
+}
+
+namespace Tests {
+    [Test]
+    void CGameCtnArticle_SizesMatchLiveReflection(Tests::Context@ ctx) {
+        ctx.AssertTrue(SZ_CTNARTICLE == 0x130, "CGameCtnArticle size 0x130");
+        ctx.AssertTrue(SZ_CTNARTICLENODE == 0x48, "CGameCtnArticleNode size 0x48");
+        ctx.AssertTrue(SZ_CTNARTICLENODEARTICLE == 0x48, "CGameCtnArticleNodeArticle size 0x48");
+        ctx.AssertTrue(SZ_CTNARTICLENODEDIR == 0x70, "CGameCtnArticleNodeDirectory size 0x70");
+    }
+
+    [Test]
+    void CGameCtnArticle_ExposedOffsetsMatchGetTypeInfo(Tests::Context@ ctx) {
+        ctx.AssertTrue(O_ARTICLE_CollectorFid == 0x18, "CollectorFid +0x18");
+        ctx.AssertTrue(O_ARTICLE_LoadedNod == 0x80, "LoadedNod +0x80");
+        ctx.AssertTrue(O_ARTICLE_BitmapIcon == 0x88, "BitmapIcon +0x88");
+        ctx.AssertTrue(O_ARTICLE_NbAvailableMax == 0x90, "NbAvailableMax +0x90");
+        ctx.AssertTrue(O_ARTICLE_NbAvailableCurrent == 0x94, "NbAvailableCurrent +0x94");
+        ctx.AssertTrue(O_ARTICLE_AmountString == 0xA0, "AmountString +0xA0");
+        ctx.AssertTrue(O_ARTICLE_Name == 0xB0, "Name +0xB0");
+        ctx.AssertTrue(O_ARTICLE_DisplayName == 0xC0, "DisplayName +0xC0");
+        ctx.AssertTrue(O_ARTICLE_PageName == 0xD0, "PageName +0xD0");
+        ctx.AssertTrue(O_ARTICLE_ArticleDataLocation == 0xF8, "ArticleDataLocation +0xF8");
+        ctx.AssertTrue(O_ARTICLE_BlockItem_ItemModelArticle == 0x108, "BlockItem_ItemModelArticle +0x108");
+        ctx.AssertTrue(O_ARTICLE_GameSkin == 0x118, "GameSkin +0x118");
+    }
+
+    [Test]
+    void CGameCtnArticle_UnreflectedOffsetsStayAnchored(Tests::Context@ ctx) {
+        ctx.AssertTrue(O_ARTICLE_SortKeyHi == 0x64, "SortKeyHi +0x64");
+        ctx.AssertTrue(O_ARTICLE_PathSegmentsBuf == 0xE0, "PathSegments +0xE0");
+        ctx.AssertTrue(O_ARTICLE_CatalogSortKey == 0xF0, "CatalogSortKey +0xF0");
+        ctx.AssertTrue(O_ARTICLE_ItemType == 0x128, "ItemType +0x128");
+        ctx.AssertTrue(O_ARTICLENODEDIR_FolderFlags == 0x68, "FolderFlags +0x68");
+    }
+
+    [Test]
+    void CGameCtnArticleNode_OffsetsMatchGetTypeInfo(Tests::Context@ ctx) {
+        ctx.AssertTrue(O_ARTICLENODE_ParentNode == 0x18, "ParentNode +0x18");
+        ctx.AssertTrue(O_ARTICLENODE_Name == 0x20, "Name +0x20");
+        ctx.AssertTrue(O_ARTICLENODEARTICLE_Article == 0x30, "Article +0x30");
+        ctx.AssertTrue(O_ARTICLENODEDIR_ChildNodes == 0x48, "ChildNodes +0x48");
+        ctx.AssertTrue(GetOffset("CGameCtnArticleNode", "NodeName") == O_ARTICLENODE_Name, "NodeName aliases Name");
+        ctx.AssertTrue(GetOffset("CGameCtnArticleNodeDirectory", "Children") == O_ARTICLENODEDIR_ChildNodes, "Children aliases ChildNodes");
+    }
+}
+#endif
