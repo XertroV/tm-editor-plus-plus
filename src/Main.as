@@ -69,7 +69,7 @@ void Main() {
     RegisterNewAfterCursorUpdateCallback(CustomCursorRotations::CustomYaw_AfterCursorUpdate, "CustomCursorRotaitons::CustomYaw");
     // startnew(Editor::OffzonePatch::Apply);
     Editor::SetupApplySkinsCBs();
-    TvScreenLog::OnPluginLoad();
+    // TvScreenLog::OnPluginLoad();
     CustomSelection::OnPluginLoad();
     FillBlocks::OnPluginLoad();
 #if DEV
@@ -309,7 +309,7 @@ void Render() {
     if (IsInAnyEditor) {
         ToolsTG.DrawWindows();
     }
-    TvScreenLog::Render();
+    // TvScreenLog::Render();
 }
 
 void RenderInterface() {

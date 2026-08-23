@@ -130,10 +130,4 @@ namespace Editor {
     import void SaveItemAsEditorAsync(const string &in path) from "Editor";
     import void ZeroCurrentItemModelFids(bool pushMatMod = true) from "Editor";
     import void ZeroCurrentItemModelFidsKeepMaterials(bool pushMatMod = true) from "Editor";
-    import bool GetHasArchetypeRefPatch() from "Editor";
-    import void SetHasArchetypeRefPatch(bool value) from "Editor";
-    import bool GetHasArchetypeRefPatchSiteFound() from "Editor";
-    import bool GetAllowCrossTreeFidRefsPatch() from "Editor";
-    import void SetAllowCrossTreeFidRefsPatch(bool value) from "Editor";
-    import bool GetAllowCrossTreeFidRefsPatchSiteFound() from "Editor";
 }
