@@ -126,6 +126,10 @@ for pluginSrc in ${pluginSources[@]}; do
       _build_dest=$PLUGIN_DEV_LOC
       mkdir -p $_build_dest/
       rsync -auv --progress --delete ./$pluginSrc/ $_build_dest
+      if [[ -d ./ascall-spikes ]]; then
+        mkdir -p $_build_dest/ascall-spikes
+        rsync -auv --progress ./ascall-spikes/ $_build_dest/ascall-spikes/
+      fi
       # rm -vr $_build_dest/* || true
       # cp -LR -v ./$pluginSrc/* $_build_dest/
       # cp -LR -v ./fonts $_build_dest/fonts
@@ -173,6 +177,34 @@ for pluginSrc in ${pluginSources[@]}; do
   else
     _colortext16 green "✅ Release file: ${RELEASE_NAME}"
     if [[ "$_build_mode" == "dev" && "${EPP_SKIP_REMOTE_RELOAD:-0}" != "1" ]]; then
+      _mcp_call=""
+      if [[ -n "${EPP_MCP_CALL:-}" && -x "${EPP_MCP_CALL}" ]]; then
+        _mcp_call="$EPP_MCP_CALL"
+      elif [[ -x "$HOME/src/openplanet/my-plugins/tm-control-mcp/tools/call.py" ]]; then
+        _mcp_call="$HOME/src/openplanet/my-plugins/tm-control-mcp/tools/call.py"
+      elif command -v python3 >/dev/null 2>&1 && [[ -f "$(dirname "$0")/../tm-control-mcp/tools/call.py" ]]; then
+        _mcp_call="$(cd "$(dirname "$0")/../tm-control-mcp" && pwd)/tools/call.py"
+      fi
+      if [[ -n "$_mcp_call" ]]; then
+        _colortext16 green "⏳ Checking LM compute via MCP before reload...\n"
+        _shadow_wait_ms="${EPP_SHADOW_WAIT_MS:-600000}"
+        set +e
+        _wait_out="$(python3 "$_mcp_call" WaitUntil "{\"condition\":\"shadowsClear\",\"timeoutMs\":${_shadow_wait_ms},\"pollMs\":500}" 2>/dev/null)"
+        _wait_rc=$?
+        set -e
+        if [[ "$_wait_rc" != "0" ]]; then
+          _colortext16 yellow "⚠ MCP wait failed (rc=${_wait_rc}); reloading anyway.\n"
+        else
+          echo "$_wait_out"
+          if echo "$_wait_out" | grep -q '"timedOut":true'; then
+            _colortext16 yellow "⚠ Still calculating shadows after wait; reloading anyway.\n"
+          elif echo "$_wait_out" | grep -q 'unknown condition'; then
+            _colortext16 yellow "⚠ MCP has no shadowsClear yet; reloading.\n"
+          else
+            _colortext16 green "✅ Shadows idle (or not baking).\n"
+          fi
+        fi
+      fi
       if command -v tm-remote-build >/dev/null 2>&1; then
         OP_DATA_DIR=${OPENPLANET_DIR:-$(dirname "$PLUGINS_DIR")}
         REMOTE_RELOAD_TIMEOUT=${EPP_REMOTE_RELOAD_TIMEOUT:-60s}
