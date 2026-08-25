@@ -11,12 +11,13 @@ Current E++ hack (not the target API): [`src/Editor/VehiclePreview.as`](../src/E
 | Question | Answer |
 |---|---|
 | How do official cars enter `VehicleState::GetAllVis`? | They are `CSceneVehicleVis*` in `NSceneVehicleVis::SMgr+0x210` (GbxVector of ptrs). Editor Test, playground/race, and ghosts all land in this list. |
-| Create / destroy pair | **`NSceneVehicleVis_SMgr_CreateVis`** `0x140737ae0` / **`NSceneVehicleVis_SMgr_DestroyVis`** `0x140737cf0`. Owner is **`NSceneVehicleVis::SMgr`** on `GameScene` (mgr index 12). |
+| Create / destroy pair | **`NSceneVehicleVis_SMgr_CreateVis`** `0x140737ae0` / **`NSceneVehicleVis_SMgr_DestroyVis`** `0x140737cf0`. Owner is **`NSceneVehicleVis::SMgr`** on `GameScene` (mgr index **13**). |
 | Vis without a phy car? | **Yes.** Create does not allocate or attach `NSceneVehiclePhy`. `ExtractVisStates` only walks phy cars. That is the Map Together mode. |
 | Pose write | `CSceneVehicleVis.AsyncState` (`+0x130`) → `CSceneVehicleVisState` iso4 **`+0x2C`** (`O_VISSTATE_Mat`). Same site VehiclePreview already writes. If a phy car is attached, `NSceneVehiclePhy::ExtractVisStates` overwrites it every tick. |
 | Skin / model | Create takes `CPlugVehicleVisModel*` at spawn `+0x08`. Null model = vis-only, **no mesh**. CarSport vis model is `GameData/Vehicles/Cars/CarSport/VisModelSport.VehicleVisModel.Gbx`. Stadium.zip is the default CarSport skin, not a different vehicle class. |
 | Limits | SMgr exists in editor **and** playground. Test mode is **not** required. Leaving Test reaps the *cursor item records* (keep-patch site), not a vis we created via SMgr. Initial vis-list reserve is **100**; the pool can grow (untested past 100). |
 | AsCall | Patterns below, 1 hit each in Ghidra. Do **not** `Dev::Hook` the AsCall stub. |
+| Leftover cars after SMgr=0? | HMS **dyna** instances, not vis. Monitor/remove: [`2026-08-25-HmsVisInstances.md`](2026-08-25-HmsVisInstances.md) (`dumpDyna` / `sweepDyna`). Static is the Test cursor path — do not `ClearStaticInstances`. |
 
 ## Do not treat the keep-patch as the API
 
@@ -37,8 +38,8 @@ Registered `FUN_140727890`. Live pointer: `GameScene+0x10 + 13*8` (mgr index **1
 
 | Off | What |
 |---|---|
-| `+0x48` | Slot pool of `CSceneVehicleVisState` (stride **0x360**) |
-| `+0x210` | Vis list: GbxVector of `CSceneVehicleVis*` + pool of **0x10B0** slots (`0x10A8` nod + 4-byte index at `+0x10A8`) |
+| `+0x48` | Slot pool of `CSceneVehicleVisState` (stride **0x360**). Init via `FUN_1413a4040(pool, 0x360, 0)`. Live editor: `align=8 stride=0x368 batch=4 chunk=0x1000 used=0 free=0` (freelist empty until first AllocVisState grow). |
+| `+0x210` | Vis list: GbxVector of `CSceneVehicleVis*` + slot pool at **`+0x220`** (stride **0x10B0**, `vis+0x10A8` index). `Reserve100` re-inits that pool with batch hint 100. |
 | `+0x218` | Vector count (vis count) |
 | `+0x21C` | Vector capacity |
 
@@ -47,9 +48,20 @@ Registered `FUN_140727890`. Live pointer: `GameScene+0x10 + 13*8` (mgr index **1
 | Off | What |
 |---|---|
 | `+0x00` | Ent id (`0xFF00000` = not registered with the scene) |
-| `+0x08` | `CPlugVehicleVisModel*` (`Model`) |
+| `+0x08` | `CPlugVehicleVisModel*` (`Model`) — VehicleState |
+| `+0x10` | `CPlugVehicleVisGeomModel*` — VehicleState; CreateVis copies `model+0x20` |
+| `+0x18` | `CPlugVehicleVisModelShared*` — VehicleState; CreateVis copies `model+0x18` (FID `Common.VehicleVisModel.Gbx`) |
+| `+0x40` | `CPlugVehiclePhyModel*` (CreateVis spawn `+0x10`). Official Test vis. Not dest s2m. |
+| `+0x50` | HMS dyna instance id. `-1` skips Unbind/InstanceDestroy and UpdateAuxChannels pose write. E++ Bind then writes `-1` (073C58D). |
+| `+0x7c` | Flags. Official CreateVisFromState: bit0\|bit5 (`0x21`), bit3 (`0x8`) = reconcile-managed. Live E++ Bind vis later show `0x7`. |
+| `+0x94` | Clip / FX mask. Update1 passes SMgr collision world into UpdateAuxChannels when `0xf` / `0xf0` / `0xf00` or bit 13 (`0x2000`). Live E++ Bind cars sit at **`0x3FFF`** (bits 0–13) **every frame**. `CSceneVehicleVis_Init` zeros it. Bind does not write it. Reconcile only tweaks bit 13 from AsyncState (`state+0x88` / `0x2000000`). Writer of `0x3FFF` not yet a single `mov imm` (not InitVis, not Bind, not UpdateChannelsFromState). OnUpdate clear loses the race: game restores `0x3FFF` before Update1 PointCast. |
 | `+0x130` | `CSceneVehicleVisState*` (`AsyncState`) |
+| `+0x1b8` | Wheel-contact count. Official `NSceneVehicleVis_BindCopyWheelContactSlots` (`0x14072c2a0`) copies `geom+0x5a8`. E++ Bind skips it (stays 0). |
 | `+0x10A8` | Index in SMgr+0x210 vector (extra pool header, past nod size) |
+
+**PointCast_FirstClip** (`NHmsCollision_PointCast_FirstClip` `0x1402a4ec0`): Update1 `AsyncState_Update` → UpdateAuxChannels, **two** casts per vis when `+0x94` arms the collision world (4 cars → 8). Same function later in the frame from `CGameEnvironmentManager_Update` (`0x140fc3b70`, also 8 with 4 cars) — editor/env probes vs HMS collision **targets**. Alternating 5ms/3ms is the two UpdateAuxChannels rays (second often cheaper). Test vs Validation differ in vehicle collision; compare official vis `+0x94`/`+0x7c`/`+0x50` in both.
+
+Hook sketch (not shipped): intercept the `0x3FFF` **writer** call site if it is not the phy loop; else hook a run context **after** that write and **before** Update1 PointCast (Update1 entry is a candidate — AfterRadialLod, not `ExtractVisStates`). Do not `Dev::Hook` the AsCall stub.
 
 Factory ctor `CSceneVehicleVis_FactoryCtor` `0x14073f730` is the MwClass allocator. **Do not AsCall it** — it does not add the vis to the SMgr list.
 
@@ -189,10 +201,10 @@ There is no higher-level `SetLocation` on `CSceneVehicleVis` that we need. The m
 | Default CarSport mesh | `GameData/Vehicles/Cars/CarSport/VisModelSport.VehicleVisModel.Gbx` (also PhyModel/Tunings/Gearbox siblings). |
 | Default skin file | `Skins\Models\CarSport\Stadium.zip`. `Stadium_World.zip` / `Stadium_%1.zip` are variants. |
 | Profile skin slots | `VehicleSkin_AssignCarSportOrCharacterPilot` `0x140c5f620`. CarSport and CharacterPilot are **different rows** ([`2026-08-24-CharacterPilotSkins.md`](2026-08-24-CharacterPilotSkins.md)). |
-| Skinned model build | `NPlugVehicleVis::CreateSkinnedModel_Internal` `FUN_1405f0250`. |
+| Skinned model build | `NPlugVehicleVis_CreateSkinnedModel_Internal` `0x1405f0250` (wrapper `0x1405f09f0`, public `CreateSkinnedVisModel` `0x140e646c0`). Fallback: `GeomModelCreate` `0x1405efba0` looks up `MainBody.Solid.gbx`, then `CPlugSolid2Model_Constructor` + `CopyWithSourceFid` `0x140438ca0` onto clone `model+0x30`. |
 | Apply at create | `NSceneVehicleVis_BindModelEntity` → `FUN_1405faf20` with spawn `+0x50`. |
 
-Picking StadiumCar vs a URL skin: pass CarSport vis model + a skin desc at spawn `+0x50` (same resolve rules as `SkinNameOrUrl`: `Skins/Model/...`, `http://...`, `Default`, `Profile`). Exact spawn+0x50 layout is **not** fully typed yet — next spike should dump a live official create.
+Picking StadiumCar vs a URL skin: pass CarSport vis model + a **`CSystemPackDesc*`** at spawn `+0x50` / Bind param_4 (same resolve rules as `SkinNameOrUrl`: `Skins/Model/...`, `http://...`, `Default`, `Profile`). Slot builder is `FUN_140beee10`. Shipped attach + dump: [`2026-08-25-VehicleVisSkins.md`](2026-08-25-VehicleVisSkins.md).
 
 `CarSport.Item.Gbx` is the **item** (`\Vehicles\Items\CarSport.Item.gbx`). PlaceItems rejects it (wrong collection). Do not go through items for remote cars.
 
@@ -262,6 +274,97 @@ Find with `Dev::FindPattern`, subtract `PatOff` to the entry. All scanned **1 hi
 
 Calling this without CreateVisFromState leaves an uninitialized 0x10B0 slot on `GetAllVis`. Use CreateVis.
 
+## CreateVis via AsCall OnAction — native crash (2026-08-25 00:23)
+
+`LogCrash_EA180000007EDC20.txt`. Last OP line is the pre-call CreateVis dump; **no** `step 3:` result. RIP in **Openplanet.dll**, AV **write 0x240**, `rax=0 r15=0`, `r09=0x0A018000` (`CSceneVehicleVis`), `r10=0x0FF00000` (ent), `rdx=vis-slot pool head+8`.
+
+AllocVisState via the same AsCall path is fine. Wrap-suppression in this tab does not help: AngelScript never resumes. Hypothesis: `carrier.OnAction()` → stub → CreateVis (likely succeeds / VisList_Add) → OP OnAction epilogue tries to wrap the new vis as a nod.
+
+CreateVis through this adapter is **disabled** until we have a call path that is not `CControlButton.OnAction`, or Init/FactoryCtor proves the vis is a real `CMwNod`.
+
+Step 4 “confirm vis in SMgr list” (2026-08-25 01:16) is a **false fail**, not a new crash: CreateVis never ran, so `lastCreatedVis=0` / SMgr count=0. No new `LogCrash`. Step 4 is now a vis-slot `PoolPop` (same helper AllocVisState uses) that must **not** `VisList_Add`.
+
+Live Step 4 (2026-08-25 01:25): `PoolPop ret=0x2F6E8F0C0` `+0x00=0` `used 0→1` `list 0→0` first 64 bytes zero. Unused slot is not a nod. Step 5 is now `CSceneVehicleVis_Init` on that slot (rcx=vis; writes `+0x50=-1`; does **not** write `+0x00` / vtable; does not list-add). Pattern unique: 1 Ghidra / 1 PE / 1 live @ `0x14073f760`.
+
+Live Step 5 (2026-08-25 02:34): green, `+0x00` still 0, `+0x50=0xffffffff`, list stayed 0. Init via AsCall is safe and is **not** a vehicle — nothing is listed, no model. Step 6 is a raw list insert (ent `0xFF00000`, model 0, attach AllocVisState, pose at spawn, increment `+0x218`) without calling CreateVis / VisList_Add. Still no mesh.
+
+Live Step 6 (2026-08-25 03:35): **green** `raw insert 0x2F55FF778` `count 0→1` `inList=true` `pos=<64,64,64>` readback match. Raw insert is the working create path. Full spike steps are now 0 ensure / 1 SMgr / 2 create / 3 confirm / 4 pose / 5 DestroyVis / 6 add N / 7 preload VisModelSport + ModelQuery + BindModelEntity. CreateVis via OnAction remains a labeled crash probe.
+
+MCP (2026-08-25 03:48–03:50): `Editor::DevTest::ManageVehiclesOp` + `tm-mcp-pack-epp.ManageVehicles`. Autonomous run: ensure/create/confirm/pose/destroy(raw-remove)/addN all green. `bind` (ModelQuery+BindModelEntity via OnAction) crashed TM at `0x140FC41A7` (read `-1`). `bindPreload` (FID preload + write vis+0x08 only) is green (`lastModel` nonzero). Do not call `bindQuery` / `bindEntity` / `createVisNative` / `destroyNative` from the loop.
+
+`bindOfficial` (2026-08-25 06:18:33): Bind **did** allocate our own `vis+0x58` / `+0x70` from the Test-mode model. Next frame `NSceneVehicleVis_Update1_AfterRadialLod` `0x14073A7D6` AV read `0x2B4` with `rcx=0`. Bytecode: `mov rcx,[vis+0x40]; movss xmm0,[rcx+0x2B4]`. `vis+0x40` is CreateVis spawn `+0x10` / CreateVisFromState `r9`. Never leave Model set with `+0x40==0`. Do not enter Test / place a start for a model.
+
+FID preload (2026-08-25 06:26–06:34), no start block:
+
+- `GameData/Vehicles/Cars/CarSport/VisModelSport.VehicleVisModel.Gbx` loads as `CPlugVehicleVisModel` with `+0x18`/`+0x20`/`+0x28` set and **`+0x30=0`**.
+- `GameData/Skins/Models/CarSport/Stadium/Standard/MainBody.Mesh.gbx` is a `CPlugSolid2Model` (`0x090bb000`). Writing it into `model+0x30` then `ModelQuery` is `LogCrash_00000000001E012A` (null read in `FUN_1401dfd50`, caller ModelQuery+0x100). Same RIP from **Bind** (`0x14072C146`) when that mesh is in `+0x30`. Official Test `+0x30` is a different, already-wired nod — not a raw MainBody write.
+- Raw-listed vis with null model is **reaped within a frame** (slot returned, `AsyncState=0`, `smgrN=0`). Reconcile `RemoveVis` only unmatched vis with `+0x7c&8`; ours was 0. Something else (list rebuild / Update1) still drops a half-init slot.
+- `ModelQuery` on the FID vis model is unsafe via AsCall. Bind on official `+0x30` worked. Next: find the real `+0x30` nod from `model+0x20` (vis geom) / its FID, do not stuff MainBody there.
+
+FID dump (2026-08-25 06:40, editor, no Test): VisModelSport and `CarSport.Item.Gbx` share the same vis model. `model+0x30=0`, `geom+0x18=0`, `geom+0x38=0`. The FID vis model is a header; the solid is not installed until official spawn/skin. Wire-only (vis+0x40=MainBody, model+0x30 left 0, no Bind): create returns, next frame `FUN_14072b3c0` write AV `0x134` from Update1 (`LogCrash_000000000072B456`, `r14`=MainBody, `vis+0x58=0`). Listed vis with Model set **requires** Bind's `+0x58`.
+
+Bind 2026-08-25 07:21 (`LogCrash_00000000001E012A`, RIP `0x1401E012A`, caller `BindModelEntity+0x56` `0x14072C146` via AsCall stub): stuffing FID `MainBody.Mesh.gbx` into `model+0x30` then Bind. Bind reads `vis->Model+0x30`; 0 = no-op; FID mesh = this crash; `CopyWithSourceFid` dest = allocates `+0x58/+0x70`. Bind does **not** write `vis+0x40` (CreateVis spawn `+0x10`). `GeomModelCreate` looks up `MainBody.Solid.gbx` next to the vis model. E++ `skinModel` op: `CPlugSolid2Model()` + `CopyWithSourceFid` + clone `CPlugVehicleVisModel` with dest at `+0x30`. Do not Bind until `dest != fidS2m`.
+
+`skinModel` 2026-08-25 07:38 (`LogCrash_EA180000007EDC32`, RIP Openplanet.dll read 0x68 rcx=0, stack all OP.dll). Last OP line is pack start `skinModel` — no ManageVehicles breadcrumb. Same family as CreateVis OnAction wrap: AsCall stub left `rax`=returned `CPlugSolid2Model*`, OP OnAction epilogue wrapped it. Stub now `xor rax,rax` after saving OffRet.
+
+Pointer IO (2026-08-25): ManageVehicles reads go through `Dev_SafeReadUInt64` / `Dev::SafeRead*` (never raw `Dev::ReadUInt64`). Writes require `Dev_CanTouch` first. AsCall args must be 0 or a mapped page. Object bases also pass `Dev_PtrUsable` (`Dev_PointerLooksBad` + touch).
+
+`skinModel` 2026-08-25 07:57 (`LogCrash_EA180000007EDC32` again). Breadcrumb reached `CopyWithSourceFid dest=0x13DD86650 src=0x2E282BF30` — no `copy returned`. RIP Openplanet.dll `+0x7EDC32` `mov rax,[r14+0x68]` r14=0 rax=0. **Do not AsCall CopyWithSourceFid / CreateVis via OnAction.** `KinAo_Call3` Copy succeeded 08:09 (`copy returned`, dest≠fid, clone+0x30 set).
+
+`bindEntity` 2026-08-25 08:09 and 08:15 (`LogCrash_00000000001E012A`). KinAo_Call4 Bind `0x14072C146` → `0x1401E012A` null read. 08:15 dest had tris=31 **and** dest+0x2e0==src (we wrote it). Still AV. Mesh.gbx Copy dest is not Bind-ready. Official Copy source is `geom+0x18` from `GeomModelCreate` (`MainBody.Solid.gbx`). bindEntity/bindOfficial disabled.
+
+GeomModelCreate `0x1405efba0` (decompiled 2026-08-25): `rcx=this`, `rdx=16-byte FID key*` (4 dwords, copied then joined with `MainBody.Solid.gbx`), `r9` passed to `FUN_1405eec60`. **Not** `KinAo_Call3(geom,0,0)` — rdx=0 is an immediate null read.
+
+`geomCreate` 2026-08-25 08:37 (`LogCrash_0000000000919015`). KinAo_Call4 GeomModelCreate with key `{parentFolder*, 0}`. RIP `0x140919015` `mov rdx,[rbx+0x18]` read `0x800000018` (`rbx=0x800000000`). Called from PackManager `0x1409191AF` ← joiner `0x1408FBC56` ← GeomModelCreate `0x1405EFC44` ← kinao. Last OP line: `key={parent=0x231AA958,0} fn=0x1405EFBA0 geom+0x18 before=0`. RIP in **Trackmania.exe**. `FUN_1408fbba0`: `key[1]==0` → `PackManager(*key, filename)`; `key[1]!=0` → `FUN_1408fa390(key[1], filename)`. visFid `+0x10=0` `+0x18=parent`. Do not retry `{parent,0}`.
+
+`geomCreate` 2026-08-25 08:42 key=`visFid+0x10={0,parent}`: **no crash**, `ret=0`, `vis+0x20` still the empty FID geom (`+0x18=0`). Joiner looks up `MainBodyVeryHigh/High/MainBody.Solid.gbx` plus `Desc.xml` and `MainBody.Mesh.Gbx` in the **vehicle** folder. Mesh lives under `Skins/Models/CarSport/Stadium/Standard`. Installer `FUN_1405eec60` (unique `48 89 5C 24 20 … 48 81 EC 10 03 00 00`) bails when that Mesh FID is 0.
+
+`geomInstall` 2026-08-25 08:49: KinAo `FUN_1405eec60(vis, {0,0,solidFid,meshFid})` **no crash**. `ret=0x31F321920` (new 0x1198 geom, vtable `0x141BD32B8`) `+0x18=FID Mesh` `tris=31` `sameAsMesh=true`. `vis+0x20` still the empty FID geom. Solid FID `+0x78 class=0xFFFFFFFF` `+0x80 nod=0`.
+
+`loadSolid` 2026-08-25 08:55: factory+0x10 is **BackingExists**, not load. `CSystemFid_PreloadNod` `0x1408f9d10` (unique `40 55 53 56 57 48 8D 6C 24 C1 …`) on `MainBody.Solid.gbx` returns **eax=0** `out=0` class still `FFFFFFFF`. Solid is not a standalone-loadable nod in the editor. Official SharedData hit is the Bind-ready +0x30 path; GeomModelCreate fallback yields Mesh.
+
+Stadium `Common/` has `MainBody.Skel.Gbx` (`CPlugSkel` `0x090ba000`, live preload `0x2FFB555C0`) and `MainBody.Anim.Gbx`.
+
+`attachSkel` 2026-08-25 08:58: **green**. dest `0x3222A3CD0` ≠ Mesh, dest+0x78=`0x2FFB555C0`, dest+0x2e0=src, dest+0xC8=0, tris=31.
+
+`bindEntity` 2026-08-25 08:58 (`LogCrash_00000000001E012A`). create listed vis `0x2F9A6FC80` then Bind. RIP `0x1401E012A` rcx=0, caller `BindModelEntity+0x56` `0x14072C146` ← kinao. dest+skel is **not** Bind-ready. bindEntity/bindOfficial/bindQuery disabled.
+
+Bind+0x56 is `CHmsMgrVisDyna::InstanceCreate` `0x1401de990` after `FUN_1406a5ac0` (`GetSceneComponentBySlotIndex`). Crash may be a missing/empty dyna-vis mgr (`param_1+0xa8`) in the editor, not only a bad s2m. dest+0xC8 still 0.
+
+Official Test vis dump 2026-08-25 09:36 (before leaveTest): `model+0x30` dest `0x2F74B7780` has `+0x38=3` (VisCst car), `+0x78 skel=0`, `+0xB0 tris=31`, **`+0xC8 mats=0x2F7CBD7A0` n=7**, `+0x2e0` source. `vis+0x40` is **not** that s2m (vtable `0x141BD37F0`, float at `+0x2B4`). Official Bind-ready s2m is materials-filled, not skel-stuffed.
+
+`createSkinned` 2026-08-25 09:36 (`LogCrash_000000000011DA01`). KinAo `CreateSkinnedModel_Internal` with key `{0, stadiumFolder*=0x24134568}`. RIP `0x14011DA01` `CFastLinearAllocator_Alloc` illegal insn after `Alloc overflow: 0 + (546974536+0)`. Callers: `NodeRefScratchVector_AllocateCapacity` `0x140168333` ← joiner `0x1408FBC9D` ← Internal `0x1405F030D` ← kinao. rdx is **MwString {ptr,len}**, not a GeomFidKey. `{0,folder*}` is `ptr=0 len=folder*`. Do not retry. Crash in Trackmania.exe; Openplanet.dll only on the warn-user line.
+
+`create` null-model 2026-08-25 09:45 (`LogCrash_0000000000FC419F`). First raw insert returned (vis `0x2FE677FA0`, `+0x7c=0x21`, `+0x58=0x10000`, `+0x70=0x0000FFFF00010000`). Next frame AV RIP `0x140FC419F` read `-1`, `rbx=vis`, `rcx=vis+0x70` leftover. Zero `+0x58/+0x70` after Init before listing.
+
+`installMats` 2026-08-25 09:50: Copy dest has MaterialIds n=7 (`_GlassDmgCrack_Glass` … `_SkinDmgDecal_Skin`) but `+0xC8=0`. Those IDs are not standalone FIDs. Mapped suffix → `Tech3_CommonCar{Glass,Details,Skin,Wheels}` (preload as `CPlugMaterial`). Wrote dest `+0xC8` n=7, `bindReady=true`. No Bind yet.
+
+`create` stadium Bind 2026-08-25 09:54 (`LogCrash_000000000072BBE2`). Bind allocated `+0x58/+0x70`, `stadium=true`. Next frame `NSceneVehicleVis_UpdateAuxChannels` RIP `0x14072BBE2` write `rcx=0`. `**(vis+0x70+0x170)` when inner ptr is 0. Zero `+0x70` if `+0x170==0`.
+
+`create` stadium Bind + zero `+0x70` 2026-08-25 09:56 (`LogCrash_0000000000737E6A`). RIP `0x140737E6A` in `FUN_140737e00` (`NSceneVehicleVis_Update2_AfterAnim` caller `0x14073BBCB`). AV read 0: `mov rcx,[vis+0x70]; call [rax+8]`. `rdi`=vis `0x2FAA652F0`. Function returns early if `vis+0x58==0`, then **requires** `+0x70`. Do not zero Bind's `+0x70`. Trackmania.exe.
+
+Official `vis+0x40` vtable `0x141BD37F0` is `vt_CPlugVehiclePhyModel` (xrefs: `CPlugVehiclePhyModel_Construct` / dtor `FUN_1405f78f0`). Spawn `+0x10` is `PhyModelSport.VehiclePhyModel.Gbx` (`GameData/Vehicles/Cars/CarSport/PhyModelSport.VehiclePhyModel.Gbx`), also `CGameItemModel.PhyModel`. Dest s2m at `vis+0x40` is the wrong class. Update1 `+0x2B4` is a phy-model float.
+
+`dumpPhy` 2026-08-25: `PhyModelSport` `0x6732CEA0` vt=`0x141BD37F0` class=`0x090EA000` `+0x2B4=0x3f000000` (0.5).
+
+Bind with phy at `+0x40` (no list): `+0x70=0x31CC69890` vt=`0x141B65F90` (`FUN_140200d60` ctor), `vis+0x58=+0x70+0x20`, `+0x70+0x170=0`. Guard refused list. `NSceneVehicleVis_UpdateAuxChannels` writes one byte `**(vis+0x70+0x170)=state+0x0A` with no null check. Bind does not fill `+0x170`. Fill a live byte there; do not zero `+0x70`.
+
+`create` phy+`+0x170=+0x17e` 2026-08-25 10:10 (`LogCrash_000000000073C58D`). Listed stadium=true, `+0x40vt=0x141BD37F0`. Next frame RIP `0x14073C58D` in `NSceneVehicleVis_UpdateAsync_PostCameraVisibility` read `0x18` `rdx=0`. `rdi`=vis. Preceding: `[vis+0x50]!=-1` and `[shared+0xC8]!=0` then a call that left `rdx=0`; `mov rax,[rdx+0x18]`. Trackmania.exe. Restore `vis+0x50=-1` after Bind until `geom+0x208` has an SMgr entry.
+
+`create` phy + `+0x170=+0x17e` + `+0x50=-1` 2026-08-25: listed stadium=true, survived Update, **visible white Stadium CarSport** at 64,64,64 (`ScreenShot97.jpg`). AsyncState pose writes; mesh stays at Bind pose while `+0x50==-1`.
+
+Pose-by-index 2026-08-25: `UpdateAsync_PostCameraVisibility` indexes **`model+0x208`** `{SMgr*, entry*}` (not geom). Keep `+0x50=-1`. Drawn pose is `CHmsMgrVisDyna` rec+`0x08` iso4 (InstanceCreateFill). `WritePoseRaw` now writes AsyncState + rec+`0x08` + channel+`0x20`. Live: rec tx 64,64,64 → 80,64,64 → 48,64,80 and the **mesh moved** (`ScreenShot03` at 48,64,80; spawn `ScreenShot04` empty). Three cars posed independently (`ScreenShot05/06/07` at 40,64,88 / 64,72,64 / 88,64,40). Destroy-any-order left `dyna live=0`.
+
+Plugin reload 2026-08-25 11:42 (`LogCrash_0000000000000000`). AV, called from `0x14011F124` (stack also `0x140737E70` Update2_AfterAnim+6). `OnPluginUnload` used `ForgetOwned` so a Bind vis survived in SMgr/dyna with no owner. `DestroyAllOwnedQuiet` now `DestroyOwned` first. Do not SpawnStadium from `[Test]` on plugin load.
+
+`create` after `ResolveSkinPack`/`GetPackDesc` on the add path 2026-08-25 11:45 (`LogCrash_0000000000783A50`). Listed stadium=true then next frame AV `FUN_140783a50` (4-byte stub) from `NSceneVehicleVis_Update1_AfterRadialLod` `0x14073AE41`. `GetPackDesc` is SetBlockSkin on a screen, not a car zip. Removed that call from `AddStadiumVis`.
+
+Second spawn 2026-08-25 11:57 (`LogCrash_0000000011B30000`). RIP `0x11B30000` (not exe). After `InstallSkinnedModel` replaced wrap dest then wrap reused `dest=0x2F73A7580`. Do not Copy-first when wrap dest is reusable. Do not Free the CreateSkinned r8 name buffer.
+
+`poses` 3 cars 2026-08-25 12:00 (`LogCrash_00000000005CAB7C`). RIP `0x1405CAB7C` next frame after `posed 3/3`. `Dev::Write(vec3)` at rec+`0x08`+36 can store 16 bytes and smash rec+`0x38` (channel). Write 12 scalar floats.
+
+List-only `RawRemoveOne` with `+0x50==-1` leaves HMS cars: SMgr/GetAllVis=0 but 6 cars still drawn (`ScreenShot01.jpg`). Official Unbind `FUN_14072c250` / `CHmsMgrVisDyna::InstanceDestroy` `0x1401defc0` **no-ops when `vis+0x50==-1`**. Stash Bind's instance id, restore it, then KinAo `DestroyVis`.
+
 ## Proposed first spike
 
 1. Resolve SMgr from `GameScene` (index **13**). Confirm `+0x218` count matches `GetAllVis`. Index 12 is not the vis SMgr.
@@ -293,6 +396,13 @@ Stay out of Test mode for this spike. Do not apply VehicleKeepState. Do not `Dev
 | `0x140736610` | `NSceneVehicleVis_ModelQuery` |
 | `0x140736cb0` | `NSceneVehicleVis_ModelRelease` |
 | `0x14072c0f0` | `NSceneVehicleVis_BindModelEntity` |
+| `0x1405f0250` | `NPlugVehicleVis_CreateSkinnedModel_Internal` |
+| `0x1405f09f0` | `NPlugVehicleVis_CreateSkinnedModel` |
+| `0x140e646c0` | `CreateSkinnedVisModel` |
+| `0x1405efba0` | `NPlugVehicleVis_GeomModelCreate` |
+| `0x1405e63c0` | `NPlugVehicleVis_GeomModelLookupOrCreate` |
+| `0x1405e66e0` | `CPlugVehicleVisModel_Constructor` |
+| `0x140438ca0` | `CPlugSolid2Model_CopyWithSourceFid` |
 | `0x140ebe050` | `NGameCursorBlock_UpsertCursorItemRecords` |
 | `0x140ebe560` | `NGameCursorBlock_DestroyCursorItemRecords` |
 | `0x1407d29a0` | `NSceneVehiclePhy_ExtractVisStates` (pre-existing) |
@@ -305,3 +415,13 @@ Stay out of Test mode for this spike. Do not apply VehicleKeepState. Do not `Dev
 - Live proof that SMgr-created vis survives leaving Test and editor-unload.
 - Grow past 100.
 - Whether Reconcile (`0x140739d20`) will **destroy** a vis we created if its state is not in the phy-extract buffer. If yes, keep our states out of that buffer (they already are — they live in the +0x48 pool, not the extract scratch) **or** set whatever flag Reconcile uses at vis `+0x7c` bit 3 (`| 8` marks reconcile-managed vis). Our CreateVis path does **not** set that bit. Good.
+
+## Independent validation 2026-08-25
+
+Read-only Ghidra (`Trackmania.exe` @ `0x140000000`). No AsCall. Layout corrections:
+
+- **GameScene table is inline.** `ISceneVis_Create` writes `scene+0x8 = slot count` then zeros `scene+0x10[count]`. Official `GetSceneComponentBySlotIndex` is `*(scene + 0x10 + slot*8)`. Not a GbxVector `{ptr, count}`.
+- **Index 13 = `NSceneVehicleVis::SMgr`.** Slot from `SceneComponentSlot_AllocNext` (`return counter++`, BSS starts 0). Index **12 = `NSceneDecals::SMgr`** (class size `0x130`). `idx12+0x218` is OOB / a pointer word — that is the 2.7e9 “count”.
+- **Vis list is `MwFastBuffer` at `SMgr+0x210`:** `+0x00 ptr`, `+0x08 uint32 count`, `+0x0C uint32 cap`. Not `{ptr, size_t}`. `VisList_Add` increments that count; last element is the new vis. Add does not clamp at 100.
+- **Pool stride stored = `AlignUp(requested+8, 8)`** (8-byte freelist header before each object). State: request `0x360` → `0x368`. Vis slot: request `0x10B0` → `0x10B8`. `Reserve100` then `Reserve(100)` grows **twice** (`(N-free)/batch+1`), so empty vis slot pool `free=200`.
+- **AllocVisState rcx is the pool (`SMgr+0x48`)**. Pop is used++ / free-- / return ptr; no auto-free. Uninited pool Grow is `_aligned_malloc(0,0)` CRT-abort.
