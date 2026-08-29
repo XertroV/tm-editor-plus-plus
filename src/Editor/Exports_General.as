@@ -125,4 +125,9 @@ namespace Editor {
     import void LeaveCurrentItemEditor() from "Editor";
     // Magic save+reload; starts a coroutine (returns immediately).
     import void SaveAndReloadItemEditorAsync() from "Editor";
+    import void ReloadCurrentItemEditorItemAsync() from "Editor";
+    import void SaveItemAsEditorAsync(const string &in path) from "Editor";
+    import void ZeroCurrentItemModelFids(bool pushMatMod = true) from "Editor";
+    import void ZeroCurrentItemModelFidsKeepMaterials(bool pushMatMod = true) from "Editor";
+    import uint32 ItemNameToMwId(const string &in name) from "Editor";
 }
