@@ -312,6 +312,11 @@ namespace Editor {
         bool applyIsRemote = IsCaptureSuppressed();
         auto pmt = editor.PluginMapType;
         auto map = editor.Challenge;
+        // never peel while an engine terraform job may still be in flight:
+        // concurrent remove-vs-build has wedged the engine's terrain job
+        // queue for the rest of the session (observed live 2026-08-29)
+        uint _quietWaitStart = Time::Now;
+        while (Time::Now < _lastTerrainActivityAt + 700 && Time::Now < _quietWaitStart + 8000) yield();
 
         // NATIVE-ONLY apply. In the vista editors terrain can only be RAISED
         // by ground-block AutoTerrains (PlaceTerrainBlocks refuses in this
@@ -365,6 +370,13 @@ namespace Editor {
         return true;
     }
 
+    // True when the model's base ground variant carries AutoTerrains (i.e.
+    // native placement of it terraforms).
+    bool _GroundVariantHasAutoTerrains(CGameCtnBlockInfo@ info) {
+        if (info is null || info.VariantBaseGround is null) return false;
+        return DGameCtnBlockInfoVariantGround(info.VariantBaseGround).AutoTerrainsBuf.Length > 0;
+    }
+
     // Base-relative signature of the live cell at (x, z), "" when unreadable.
     string _CurrentCellSig(CGameCtnChallenge@ map, int x, int z) {
         if (map is null || x < 0 || z < 0) return "";
@@ -392,6 +404,8 @@ namespace Editor {
         if (gspec is null || editor is null || editor.PluginMapType is null) return false;
         if (gspec.Blocks.Length == 0) return true;
         auto pmt = editor.PluginMapType;
+        string _defaultSigCache = "";
+        bool _defaultSigInit = false;
         array<BlockSpec@> failedBlocks;
         for (uint i = 0; i < gspec.blocks.Length; i++) {
             auto b = gspec.blocks[i];
@@ -411,8 +425,39 @@ namespace Editor {
                 if (existing is null) @existing = pmt.GetBlock(int3(c.x, c.y - 1, c.z));
                 if (existing !is null && existing.BlockInfo !is null
                     && existing.BlockInfo.IdName == b.name && int(existing.Dir) == int(b.dir)) {
-                    dev_trace("PlaceMacroblockGroundBlocks: " + b.name + " already at " + c.ToString() + "; skipping");
-                    placed = true;
+                    // Heal: an undo dance can kill a still-pending async
+                    // terraform job after a block landed (the job takes ~1s;
+                    // an echo can dance within ~100ms). The block survives the
+                    // dance (API places have no undo entry) but the ground
+                    // stays bald. If the model carries ground AutoTerrains and
+                    // the cell under the block is still the map default,
+                    // remove + re-place to re-trigger the terrain job.
+                    bool healed = false;
+                    if (_GroundVariantHasAutoTerrains(existing.BlockInfo)) {
+                        if (!_defaultSigInit) {
+                            _defaultSigInit = true;
+                            _defaultSigCache = GetMapDefaultGenealogySignature(
+                                DGameCtnChallenge(editor.Challenge).TerrainGenealogies);
+                        }
+                        string cellSig = _CurrentCellSig(editor.Challenge, c.x, c.z);
+                        if (cellSig != "" && cellSig == _defaultSigCache) {
+                            dev_trace("PlaceMacroblockGroundBlocks: " + b.name + " at " + c.ToString()
+                                + " has no terraform under it; re-placing to re-trigger the terrain job");
+                            auto exCoord = Nat3ToInt3(Editor::GetBlockCoord(existing));
+                            try {
+                                pmt.RemoveBlockSafe(existing.BlockInfo, exCoord,
+                                    CGameEditorPluginMap::ECardinalDirections(int(existing.Dir)));
+                                placed = pmt.PlaceBlock(info, c, dir);
+                                healed = true;
+                            } catch {
+                                warn("PlaceMacroblockGroundBlocks: heal re-place threw for " + b.name + ": " + getExceptionInfo());
+                            }
+                        }
+                    }
+                    if (!healed) {
+                        dev_trace("PlaceMacroblockGroundBlocks: " + b.name + " already at " + c.ToString() + "; skipping");
+                        placed = true;
+                    }
                 } else {
                     try {
                         placed = pmt.PlaceBlock(info, c, dir);
@@ -578,7 +623,11 @@ namespace Editor {
         startnew(_TerrainSnapshotResyncSoon);
     }
     void _TerrainSnapshotResyncSoon() {
+        // wait for 2s of terrain QUIET, not a fixed 2s: a burst of ground
+        // blocks terraforms over several seconds, and refreshing mid-burst
+        // leaks the late cells into the next diff (broadcast echo)
         sleep(2000);
+        while (Time::Now < _lastTerrainActivityAt + 2000) sleep(250);
         _terrainResyncScheduled = false;
         if (_terrainSnapshotTaken) RefreshTerrainSnapshot();
     }
@@ -593,6 +642,9 @@ namespace Editor {
     //   GetTerrainDiffSpec() -> terrain-only MacroblockSpec to broadcast.
 
     bool _terrainDirty = false;
+    // last time a terrain block add/remove hook fired: engine terraform jobs
+    // are async, so recent activity means a rebuild may still be in flight
+    uint _lastTerrainActivityAt = 0;
     bool _terrainSnapshotTaken = false;
     array<string> _terrainSnapshotSigs;
 

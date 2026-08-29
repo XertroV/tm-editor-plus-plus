@@ -139,6 +139,7 @@ namespace Editor {
         // flag it so sync plugins can diff the grid (see GetTerrainDiffSpec).
         if (block.BlockInfo.IsTerrain) {
             _terrainDirty = true;
+            _lastTerrainActivityAt = Time::Now;
             Editor::Callbacks::Exts::Run_OnPlaceTerrainBlock(block);
             return;
         }
@@ -164,6 +165,7 @@ namespace Editor {
         // see TrackMap_OnAddBlock: terrain block churn = grid change signal
         if (block.BlockInfo.IsTerrain) {
             _terrainDirty = true;
+            _lastTerrainActivityAt = Time::Now;
             Editor::Callbacks::Exts::Run_OnDeleteTerrainBlock(block);
             return;
         }
