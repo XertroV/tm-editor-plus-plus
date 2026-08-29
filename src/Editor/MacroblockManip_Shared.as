@@ -347,8 +347,7 @@ namespace Editor {
             return {this};
         }
 
-        // Does not clone block, item, or terrain specs! This will add all
-        // blocks, items, and terrains from the other macroblock to this one.
+        // Does not clone block, item, or terrain specs! This will add all blocks, items, and terrains from the other macroblock to this one.
         void AddMacroblock(MacroblockSpec@ macroblock) {
             // todo: handle skins
             AddBlocks(macroblock.blocks);

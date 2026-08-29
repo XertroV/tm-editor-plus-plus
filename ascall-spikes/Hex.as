@@ -1,4 +1,4 @@
-#if SIG_DEVELOPER
+#if DEV
 // From spike-live-add-kinematic-ao StubLayout.as. AsCall writes the RWX stub with this.
 namespace Hex {
     array<uint8> Parse(const string &in hex) {
@@ -19,7 +19,7 @@ namespace Hex {
         return bytes;
     }
 
-    string Dump(array<uint8> b) {
+    string Dump(array<uint8> &in b) {
         string s = "";
         for (uint i = 0; i < b.Length; i++) {
             if (i > 0) s += " ";

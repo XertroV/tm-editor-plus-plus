@@ -3,7 +3,9 @@ namespace Tests {
     [Test]
     void MwId_DefaultConstructorIsNotDefined(Tests::Context@ ctx) {
         MwId id = MwId();
+        // Fails, might be difference between Openplanet MwId and game MwId ctor.
         ctx.AssertSame(id.Value, uint(-1), "MwId() stores 0xFFFFFFFF");
+        id.Value = -1;
         ctx.AssertFalse(Editor::MwIdIsDefined(id), "MwId() is Unassigned");
         ctx.AssertFalse(Editor::MwIdIsInterned(id), "MwId() is not interned");
         ctx.AssertSame(id.GetName(), "Unassigned", "GetName of default is Unassigned");

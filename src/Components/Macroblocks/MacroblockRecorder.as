@@ -15,17 +15,17 @@ namespace MacroblockRecorder {
 	[Setting hidden]
 	bool S_RecordMB_Save_AutoNameAndSave = false;
 	[Setting hidden]
-	bool S_RecordMB_RecordTerrain = true;
+	bool S_RecordMB_RecordTerrain = false;
 	[Setting hidden]
 	Editor::AlignWithinBlock S_RecordMB_AlignWithinBlock = Editor::AlignWithinBlock::None;
 
 	void DrawSettings() {
-        MacroblockRecorder::S_RecordMB_ForceAir = UI::Checkbox("Set all Blocks to Air", MacroblockRecorder::S_RecordMB_ForceAir);
-        MacroblockRecorder::S_RecordMB_ForceFree = UI::Checkbox("Convert all Blocks to Free", MacroblockRecorder::S_RecordMB_ForceFree);
-        MacroblockRecorder::S_RecordMB_RecordTerrain = UI::Checkbox("Record Terrain (from map)", MacroblockRecorder::S_RecordMB_RecordTerrain);
-        AddSimpleTooltip("Captures the map terrain under the recorded region into the macroblock. Placement applies the terrain via a ground-mode donor pass.");
-        MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction = UI::Checkbox("Save Macroblock after Construction", MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction);
-        MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave = UI::Checkbox("Automate Save (to _epp_tmp.Macroblock.Gbx)", MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave);
+		MacroblockRecorder::S_RecordMB_ForceAir = UI::Checkbox("Set all Blocks to Air", MacroblockRecorder::S_RecordMB_ForceAir);
+		MacroblockRecorder::S_RecordMB_ForceFree = UI::Checkbox("Convert all Blocks to Free", MacroblockRecorder::S_RecordMB_ForceFree);
+		MacroblockRecorder::S_RecordMB_RecordTerrain = UI::Checkbox("Record Terrain (from map)", MacroblockRecorder::S_RecordMB_RecordTerrain);
+		AddSimpleTooltip("Captures the map terrain under the recorded region into the macroblock. Placement applies the terrain via a ground-mode donor pass.");
+		MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction = UI::Checkbox("Save Macroblock after Construction", MacroblockRecorder::S_RecordMB_SaveAfterMbConstruction);
+		MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave = UI::Checkbox("Automate Save (to _epp_tmp.Macroblock.Gbx)", MacroblockRecorder::S_RecordMB_Save_AutoNameAndSave);
 	}
 
 	bool get_IsActive() {
@@ -73,6 +73,10 @@ namespace MacroblockRecorder {
 	uint get_CompletedRec_NbTerrains() {
 		if (recordedMB is null) return 0;
 		return recordedMB.terrains.Length;
+	}
+
+	uint get_CompletedRec_NbAll() {
+		return CompletedRec_NbBlocks + CompletedRec_NbItems + CompletedRec_NbTerrains;
 	}
 
 	Editor::MacroblockSpec@ GetRecordingMB() {
@@ -294,7 +298,7 @@ namespace MacroblockRecorder {
 				// Editor::SetSnapCameraPosition(editor, camState.CamPos);
 				auto rotateCamBtn = CControl::Editor_FrameEditSnap_RotateCameraBtn;
 				while (!rotateCamBtn.IsVisible || !rotateCamBtn.Parent.IsVisible) {
-					dev_trace("yield: rotateBtnVisibility");
+					Dev_NotifyTrace0("[TransferRecordedMbToEditorCopyPasteMb] yield: rotateBtnVisibility");
 					yield();
 				}
 				// rotateCamBtn.OnAction();
@@ -303,12 +307,12 @@ namespace MacroblockRecorder {
 					yield();
 					auto saveSnapMbBtn = CControl::Editor_FrameEditSnap_SaveBtn;
 					while (!saveSnapMbBtn.IsVisible || !saveSnapMbBtn.Parent.IsVisible) {
-						dev_trace("yield: saveSnapMbBtnVisibility");
+						Dev_NotifyTrace0("yield: saveSnapMbBtnVisibility");
 						yield();
 					}
 					saveSnapMbBtn.OnAction();
 					while (GetDialogSaveAs() is null) {
-						dev_trace("yield: get dialog save as");
+						Dev_NotifyTrace0("yield: get dialog save as");
 						yield();
 					}
 					if (SetSaveAsDialogEntryPath("_epp_tmp.Macroblock.Gbx")) {
@@ -348,7 +352,7 @@ namespace MacroblockRecorder {
 		// pmt.Cursor.Raise();
 		// pmt.Cursor.Lower();
 
-		if (_manipulating.GeneratedBlockInfo !is null) {
+		if (_manipulating !is null && _manipulating.GeneratedBlockInfo !is null) {
 			// do this after we change placement mode too.
 			if (_manipulating.GeneratedBlockInfo.VariantGround !is null) {
 				// when the recording captured terrain, keep terrain enabled for

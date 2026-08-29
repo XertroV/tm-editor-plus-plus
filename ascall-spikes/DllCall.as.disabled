@@ -1,4 +1,4 @@
-// #if SIG_DEVELOPER
+// #if DEV
 // // Backup native invoke: kinao_call.dll next to Trackmania.exe.
 // // Use this for callees that return or mutate CMwNod* — AsCall OnAction
 // // wraps those and AVs in Openplanet.dll (CopyWithSourceFid 07:57,

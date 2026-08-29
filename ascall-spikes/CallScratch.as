@@ -1,6 +1,6 @@
-#if SIG_DEVELOPER
+#if DEV
 // Persistent CreateVis scratch. Adapted from spike-live-add-kinematic-ao CallScratch
-// (that one was CreateInst-sized). Spawn params must be >= ~0x90; we keep 0xA0.
+// (that one was CreateInst-sized). Spawn ParamsBytes must be >= ~0x90; we keep 0xA0.
 namespace CallScratch {
     const uint OutBytes = 16;
     const uint ParamsBytes = 0xA0;
@@ -12,19 +12,14 @@ namespace CallScratch {
     uint64 params;
 
     void Ensure() {
-        if (outHandle == 0) outHandle = Dev::Allocate(OutBytes, false);
-        if (params == 0) params = Dev::Allocate(ParamsBytes, false);
+        if (outHandle == 0) outHandle = Dev::Allocate(OutBytes + ParamsBytes, false);
+        params = outHandle + OutBytes;
     }
 
     void Shutdown() {
-        if (outHandle != 0) {
-            Dev::Free(outHandle);
-            outHandle = 0;
-        }
-        if (params != 0) {
-            Dev::Free(params);
-            params = 0;
-        }
+        if (outHandle != 0) Dev::Free(outHandle);
+        outHandle = 0;
+        params = 0;
     }
 
     void Zero(uint64 ptr, uint nbytes) {

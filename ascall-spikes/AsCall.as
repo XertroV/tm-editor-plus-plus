@@ -1,4 +1,4 @@
-#if SIG_DEVELOPER
+#if DEV
 // OP-thread native call via dummy CControlButton vtable+0x200.
 // Adapted from spike-live-add-kinematic-ao (Win64-aligned stub).
 // Do not Dev::Hook this stub — ApplyHookAfterEnsure must stay false
@@ -7,9 +7,9 @@
 namespace AsCall {
     const uint OnActionVtableOff = 0x200;
     const uint VtCopyBytes = 0x280;
-    const uint64 GhidraOnActionThunk = 0x140143F84;
     const uint ClassIdButton = 0x07007000;
-    const string OnActionThunkHex = "48 8B 01 FF A0 00 02 00 00";
+    // const uint64 GhidraOnActionThunk = 0x140143F84;
+    // const string OnActionThunkHex = "48 8B 01 FF A0 00 02 00 00";
 
     const uint OffFn = 0x80;
     const uint OffRcx = 0x88;

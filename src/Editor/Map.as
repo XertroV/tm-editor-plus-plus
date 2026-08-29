@@ -404,7 +404,6 @@ namespace Editor {
     // }
 
     // False when +0x2D0 is not a FastArray (null ptr, huge len, cap<len).
-    // Reading MbName/GetMwIdValue through that junk is an Openplanet.dll crash.
     bool MapMacroblockInfosLookValid(CGameCtnChallenge@ map) {
         if (map is null) return false;
         uint64 ptr = Dev::GetOffsetUint64(map, O_MAP_MACROBLOCK_INFOS);

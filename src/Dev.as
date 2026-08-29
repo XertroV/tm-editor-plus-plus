@@ -173,8 +173,7 @@ bool Dev_PointerLooksBad(uint64 ptr) {
 }
 
 
-// Mapped-page probe. Does not require 8-byte alignment (field addrs like +0x2C
-// and pattern bytes at +5 are legal). Use Dev_PtrUsable for object bases.
+// Check if memory is readable. No alignment check. Use Dev_PtrUsable for nods/structs.
 bool Dev_CanTouch(uint64 addr) {
     if (addr == 0) return false;
     try {

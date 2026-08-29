@@ -31,6 +31,12 @@ void Dev_NotifyWarning(const string &in msg) {
 #endif
 }
 
+void Dev_NotifyTrace0(const string &in msg) {
+#if DEV
+    // show only for 1 frame.
+    UI::ShowNotification(msg, "Dev: Trace", 0);
+#endif
+}
 
 void AddSimpleTooltip(const string &in msg, bool pushFont = false) {
     if (UI::IsItemHovered()) {

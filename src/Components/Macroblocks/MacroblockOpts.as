@@ -65,7 +65,7 @@ class MacroblockOptsTab : Tab {
             if (hasExistingRec) {
                 UI::SameLine();
                 if (UI::ButtonColored("Resume Recording", .3, .6, .5)) MacroblockRecorder::ResumeRecording();
-                if (MacroblockRecorder::CompletedRec_NbTerrains > 0) {
+                if (MacroblockRecorder::CompletedRec_NbAll > 0) {
                     UI::Text("Last recording: " + MacroblockRecorder::CompletedRec_NbBlocks + " blocks, "
                         + MacroblockRecorder::CompletedRec_NbItems + " items, "
                         + MacroblockRecorder::CompletedRec_NbTerrains + " terrains");
