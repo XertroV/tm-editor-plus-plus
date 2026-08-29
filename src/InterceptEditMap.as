@@ -3,10 +3,10 @@ bool INTERCEPTS_SET_UP = false;
 void SetUpEditMapIntercepts() {
     if (INTERCEPTS_SET_UP) return;
     INTERCEPTS_SET_UP = true;
-// #if DEV
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap", _EditMap);
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap2", _EditMap2);
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap3", _EditMap3);
+    // this one is used
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap4", _EditMap4);
     // this one is used
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditMap5", _EditMap5);
@@ -17,7 +17,6 @@ void SetUpEditMapIntercepts() {
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap", _EditNewMapFromBaseMap);
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap2", _EditNewMapFromBaseMap2);
     Dev::InterceptProc("CGameManiaTitleControlScriptAPI", "EditNewMapFromBaseMap3", _EditNewMapFromBaseMap3);
-// #endif
     Dev::InterceptProc("CGameEditorPluginMap", "LayerCustomEvent", _CGameEditorPluginMap_LayerCustomEvent);
 }
 
@@ -66,23 +65,42 @@ bool _EditMap3(CMwStack &in stack) {
     // return true;
 }
 
-bool _EditMap4(CMwStack &in stack) {
+bool _EditMap4_Passthrough = false;
+// void EditMap4(wstring Map, string Decoration, wstring ModNameOrUrl, wstring PlayerModel, MwFastBuffer<wstring>& EditorPluginsScripts, MwFastBuffer<wstring>& EditorPluginsArguments, bool UpgradeToAdvancedEditor)
+bool _EditMap4(CMwStack &in stack, CMwNod@ nod) {
+    if (_EditMap4_Passthrough) {
+        Event::RunOnEditorStartingUpCbs(true);
+        return true;
+    }
     trace("Editing map via: _EditMap4");
-    Event::RunOnEditorStartingUpCbs(true);
-    return true;
+
+    bool upgradeAdv = stack.CurrentBool(0);
+    auto pluginArgs = stack.CurrentBufferWString(1);
+    auto pluginScripts = stack.CurrentBufferWString(2);
+    string playerModel = stack.CurrentWString(3);
+    string modNameOrUrl = stack.CurrentWString(4);
+    string decoration = stack.CurrentString(5);
+    string map = stack.CurrentWString(6);
+    CGameManiaTitleControlScriptAPI@ titleApi = cast<CGameManiaTitleControlScriptAPI>(nod);
+
+    trace("Calling EditMapIntercept::EditMap4");
+    EditMapIntercept::EditMap4(titleApi, map, decoration, modNameOrUrl, playerModel, pluginScripts, pluginArgs, upgradeAdv);
+    return false;
     // if (EDIT_MAP_PASSTHROUGH) return true;
     // dev_trace("_EditMap4");
     // return true;
 }
 
 bool _EditMap5_Passthrough = false;
-
 // used for UI things
 bool _EditMap5(CMwStack &in stack, CMwNod@ nod) {
+    // void EditMap5(wstring Map, string Decoration, wstring ModNameOrUrl, wstring PlayerModel, MwFastBuffer<wstring>& EditorPluginsScripts, MwFastBuffer<wstring>& EditorPluginsArguments, bool UpgradeToAdvancedEditor, bool OnlyUseForcedPlugins)
     if (_EditMap5_Passthrough) {
         Event::RunOnEditorStartingUpCbs(true);
         return true;
     }
+    trace("Editing map via: _EditMap5");
+
     bool onlyForced = stack.CurrentBool(0);
     bool upgradeAdv = stack.CurrentBool(1);
     auto pluginArgs = stack.CurrentBufferWString(2);
@@ -151,6 +169,26 @@ bool _EditMap5(CMwStack &in stack, CMwNod@ nod) {
 bool S_AllowNonCarSportPlayerModelsEditingMap = true;
 
 namespace EditMapIntercept {
+    void EditMap4(CGameManiaTitleControlScriptAPI@ titleApi, const string &in map, const string &in decoration, const string &in modNameOrUrl, string _playerModel, MwFastBuffer<wstring> &in pluginScripts, MwFastBuffer<wstring> &in pluginArgs, bool upgradeAdv) {
+        dev_trace("map: " + map);
+        dev_trace("decoration: " + decoration);
+        dev_trace("modNameOrUrl: " + modNameOrUrl);
+        dev_trace("playerModel: " + _playerModel);
+        dev_trace("pluginScripts: " + MwBufWstrToString(pluginScripts));
+        dev_trace("pluginArgs: " + MwBufWstrToString(pluginArgs));
+        dev_trace("upgradeAdv: " + upgradeAdv);
+
+        if (S_AllowNonCarSportPlayerModelsEditingMap && _playerModel == "CarSport") {
+            trace("Allowing any player/car model for editing map");
+            _playerModel = "";
+        }
+
+        trace("Calling titleApi.EditMap4");
+        _EditMap4_Passthrough = true;
+        titleApi.EditMap4(map, decoration, modNameOrUrl, _playerModel, pluginScripts, pluginArgs, upgradeAdv);
+        _EditMap4_Passthrough = false;
+    }
+
     void EditMap5(CGameManiaTitleControlScriptAPI@ titleApi, const string &in map, const string &in decoration, const string &in modNameOrUrl, string _playerModel, MwFastBuffer<wstring> &in pluginScripts, MwFastBuffer<wstring> &in pluginArgs, bool upgradeAdv, bool onlyForced) {
         dev_trace("map: " + map);
         dev_trace("decoration: " + decoration);
@@ -169,6 +207,28 @@ namespace EditMapIntercept {
         _EditMap5_Passthrough = true;
         titleApi.EditMap5(map, decoration, modNameOrUrl, _playerModel, pluginScripts, pluginArgs, upgradeAdv, onlyForced);
         _EditMap5_Passthrough = false;
+    }
+
+    void EditNewMap4(CGameManiaTitleControlScriptAPI@ titleApi, const string &in environment, const string &in decoration, const string &in modNameOrUrl, string _playerModel, const string &in mapType, bool useSimple, MwFastBuffer<wstring> &in pluginScripts, MwFastBuffer<wstring> &in pluginArgs, bool onlyForced) {
+        dev_trace("environment: " + environment);
+        dev_trace("decoration: " + decoration);
+        dev_trace("modNameOrUrl: " + modNameOrUrl);
+        dev_trace("playerModel: " + _playerModel);
+        dev_trace("mapType: " + mapType);
+        dev_trace("useSimple: " + useSimple);
+        dev_trace("pluginScripts: " + MwBufWstrToString(pluginScripts));
+        dev_trace("pluginArgs: " + MwBufWstrToString(pluginArgs));
+        dev_trace("onlyForced: " + onlyForced);
+
+        if (S_AllowNonCarSportPlayerModelsEditingMap && _playerModel == "CarSport") {
+            trace("Allowing any player/car model for editing map");
+            _playerModel = "";
+        }
+
+        trace("Calling titleApi.EditNewMap4");
+        _EditNewMap4_Passthrough = true;
+        titleApi.EditNewMap4(environment, decoration, modNameOrUrl, _playerModel, mapType, useSimple, pluginScripts, pluginArgs, onlyForced);
+        _EditNewMap4_Passthrough = false;
     }
 
     string MwBufWstrToString(MwFastBuffer<wstring> &in buf) {
@@ -225,60 +285,29 @@ bool _EditNewMap3(CMwStack &in stack) {
     // return true;
 }
 
+bool _EditNewMap4_Passthrough = false;
+
 // used for all UI calls
 bool _EditNewMap4(CMwStack &in stack, CMwNod@ nod) {
+    // void EditNewMap4(string Environment, string Decoration, wstring ModNameOrUrl, wstring PlayerModel, wstring MapType, bool UseSimpleEditor, MwFastBuffer<wstring>& EditorPluginsScripts, MwFastBuffer<wstring>& EditorPluginsArguments, bool OnlyUseForcedPlugins)
+    if (_EditNewMap4_Passthrough) {
+        Event::RunOnEditorStartingUpCbs(false);
+        return true;
+    }
     trace("Editing new map via: _EditNewMap4");
-    Event::RunOnEditorStartingUpCbs(false);
-    return true;
-    // if (EDIT_MAP_PASSTHROUGH) return true;
-    // CGameManiaTitleControlScriptAPI@ titleApi = cast<CGameManiaTitleControlScriptAPI>(nod);
-    // dev_trace("_EditNewMap4");
-    // // string Environment, string Decoration, wstring ModNameOrUrl,
-    // // wstring PlayerModel, wstring MapType, bool UseSimpleEditor,
-    // // MwFastBuffer<wstring>& EditorPluginsScripts, MwFastBuffer<wstring>& EditorPluginsArguments,
-    // // bool OnlyUseForcedPlugins
-    // bool onlyForced = stack.CurrentBool(0);
-    // auto pluginArgs = stack.CurrentBufferWString(1);
-    // auto pluginScripts = stack.CurrentBufferWString(2);
-    // bool useSimple = stack.CurrentBool(3);
-    // string mapType = stack.CurrentWString(4);
-    // string playerModel = stack.CurrentWString(5);
-    // string modNameOrUrl = stack.CurrentWString(6);
-    // string decoration = stack.CurrentString(7);
-    // string environment = stack.CurrentString(8);
 
-    // MwFastBuffer<wstring> _pluginScripts;
-    // MwFastBuffer<wstring> _pluginArgs;
-    // _pluginScripts.Add(wstring("EditorPlusPlus.Script.txt"));
-    // _pluginArgs.Add(wstring(""));
-    // string pluginScriptsTxt;
-    // string pluginArgsTxt;
-    // for (uint i = 0; i < pluginScripts.Length; i++) {
-    //     auto s = string(pluginScripts[i]);
-    //     _pluginScripts.Add(s);
-    //     pluginScriptsTxt += (i > 0 ? ", " : "") + s;
-    // }
-    // for (uint i = 0; i < pluginArgs.Length; i++) {
-    //     auto s = string(pluginArgs[i]);
-    //     _pluginArgs.Add(s);
-    //     pluginArgsTxt += (i > 0 ? ", " : "") + s;
-    // }
-
-    // dev_trace("environment: " + environment);
-    // dev_trace("decoration: " + decoration);
-    // dev_trace("modNameOrUrl: " + modNameOrUrl);
-    // dev_trace("playerModel: " + playerModel);
-    // dev_trace("mapType: " + mapType);
-    // dev_trace("useSimple: " + useSimple);
-    // dev_trace("pluginScripts: " + pluginScriptsTxt);
-    // dev_trace("pluginArgs: " + pluginArgsTxt);
-    // dev_trace("onlyForced: " + onlyForced);
-
-    // EDIT_MAP_PASSTHROUGH = true;
-    // titleApi.EditNewMap4(environment, decoration, modNameOrUrl, playerModel, mapType, useSimple, pluginScripts, pluginArgs, onlyForced);
-    // EDIT_MAP_PASSTHROUGH = false;
-
-    // return false;
+    bool onlyForced = stack.CurrentBool(0);
+    auto pluginArgs = stack.CurrentBufferWString(1);
+    auto pluginScripts = stack.CurrentBufferWString(2);
+    bool useSimple = stack.CurrentBool(3);
+    string mapType = stack.CurrentWString(4);
+    string playerModel = stack.CurrentWString(5);
+    string modNameOrUrl = stack.CurrentWString(6);
+    string decoration = stack.CurrentString(7);
+    string environment = stack.CurrentString(8);
+    CGameManiaTitleControlScriptAPI@ titleApi = cast<CGameManiaTitleControlScriptAPI>(nod);
+    EditMapIntercept::EditNewMap4(titleApi, environment, decoration, modNameOrUrl, playerModel, mapType, useSimple, pluginScripts, pluginArgs, onlyForced);
+    return false;
 }
 bool _EditNewMapFromBaseMap(CMwStack &in stack) {
     trace("Editing new map via: _EditNewMapFromBaseMap");
