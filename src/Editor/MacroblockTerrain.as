@@ -315,11 +315,25 @@ namespace Editor {
         bool applyIsRemote = IsCaptureSuppressed();
         auto pmt = editor.PluginMapType;
         auto map = editor.Challenge;
+        // Fast path: when every cell already matches its target (the common
+        // case -- the ground-block replay preceding this diff terraformed the
+        // same cells), there is nothing to peel, so no need to wait for the
+        // engine job queue at all.
+        bool anyWork = false;
+        for (uint i = 0; i < mbSpec.terrains.Length; i++) {
+            auto ts = mbSpec.terrains[i];
+            string curSig = _CurrentCellSig(map, ts.offset.x, ts.offset.z);
+            if (curSig != "" && curSig != TerrainSpecSignature(ts)) { anyWork = true; break; }
+        }
+        if (!anyWork) {
+            dev_trace("PlaceMacroblockTerrain: " + mbSpec.terrains.Length + " cells all match; no-op");
+            return true;
+        }
         // never peel while an engine terraform job may still be in flight:
         // concurrent remove-vs-build has wedged the engine's terrain job
         // queue for the rest of the session (observed live 2026-08-29)
         uint _quietWaitStart = Time::Now;
-        while (Time::Now < _lastTerrainActivityAt + 700 && Time::Now < _quietWaitStart + 8000) yield();
+        while (Time::Now < _lastTerrainActivityAt + 300 && Time::Now < _quietWaitStart + 8000) yield();
 
         // NATIVE-ONLY apply. In the vista editors terrain can only be RAISED
         // by ground-block AutoTerrains (PlaceTerrainBlocks refuses in this
@@ -626,11 +640,14 @@ namespace Editor {
         startnew(_TerrainSnapshotResyncSoon);
     }
     void _TerrainSnapshotResyncSoon() {
-        // wait for 2s of terrain QUIET, not a fixed 2s: a burst of ground
-        // blocks terraforms over several seconds, and refreshing mid-burst
-        // leaks the late cells into the next diff (broadcast echo)
-        sleep(2000);
-        while (Time::Now < _lastTerrainActivityAt + 2000) sleep(250);
+        // wait for terrain QUIET, not a fixed time: a burst of ground blocks
+        // terraforms over several seconds, and refreshing mid-burst leaks the
+        // late cells into the next diff (broadcast echo). An early refresh is
+        // only an echo (peers no-op it via sig-match), so a short quiet
+        // window with a hard cap is enough.
+        sleep(300);
+        uint capAt = Time::Now + 5000;
+        while (Time::Now < _lastTerrainActivityAt + 500 && Time::Now < capAt) sleep(100);
         _terrainResyncScheduled = false;
         if (_terrainSnapshotTaken) RefreshTerrainSnapshot();
     }
@@ -728,8 +745,12 @@ namespace Editor {
     // poll GetTerrainDiffSpec -- hooks fan the single diff out instead).
     // With no subscribers the watcher touches nothing, keeping the polling
     // exports usable. Ticked from ResetTrackMapChanges_Loop (BeforeScripts).
-    const uint TERRAIN_SETTLE_MS = 1200;
-    uint _terrainHookDirtyAt = 0;
+    // Frame-based settle: the engine terraform job advances per frame, so N
+    // consecutive watcher ticks with no dirty flag means the job is done. A
+    // premature settle self-heals (the next change re-arms and emits a
+    // follow-up diff), so this can be small.
+    const uint TERRAIN_SETTLE_QUIET_FRAMES = 5;
+    uint _terrainQuietFrames = 0;
     bool _terrainHookArmed = false;
 
     bool _terrainHookWatcherAnnounced = false;
@@ -756,14 +777,16 @@ namespace Editor {
                 Callbacks::Exts::Run_OnTerrainDirty();
             }
             _terrainHookArmed = true;
-            _terrainHookDirtyAt = Time::Now;
+            _terrainQuietFrames = 0;
+        } else if (_terrainHookArmed) {
+            _terrainQuietFrames++;
         }
-        if (_terrainHookArmed && Time::Now - _terrainHookDirtyAt > TERRAIN_SETTLE_MS) {
+        if (_terrainHookArmed && _terrainQuietFrames >= TERRAIN_SETTLE_QUIET_FRAMES) {
             if (IsTerrainResyncPending()) {
                 // a remote/API apply is still settling; its grid churn must
                 // land in the snapshot (via the restore-loop refresh), not in
                 // a broadcast diff -- hold until quiet
-                _terrainHookDirtyAt = Time::Now;
+                _terrainQuietFrames = 0;
                 return;
             }
             _terrainHookArmed = false;
