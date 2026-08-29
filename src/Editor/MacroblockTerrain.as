@@ -355,6 +355,17 @@ namespace Editor {
                 nbResetOnly++;
                 continue;
             }
+            // Peeling only LOWERS the stack: a target that tops out above the
+            // live cell is provably not peel-reachable. Bail before touching
+            // the cell -- attempting anyway strips it toward default (and
+            // burns ~40 frames per attempt) before concluding deferred.
+            auto curGen = _CurrentCellGen(map, c.x, c.z);
+            if (curGen !is null && ts.topHeight - ts.baseHeight > curGen.TopHeight - curGen.BaseHeight) {
+                nbDeferred++;
+                dev_trace("PlaceMacroblockTerrain: cell <" + c.x + "," + c.z
+                    + "> target above current stack (raise-shaped); deferring without peel");
+                continue;
+            }
             bool matched = false;
             for (uint attempt = 0; attempt < 8; attempt++) {
                 if (!pmt.RemoveTerrainBlocks(int3(c.x, 0, c.z), int3(c.x, 40, c.z))) break;
@@ -403,17 +414,21 @@ namespace Editor {
     uint _TerrainCellIx(int x, int z, int sizeZ) { return uint(z) + uint(x) * uint(sizeZ); }
     int3 _TerrainCellCoord(uint ix, int sizeZ) { return int3(int(ix) / sizeZ, 0, int(ix) % sizeZ); }
 
-    // Base-relative signature of the live cell at (x, z), "" when unreadable.
-    string _CurrentCellSig(CGameCtnChallenge@ map, int x, int z) {
-        if (map is null || x < 0 || z < 0) return "";
+    // Live genealogy nod of the cell at (x, z), null when unreadable.
+    CGameCtnZoneGenealogy@ _CurrentCellGen(CGameCtnChallenge@ map, int x, int z) {
+        if (map is null || x < 0 || z < 0) return null;
         auto cells = DGameCtnChallenge(map).TerrainGenealogies;
         int sizeZ = Nat3ToInt3(map.Size).z;
-        if (sizeZ <= 0) return "";
+        if (sizeZ <= 0) return null;
         uint ix = _TerrainCellIx(x, z, sizeZ);
-        if (ix >= cells.Length) return "";
-        auto gen = cells.GetTerrainCell(ix).Nod;
-        if (gen is null) return "";
-        return GenealogySignature(gen);
+        if (ix >= cells.Length) return null;
+        return cells.GetTerrainCell(ix).Nod;
+    }
+
+    // Base-relative signature of the live cell at (x, z), "" when unreadable.
+    string _CurrentCellSig(CGameCtnChallenge@ map, int x, int z) {
+        auto gen = _CurrentCellGen(map, x, z);
+        return gen is null ? "" : GenealogySignature(gen);
     }
 
     // Place ground grid blocks. The air-mode donor refuses any isGround block
