@@ -2,6 +2,7 @@
 
 ## Macroblocks — terrain (new)
 
+- 2026-08-29: genealogy-grid flatten fixed — the grid at challenge+0x390 is **x-major** (`ix = z + x*size.z`, verified empirically); pre-fix TerrainSpec offsets and remote peels used mirrored cells (commit 4289867).
 - Macroblock specs can capture, serialize, and place **map terrain** (non-default genealogy cells). E++ placement is two-pass: air-mode for blocks/items, then a ground-mode donor pass for terrain only (air-mode + AutoTerrains crashes the game).
 - Guards: never ground-place an empty donor; abort if the map ground base cannot be resolved; terrain offsets stored absolute and normalized at place time. Zone nods resolved from the map genealogy grid (not `CompleteZoneList`).
 - Macroblock Recorder: **Record Terrain (from map)** checkbox (default off). Captures terrain under the recorded region into the spec; UI shows terrain counts. Native paste of an air macroblock that still carries AutoTerrains can crash — prefer applying the recording through E++ `PlaceMacroblock`.
