@@ -26,7 +26,7 @@ Prior: [`2026-08-24-SceneVehicleInstances.md`](2026-08-24-SceneVehicleInstances.
 Unpacked GameData (not the zip itself):
 
 - `GameData/Skins/Models/CarSport/Stadium/Standard/MainBody.Mesh.gbx`
-- `GameData/Skins/Models/CarSport/Stadium/Common/MainBody.Skel.Gbx` + `Skin_DirtMask.dds` / `Details_DirtMask.dds` (`tm-modless-skids`)
+- `GameData/Skins/Models/CarSport/Stadium/Common/MainBody.Skel.Gbx` + `Skin_DirtMask.dds` / `Details_DirtMask.dds` (`tm-modless-skids`). DirtMask is the body overlay, not tyre/dirt **smoke** — smoke is GameData particle FIDs, not the zip ([`2026-08-26-VehicleSmokeSkins.md`](2026-08-26-VehicleSmokeSkins.md)).
 
 Country zips remap textures on that same Stadium mesh folder. Snow/Rally/Desert are **other vis models**, not skins.
 

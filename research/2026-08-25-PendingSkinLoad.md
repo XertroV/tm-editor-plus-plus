@@ -222,9 +222,15 @@ Defaults: `flags &= 0x1f80`, `+8 = 1.0f`, `+0x14 = 0x3fff`, `+0x18 = vec4(0.5)`,
 - Whether `FlushPendingCreateSkinned` runs mid-match at all, or only on app teardown / a rare CGameCtnApp vtable tick.
 - Polarity of `g_nLagAllowed` vs the 200 ms budget in a live paused frame (decompile only).
 
+## Compact handoff (2026-08-26, persist-before-compact)
+
+Pickup file is this note. Ghidra saved again (`GET /save_all_programs` success, both programs). No plugin code, no tests, no git commit pending for this work. `research/2026-08-25-PendingSkinLoad.md` is untracked in the working tree; do not assume it is on origin.
+
+Goal that started the session: find the **apply** trigger for a match-joiner skin that has already downloaded. Answer is in Short answer + Pipeline above. Do not re-walk the named graph.
+
 ## Next session (do not redo)
 
-Ghidra DB is saved (`GET /save_all_programs` 2026-08-26). Struct `CSystemPackDesc` exists. **Do not** whole-program `/search_instructions` — it held the `:18742` lock for minutes. Scope `function=` and prefer `CMP`/`MOV` + operand `0xa0`.
+Ghidra DB is saved (`GET /save_all_programs` 2026-08-26, twice). Struct `CSystemPackDesc` exists. **Do not** whole-program `/search_instructions` — it held the `:18742` lock for minutes. Scope `function=` and prefer `CMP`/`MOV` + operand `0xa0`.
 
 Still `FUN_*` on the graph: `FUN_14091a0c0` (URL create, reads manager `+0xa0` folder only), `FUN_140b4b250` (vtable `+0x138` thunk used as pack fallback), `FUN_140749580` (CharVis path into display-params init), `FUN_14074b320` (other vis `+0x528`), `FUN_140741c30`, `FUN_14106fba0` / `FUN_14106f8f0` (pool pop + display-params at `+0x44`).
 

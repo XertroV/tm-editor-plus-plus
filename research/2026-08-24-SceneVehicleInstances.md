@@ -54,7 +54,7 @@ Registered `FUN_140727890`. Live pointer: `GameScene+0x10 + 13*8` (mgr index **1
 | `+0x40` | `CPlugVehiclePhyModel*` (CreateVis spawn `+0x10`). Official Test vis. Not dest s2m. |
 | `+0x50` | HMS dyna instance id. `-1` skips Unbind/InstanceDestroy and UpdateAuxChannels pose write. E++ Bind then writes `-1` (073C58D). |
 | `+0x7c` | Flags. Official CreateVisFromState: bit0\|bit5 (`0x21`), bit3 (`0x8`) = reconcile-managed. Live E++ Bind vis later show `0x7`. |
-| `+0x94` | Clip / FX mask. Update1 passes SMgr collision world into UpdateAuxChannels when `0xf` / `0xf0` / `0xf00` or bit 13 (`0x2000`). Live E++ Bind cars sit at **`0x3FFF`** (bits 0–13) **every frame**. `CSceneVehicleVis_Init` zeros it. Bind does not write it. Reconcile only tweaks bit 13 from AsyncState (`state+0x88` / `0x2000000`). Writer of `0x3FFF` not yet a single `mov imm` (not InitVis, not Bind, not UpdateChannelsFromState). OnUpdate clear loses the race: game restores `0x3FFF` before Update1 PointCast. |
+| `+0x94` | uint32 clip/FX mask. Full bit consumers: [`2026-08-26-Vis94ClipMask.md`](2026-08-26-Vis94ClipMask.md). Editor cursor / E++ Bind `0x3FFF`; Test+Validation driving `0x7111`. |
 | `+0x130` | `CSceneVehicleVisState*` (`AsyncState`) |
 | `+0x1b8` | Wheel-contact count. Official `NSceneVehicleVis_BindCopyWheelContactSlots` (`0x14072c2a0`) copies `geom+0x5a8`. E++ Bind skips it (stays 0). |
 | `+0x10A8` | Index in SMgr+0x210 vector (extra pool header, past nod size) |
@@ -62,6 +62,25 @@ Registered `FUN_140727890`. Live pointer: `GameScene+0x10 + 13*8` (mgr index **1
 **PointCast_FirstClip** (`NHmsCollision_PointCast_FirstClip` `0x1402a4ec0`): Update1 `AsyncState_Update` → UpdateAuxChannels, **two** casts per vis when `+0x94` arms the collision world (4 cars → 8). Same function later in the frame from `CGameEnvironmentManager_Update` (`0x140fc3b70`, also 8 with 4 cars) — editor/env probes vs HMS collision **targets**. Alternating 5ms/3ms is the two UpdateAuxChannels rays (second often cheaper). Test vs Validation differ in vehicle collision; compare official vis `+0x94`/`+0x7c`/`+0x50` in both.
 
 Hook sketch (not shipped): intercept the `0x3FFF` **writer** call site if it is not the phy loop; else hook a run context **after** that write and **before** Update1 PointCast (Update1 entry is a candidate — AfterRadialLod, not `ExtractVisStates`). Do not `Dev::Hook` the AsCall stub.
+
+Live 2026-08-26 **Test mode** (driving, not cursor-only), SMgr count ~1–2, `dynaLive=4`:
+
+| vis | ent | `+0x94` | `+0x7c` | `+0x50` | `+0x1b8` | `+0x40` | `+0x70+0x170` |
+|---|---|---|---|---|---|---|---|
+| Cursor (editor, earlier) | `0x04000012` | `0x3FFF` | `0x7` | `2` | `4` | PhyModelSport | heap |
+| Test driving `0x300C3E240` | `0x02000012` | **`0x7111`** | `0xF` | `0` | `4` | PhyModelSport | heap `0x337EE7910` |
+| Extra slot `0x300C3F2F8` | `0x04000017` | `0x3FFF` | `0xF` | `-1` | `0` | 0 | 0 (no model) |
+| E++ Bind (editor) | `0xFF00000` | `0x3FFF` | `0x7` | `-1` | `0` | PhyModelSport | `chan+0x17e` stub |
+
+`0x7111` = bits 0,4,8,12,13,14 (one bit per nibble + extras). Still trips Update1 PointCast (`0xf`/`0xf0`/`0xf00`/bit13 all nonzero) but is **not** the full `0x3FFF` editor/cursor mask.
+
+Live 2026-08-26 **Validation** (`inTest=false`, SMgr count=1, `dynaLive=2`), driving vis `0x300C3F2F8`:
+
+| vis | ent | `+0x94` | `+0x7c` | `+0x50` | `+0x1b8` | `+0x40` | `+0x70+0x170` |
+|---|---|---|---|---|---|---|---|
+| Validation driving | `0x0200001e` | **`0x7111`** | `0xF` | `0` | `4` | PhyModelSport | heap `0x34D3AA1C0` |
+
+Validation **matches Test driving** on `+0x94`/`+0x7c`/`+0x50`/`+0x1b8`. Editor cursor and E++ Bind stay on `0x3FFF` / `+0x7c=7` / no wheel slots. Stale E++ slots in the pool still show `ent=0xFF00000`, `+0x50=-1`, `+0x94=0x1000` (OnUpdate silence leftover), `+0x58=0`.
 
 Factory ctor `CSceneVehicleVis_FactoryCtor` `0x14073f730` is the MwClass allocator. **Do not AsCall it** — it does not add the vis to the SMgr list.
 
@@ -358,6 +377,10 @@ Pose-by-index 2026-08-25: `UpdateAsync_PostCameraVisibility` indexes **`model+0x
 Plugin reload 2026-08-25 11:42 (`LogCrash_0000000000000000`). AV, called from `0x14011F124` (stack also `0x140737E70` Update2_AfterAnim+6). `OnPluginUnload` used `ForgetOwned` so a Bind vis survived in SMgr/dyna with no owner. `DestroyAllOwnedQuiet` now `DestroyOwned` first. Do not SpawnStadium from `[Test]` on plugin load.
 
 `create` after `ResolveSkinPack`/`GetPackDesc` on the add path 2026-08-25 11:45 (`LogCrash_0000000000783A50`). Listed stadium=true then next frame AV `FUN_140783a50` (4-byte stub) from `NSceneVehicleVis_Update1_AfterRadialLod` `0x14073AE41`. `GetPackDesc` is SetBlockSkin on a screen, not a car zip. Removed that call from `AddStadiumVis`.
+
+Leave editor (destroy-all first, 2026-08-26 ~12:32) then **create more** crashed again at RIP `0x140783A50` (file vanished; same Update1 `rdx` garbage). Destroy-all left `lastSkinnedS2m` set. CreateSkinned dest dies with the map; `Dev_CanTouch` stays true on recycled heap; `destC8` can be nonzero garbage so `WrapNeedsNewDest` reuses it. Fix: `ForgetOwned` zeros wrap dest; `editorSessionGen++` on `OnEditorUnload`; `WrapDestReusable` refuses dest from a prior session. Do not reuse wrap dest after leave/re-enter.
+
+Re-enter create with wrap dest dropped 2026-08-26 12:45 (`LogCrash_0000000000783A50` at tm-docs root). CreateSkinned+Bind returned; next frame RIP `0x140783A50` rdx=`0x3F80000000000000`. `FUN_14072b3c0` walks `vis+0xf88..+0x1028`; InitVis does not zero it; PoolPop after map unload is dirty heap. `ZeroVisF88Slots` after InitVis. Trackmania.exe, not OP.dll.
 
 Second spawn 2026-08-25 11:57 (`LogCrash_0000000011B30000`). RIP `0x11B30000` (not exe). After `InstallSkinnedModel` replaced wrap dest then wrap reused `dest=0x2F73A7580`. Do not Copy-first when wrap dest is reusable. Do not Free the CreateSkinned r8 name buffer.
 
