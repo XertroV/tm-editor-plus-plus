@@ -120,8 +120,10 @@ namespace Editor {
     }
 
     void TrackMap_OnAddBlock(CGameCtnBlock@ block) {
-        // skip grass
-        if (block.BlockInfo.IsTerrain) return;
+        // terrain blocks are not tracked as placements, but their appearance
+        // means the genealogy grid changed (terraform tools / auto-terrain) --
+        // flag it so sync plugins can diff the grid (see GetTerrainDiffSpec).
+        if (block.BlockInfo.IsTerrain) { _terrainDirty = true; return; }
         blocksAddedThisFrame.InsertLast(BlockSpecPriv(block));
         if (block.Skin !is null && (block.Skin.PackDesc !is null || block.Skin.ForegroundPackDesc !is null)) {
             auto fg = block.Skin.ForegroundPackDesc !is null ? GetSkinPath(block.Skin.ForegroundPackDesc) : "";
@@ -140,8 +142,8 @@ namespace Editor {
     }
 
     void TrackMap_OnRemoveBlock(CGameCtnBlock@ block) {
-        // skip grass
-        if (block.BlockInfo.IsTerrain) return;
+        // see TrackMap_OnAddBlock: terrain block churn = grid change signal
+        if (block.BlockInfo.IsTerrain) { _terrainDirty = true; return; }
         auto ptr = Dev_GetPointerForNod(block);
         if (_TrackMap_RemoveBlock_IsByAPI) {
             blocksRemovedByAPIThisFrame.InsertLast(BlockSpecPriv(block));
@@ -424,6 +426,44 @@ namespace Editor {
             return false;
         }
         auto pmt = editor.PluginMapType;
+
+        // Terrain-only specs (e.g. relayed terraform diffs) go straight to the
+        // ground-mode terrain pass; an empty air-mode donor place would just
+        // fail and report a bogus error.
+        if (mbSpec.blocks.Length == 0 && mbSpec.items.Length == 0 && mbSpec.terrains.Length > 0) {
+            dev_trace("PlaceMacroblock: terrain-only spec (" + mbSpec.terrains.Length + " cells)");
+            bool terrainPlaced = Editor::PlaceMacroblockTerrain(mbSpec);
+            if (terrainPlaced && addUndoRedoPoint) pmt.AutoSave();
+            return terrainPlaced;
+        }
+
+        // Ground grid blocks can't place through the air-mode donor (the engine
+        // refuses them; verified on RedIsland), so peel them into a ground-mode
+        // donor pass and keep everything else on the air pass below.
+        {
+            array<BlockSpec@> groundBlocks;
+            array<BlockSpec@> airBlocks;
+            for (uint i = 0; i < mbSpec.blocks.Length; i++) {
+                auto b = mbSpec.blocks[i];
+                if (b.isGround && !b.isFree && !b.isGhost) groundBlocks.InsertLast(b);
+                else airBlocks.InsertLast(b);
+            }
+            if (groundBlocks.Length > 0) {
+                dev_trace("PlaceMacroblock: splitting " + groundBlocks.Length + " ground blocks into ground pass ("
+                    + airBlocks.Length + " air blocks remain)");
+                bool groundPlaced = Editor::PlaceMacroblockGroundBlocks(MacroblockSpecPriv(groundBlocks, array<ItemSpec@> = {}));
+                auto rest = MacroblockSpecPriv(airBlocks, mbSpec.items);
+                for (uint i = 0; i < mbSpec.skins.Length; i++) rest.skins.InsertLast(mbSpec.skins[i]);
+                for (uint i = 0; i < mbSpec.terrains.Length; i++) rest.terrains.InsertLast(mbSpec.terrains[i]);
+                bool restPlaced = true;
+                if (rest.blocks.Length + rest.items.Length + rest.skins.Length + rest.terrains.Length > 0) {
+                    restPlaced = PlaceMacroblock(rest, false);
+                }
+                if ((groundPlaced || restPlaced) && addUndoRedoPoint) pmt.AutoSave();
+                return groundPlaced && restPlaced;
+            }
+        }
+
         CGameCtnMacroBlockInfo@ mb = Editor::ResolveDonorMacroblock(editor, "PlaceMacroblock");
         if (mb is null) return false;
         dev_trace("[DEBUG] PlaceMacroblock: Writing to MB");

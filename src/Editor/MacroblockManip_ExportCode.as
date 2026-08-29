@@ -116,4 +116,15 @@ namespace Editor {
     import vec3 MTCoordToPos(int3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
     import vec3 MTCoordToPos(nat3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
     import vec3 MTCoordToPos(vec3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
+
+    // Terrain change tracking (terraform lands async and terrain blocks are
+    // invisible to the placement trackers): RefreshTerrainSnapshot on editor
+    // entry, poll IsTerrainDirty, debounce ~1-2s, then GetTerrainDiffSpec for
+    // a terrain-only MacroblockSpec of the changed cells (also resyncs the
+    // snapshot). PlaceMacroblock applies terrain-only specs via the ground
+    // donor pass.
+    import bool IsTerrainDirty() from "Editor";
+    import void ClearTerrainDirty() from "Editor";
+    import void RefreshTerrainSnapshot() from "Editor";
+    import MacroblockSpec@ GetTerrainDiffSpec() from "Editor";
 }

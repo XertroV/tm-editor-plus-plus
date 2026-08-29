@@ -355,6 +355,68 @@ namespace Editor {
         return placed;
     }
 
+    // Place ground grid blocks via a ground-mode donor pass. Air-mode donor
+    // placement refuses any isGround block (verified on RedIsland: even a plain
+    // OpenTechRoadStraight spec with isGround=true returns placed=false), so
+    // PlaceMacroblock peels ground blocks into this pass. Block coords are kept
+    // absolute — the donor is ground-placed at XZ origin, and the engine
+    // re-derives ground-block Y from the terrain surface.
+    bool PlaceMacroblockGroundBlocks(MacroblockSpecPriv@ gspec) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (gspec is null || editor is null || editor.PluginMapType is null) return false;
+        if (gspec.Blocks.Length == 0) return true;
+        auto pmt = editor.PluginMapType;
+        CGameCtnMacroBlockInfo@ mb = Editor::ResolveDonorMacroblock(editor, "PlaceMacroblockGroundBlocks");
+        if (mb is null) return false;
+        int groundBase = GetMapGroundBaseHeight();
+        if (groundBase < 1) {
+            NotifyWarning("PlaceMacroblockGroundBlocks: could not determine map ground base height; aborting");
+            return false;
+        }
+        // the engine adds placeCoord to each block coord, and ground placement
+        // only accepts placeCoord.y = groundBase - 1 — so block Y must be
+        // stored relative to that (X/Z stay absolute; placeCoord XZ is 0).
+        // Duplicate the specs: the handles are shared with the caller's spec.
+        for (uint i = 0; i < gspec.blocks.Length; i++) {
+            auto b = gspec.blocks[i].Duplicate();
+            int by = int(b.coord.y) - (groundBase - 1);
+            b.coord.y = by < 0 ? 0 : uint(by);
+            @gspec.blocks[i] = b;
+        }
+        try {
+            gspec._TempWriteToMacroblock(mb, true);
+        } catch {
+            NotifyWarning("PlaceMacroblockGroundBlocks: exception temp-writing donor: " + getExceptionInfo());
+            try { gspec._RestoreMacroblock(); } catch { warn("PlaceMacroblockGroundBlocks: restore after temp-write failure: " + getExceptionInfo()); }
+            return false;
+        }
+        // ground-mode calls no-op while Initialized/Connected are false
+        // (temp-write clears them)
+        mb.Initialized = true;
+        mb.Connected = true;
+        int3 placeCoord = int3(0, groundBase - 1, 0);
+        bool canPlace = false;
+        try {
+            canPlace = pmt.CanPlaceMacroblock(mb, placeCoord, CGameEditorPluginMap::ECardinalDirections::North);
+        } catch {
+            warn("PlaceMacroblockGroundBlocks: CanPlaceMacroblock exception: " + getExceptionInfo());
+        }
+        dev_trace("PlaceMacroblockGroundBlocks: ground-placing " + gspec.Blocks.Length
+            + " blocks at " + placeCoord.ToString() + "; canPlace=" + canPlace);
+        bool placed = false;
+        try {
+            placed = pmt.PlaceMacroblock(mb, placeCoord, CGameEditorPluginMap::ECardinalDirections::North);
+        } catch {
+            NotifyWarning("PlaceMacroblockGroundBlocks: exception placing donor: " + getExceptionInfo());
+        }
+        dev_trace("PlaceMacroblockGroundBlocks: PlaceMacroblock returned " + placed);
+        // ground placement can terraform via the blocks' own ground variants,
+        // and that apply is async — delay the donor restore like the terrain pass
+        _terrainPlaceRestoreQueue.InsertLast(gspec);
+        if (_terrainPlaceRestoreQueue.Length == 1) startnew(TerrainDonorRestoreLoop);
+        return placed;
+    }
+
     // Reset a terrain rect to the collection default (WaterHill on RedIsland).
     // Script API: PluginMapType.RemoveTerrainBlocks. RE: wrapper at 0x140f9a2e0
     // calls PlaceTerraformRect with no block model, which writes the map's
@@ -417,5 +479,86 @@ namespace Editor {
             }
             _terrainPlaceRestoreQueue.RemoveAt(0);
         }
+        // The applies this loop waited on came from remote/API specs, so the
+        // grid changes they caused are already known to whoever sent them --
+        // resync the snapshot so GetTerrainDiffSpec does not echo them back.
+        // (Local edits made during the ~2s window are folded in too; callers
+        // diff on a dirty-flag debounce, so this is a bounded blind spot.)
+        if (_terrainSnapshotTaken) RefreshTerrainSnapshot();
+    }
+
+    // MARK: Terrain change tracking (for sync plugins, e.g. map-together)
+    //
+    // The genealogy grid changes asynchronously (terraform lands ~1s after
+    // placement) and terrain "blocks" are invisible to the placement trackers
+    // (IsTerrain models are skipped, but set _terrainDirty). Sync flow:
+    //   RefreshTerrainSnapshot() on editor/map entry;
+    //   poll IsTerrainDirty(), debounce past the async apply, then
+    //   GetTerrainDiffSpec() -> terrain-only MacroblockSpec to broadcast.
+
+    bool _terrainDirty = false;
+    bool _terrainSnapshotTaken = false;
+    array<string> _terrainSnapshotSigs;
+
+    bool IsTerrainDirty() { return _terrainDirty; }
+    void ClearTerrainDirty() { _terrainDirty = false; }
+
+    // Full per-cell state, absolute heights (unlike GenealogySignature, which
+    // is base-relative for default-cell detection).
+    string _TerrainCellSig(CGameCtnZoneGenealogy@ gen) {
+        if (gen is null) return "";
+        string sig = uint(gen.Dir) + "|" + gen.CurrentIndex + "|" + gen.BaseHeight
+            + "|" + gen.BottomHeight + "|" + gen.TopHeight + "|";
+        for (uint i = 0; i < gen.ZoneIds.Length; i++) {
+            sig += gen.ZoneIds[i].GetName() + ":" + gen.ZoneHeights[i] + ",";
+        }
+        return sig;
+    }
+
+    void RefreshTerrainSnapshot() {
+        _terrainSnapshotTaken = false;
+        _terrainSnapshotSigs.Resize(0);
+        auto map = GetApp().RootMap;
+        if (map is null) return;
+        auto cells = DGameCtnChallenge(map).TerrainGenealogies;
+        _terrainSnapshotSigs.Resize(cells.Length);
+        for (uint i = 0; i < cells.Length; i++) {
+            _terrainSnapshotSigs[i] = _TerrainCellSig(cells.GetTerrainCell(i).Nod);
+        }
+        _terrainSnapshotTaken = true;
+        _terrainDirty = false;
+    }
+
+    // Cells that differ from the snapshot, as a terrain-only MacroblockSpec
+    // (same conventions as CaptureTerrainIntoSpec: absolute XZ offsets,
+    // heights normalized by each cell's BaseHeight). Updates the snapshot to
+    // the current grid. Returns null when no snapshot was taken or the map is
+    // gone; an empty spec when nothing changed.
+    MacroblockSpec@ GetTerrainDiffSpec() {
+        if (!_terrainSnapshotTaken) return null;
+        auto map = GetApp().RootMap;
+        if (map is null) return null;
+        auto cells = DGameCtnChallenge(map).TerrainGenealogies;
+        auto spec = MacroblockSpecPriv();
+        if (cells.Length != _terrainSnapshotSigs.Length) {
+            // map changed shape under us; resync rather than diff garbage
+            RefreshTerrainSnapshot();
+            return spec;
+        }
+        int sizeX = Nat3ToInt3(map.Size).x;
+        if (sizeX <= 0) return null;
+        for (uint i = 0; i < cells.Length; i++) {
+            auto gen = cells.GetTerrainCell(i).Nod;
+            string sig = _TerrainCellSig(gen);
+            if (sig == _terrainSnapshotSigs[i]) continue;
+            _terrainSnapshotSigs[i] = sig;
+            if (gen is null) continue;
+            auto ts = TerrainSpec();
+            ts.offset = int3(int(i) % sizeX, 0, int(i) / sizeX);
+            SetTerrainSpecFromGenealogy(ts, gen, gen.BaseHeight);
+            spec.terrains.InsertLast(ts);
+        }
+        _terrainDirty = false;
+        return spec;
     }
 }
