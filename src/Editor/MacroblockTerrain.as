@@ -488,7 +488,7 @@ namespace Editor {
                     } catch {
                         warn("PlaceMacroblockGroundBlocks: PlaceBlock threw for " + b.name + ": " + getExceptionInfo());
                     }
-                    dev_trace("PlaceMacroblockGroundBlocks: native place " + b.name + " @ " + c.ToString() + " dir " + tostring(dir) + " -> " + placed);
+                    dev_trace("PlaceMacroblockGroundBlocks: native place " + b.name + " @ " + c.ToString() + " dir " + tostring(dir) + " -> " + placed + " @f" + Time::FrameCount);
                 }
             }
             if (!placed) failedBlocks.InsertLast(b);
@@ -756,14 +756,14 @@ namespace Editor {
     // poll GetTerrainDiffSpec -- hooks fan the single diff out instead).
     // With no subscribers the watcher touches nothing, keeping the polling
     // exports usable. Ticked from ResetTrackMapChanges_Loop (BeforeScripts).
-    // Frame-based settle: the engine terraform job advances per frame, so N
-    // consecutive watcher ticks with no dirty flag means the job is done. A
-    // premature settle self-heals (the next change re-arms and emits a
-    // follow-up diff), so this can be small. Measured: a single block commits
-    // in 1 frame; 10 queued blocks commit as 10 dirty ticks over 39 frames
-    // with a max intra-burst quiet gap of 4 frames -- so 5 is the working
-    // minimum and 8 gives margin without meaningful latency.
-    const uint TERRAIN_SETTLE_QUIET_FRAMES = 8;
+    // Frame-based settle: terraform COMMITS IN THE SAME FRAME as the block
+    // placement -- a replay wave of 13 ground blocks placed at f291434 landed
+    // every terrain change as one dirty tick at f291434 (tickOffsets [0]).
+    // So 2 quiet frames (1 frame of straddle margin) is enough; a premature
+    // settle would self-heal via a follow-up diff anyway. (An earlier
+    // "max gap 4f" measurement was an artifact of MCP test calls arriving
+    // ~4 frames apart -- per-action commits are same-frame.)
+    const uint TERRAIN_SETTLE_QUIET_FRAMES = 2;
     uint _terrainQuietFrames = 0;
     bool _terrainHookArmed = false;
     // burst stats (hard data for tuning the settle threshold): dirty ticks per
@@ -774,6 +774,7 @@ namespace Editor {
     uint64 _burstLastDirtyFrame = 0;
     uint _burstDirtyTicks = 0;
     uint _burstMaxGap = 0;
+    array<uint> _burstTickOffsets;
 
     bool _terrainHookWatcherAnnounced = false;
     void TerrainHookWatcher_Tick() {
@@ -802,11 +803,13 @@ namespace Editor {
                 _burstStartFrame = Time::FrameCount;
                 _burstDirtyTicks = 0;
                 _burstMaxGap = 0;
+                _burstTickOffsets.RemoveRange(0, _burstTickOffsets.Length);
             } else if (_terrainQuietFrames > _burstMaxGap) {
                 _burstMaxGap = _terrainQuietFrames;
             }
             _burstDirtyTicks++;
             _burstLastDirtyFrame = Time::FrameCount;
+            if (_burstTickOffsets.Length < 24) _burstTickOffsets.InsertLast(uint(Time::FrameCount - _burstStartFrame));
             _terrainHookArmed = true;
             _terrainQuietFrames = 0;
         } else if (_terrainHookArmed) {
@@ -822,9 +825,11 @@ namespace Editor {
             }
             _terrainHookArmed = false;
             auto diff = GetTerrainDiffSpec();
+            string _tickOffs = "";
+            for (uint ti = 0; ti < _burstTickOffsets.Length; ti++) _tickOffs += (ti > 0 ? "," : "") + _burstTickOffsets[ti];
             dev_trace("[TerrainHookWatcher] settled @f" + Time::FrameCount + "; diff cells: " + (diff is null ? -1 : int(diff.Terrains.Length))
                 + "; burst: " + _burstDirtyTicks + " dirty ticks over " + (_burstLastDirtyFrame - _burstStartFrame + 1)
-                + " frames, max quiet gap " + _burstMaxGap + "f");
+                + " frames (start f" + _burstStartFrame + "), max quiet gap " + _burstMaxGap + "f, tickOffsets [" + _tickOffs + "]");
             if (diff !is null && diff.Terrains.Length > 0) {
                 Callbacks::Exts::Run_OnTerrainChanged(diff);
             }
