@@ -12,6 +12,10 @@
 - New **Terrain** subtab lists `PluginMapType.TerrainBlocks` (includes the default fill; CSV includes terrain rows).
 - Reset a cell to the collection default (peels genealogy layers until WaterHill/Water/Grass/etc.).
 
+## Plugin API — terrain placement hooks (new)
+
+- `IEppExtension`: `onPlaceTerrainBlock` / `onDeleteTerrainBlock` (raw, per terrain block; terraform fires bursts) and `onTerrainDirty` / `onTerrainChanged(MacroblockSpec@ diff)` (settled cell diff after ~1.2s debounce). Registering a settled hook makes E++ the owner of the terrain snapshot — don't poll `GetTerrainDiffSpec` alongside it.
+
 ## Plugin API — item editor / inventory / skins
 
 - `SaveAndReloadItemEditorAsync()` (coroutine; same path as the item-editor Save+reload).
