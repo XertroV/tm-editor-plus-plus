@@ -366,6 +366,7 @@ class MapEditPropsTab : Tab {
         if (m_DraftNbLaps < 0) m_DraftNbLaps = int(liveLaps);
         if (m_DraftIsLapRace < 0) m_DraftIsLapRace = liveIsLap ? 1 : 0;
 
+        /*
         // ── Clones ──────────────────────────────────────────────
         UI::Text("Clones (TMObjective_NbClones)");
         AddSimpleTooltip("0 = normal race. >0 enables clone mode (ghost copies of yourself).\nSave map to persist. Max 64.\nNote: the stock editor validation UI may not refresh until you reopen it / save-reload — E++ writes MapInfo directly.");
@@ -475,6 +476,7 @@ class MapEditPropsTab : Tab {
         } else {
             UI::TextDisabled("live: " + (liveIsLap ? (tostring(liveLaps) + " laps") : "not lap race"));
         }
+        */
 
 #if DEV
         if (UI::CollapsingHeader("Objectives RE dump")) {

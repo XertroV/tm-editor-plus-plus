@@ -709,8 +709,13 @@ namespace Editor {
     uint _terrainHookDirtyAt = 0;
     bool _terrainHookArmed = false;
 
+    bool _terrainHookWatcherAnnounced = false;
     void TerrainHookWatcher_Tick() {
         if (!Callbacks::Exts::HasTerrainSettleSubscribers()) return;
+        if (!_terrainHookWatcherAnnounced) {
+            _terrainHookWatcherAnnounced = true;
+            trace("[TerrainHookWatcher] active: settled-terrain subscriber registered");
+        }
         if (cast<CGameCtnEditorFree>(GetApp().Editor) is null || GetApp().RootMap is null) {
             _terrainHookArmed = false;
             _terrainSnapshotTaken = false;
@@ -740,6 +745,7 @@ namespace Editor {
             }
             _terrainHookArmed = false;
             auto diff = GetTerrainDiffSpec();
+            dev_trace("[TerrainHookWatcher] settled; diff cells: " + (diff is null ? -1 : int(diff.Terrains.Length)));
             if (diff !is null && diff.Terrains.Length > 0) {
                 Callbacks::Exts::Run_OnTerrainChanged(diff);
             }
