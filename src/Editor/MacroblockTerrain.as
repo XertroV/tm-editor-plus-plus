@@ -388,8 +388,14 @@ namespace Editor {
             + " peeled, " + nbDeferred + " deferred [f: quietWait=" + (_fQuietDone - _fEnter)
             + " peels=" + _fPeelTotal + " total=" + (Time::FrameCount - _fEnter) + " @f" + Time::FrameCount + "]");
         // peels fired terrain-block hooks; for a remote apply make sure the
-        // diff snapshot resyncs instead of broadcasting them back
-        if (applyIsRemote) ScheduleTerrainSnapshotResync();
+        // diff snapshot resyncs (scoped to these cells) instead of
+        // broadcasting them back
+        if (applyIsRemote) {
+            for (uint i = 0; i < mbSpec.terrains.Length; i++) {
+                MarkTerrainResyncCells(mbSpec.terrains[i].offset.x, mbSpec.terrains[i].offset.z);
+            }
+            ScheduleTerrainSnapshotResync();
+        }
         return true;
     }
 
@@ -491,6 +497,7 @@ namespace Editor {
                     dev_trace("PlaceMacroblockGroundBlocks: native place " + b.name + " @ " + c.ToString() + " dir " + tostring(dir) + " -> " + placed + " @f" + Time::FrameCount);
                 }
             }
+            MarkTerrainResyncCells(int(b.coord.x), int(b.coord.z));
             if (!placed) failedBlocks.InsertLast(b);
         }
         // native placement terraforms; resync the diff snapshot once it lands
@@ -640,9 +647,31 @@ namespace Editor {
     }
 
     bool _terrainResyncScheduled = false;
-    // Coalesced "refresh the diff snapshot in ~2s": used after native ground-
-    // block replays, whose terraform lands async and must not be diffed back
-    // to the peer who sent them.
+    // Cells a remote/API apply touched (grid indices), awaiting a SCOPED
+    // snapshot resync. Only these are re-baselined, so a concurrent LOCAL
+    // edit elsewhere on the map is not absorbed -- it settles into a
+    // broadcast diff as soon as the pending window closes. A one-block
+    // terraform changes cells up to 2 away from the block (blending ring),
+    // hence the margin.
+    dictionary _terrainResyncCellIxs;
+    const int TERRAIN_RESYNC_MARGIN = 2;
+
+    void MarkTerrainResyncCells(int bx, int bz) {
+        auto map = GetApp().RootMap;
+        if (map is null) return;
+        int3 size = Nat3ToInt3(map.Size);
+        if (size.z <= 0) return;
+        for (int x = bx - TERRAIN_RESYNC_MARGIN; x <= bx + TERRAIN_RESYNC_MARGIN; x++) {
+            for (int z = bz - TERRAIN_RESYNC_MARGIN; z <= bz + TERRAIN_RESYNC_MARGIN; z++) {
+                if (x < 0 || z < 0 || x >= size.x || z >= size.z) continue;
+                _terrainResyncCellIxs.Set("" + (uint(z) + uint(x) * uint(size.z)), true);
+            }
+        }
+    }
+
+    // Coalesced scoped resync: after the remote/API apply's terraform lands,
+    // re-baseline ONLY the marked cells so their churn is not diffed back to
+    // the peer who sent them.
     void ScheduleTerrainSnapshotResync() {
         if (_terrainResyncScheduled) return;
         _terrainResyncScheduled = true;
@@ -659,8 +688,25 @@ namespace Editor {
         uint capAt = Time::Now + 5000;
         while (Time::Now < _lastTerrainActivityAt + 500 && Time::Now < capAt) sleep(100);
         _terrainResyncScheduled = false;
-        dev_trace("[TerrainResync] refreshing after " + (Time::FrameCount - _fResync) + " frames @f" + Time::FrameCount);
-        if (_terrainSnapshotTaken) RefreshTerrainSnapshot();
+        auto keys = _terrainResyncCellIxs.GetKeys();
+        _terrainResyncCellIxs.DeleteAll();
+        if (!_terrainSnapshotTaken) return;
+        auto map = GetApp().RootMap;
+        if (map is null) return;
+        auto cells = DGameCtnChallenge(map).TerrainGenealogies;
+        if (cells.Length != _terrainSnapshotSigs.Length) {
+            RefreshTerrainSnapshot();
+            return;
+        }
+        uint refreshed = 0;
+        for (uint i = 0; i < keys.Length; i++) {
+            uint ix = Text::ParseUInt(keys[i]);
+            if (ix >= _terrainSnapshotSigs.Length) continue;
+            _terrainSnapshotSigs[ix] = _TerrainCellSig(cells.GetTerrainCell(ix).Nod);
+            refreshed++;
+        }
+        dev_trace("[TerrainResync] scoped refresh of " + refreshed + " cells after "
+            + (Time::FrameCount - _fResync) + " frames @f" + Time::FrameCount);
     }
 
     // MARK: Terrain change tracking (for sync plugins, e.g. map-together)
