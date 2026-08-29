@@ -1,8 +1,14 @@
 [DGameCtnChallenge: SZ_CTNCHALLENGE]
 NativeClass = CGameCtnChallenge
 Buffer: MacroblockInstances = DGameCtnChallenge_Macroblocks, O_MAP_MACROBLOCK_INFOS, 0x8, false
+# offset: 0x390 — one CGameCtnZoneGenealogy@ per XZ cell (len = sizeX*sizeZ); see research/MacroblockTerrain.md
+Buffer: TerrainGenealogies = DGameCtnChallenge_TerrainCells, O_MAP_TERRAIN_GENEALOGY_GRID, SZ_CTNZONEGENEALOGY, true
 # unk = uint64, 0x4d0
 # unk = uint64, 0x368
+
+[DGameCtnChallenge_TerrainCell: SZ_CTNZONEGENEALOGY]
+NativeClass = CGameCtnZoneGenealogy
+Inline: DGameCtnZoneGenealogy@ AsGenealogyStruct() { return DGameCtnZoneGenealogy(this.Ptr); }
 
 [DGameCtnChallenge_Macroblock: 0x8]
 InstId = int, 0x0, GS

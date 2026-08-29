@@ -1,0 +1,2 @@
+default_mode = "lsp"
+defines = ["DEV", "TMNEXT"]

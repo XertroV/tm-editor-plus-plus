@@ -403,12 +403,34 @@ namespace Editor {
     //     return Mood::Whatever;
     // }
 
+    // False when +0x2D0 is not a FastArray (null ptr, huge len, cap<len).
+    bool MapMacroblockInfosLookValid(CGameCtnChallenge@ map) {
+        if (map is null) return false;
+        uint64 ptr = Dev::GetOffsetUint64(map, O_MAP_MACROBLOCK_INFOS);
+        uint len = Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0x8);
+        uint cap = Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0xC);
+        if (ptr == 0 && len != 0) return false;
+        if (len > 100000) return false;
+        if (cap < len) return false;
+        return true;
+    }
+
     uint GetNbMacroblocks(CGameCtnChallenge@ map) {
+        if (!MapMacroblockInfosLookValid(map)) return 0;
         return Dev::GetOffsetUint32(map, O_MAP_MACROBLOCK_INFOS + 0x8);
     }
 
     DGameCtnChallenge_Macroblocks@ GetMapMacroblocks(CGameCtnChallenge@ map) {
         return DGameCtnChallenge(map).MacroblockInstances;
+    }
+
+    // Null-safe: generated GetMacroblock NPEs on this[i]==null (el.ElSize).
+    DGameCtnChallenge_Macroblock@ GetMapMacroblock(DGameCtnChallenge_Macroblocks@ mbs, uint i) {
+        if (mbs is null) return null;
+        if (i >= mbs.Length) return null;
+        auto el = mbs.GetElement(i);
+        if (el is null) return null;
+        return DGameCtnChallenge_Macroblock(el);
     }
 
     // MARK: Matrix

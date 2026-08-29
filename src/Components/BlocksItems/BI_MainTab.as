@@ -12,6 +12,7 @@ class BI_MainTab : Tab {
         ViewSkinnedItemsTab(Children);
         ViewClassicBlocksTab(Children);
         ViewGhostBlocksTab(Children);
+        ViewTerrainBlocksTab(Children);
         @g_DuplicateFreeBlocks_SubTab = ViewDuplicateFreeBlocksTab(Children);
         @g_DuplicateItems_SubTab = ViewDuplicateItemsTab(Children);
         WaypointsBITab(Children);
@@ -57,6 +58,25 @@ class ViewGhostBlocksTab : ViewAllBlocksTab {
     CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) override {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         return editor.PluginMapType.GhostBlocks[i];
+    }
+}
+
+class ViewTerrainBlocksTab : ViewAllBlocksTab {
+    ViewTerrainBlocksTab(TabGroup@ p) {
+        super(p, "Terrain", Icons::Cubes, BIListTabType::Blocks);
+        allowSkipTerrainPrefix = false;
+        excludeTerrainFromCsv = false;
+        nbCols = 9;
+    }
+
+    uint GetNbObjects(CGameCtnChallenge@ map) override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.PluginMapType.TerrainBlocks.Length;
+    }
+
+    CGameCtnBlock@ GetBlock(CGameCtnChallenge@ map, uint i) override {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return editor.PluginMapType.TerrainBlocks[i];
     }
 }
 
@@ -220,6 +240,10 @@ class ViewAllBlocksTab : BlockItemListTab {
     void DeleteBlockSoon(ref@ ref) {
         CGameCtnBlock@ block = cast<CGameCtnBlock>(ref);
         if (block is null) return;
+        if (block.BlockInfo !is null && block.BlockInfo.IsTerrain) {
+            Editor::ResetTerrainCell(block);
+            return;
+        }
         Editor::DeleteBlocks({block}, true);
         if (Editor::HasPendingFreeBlocksToDelete()) {
             Meta::StartWithRunContext(Meta::RunContext::MainLoop, Editor::RunDeleteFreeBlockDetection);
@@ -852,8 +876,9 @@ class MacroblocksBITab : Tab {
         auto map = GetApp().RootMap;
         if (map is null) return;
         BI_DrawCacheRefreshMsg();
+        uint nb = Editor::GetNbMacroblocks(map);
         auto mbs = Editor::GetMapMacroblocks(map);
-        if (mbs.Length == 0) {
+        if (nb == 0) {
             UI::Text("No macroblocks found.");
             return;
         }
@@ -861,18 +886,21 @@ class MacroblocksBITab : Tab {
         auto @mbCache = mapCache.Macroblocks;
         Editor::ObjInMap@ obj;
         array<Editor::ObjInMap@>@ objs;
-        for (uint i = 0; i < mbs.Length; i++) {
-            auto mb = mbs.GetMacroblock(i);
-            if (mbCache.Exists(tostring(mb.InstId))) {
-                @objs = cast<array<Editor::ObjInMap@>>(mbCache[tostring(mb.InstId)]);
+        for (uint i = 0; i < nb; i++) {
+            auto mb = Editor::GetMapMacroblock(mbs, i);
+            if (mb is null) continue;
+            int instId = mb.InstId;
+            string mbName = Editor::MwIdNameSafe(mb.MbMwId);
+            if (mbCache.Exists(tostring(instId))) {
+                @objs = cast<array<Editor::ObjInMap@>>(mbCache[tostring(instId)]);
                 if (objs !is null) {
                     if (objs.Length > 0) {
-                        if (UX::SmallButton(Icons::Eye + "##" + mb.InstId)) {
+                        if (UX::SmallButton(Icons::Eye + "##" + instId)) {
                             Editor::SetCamAnimationGoTo(Editor::DirToLookUvFromCamera(objs[0]._pos), objs[0]._pos, 120.);
                         }
                         UI::SameLine();
                     }
-                    if (UI::TreeNode(tostring(mb.InstId) + ". " + mb.MbName + " ("+objs.Length+")")) {
+                    if (UI::TreeNode(tostring(instId) + ". " + mbName + " ("+objs.Length+")")) {
                         for (uint j = 0; j < objs.Length; j++) {
                             @obj = objs[j];
                             auto item = cast<Editor::ItemInMap>(objs[j]);
@@ -893,7 +921,7 @@ class MacroblocksBITab : Tab {
             } else {
                 UI::Text("MB objects not found in cache.");
                 UI::SameLine();
-                if (UX::SmallButton(Icons::Refresh + "##refresh-cache-mb-" + mb.InstId)) {
+                if (UX::SmallButton(Icons::Refresh + "##refresh-cache-mb-" + instId)) {
                     Editor::GetMapCache().RefreshCacheSoon();
                 }
             }

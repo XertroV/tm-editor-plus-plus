@@ -1,0 +1,71 @@
+// #if DEV
+// // Backup native invoke: kinao_call.dll next to Trackmania.exe.
+// // Use this for callees that return or mutate CMwNod* — AsCall OnAction
+// // wraps those and AVs in Openplanet.dll (CopyWithSourceFid 07:57,
+// // CreateVis write 0x240). AllocVisState/Init/PoolPop stay on AsCall.
+// namespace DllCall {
+//     const string FileName = "kinao_call.dll";
+//     const uint ExpectPing = 0xA0A0;
+
+//     Import::Library@ lib;
+//     Import::Function@ fnPing;
+//     Import::Function@ fnCall3;
+//     Import::Function@ fnCall4;
+//     string lastErr;
+
+//     bool Loaded() {
+//         return lib !is null && fnPing !is null && fnCall3 !is null;
+//     }
+
+//     string Load() {
+//         if (Loaded()) return "";
+//         lastErr = "";
+//         @lib = Import::GetLibrary(FileName);
+//         if (lib is null) {
+//             lastErr = "GetLibrary(" + FileName + ") failed — copy next to Trackmania.exe";
+//             return lastErr;
+//         }
+//         @fnPing = lib.GetFunction("KinAo_Ping");
+//         @fnCall3 = lib.GetFunction("KinAo_Call3");
+//         @fnCall4 = lib.GetFunction("KinAo_Call4");
+//         if (fnPing is null || fnCall3 is null) {
+//             lastErr = "missing KinAo_Ping / KinAo_Call3";
+//             @lib = null;
+//             return lastErr;
+//         }
+//         uint p = 0;
+//         try {
+//             p = fnPing.CallUInt32();
+//         } catch {
+//             lastErr = "KinAo_Ping threw";
+//             @fnPing = null;
+//             @fnCall3 = null;
+//             @lib = null;
+//             return lastErr;
+//         }
+//         if (p != ExpectPing) {
+//             lastErr = "KinAo_Ping 0x" + Text::Format("%04x", p) + " want 0xA0A0";
+//             @fnPing = null;
+//             @fnCall3 = null;
+//             @lib = null;
+//             return lastErr;
+//         }
+//         return "";
+//     }
+
+//     uint64 Call3(uint64 fn, uint64 rcx, uint64 rdx, uint64 r8) {
+//         string err = Load();
+//         if (err.Length > 0) throw(err);
+//         if (fn == 0) throw("DllCall fn is 0");
+//         return fnCall3.CallUInt64(fn, rcx, rdx, r8);
+//     }
+
+//     uint64 Call4(uint64 fn, uint64 rcx, uint64 rdx, uint64 r8, uint64 r9) {
+//         string err = Load();
+//         if (err.Length > 0) throw(err);
+//         if (fnCall4 is null) throw("Call4 unbound");
+//         if (fn == 0) throw("DllCall fn is 0");
+//         return fnCall4.CallUInt64(fn, rcx, rdx, r8, r9);
+//     }
+// }
+// #endif

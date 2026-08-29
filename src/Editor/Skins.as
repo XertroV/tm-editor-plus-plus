@@ -106,6 +106,31 @@ namespace Editor {
         }
         return packDescs;
     }
+
+    CPlugGameSkin@ GetItemModelGameSkin(CGameItemModel@ model) {
+        if (model is null) return null;
+        return cast<CPlugGameSkin>(Dev::GetOffsetNod(model, O_ITEM_MODEL_SKIN));
+    }
+
+    CPlugGameSkin@ GetBlockInfoGameSkin(CGameCtnBlockInfo@ info) {
+        if (info is null) return null;
+        return cast<CPlugGameSkin>(Dev::GetOffsetNod(info, O_BLOCKINFO_GAMESKIN));
+    }
+
+    void SetItemModelGameSkin(CGameItemModel@ model, CPlugGameSkin@ skin) {
+        if (model is null) return;
+        auto old = GetItemModelGameSkin(model);
+        if (skin !is null) skin.MwAddRef();
+        Dev::SetOffset(model, O_ITEM_MODEL_SKIN, skin);
+        if (old !is null && old !is skin) old.MwRelease();
+        if (skin !is null) {
+            if (string(model.SkinDirectory).Length > 0) {
+                model.SkinDirNameCustom = model.SkinDirectory;
+            } else {
+                model.SkinDirNameCustom = DPlugGameSkin(skin).Path1;
+            }
+        }
+    }
 }
 
 // awaitable@ testLoadPackDescs = startnew(function() {

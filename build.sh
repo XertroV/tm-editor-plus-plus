@@ -47,6 +47,24 @@ elif [[ -z "$EPP_CODEGEN_EXISTS" ]]; then
   sleep 2
 fi
 
+# Static check via openplanet-lsp (catches AS compile errors before staging/reload).
+# Exits nonzero on errors; warnings (e.g. pre-existing signed/unsigned) don't fail.
+if [[ "${EPP_SKIP_LSP:-0}" != "1" ]]; then
+  if command -v openplanet-lsp >/dev/null 2>&1; then
+    _colortext16 green "🔍 Running openplanet-lsp check"
+    set +e
+    openplanet-lsp check --format plain .
+    _lsp_exit_code=$?
+    set -e
+    if [[ "$_lsp_exit_code" != "0" ]]; then
+      _colortext16 red "⚠ Error: openplanet-lsp reported errors (see above). Fix them or run with EPP_SKIP_LSP=1 to bypass."
+      exit 1
+    fi
+  else
+    _colortext16 yellow "⚠ Warning: openplanet-lsp not found. Skipping static check."
+  fi
+fi
+
 
 
 pluginSources=( 'src' )
@@ -89,7 +107,8 @@ for pluginSrc in ${pluginSources[@]}; do
 
   function buildPlugin {
     # 7z a ./$BUILD_NAME ./fonts ./$pluginSrc/* ./LICENSE ./README.md
-    7z a ./$BUILD_NAME ./$pluginSrc/* ./LICENSE ./README.md
+    # Keep *_Test.as / *_Tests.as / *.disabled / *.snippets out of the .op
+    7z a ./$BUILD_NAME ./$pluginSrc/* ./LICENSE ./README.md '-xr!*_Test.as' '-xr!*_Tests.as' '-xr!*.disabled' '-xr!*.snippets'
 
     cp -v $BUILD_NAME $RELEASE_NAME
     cp -v $RELEASE_NAME editor.op
@@ -107,6 +126,10 @@ for pluginSrc in ${pluginSources[@]}; do
       _build_dest=$PLUGIN_DEV_LOC
       mkdir -p $_build_dest/
       rsync -auv --progress --delete ./$pluginSrc/ $_build_dest
+      if [[ -d ./ascall-spikes ]]; then
+        mkdir -p $_build_dest/ascall-spikes
+        rsync -auv --progress ./ascall-spikes/ $_build_dest/ascall-spikes/
+      fi
       # rm -vr $_build_dest/* || true
       # cp -LR -v ./$pluginSrc/* $_build_dest/
       # cp -LR -v ./fonts $_build_dest/fonts
@@ -154,6 +177,34 @@ for pluginSrc in ${pluginSources[@]}; do
   else
     _colortext16 green "✅ Release file: ${RELEASE_NAME}"
     if [[ "$_build_mode" == "dev" && "${EPP_SKIP_REMOTE_RELOAD:-0}" != "1" ]]; then
+      _mcp_call=""
+      if [[ -n "${EPP_MCP_CALL:-}" && -x "${EPP_MCP_CALL}" ]]; then
+        _mcp_call="$EPP_MCP_CALL"
+      elif [[ -x "$HOME/src/openplanet/my-plugins/tm-control-mcp/tools/call.py" ]]; then
+        _mcp_call="$HOME/src/openplanet/my-plugins/tm-control-mcp/tools/call.py"
+      elif command -v python3 >/dev/null 2>&1 && [[ -f "$(dirname "$0")/../tm-control-mcp/tools/call.py" ]]; then
+        _mcp_call="$(cd "$(dirname "$0")/../tm-control-mcp" && pwd)/tools/call.py"
+      fi
+      if [[ -n "$_mcp_call" ]]; then
+        _colortext16 green "⏳ Checking LM compute via MCP before reload...\n"
+        _shadow_wait_ms="${EPP_SHADOW_WAIT_MS:-600000}"
+        set +e
+        _wait_out="$(python3 "$_mcp_call" WaitUntil "{\"condition\":\"shadowsClear\",\"timeoutMs\":${_shadow_wait_ms},\"pollMs\":500}" 2>/dev/null)"
+        _wait_rc=$?
+        set -e
+        if [[ "$_wait_rc" != "0" ]]; then
+          _colortext16 yellow "⚠ MCP wait failed (rc=${_wait_rc}); reloading anyway.\n"
+        else
+          echo "$_wait_out"
+          if echo "$_wait_out" | grep -q '"timedOut":true'; then
+            _colortext16 yellow "⚠ Still calculating shadows after wait; reloading anyway.\n"
+          elif echo "$_wait_out" | grep -q 'unknown condition'; then
+            _colortext16 yellow "⚠ MCP has no shadowsClear yet; reloading.\n"
+          else
+            _colortext16 green "✅ Shadows idle (or not baking).\n"
+          fi
+        fi
+      fi
       if command -v tm-remote-build >/dev/null 2>&1; then
         OP_DATA_DIR=${OPENPLANET_DIR:-$(dirname "$PLUGINS_DIR")}
         REMOTE_RELOAD_TIMEOUT=${EPP_REMOTE_RELOAD_TIMEOUT:-60s}
@@ -165,44 +216,47 @@ for pluginSrc in ${pluginSources[@]}; do
         if [[ -n "$REMOTE_RELOAD_HOST" && "$REMOTE_RELOAD_HOST" != "0.0.0.0" && "$REMOTE_RELOAD_HOST" != "*" ]]; then
           _remote_host_args=(--host "$REMOTE_RELOAD_HOST")
         fi
-        _colortext16 green "🔁 Reloading ${PLUGIN_NAME} through Openplanet RemoteBuild...\n"
+        # Reload a staged plugin folder via RemoteBuild. No-ops if the folder is
+        # absent. Timeout/errors warn but do not fail the E++ build.
+        # Usage: remote_reload_folder <plugin_folder> [why]
+        function remote_reload_folder {
+          local _folder="$1"
+          local _why="${2:+ $2}"
+          local _reload_log _reload_exit_code
+          if [[ ! -d "$PLUGINS_DIR/$_folder" ]]; then
+            return 0
+          fi
+          _colortext16 green "🔁 Reloading ${_folder}${_why}...\n"
+          _reload_log="$(mktemp)"
+          set +e
+          timeout --foreground "$REMOTE_RELOAD_TIMEOUT" tm-remote-build load folder "$_folder" -op OpenplanetNext "${_remote_host_args[@]}" -d "$OP_DATA_DIR" \
+            -l "${EPP_REMOTE_LOG_DONE_LIMIT:-3}" \
+            -i "${EPP_REMOTE_LOG_CHECK_INTERVAL:-0.5}" 2>&1 | tee "$_reload_log"
+          _reload_exit_code="${PIPESTATUS[0]}"
+          if [[ "$_reload_exit_code" == "0" ]] && grep -Eq "ERROR:tm_remote_build|Problem commanding" "$_reload_log"; then
+            _reload_exit_code=1
+          fi
+          set -e
+          rm -f "$_reload_log"
+          if [[ "$_reload_exit_code" == "124" ]]; then
+            _colortext16 yellow "⚠ Warning: ${_folder} reload timed out after ${REMOTE_RELOAD_TIMEOUT}; check Openplanet.log.\n"
+          elif [[ "$_reload_exit_code" != "0" ]]; then
+            _colortext16 yellow "⚠ Warning: ${_folder} reload reported an error; check Openplanet.log.\n"
+          fi
+        }
+
         if [[ "${#_remote_host_args[@]}" != "0" ]]; then
           _colortext16 green "🔌 RemoteBuild host: ${REMOTE_RELOAD_HOST}\n"
         fi
-        _remote_reload_log="$(mktemp)"
-        set +e
-        timeout --foreground "$REMOTE_RELOAD_TIMEOUT" tm-remote-build load folder "$PLUGIN_NAME" -op OpenplanetNext "${_remote_host_args[@]}" -d "$OP_DATA_DIR" \
-          -l "${EPP_REMOTE_LOG_DONE_LIMIT:-3}" \
-          -i "${EPP_REMOTE_LOG_CHECK_INTERVAL:-0.5}" 2>&1 | tee "$_remote_reload_log"
-        _remote_reload_exit_code="${PIPESTATUS[0]}"
-        if [[ "$_remote_reload_exit_code" == "0" ]] && grep -Eq "ERROR:tm_remote_build|Problem commanding" "$_remote_reload_log"; then
-          _remote_reload_exit_code=1
+        remote_reload_folder "$PLUGIN_NAME" "through Openplanet RemoteBuild"
+        if [[ "${EPP_RELOAD_CONTROL_MCP:-1}" == "1" ]]; then
+          remote_reload_folder tm-control-mcp "after ${PLUGIN_NAME}"
         fi
-        set -e
-        rm -f "$_remote_reload_log"
-        if [[ "$_remote_reload_exit_code" == "124" ]]; then
-          _colortext16 yellow "⚠ Warning: tm-remote-build timed out after ${REMOTE_RELOAD_TIMEOUT}; check Openplanet.log.\n"
-        elif [[ "$_remote_reload_exit_code" != "0" ]]; then
-          _colortext16 yellow "⚠ Warning: tm-remote-build reported an error; check Openplanet.log.\n"
+        if [[ "${EPP_RELOAD_PACK_EPP:-1}" == "1" ]]; then
+          remote_reload_folder tm-mcp-pack-epp "after tm-control-mcp"
         fi
-        if [[ "${EPP_RELOAD_CONTROL_MCP:-1}" == "1" && -d "$PLUGINS_DIR/tm-control-mcp" ]]; then
-          _colortext16 green "🔁 Reloading tm-control-mcp after ${PLUGIN_NAME}...\n"
-          _control_reload_log="$(mktemp)"
-          set +e
-          timeout --foreground "$REMOTE_RELOAD_TIMEOUT" tm-remote-build load folder tm-control-mcp -op OpenplanetNext "${_remote_host_args[@]}" -d "$OP_DATA_DIR" \
-            -l "${EPP_REMOTE_LOG_DONE_LIMIT:-3}" \
-            -i "${EPP_REMOTE_LOG_CHECK_INTERVAL:-0.5}" 2>&1 | tee "$_control_reload_log"
-          _control_reload_exit_code="${PIPESTATUS[0]}"
-          if [[ "$_control_reload_exit_code" == "0" ]] && grep -Eq "ERROR:tm_remote_build|Problem commanding" "$_control_reload_log"; then
-            _control_reload_exit_code=1
-          fi
-          set -e
-          rm -f "$_control_reload_log"
-          if [[ "$_control_reload_exit_code" == "124" ]]; then
-            _colortext16 yellow "⚠ Warning: tm-control-mcp reload timed out after ${REMOTE_RELOAD_TIMEOUT}; check Openplanet.log.\n"
-          elif [[ "$_control_reload_exit_code" != "0" ]]; then
-            _colortext16 yellow "⚠ Warning: tm-control-mcp reload reported an error; check Openplanet.log.\n"
-          fi
+        if [[ "${EPP_RELOAD_MAP_TOGETHER:-1}" == "1" ]]; then
+          remote_reload_folder map-together "after ${PLUGIN_NAME}"
         fi
       else
         _colortext16 yellow "⚠ Warning: tm-remote-build not found; skipping RemoteBuild reload.\n"

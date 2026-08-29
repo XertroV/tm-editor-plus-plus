@@ -37,6 +37,17 @@ Buffer: Blocks = DGameCtnMacroBlockInfo_Blocks, O_MACROBLOCK_BLOCKSBUF, SZ_MACRO
 Buffer: Skins = DGameCtnMacroBlockInfo_Skins, O_MACROBLOCK_SKINSBUF, SZ_MACROBLOCK_SKINSBUFEL, true
 #
 Buffer: Items = DGameCtnMacroBlockInfo_Items, O_MACROBLOCK_ITEMSBUF, SZ_MACROBLOCK_ITEMSBUFEL, true
+# offset: 0x1F8 — authoritative terrain list for macroblock placement (see research/MacroblockTerrain.md)
+Buffer: AutoTerrains = DGameCtnAutoTerrains, O_MACROBLOCK_AUTOTERRAINSBUF, SZ_CTNAUTOTERRAIN, true
+# 0x1D0/0x1D8: zone-list struct ptrs (null for small macroblocks; used by the full-map-size gated path)
+ZoneListStructA = uint64, 0x1D0, GS
+ZoneListStructB = uint64, 0x1D8, GS
+TerrainGridSizeX = int, 0x1E0, GS
+TerrainGridSizeY = int, 0x1E4, GS
+TerrainGridSizeZ = int, 0x1E8, GS
+unk1EC = int, 0x1EC, GS
+unk1F0 = int, 0x1F0, GS
+unk1F4 = int, 0x1F4, GS
 
 [DGameCtnMacroBlockInfo_Skin: SZ_MACROBLOCK_SKINSBUFEL]
 Skin = CGameCtnBlockSkin, 0x0, GS
@@ -79,3 +90,36 @@ unk9C = uint, 0x9C, GS
 BGSkin = CSystemPackDesc, 0xA0, GS
 FGSkin = CSystemPackDesc, 0xA8, GS
 Model = CGameItemModel, 0xB0, GS
+
+
+# CGameCtnAutoTerrain (0x03120000); offsets live-verified, see research/MacroblockTerrain.md
+[DGameCtnAutoTerrain: SZ_CTNAUTOTERRAIN]
+NativeClass = CGameCtnAutoTerrain
+refCount = int, 0x10, GS
+OffsetX = int, 0x18, GS
+OffsetY = int, 0x1C, GS
+OffsetZ = int, 0x20, GS
+Genealogy = CGameCtnZoneGenealogy, 0x28, GS
+
+# CGameCtnZoneGenealogy (0x0311D000); offsets live-verified, see research/MacroblockTerrain.md
+[DGameCtnZoneGenealogy: SZ_CTNZONEGENEALOGY]
+NativeClass = CGameCtnZoneGenealogy
+CurrentZone = CGameCtnZone, 0x18, GS
+Buffer: Zones = DGameCtnZones, 0x20, SZ_CTNZONE, true
+Buffer: ZoneHeights = DInt32s, 0x30, 0x4, false
+CurrentIndex = uint, 0x40, GS
+Dir = uint, 0x44, GS
+Buffer: ZoneIds = DMwIds, 0x48, 0x4, false
+CurrentZoneId = uint, 0x58, GS
+BaseHeight = int, 0x5C, GS
+BottomHeight = int, 0x60, GS
+TopHeight = int, 0x64, GS
+
+[DGameCtnZone: SZ_CTNZONE]
+NativeClass = CGameCtnZone
+
+[DInt32: 0x4]
+Value = int, 0x0, GS
+
+[DMwId: 0x4]
+Value = uint, 0x0, GS

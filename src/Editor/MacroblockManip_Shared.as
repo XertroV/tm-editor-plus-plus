@@ -91,10 +91,94 @@ namespace Editor {
         }
     }
 
+    // One macroblock terrain cell: an XZ offset plus the zone genealogy column.
+    // See research/MacroblockTerrain.md. Heights are normalized to base 0
+    // (matching in-memory macroblock storage); offsets are absolute map cell
+    // coords at capture time (normalized to min XZ at place time).
+    shared class TerrainSpec : NetworkSerializable {
+        int3 offset;
+        string[] zoneNames;
+        int[] zoneHeights;
+        uint currentIndex;
+        uint dir;
+        int baseHeight;
+        int bottomHeight;
+        int topHeight;
+
+        TerrainSpec() {}
+
+        TerrainSpec(MemoryBuffer@ buf) {
+            ReadFromNetworkBuffer(buf);
+        }
+
+        uint CalcSize() override {
+            uint size = 0;
+            size += 12; // offset
+            size += 1; // zone count
+            for (uint i = 0; i < zoneNames.Length; i++) {
+                size += 2 + zoneNames[i].Length + 4; // name + height
+            }
+            size += 4; // currentIndex
+            size += 4; // dir
+            size += 12; // base/bottom/top
+            return size;
+        }
+
+        void WriteToNetworkBufferInternal(MemoryBuffer@ buf) override {
+            buf.Write(offset.x);
+            buf.Write(offset.y);
+            buf.Write(offset.z);
+            uint nb = zoneNames.Length;
+            buf.Write(uint8(nb));
+            for (uint i = 0; i < nb; i++) {
+                WriteLPStringToBuffer(buf, zoneNames[i]);
+                buf.Write(zoneHeights[i]);
+            }
+            buf.Write(uint(currentIndex));
+            buf.Write(uint(dir));
+            buf.Write(baseHeight);
+            buf.Write(bottomHeight);
+            buf.Write(topHeight);
+        }
+
+        NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
+            offset.x = buf.ReadInt32();
+            offset.y = buf.ReadInt32();
+            offset.z = buf.ReadInt32();
+            uint nb = buf.ReadUInt8();
+            zoneNames.Resize(nb);
+            zoneHeights.Resize(nb);
+            for (uint i = 0; i < nb; i++) {
+                zoneNames[i] = ReadLPStringFromBuffer(buf);
+                zoneHeights[i] = buf.ReadInt32();
+            }
+            currentIndex = buf.ReadUInt32();
+            dir = buf.ReadUInt32();
+            baseHeight = buf.ReadInt32();
+            bottomHeight = buf.ReadInt32();
+            topHeight = buf.ReadInt32();
+            return this;
+        }
+
+        TerrainSpec@ Duplicate() {
+            auto ts = TerrainSpec();
+            ts.offset = offset;
+            ts.zoneNames = zoneNames;
+            ts.zoneHeights = zoneHeights;
+            ts.currentIndex = currentIndex;
+            ts.dir = dir;
+            ts.baseHeight = baseHeight;
+            ts.bottomHeight = bottomHeight;
+            ts.topHeight = topHeight;
+            return ts;
+        }
+    }
+
     shared class MacroblockSpec : NetworkSerializable {
         BlockSpec@[] blocks;
         SkinSpec@[] skins;
         ItemSpec@[] items;
+        TerrainSpec@[] terrains;
 
         BlockSpec@[]@ get_Blocks() {
             return blocks;
@@ -104,6 +188,13 @@ namespace Editor {
         }
         ItemSpec@[]@ get_Items() {
             return items;
+        }
+        TerrainSpec@[]@ get_Terrains() {
+            return terrains;
+        }
+
+        bool HasTerrain() {
+            return terrains.Length > 0;
         }
 
         uint get_Length() {
@@ -152,6 +243,15 @@ namespace Editor {
             size += 2; // item count
             for (uint i = 0; i < items.Length; i++) {
                 size += items[i].CalcSize();
+            }
+            // terrains chunk is omitted when empty (backwards compatibility).
+            // the chunk is the version flag.
+            if (terrains.Length > 0) {
+                size += 4; // magic
+                size += 2; // terrain count
+                for (uint i = 0; i < terrains.Length; i++) {
+                    size += terrains[i].CalcSize();
+                }
             }
             return size;
         }
@@ -224,6 +324,16 @@ namespace Editor {
             for (uint i = 0; i < items.Length; i++) {
                 items[i].WriteToNetworkBuffer(buf);
             }
+
+            // terrains chunk is omitted when empty (backwards compatibility).
+            // 0x734e5254 = "TRNs"
+            if (terrains.Length > 0) {
+                buf.Write(MAGIC_TERRAINS);
+                buf.Write(uint16(terrains.Length));
+                for (uint i = 0; i < terrains.Length; i++) {
+                    terrains[i].WriteToNetworkBuffer(buf);
+                }
+            }
         }
 
         NetworkSerializable@ ReadFromNetworkBuffer(MemoryBuffer@ buf) override {
@@ -237,11 +347,14 @@ namespace Editor {
             return {this};
         }
 
-        // Does not clone block and item specs! This will add all blocks and items from the other macroblock to this one.
+        // Does not clone block, item, or terrain specs! This will add all blocks, items, and terrains from the other macroblock to this one.
         void AddMacroblock(MacroblockSpec@ macroblock) {
             // todo: handle skins
             AddBlocks(macroblock.blocks);
             AddItems(macroblock.items);
+            for (uint i = 0; i < macroblock.terrains.Length; i++) {
+                terrains.InsertLast(macroblock.terrains[i]);
+            }
         }
 
         NewMbParts@ AddMacroblock(CGameCtnMacroBlockInfo@ macroblock, const vec3 &in position, const vec3 &in rotation) {

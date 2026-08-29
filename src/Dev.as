@@ -145,29 +145,108 @@ bool S_ForceDisableLinuxWineCheck = false;
 [Setting category="General" name="Reduce lower bound on pointer sizes (rarely needed for windows, linux/wine handled automatically)"]
 bool S_ReducedPointerSizeCheck = false;
 
+bool _RetLog(bool ret, const string &in msg) {
+    if (ret) dev_trace(msg);
+    return ret;
+}
 
 bool Dev_PointerLooksBad(uint64 ptr) {
     // ! testing
     if (S_ReducedPointerSizeCheck || (HAS_Z_DRIVE_WINE_INDICATOR && !S_ForceDisableLinuxWineCheck)) {
         // dev_trace('Has Z drive / ptr: ' + Text::FormatPointer(ptr) + ' < 0x100000000 = ' + tostring(ptr < 0x100000000));
         // dev_trace('base addr end: ' + Text::FormatPointer(BASE_ADDR_END));
-        if (ptr < 0x1000000) return true;
+        if (ptr < 0x1000000) return _RetLog(true, 'ptr < 0x1000000');
     } else {
         // dev_trace('Windows (no Z drive or forced skip) / ptr: ' + Text::FormatPointer(ptr));
-        if (ptr < 0x10000000000) return true;
+        if (ptr < 0x8000000000) return _RetLog(true, 'ptr < 0x8000000000');
     }
     // todo: something like this should fix linux (also in Dev_GetNodFromPointer)
     // if (ptr < 0x4fff08D0) return true;
-    if (ptr % 8 != 0) return true;
-    if (ptr == 0) return true;
+    if (ptr % 8 != 0) return _RetLog(true, 'ptr % 8 != 0');
+    if (ptr == 0) return _RetLog(true, 'ptr == 0');
 
     // base address is very low under wine (`0x0000000142C3D000`)
     if (!HAS_Z_DRIVE_WINE_INDICATOR || S_ForceDisableLinuxWineCheck) {
-        if (ptr > BASE_ADDR_END) return true;
+        if (ptr > BASE_ADDR_END) return _RetLog(true, 'ptr > BASE_ADDR_END');
     }
-    return false;
+    return _RetLog(false, 'ptr looks good');
 }
 
+
+// Check if memory is readable. No alignment check. Use Dev_PtrUsable for nods/structs.
+bool Dev_CanTouch(uint64 addr) {
+    if (addr == 0) return false;
+    try {
+        Dev::SafeReadUInt8(addr);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// Object / nod pointer: aligned, in range, and the page is readable.
+bool Dev_PtrUsable(uint64 ptr) {
+    return !Dev_PointerLooksBad(ptr) && Dev_CanTouch(ptr);
+}
+
+uint64 Dev_SafeReadUInt64(uint64 addr) {
+    if (addr == 0) return 0;
+    try {
+        return Dev::SafeReadUInt64(addr);
+    } catch {
+        return 0;
+    }
+}
+
+uint Dev_SafeReadUInt32(uint64 addr) {
+    if (addr == 0) return 0;
+    try {
+        return Dev::SafeReadUInt32(addr);
+    } catch {
+        return 0;
+    }
+}
+
+uint8 Dev_SafeReadUInt8(uint64 addr) {
+    if (addr == 0) return 0;
+    try {
+        return Dev::SafeReadUInt8(addr);
+    } catch {
+        return 0;
+    }
+}
+
+int Dev_SafeReadInt32(uint64 addr) {
+    if (addr == 0) return 0;
+    try {
+        return int(Dev::SafeReadUInt32(addr));
+    } catch {
+        return 0;
+    }
+}
+
+vec3 Dev_SafeReadVec3(uint64 addr) {
+    if (!Dev_CanTouch(addr) || !Dev_CanTouch(addr + 8)) return vec3();
+    return Dev::ReadVec3(addr);
+}
+
+bool Dev_SafeWriteUInt64(uint64 addr, uint64 v) {
+    if (!Dev_CanTouch(addr)) return false;
+    Dev::Write(addr, v);
+    return true;
+}
+
+bool Dev_SafeWriteUInt32(uint64 addr, uint32 v) {
+    if (!Dev_CanTouch(addr)) return false;
+    Dev::Write(addr, v);
+    return true;
+}
+
+bool Dev_SafeWriteVec3(uint64 addr, vec3 v) {
+    if (!Dev_CanTouch(addr) || !Dev_CanTouch(addr + 8)) return false;
+    Dev::Write(addr, v);
+    return true;
+}
 
 CMwNod@ Dev_GetOffsetNodSafe(CMwNod@ target, uint16 offset) {
     if (target is null) return null;
@@ -334,6 +413,11 @@ class ReferencedNod {
 
     void SetNod(CMwNod@ _nod) {
         NullifyAndRelease();
+        auto rc = Reflection::GetRefCount(_nod);
+        if (rc == 0) {
+            warn("SetNod: nod has ref count of 0 when setting.");
+            PrintActiveContextStack(true);
+        }
         @nod = _nod;
         if (nod !is null) {
             nod.MwAddRef();
@@ -440,6 +524,12 @@ class ReferencedNod {
     }
     CPlugSurface@ As_CPlugSurface() {
         return cast<CPlugSurface>(this.nod);
+    }
+    CControlLabel@ As_CControlLabel() {
+        return cast<CControlLabel>(this.nod);
+    }
+    CPlugBitmap@ As_CPlugBitmap() {
+        return cast<CPlugBitmap>(this.nod);
     }
 
     // Get stuff from the nod -- used for node graph
@@ -812,8 +902,12 @@ const uint16 O_BLOCKVAR_WATER_BUF = O_BLOCKVAR_COMPOUNDLOC + 0x30;
 
 const uint16 O_PREFAB_ENTS = GetOffset("CPlugPrefab", "Ents");
 const uint32 SZ_ENT_REF = 0x50;
+const uint16 O_ENTREF_MODEL = GetOffset("NPlugPrefab_SEntRef", "Model");
 const uint16 O_ENTREF_MODELFID = GetOffset("NPlugPrefab_SEntRef", "ModelFid");
 const uint16 O_ENTREF_PARAMS = GetOffset("NPlugPrefab_SEntRef", "Params");
+const uint16 O_ENTREF_LOCATION = GetOffset("NPlugPrefab_SEntRef", "Location");
+const uint16 O_ENTREF_LODGROUPID = GetOffset("NPlugPrefab_SEntRef", "LodGroupId");
+const uint16 O_ENTREF_NAME = GetOffset("NPlugPrefab_SEntRef", "Name");
 
 const uint16 O_VARLIST_VARIANTS = GetOffset("NPlugItem_SVariantList", "Variants");
 const uint32 SZ_VARLIST_VARIANT = 0x28;
@@ -879,6 +973,21 @@ const uint16 SZ_MACROBLOCK_BLOCKSBUFEL = 0x70;
 const uint16 SZ_MACROBLOCK_ITEMSBUFEL = 0xC0;
 const uint16 SZ_MACROBLOCK_SKINSBUFEL = 0x18;
 const uint16 SZ_CTNMACROBLOCK = 0x248;
+
+// MARK: O MB terrain
+// 0x148 + 0xB0 = 0x1F8 — authoritative AutoTerrains buffer for macroblock placement (research/MacroblockTerrain.md)
+const uint16 O_MACROBLOCK_AUTOTERRAINSBUF = GetOffset("CGameCtnMacroBlockInfo", "HasMultilap") + 0xB0;
+// map terrain genealogy grid: one CGameCtnZoneGenealogy@ per XZ cell; 0x310 + 0x80 = 0x390
+const uint16 O_MAP_TERRAIN_GENEALOGY_GRID = GetOffset("CGameCtnChallenge","MapInfo") + 0x80;
+// CGameCtnBlockInfoVariantGround terrain members (variant copy of AutoTerrains)
+const uint16 O_VARIANTGROUND_AUTOTERRAINS = GetOffset("CGameCtnBlockInfoVariantGround", "AutoTerrains");
+const uint16 O_VARIANTGROUND_AT_HEIGHTOFFSET = GetOffset("CGameCtnBlockInfoVariantGround", "AutoTerrainHeightOffset");
+const uint16 O_VARIANTGROUND_AT_PLACETYPE = GetOffset("CGameCtnBlockInfoVariantGround", "AutoTerrainPlaceType");
+const uint16 O_VARIANTGROUND_AT_WITHFRONTIERS = GetOffset("CGameCtnBlockInfoVariantGround", "AutoTerrainWithFrontiers");
+const uint16 SZ_CTNAUTOTERRAIN = 0x30;
+const uint16 SZ_CTNZONEGENEALOGY = 0x78;
+const uint16 SZ_CTNZONE = 0x40;
+const uint16 SZ_CTNBLOCKINFOVARIANTGROUND = 0x288;
 
 
 const uint16 SZ_CPlugVisualIndexedTriangles = 0x190; // 400

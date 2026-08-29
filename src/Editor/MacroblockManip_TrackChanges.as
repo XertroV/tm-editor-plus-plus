@@ -253,7 +253,7 @@ namespace Editor {
 
     void ResetTrackMapChanges() {
         if (blocksAddedThisFrame.Length > 0) {
-            dev_trace('Resetting map changes now.');
+            dev_trace('[MacroblockManip_TrackChanges::ResetTrackMapChanges] Resetting map changes now.');
         }
         @blocksAddedLastFrame = blocksAddedThisFrame;
         @blocksRemovedLastFrame = blocksRemovedThisFrame;
@@ -521,6 +521,12 @@ namespace Editor {
         } catch {
             warn("PlaceMacroblock: exception restoring donor macroblock: " + getExceptionInfo());
         }
+        // terrain needs ground-mode placement, so it runs as a second donor
+        // pass (terrain-only) after the air-mode blocks/items pass
+        if (mbSpec.terrains.Length > 0) {
+            dev_trace("PlaceMacroblock: placing terrain (" + mbSpec.terrains.Length + " cells) via ground donor pass");
+            Editor::PlaceMacroblockTerrain(mbSpec);
+        }
         pmt.ForceMacroblockColor = forceMbColor;
         dev_trace("PlaceMacroblock returning: " + placed);
 
@@ -609,6 +615,14 @@ namespace Editor {
             removed = pmt.RemoveMacroblock(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
             dev_trace("DeleteMacroblock: RemoveMacroblock returned " + removed
                 + " (after init/conn=true)");
+            // MB donors often lack the variant AutoTerrains copy that
+            // RemoveMacroblock uses to reset cells. Always reset captured
+            // terrain via RemoveTerrainBlocks (becomes collection default).
+            if (mbSpec.HasTerrain()) {
+                bool terrainReset = Editor::ResetTerrainFromSpec(mbSpec);
+                dev_trace("DeleteMacroblock: ResetTerrainFromSpec=" + terrainReset);
+                if (terrainReset) removed = true;
+            }
             if (removed && addUndoRedoPoint) pmt.AutoSave();
         } catch {
             NotifyWarning("DeleteMacroblock: exception removing donor macroblock: " + getExceptionInfo());

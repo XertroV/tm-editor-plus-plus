@@ -2,6 +2,16 @@
 NativeClass = CGameCtnBlockInfoVariant
 Buffer: Pillars = DGameCtnBlockInfos, O_BLOCKINFOVAR_PILLARSArray, SZ_CTNBLOCKINFO, true
 
+# Terrain members at +0x250.. (variant copy of AutoTerrains; used by removal/ground-block placement,
+# NOT by macroblock placement — see research/MacroblockTerrain.md). Wrapper DGameCtnAutoTerrains
+# and element DGameCtnAutoTerrain are generated from codegen/Editor/Macroblocks.xtoml.
+[DGameCtnBlockInfoVariantGround: SZ_CTNBLOCKINFOVARIANTGROUND]
+NativeClass = CGameCtnBlockInfoVariantGround
+Inline: DGameCtnAutoTerrains@ get_AutoTerrainsBuf() { return DGameCtnAutoTerrains(this.GetBuffer(O_VARIANTGROUND_AUTOTERRAINS, SZ_CTNAUTOTERRAIN, true)); }
+AutoTerrainHeightOffset = int, O_VARIANTGROUND_AT_HEIGHTOFFSET, GS
+AutoTerrainPlaceType = CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType(4), O_VARIANTGROUND_AT_PLACETYPE, GS
+AutoTerrainWithFrontiers = uint8, O_VARIANTGROUND_AT_WITHFRONTIERS, GS
+
 [DGameCtnBlockInfo: SZ_CTNBLOCKINFO]
 NativeClass = CGameCtnBlockInfo
 PackedProps = uint32, O_CTNBLOCK_MOBILVARIANT, GS

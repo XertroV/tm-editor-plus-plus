@@ -1,5 +1,8 @@
+
 ignore.*.as
 *.zip
 src/Editor/LibWebP.as
 *.back
 Trackmani*.exe
+research/screenshots/*.jpg
+**/__pycache__

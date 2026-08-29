@@ -33,6 +33,12 @@ namespace Editor {
         return cast<CGameItemModel>(node.GetCollectorNod());
     }
 
+    CGameCtnBlockInfo@ GetInventoryBlockInfoByName(const string &in name) {
+        auto node = GetInventoryCache().GetBlockByName(name);
+        if (node is null) return null;
+        return cast<CGameCtnBlockInfo>(node.GetCollectorNod());
+    }
+
     void RefreshInventoryCache() {
         _InventoryCache.RefreshCacheSoon();
     }
