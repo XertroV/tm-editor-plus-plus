@@ -45,6 +45,11 @@ void Main() {
     RegisterOnEditorLoadCallback(PlacementHooks::SetupHooks, "PlacementHooks::SetupHooks");
     RegisterOnEditorUnloadCallback(PlacementHooks::UnloadHooks, "PlacementHooks::UnloadHooks");
 
+#if DEV
+    RegisterOnEditorLoadCallback(LMComputePreviewSpike::SetupHooks, "LMComputePreviewSpike::SetupHooks");
+    RegisterOnEditorUnloadCallback(LMComputePreviewSpike::UnloadHooks, "LMComputePreviewSpike::UnloadHooks");
+#endif
+
     RegisterOnEditorStartingUpCallback(EditorPatches::OnEditorStartingUp, "EditorPatches::OnEditorStartingUp");
 
     RegisterOnEditorStartingUpCallback(PillarsChoice::OnEditorStartingUp, "PillarsChoice::OnEditorStartingUp");
@@ -269,6 +274,10 @@ void RenderEarly() {
     }
 
     IsCalculatingShadows = IsInEditor && DGameCtnEditorFree(editor).IsCalculatingShadows;
+#if DEV
+    // Null LM preview Bitmap handles in the same RenderEarly that sees bake end.
+    LMComputePreviewSpike::OnBakeTick();
+#endif
 
     g_WasDragging = g_IsDragging;
     g_LmbDown = IsLMBPressed();

@@ -28,6 +28,9 @@ class LightmapTab : Tab {
         }
 #endif
         DrawLightmapDebugFlagCheckbox();
+#if SIG_DEVELOPER
+        LMComputePreviewSpike::DrawPicker();
+#endif
 
         if (UI::CollapsingHeader("Customize Lightmap")) {
             UI::Indent();

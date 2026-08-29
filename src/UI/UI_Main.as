@@ -86,8 +86,15 @@ void _UI_Main_Render() {
     // test: don't draw stuff for 1 more frame
     if (EnteringEditor) return;
 
+#if DEV
+    // Tick even when the editor flag has dropped so leftover preview binds are
+    // cleared after the wait dialog hides (flag at 0x1264 can stick).
+    LMComputePreviewSpike::OnBakeTick();
+#endif
     if (IsCalculatingShadows) {
-        // todo: draw something about calculating shadows?
+#if DEV
+        LMComputePreviewSpike::DrawBakeOverlay();
+#endif
         return;
     }
 
