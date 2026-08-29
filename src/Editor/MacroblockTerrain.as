@@ -84,10 +84,7 @@ namespace Editor {
         for (int z = minCoord.z; z <= maxCoord.z; z++) {
             for (int x = minCoord.x; x <= maxCoord.x; x++) {
                 if (x < 0 || z < 0 || x >= size.x || z >= size.z) continue;
-                // Grid is x-major: ix = z + x*size.z (verified empirically:
-                // a block placed at engine coord (30,·,35) changes the grid
-                // entries whose x-major decode is (30±1, 35±1)).
-                uint ix = uint(z) + uint(x) * uint(size.z);
+                uint ix = _TerrainCellIx(x, z, size.z);
                 if (ix >= cells.Length) continue;
                 auto gen = cells.GetTerrainCell(ix).Nod;
                 if (gen is null) continue;
@@ -319,7 +316,6 @@ namespace Editor {
         // case -- the ground-block replay preceding this diff terraformed the
         // same cells), there is nothing to peel, so no need to wait for the
         // engine job queue at all.
-        uint64 _fEnter = Time::FrameCount;
         bool anyWork = false;
         for (uint i = 0; i < mbSpec.terrains.Length; i++) {
             auto ts = mbSpec.terrains[i];
@@ -333,10 +329,8 @@ namespace Editor {
         // never peel while an engine terraform job may still be in flight:
         // concurrent remove-vs-build has wedged the engine's terrain job
         // queue for the rest of the session (observed live 2026-08-29)
-        uint _quietWaitStart = Time::Now;
-        while (Time::Now < _lastTerrainActivityAt + 300 && Time::Now < _quietWaitStart + 8000) yield();
-        uint64 _fQuietDone = Time::FrameCount;
-        uint64 _fPeelTotal = 0;
+        uint quietWaitStart = Time::Now;
+        while (Time::Now < _lastTerrainActivityAt + 300 && Time::Now < quietWaitStart + 8000) yield();
 
         // NATIVE-ONLY apply. In the vista editors terrain can only be RAISED
         // by ground-block AutoTerrains (PlaceTerrainBlocks refuses in this
@@ -362,7 +356,6 @@ namespace Editor {
                 continue;
             }
             bool matched = false;
-            uint64 _fPeelStart = Time::FrameCount;
             for (uint attempt = 0; attempt < 8; attempt++) {
                 if (!pmt.RemoveTerrainBlocks(int3(c.x, 0, c.z), int3(c.x, 40, c.z))) break;
                 string newSig = curSig;
@@ -375,7 +368,6 @@ namespace Editor {
                 if (newSig == curSig) break; // fixed point; peeling does nothing more
                 curSig = newSig;
             }
-            _fPeelTotal += Time::FrameCount - _fPeelStart;
             if (matched) nbPeelMatched++;
             else {
                 nbDeferred++;
@@ -385,8 +377,7 @@ namespace Editor {
         }
         dev_trace("PlaceMacroblockTerrain: " + mbSpec.terrains.Length + " cells -> "
             + nbMatched + " matched, " + nbResetOnly + " reset, " + nbPeelMatched
-            + " peeled, " + nbDeferred + " deferred [f: quietWait=" + (_fQuietDone - _fEnter)
-            + " peels=" + _fPeelTotal + " total=" + (Time::FrameCount - _fEnter) + " @f" + Time::FrameCount + "]");
+            + " peeled, " + nbDeferred + " deferred @f" + Time::FrameCount);
         // peels fired terrain-block hooks; for a remote apply make sure the
         // diff snapshot resyncs (scoped to these cells) instead of
         // broadcasting them back
@@ -406,13 +397,19 @@ namespace Editor {
         return DGameCtnBlockInfoVariantGround(info.VariantBaseGround).AutoTerrainsBuf.Length > 0;
     }
 
+    // The genealogy grid is x-major: ix = z + x*size.z. Verified empirically:
+    // a block placed at engine coord (30,·,35) changes the grid entries whose
+    // x-major decode is (30±1, 35±1); the z-major decode mirrors them.
+    uint _TerrainCellIx(int x, int z, int sizeZ) { return uint(z) + uint(x) * uint(sizeZ); }
+    int3 _TerrainCellCoord(uint ix, int sizeZ) { return int3(int(ix) / sizeZ, 0, int(ix) % sizeZ); }
+
     // Base-relative signature of the live cell at (x, z), "" when unreadable.
     string _CurrentCellSig(CGameCtnChallenge@ map, int x, int z) {
         if (map is null || x < 0 || z < 0) return "";
         auto cells = DGameCtnChallenge(map).TerrainGenealogies;
         int sizeZ = Nat3ToInt3(map.Size).z;
         if (sizeZ <= 0) return "";
-        uint ix = uint(z) + uint(x) * uint(sizeZ);
+        uint ix = _TerrainCellIx(x, z, sizeZ);
         if (ix >= cells.Length) return "";
         auto gen = cells.GetTerrainCell(ix).Nod;
         if (gen is null) return "";
@@ -433,9 +430,8 @@ namespace Editor {
         if (gspec is null || editor is null || editor.PluginMapType is null) return false;
         if (gspec.Blocks.Length == 0) return true;
         auto pmt = editor.PluginMapType;
-        string _defaultSigCache = "";
-        bool _defaultSigInit = false;
-        uint64 _fGpEnter = Time::FrameCount;
+        string defaultSig = "";
+        bool defaultSigInit = false;
         array<BlockSpec@> failedBlocks;
         for (uint i = 0; i < gspec.blocks.Length; i++) {
             auto b = gspec.blocks[i];
@@ -464,13 +460,13 @@ namespace Editor {
                     // remove + re-place to re-trigger the terrain job.
                     bool healed = false;
                     if (_GroundVariantHasAutoTerrains(existing.BlockInfo)) {
-                        if (!_defaultSigInit) {
-                            _defaultSigInit = true;
-                            _defaultSigCache = GetMapDefaultGenealogySignature(
+                        if (!defaultSigInit) {
+                            defaultSigInit = true;
+                            defaultSig = GetMapDefaultGenealogySignature(
                                 DGameCtnChallenge(editor.Challenge).TerrainGenealogies);
                         }
                         string cellSig = _CurrentCellSig(editor.Challenge, c.x, c.z);
-                        if (cellSig != "" && cellSig == _defaultSigCache) {
+                        if (cellSig != "" && cellSig == defaultSig) {
                             dev_trace("PlaceMacroblockGroundBlocks: " + b.name + " at " + c.ToString()
                                 + " has no terraform under it; re-placing to re-trigger the terrain job");
                             auto exCoord = Nat3ToInt3(Editor::GetBlockCoord(existing));
@@ -502,8 +498,6 @@ namespace Editor {
         }
         // native placement terraforms; resync the diff snapshot once it lands
         ScheduleTerrainSnapshotResync();
-        dev_trace("PlaceMacroblockGroundBlocks: " + gspec.blocks.Length + " blocks in "
-            + (Time::FrameCount - _fGpEnter) + " frames @f" + Time::FrameCount);
         if (failedBlocks.Length == 0) return true;
         dev_trace("PlaceMacroblockGroundBlocks: " + failedBlocks.Length + " native refusals; donor fallback");
         return _PlaceGroundBlocksViaDonor(MacroblockSpecPriv(failedBlocks, array<ItemSpec@> = {}));
@@ -664,7 +658,7 @@ namespace Editor {
         for (int x = bx - TERRAIN_RESYNC_MARGIN; x <= bx + TERRAIN_RESYNC_MARGIN; x++) {
             for (int z = bz - TERRAIN_RESYNC_MARGIN; z <= bz + TERRAIN_RESYNC_MARGIN; z++) {
                 if (x < 0 || z < 0 || x >= size.x || z >= size.z) continue;
-                _terrainResyncCellIxs.Set("" + (uint(z) + uint(x) * uint(size.z)), true);
+                _terrainResyncCellIxs.Set("" + _TerrainCellIx(x, z, size.z), true);
             }
         }
     }
@@ -683,7 +677,6 @@ namespace Editor {
         // late cells into the next diff (broadcast echo). An early refresh is
         // only an echo (peers no-op it via sig-match), so a short quiet
         // window with a hard cap is enough.
-        uint64 _fResync = Time::FrameCount;
         sleep(300);
         uint capAt = Time::Now + 5000;
         while (Time::Now < _lastTerrainActivityAt + 500 && Time::Now < capAt) sleep(100);
@@ -705,8 +698,7 @@ namespace Editor {
             _terrainSnapshotSigs[ix] = _TerrainCellSig(cells.GetTerrainCell(ix).Nod);
             refreshed++;
         }
-        dev_trace("[TerrainResync] scoped refresh of " + refreshed + " cells after "
-            + (Time::FrameCount - _fResync) + " frames @f" + Time::FrameCount);
+        dev_trace("[TerrainResync] scoped refresh of " + refreshed + " cells @f" + Time::FrameCount);
     }
 
     // MARK: Terrain change tracking (for sync plugins, e.g. map-together)
@@ -786,7 +778,7 @@ namespace Editor {
             _terrainSnapshotSigs[i] = sig;
             if (gen is null) continue;
             auto ts = TerrainSpec();
-            ts.offset = int3(int(i) / sizeZ, 0, int(i) % sizeZ);
+            ts.offset = _TerrainCellCoord(i, sizeZ);
             SetTerrainSpecFromGenealogy(ts, gen, gen.BaseHeight);
             spec.terrains.InsertLast(ts);
         }
@@ -802,25 +794,15 @@ namespace Editor {
     // poll GetTerrainDiffSpec -- hooks fan the single diff out instead).
     // With no subscribers the watcher touches nothing, keeping the polling
     // exports usable. Ticked from ResetTrackMapChanges_Loop (BeforeScripts).
-    // Frame-based settle: terraform COMMITS IN THE SAME FRAME as the block
-    // placement -- a replay wave of 13 ground blocks placed at f291434 landed
-    // every terrain change as one dirty tick at f291434 (tickOffsets [0]).
-    // So 2 quiet frames (1 frame of straddle margin) is enough; a premature
-    // settle would self-heal via a follow-up diff anyway. (An earlier
-    // "max gap 4f" measurement was an artifact of MCP test calls arriving
-    // ~4 frames apart -- per-action commits are same-frame.)
+    // Frame-based settle: terraform commits in the SAME FRAME as its block
+    // placement (measured: a 13-block replay wave landed all terrain as one
+    // dirty tick that frame), so 2 quiet frames = 1 frame of straddle margin.
+    // A premature settle self-heals via a follow-up diff. Beware re-measuring
+    // this with spaced test calls: gaps then reflect call spacing, not engine
+    // scheduling.
     const uint TERRAIN_SETTLE_QUIET_FRAMES = 2;
     uint _terrainQuietFrames = 0;
     bool _terrainHookArmed = false;
-    // burst stats (hard data for tuning the settle threshold): dirty ticks per
-    // burst, burst span in frames, and the largest intra-burst quiet gap --
-    // if that gap ever nears TERRAIN_SETTLE_QUIET_FRAMES, the threshold is
-    // too aggressive for that placement size / map
-    uint64 _burstStartFrame = 0;
-    uint64 _burstLastDirtyFrame = 0;
-    uint _burstDirtyTicks = 0;
-    uint _burstMaxGap = 0;
-    array<uint> _burstTickOffsets;
 
     bool _terrainHookWatcherAnnounced = false;
     void TerrainHookWatcher_Tick() {
@@ -845,17 +827,6 @@ namespace Editor {
             if (!IsTerrainResyncPending()) {
                 Callbacks::Exts::Run_OnTerrainDirty();
             }
-            if (!_terrainHookArmed) {
-                _burstStartFrame = Time::FrameCount;
-                _burstDirtyTicks = 0;
-                _burstMaxGap = 0;
-                _burstTickOffsets.RemoveRange(0, _burstTickOffsets.Length);
-            } else if (_terrainQuietFrames > _burstMaxGap) {
-                _burstMaxGap = _terrainQuietFrames;
-            }
-            _burstDirtyTicks++;
-            _burstLastDirtyFrame = Time::FrameCount;
-            if (_burstTickOffsets.Length < 24) _burstTickOffsets.InsertLast(uint(Time::FrameCount - _burstStartFrame));
             _terrainHookArmed = true;
             _terrainQuietFrames = 0;
         } else if (_terrainHookArmed) {
@@ -871,11 +842,7 @@ namespace Editor {
             }
             _terrainHookArmed = false;
             auto diff = GetTerrainDiffSpec();
-            string _tickOffs = "";
-            for (uint ti = 0; ti < _burstTickOffsets.Length; ti++) _tickOffs += (ti > 0 ? "," : "") + _burstTickOffsets[ti];
-            dev_trace("[TerrainHookWatcher] settled @f" + Time::FrameCount + "; diff cells: " + (diff is null ? -1 : int(diff.Terrains.Length))
-                + "; burst: " + _burstDirtyTicks + " dirty ticks over " + (_burstLastDirtyFrame - _burstStartFrame + 1)
-                + " frames (start f" + _burstStartFrame + "), max quiet gap " + _burstMaxGap + "f, tickOffsets [" + _tickOffs + "]");
+            dev_trace("[TerrainHookWatcher] settled @f" + Time::FrameCount + "; diff cells: " + (diff is null ? -1 : int(diff.Terrains.Length)));
             if (diff !is null && diff.Terrains.Length > 0) {
                 Callbacks::Exts::Run_OnTerrainChanged(diff);
             }
