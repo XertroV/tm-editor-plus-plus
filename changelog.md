@@ -1,4 +1,25 @@
-# 0.8.99999999a
+# 0.8.999999999.1
+
+## Macroblocks — terrain (new)
+
+- Macroblock specs can capture, serialize, and place **map terrain** (non-default genealogy cells). E++ placement is two-pass: air-mode for blocks/items, then a ground-mode donor pass for terrain only (air-mode + AutoTerrains crashes the game).
+- Guards: never ground-place an empty donor; abort if the map ground base cannot be resolved; terrain offsets stored absolute and normalized at place time. Zone nods resolved from the map genealogy grid (not `CompleteZoneList`).
+- Macroblock Recorder: **Record Terrain (from map)** checkbox (default off). Captures terrain under the recorded region into the spec; UI shows terrain counts. Native paste of an air macroblock that still carries AutoTerrains can crash — prefer applying the recording through E++ `PlaceMacroblock`.
+- Plugin API: `MacroblockSpec.Terrains` / `HasTerrain()`; `TerrainSpec` is part of the shared spec (network buffer includes a terrains chunk when non-empty).
+
+## Blocks & Items — Terrain tab (new)
+
+- New **Terrain** subtab lists `PluginMapType.TerrainBlocks` (includes the default fill; CSV includes terrain rows).
+- Reset a cell to the collection default (peels genealogy layers until WaterHill/Water/Grass/etc.).
+
+## Plugin API — item editor / inventory / skins
+
+- `SaveAndReloadItemEditorAsync()` (coroutine; same path as the item-editor Save+reload).
+- Inventory: `GetInventoryBlockInfoByName`. Item/block skins: `GetItemModelGameSkin` / `GetBlockInfoGameSkin` / `SetItemModelGameSkin`.
+
+## Inventory patch
+
+- Skip-club / skip-club-update patch setting stays armed after a map load (one-shot export still reverts to the menu setting). Mutually exclusive skip-vs-disable so both patches cannot be on at once.
 
 ## Map cache (in-editor block/item index)
 
@@ -61,6 +82,7 @@
 - Fix #32: `RegisterExtension` declaration was in the wrong namespace — extension scripts now bind.
 - Test-vehicle window tooltip clarified (#11): the window only shows in test mode (not validating), but the chosen vehicle is saved on the map and applies to validation too.
 - New tooling/MCP exports: `SaveCurrentItemEditorItem`, `LeaveCurrentItemEditor` (native editor `Exit()`).
+- Dev menu: **Editor** nod explorer is skipped when `GetApp().Editor` is null (crash outside the editor).
 
 # 0.8.999999996
 
