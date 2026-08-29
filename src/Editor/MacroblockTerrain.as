@@ -355,13 +355,50 @@ namespace Editor {
         return placed;
     }
 
-    // Place ground grid blocks via a ground-mode donor pass. Air-mode donor
-    // placement refuses any isGround block (verified on RedIsland: even a plain
-    // OpenTechRoadStraight spec with isGround=true returns placed=false), so
-    // PlaceMacroblock peels ground blocks into this pass. Block coords are kept
-    // absolute — the donor is ground-placed at XZ origin, and the engine
-    // re-derives ground-block Y from the terrain surface.
+    // Place ground grid blocks. The air-mode donor refuses any isGround block
+    // outright (verified on RedIsland: even a plain OpenTechRoadStraight spec
+    // with isGround=true returns placed=false), and a ground-mode donor places
+    // them WITHOUT their auto-terrain (mb+0x1F8 is authoritative for donor
+    // terraform and carries no per-model entries) — a replayed ground block
+    // then lost its terraform and desynced the grid vs the sender. So place
+    // natively per block (runs the model's own ground-variant AutoTerrains,
+    // reproducing the sender's result); blocks the engine refuses (occupied
+    // etc.) fall back to the ground-mode donor, which at least places them.
     bool PlaceMacroblockGroundBlocks(MacroblockSpecPriv@ gspec) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (gspec is null || editor is null || editor.PluginMapType is null) return false;
+        if (gspec.Blocks.Length == 0) return true;
+        auto pmt = editor.PluginMapType;
+        array<BlockSpec@> failedBlocks;
+        for (uint i = 0; i < gspec.blocks.Length; i++) {
+            auto b = gspec.blocks[i];
+            auto info = pmt.GetBlockModelFromName(b.name);
+            bool placed = false;
+            if (info is null) {
+                warn("PlaceMacroblockGroundBlocks: unknown block model: " + b.name);
+            } else {
+                // spec coords store y-1 (same convention the air pass offsets
+                // with its <0,1,0> placement coord)
+                int3 c = int3(int(b.coord.x), int(b.coord.y) + 1, int(b.coord.z));
+                auto dir = CGameEditorPluginMap::ECardinalDirections(int(b.dir));
+                try {
+                    placed = pmt.PlaceBlock(info, c, dir);
+                } catch {
+                    warn("PlaceMacroblockGroundBlocks: PlaceBlock threw for " + b.name + ": " + getExceptionInfo());
+                }
+                dev_trace("PlaceMacroblockGroundBlocks: native place " + b.name + " @ " + c.ToString() + " dir " + tostring(dir) + " -> " + placed);
+            }
+            if (!placed) failedBlocks.InsertLast(b);
+        }
+        // native placement terraforms; resync the diff snapshot once it lands
+        ScheduleTerrainSnapshotResync();
+        if (failedBlocks.Length == 0) return true;
+        dev_trace("PlaceMacroblockGroundBlocks: " + failedBlocks.Length + " native refusals; donor fallback");
+        return _PlaceGroundBlocksViaDonor(MacroblockSpecPriv(failedBlocks, array<ItemSpec@> = {}));
+    }
+
+    // Ground-mode donor fallback: places the blocks but NOT their terraform.
+    bool _PlaceGroundBlocksViaDonor(MacroblockSpecPriv@ gspec) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (gspec is null || editor is null || editor.PluginMapType is null) return false;
         if (gspec.Blocks.Length == 0) return true;
@@ -487,6 +524,21 @@ namespace Editor {
         if (_terrainSnapshotTaken) RefreshTerrainSnapshot();
     }
 
+    bool _terrainResyncScheduled = false;
+    // Coalesced "refresh the diff snapshot in ~2s": used after native ground-
+    // block replays, whose terraform lands async and must not be diffed back
+    // to the peer who sent them.
+    void ScheduleTerrainSnapshotResync() {
+        if (_terrainResyncScheduled) return;
+        _terrainResyncScheduled = true;
+        startnew(_TerrainSnapshotResyncSoon);
+    }
+    void _TerrainSnapshotResyncSoon() {
+        sleep(2000);
+        _terrainResyncScheduled = false;
+        if (_terrainSnapshotTaken) RefreshTerrainSnapshot();
+    }
+
     // MARK: Terrain change tracking (for sync plugins, e.g. map-together)
     //
     // The genealogy grid changes asynchronously (terraform lands ~1s after
@@ -502,6 +554,13 @@ namespace Editor {
 
     bool IsTerrainDirty() { return _terrainDirty; }
     void ClearTerrainDirty() { _terrainDirty = false; }
+
+    // True while a remote/API terrain apply is still settling (donor restore
+    // queue or a scheduled snapshot resync): grid changes seen in this window
+    // are someone else's edit landing, not something to broadcast.
+    bool IsTerrainResyncPending() {
+        return _terrainResyncScheduled || _terrainPlaceRestoreQueue.Length > 0;
+    }
 
     // Full per-cell state, absolute heights (unlike GenealogySignature, which
     // is base-relative for default-cell detection).

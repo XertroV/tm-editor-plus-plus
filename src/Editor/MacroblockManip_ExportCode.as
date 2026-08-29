@@ -124,6 +124,7 @@ namespace Editor {
     // snapshot). PlaceMacroblock applies terrain-only specs via the ground
     // donor pass.
     import bool IsTerrainDirty() from "Editor";
+    import bool IsTerrainResyncPending() from "Editor";
     import void ClearTerrainDirty() from "Editor";
     import void RefreshTerrainSnapshot() from "Editor";
     import MacroblockSpec@ GetTerrainDiffSpec() from "Editor";
