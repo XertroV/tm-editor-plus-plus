@@ -36,9 +36,12 @@ namespace Editor {
         ts.topHeight = gen.TopHeight - normBase;
     }
 
-    // Signature for default-cell detection: zone names + base-relative heights + dir.
+    // Signature for default-cell detection and target matching: dir + surface
+    // height + current index + zone names/heights, all base-relative. The
+    // surface height (TopHeight) is load-bearing: the Frontier carve and Flat
+    // fill gestures produce identical zone stacks that differ only in it.
     string GenealogySignature(CGameCtnZoneGenealogy@ gen) {
-        string sig = uint(gen.Dir) + "|";
+        string sig = uint(gen.Dir) + "|" + (gen.TopHeight - gen.BaseHeight) + "|" + gen.CurrentIndex + "|";
         for (uint i = 0; i < gen.ZoneIds.Length; i++) {
             sig += gen.ZoneIds[i].GetName() + ":" + (gen.ZoneHeights[i] - gen.BaseHeight) + ",";
         }
@@ -292,7 +295,7 @@ namespace Editor {
     // sig of a TerrainSpec in GenealogySignature's format (base-relative), so
     // spec targets can be compared against live grid cells
     string TerrainSpecSignature(TerrainSpec@ ts) {
-        string sig = ts.dir + "|";
+        string sig = ts.dir + "|" + (ts.topHeight - ts.baseHeight) + "|" + ts.currentIndex + "|";
         for (uint i = 0; i < ts.zoneNames.Length; i++) {
             sig += ts.zoneNames[i] + ":" + (ts.zoneHeights[i] - ts.baseHeight) + ",";
         }
@@ -360,12 +363,15 @@ namespace Editor {
                 nbResetOnly++;
                 continue;
             }
-            // Peeling only LOWERS the stack: a target that tops out above the
-            // live cell is provably not peel-reachable. Bail before touching
-            // the cell -- attempting anyway strips it toward default (and
-            // burns ~40 frames per attempt) before concluding deferred.
+            // Peeling only TRUNCATES the live stack: a target that tops out
+            // above the live cell, or that needs at least as many zones as the
+            // live stack has (equal length = a dir/height-only mismatch), is
+            // provably not peel-reachable. Bail before touching the cell --
+            // attempting anyway strips it toward default (and burns ~40 frames
+            // per attempt) before concluding deferred.
             auto curGen = _CurrentCellGen(map, c.x, c.z);
-            if (curGen !is null && ts.topHeight - ts.baseHeight > curGen.TopHeight - curGen.BaseHeight) {
+            if (curGen !is null && (ts.topHeight - ts.baseHeight > curGen.TopHeight - curGen.BaseHeight
+                    || ts.zoneNames.Length >= curGen.ZoneIds.Length)) {
                 nbDeferred++;
                 deferredCells.InsertLast(ts);
                 continue;
@@ -412,22 +418,25 @@ namespace Editor {
         return true;
     }
 
-    // Native terrain-model reconstruction for targets peeling can't reach.
-    // A genealogy's zone names are terrain block model names, so a
-    // "base + one zone" target is re-created by the terrain tool's own
-    // native placement over the matching rectangle. Models enforce minimum
-    // region sizes (the vista land/hill models need >= 2x2; shores place
-    // 1x1), so same-model cells are grouped into greedy maximal rectangles.
-    // Returns the number of cells covered by successful placements; the
-    // terraform lands async and is verified by the usual settle machinery.
+    // Native terrain reconstruction for targets peeling can't reach. A
+    // genealogy's zone names are terrain block model names, so "base + one
+    // zone" targets are re-created by the terrain tool's own native placement
+    // (research/2026-08-30-TerrainPlacementRE.md). Most of a gesture's
+    // footprint is engine-DERIVED from its neighbors rather than directly
+    // placeable (support rings around hills, slope dirs around carves), so
+    // the rebuild runs in ordered passes with a live recheck between each:
+    //   1. hills (relTop >= 2), tallest first -- their smoothing recreates
+    //      the 1-wide support rings that arrive as unplaceable thin strips;
+    //   2. land-level fills (relTop == 1) with the Flat model, 1-wide rects
+    //      widened into adjacent live land cells so the model's >= 2x2
+    //      minimum is satisfiable (idempotent for the widened cells);
+    //   3. carves: a pond dug into land leaves a patch of slope cells whose
+    //      dirs no flat gesture can express; the original carve rect is the
+    //      mismatch region's bounding box eroded by one, and re-carving it
+    //      lets the engine re-derive the slopes.
+    // A second round strips survivors to default and rebuilds from scratch.
+    // Returns the number of work cells whose live state matches its target.
     uint _ReconstructTerrainViaNativePlace(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<TerrainSpec@>@ cells) {
-        // The Frontier shore model and the Flat fill model (e.g. WhiteShore
-        // "WaterShore1" vs "Land") produce IDENTICAL zone stacks and differ
-        // only in the resulting surface height (carve = water level, fill =
-        // land level) -- and which of the two a map treats as its default
-        // varies by decoration. So groups carry the target's relative top,
-        // each placement is verified against it, and a low result is
-        // corrected by re-placing the rect with the Flat model.
         CGameCtnBlockInfo@ flatModel = null;
         for (uint i = 0; i < pmt.TerrainBlockModels.Length; i++) {
             if (cast<CGameCtnBlockInfoFlat>(pmt.TerrainBlockModels[i]) !is null) {
@@ -435,73 +444,231 @@ namespace Editor {
                 break;
             }
         }
-        array<string> names;      // zone/model name per group
-        array<int> relTops;       // target relative top per group
-        array<array<uint>@> groups;
+        array<ReconCell@> work;
         for (uint i = 0; i < cells.Length; i++) {
             auto ts = cells[i];
-            // phase 1: base + single zone (tool gestures); deeper stacks stay deferred
-            if (ts.zoneNames.Length != 2) continue;
-            string mName = ts.zoneNames[1];
-            if (pmt.GetTerrainBlockModelFromName(mName) is null) continue;
-            int relTop = ts.topHeight - ts.baseHeight;
-            int gi = -1;
-            for (uint gj = 0; gj < names.Length; gj++) {
-                if (names[gj] == mName && relTops[gj] == relTop) { gi = int(gj); break; }
-            }
-            if (gi < 0) {
-                names.InsertLast(mName);
-                relTops.InsertLast(relTop);
-                groups.InsertLast(array<uint>());
-                gi = int(names.Length) - 1;
-            }
-            groups[gi].InsertLast(uint(ts.offset.x) << 16 | uint(ts.offset.z));
+            // phase 1: tool-gesture stacks -- the base zone alone (a fill's
+            // interior cell) or base + one zone; deeper stacks stay deferred
+            if (ts.zoneNames.Length < 1 || ts.zoneNames.Length > 2) continue;
+            string zName = ts.zoneNames[ts.zoneNames.Length - 1];
+            if (pmt.GetTerrainBlockModelFromName(zName) is null && flatModel is null) continue;
+            auto rc = ReconCell();
+            rc.x = ts.offset.x;
+            rc.z = ts.offset.z;
+            rc.zone = zName;
+            rc.relTop = ts.topHeight - ts.baseHeight;
+            rc.dir = int(ts.dir);
+            rc.targetSig = TerrainSpecSignature(ts);
+            work.InsertLast(rc);
         }
-        uint placedCells = 0;
-        dictionary decidedModels; // "zone|relTop" -> model name that verified
-        for (uint g = 0; g < names.Length; g++) {
-            string decidedKey = names[g] + "|" + relTops[g];
-            dictionary inSet;
-            for (uint i = 0; i < groups[g].Length; i++) inSet.Set("" + groups[g][i], 0);
-            for (uint i = 0; i < groups[g].Length; i++) {
-                int x = int(groups[g][i] >> 16), z = int(groups[g][i] & 0xFFFF);
-                if (!_ReconCellUnused(inSet, x, z)) continue;
-                // greedy maximal rectangle from (x, z) over unused set cells
-                int w = 1, h = 1;
-                while (_ReconCellUnused(inSet, x + w, z)) w++;
-                bool grow = true;
-                while (grow) {
-                    for (int dx = 0; dx < w; dx++) {
-                        if (!_ReconCellUnused(inSet, x + dx, z + h)) { grow = false; break; }
-                    }
-                    if (grow) h++;
+        if (work.Length == 0) return 0;
+        uint remaining = _ReconRecheck(map, work);
+        for (uint round = 0; round < 2 && remaining > 0; round++) {
+            if (round == 1) {
+                // last resort: strip survivors to default and rebuild from scratch
+                for (uint i = 0; i < work.Length; i++) {
+                    if (!work[i].done) ResetTerrainCoord(int3(work[i].x, 0, work[i].z));
                 }
-                for (int dz = 0; dz < h; dz++) {
-                    for (int dx = 0; dx < w; dx++) inSet.Set("" + (uint(x + dx) << 16 | uint(z + dz)), 1);
-                }
-                string mName = names[g];
-                string cached;
-                if (decidedModels.Get(decidedKey, cached)) mName = cached;
-                bool ok = _ReconPlaceRectVerified(pmt, map, mName, x, z, w, h, relTops[g]);
-                if (!ok && mName != names[g]) ok = _ReconPlaceRectVerified(pmt, map, names[g], x, z, w, h, relTops[g]);
-                if (!ok && flatModel !is null && mName != string(flatModel.IdName)) {
-                    // surface came out low: the target was the fill gesture
-                    ok = _ReconPlaceRectVerified(pmt, map, flatModel.IdName, x, z, w, h, relTops[g]);
-                    if (ok) mName = flatModel.IdName;
-                }
-                if (ok) {
-                    placedCells += uint(w * h);
-                    decidedModels.Set(decidedKey, mName);
-                }
+                _ReconAwaitSettle();
+                remaining = _ReconRecheck(map, work);
+                if (remaining == 0) break;
             }
+            _ReconPassHills(pmt, map, work);
+            remaining = _ReconRecheck(map, work);
+            if (remaining == 0) break;
+            _ReconPassFills(pmt, map, work, flatModel);
+            remaining = _ReconRecheck(map, work);
+            if (remaining == 0) break;
+            _ReconPassCarves(pmt, map, work);
+            remaining = _ReconRecheck(map, work);
         }
-        return placedCells;
+        dev_trace("[TerrainRecon] " + (work.Length - remaining) + "/" + work.Length
+            + " cells reconstructed" + (remaining > 0 ? " (" + remaining + " unresolved)" : ""));
+        return work.Length - remaining;
     }
 
-    // Place one terrain-model rect and wait for its terraform to land, then
-    // verify the anchor cell's surface height against the target. False on
-    // refusal or a surviving height mismatch.
-    bool _ReconPlaceRectVerified(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, const string &in mName, int x, int z, int w, int h, int targetRelTop) {
+    class ReconCell {
+        int x, z;
+        string zone;    // last zone name: the gesture's terrain model name
+        int relTop;     // target surface height above base
+        int dir;        // target slope dir (0 = flat)
+        string targetSig;
+        bool done = false;
+    }
+
+    // Re-verify not-done work cells against the live grid; returns how many
+    // still mismatch. Passes claim cells only through this, never locally.
+    uint _ReconRecheck(CGameCtnChallenge@ map, array<ReconCell@>@ work) {
+        uint remaining = 0;
+        for (uint i = 0; i < work.Length; i++) {
+            if (work[i].done) continue;
+            if (_CurrentCellSig(map, work[i].x, work[i].z) == work[i].targetSig) work[i].done = true;
+            else remaining++;
+        }
+        return remaining;
+    }
+
+    void _ReconAwaitSettle() {
+        uint start = Time::Now;
+        while (Time::Now < _lastTerrainActivityAt + 250 && Time::Now < start + 4000) yield();
+    }
+
+    // pass 1: hill targets (relTop >= 2) via their zone-name model, tallest
+    // first so a taller hill's smoothing settles before shorter neighbors.
+    void _ReconPassHills(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<ReconCell@>@ work) {
+        array<string> names;
+        array<int> tops;
+        for (uint i = 0; i < work.Length; i++) {
+            auto rc = work[i];
+            if (rc.done || rc.relTop < 2) continue;
+            bool seen = false;
+            for (uint g = 0; g < names.Length; g++) {
+                if (names[g] == rc.zone && tops[g] == rc.relTop) { seen = true; break; }
+            }
+            if (!seen) { names.InsertLast(rc.zone); tops.InsertLast(rc.relTop); }
+        }
+        for (uint g = 0; g < names.Length; g++) {
+            uint best = g;
+            for (uint j = g + 1; j < names.Length; j++) {
+                if (tops[j] > tops[best]) best = j;
+            }
+            if (best != g) {
+                string tn = names[g]; names[g] = names[best]; names[best] = tn;
+                int tt = tops[g]; tops[g] = tops[best]; tops[best] = tt;
+            }
+            _ReconRecheck(map, work);
+            _ReconPlaceGroupRects(pmt, map, work, names[g], tops[g], names[g], false);
+        }
+    }
+
+    // pass 2: land-level fills, grouped by relTop ALONE -- one fill gesture
+    // produces base-zone-only interior cells and shore-zone edge cells
+    // together, and splitting them leaves an unplaceable ring. The zone name
+    // of a fill edge is the Frontier shore (which as a MODEL is the carve
+    // gesture), so place with the env's Flat model when there is one.
+    void _ReconPassFills(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<ReconCell@>@ work, CGameCtnBlockInfo@ flatModel) {
+        string mName = "";
+        if (flatModel !is null) mName = flatModel.IdName;
+        else {
+            for (uint i = 0; i < work.Length; i++) {
+                if (work[i].done || work[i].relTop != 1) continue;
+                if (pmt.GetTerrainBlockModelFromName(work[i].zone) !is null) { mName = work[i].zone; break; }
+            }
+        }
+        if (mName == "") return;
+        _ReconPlaceGroupRects(pmt, map, work, "", 1, mName, true);
+    }
+
+    // pass 3: surviving low cells are carve states (slope dirs / water
+    // centers) no flat gesture expresses. Re-carve each connected mismatch
+    // region's eroded bounding box with the zone's own (Frontier) model. A
+    // rect that would land on live-raised terrain is a mis-inference (e.g.
+    // the annulus around an unresolved hill erodes onto the hill): skip it.
+    void _ReconPassCarves(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<ReconCell@>@ work) {
+        dictionary remain; // key -> 0 (unvisited) / 1 (claimed by a region)
+        for (uint i = 0; i < work.Length; i++) {
+            auto rc = work[i];
+            // flat land-level mismatches are never carve evidence -- carving
+            // them would sink terrain a fill pass failed to raise
+            if (!rc.done && rc.relTop <= 1 && (rc.dir != 0 || rc.relTop == 0)) {
+                remain.Set("" + (uint(rc.x) << 16 | uint(rc.z)), 0);
+            }
+        }
+        for (uint i = 0; i < work.Length; i++) {
+            auto rc = work[i];
+            if (rc.done || rc.relTop > 1 || (rc.dir == 0 && rc.relTop != 0)) continue;
+            if (!_ReconCellUnused(remain, rc.x, rc.z)) continue;
+            // flood the 4-connected mismatch region, tracking its bounds
+            array<uint> queue = { uint(rc.x) << 16 | uint(rc.z) };
+            remain.Set("" + queue[0], 1);
+            int x0 = rc.x, x1 = rc.x, z0 = rc.z, z1 = rc.z;
+            while (queue.Length > 0) {
+                int cx = int(queue[queue.Length - 1] >> 16), cz = int(queue[queue.Length - 1] & 0xFFFF);
+                queue.RemoveLast();
+                if (cx < x0) x0 = cx;
+                if (cx > x1) x1 = cx;
+                if (cz < z0) z0 = cz;
+                if (cz > z1) z1 = cz;
+                for (uint n = 0; n < 4; n++) {
+                    int nx = cx + (n == 0 ? 1 : n == 1 ? -1 : 0);
+                    int nz = cz + (n == 2 ? 1 : n == 3 ? -1 : 0);
+                    if (!_ReconCellUnused(remain, nx, nz)) continue;
+                    remain.Set("" + (uint(nx) << 16 | uint(nz)), 1);
+                    queue.InsertLast(uint(nx) << 16 | uint(nz));
+                }
+            }
+            int cx0 = x0, cx1 = x1, cz0 = z0, cz1 = z1;
+            if (cx1 - cx0 >= 2) { cx0++; cx1--; }
+            if (cz1 - cz0 >= 2) { cz0++; cz1--; }
+            bool onRaised = false;
+            for (int zz = cz0; zz <= cz1 && !onRaised; zz++) {
+                for (int xx = cx0; xx <= cx1; xx++) {
+                    auto gen = _CurrentCellGen(map, xx, zz);
+                    if (gen !is null && gen.TopHeight - gen.BaseHeight >= 2) { onRaised = true; break; }
+                }
+            }
+            if (onRaised) {
+                dev_trace("[TerrainRecon] carve <" + cx0 + "," + cz0 + ">..<" + cx1 + "," + cz1
+                    + "> skipped (rect sits on raised terrain)");
+                continue;
+            }
+            string mName = rc.zone;
+            if (pmt.GetTerrainBlockModelFromName(mName) is null) {
+                for (uint j = 0; j < work.Length; j++) {
+                    if (work[j].done || work[j].relTop > 1) continue;
+                    if (pmt.GetTerrainBlockModelFromName(work[j].zone) !is null) { mName = work[j].zone; break; }
+                }
+            }
+            _ReconPlaceRect(pmt, map, mName, cx0, cz0, cx1 - cx0 + 1, cz1 - cz0 + 1);
+        }
+    }
+
+    // Greedy maximal rectangles over the not-done work cells of (zone,
+    // relTop), placed with modelName. widenForMin grows 1-wide rects into an
+    // adjacent row/col of live land-level cells (fill pass only).
+    void _ReconPlaceGroupRects(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map,
+            array<ReconCell@>@ work, const string &in zone, int relTop,
+            const string &in modelName, bool widenForMin) {
+        dictionary inSet;
+        array<uint> keys;
+        for (uint i = 0; i < work.Length; i++) {
+            auto rc = work[i];
+            if (rc.done || (zone != "" && rc.zone != zone) || rc.relTop != relTop) continue;
+            uint k = uint(rc.x) << 16 | uint(rc.z);
+            inSet.Set("" + k, 0);
+            keys.InsertLast(k);
+        }
+        for (uint i = 0; i < keys.Length; i++) {
+            int x = int(keys[i] >> 16), z = int(keys[i] & 0xFFFF);
+            if (!_ReconCellUnused(inSet, x, z)) continue;
+            int w = 1, h = 1;
+            while (_ReconCellUnused(inSet, x + w, z)) w++;
+            bool grow = true;
+            while (grow) {
+                for (int dx = 0; dx < w; dx++) {
+                    if (!_ReconCellUnused(inSet, x + dx, z + h)) { grow = false; break; }
+                }
+                if (grow) h++;
+            }
+            for (int dz = 0; dz < h; dz++) {
+                for (int dx = 0; dx < w; dx++) inSet.Set("" + (uint(x + dx) << 16 | uint(z + dz)), 1);
+            }
+            if (widenForMin && w == 1) {
+                if (_ReconSpanIsLiveLand(map, x - 1, z, 1, h)) { x--; w = 2; }
+                else if (_ReconSpanIsLiveLand(map, x + 1, z, 1, h)) w = 2;
+            }
+            if (widenForMin && h == 1) {
+                if (_ReconSpanIsLiveLand(map, x, z - 1, w, 1)) { z--; h = 2; }
+                else if (_ReconSpanIsLiveLand(map, x, z + 1, w, 1)) h = 2;
+            }
+            _ReconPlaceRect(pmt, map, modelName, x, z, w, h);
+        }
+    }
+
+    // Place one terrain-model rect at the live base height and wait for the
+    // async terraform to land. Success/failure of the CELLS is judged by the
+    // caller's recheck, not here.
+    bool _ReconPlaceRect(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, const string &in mName, int x, int z, int w, int h) {
         auto model = pmt.GetTerrainBlockModelFromName(mName);
         if (model is null) return false;
         auto gen = _CurrentCellGen(map, x, z);
@@ -512,22 +679,32 @@ namespace Editor {
                 + "> refused (below the model's minimum region?)");
             return false;
         }
+        string before = _CurrentCellSig(map, x, z);
         if (!pmt.PlaceTerrainBlocks(model, lo, hi)) {
             dev_trace("[TerrainRecon] PlaceTerrainBlocks(" + mName + ") returned false @<" + x + "," + z + ">");
             return false;
         }
-        int produced = -1000000;
         for (uint i = 0; i < 60; i++) {
             yield();
-            @gen = _CurrentCellGen(map, x, z);
-            if (gen !is null) {
-                produced = gen.TopHeight - gen.BaseHeight;
-                if (produced == targetRelTop) break;
+            if (_CurrentCellSig(map, x, z) != before) break;
+        }
+        _ReconAwaitSettle();
+        dev_trace("[TerrainRecon] placed " + mName + " " + w + "x" + h + " @<" + x + "," + z + "> y" + y);
+        return true;
+    }
+
+    // All cells of the w x h span are live at land level with a gesture-made
+    // stack: safe to include in a widened fill rect (the fill is idempotent
+    // for them, and slope dirs re-derive from final geometry).
+    bool _ReconSpanIsLiveLand(CGameCtnChallenge@ map, int x, int z, int w, int h) {
+        for (int dz = 0; dz < h; dz++) {
+            for (int dx = 0; dx < w; dx++) {
+                auto gen = _CurrentCellGen(map, x + dx, z + dz);
+                if (gen is null || gen.ZoneIds.Length > 2) return false;
+                if (gen.TopHeight - gen.BaseHeight != 1) return false;
             }
         }
-        dev_trace("[TerrainRecon] placed " + mName + " " + w + "x" + h + " @<" + x + "," + z + "> y" + y
-            + " relTop " + produced + (produced == targetRelTop ? " (target)" : " (want " + targetRelTop + ")"));
-        return produced == targetRelTop;
+        return true;
     }
 
     bool _ReconCellUnused(dictionary@ s, int x, int z) {
