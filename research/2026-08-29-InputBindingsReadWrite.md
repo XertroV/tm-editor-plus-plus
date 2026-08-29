@@ -174,3 +174,194 @@ Once the entry format is known, edits are plain memory writes — no hooking:
 4. Snapshot → single UI rebind → snapshot diff (§4b); re-derive the entry encoding.
 5. In-place rebind of a harmless action (e.g. screenshot key); confirm in the settings
    UI that the binding shows the new key; press it; confirm save-to-disk on logout.
+
+## 8. Addendum (2026-08-30): apply semantics + vehicle-settings store (Ghidra)
+
+Live corrections to §1/§2/§7: at runtime `PlayerProfiles` is empty and
+`CurrentProfile.ProfileOld` null (old chunk system dormant — §1's chain describes the
+legacy path). The live profile is `CurrentProfile.ProfileNew` (`CGameUserProfile`,
+0x31CC000, 776 B, opaque) and the live binding lists are on
+`ManiaPlanetScriptAPI.InputBindings_*` (§3 route 2). Step 4 of the checklist was run:
+a live Horn rebind diffed cleanly against the blob (see below). Step 5's typed-read of
+the old chain correctly reports empty.
+
+### Does a direct write take effect immediately?
+
+The settings dialog never writes the profile store directly; every setter goes through
+an **input-settings manager singleton** (menus object +0x1988 → `FUN_140b5f730` →
+`FUN_140df23c0()`), and after writing it calls
+**`InputSettingsManager_CommitRevision` (0x140cb4310)**, which does exactly one thing:
+
+```
+if (mgr+0x68 != 0) ++*(u32*)(*(u64*)(mgr+0x68) + 0x2F8);
+```
+
+i.e. it bumps a **u32 revision/change counter at `CGameUserProfile + 0x2F8`**.
+16 call sites bump it — the per-field setter cluster (0x140cb43f0…0x140cb5fe0) plus
+profile-apply paths (0x140c1b2e0, 0x140dd46e0, 0x140dda490, 0x140dfeaf0, 0x1410ebd30,
+0x1410ee8f0, dialog apply 0x140e30190).
+
+**Consequence for plugins:** a raw store write (or a typed property write whose
+handler doesn't commit) changes bytes but does **not** notify consumers. Make it
+take effect like the dialog does — bump the revision counter after the write:
+
+```angelscript
+uint rev = Dev::GetOffsetUint32(profileNew, 0x2F8);
+Dev::SetOffsetUint32(profileNew, 0x2F8, rev + 1);
+```
+
+(Or open/close the Controls settings page to make the game run its own apply.)
+Correction to the earlier live-diff note: the u32 at +0x2F8 that changed 0→0x1E during
+the Horn rebind was **this revision counter**, not a key code; the binding-record
+change was u32 +0x2DC 0x082B→0.
+
+### Live vehicle-settings store layout (CGameUserProfile, 0x31CC000, 776 B)
+
+- `+0xD8`: global input-device settings struct ("apply to all" values), ~9 u32s.
+  Dialog-apply copy order: `[0]=stg+0x4cc, [1]=+0x504, [2]=+0x4f0, [3]=+0x4f8,
+  [4]=+0x4fc, [5]=+0x500, [6]=+0x508, [7..8]=+0x50c`.
+- Per-vehicle entries: `0x60`-byte records keyed by `NGameVehicle_ResolveVehicleId`
+  (vehicle model id), via `VehicleSettingsStore_GetVehicleEntry` (0x140d95740 →
+  FUN_140d95530 +0x38); fallback branch shows the array at store+0xB8
+  (`entry = *(store+0xB8) + 0x38 + idx*0x60`).
+- `+0x2F8`: u32 revision counter.
+- Defaults in the dialog-list builder (`FUN_1413148a0`): sensitivity 1.0,
+  deadzone 0.1.
+
+### Full vehicle-profile settings mapping
+
+`CGameUserProfileWrapper_VehicleSettings` (0x30CD000, 32 B, factory-less — instances
+are views; all members are script-facing properties over the store above):
+
+| # | member | type/range | notes |
+|---|---|---|---|
+| 0 | `ModelDisplayName` | wstring | |
+| 1 | `ModelName` | string | key tying the entry to a car/character |
+| 2 | `SkinName` | wstring | per-car skin |
+| 3 | `SkinUrl` | string | |
+| 4 | `AnalogSensitivity` | float 0.1..10 (real 1..10) | member-info default 0.1, max 10.0 |
+| 5 | `AnalogDeadZone` | float 0..0.9 | |
+| 6 | `AnalogSteerV2` | bool | newer steering response curve |
+| 7 | `InvertSteer` | bool | |
+| 8 | `AccelIsToggleMode` | bool | |
+| 9 | `BrakeIsToggleMode` | bool | |
+| 10 | `RumbleIntensity` | float 0..2 | |
+| 11 | `HapticFeedbackEnabled` | bool | |
+| 12 | `CenterSpringIntensity` | float 0..1 | wheel centering spring |
+
+Array: `CGameUserProfileWrapper.Inputs_Vehicles` (+80), reachable typed via
+`GetApp().CurrentProfile`. The dialog writes the identical 9 gameplay-relevant
+fields through the manager. Not input-related: old-profile chunk `VehiclesSettings`
+(0x3130000) holds only `LightTrailColor` (+168) and `PrestigeSkinOptions`;
+car-specific abilities (reactor boost, air control) are physics state
+(`CSceneVehicleVisState`), not settings. `EContext` (17 values, MenuStartUp…MenuCustom)
+is the UI-context enum on the API class (`ActiveContext`), not per-car.
+
+`DialogInputSettings` pages (CGameCtnMenus): `OnPlayerInputs` (15 driving bindings),
+`OnStandardInputs` (other 25), `OnDeviceSettings`/`OnDeviceSettingsApply`
+(AnalogDeadZone, AnalogSensitivity, RumbleIntensity, CenterSpringIntensity,
+MouseSensitivity Default/Laser Normalized(Log), MouseSensitivities_EnableSpecific,
+MouseAccel, MouseScaleY, MouseScaleFreeLook, MouseLookInvertY, MouseReleaseKey,
+**ApplyOnlyToThisVehicle**), `OnBindingsUnbindKey`, `OnBindingsResetToDefaults`,
+`OnClose` (FUN_140e30080; apply = FUN_140e30190; the per-vehicle toggle property =
+FUN_140e30190-adjacent FUN_140e301xx region).
+
+### Open
+
+- Who watches the +0x2F8 revision counter at runtime (the re-apply consumer) —
+  counter-bump-then-observe is the remaining live check, together with the binding
+  entry encoding (§4).
+- `CInputBindingsConfig` (0x13006000) five-vector layout: legacy-system only; not
+  present in the live new-profile flow.
+
+## 9. Controller (gamepad) inputs — full layer map (2026-08-30)
+
+All classes below are in Openplanet's reflection (`Input` namespace of
+`~/OpenplanetNext/OpenplanetNext.json`), so the typed access shown works from a plugin.
+
+### 9.1 Device hub — `CInputPort` (0x13001000, 6392 B)
+
+Reachable typed: **`GetApp().InputPort`** (member of `CGameApp`, id 4).
+The engine input hub everything else hangs off:
+
+| member | meaning |
+|---|---|
+| `InputsMode` | enum Timed / NotTimed / Config |
+| `CurrentActionMap` (string) | name of the active action map (the binding set in use) |
+| `IsFocused`, `MouseVisibility` (Auto/ForceHide/ForceShow), `IsDoingIME` | window/input focus state |
+| `RumbleIntensity` [0..2], `CenterSpringIntensity` [0..1], `ForceFeedbackIntensity` [0..1] | **global** force-feedback levels (per-car versions live in VehicleSettings, §8) |
+| `PollingEnabled`, `MaxSampleRate`, `MinHistoryLength`, `EventInStoreCount` | polling/pipeline |
+| `DeviceHasBeenHotPlugged`, `DevicePlugEventCount`, `DeviceHotPlugUpdate` | hot-plug notifications |
+| `ConnectedDevices` : MwFastBuffer<CInputDevice@> | every physical input device |
+| `IgnoreFocusForGamePads` | pads keep working when unfocused |
+| `Script_Pads` : MwFastBuffer<CInputScriptPad@> | the script-layer pads (same objects as `CInputScriptManager.Pads`) |
+| `AutoRepeat_InitialDelay` / `AutoRepeat_Period` | key auto-repeat |
+| `FakeInputLagAvg` / `FakeInputLagVar` | simulated input lag (testing) |
+| `Stats*` | DInput diagnostics: events/frame, overflow, wrong-timestamp ratios |
+
+### 9.2 Physical devices — `CInputDevice` (0x13007000, 360 B)
+
+`UserData`, `InstanceName` (wstring), `InstanceId` (MwId), `DeviceModelName`,
+`DeviceModelId`, `IsDisabled`, `InputNotAvailable`, `IsUnPlugged`, `MustBePolled`,
+`CanRumble`, `ObjectCount`, `ReadHardwareCurState()`. Concrete subclasses:
+`CInputDeviceDx8Keyboard` (0x1300B000, 648), `CInputDeviceDx8Pad` (0x1300C000, 760,
+DirectInput pad), `CInputDeviceMouse`/`CInputDeviceDx8Mouse`. Also `CInputPortDx8`
+(0x13002000) vs `CInputPortNull`; `CInputReplay` (0x1300D000, `NbEvents`) is the
+input-event recorder.
+
+### 9.3 Script pad layer (per-controller state & effects)
+
+`CInputScriptPad` (0x13012000, 264 B) — one per connected controller:
+
+| member | type | meaning |
+|---|---|---|
+| `ControllerId`, `UserId` (MwId), `Type` | EPadType: Keyboard / Mouse / Generic / XBox / PlayStation / Vive | identity |
+| `ModelName` | wstring | device model string |
+| `IdleDuration` | uint | ms since last input |
+| `Left/Right/Up/Down/A/B/X/Y/L1/R1/LeftStickBut/RightStickBut/Menu/View` | uint | digital button state |
+| `LeftStickX/Y`, `RightStickX/Y` | float [-1..1] | sticks |
+| `L2`, `R2` | float [0..1] | triggers |
+| `ButtonEvents` | MwFastBuffer<EButton> | button events queued this frame |
+| `ClearRumble()`, `AddRumble(Duration, LargeMotor, SmallMotor)`, `SetColor(vec3)` | methods | force feedback + DualShock lightbar |
+
+`CInputScriptManager` (0x13011000, 152 B): `Now`, `Period`, `Pads` (+48),
+`PendingEvents` (+64), `MousePos`, mouse buttons, `TouchPoints_*`; methods
+`GetPadButtonBinding / GetPadButtonCurrentBinding / GetPadButtonPlaygroundBinding
+(Pad, EButton) → wstring` (maniascript-only). Reach it typed from
+`CGameManiaApp.Input` (e.g. `GetApp().Network.ClientManiaAppPlayground.Input`) or
+`GetApp().PlaygroundScript.Input` in play, or `CInputPort.Script_Pads` in menus.
+
+`CInputScriptEvent` (0x13004000, 72 B): `Type` (PadButtonPress), `Pad@`, `Button`
+(EButton: Left/Right/Up/Down/A/B/X/Y/L1/R1/LeftStick/RightStick/Menu/View +
+LeftStick_*/RightStick_* directions + L2/R2 + None), `IsAutoRepeat`, **`KeyCode`
+(uint) + `KeyName` (string)** — the physical key identity used to cross-reference
+binding encodings.
+
+### 9.4 Bindings for pads
+
+The **40-action action map is shared**: keyboard and pad bindings live in the same
+set (the Controls page shows pad chips when a pad is connected;
+`GetPadButtonBinding(Pad, Button)` resolves the action label for a pad button;
+`CInputPort.CurrentActionMap` names the active map). Analog feel per car is the
+VehicleSettings layer (§8): `AnalogSensitivity`, `AnalogDeadZone`, `AnalogSteerV2`,
+`InvertSteer`, toggle modes, rumble/haptics — applied to pad sticks.
+
+### 9.5 Plugin recipes
+
+```angelscript
+// enumerate devices + pads, read live state
+auto port = GetApp().InputPort;
+for (uint i = 0; i < port.ConnectedDevices.Length; i++) {
+    auto d = port.ConnectedDevices[i];
+    print(d.InstanceName + " model=" + d.DeviceModelName + " canRumble=" + d.CanRumble);
+}
+for (uint i = 0; i < port.Script_Pads.Length; i++) {
+    auto pad = port.Script_Pads[i];
+    print(pad.ModelName + " LS=" + pad.LeftStickX + "," + pad.LeftStickY);
+    pad.AddRumble(200, 1.0, 0.5); // ms, large, small motors
+}
+```
+
+Button events: read `pad.ButtonEvents` or the manager's `PendingEvents`
+(`CInputScriptEvent.KeyCode/KeyName` identify the physical key). Rumble/LED via the
+pad methods; global levels via `port.RumbleIntensity` etc.
