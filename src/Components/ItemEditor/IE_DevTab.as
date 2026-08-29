@@ -1,8 +1,15 @@
 #if SIG_DEVELOPER
 
 class IE_DevTab : Tab {
+    DynaWaterModelCapability@ m_DynaWater;
+    DynaPhysicsCapability@ m_DynaPhysics;
+    FoggerCustomTexCapability@ foggerTex;
+
     IE_DevTab(TabGroup@ p) {
         super(p, "Dev", Icons::ExclamationTriangle);
+        @m_DynaWater = DynaWaterModelCapability();
+        @m_DynaPhysics = DynaPhysicsCapability();
+        @foggerTex = FoggerCustomTexCapability();
     }
 
     void DrawInner() override {
@@ -72,6 +79,21 @@ class IE_DevTab : Tab {
         //     auto ciem = cast<CGameCommonItemEntityModel>(im.EntityModel);
         //     Dev::SetOffset(ciem, GetOffset(ciem, "StaticObject"), CPlugVehicleVisModel());
         // }
+
+        if (m_DynaWater is null) {
+            @m_DynaWater = DynaWaterModelCapability();
+        }
+        m_DynaWater.Draw();
+
+        if (m_DynaPhysics is null) {
+            @m_DynaPhysics = DynaPhysicsCapability();
+        }
+        m_DynaPhysics.Draw();
+
+        if (foggerTex is null) {
+            @foggerTex = FoggerCustomTexCapability();
+        }
+        foggerTex.Draw();
     }
 }
 
