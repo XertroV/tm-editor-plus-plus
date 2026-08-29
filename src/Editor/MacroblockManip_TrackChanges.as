@@ -119,11 +119,26 @@ namespace Editor {
         return MacroblockWithSetSkins(MacroblockSpecPriv(blocks, items), skins);
     }
 
+    // While > 0, placement/removal capture is suppressed. map-together wraps
+    // its server-update applies in this so replayed edits don't get captured
+    // and rebroadcast: sync consumers read the LastFrame buffers (complete
+    // frames, immune to coroutine ordering), where apply-side hook events
+    // would otherwise surface. IsTerrain dirty flagging is deliberately NOT
+    // suppressed — the terrain snapshot resync accounts for those.
+    int _captureSuppressDepth = 0;
+    void BeginCaptureSuppress() { _captureSuppressDepth++; }
+    void EndCaptureSuppress() { if (_captureSuppressDepth > 0) _captureSuppressDepth--; }
+    // Self-healing reset for the (single) consumer's loop start: an exception
+    // mid-apply must not leave capture off for the rest of the session.
+    void ResetCaptureSuppress() { _captureSuppressDepth = 0; }
+    bool IsCaptureSuppressed() { return _captureSuppressDepth > 0; }
+
     void TrackMap_OnAddBlock(CGameCtnBlock@ block) {
         // terrain blocks are not tracked as placements, but their appearance
         // means the genealogy grid changed (terraform tools / auto-terrain) --
         // flag it so sync plugins can diff the grid (see GetTerrainDiffSpec).
         if (block.BlockInfo.IsTerrain) { _terrainDirty = true; return; }
+        if (_captureSuppressDepth > 0) return;
         blocksAddedThisFrame.InsertLast(BlockSpecPriv(block));
         if (block.Skin !is null && (block.Skin.PackDesc !is null || block.Skin.ForegroundPackDesc !is null)) {
             auto fg = block.Skin.ForegroundPackDesc !is null ? GetSkinPath(block.Skin.ForegroundPackDesc) : "";
@@ -144,6 +159,7 @@ namespace Editor {
     void TrackMap_OnRemoveBlock(CGameCtnBlock@ block) {
         // see TrackMap_OnAddBlock: terrain block churn = grid change signal
         if (block.BlockInfo.IsTerrain) { _terrainDirty = true; return; }
+        if (_captureSuppressDepth > 0) return;
         auto ptr = Dev_GetPointerForNod(block);
         if (_TrackMap_RemoveBlock_IsByAPI) {
             blocksRemovedByAPIThisFrame.InsertLast(BlockSpecPriv(block));
@@ -159,6 +175,7 @@ namespace Editor {
     }
 
     void TrackMap_OnAddItem(CGameCtnAnchoredObject@ item) {
+        if (_captureSuppressDepth > 0) return;
         auto spec = ItemSpecPriv(item);
         itemsAddedThisFrame.InsertLast(spec);
         auto fgSkin = Editor::GetItemFGSkin(item);
@@ -172,6 +189,7 @@ namespace Editor {
     }
 
     void TrackMap_OnRemoveItem(CGameCtnAnchoredObject@ item) {
+        if (_captureSuppressDepth > 0) return;
         auto ptr = Dev_GetPointerForNod(item);
         for (uint i = 0; i < itemsAddedThisFrame.Length; i++) {
             if (ptr == cast<ItemSpecPriv>(itemsAddedThisFrame[i]).ObjPtr) {
@@ -425,6 +443,7 @@ namespace Editor {
             NotifyError("PlaceMacroblock: invalid macroblock or editor null");
             return false;
         }
+        Editor::WaitForDonorRestores();
         auto pmt = editor.PluginMapType;
 
         // Terrain-only specs (e.g. relayed terraform diffs) go straight to the
@@ -578,6 +597,7 @@ namespace Editor {
         auto mbSpec = cast<MacroblockSpecPriv>(macroblock);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (mbSpec is null || editor is null || editor.PluginMapType is null) return false;
+        Editor::WaitForDonorRestores();
         auto pmt = editor.PluginMapType;
         // Match PlaceMacroblock donor selection + regeneration. Without regen,
         // RemoveMacroblock often no-ops for items (and some blocks) on non-Stadium

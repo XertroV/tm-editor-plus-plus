@@ -125,6 +125,15 @@ namespace Editor {
     // donor pass.
     import bool IsTerrainDirty() from "Editor";
     import bool IsTerrainResyncPending() from "Editor";
+
+    // Capture suppression for sync plugins applying server updates: replayed
+    // edits fire the same engine hooks as user edits; wrap applies so they
+    // are not re-captured and rebroadcast. Reset at the consumer's loop start
+    // (self-healing if an apply threw mid-suppress).
+    import void BeginCaptureSuppress() from "Editor";
+    import void EndCaptureSuppress() from "Editor";
+    import void ResetCaptureSuppress() from "Editor";
+    import bool IsCaptureSuppressed() from "Editor";
     import void ClearTerrainDirty() from "Editor";
     import void RefreshTerrainSnapshot() from "Editor";
     import MacroblockSpec@ GetTerrainDiffSpec() from "Editor";

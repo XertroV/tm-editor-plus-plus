@@ -274,6 +274,16 @@ namespace Editor {
 
     MacroblockSpecPriv@[] _terrainPlaceRestoreQueue;
 
+    // Every pass (air, ground, terrain, delete) shares ONE donor macroblock,
+    // and terrain/ground passes restore it on a ~2s delay. Temp-writing while
+    // a restore is pending snapshots the polluted variant state, and the
+    // interleaved restores then re-leak variant AutoTerrains into a later
+    // air-mode place — which crashes the game (observed live 2026-08-29).
+    // Callers wait here before touching the donor.
+    void WaitForDonorRestores() {
+        while (_terrainPlaceRestoreQueue.Length > 0) yield();
+    }
+
     // Place just the terrain of a macroblock spec: builds a terrain-only copy,
     // temp-writes the donor's AutoTerrains buffers (blocks/items stay empty so
     // nothing is double-placed), then ground-places the donor at the spec's min
@@ -290,6 +300,7 @@ namespace Editor {
     }
 
     bool PlaceMacroblockTerrain(MacroblockSpecPriv@ mbSpec) {
+        WaitForDonorRestores();
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (mbSpec is null || editor is null || editor.PluginMapType is null || editor.Challenge is null) return false;
         if (mbSpec.terrains.Length == 0) return true;
@@ -452,6 +463,7 @@ namespace Editor {
 
     // Ground-mode donor fallback: places the blocks but NOT their terraform.
     bool _PlaceGroundBlocksViaDonor(MacroblockSpecPriv@ gspec) {
+        WaitForDonorRestores();
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (gspec is null || editor is null || editor.PluginMapType is null) return false;
         if (gspec.Blocks.Length == 0) return true;

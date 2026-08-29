@@ -212,6 +212,15 @@ namespace Editor {
                 tmpVariantATPlaceType = uint(dvg.AutoTerrainPlaceType);
                 tmpVariantATWithFrontiers = dvg.AutoTerrainWithFrontiers;
                 tmpVariantStateSaved = true;
+                if (!forGroundTerrain && (tmpVariantAutoTerrainsBufLenCap & 0xFFFFFFFF) != 0) {
+                    // a prior terrain pass's variant mirror is still on the
+                    // donor (its delayed restore hasn't run): scrub it before
+                    // an air-mode place — air-mode + AutoTerrains crashes the
+                    // game. _RestoreMacroblock writes the saved value back.
+                    warn("_TempWriteToMacroblock: scrubbing " + (tmpVariantAutoTerrainsBufLenCap & 0xFFFFFFFF)
+                        + " stale variant AutoTerrains before air-mode place");
+                    Dev::Write(vatBuf.Ptr + 0x8, nat2(0));
+                }
             }
 
             tmpMacroblockIsGround = macroblock.IsGround;
