@@ -759,8 +759,11 @@ namespace Editor {
     // Frame-based settle: the engine terraform job advances per frame, so N
     // consecutive watcher ticks with no dirty flag means the job is done. A
     // premature settle self-heals (the next change re-arms and emits a
-    // follow-up diff), so this can be small.
-    const uint TERRAIN_SETTLE_QUIET_FRAMES = 5;
+    // follow-up diff), so this can be small. Measured: a single block commits
+    // in 1 frame; 10 queued blocks commit as 10 dirty ticks over 39 frames
+    // with a max intra-burst quiet gap of 4 frames -- so 5 is the working
+    // minimum and 8 gives margin without meaningful latency.
+    const uint TERRAIN_SETTLE_QUIET_FRAMES = 8;
     uint _terrainQuietFrames = 0;
     bool _terrainHookArmed = false;
     // burst stats (hard data for tuning the settle threshold): dirty ticks per
