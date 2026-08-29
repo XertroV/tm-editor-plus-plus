@@ -567,6 +567,17 @@ namespace Editor {
             // Place-vs-delete forensics: snapshot donor item buffer after regen
             MacroblockItemDeleteDiag::OnPlaceMacroblockPrePlace(mbSpec, mb);
 #endif
+            // TurnIntoAirMb regeneration can leave AutoTerrains on the donor
+            // (generated from ground-capable block models; observed len=14
+            // before the 2026-08-29 crash) and air-mode + AutoTerrains crashes
+            // the game — zero both terrain lists right before placing. The
+            // mb-level buffer is restored from the temp-write snapshot; the
+            // variant belongs to the regenerated model and is rebuilt on the
+            // donor's next regeneration anyway.
+            Dev::Write(DGameCtnMacroBlockInfo(mb).AutoTerrains.Ptr + 0x8, nat2(0));
+            if (mb.GeneratedBlockInfo !is null && mb.GeneratedBlockInfo.VariantGround !is null) {
+                Dev::Write(DGameCtnBlockInfoVariantGround(mb.GeneratedBlockInfo.VariantGround).AutoTerrainsBuf.Ptr + 0x8, nat2(0));
+            }
             placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
             if (placed && addUndoRedoPoint) {
                 dev_trace("Placed MB -> AutoSaving");

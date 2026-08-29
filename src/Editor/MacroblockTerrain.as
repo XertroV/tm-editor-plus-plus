@@ -445,12 +445,23 @@ namespace Editor {
                 // with its <0,1,0> placement coord)
                 int3 c = int3(int(b.coord.x), int(b.coord.y) + 1, int(b.coord.z));
                 auto dir = CGameEditorPluginMap::ECardinalDirections(int(b.dir));
-                try {
-                    placed = pmt.PlaceBlock(info, c, dir);
-                } catch {
-                    warn("PlaceMacroblockGroundBlocks: PlaceBlock threw for " + b.name + ": " + getExceptionInfo());
+                // an identical block already there means this apply is already
+                // satisfied (e.g. the echo of an API placement, which has no
+                // undo point to rewind) — don't refuse into the donor fallback
+                auto existing = pmt.GetBlock(c);
+                if (existing is null) @existing = pmt.GetBlock(int3(c.x, c.y - 1, c.z));
+                if (existing !is null && existing.BlockInfo !is null
+                    && existing.BlockInfo.IdName == b.name && int(existing.Dir) == int(b.dir)) {
+                    dev_trace("PlaceMacroblockGroundBlocks: " + b.name + " already at " + c.ToString() + "; skipping");
+                    placed = true;
+                } else {
+                    try {
+                        placed = pmt.PlaceBlock(info, c, dir);
+                    } catch {
+                        warn("PlaceMacroblockGroundBlocks: PlaceBlock threw for " + b.name + ": " + getExceptionInfo());
+                    }
+                    dev_trace("PlaceMacroblockGroundBlocks: native place " + b.name + " @ " + c.ToString() + " dir " + tostring(dir) + " -> " + placed);
                 }
-                dev_trace("PlaceMacroblockGroundBlocks: native place " + b.name + " @ " + c.ToString() + " dir " + tostring(dir) + " -> " + placed);
             }
             if (!placed) failedBlocks.InsertLast(b);
         }
