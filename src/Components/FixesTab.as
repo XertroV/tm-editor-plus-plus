@@ -84,6 +84,13 @@ class FixesTab : Tab {
         }
 
 #if DEV
+        // if (UI::CollapsingHeader("Embed ItemTypeE 0x0C")) {
+        //     UI::TextWrapped("Map save lists ItemTypeE 0x0C items as \"unhandled type\" and skips embed. CollectAndEmbedItems mask 0x683e allows types 1–5, 0xB, 0xD, 0xE only. This ORs bit 12 (0x783e) so a movable DynaObject can go into the map zip. Official customMaterials fids are not the gate (BF2_Crown has those and embeds). Off by default — after enabling, Save again. Serialize of a bare 0x0C item is untested; if embed still fails you get \"Error while saving items\" instead.");
+        //     Editor::EmbedItemType0C::IsActive = UI::Checkbox("Patch: allow ItemTypeE 0x0C in map embed", Editor::EmbedItemType0C::IsActive);
+        //     UI::Text("Active: " + BoolIcon(Editor::EmbedItemType0C::IsActive));
+        //     UI::TextDisabled("0x140b90484 MOV ECX,0x683e → 0x783e; unique 2026-08-27 (Ghidra 1 hit).");
+        // }
+
         // if (UI::CollapsingHeader("Allow vanilla fid-refs in User GBX")) {
         //     UI::TextWrapped("Lets item save and map embed keep nod-refs to GameData files (official .GameSkin.Gbx / .Material.Gbx). Vanilla rejects those as cross-tree and shows \"Could not save the file\" / the embed warning. Two sites, one toggle: skip the reject, and build those fids with the same-tree folder walker (not orphan nodes). Off by default. Cold-load of a file written with reject-only was an AV; leave this off until a save+reopen probe passes.");
         //     UI::Text("Site found: " + BoolIcon(Editor::AllowCrossTreeFidRefs::SiteFound));
