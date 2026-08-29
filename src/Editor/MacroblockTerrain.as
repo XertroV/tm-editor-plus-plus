@@ -421,7 +421,22 @@ namespace Editor {
     // Returns the number of cells covered by successful placements; the
     // terraform lands async and is verified by the usual settle machinery.
     uint _ReconstructTerrainViaNativePlace(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<TerrainSpec@>@ cells) {
-        array<string> names;
+        // The Frontier shore model and the Flat fill model (e.g. WhiteShore
+        // "WaterShore1" vs "Land") produce IDENTICAL zone stacks and differ
+        // only in the resulting surface height (carve = water level, fill =
+        // land level) -- and which of the two a map treats as its default
+        // varies by decoration. So groups carry the target's relative top,
+        // each placement is verified against it, and a low result is
+        // corrected by re-placing the rect with the Flat model.
+        CGameCtnBlockInfo@ flatModel = null;
+        for (uint i = 0; i < pmt.TerrainBlockModels.Length; i++) {
+            if (cast<CGameCtnBlockInfoFlat>(pmt.TerrainBlockModels[i]) !is null) {
+                @flatModel = pmt.TerrainBlockModels[i];
+                break;
+            }
+        }
+        array<string> names;      // zone/model name per group
+        array<int> relTops;       // target relative top per group
         array<array<uint>@> groups;
         for (uint i = 0; i < cells.Length; i++) {
             auto ts = cells[i];
@@ -429,18 +444,23 @@ namespace Editor {
             if (ts.zoneNames.Length != 2) continue;
             string mName = ts.zoneNames[1];
             if (pmt.GetTerrainBlockModelFromName(mName) is null) continue;
-            int gi = names.Find(mName);
+            int relTop = ts.topHeight - ts.baseHeight;
+            int gi = -1;
+            for (uint gj = 0; gj < names.Length; gj++) {
+                if (names[gj] == mName && relTops[gj] == relTop) { gi = int(gj); break; }
+            }
             if (gi < 0) {
                 names.InsertLast(mName);
+                relTops.InsertLast(relTop);
                 groups.InsertLast(array<uint>());
                 gi = int(names.Length) - 1;
             }
             groups[gi].InsertLast(uint(ts.offset.x) << 16 | uint(ts.offset.z));
         }
         uint placedCells = 0;
+        dictionary decidedModels; // "zone|relTop" -> model name that verified
         for (uint g = 0; g < names.Length; g++) {
-            auto model = pmt.GetTerrainBlockModelFromName(names[g]);
-            if (model is null) continue;
+            string decidedKey = names[g] + "|" + relTops[g];
             dictionary inSet;
             for (uint i = 0; i < groups[g].Length; i++) inSet.Set("" + groups[g][i], 0);
             for (uint i = 0; i < groups[g].Length; i++) {
@@ -459,26 +479,55 @@ namespace Editor {
                 for (int dz = 0; dz < h; dz++) {
                     for (int dx = 0; dx < w; dx++) inSet.Set("" + (uint(x + dx) << 16 | uint(z + dz)), 1);
                 }
-                auto gen = _CurrentCellGen(map, x, z);
-                int y = gen is null ? 0 : gen.BaseHeight;
-                int3 lo = int3(x, y, z), hi = int3(x + w - 1, y, z + h - 1);
-                if (!pmt.CanPlaceTerrainBlocks(model, lo, hi)) {
-                    dev_trace("[TerrainRecon] " + names[g] + " " + w + "x" + h + " @<" + x + "," + z
-                        + "> refused (below the model's minimum region?)");
-                    continue;
+                string mName = names[g];
+                string cached;
+                if (decidedModels.Get(decidedKey, cached)) mName = cached;
+                bool ok = _ReconPlaceRectVerified(pmt, map, mName, x, z, w, h, relTops[g]);
+                if (!ok && mName != names[g]) ok = _ReconPlaceRectVerified(pmt, map, names[g], x, z, w, h, relTops[g]);
+                if (!ok && flatModel !is null && mName != string(flatModel.IdName)) {
+                    // surface came out low: the target was the fill gesture
+                    ok = _ReconPlaceRectVerified(pmt, map, flatModel.IdName, x, z, w, h, relTops[g]);
+                    if (ok) mName = flatModel.IdName;
                 }
-                if (pmt.PlaceTerrainBlocks(model, lo, hi)) {
+                if (ok) {
                     placedCells += uint(w * h);
-                    dev_trace("[TerrainRecon] placed " + names[g] + " " + w + "x" + h + " @<" + x + "," + z + "> y" + y);
-                    // let the engine job land before the next region
-                    uint pw = Time::Now;
-                    while (Time::Now < _lastTerrainActivityAt + 300 && Time::Now < pw + 8000) yield();
-                } else {
-                    dev_trace("[TerrainRecon] PlaceTerrainBlocks(" + names[g] + ") returned false @<" + x + "," + z + ">");
+                    decidedModels.Set(decidedKey, mName);
                 }
             }
         }
         return placedCells;
+    }
+
+    // Place one terrain-model rect and wait for its terraform to land, then
+    // verify the anchor cell's surface height against the target. False on
+    // refusal or a surviving height mismatch.
+    bool _ReconPlaceRectVerified(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, const string &in mName, int x, int z, int w, int h, int targetRelTop) {
+        auto model = pmt.GetTerrainBlockModelFromName(mName);
+        if (model is null) return false;
+        auto gen = _CurrentCellGen(map, x, z);
+        int y = gen is null ? 0 : gen.BaseHeight;
+        int3 lo = int3(x, y, z), hi = int3(x + w - 1, y, z + h - 1);
+        if (!pmt.CanPlaceTerrainBlocks(model, lo, hi)) {
+            dev_trace("[TerrainRecon] " + mName + " " + w + "x" + h + " @<" + x + "," + z
+                + "> refused (below the model's minimum region?)");
+            return false;
+        }
+        if (!pmt.PlaceTerrainBlocks(model, lo, hi)) {
+            dev_trace("[TerrainRecon] PlaceTerrainBlocks(" + mName + ") returned false @<" + x + "," + z + ">");
+            return false;
+        }
+        int produced = -1000000;
+        for (uint i = 0; i < 60; i++) {
+            yield();
+            @gen = _CurrentCellGen(map, x, z);
+            if (gen !is null) {
+                produced = gen.TopHeight - gen.BaseHeight;
+                if (produced == targetRelTop) break;
+            }
+        }
+        dev_trace("[TerrainRecon] placed " + mName + " " + w + "x" + h + " @<" + x + "," + z + "> y" + y
+            + " relTop " + produced + (produced == targetRelTop ? " (target)" : " (want " + targetRelTop + ")"));
+        return produced == targetRelTop;
     }
 
     bool _ReconCellUnused(dictionary@ s, int x, int z) {
