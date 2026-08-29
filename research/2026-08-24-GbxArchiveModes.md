@@ -31,4 +31,6 @@ No other immediates. There is no mode `2` at these wrappers; `+0x70==2` is a **d
 
 Mode 10 is why User items cannot keep GameData fids: `+0x68==0` queues every fid-bearing child as an external ref, then `GbxArchive_BuildBodyRefTreeOrRejectCrossTree` (`0x140901ce0`) rejects cross-tree.
 
+`CPlugDynaObjectModel_Archive` (`0x14061c7a0`) does **not** inspect mode 8 vs 10. Mesh / DynaShape / WaterModel are ordinary nod-refs. A convert can still fail map embed (mode 8) because `ZeroFids(CPlugSurface)` leaves material fids — that is `"Error while saving items into the map file"`, not a DynaObject writer hole.
+
 To **embed** instead of ref: `+0x68==1` (mode bit 2), or strip the child's fid (ZeroFids). To **allow cross-tree refs**: `archive+0x70==2` or `fid+0x20&4` on a special-tree parent.

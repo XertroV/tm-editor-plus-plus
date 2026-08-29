@@ -97,6 +97,12 @@ A prior walk can also fill *"textures or skins which do not belong to the game n
 
 `FUN_140ba1030` formats the AskYesNo (Save anyway / Cancel).
 
+Embed first classifies `ItemTypeE` (`item+0xF0`) with `CMP EAX,0xE` / `MOV ECX,0x683e` / `BT ECX,EAX` at `0x140b9047e`. Allowed bits: 1–5, 0xB, 0xD, 0xE. **`0x0C` is not in the mask** → `"Reason: The map contains items with an unhandled type"` (`CGameCtnChallenge_FormatEmbedWarningDialog` `0x140ba1030`, UI may say “unsupported”). Item5 hit this (screenshot 2026-08-27). Official `customMaterials` fids are **not** that dialog: BF2_Crown is Prefab+Dyna with GameData mats and `ItemTypeE=1`, so it embeds. `CPlugSolid2Model` chunk 000 writes UserInsts (`0x90fd000`, skipped in the belong-to-game walk), not `customMaterials[]`.
+
+CommonItem-only prep (`CGameItemModel_PrepCommonItemForEmbed` `0x140f5a690`) still exists for edition/static items; it is not why Item5 failed.
+
+Patch (off by default): `Editor::EmbedItemType0C` writes `0x783e` at `0x140b90484`. Then Save again. Serialize of a bare 0x0C item after the type gate is untested.
+
 ## Patch / flag options
 
 Shipped (off by default): `Editor::AllowCrossTreeFidRefs` (`src/Editor/AllowCrossTreeFidRefs.as`). One toggle, two sites:

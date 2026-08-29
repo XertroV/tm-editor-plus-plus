@@ -32,7 +32,7 @@ File suffixes from register / Openplanet: `Item.Gbx`, `DynaObject.Gbx`, `Prefab.
 
 ## What you must write after `Class()`
 
-Validated movable recipe (bare DynaObject **or** Prefab wrapping one). Ctor defaults that **fail** the recipe are marked.
+Validated movable recipe: **bare** `CPlugDynaObjectModel` + `ItemTypeE=0x0C`. Prefab wrap is **not** valid on 0x0C (`GetEntityVisRoot` returns 0 → `GenerateDestructibleSlots` AV). Ctor defaults that **fail** the recipe are marked.
 
 | After construct | Must become | Ctor default |
 |---|---|---|
@@ -120,8 +120,8 @@ A fresh `Class()` item has no `EntityModel`; save will persist `ItemTypeE=4` unl
 | `+0x20` | `Mesh` | 0 | optional `CPlugSolid2Model*` (`0x090BB000`) |
 | `+0x28` | `StaticShape` | 0 | optional; ver 0 copies `DynaShape` |
 | `+0x30` | `DynaShape` | **0** | **required** `CPlugSurface*` |
-| `+0x38` | `LocAnim` | 0 | omit for a free body |
-| `+0x40` | `LocAnimIsPhysical` | 0 | |
+| `+0x38` | `LocAnim` | 0 | `CPlugAnimLocSimple*` (`0x090F8000`). Whole-object spin/bob. Omit for a free body. |
+| `+0x40` | `LocAnimIsPhysical` | **0** | Nadeo: *"LocAnim purely visual or not. avoid physical calculations if not necessary."* `0` = visual-only (default). `1` = loc anim also drives phy. Archive ver `<10` forces 0. |
 | `+0x44` | `Mass` | **10.0** (`0x41200000`) | script range 1..1000 |
 | `+0x48` | `BreakSpeedKmh` | **100.0** (`0x42C80000`) | race-speed cars **destroy** at 100 |
 | `+0x4C` | (unregistered) | 1.0 | not in Archive |
@@ -139,6 +139,8 @@ A fresh `Class()` item has no `EntityModel`; save will persist `ItemTypeE=4` unl
 ### Archive
 
 `CPlugDynaObjectModel_Archive` writes version **`0x0D`**. `DynamizeOnSpawn` only if `version > 10`. Current writer is fine; a v10 file never stores the flag (stays ctor 0). Always archives `DynaShape` as class `0x0900C000`. `PostLoad` `0x14061ce10` builds the dyna AABB from `DynaShape` + `Mass`.
+
+The archive is **mode-agnostic**. Item save (`SerializeNodToFid` mode **10**) and map embed (`CollectAndEmbedItems` mode **8**) both set `archive+0x68=0` (fid-bearing children become refs). There is no “DynaObject cannot be saved” branch. Failure is the usual cross-tree gate on **children** (Mesh `0x090BB000`, Surface `0x0900C000` / its materials, WaterModel, LocAnim). `ZeroFids(CPlugSurface)` does **not** clear material fids — that is a common `"Error while saving items into the map file"` after a dyna convert.
 
 ## `CPlugPrefab` — `0x09145000`
 
@@ -254,11 +256,9 @@ CGameItemModel()                         # Create 0x140ab36a0
         Mass=10, BreakSpeedKmh=100
       no SInstanceParams on this path
 
-  (B) prefab wrap (recommended)
-      CPlugPrefab()                      # Factory 0x1405980b0
-      CPlugPrefab_AddEntIdentity(prefab, dyna)
-        synthesizes SInstanceParams      # UNINIT — write IsKinematic=0
-      do NOT add NPlugDyna_SKinematicConstraint
+  (B) prefab wrap — DO NOT use with ItemTypeE 0x0C
+      GetEntityVisRoot returns 0 → GenerateDestructibleSlots AV
+      (type 1 + Prefab is the kinematic-obstacle path, not a soccer ball)
 
 CPlugSurface()                           # New 0x1404dfc90
   m_GmSurf=0                             # fill / clone a real hull

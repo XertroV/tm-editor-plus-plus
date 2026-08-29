@@ -54,9 +54,9 @@ This does **not** make a soccer ball. The item stays nailed to the map.
 | `+0x20` | `Mesh` | visual |
 | `+0x28` | `StaticShape` | "Boite de collision **avant** destruction" |
 | `+0x30` | `DynaShape` | "Boite de collision **apres** destruction, ne supporte pas mesh quelconque" |
-| `+0x40` | `LocAnimIsPhysical` | skip phys if loc anim is visual-only |
+| `+0x40` | `LocAnimIsPhysical` | Nadeo: skip phys calcs if LocAnim is visual-only. Default **0**. `LocAnim` is `CPlugAnimLocSimple`. |
 | `+0x44` | `Mass` | default **10**; script range 1..1000 |
-| `+0x48` | `BreakSpeedKmh` | default **100**. "Vitesse a laquelle l'objet sera detruit si un vehicule de 1500kg fonce dessus." |
+| `+0x48` | `BreakSpeedKmh` | default **100**. Nadeo: speed at which a **1500 kg** car **breaks** it (threshold scales as `1500/m_car`). **Not** delete. See insert-paths. |
 
 Ctor: `CPlugDynaObjectModel_Construct` (`0x14061c580`). `IsStatic` / `DynamizeOnSpawn` default false (zeroed).
 
@@ -67,7 +67,7 @@ Three DynaObject modes:
 | `IsStatic` | `DynamizeOnSpawn` | Runtime |
 |---|---|---|
 | true | * | Always static. Uses `StaticShape`. A dyna nod that never moves. |
-| false | false | Starts static; **becomes** a physics body when a ~1500 kg car hits faster than `BreakSpeedKmh`. `StaticShape` before break, `DynaShape` after. |
+| false | false | Starts as **static HMS** (`StaticShape.GmSurf`). Car still collides. Hit faster than `BreakSpeedKmh` → `BeforeContactCallback` queues kind=1 → `ProcessFrameHits` tears static and creates a **DynaShape** rigid body + impulse. Slower hit: stay static. |
 | false | **true** | Spawned already dynamized. **This is the soccer-ball path.** |
 
 `DynaShape` "does not support an arbitrary mesh" — expect a convex / box-like collision, not a raw visual mesh.
@@ -96,19 +96,24 @@ Evidence: `CPlugDynaObjectModel_Archive` (`0x14061c7a0`, writer ver `0x0D`), `CP
 | `Mesh` | Vision preload only if non-null. |
 | Kinematic constraint | Separate prefab ent. Presence makes scripted motion, not a free body — omit it. |
 
-Map-side: `GenerateDestructibleSlots` only treats a **bare** DynaObject EntityModel as a slot when `ItemTypeE == 0x0C` (also accepts Prefab on that type). ItemType 1 + Prefab is the kinematic-obstacle path.
+Map-side: `GenerateDestructibleSlots` (`0x140dcded0`) calls `NSceneItem_GetRecordEntityVisRoot` (`0x1410818f0` → `GetEntityVisRoot` `0x1410816d0`) then `IsA` with **no null check**.
+
+`GetEntityVisRoot` for **`ItemTypeE == 0x0C`** returns `EntityModel` only if it is a **bare** `CPlugDynaObjectModel` (`0x9144000`) or a VariantList slot. **`CPlugPrefab` (`0x9145000`) is not accepted** — it returns 0. That is `LogCrash_0000000000DCE0C3` (2026-08-26): Prefab + 0x0C, `mov rcx,[rax]` on null.
+
+Type 1 / 5 / 0xD **do** return Prefab (kinematic-obstacle path). Do not Prefab-wrap a 0x0C soccer ball.
 
 ### Can we add this to a custom item?
 
 Yes. Recipe for a placeable ball:
 
-1. Item `EntityModel` = `CPlugPrefab` with one `CPlugDynaObjectModel` (no kinematic-constraint ent).
+1. Item `EntityModel` = **bare** `CPlugDynaObjectModel` (no Prefab wrap; no kinematic-constraint ent).
 2. `dyna.IsStatic = false`, `dyna.DynamizeOnSpawn = true`.
 3. `dyna.DynaShape` = a `CPlugSurface` whose `PhysicId` is `GolfBall` (or `Rubber` / `Plastic`). Not `NotCollidable`.
 4. `dyna.Mass` set (default 10 is fine to start).
 5. `dyna.BreakSpeedKmh` raised (default 100 will **destroy** the ball the first time a car hits it at race speed; slider max is 200).
-6. Prefab ent `NPlugDynaObjectModel::SInstanceParams.IsKinematic = false`.
-7. Save the `.Item.Gbx`.
+6. No Prefab wrap (0x0C + Prefab → GetEntityVisRoot 0 → crash). Bare DynaObject has no `SInstanceParams`.
+7. Save the `.Item.Gbx`. Map embed then refuses `ItemTypeE=0x0C` (`0x683e` mask, `"unhandled type"`). Official `customMaterials` fids are fine on type 1 (BF2_Crown). Enable `Editor::EmbedItemType0C` (0x783e) to embed a soccer ball.
+8. Editor map view will **not** draw a bare 0x0C Dyna (cursor will). `UpdateVisAndSkins` only CreateEnts Dyna.Mesh when record+0x68 bit0 (cursor) is set. See [`2026-08-27-Item5InvisibleOnMap.md`](2026-08-27-Item5InvisibleOnMap.md). Full insert-path map vs Crown kinematic: [`2026-08-27-DynaObjectInsertPaths.md`](2026-08-27-DynaObjectInsertPaths.md).
 
 E++ already has the property checkboxes (`IE_CurrentProps.as`) and the PhysicsID editors (`ItemBrowser.as`). It does **not** yet have a one-click "make this a physical ball" that wraps a static custom item into that prefab. That is an E++ feature we can add; the game already accepts it on a custom item.
 

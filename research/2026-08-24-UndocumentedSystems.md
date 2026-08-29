@@ -19,7 +19,7 @@ No `CPlugVehiclePlane` / dedicated plane phy found in this pass. Dedicated follo
 
 - `0x2E01D000`, `0x0910F000`, `0x2E01C000`, `0x2E028000`, `0x0911C000`, `0x09123000`, `0x2E032000`, variant-list.
 
-`GenerateDestructibleSlots`: `ItemTypeE == 0x0C` + DynaObject/Prefab = movable/destructible slot; type 1 + Prefab = kinematic obstacle.
+`GenerateDestructibleSlots`: `ItemTypeE == 0x0C` + **bare** DynaObject = movable slot. Type 0x0C + Prefab: `GetEntityVisRoot` returns 0, then IsA AV (`LogCrash_0000000000DCE0C3`). Type 1 + Prefab = kinematic obstacle.
 
 ## Water
 
