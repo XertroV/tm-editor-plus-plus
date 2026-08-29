@@ -34,6 +34,7 @@ Code/issues: [https://github.com/XertroV/tm-editor-plus-plus](https://github.com
 GL HF
 
 Tools:
+- `tools/tm_logs.py` prints the last N lines of `~/OpenplanetNext/Openplanet.log` and the newest crash files under `~/tm-docs/LogCrash/` plus root `LogCrash_*.txt` / `Crash_*.txt`. `--lines` (default 80), `--crashes` (default 5).
 - `tools/openplanet_recent_exception.py` prints the newest exception-ish block from `~/OpenplanetNext/Openplanet.log` and accepts `--engine`, `--level`, `--source`/`--plugin`, `--field NAME=VALUE`, `--contains TEXT`, `--context`, `--count`, `--all`, and `--include-repeats`. Field aliases include `engine`/`runtime`, `level`, `time`/`timestamp`, and `source`/`plugin`; numeric field indexes also work.
 
 todo:
