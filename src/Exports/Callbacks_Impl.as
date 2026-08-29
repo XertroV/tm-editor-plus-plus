@@ -28,6 +28,10 @@ namespace Editor {
             IEppExtension@[] withItemDeleteCbs;
             IEppExtension@[] withBlockPlaceCbs;
             IEppExtension@[] withBlockDeleteCbs;
+            IEppExtension@[] withTerrainBlockPlaceCbs;
+            IEppExtension@[] withTerrainBlockDeleteCbs;
+            IEppExtension@[] withTerrainDirtyCbs;
+            IEppExtension@[] withTerrainChangedCbs;
 
             void RegisterExtension(IEppExtension@ extension) {
                 allExtensions.InsertLast(extension);
@@ -51,6 +55,10 @@ namespace Editor {
                 if (extension.onDeleteItem !is null) withItemDeleteCbs.InsertLast(extension);
                 if (extension.onPlaceBlock !is null) withBlockPlaceCbs.InsertLast(extension);
                 if (extension.onDeleteBlock !is null) withBlockDeleteCbs.InsertLast(extension);
+                if (extension.onPlaceTerrainBlock !is null) withTerrainBlockPlaceCbs.InsertLast(extension);
+                if (extension.onDeleteTerrainBlock !is null) withTerrainBlockDeleteCbs.InsertLast(extension);
+                if (extension.onTerrainDirty !is null) withTerrainDirtyCbs.InsertLast(extension);
+                if (extension.onTerrainChanged !is null) withTerrainChangedCbs.InsertLast(extension);
                 // if (extension.onEditorSaveMap !is null) withOnEditorSaveMapCbs.InsertLast(extension);
                 // if (extension.afterEditorSaveMap !is null) withAfterEditorSaveMapCbs.InsertLast(extension);
             }
@@ -77,6 +85,10 @@ namespace Editor {
                 RemoveFromArrayIfExists(withItemDeleteCbs, extension);
                 RemoveFromArrayIfExists(withBlockPlaceCbs, extension);
                 RemoveFromArrayIfExists(withBlockDeleteCbs, extension);
+                RemoveFromArrayIfExists(withTerrainBlockPlaceCbs, extension);
+                RemoveFromArrayIfExists(withTerrainBlockDeleteCbs, extension);
+                RemoveFromArrayIfExists(withTerrainDirtyCbs, extension);
+                RemoveFromArrayIfExists(withTerrainChangedCbs, extension);
                 // RemoveFromArrayIfExists(withOnEditorSaveMapCbs, extension);
                 // RemoveFromArrayIfExists(withAfterEditorSaveMapCbs, extension);
             }
@@ -314,6 +326,61 @@ namespace Editor {
                     }
                     ext.onDeleteBlock(block);
                 }
+            }
+
+            void Run_OnPlaceTerrainBlock(CGameCtnBlock@ block) {
+                for (int i = 0; i < int(withTerrainBlockPlaceCbs.Length); i++) {
+                    auto ext = withTerrainBlockPlaceCbs[i];
+                    if (ext is null || ext.isDead || ext.onPlaceTerrainBlock is null) {
+                        RemoveExtension_Immediate(ext);
+                        i--;
+                        continue;
+                    }
+                    ext.onPlaceTerrainBlock(block);
+                }
+            }
+
+            void Run_OnDeleteTerrainBlock(CGameCtnBlock@ block) {
+                for (int i = 0; i < int(withTerrainBlockDeleteCbs.Length); i++) {
+                    auto ext = withTerrainBlockDeleteCbs[i];
+                    if (ext is null || ext.isDead || ext.onDeleteTerrainBlock is null) {
+                        RemoveExtension_Immediate(ext);
+                        i--;
+                        continue;
+                    }
+                    ext.onDeleteTerrainBlock(block);
+                }
+            }
+
+            void Run_OnTerrainDirty() {
+                for (int i = 0; i < int(withTerrainDirtyCbs.Length); i++) {
+                    auto ext = withTerrainDirtyCbs[i];
+                    if (ext is null || ext.isDead || ext.onTerrainDirty is null) {
+                        RemoveExtension_Immediate(ext);
+                        i--;
+                        continue;
+                    }
+                    ext.onTerrainDirty();
+                }
+            }
+
+            void Run_OnTerrainChanged(MacroblockSpec@ terrainDiff) {
+                for (int i = 0; i < int(withTerrainChangedCbs.Length); i++) {
+                    auto ext = withTerrainChangedCbs[i];
+                    if (ext is null || ext.isDead || ext.onTerrainChanged is null) {
+                        RemoveExtension_Immediate(ext);
+                        i--;
+                        continue;
+                    }
+                    ext.onTerrainChanged(terrainDiff);
+                }
+            }
+
+            // The settled-terrain watcher (TerrainHookWatcher_Tick) only runs when a
+            // subscriber exists, so polling consumers of the GetTerrainDiffSpec
+            // exports are unaffected until someone registers a hook.
+            bool HasTerrainSettleSubscribers() {
+                return withTerrainDirtyCbs.Length > 0 || withTerrainChangedCbs.Length > 0;
             }
 
             // void Run_OnEditorSaveMap() {

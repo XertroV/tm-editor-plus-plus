@@ -137,7 +137,11 @@ namespace Editor {
         // terrain blocks are not tracked as placements, but their appearance
         // means the genealogy grid changed (terraform tools / auto-terrain) --
         // flag it so sync plugins can diff the grid (see GetTerrainDiffSpec).
-        if (block.BlockInfo.IsTerrain) { _terrainDirty = true; return; }
+        if (block.BlockInfo.IsTerrain) {
+            _terrainDirty = true;
+            Editor::Callbacks::Exts::Run_OnPlaceTerrainBlock(block);
+            return;
+        }
         if (_captureSuppressDepth > 0) return;
         blocksAddedThisFrame.InsertLast(BlockSpecPriv(block));
         if (block.Skin !is null && (block.Skin.PackDesc !is null || block.Skin.ForegroundPackDesc !is null)) {
@@ -158,7 +162,11 @@ namespace Editor {
 
     void TrackMap_OnRemoveBlock(CGameCtnBlock@ block) {
         // see TrackMap_OnAddBlock: terrain block churn = grid change signal
-        if (block.BlockInfo.IsTerrain) { _terrainDirty = true; return; }
+        if (block.BlockInfo.IsTerrain) {
+            _terrainDirty = true;
+            Editor::Callbacks::Exts::Run_OnDeleteTerrainBlock(block);
+            return;
+        }
         if (_captureSuppressDepth > 0) return;
         auto ptr = Dev_GetPointerForNod(block);
         if (_TrackMap_RemoveBlock_IsByAPI) {
@@ -268,6 +276,7 @@ namespace Editor {
         while (true) {
             yield();
             ResetTrackMapChanges();
+            TerrainHookWatcher_Tick();
         }
     }
 

@@ -696,4 +696,53 @@ namespace Editor {
         _terrainDirty = false;
         return spec;
     }
+
+    // MARK: Settled-terrain hook watcher
+    //
+    // When any extension registers onTerrainDirty/onTerrainChanged, E++ owns
+    // the debounce + snapshot pipeline above and delivers the settled diff to
+    // every subscriber (the snapshot is global, so only one consumer can ever
+    // poll GetTerrainDiffSpec -- hooks fan the single diff out instead).
+    // With no subscribers the watcher touches nothing, keeping the polling
+    // exports usable. Ticked from ResetTrackMapChanges_Loop (BeforeScripts).
+    const uint TERRAIN_SETTLE_MS = 1200;
+    uint _terrainHookDirtyAt = 0;
+    bool _terrainHookArmed = false;
+
+    void TerrainHookWatcher_Tick() {
+        if (!Callbacks::Exts::HasTerrainSettleSubscribers()) return;
+        if (cast<CGameCtnEditorFree>(GetApp().Editor) is null || GetApp().RootMap is null) {
+            _terrainHookArmed = false;
+            _terrainSnapshotTaken = false;
+            return;
+        }
+        // late-subscribe baseline: changes are reported from registration on
+        if (!_terrainSnapshotTaken) RefreshTerrainSnapshot();
+        if (_terrainDirty) {
+            _terrainDirty = false;
+            // fires every tick that edits land (not once per burst): sync
+            // consumers re-cache their undo position on each ping so an
+            // incoming update's undo dance can only rewind ~1 frame of
+            // un-broadcast terraform
+            if (!IsTerrainResyncPending()) {
+                Callbacks::Exts::Run_OnTerrainDirty();
+            }
+            _terrainHookArmed = true;
+            _terrainHookDirtyAt = Time::Now;
+        }
+        if (_terrainHookArmed && Time::Now - _terrainHookDirtyAt > TERRAIN_SETTLE_MS) {
+            if (IsTerrainResyncPending()) {
+                // a remote/API apply is still settling; its grid churn must
+                // land in the snapshot (via the restore-loop refresh), not in
+                // a broadcast diff -- hold until quiet
+                _terrainHookDirtyAt = Time::Now;
+                return;
+            }
+            _terrainHookArmed = false;
+            auto diff = GetTerrainDiffSpec();
+            if (diff !is null && diff.Terrains.Length > 0) {
+                Callbacks::Exts::Run_OnTerrainChanged(diff);
+            }
+        }
+    }
 }
