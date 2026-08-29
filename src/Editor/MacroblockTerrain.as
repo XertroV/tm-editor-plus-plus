@@ -279,18 +279,71 @@ namespace Editor {
     // nothing is double-placed), then ground-places the donor at the spec's min
     // terrain XZ. Donor restore is delayed (~2s) because the terrain apply is
     // async and reads mb+0x1F8 after the call.
+    // sig of a TerrainSpec in GenealogySignature's format (base-relative), so
+    // spec targets can be compared against live grid cells
+    string TerrainSpecSignature(TerrainSpec@ ts) {
+        string sig = ts.dir + "|";
+        for (uint i = 0; i < ts.zoneNames.Length; i++) {
+            sig += ts.zoneNames[i] + ":" + (ts.zoneHeights[i] - ts.baseHeight) + ",";
+        }
+        return sig;
+    }
+
     bool PlaceMacroblockTerrain(MacroblockSpecPriv@ mbSpec) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (mbSpec is null || editor is null || editor.PluginMapType is null) return false;
+        if (mbSpec is null || editor is null || editor.PluginMapType is null || editor.Challenge is null) return false;
         if (mbSpec.terrains.Length == 0) return true;
         auto pmt = editor.PluginMapType;
+
+        // The engine's auto-terrain apply is ADDITIVE: it cannot lower a cell
+        // (verified live: applying flat entries over a hill is a no-op, even
+        // with placed=true). So first reset every cell whose current state
+        // differs from its target (RemoveTerrainBlocks peeling CAN lower),
+        // then apply the remaining non-default targets through the donor.
+        // Cells already matching their target are skipped entirely, which
+        // keeps re-applied echoes cheap and loop-free.
+        auto cells = DGameCtnChallenge(editor.Challenge).TerrainGenealogies;
+        int gridSizeX = Nat3ToInt3(editor.Challenge.Size).x;
+        string defaultSig = GetMapDefaultGenealogySignature(cells);
+        array<TerrainSpec@> toApply;
+        uint nbMatched = 0;
+        uint nbResetOnly = 0;
+        for (uint i = 0; i < mbSpec.terrains.Length; i++) {
+            auto ts = mbSpec.terrains[i];
+            string targetSig = TerrainSpecSignature(ts);
+            CGameCtnZoneGenealogy@ gen = null;
+            if (ts.offset.x >= 0 && ts.offset.z >= 0 && gridSizeX > 0) {
+                uint ix = uint(ts.offset.x) + uint(ts.offset.z) * uint(gridSizeX);
+                if (ix < cells.Length) @gen = cells.GetTerrainCell(ix).Nod;
+            }
+            if (gen !is null && GenealogySignature(gen) == targetSig) {
+                nbMatched++;
+                continue;
+            }
+            ResetTerrainCoord(int3(ts.offset.x, 0, ts.offset.z));
+            if (targetSig == defaultSig) nbResetOnly++;
+            else toApply.InsertLast(ts);
+        }
+        dev_trace("PlaceMacroblockTerrain: " + mbSpec.terrains.Length + " cells -> "
+            + nbMatched + " matched, " + nbResetOnly + " reset-only, " + toApply.Length + " to apply");
+        if (toApply.Length == 0) {
+            // resets fired terrain-block hooks; make sure the diff snapshot
+            // resyncs instead of broadcasting these cells back
+            ScheduleTerrainSnapshotResync();
+            return true;
+        }
+
         CGameCtnMacroBlockInfo@ mb = Editor::ResolveDonorMacroblock(editor, "PlaceMacroblockTerrain");
         if (mb is null) return false;
         auto tspec = MacroblockSpecPriv();
-        int3 minCoord = mbSpec.GetMinTerrainCoords();
+        int3 minCoord = int3(toApply[0].offset.x, 0, toApply[0].offset.z);
+        for (uint i = 1; i < toApply.Length; i++) {
+            if (toApply[i].offset.x < minCoord.x) minCoord.x = toApply[i].offset.x;
+            if (toApply[i].offset.z < minCoord.z) minCoord.z = toApply[i].offset.z;
+        }
         tspec.terrainWriteOrigin = minCoord;
-        for (uint i = 0; i < mbSpec.terrains.Length; i++) {
-            tspec.terrains.InsertLast(mbSpec.terrains[i].Duplicate());
+        for (uint i = 0; i < toApply.Length; i++) {
+            tspec.terrains.InsertLast(toApply[i].Duplicate());
         }
         try {
             tspec._TempWriteToMacroblock(mb, true);
