@@ -430,6 +430,7 @@ namespace Editor {
     //   2. land-level fills (relTop == 1) with the Flat model, 1-wide rects
     //      widened into adjacent live land cells so the model's >= 2x2
     //      minimum is satisfiable (idempotent for the widened cells);
+    //   2.5 stacked gestures (> 2 zones) replayed layer by layer, bottom-up;
     //   3. carves: a pond dug into land leaves a patch of slope cells whose
     //      dirs no flat gesture can express; the original carve rect is the
     //      mismatch region's bounding box eroded by one, and re-carving it
@@ -447,9 +448,10 @@ namespace Editor {
         array<ReconCell@> work;
         for (uint i = 0; i < cells.Length; i++) {
             auto ts = cells[i];
-            // phase 1: tool-gesture stacks -- the base zone alone (a fill's
-            // interior cell) or base + one zone; deeper stacks stay deferred
-            if (ts.zoneNames.Length < 1 || ts.zoneNames.Length > 2) continue;
+            // tool-gesture stacks: the base zone alone (a fill's interior
+            // cell), base + one zone, or a deeper stack of layered gestures
+            // (e.g. a hill placed on a beach pad) replayed by the layers pass
+            if (ts.zoneNames.Length < 1 || ts.zoneNames.Length > 6) continue;
             string zName = ts.zoneNames[ts.zoneNames.Length - 1];
             if (pmt.GetTerrainBlockModelFromName(zName) is null && flatModel is null) continue;
             auto rc = ReconCell();
@@ -459,6 +461,12 @@ namespace Editor {
             rc.relTop = ts.topHeight - ts.baseHeight;
             rc.dir = int(ts.dir);
             rc.targetSig = TerrainSpecSignature(ts);
+            rc.deep = ts.zoneNames.Length > 2;
+            if (rc.deep) {
+                for (uint zi = 1; zi < ts.zoneNames.Length; zi++) rc.layers.InsertLast(ts.zoneNames[zi]);
+                for (uint zi = 0; zi < ts.zoneNames.Length; zi++) rc.stackKey += ts.zoneNames[zi] + "/";
+                rc.stackKey += tostring(rc.relTop);
+            }
             work.InsertLast(rc);
         }
         if (work.Length == 0) return 0;
@@ -479,6 +487,9 @@ namespace Editor {
             _ReconPassFills(pmt, map, work, flatModel);
             remaining = _ReconRecheck(map, work);
             if (remaining == 0) break;
+            _ReconPassLayers(pmt, map, work);
+            remaining = _ReconRecheck(map, work);
+            if (remaining == 0) break;
             _ReconPassCarves(pmt, map, work);
             remaining = _ReconRecheck(map, work);
         }
@@ -494,6 +505,9 @@ namespace Editor {
         int dir;        // target slope dir (0 = flat)
         string targetSig;
         bool done = false;
+        bool deep = false;      // stack of > 2 zones: handled by the layers pass
+        array<string> layers;   // deep only: zone names above the base zone
+        string stackKey;        // deep only: full-stack grouping key
     }
 
     // Re-verify not-done work cells against the live grid; returns how many
@@ -520,7 +534,7 @@ namespace Editor {
         array<int> tops;
         for (uint i = 0; i < work.Length; i++) {
             auto rc = work[i];
-            if (rc.done || rc.relTop < 2) continue;
+            if (rc.done || rc.deep || rc.relTop < 2) continue;
             bool seen = false;
             for (uint g = 0; g < names.Length; g++) {
                 if (names[g] == rc.zone && tops[g] == rc.relTop) { seen = true; break; }
@@ -559,6 +573,49 @@ namespace Editor {
         _ReconPlaceGroupRects(pmt, map, work, "", 1, mName, true);
     }
 
+    // pass 2.5: stacked gestures (a hill placed on a beach pad and the
+    // like). Group deep cells by their full zone stack and replay each
+    // layer's gesture bottom-up over the group's rects: the native placement
+    // takes the base y for every layer, and layers the fill pass already
+    // built are idempotent. Base zones never resolve to models and skip.
+    void _ReconPassLayers(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<ReconCell@>@ work) {
+        array<string> seen;
+        for (uint i = 0; i < work.Length; i++) {
+            if (work[i].done || !work[i].deep) continue;
+            if (seen.Find(work[i].stackKey) >= 0) continue;
+            seen.InsertLast(work[i].stackKey);
+            dictionary inSet;
+            array<uint> keys;
+            for (uint j = 0; j < work.Length; j++) {
+                auto rc = work[j];
+                if (rc.done || !rc.deep || rc.stackKey != work[i].stackKey) continue;
+                uint k = uint(rc.x) << 16 | uint(rc.z);
+                inSet.Set("" + k, 0);
+                keys.InsertLast(k);
+            }
+            for (uint j = 0; j < keys.Length; j++) {
+                int x = int(keys[j] >> 16), z = int(keys[j] & 0xFFFF);
+                if (!_ReconCellUnused(inSet, x, z)) continue;
+                int w = 1, h = 1;
+                while (_ReconCellUnused(inSet, x + w, z)) w++;
+                bool grow = true;
+                while (grow) {
+                    for (int dx = 0; dx < w; dx++) {
+                        if (!_ReconCellUnused(inSet, x + dx, z + h)) { grow = false; break; }
+                    }
+                    if (grow) h++;
+                }
+                for (int dz = 0; dz < h; dz++) {
+                    for (int dx = 0; dx < w; dx++) inSet.Set("" + (uint(x + dx) << 16 | uint(z + dz)), 1);
+                }
+                for (uint li = 0; li < work[i].layers.Length; li++) {
+                    if (pmt.GetTerrainBlockModelFromName(work[i].layers[li]) is null) continue;
+                    _ReconPlaceRect(pmt, map, work[i].layers[li], x, z, w, h);
+                }
+            }
+        }
+    }
+
     // pass 3: surviving low cells are carve states (slope dirs / water
     // centers) no flat gesture expresses. Re-carve each connected mismatch
     // region's eroded bounding box with the zone's own (Frontier) model. A
@@ -570,13 +627,13 @@ namespace Editor {
             auto rc = work[i];
             // flat land-level mismatches are never carve evidence -- carving
             // them would sink terrain a fill pass failed to raise
-            if (!rc.done && rc.relTop <= 1 && (rc.dir != 0 || rc.relTop == 0)) {
+            if (!rc.done && !rc.deep && rc.relTop <= 1 && (rc.dir != 0 || rc.relTop == 0)) {
                 remain.Set("" + (uint(rc.x) << 16 | uint(rc.z)), 0);
             }
         }
         for (uint i = 0; i < work.Length; i++) {
             auto rc = work[i];
-            if (rc.done || rc.relTop > 1 || (rc.dir == 0 && rc.relTop != 0)) continue;
+            if (rc.done || rc.deep || rc.relTop > 1 || (rc.dir == 0 && rc.relTop != 0)) continue;
             if (!_ReconCellUnused(remain, rc.x, rc.z)) continue;
             // flood the 4-connected mismatch region, tracking its bounds
             array<uint> queue = { uint(rc.x) << 16 | uint(rc.z) };
@@ -633,7 +690,7 @@ namespace Editor {
         array<uint> keys;
         for (uint i = 0; i < work.Length; i++) {
             auto rc = work[i];
-            if (rc.done || (zone != "" && rc.zone != zone) || rc.relTop != relTop) continue;
+            if (rc.done || rc.deep || (zone != "" && rc.zone != zone) || rc.relTop != relTop) continue;
             uint k = uint(rc.x) << 16 | uint(rc.z);
             inSet.Set("" + k, 0);
             keys.InsertLast(k);
