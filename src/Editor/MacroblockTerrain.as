@@ -84,7 +84,10 @@ namespace Editor {
         for (int z = minCoord.z; z <= maxCoord.z; z++) {
             for (int x = minCoord.x; x <= maxCoord.x; x++) {
                 if (x < 0 || z < 0 || x >= size.x || z >= size.z) continue;
-                uint ix = uint(x) + uint(z) * uint(size.x);
+                // Grid is x-major: ix = z + x*size.z (verified empirically:
+                // a block placed at engine coord (30,·,35) changes the grid
+                // entries whose x-major decode is (30±1, 35±1)).
+                uint ix = uint(z) + uint(x) * uint(size.z);
                 if (ix >= cells.Length) continue;
                 auto gen = cells.GetTerrainCell(ix).Nod;
                 if (gen is null) continue;
@@ -381,9 +384,9 @@ namespace Editor {
     string _CurrentCellSig(CGameCtnChallenge@ map, int x, int z) {
         if (map is null || x < 0 || z < 0) return "";
         auto cells = DGameCtnChallenge(map).TerrainGenealogies;
-        int sizeX = Nat3ToInt3(map.Size).x;
-        if (sizeX <= 0) return "";
-        uint ix = uint(x) + uint(z) * uint(sizeX);
+        int sizeZ = Nat3ToInt3(map.Size).z;
+        if (sizeZ <= 0) return "";
+        uint ix = uint(z) + uint(x) * uint(sizeZ);
         if (ix >= cells.Length) return "";
         auto gen = cells.GetTerrainCell(ix).Nod;
         if (gen is null) return "";
@@ -700,8 +703,8 @@ namespace Editor {
             RefreshTerrainSnapshot();
             return spec;
         }
-        int sizeX = Nat3ToInt3(map.Size).x;
-        if (sizeX <= 0) return null;
+        int sizeZ = Nat3ToInt3(map.Size).z;
+        if (sizeZ <= 0) return null;
         for (uint i = 0; i < cells.Length; i++) {
             auto gen = cells.GetTerrainCell(i).Nod;
             string sig = _TerrainCellSig(gen);
@@ -709,7 +712,7 @@ namespace Editor {
             _terrainSnapshotSigs[i] = sig;
             if (gen is null) continue;
             auto ts = TerrainSpec();
-            ts.offset = int3(int(i) % sizeX, 0, int(i) / sizeX);
+            ts.offset = int3(int(i) / sizeZ, 0, int(i) % sizeZ);
             SetTerrainSpecFromGenealogy(ts, gen, gen.BaseHeight);
             spec.terrains.InsertLast(ts);
         }
