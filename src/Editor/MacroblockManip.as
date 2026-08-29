@@ -159,12 +159,28 @@ namespace Editor {
         protected uint64 tmpMacroblockSkinsBufLenCap = 0;
         protected uint64 tmpMacroblockAutoTerrainsBuf = 0;
         protected uint64 tmpMacroblockAutoTerrainsBufLenCap = 0;
-        protected uint64 tmpVariantAutoTerrainsBuf = 0;
-        protected uint64 tmpVariantAutoTerrainsBufLenCap = 0;
-        protected int tmpVariantATHeightOffset = 0;
-        protected uint tmpVariantATPlaceType = 0;
-        protected uint8 tmpVariantATWithFrontiers = 0;
+        // one entry per distinct ground-variant nod on the donor's generated
+        // blockinfo: VariantGround and VariantBaseGround can be DIFFERENT nods
+        // after regeneration, and the engine's terrain apply gate reads
+        // VariantBaseGround -- mirroring to only one silently no-ops applies.
+        protected array<uint64> tmpVariantATBufs;
+        protected array<uint64> tmpVariantATLenCaps;
+        protected array<int> tmpVariantATHeightOffsets;
+        protected array<uint> tmpVariantATPlaceTypes;
+        protected array<uint8> tmpVariantATFrontiers;
         protected bool tmpVariantStateSaved = false;
+
+        protected array<CGameCtnBlockInfoVariantGround@>@ _DistinctGroundVariants(CGameCtnMacroBlockInfo@ macroblock) {
+            array<CGameCtnBlockInfoVariantGround@>@ vgs = array<CGameCtnBlockInfoVariantGround@>();
+            auto gbi = macroblock is null ? null : macroblock.GeneratedBlockInfo;
+            if (gbi is null) return vgs;
+            if (gbi.VariantGround !is null) vgs.InsertLast(gbi.VariantGround);
+            if (gbi.VariantBaseGround !is null
+                && (vgs.Length == 0 || Dev_GetPointerForNod(vgs[0]) != Dev_GetPointerForNod(gbi.VariantBaseGround))) {
+                vgs.InsertLast(gbi.VariantBaseGround);
+            }
+            return vgs;
+        }
         protected bool tmpWroteTerrain = false;
         // terrain buffers are only written for the ground-mode terrain pass;
         // the air pass must not carry terrain (air-mode + AutoTerrains = crash)
@@ -203,24 +219,33 @@ namespace Editor {
             tmpVariantStateSaved = false;
             tmpWroteTerrain = false;
             tmpWriteTerrain = forGroundTerrain;
-            if (macroblock.GeneratedBlockInfo !is null && macroblock.GeneratedBlockInfo.VariantGround !is null) {
-                auto dvg = DGameCtnBlockInfoVariantGround(macroblock.GeneratedBlockInfo.VariantGround);
-                auto vatBuf = dvg.AutoTerrainsBuf;
-                tmpVariantAutoTerrainsBuf = Dev::ReadUInt64(vatBuf.Ptr);
-                tmpVariantAutoTerrainsBufLenCap = Dev::ReadUInt64(vatBuf.Ptr + 0x8);
-                tmpVariantATHeightOffset = dvg.AutoTerrainHeightOffset;
-                tmpVariantATPlaceType = uint(dvg.AutoTerrainPlaceType);
-                tmpVariantATWithFrontiers = dvg.AutoTerrainWithFrontiers;
-                tmpVariantStateSaved = true;
-                if (!forGroundTerrain && (tmpVariantAutoTerrainsBufLenCap & 0xFFFFFFFF) != 0) {
-                    // a prior terrain pass's variant mirror is still on the
-                    // donor (its delayed restore hasn't run): scrub it before
-                    // an air-mode place — air-mode + AutoTerrains crashes the
-                    // game. _RestoreMacroblock writes the saved value back.
-                    warn("_TempWriteToMacroblock: scrubbing " + (tmpVariantAutoTerrainsBufLenCap & 0xFFFFFFFF)
-                        + " stale variant AutoTerrains before air-mode place");
-                    Dev::Write(vatBuf.Ptr + 0x8, nat2(0));
+            tmpVariantATBufs.Resize(0);
+            tmpVariantATLenCaps.Resize(0);
+            tmpVariantATHeightOffsets.Resize(0);
+            tmpVariantATPlaceTypes.Resize(0);
+            tmpVariantATFrontiers.Resize(0);
+            {
+                auto vgs = _DistinctGroundVariants(macroblock);
+                for (uint vi = 0; vi < vgs.Length; vi++) {
+                    auto dvg = DGameCtnBlockInfoVariantGround(vgs[vi]);
+                    auto vatBuf = dvg.AutoTerrainsBuf;
+                    uint64 lenCap = Dev::ReadUInt64(vatBuf.Ptr + 0x8);
+                    tmpVariantATBufs.InsertLast(Dev::ReadUInt64(vatBuf.Ptr));
+                    tmpVariantATLenCaps.InsertLast(lenCap);
+                    tmpVariantATHeightOffsets.InsertLast(dvg.AutoTerrainHeightOffset);
+                    tmpVariantATPlaceTypes.InsertLast(uint(dvg.AutoTerrainPlaceType));
+                    tmpVariantATFrontiers.InsertLast(dvg.AutoTerrainWithFrontiers);
+                    if (!forGroundTerrain && (lenCap & 0xFFFFFFFF) != 0) {
+                        // a prior terrain pass's variant mirror is still on the
+                        // donor (its delayed restore hasn't run): scrub it before
+                        // an air-mode place — air-mode + AutoTerrains crashes the
+                        // game. _RestoreMacroblock writes the saved value back.
+                        warn("_TempWriteToMacroblock: scrubbing " + (lenCap & 0xFFFFFFFF)
+                            + " stale variant AutoTerrains before air-mode place (variant " + vi + ")");
+                        Dev::Write(vatBuf.Ptr + 0x8, nat2(0));
+                    }
                 }
+                tmpVariantStateSaved = vgs.Length > 0;
             }
 
             tmpMacroblockIsGround = macroblock.IsGround;
@@ -335,11 +360,13 @@ namespace Editor {
                     // authoritative terrain list for macroblock placement (mb+0x1F8)
                     Dev::Write(tmpMacroblock.AutoTerrains.Ptr, atPtrsPtr);
                     Dev::Write(tmpMacroblock.AutoTerrains.Ptr + 0x8, nat2(terrainsWritten));
-                    // variant copy mirror (used by removal / ground-block placement)
+                    // variant copy mirror -- write to EVERY distinct ground
+                    // variant: the engine's terrain apply gate reads
+                    // VariantBaseGround, which can differ from VariantGround
                     if (tmpVariantStateSaved) {
-                        auto vgNod = tmpMacroblock.Nod.GeneratedBlockInfo.VariantGround;
-                        if (vgNod !is null) {
-                            auto dvg = DGameCtnBlockInfoVariantGround(vgNod);
+                        auto vgs = _DistinctGroundVariants(tmpMacroblock.Nod);
+                        for (uint vi = 0; vi < vgs.Length; vi++) {
+                            auto dvg = DGameCtnBlockInfoVariantGround(vgs[vi]);
                             auto vatBuf = dvg.AutoTerrainsBuf;
                             Dev::Write(vatBuf.Ptr, atPtrsPtr);
                             Dev::Write(vatBuf.Ptr + 0x8, nat2(terrainsWritten));
@@ -426,15 +453,15 @@ namespace Editor {
             Dev::Write(tmpMacroblock.AutoTerrains.Ptr, tmpMacroblockAutoTerrainsBuf);
             Dev::Write(tmpMacroblock.AutoTerrains.Ptr + 0x8, tmpMacroblockAutoTerrainsBufLenCap);
             if (tmpVariantStateSaved) {
-                auto vgNod = tmpMacroblock.Nod.GeneratedBlockInfo.VariantGround;
-                if (vgNod !is null) {
-                    auto dvg = DGameCtnBlockInfoVariantGround(vgNod);
+                auto vgs = _DistinctGroundVariants(tmpMacroblock.Nod);
+                for (uint vi = 0; vi < vgs.Length && vi < tmpVariantATBufs.Length; vi++) {
+                    auto dvg = DGameCtnBlockInfoVariantGround(vgs[vi]);
                     auto vatBuf = dvg.AutoTerrainsBuf;
-                    Dev::Write(vatBuf.Ptr, tmpVariantAutoTerrainsBuf);
-                    Dev::Write(vatBuf.Ptr + 0x8, tmpVariantAutoTerrainsBufLenCap);
-                    dvg.AutoTerrainHeightOffset = tmpVariantATHeightOffset;
-                    dvg.AutoTerrainPlaceType = CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType(tmpVariantATPlaceType);
-                    dvg.AutoTerrainWithFrontiers = tmpVariantATWithFrontiers;
+                    Dev::Write(vatBuf.Ptr, tmpVariantATBufs[vi]);
+                    Dev::Write(vatBuf.Ptr + 0x8, tmpVariantATLenCaps[vi]);
+                    dvg.AutoTerrainHeightOffset = tmpVariantATHeightOffsets[vi];
+                    dvg.AutoTerrainPlaceType = CGameCtnBlockInfoVariantGround::EnumAutoTerrainPlaceType(tmpVariantATPlaceTypes[vi]);
+                    dvg.AutoTerrainWithFrontiers = tmpVariantATFrontiers[vi];
                 }
             }
             SetMacroblockGround(tmpMacroblock.Nod, tmpMacroblockIsGround);

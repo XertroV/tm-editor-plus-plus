@@ -304,119 +304,78 @@ namespace Editor {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (mbSpec is null || editor is null || editor.PluginMapType is null || editor.Challenge is null) return false;
         if (mbSpec.terrains.Length == 0) return true;
+        // Remote applies run under capture suppression: their grid changes are
+        // already known to whoever sent them, so swallow them from the diff
+        // snapshot. A LOCAL terrain apply (user placing a terrain-carrying
+        // macroblock / API call) must broadcast, so leave the dirty flag to
+        // settle into a diff.
+        bool applyIsRemote = IsCaptureSuppressed();
         auto pmt = editor.PluginMapType;
+        auto map = editor.Challenge;
 
-        // The engine's auto-terrain apply is ADDITIVE: it cannot lower a cell
-        // (verified live: applying flat entries over a hill is a no-op, even
-        // with placed=true). So first reset every cell whose current state
-        // differs from its target (RemoveTerrainBlocks peeling CAN lower),
-        // then apply the remaining non-default targets through the donor.
-        // Cells already matching their target are skipped entirely, which
-        // keeps re-applied echoes cheap and loop-free.
-        auto cells = DGameCtnChallenge(editor.Challenge).TerrainGenealogies;
-        int gridSizeX = Nat3ToInt3(editor.Challenge.Size).x;
-        string defaultSig = GetMapDefaultGenealogySignature(cells);
-        array<TerrainSpec@> toApply;
-        uint nbMatched = 0;
-        uint nbResetOnly = 0;
+        // NATIVE-ONLY apply. In the vista editors terrain can only be RAISED
+        // by ground-block AutoTerrains (PlaceTerrainBlocks refuses in this
+        // editor context, and donor-mb fake AutoTerrains either no-op or abort
+        // the engine's terrain job -- see research/MacroblockTerrain.md). Every
+        // user-reachable lowered state is a truncation of a block-made stack:
+        //   hill -> bare dirt -> collection default (fixed point),
+        // so RemoveTerrainBlocks peeling reaches any of them. Raise-shaped
+        // targets are recreated by the ground-block replay that precedes this
+        // diff in the update stream; they are logged and left to converge.
+        string defaultSig = GetMapDefaultGenealogySignature(DGameCtnChallenge(map).TerrainGenealogies);
+        uint nbMatched = 0, nbResetOnly = 0, nbPeelMatched = 0, nbDeferred = 0;
         for (uint i = 0; i < mbSpec.terrains.Length; i++) {
             auto ts = mbSpec.terrains[i];
             string targetSig = TerrainSpecSignature(ts);
-            CGameCtnZoneGenealogy@ gen = null;
-            if (ts.offset.x >= 0 && ts.offset.z >= 0 && gridSizeX > 0) {
-                uint ix = uint(ts.offset.x) + uint(ts.offset.z) * uint(gridSizeX);
-                if (ix < cells.Length) @gen = cells.GetTerrainCell(ix).Nod;
-            }
-            if (gen !is null && GenealogySignature(gen) == targetSig) {
-                nbMatched++;
+            int3 c = int3(ts.offset.x, 0, ts.offset.z);
+            string curSig = _CurrentCellSig(map, c.x, c.z);
+            if (curSig == "") continue;
+            if (curSig == targetSig) { nbMatched++; continue; }
+            if (targetSig == defaultSig) {
+                ResetTerrainCoord(c);
+                nbResetOnly++;
                 continue;
             }
-            ResetTerrainCoord(int3(ts.offset.x, 0, ts.offset.z));
-            if (targetSig == defaultSig) nbResetOnly++;
-            else toApply.InsertLast(ts);
+            bool matched = false;
+            for (uint attempt = 0; attempt < 8; attempt++) {
+                if (!pmt.RemoveTerrainBlocks(int3(c.x, 0, c.z), int3(c.x, 40, c.z))) break;
+                string newSig = curSig;
+                for (uint w = 0; w < 40; w++) {
+                    yield();
+                    newSig = _CurrentCellSig(map, c.x, c.z);
+                    if (newSig != curSig) break;
+                }
+                if (newSig == targetSig) { matched = true; break; }
+                if (newSig == curSig) break; // fixed point; peeling does nothing more
+                curSig = newSig;
+            }
+            if (matched) nbPeelMatched++;
+            else {
+                nbDeferred++;
+                dev_trace("PlaceMacroblockTerrain: cell <" + c.x + "," + c.z
+                    + "> target not peel-reachable (raise-shaped); deferring to ground-block replay");
+            }
         }
         dev_trace("PlaceMacroblockTerrain: " + mbSpec.terrains.Length + " cells -> "
-            + nbMatched + " matched, " + nbResetOnly + " reset-only, " + toApply.Length + " to apply");
-        if (toApply.Length == 0) {
-            // resets fired terrain-block hooks; make sure the diff snapshot
-            // resyncs instead of broadcasting these cells back
-            ScheduleTerrainSnapshotResync();
-            return true;
-        }
+            + nbMatched + " matched, " + nbResetOnly + " reset, " + nbPeelMatched
+            + " peeled, " + nbDeferred + " deferred");
+        // peels fired terrain-block hooks; for a remote apply make sure the
+        // diff snapshot resyncs instead of broadcasting them back
+        if (applyIsRemote) ScheduleTerrainSnapshotResync();
+        return true;
+    }
 
-        CGameCtnMacroBlockInfo@ mb = Editor::ResolveDonorMacroblock(editor, "PlaceMacroblockTerrain");
-        if (mb is null) return false;
-        auto tspec = MacroblockSpecPriv();
-        int3 minCoord = int3(toApply[0].offset.x, 0, toApply[0].offset.z);
-        for (uint i = 1; i < toApply.Length; i++) {
-            if (toApply[i].offset.x < minCoord.x) minCoord.x = toApply[i].offset.x;
-            if (toApply[i].offset.z < minCoord.z) minCoord.z = toApply[i].offset.z;
-        }
-        tspec.terrainWriteOrigin = minCoord;
-        for (uint i = 0; i < toApply.Length; i++) {
-            tspec.terrains.InsertLast(toApply[i].Duplicate());
-        }
-        try {
-            tspec._TempWriteToMacroblock(mb, true);
-        } catch {
-            NotifyWarning("PlaceMacroblockTerrain: exception temp-writing donor macroblock: " + getExceptionInfo());
-            try {
-                tspec._RestoreMacroblock();
-            } catch {
-                warn("PlaceMacroblockTerrain: exception restoring donor after temp-write failure: " + getExceptionInfo());
-            }
-            return false;
-        }
-        if (tspec.lastTerrainsWritten == 0) {
-            // nothing was written (missing templates/zones); do NOT ground-place
-            // an empty donor — native ground placement with a stale/empty donor
-            // crashed the game on 2026-08-18 (Openplanet.dll AV)
-            NotifyWarning("PlaceMacroblockTerrain: 0 terrain entries written; aborting ground placement");
-            try {
-                tspec._RestoreMacroblock();
-            } catch {
-                warn("PlaceMacroblockTerrain: exception restoring donor after empty write: " + getExceptionInfo());
-            }
-            return false;
-        }
-        int groundBase = GetMapGroundBaseHeight();
-        if (groundBase < 1) {
-            NotifyWarning("PlaceMacroblockTerrain: could not determine map ground base height; aborting ground placement");
-            try {
-                tspec._RestoreMacroblock();
-            } catch {
-                warn("PlaceMacroblockTerrain: exception restoring donor after ground-base failure: " + getExceptionInfo());
-            }
-            return false;
-        }
-        // mirror the DeleteMacroblock finding: ground-mode calls no-op while
-        // Initialized/Connected are false (temp-write clears them)
-        mb.Initialized = true;
-        mb.Connected = true;
-        int3 placeCoord = int3(minCoord.x, groundBase - 1, minCoord.z);
-        bool placed = false;
-        auto gbi = mb.GeneratedBlockInfo;
-        dev_trace("PlaceMacroblockTerrain: donor GeneratedBlockInfo=" + (gbi !is null)
-            + " VariantBaseGround=" + (gbi !is null && gbi.VariantBaseGround !is null)
-            + " mbAutoTerrainsLen=" + DGameCtnMacroBlockInfo(mb).AutoTerrains.Length);
-        bool canPlace = false;
-        try {
-            canPlace = pmt.CanPlaceMacroblock(mb, placeCoord, CGameEditorPluginMap::ECardinalDirections::North);
-        } catch {
-            warn("PlaceMacroblockTerrain: CanPlaceMacroblock exception: " + getExceptionInfo());
-        }
-        dev_trace("PlaceMacroblockTerrain: ground-placing donor at " + placeCoord.ToString()
-            + " with " + tspec.terrains.Length + " terrain cells; canPlace=" + canPlace);
-        try {
-            placed = pmt.PlaceMacroblock(mb, placeCoord, CGameEditorPluginMap::ECardinalDirections::North);
-        } catch {
-            NotifyWarning("PlaceMacroblockTerrain: exception placing donor macroblock: " + getExceptionInfo());
-        }
-        dev_trace("PlaceMacroblockTerrain: PlaceMacroblock returned " + placed);
-        // terrain apply is async (~1s) and reads mb+0x1F8; delay the restore
-        _terrainPlaceRestoreQueue.InsertLast(tspec);
-        if (_terrainPlaceRestoreQueue.Length == 1) startnew(TerrainDonorRestoreLoop);
-        return placed;
+    // Base-relative signature of the live cell at (x, z), "" when unreadable.
+    string _CurrentCellSig(CGameCtnChallenge@ map, int x, int z) {
+        if (map is null || x < 0 || z < 0) return "";
+        auto cells = DGameCtnChallenge(map).TerrainGenealogies;
+        int sizeX = Nat3ToInt3(map.Size).x;
+        if (sizeX <= 0) return "";
+        uint ix = uint(x) + uint(z) * uint(sizeX);
+        if (ix >= cells.Length) return "";
+        auto gen = cells.GetTerrainCell(ix).Nod;
+        if (gen is null) return "";
+        return GenealogySignature(gen);
     }
 
     // Place ground grid blocks. The air-mode donor refuses any isGround block
@@ -581,6 +540,12 @@ namespace Editor {
         return ok;
     }
 
+    // set while the restore queue contains at least one REMOTE (capture-
+    // suppressed) terrain apply: those must be swallowed from the diff
+    // snapshot when the queue drains. Local applies leave it false so their
+    // changes settle into a broadcastable diff.
+    bool _terrainRestoreSwallow = false;
+
     void TerrainDonorRestoreLoop() {
         while (_terrainPlaceRestoreQueue.Length > 0) {
             sleep(2000);
@@ -592,12 +557,15 @@ namespace Editor {
             }
             _terrainPlaceRestoreQueue.RemoveAt(0);
         }
-        // The applies this loop waited on came from remote/API specs, so the
-        // grid changes they caused are already known to whoever sent them --
-        // resync the snapshot so GetTerrainDiffSpec does not echo them back.
-        // (Local edits made during the ~2s window are folded in too; callers
-        // diff on a dirty-flag debounce, so this is a bounded blind spot.)
-        if (_terrainSnapshotTaken) RefreshTerrainSnapshot();
+        // Remote applies' grid changes are already known to whoever sent them
+        // -- resync the snapshot so GetTerrainDiffSpec does not echo them
+        // back. (Local edits made during the ~2s window are folded in too;
+        // callers diff on a dirty-flag debounce, so this is a bounded blind
+        // spot.) Queues with only local applies skip the refresh so their
+        // changes broadcast.
+        bool swallow = _terrainRestoreSwallow;
+        _terrainRestoreSwallow = false;
+        if (swallow && _terrainSnapshotTaken) RefreshTerrainSnapshot();
     }
 
     bool _terrainResyncScheduled = false;

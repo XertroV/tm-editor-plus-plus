@@ -586,6 +586,10 @@ namespace Editor {
             Dev::Write(DGameCtnMacroBlockInfo(mb).AutoTerrains.Ptr + 0x8, nat2(0));
             if (mb.GeneratedBlockInfo !is null && mb.GeneratedBlockInfo.VariantGround !is null) {
                 Dev::Write(DGameCtnBlockInfoVariantGround(mb.GeneratedBlockInfo.VariantGround).AutoTerrainsBuf.Ptr + 0x8, nat2(0));
+                if (mb.GeneratedBlockInfo.VariantBaseGround !is null
+                    && Dev_GetPointerForNod(mb.GeneratedBlockInfo.VariantBaseGround) != Dev_GetPointerForNod(mb.GeneratedBlockInfo.VariantGround)) {
+                    Dev::Write(DGameCtnBlockInfoVariantGround(mb.GeneratedBlockInfo.VariantBaseGround).AutoTerrainsBuf.Ptr + 0x8, nat2(0));
+                }
             }
             placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
             if (placed && addUndoRedoPoint) {
