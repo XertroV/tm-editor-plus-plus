@@ -333,16 +333,21 @@ namespace Editor {
         while (Time::Now < _lastTerrainActivityAt + 300 && Time::Now < quietWaitStart + 8000) yield();
 
         // NATIVE-ONLY apply. In the vista editors terrain can only be RAISED
-        // by ground-block AutoTerrains (PlaceTerrainBlocks refuses in this
-        // editor context, and donor-mb fake AutoTerrains either no-op or abort
-        // the engine's terrain job -- see research/MacroblockTerrain.md). Every
-        // user-reachable lowered state is a truncation of a block-made stack:
-        //   hill -> bare dirt -> collection default (fixed point),
-        // so RemoveTerrainBlocks peeling reaches any of them. Raise-shaped
-        // targets are recreated by the ground-block replay that precedes this
-        // diff in the update stream; they are logged and left to converge.
+        // by three primitives (research/MacroblockTerrain.md +
+        // research/2026-08-30-TerrainPlacementRE.md):
+        //   - RemoveTerrainBlocks peels to any truncation of the current
+        //     stack (block-made or tool-made lowers),
+        //   - PlaceTerrainBlocks re-creates tool-made states: a genealogy's
+        //     zone names ARE terrain block model names, and the script API
+        //     reaches the terrain tool's own native routine (it type-gates
+        //     on CGameCtnBlockInfoFrontier/Flat models and enforces minimum
+        //     region sizes, e.g. 2x2 for the vista land/hill models) -- see
+        //     _ReconstructTerrainViaNativePlace,
+        //   - ground-block AutoTerrain raises are recreated by the
+        //     ground-block replay that precedes this diff in the stream.
         string defaultSig = GetMapDefaultGenealogySignature(DGameCtnChallenge(map).TerrainGenealogies);
         uint nbMatched = 0, nbResetOnly = 0, nbPeelMatched = 0, nbDeferred = 0;
+        array<TerrainSpec@> deferredCells;
         for (uint i = 0; i < mbSpec.terrains.Length; i++) {
             auto ts = mbSpec.terrains[i];
             string targetSig = TerrainSpecSignature(ts);
@@ -362,8 +367,7 @@ namespace Editor {
             auto curGen = _CurrentCellGen(map, c.x, c.z);
             if (curGen !is null && ts.topHeight - ts.baseHeight > curGen.TopHeight - curGen.BaseHeight) {
                 nbDeferred++;
-                dev_trace("PlaceMacroblockTerrain: cell <" + c.x + "," + c.z
-                    + "> target above current stack (raise-shaped); deferring without peel");
+                deferredCells.InsertLast(ts);
                 continue;
             }
             bool matched = false;
@@ -382,13 +386,20 @@ namespace Editor {
             if (matched) nbPeelMatched++;
             else {
                 nbDeferred++;
-                dev_trace("PlaceMacroblockTerrain: cell <" + c.x + "," + c.z
-                    + "> target not peel-reachable (raise-shaped); deferring to ground-block replay");
+                deferredCells.InsertLast(ts);
             }
+        }
+        uint nbNativeRaised = 0;
+        if (deferredCells.Length > 0) {
+            // let this apply's own peels/resets settle before placing
+            uint reconWait = Time::Now;
+            while (Time::Now < _lastTerrainActivityAt + 300 && Time::Now < reconWait + 8000) yield();
+            nbNativeRaised = _ReconstructTerrainViaNativePlace(pmt, map, deferredCells);
         }
         dev_trace("PlaceMacroblockTerrain: " + mbSpec.terrains.Length + " cells -> "
             + nbMatched + " matched, " + nbResetOnly + " reset, " + nbPeelMatched
-            + " peeled, " + nbDeferred + " deferred @f" + Time::FrameCount);
+            + " peeled, " + nbNativeRaised + " native-placed, "
+            + (nbDeferred > nbNativeRaised ? nbDeferred - nbNativeRaised : 0) + " deferred @f" + Time::FrameCount);
         // peels fired terrain-block hooks; for a remote apply make sure the
         // diff snapshot resyncs (scoped to these cells) instead of
         // broadcasting them back
@@ -399,6 +410,81 @@ namespace Editor {
             ScheduleTerrainSnapshotResync();
         }
         return true;
+    }
+
+    // Native terrain-model reconstruction for targets peeling can't reach.
+    // A genealogy's zone names are terrain block model names, so a
+    // "base + one zone" target is re-created by the terrain tool's own
+    // native placement over the matching rectangle. Models enforce minimum
+    // region sizes (the vista land/hill models need >= 2x2; shores place
+    // 1x1), so same-model cells are grouped into greedy maximal rectangles.
+    // Returns the number of cells covered by successful placements; the
+    // terraform lands async and is verified by the usual settle machinery.
+    uint _ReconstructTerrainViaNativePlace(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<TerrainSpec@>@ cells) {
+        array<string> names;
+        array<array<uint>@> groups;
+        for (uint i = 0; i < cells.Length; i++) {
+            auto ts = cells[i];
+            // phase 1: base + single zone (tool gestures); deeper stacks stay deferred
+            if (ts.zoneNames.Length != 2) continue;
+            string mName = ts.zoneNames[1];
+            if (pmt.GetTerrainBlockModelFromName(mName) is null) continue;
+            int gi = names.Find(mName);
+            if (gi < 0) {
+                names.InsertLast(mName);
+                groups.InsertLast(array<uint>());
+                gi = int(names.Length) - 1;
+            }
+            groups[gi].InsertLast(uint(ts.offset.x) << 16 | uint(ts.offset.z));
+        }
+        uint placedCells = 0;
+        for (uint g = 0; g < names.Length; g++) {
+            auto model = pmt.GetTerrainBlockModelFromName(names[g]);
+            if (model is null) continue;
+            dictionary inSet;
+            for (uint i = 0; i < groups[g].Length; i++) inSet.Set("" + groups[g][i], 0);
+            for (uint i = 0; i < groups[g].Length; i++) {
+                int x = int(groups[g][i] >> 16), z = int(groups[g][i] & 0xFFFF);
+                if (!_ReconCellUnused(inSet, x, z)) continue;
+                // greedy maximal rectangle from (x, z) over unused set cells
+                int w = 1, h = 1;
+                while (_ReconCellUnused(inSet, x + w, z)) w++;
+                bool grow = true;
+                while (grow) {
+                    for (int dx = 0; dx < w; dx++) {
+                        if (!_ReconCellUnused(inSet, x + dx, z + h)) { grow = false; break; }
+                    }
+                    if (grow) h++;
+                }
+                for (int dz = 0; dz < h; dz++) {
+                    for (int dx = 0; dx < w; dx++) inSet.Set("" + (uint(x + dx) << 16 | uint(z + dz)), 1);
+                }
+                auto gen = _CurrentCellGen(map, x, z);
+                int y = gen is null ? 0 : gen.BaseHeight;
+                int3 lo = int3(x, y, z), hi = int3(x + w - 1, y, z + h - 1);
+                if (!pmt.CanPlaceTerrainBlocks(model, lo, hi)) {
+                    dev_trace("[TerrainRecon] " + names[g] + " " + w + "x" + h + " @<" + x + "," + z
+                        + "> refused (below the model's minimum region?)");
+                    continue;
+                }
+                if (pmt.PlaceTerrainBlocks(model, lo, hi)) {
+                    placedCells += uint(w * h);
+                    dev_trace("[TerrainRecon] placed " + names[g] + " " + w + "x" + h + " @<" + x + "," + z + "> y" + y);
+                    // let the engine job land before the next region
+                    uint pw = Time::Now;
+                    while (Time::Now < _lastTerrainActivityAt + 300 && Time::Now < pw + 8000) yield();
+                } else {
+                    dev_trace("[TerrainRecon] PlaceTerrainBlocks(" + names[g] + ") returned false @<" + x + "," + z + ">");
+                }
+            }
+        }
+        return placedCells;
+    }
+
+    bool _ReconCellUnused(dictionary@ s, int x, int z) {
+        if (x < 0 || z < 0) return false;
+        int64 v = 0;
+        return s.Get("" + (uint(x) << 16 | uint(z)), v) && v == 0;
     }
 
     // True when the model's base ground variant carries AutoTerrains (i.e.
