@@ -83,6 +83,9 @@ namespace VehiclePreview {
 
     // Most recently added vis — test mode appends, so the kept car is last.
     CSceneVehicleVis@ GetMostRecentVis() {
+#if DEV
+        if (ManageVehicles::WrapBlocked()) return null;
+#endif
         auto scene = GetApp().GameScene;
         if (scene is null) return null;
         auto viss = VehicleState::GetAllVis(scene);
@@ -94,6 +97,9 @@ namespace VehiclePreview {
 
     // Nearest non-hidden vis to nearPos; ties resolve to the most recent.
     CSceneVehicleVis@ PickPreviewVis(vec3 nearPos) {
+#if DEV
+        if (ManageVehicles::WrapBlocked()) return null;
+#endif
         auto scene = GetApp().GameScene;
         if (scene is null) return null;
         auto viss = VehicleState::GetAllVis(scene);
@@ -139,6 +145,9 @@ namespace VehiclePreview {
 
     // Park every existing vis far below the map so only the newly kept one shows.
     void HideAllVis() {
+#if SIG_DEVELOPER
+        if (ManageVehicles::WrapBlocked()) return;
+#endif
         auto scene = GetApp().GameScene;
         if (scene is null) return;
         auto viss = VehicleState::GetAllVis(scene);

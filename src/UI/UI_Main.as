@@ -731,6 +731,7 @@ Settings & Help
 - Fixes
 - About
 - Dev
+- Manage Vehicles [DEV]
 
 */
 
@@ -842,6 +843,7 @@ TabGroup@ CreateRootTabGroup() {
     AboutTab(root);
 
 #if DEV
+    ManageVehiclesTab(root);
     LaunchedCPsTab(root);
 #endif
 

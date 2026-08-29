@@ -12,6 +12,7 @@ namespace DevTest {
     import string SpikeEnterTestAtLatestStart() from "Editor";
     import string SpikeNudgeKeptVehicle(float dy) from "Editor";
     import bool SetMacroblockCanPlacePatch(bool on) from "Editor";
+    import string ManageVehiclesOp(const string &in op, const string &in argsJson) from "Editor";
 }
 }
 #endif

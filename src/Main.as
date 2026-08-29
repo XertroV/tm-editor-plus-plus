@@ -159,6 +159,9 @@ void Unload(bool freeMem = true) {
     LightMapCustomRes::Unpatch();
     PillarsChoice::IsActive = false;
     Gizmo::IsActive = false;
+#if DEV
+    ManageVehicles::OnPluginUnload();
+#endif
     NodPtrs::Cleanup();
     FreeAllAllocated();
 #if DEV
@@ -450,6 +453,9 @@ float g_AvgFrameTime = 10.;
 void Update(float dt) {
     g_FrameTime = dt;
     g_AvgFrameTime = g_AvgFrameTime * .9 + dt * .1;
+#if DEV
+    ManageVehicles::OnUpdate();
+#endif
 }
 
 // virtual keys that are registered for a hotkey
