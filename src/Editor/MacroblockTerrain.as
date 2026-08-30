@@ -335,19 +335,11 @@ namespace Editor {
         uint quietWaitStart = Time::Now;
         while (Time::Now < _lastTerrainActivityAt + 300 && Time::Now < quietWaitStart + 8000) yield();
 
-        // NATIVE-ONLY apply. In the vista editors terrain can only be RAISED
-        // by three primitives (research/MacroblockTerrain.md +
-        // research/2026-08-30-TerrainPlacementRE.md):
-        //   - RemoveTerrainBlocks peels to any truncation of the current
-        //     stack (block-made or tool-made lowers),
-        //   - PlaceTerrainBlocks re-creates tool-made states: a genealogy's
-        //     zone names ARE terrain block model names, and the script API
-        //     reaches the terrain tool's own native routine (it type-gates
-        //     on CGameCtnBlockInfoFrontier/Flat models and enforces minimum
-        //     region sizes, e.g. 2x2 for the vista land/hill models) -- see
-        //     _ReconstructTerrainViaNativePlace,
-        //   - ground-block AutoTerrain raises are recreated by the
-        //     ground-block replay that precedes this diff in the stream.
+        // NATIVE-ONLY apply: RemoveTerrainBlocks peels to any truncation of
+        // the live stack; PlaceTerrainBlocks recreates tool-made raises (zone
+        // names ARE terrain model names); ground-block AutoTerrain raises are
+        // recreated by the ground-block replay preceding this diff. Long
+        // form: research/MacroblockTerrain.md (Recon pass architecture).
         string defaultSig = GetMapDefaultGenealogySignature(DGameCtnChallenge(map).TerrainGenealogies);
         uint nbMatched = 0, nbResetOnly = 0, nbPeelMatched = 0, nbDeferred = 0;
         array<TerrainSpec@> deferredCells;
@@ -418,24 +410,11 @@ namespace Editor {
         return true;
     }
 
-    // Native terrain reconstruction for targets peeling can't reach. A
-    // genealogy's zone names are terrain block model names, so "base + one
-    // zone" targets are re-created by the terrain tool's own native placement
-    // (research/2026-08-30-TerrainPlacementRE.md). Most of a gesture's
-    // footprint is engine-DERIVED from its neighbors rather than directly
-    // placeable (support rings around hills, slope dirs around carves), so
-    // the rebuild runs in ordered passes with a live recheck between each:
-    //   1. hills (relTop >= 2), tallest first -- their smoothing recreates
-    //      the 1-wide support rings that arrive as unplaceable thin strips;
-    //   2. land-level fills (relTop == 1) with the Flat model, 1-wide rects
-    //      widened into adjacent live land cells so the model's >= 2x2
-    //      minimum is satisfiable (idempotent for the widened cells);
-    //   2.5 stacked gestures (> 2 zones) replayed layer by layer, bottom-up;
-    //   3. carves: a pond dug into land leaves a patch of slope cells whose
-    //      dirs no flat gesture can express; the original carve rect is the
-    //      mismatch region's bounding box eroded by one, and re-carving it
-    //      lets the engine re-derive the slopes.
-    // A second round strips survivors to default and rebuilds from scratch.
+    // Native reconstruction for targets peeling can't reach: ordered passes
+    // (hills tallest-first -> zone-agnostic fills -> stacked layers -> carve
+    // inference), live recheck between each, then one reset-and-rebuild
+    // round. Why each pass and its ordering exist:
+    // research/MacroblockTerrain.md (Recon pass architecture).
     // Returns the number of work cells whose live state matches its target.
     uint _ReconstructTerrainViaNativePlace(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<TerrainSpec@>@ cells) {
         CGameCtnBlockInfo@ flatModel = null;
@@ -593,24 +572,11 @@ namespace Editor {
                 inSet.Set("" + k, 0);
                 keys.InsertLast(k);
             }
-            for (uint j = 0; j < keys.Length; j++) {
-                int x = int(keys[j] >> 16), z = int(keys[j] & 0xFFFF);
-                if (!_ReconCellUnused(inSet, x, z)) continue;
-                int w = 1, h = 1;
-                while (_ReconCellUnused(inSet, x + w, z)) w++;
-                bool grow = true;
-                while (grow) {
-                    for (int dx = 0; dx < w; dx++) {
-                        if (!_ReconCellUnused(inSet, x + dx, z + h)) { grow = false; break; }
-                    }
-                    if (grow) h++;
-                }
-                for (int dz = 0; dz < h; dz++) {
-                    for (int dx = 0; dx < w; dx++) inSet.Set("" + (uint(x + dx) << 16 | uint(z + dz)), 1);
-                }
+            auto rects = _ReconGreedyRects(inSet, keys);
+            for (uint r = 0; r < rects.Length; r++) {
                 for (uint li = 0; li < work[i].layers.Length; li++) {
                     if (pmt.GetTerrainBlockModelFromName(work[i].layers[li]) is null) continue;
-                    _ReconPlaceRect(pmt, map, work[i].layers[li], x, z, w, h);
+                    _ReconPlaceRect(pmt, map, work[i].layers[li], rects[r].x, rects[r].z, rects[r].w, rects[r].h);
                 }
             }
         }
@@ -680,21 +646,15 @@ namespace Editor {
         }
     }
 
-    // Greedy maximal rectangles over the not-done work cells of (zone,
-    // relTop), placed with modelName. widenForMin grows 1-wide rects into an
-    // adjacent row/col of live land-level cells (fill pass only).
-    void _ReconPlaceGroupRects(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map,
-            array<ReconCell@>@ work, const string &in zone, int relTop,
-            const string &in modelName, bool widenForMin) {
-        dictionary inSet;
-        array<uint> keys;
-        for (uint i = 0; i < work.Length; i++) {
-            auto rc = work[i];
-            if (rc.done || rc.deep || (zone != "" && rc.zone != zone) || rc.relTop != relTop) continue;
-            uint k = uint(rc.x) << 16 | uint(rc.z);
-            inSet.Set("" + k, 0);
-            keys.InsertLast(k);
-        }
+    class ReconRect {
+        int x, z, w, h;
+        ReconRect(int x, int z, int w, int h) { this.x = x; this.z = z; this.w = w; this.h = h; }
+    }
+
+    // Greedy maximal rectangles over the unused cells of inSet (as built by
+    // the caller from keys); marks consumed cells.
+    array<ReconRect@>@ _ReconGreedyRects(dictionary@ inSet, array<uint>@ keys) {
+        array<ReconRect@>@ rects = array<ReconRect@>();
         for (uint i = 0; i < keys.Length; i++) {
             int x = int(keys[i] >> 16), z = int(keys[i] & 0xFFFF);
             if (!_ReconCellUnused(inSet, x, z)) continue;
@@ -710,6 +670,29 @@ namespace Editor {
             for (int dz = 0; dz < h; dz++) {
                 for (int dx = 0; dx < w; dx++) inSet.Set("" + (uint(x + dx) << 16 | uint(z + dz)), 1);
             }
+            rects.InsertLast(ReconRect(x, z, w, h));
+        }
+        return rects;
+    }
+
+    // Greedy maximal rectangles over the not-done work cells of (zone,
+    // relTop), placed with modelName. widenForMin grows 1-wide rects into an
+    // adjacent row/col of live land-level cells (fill pass only).
+    void _ReconPlaceGroupRects(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map,
+            array<ReconCell@>@ work, const string &in zone, int relTop,
+            const string &in modelName, bool widenForMin) {
+        dictionary inSet;
+        array<uint> keys;
+        for (uint i = 0; i < work.Length; i++) {
+            auto rc = work[i];
+            if (rc.done || rc.deep || (zone != "" && rc.zone != zone) || rc.relTop != relTop) continue;
+            uint k = uint(rc.x) << 16 | uint(rc.z);
+            inSet.Set("" + k, 0);
+            keys.InsertLast(k);
+        }
+        auto rects = _ReconGreedyRects(inSet, keys);
+        for (uint i = 0; i < rects.Length; i++) {
+            int x = rects[i].x, z = rects[i].z, w = rects[i].w, h = rects[i].h;
             if (widenForMin && w == 1) {
                 if (_ReconSpanIsLiveLand(map, x - 1, z, 1, h)) { x--; w = 2; }
                 else if (_ReconSpanIsLiveLand(map, x + 1, z, 1, h)) w = 2;
@@ -1173,17 +1156,14 @@ namespace Editor {
     // MARK: Settled-terrain hook watcher
     //
     // When any extension registers onTerrainDirty/onTerrainChanged, E++ owns
-    // the debounce + snapshot pipeline above and delivers the settled diff to
-    // every subscriber (the snapshot is global, so only one consumer can ever
-    // poll GetTerrainDiffSpec -- hooks fan the single diff out instead).
-    // With no subscribers the watcher touches nothing, keeping the polling
-    // exports usable. Ticked from ResetTrackMapChanges_Loop (BeforeScripts).
-    // Frame-based settle: terraform commits in the SAME FRAME as its block
-    // placement (measured: a 13-block replay wave landed all terrain as one
-    // dirty tick that frame), so 2 quiet frames = 1 frame of straddle margin.
-    // A premature settle self-heals via a follow-up diff. Beware re-measuring
-    // this with spaced test calls: gaps then reflect call spacing, not engine
-    // scheduling.
+    // the debounce + snapshot pipeline above and fans the single settled diff
+    // out to every subscriber (so only one consumer may ever poll
+    // GetTerrainDiffSpec). No subscribers = the watcher touches nothing.
+    // Ticked from ResetTrackMapChanges_Loop (BeforeScripts). Settle is
+    // frame-based: terraform commits the same frame as placement (measured),
+    // so 2 quiet frames = 1 frame straddle margin; a premature settle
+    // self-heals. Measurement caveats:
+    // research/MacroblockTerrain.md (Settle measurement).
     const uint TERRAIN_SETTLE_QUIET_FRAMES = 2;
     uint _terrainQuietFrames = 0;
     bool _terrainHookArmed = false;

@@ -9,7 +9,6 @@ namespace Editor {
 
     // Set the editor cursor to a world position (block cursor free pos, coord, snapped loc; item cursor pos)
     import void SetAllCursorPos(vec3 pos) from "Editor";
-    import nat3 PosToCoord(vec3 pos) from "Editor";
 
     // None = 0, Normal = 1, FreeGround = 2, Free = 3
     import int GetItemPlacementModeInt(bool checkEditMode = true, bool checkPlacementMode = true) from "Editor";
