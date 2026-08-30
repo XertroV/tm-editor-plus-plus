@@ -6,6 +6,7 @@ namespace Editor {
         shared funcdef void ProcessNewSelectedBlock(CGameCtnBlockInfo@ blockInfo);
         shared funcdef void ProcessNewSelectedMacroBlock(CGameCtnMacroBlockInfo@ mbInfo);
         shared funcdef void ProcessTerrainChanged(MacroblockSpec@ terrainDiff);
+        shared funcdef void ProcessMapSaved(bool mapSaved, bool onlyScriptMetadataModified);
 
 #if FALSE
         // for vscode extension completion
@@ -59,8 +60,17 @@ namespace Editor {
             // Argument is a CGameEditorPluginMap::EMapElemColor cast to int64
             CoroutineFuncUserdataInt64@ onApplyColorToSelection;
 
-            // CoroutineFunc@ onEditorSaveMap;
-            // CoroutineFunc@ afterEditorSaveMap;
+            // Fired when the user triggers the editor's save input/button
+            // (EditorInput/Save via the E++ editor plugin's PendingEvents).
+            // Best-effort pre-save: metadata writes queued here may land 1-2
+            // frames later and can lose a race with a quick Ctrl+S.
+            // Only fires while E++'s supporting editor plugin is active.
+            CoroutineFunc@ onEditorSaveMap;
+            // Fired after the save dialog resolves (MapSavedOrSaveCancelled).
+            // mapSaved=false means the save was cancelled;
+            // onlyScriptMetadataModified=true means nothing but script metadata
+            // changed since the previous save. The reliable post-save backstop.
+            ProcessMapSaved@ afterEditorSaveMap;
 
             // Called when a new item is added to the map, but before the game begins rendering it.
             ProcessItem@ onPlaceItem;

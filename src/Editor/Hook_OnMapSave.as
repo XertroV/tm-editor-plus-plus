@@ -1,3 +1,8 @@
+// DEAD CODE — do not revive. The byte pattern below is stale ("Isn't triggered
+// in latest game ver", see research/src/Editor/Map_OnSaveHook.as). The live
+// map-save hook is the editor plugin's PendingEvents drain (EditorInput/Save +
+// MapSavedOrSaveCancelled) in scripts/EditorPlugin_EditorPlusPlus.Script.as,
+// forwarded via FromML.as -> Event::Run{On,After}EditorSaveMapCbs.
 namespace HookOnMapSave {
     // const string SAVE_MAP_PATTERN = "48 8B D7 49 8B CF E8 ?? ?? ?? ?? 44 8B F8 85 C0 75";
     // FunctionHookHelper@ saveMapHook = FunctionHookHelper(

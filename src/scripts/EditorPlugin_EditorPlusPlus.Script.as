@@ -84,6 +84,9 @@ Void SendAllInfo() {
 
 declare Boolean ShouldBreakLoop;
 declare Boolean DisableMetadata;
+// Reassembly buffer for chunked SetDipsSpecChunk messages (dips++ editor spec).
+declare Text DPP_SpecAccum;
+declare Integer DPP_SpecNextChunk;
 
 Void ProcessIncomingMessages() {
 	declare Text[][] EPP_MsgQueue for ManialinkPage = [];
@@ -117,6 +120,32 @@ Void ProcessIncomingMessages() {
 			CCT_CustomColorTables = InMsg[1];
 			log("CCT_CustomColorTables after: " ^ CCT_CustomColorTables);
 			SendEvent("CustomColorTables", [""^CCT_CustomColorTables]);
+		} else if (MsgType == "SetDipsSpecChunk") {
+			// ["SetDipsSpecChunk", ChunkIx, NbChunks, Data]; ChunkIx 0 resets the
+			// accumulator so an interrupted/superseded send self-heals.
+			if (DisableMetadata) continue;
+			if (InMsg.count < 4) continue;
+			declare Integer ChunkIx = TL::ToInteger(InMsg[1]);
+			declare Integer NbChunks = TL::ToInteger(InMsg[2]);
+			if (ChunkIx == 0) {
+				DPP_SpecAccum = "";
+				DPP_SpecNextChunk = 0;
+			}
+			if (ChunkIx != DPP_SpecNextChunk) {
+				log("E++ EditorPlugin: dropping out-of-order dips spec chunk " ^ ChunkIx ^ " (expected " ^ DPP_SpecNextChunk ^ ")");
+				continue;
+			}
+			DPP_SpecAccum = DPP_SpecAccum ^ InMsg[3];
+			DPP_SpecNextChunk += 1;
+			if (DPP_SpecNextChunk >= NbChunks) {
+				// The ONLY assignment of DPP_EditorSpec: the trait must never be
+				// created on maps that had no dips++ spec written (so no "nil"
+				// sentinel init in main() and no declare in SendAllInfo, unlike CCT).
+				declare metadata Text DPP_EditorSpec for Map = "";
+				DPP_EditorSpec = DPP_SpecAccum;
+				DPP_SpecAccum = "";
+				DPP_SpecNextChunk = 0;
+			}
 		}
 	}
 	EPP_MsgQueue.clear();
@@ -238,6 +267,19 @@ main() {
 			if (ShouldBreakLoop) {
 				// ShouldBreakLoop is set in ProcessIncomingMessages
 				break;
+			}
+
+			// Forward save-related editor events to AngelScript (the map-save
+			// hook). Do NOT set EnableEditorInputsCustomProcessing: Nadeo only
+			// enables it while owning input, and it would hijack editor input.
+			foreach (Event in PendingEvents) {
+				if (Event.Type == CMapEditorPluginEvent::Type::EditorInput) {
+					if (Event.Input == CMapEditorPluginEvent::EInput::Save) {
+						SendEvent("EditorSaveInput", [""]);
+					}
+				} else if (Event.Type == CMapEditorPluginEvent::Type::MapSavedOrSaveCancelled) {
+					SendEvent("MapSaved", [""^Event.MapSavedOrSaveCancelled, ""^Event.OnlyScriptMetadataModified]);
+				}
 			}
 
 			// // signal from angelscript: clear CustomSelectionCoords

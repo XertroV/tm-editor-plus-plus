@@ -2,6 +2,8 @@ TODO: item stuff with cbs
 TODO: changing props of blocks/items will cache the new values as deleted, not the old ones
 
 
+- FEAT: onEditorSaveMap / afterEditorSaveMap plugin callbacks now work (driven by editor-plugin PendingEvents; no memory hooks)
+- FEAT: add DPP_EditorSpec (dips++ editor spec) support to editor plugin script + Set_Map_DipsSpecEncoded export
 - FEAT: All E++ hotkeys are now re-bindable
 - Remember which tabs you were on properly (separate records for item editor, blocks & items sub tabs, etc)
 - make nullified pillars alert clearer and add dismiss button
