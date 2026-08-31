@@ -106,16 +106,10 @@ namespace ToML {
     }
 
     // -- dips++ editor spec (DPP_EditorSpec map metadata) --
-    // Payloads can be tens of KB and each ClearSendQueue rewrites the whole ML
-    // page, so sends are chunked and paced at one chunk per frame (pacing
-    // smooths frame time; each queued chunk still costs one full page rewrite,
-    // hence chunks are as large as is proven safe — CCT sends whole color
-    // tables through the same splice unchunked). The payload must be
-    // quote/backslash-free (the page splice does no escaping): senders are
-    // expected to base64-encode. A single-chunk payload is the degenerate case
-    // of the same wire format. Note the ML-side accumulator is per-key by
-    // necessity: `declare metadata Text X for Map` needs a literal identifier,
-    // so a second chunked channel would add its own accumulator + branch.
+    // Multi-10s-of-KB payloads, chunked at one chunk per frame to smooth frame
+    // time; each chunk costs a full ML page rewrite, so chunks are large
+    // (CCT sends whole color tables through the same splice unchunked).
+    // Payload must be quote/backslash-free (the splice does no escaping).
     const uint DPP_CHUNK_CHARS = 16384;
     string[] _dppChunks;
     uint _dppChunksSent = 0;
