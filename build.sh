@@ -185,6 +185,36 @@ for pluginSrc in ${pluginSources[@]}; do
       elif command -v python3 >/dev/null 2>&1 && [[ -f "$(dirname "$0")/../tm-control-mcp/tools/call.py" ]]; then
         _mcp_call="$(cd "$(dirname "$0")/../tm-control-mcp" && pwd)/tools/call.py"
       fi
+      # RemoteBuild-style rebuild via tm-control-mcp. Returns 1 on compile/load
+      # failure. Cannot load tm-control-mcp itself (LoadPlugin of the running
+      # MCP plugin is refused).
+      function mcp_load_plugin {
+        local _id="$1"
+        if [[ -z "$_mcp_call" ]]; then
+          return 1
+        fi
+        _colortext16 green "🔁 Loading ${_id} via MCP ControlPlugin...\n"
+        local _out _rc
+        set +e
+        _out="$(python3 "$_mcp_call" --timeout "${EPP_MCP_LOAD_TIMEOUT:-90}" ControlPlugin "{\"action\":\"load\",\"id\":\"${_id}\"}" 2>/dev/null)"
+        _rc=$?
+        set -e
+        if [[ "$_rc" != "0" ]]; then
+          return 1
+        fi
+        if echo "$_out" | grep -q '"compileFailed":true'; then
+          echo "$_out"
+          return 1
+        fi
+        if echo "$_out" | grep -q '"loaded":true'; then
+          return 0
+        fi
+        if echo "$_out" | grep -q '"success":true' && ! echo "$_out" | grep -q '"ok":false'; then
+          return 0
+        fi
+        echo "$_out"
+        return 1
+      }
       if [[ -n "$_mcp_call" ]]; then
         _colortext16 green "⏳ Checking LM compute via MCP before reload...\n"
         _shadow_wait_ms="${EPP_SHADOW_WAIT_MS:-600000}"
@@ -217,7 +247,10 @@ for pluginSrc in ${pluginSources[@]}; do
           _remote_host_args=(--host "$REMOTE_RELOAD_HOST")
         fi
         # Reload a staged plugin folder via RemoteBuild. No-ops if the folder is
-        # absent. Timeout/errors warn but do not fail the E++ build.
+        # absent. Timeouts warn and return 0. Compile/load failure returns 1.
+        # Openplanet can still emit "Loaded plugin" after a failed compile
+        # (old module stays registered), so folder-specific `:  ERR :` lines
+        # are treated as a failed load.
         # Usage: remote_reload_folder <plugin_folder> [why]
         function remote_reload_folder {
           local _folder="$1"
@@ -236,30 +269,47 @@ for pluginSrc in ${pluginSources[@]}; do
           if [[ "$_reload_exit_code" == "0" ]] && grep -Eq "ERROR:tm_remote_build|Problem commanding" "$_reload_log"; then
             _reload_exit_code=1
           fi
+          if grep -Eq "Plugins/${_folder}/.*:  ERR :" "$_reload_log"; then
+            _reload_exit_code=1
+          fi
           set -e
           rm -f "$_reload_log"
           if [[ "$_reload_exit_code" == "124" ]]; then
             _colortext16 yellow "⚠ Warning: ${_folder} reload timed out after ${REMOTE_RELOAD_TIMEOUT}; check Openplanet.log.\n"
+            return 0
           elif [[ "$_reload_exit_code" != "0" ]]; then
-            _colortext16 yellow "⚠ Warning: ${_folder} reload reported an error; check Openplanet.log.\n"
+            _colortext16 yellow "⚠ RemoteBuild failed for ${_folder}; trying MCP if available.\n"
+            return 1
           fi
+          return 0
         }
 
         if [[ "${#_remote_host_args[@]}" != "0" ]]; then
           _colortext16 green "🔌 RemoteBuild host: ${REMOTE_RELOAD_HOST}\n"
         fi
-        remote_reload_folder "$PLUGIN_NAME" "through Openplanet RemoteBuild"
+        if ! remote_reload_folder "$PLUGIN_NAME" "through Openplanet RemoteBuild"; then
+          if mcp_load_plugin "$PLUGIN_NAME"; then
+            _colortext16 green "✅ ${PLUGIN_NAME} loaded via MCP after RemoteBuild failure.\n"
+          else
+            _colortext16 red "⚠ Error: ${PLUGIN_NAME} failed to load. Aborting remaining plugin reloads."
+            exit 1
+          fi
+        fi
         if [[ "${EPP_RELOAD_CONTROL_MCP:-1}" == "1" ]]; then
-          remote_reload_folder tm-control-mcp "after ${PLUGIN_NAME}"
+          remote_reload_folder tm-control-mcp "after ${PLUGIN_NAME}" || true
         fi
         if [[ "${EPP_RELOAD_PACK_EPP:-1}" == "1" ]]; then
-          remote_reload_folder tm-mcp-pack-epp "after tm-control-mcp"
+          remote_reload_folder tm-mcp-pack-epp "after tm-control-mcp" || mcp_load_plugin tm-mcp-pack-epp || true
         fi
         if [[ "${EPP_RELOAD_MAP_TOGETHER:-1}" == "1" ]]; then
-          remote_reload_folder map-together "after ${PLUGIN_NAME}"
+          remote_reload_folder map-together "after ${PLUGIN_NAME}" || mcp_load_plugin map-together || true
         fi
       else
-        _colortext16 yellow "⚠ Warning: tm-remote-build not found; skipping RemoteBuild reload.\n"
+        _colortext16 yellow "⚠ Warning: tm-remote-build not found; trying MCP load.\n"
+        if ! mcp_load_plugin "$PLUGIN_NAME"; then
+          _colortext16 red "⚠ Error: ${PLUGIN_NAME} failed to load. Aborting remaining plugin reloads."
+          exit 1
+        fi
       fi
     fi
   fi
