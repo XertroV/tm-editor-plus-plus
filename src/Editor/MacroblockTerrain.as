@@ -818,10 +818,11 @@ namespace Editor {
                 if (existing is null) @existing = pmt.GetBlock(int3(c.x, c.y - 1, c.z));
                 if (existing !is null && existing.BlockInfo !is null
                     && existing.BlockInfo.IdName == b.name && int(existing.Dir) == int(b.dir)) {
-                    // Heal: an undo dance can kill a still-pending async
-                    // terraform job after a block landed (the job takes ~1s;
-                    // an echo can dance within ~100ms). The block survives the
-                    // dance (API places have no undo entry) but the ground
+                    // Heal: a sync consumer's rebase (undo-to-baseline + replay)
+                    // can kill a still-pending async terraform job after a
+                    // block landed (the job takes ~1s; an echo can rebase
+                    // within ~100ms). The block survives the rebase (API
+                    // places have no undo entry) but the ground
                     // stays bald. If the model carries ground AutoTerrains and
                     // the cell under the block is still the map default,
                     // remove + re-place to re-trigger the terrain job.
@@ -1186,7 +1187,7 @@ namespace Editor {
             _terrainDirty = false;
             // fires every tick that edits land (not once per burst): sync
             // consumers re-cache their undo position on each ping so an
-            // incoming update's undo dance can only rewind ~1 frame of
+            // incoming update's rebase can only rewind ~1 frame of
             // un-broadcast terraform
             if (!IsTerrainResyncPending()) {
                 Callbacks::Exts::Run_OnTerrainDirty();
