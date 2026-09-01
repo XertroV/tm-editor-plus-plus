@@ -15,6 +15,7 @@ The important factor is the **Tech3 shader family** (or the UserInst `Model` MwI
 | `Tech3_Block_TDSN_CubeOut` / `_DispIn` | `Tech3 Block PDiff_* PC3` (Grass) |
 | `MaterialDyna0_*` UserInst models | `MaterialStatic_*` UserInst models |
 | Official turnstile / DeathPit | Game mats whose parent is a non-CubeOut Block shader |
+| | **`PyPxz` / `PxzTDSN` world-projected mats (RoadIce, ice platforms)** |
 
 ## Why (vis-const, not “textures failed to load”)
 
@@ -75,6 +76,26 @@ HLSL split matches the names: `Tech3/Block_TDSN_*.hlsl` (static / LightFromMap) 
 
 `IsUsingGameMaterial` (`+0x224`, “Is Based on Game Textures”): ignore `Model`, follow `Link` / `_LinkFull` to the game `CPlugMaterial` and test **that** shader.
 
+## World projection (`Pxz` / `PyPxz`, not `Pxy`)
+
+There is **no `Pxy` string** in the exe. The family is **`Pxz`** (project world position onto the XZ ground plane) and **`PyPxz`** (blend **Py** = vertical / wall projection with **Pxz** by surface angle). Easy to misread as Pxy.
+
+Live: `RoadIce.Material.Gbx` (the stadium ice-platform mat; there is no `PlatformIce.Material.Gbx` in the pak).
+
+| | RoadIce | PlatformTech / RoadTech |
+|---|---|---|
+| Parent `+0x48` | **`Tech3 Block PyPxzTLayered.Material.gbx`** | `Tech3_Block_TDSN_CubeOut.Material.gbx` |
+| Shader | `Tech3 Block PyPxzTLayered_NoDecal.Shader.Gbx` | CubeOut |
+| `+0x154` | `0x1005` | `0x1041` |
+
+UVs are **not mesh UVs**. `NativeShader_BindWorldPosToTcFromMaterialLayers` `0x1409fc550` binds shader params `g_WorldPosToTcPyPxz` / `g_WorldPosToTcPyX2` / `g_WorldPosToTcPyH2` from material layers. UI strings: **`Pxz UV Size (m)`**, `Pxz UV Offset (m)`, `Py-Pxz Blend_StartAngle` / `EndAngle`. UserInst `TextureSizeInMeters` (`+0x140`) is that meter size.
+
+All of these are **`Tech3/Block_*` only** (`Block_PxzTDSN_*`, `Block_PyPxz_ids_*`). No `Dyna_` / CubeOut sibling. Same vis-const-2 gate as Grass → **invisible on kinematic**. If a projected pass ever did bind, the texture would **swim** (world-locked UVs, mesh slides through).
+
+Dyna ice is a **different** model: `MaterialDyna0_TIce` → `Tech3 Block Ice.Shader.Gbx` (mesh UVs), not PyPxz. Use that (or CubeOut) on moving items, not RoadIce.
+
+Related fids: `Tech3 Block PxzDiff_Spec_Norm`, `PyPxz_Blend2` / `_Hue` / `_Ids`, `PlatformDetailsToPlatformPxz.Material.Gbx`.
+
 ## Plugin check (in advance)
 
 Walk every Solid2 on the item (Prefab → Dyna `+0x20` Mesh, StaticObject `+0x18` Mesh). Empty `materials[]` → `customMaterials[]` (`+0x1F8`) → `UserInsts` (`+0xF8`, stride `0x18`).
@@ -90,6 +111,7 @@ bool KinematicMatWillDraw(CPlugMaterial@ mat) {
     string n = fid.FileName; // or shader fid FileName
     n = n.ToLower();
     if (n.Contains("cubeout") || n.Contains("_cout") || n.Contains("dyna_")) return true;
+    if (n.Contains("pypxz") || n.Contains("pxz")) return false; // world-projected; Block-only
     if (n.Contains("lightfrommap") || n.Contains("pc3") || n.Contains("pdiff")) return false;
     if (n.Contains("block_") && !n.Contains("cout") && !n.Contains("cubeout")) return false;
     return true; // DeferredDecal / VertexTween / unknown: treat as ok until proven otherwise
@@ -119,6 +141,7 @@ Do **not** use mesh `VisCstType` as the predictor (kinematic files are 1; intern
 | Bare `ItemTypeE=0x0C` Dyna invisible on the map, visible in cursor | No placed `SImage` — [`Item5InvisibleOnMap`](2026-08-27-Item5InvisibleOnMap.md) |
 | User-folder DynaObject never loads | Cross-tree fid / missing texture GBX — [`ItemAndGhostCollisions`](2026-08-24-ItemAndGhostCollisions.md) |
 | Wrong lighting but still visible | CubeOut without a good cubemap; not a missing pass |
+| Ice/road texture “swims” if it ever drew | PyPxz world-pos UVs (`g_WorldPosToTcPyPxz`); not vis-const |
 
 ## Ghidra (this pass)
 
@@ -131,3 +154,4 @@ Do **not** use mesh `VisCstType` as the predictor (kinematic files are 1; intern
 | `0x1403de300` | `CPlugShader_LookupPreLightGenSemantic` (`+0x154 & 0x1000`) |
 | `0x14040f750` | `CPlugMaterial_ResolveActiveRuntimeResourceTable` |
 | `0x1404fc570` | `CPlugMaterialUserInst_GetReflectedMemberValue` (`ModelModelDyna0` = `0x90fd008`) |
+| `0x1409fc550` | `NativeShader_BindWorldPosToTcFromMaterialLayers` (`g_WorldPosToTcPyPxz`) |
