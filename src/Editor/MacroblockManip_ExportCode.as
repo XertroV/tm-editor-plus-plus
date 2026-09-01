@@ -86,6 +86,15 @@ namespace Editor {
     import void Set_Map_EmbeddedCustomColorsEncoded(const string &in raw) from "Editor";
     import string Get_Map_EmbeddedCustomColorsEncoded() from "Editor";
 
+    // dips++ editor spec -> DPP_EditorSpec map metadata trait. Delivery is
+    // async and chunked; verify by re-reading the trait, not by assuming.
+    import void Set_Map_DipsSpecEncoded(const string &in raw) from "Editor";
+    import bool Is_DipsSpecSendInFlight() from "Editor";
+    // whether E++'s supporting editor plugin is active (metadata writes possible)
+    import bool Is_SupportingEditorPluginActive() from "Editor";
+    // whether the current map opted out of metadata writes (EPP_MetadataDisabled)
+    import bool Get_Map_MetadataDisabled() from "Editor";
+
     // pass in paths relative to `Trackmania/Items/` folder
     import void ReloadItemsAsync(string[]@ paths) from "Editor";
 }

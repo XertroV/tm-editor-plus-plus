@@ -22,8 +22,8 @@ namespace Editor {
             IEppExtension@[] withAfterCursorUpdateCbs;
             IEppExtension@[] withBeforeCursorUpdateCbs;
             IEppExtension@[] withApplyColorToSelectionCbs;
-            // IEppExtension@[] withOnEditorSaveMapCbs;
-            // IEppExtension@[] withAfterEditorSaveMapCbs;
+            IEppExtension@[] withOnEditorSaveMapCbs;
+            IEppExtension@[] withAfterEditorSaveMapCbs;
             IEppExtension@[] withItemPlaceCbs;
             IEppExtension@[] withItemDeleteCbs;
             IEppExtension@[] withBlockPlaceCbs;
@@ -59,8 +59,8 @@ namespace Editor {
                 if (extension.onDeleteTerrainBlock !is null) withTerrainBlockDeleteCbs.InsertLast(extension);
                 if (extension.onTerrainDirty !is null) withTerrainDirtyCbs.InsertLast(extension);
                 if (extension.onTerrainChanged !is null) withTerrainChangedCbs.InsertLast(extension);
-                // if (extension.onEditorSaveMap !is null) withOnEditorSaveMapCbs.InsertLast(extension);
-                // if (extension.afterEditorSaveMap !is null) withAfterEditorSaveMapCbs.InsertLast(extension);
+                if (extension.onEditorSaveMap !is null) withOnEditorSaveMapCbs.InsertLast(extension);
+                if (extension.afterEditorSaveMap !is null) withAfterEditorSaveMapCbs.InsertLast(extension);
             }
 
             void RemoveExtension_Immediate(IEppExtension@ extension) {
@@ -89,8 +89,8 @@ namespace Editor {
                 RemoveFromArrayIfExists(withTerrainBlockDeleteCbs, extension);
                 RemoveFromArrayIfExists(withTerrainDirtyCbs, extension);
                 RemoveFromArrayIfExists(withTerrainChangedCbs, extension);
-                // RemoveFromArrayIfExists(withOnEditorSaveMapCbs, extension);
-                // RemoveFromArrayIfExists(withAfterEditorSaveMapCbs, extension);
+                RemoveFromArrayIfExists(withOnEditorSaveMapCbs, extension);
+                RemoveFromArrayIfExists(withAfterEditorSaveMapCbs, extension);
             }
 
             bool RemoveFromArrayIfExists(IEppExtension@[]@ arr, IEppExtension@ extension) {
@@ -383,29 +383,29 @@ namespace Editor {
                 return withTerrainDirtyCbs.Length > 0 || withTerrainChangedCbs.Length > 0;
             }
 
-            // void Run_OnEditorSaveMap() {
-            //     for (int i = 0; i < int(withOnEditorSaveMapCbs.Length); i++) {
-            //         auto ext = withOnEditorSaveMapCbs[i];
-            //         if (ext is null || ext.isDead || //         ext is null) {
-            //             RemoveExtension_Immediate(ext);
-            //             i--;
-            //             continue;
-            //         }
-            //         ext.onEditorSaveMap();
-            //     }
-            // }
+            void Run_OnEditorSaveMap() {
+                for (int i = 0; i < int(withOnEditorSaveMapCbs.Length); i++) {
+                    auto ext = withOnEditorSaveMapCbs[i];
+                    if (ext is null || ext.isDead || ext.onEditorSaveMap is null) {
+                        RemoveExtension_Immediate(ext);
+                        i--;
+                        continue;
+                    }
+                    ext.onEditorSaveMap();
+                }
+            }
 
-            // void Run_AfterEditorSaveMap() {
-            //     for (int i = 0; i < int(withAfterEditorSaveMapCbs.Length); i++) {
-            //         auto ext = withAfterEditorSaveMapCbs[i];
-            //         if (ext is null || ext.isDead || //         ext is null) {
-            //             RemoveExtension_Immediate(ext);
-            //             i--;
-            //             continue;
-            //         }
-            //         ext.afterEditorSaveMap();
-            //     }
-            // }
+            void Run_AfterEditorSaveMap(bool mapSaved, bool onlyScriptMetadataModified) {
+                for (int i = 0; i < int(withAfterEditorSaveMapCbs.Length); i++) {
+                    auto ext = withAfterEditorSaveMapCbs[i];
+                    if (ext is null || ext.isDead || ext.afterEditorSaveMap is null) {
+                        RemoveExtension_Immediate(ext);
+                        i--;
+                        continue;
+                    }
+                    ext.afterEditorSaveMap(mapSaved, onlyScriptMetadataModified);
+                }
+            }
         }
     }
 }

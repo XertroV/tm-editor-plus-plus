@@ -56,10 +56,10 @@ string[] onBeforeCursorUpdateCbNames;
 CoroutineFuncUserdataInt64@[] onApplyColorToSelectionCbs;
 string[] onApplyColorToSelectionCbNames;
 
-// CoroutineFunc@[] onEditorSaveMapCbs;
-// string[] onEditorSaveMapCbNames;
-// CoroutineFunc@[] afterEditorSaveMapCbs;
-// string[] afterEditorSaveMapCbNames;
+CoroutineFunc@[] onEditorSaveMapCbs;
+string[] onEditorSaveMapCbNames;
+Editor::Callbacks::ProcessMapSaved@[] afterEditorSaveMapCbs;
+string[] afterEditorSaveMapCbNames;
 
 // set this shortly after loading the plugin
 bool CallbacksEnabledPostInit = false;
@@ -256,19 +256,19 @@ void RegisterOnApplyColorToSelectionCallback(CoroutineFuncUserdataInt64@ f, cons
     }
 }
 
-// void RegisterOnEditorSaveMapCallback(CoroutineFunc@ f, const string &in name) {
-//     if (f !is null) {
-//         onEditorSaveMapCbs.InsertLast(f);
-//         onEditorSaveMapCbNames.InsertLast(name);
-//     }
-// }
+void RegisterOnEditorSaveMapCallback(CoroutineFunc@ f, const string &in name) {
+    if (f !is null) {
+        onEditorSaveMapCbs.InsertLast(f);
+        onEditorSaveMapCbNames.InsertLast(name);
+    }
+}
 
-// void RegisterAfterEditorSaveMapCallback(CoroutineFunc@ f, const string &in name) {
-//     if (f !is null) {
-//         afterEditorSaveMapCbs.InsertLast(f);
-//         afterEditorSaveMapCbNames.InsertLast(name);
-//     }
-// }
+void RegisterAfterEditorSaveMapCallback(Editor::Callbacks::ProcessMapSaved@ f, const string &in name) {
+    if (f !is null) {
+        afterEditorSaveMapCbs.InsertLast(f);
+        afterEditorSaveMapCbNames.InsertLast(name);
+    }
+}
 
 // void RegisterBlockChangedCallback(CoroutineFunc@ f) {
 //     if (f !is null) {
@@ -460,6 +460,7 @@ namespace Event {
         for (uint i = 0; i < placementModeChangedCbs.Length; i++) {
             placementModeChangedCbs[i](newMode);
         }
+
         // Editor::Callbacks::Exts::Run_OnNewPlacementMode(newMode);
         _Log::Trace("Finished OnPlacementModeChanged");
     }
@@ -522,20 +523,20 @@ namespace Event {
         Editor::TrackMap_OnSetItemColor(item);
     }
     void RunOnEditorSaveMapCbs() {
-        throw("not enabled");
-        // _Log::Trace("Running OnEditorSaveMap callbacks");
-        // for (uint i = 0; i < onEditorSaveMapCbs.Length; i++) {
-        //     onEditorSaveMapCbs[i]();
-        // }
-        // _Log::Trace("Finished OnEditorSaveMap callbacks");
+        _Log::Trace("Running OnEditorSaveMap callbacks");
+        for (uint i = 0; i < onEditorSaveMapCbs.Length; i++) {
+            onEditorSaveMapCbs[i]();
+        }
+        Editor::Callbacks::Exts::Run_OnEditorSaveMap();
+        _Log::Trace("Finished OnEditorSaveMap callbacks");
     }
-    void RunAfterEditorSaveMapCbs(bool saved = false, bool onlyMeta = false) {
-        throw("not enabled");
-        // _Log::Trace("Running AfterEditorSaveMap callbacks");
-        // for (uint i = 0; i < afterEditorSaveMapCbs.Length; i++) {
-        //     afterEditorSaveMapCbs[i]();
-        // }
-        // _Log::Trace("Finished AfterEditorSaveMap callbacks");
+    void RunAfterEditorSaveMapCbs(bool mapSaved, bool onlyScriptMetadataModified) {
+        _Log::Trace("Running AfterEditorSaveMap callbacks (saved=" + mapSaved + ", onlyMeta=" + onlyScriptMetadataModified + ")");
+        for (uint i = 0; i < afterEditorSaveMapCbs.Length; i++) {
+            afterEditorSaveMapCbs[i](mapSaved, onlyScriptMetadataModified);
+        }
+        Editor::Callbacks::Exts::Run_AfterEditorSaveMap(mapSaved, onlyScriptMetadataModified);
+        _Log::Trace("Finished AfterEditorSaveMap callbacks");
     }
 }
 

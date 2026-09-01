@@ -49,6 +49,12 @@ namespace Editor {
     import CGameCtnBlock@ GetPickedBlock() from "Editor";
     import vec3 GetSelectedMacroblockSize(CGameCtnEditorFree@ editor) from "Editor";
 
+    // Saves the map to its existing filename via PluginMapType.SaveMap and
+    // restores the MapName afterwards (the save can clobber it). Returns false
+    // (with a warning) if the map has never been saved. Note: a programmatic
+    // save raises MapSavedOrSaveCancelled like any other save.
+    import bool SaveMapSameName(CGameCtnEditorFree@ editor) from "Editor";
+
     // Some special things only E++ can do really or best maintained in 1 place
     import void OpenItemEditor(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ nodToEdit) from "Editor";
     import void OpenItemEditor(CGameCtnEditorFree@ editor, CGameCtnBlock@ nodToEdit) from "Editor";

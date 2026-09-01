@@ -1,5 +1,14 @@
 # 0.8.999999999.1
 
+## Plugin API — map save callbacks (new)
+
+- `IEppExtension`: `onEditorSaveMap` (user pressed the editor's save input; best-effort pre-save — metadata writes queued here can land 1-2 frames later) and `afterEditorSaveMap(bool mapSaved, bool onlyScriptMetadataModified)` (post-save-dialog outcome; `mapSaved=false` = cancelled). Driven by the E++ editor plugin's `PendingEvents` (`EditorInput/Save`, `MapSavedOrSaveCancelled`) — pure ManiaScript, no memory hooks — so they fire only while the E++ supporting editor plugin is active, and programmatic `PluginMapType.SaveMap()` calls from other plugins raise only `afterEditorSaveMap`.
+- `SaveMapSameName(editor)` exported (saves to the existing filename, restores MapName after).
+
+## Plugin API — dips++ editor spec in map metadata (new)
+
+- `Set_Map_DipsSpecEncoded(raw)` writes the `DPP_EditorSpec` map metadata trait via the editor plugin script (chunked ML transport; payload must be quote/backslash-free — base64 it). The trait is only ever created when a write happens (no CCT-style init-on-every-map). Helpers: `Is_DipsSpecSendInFlight()`, `Is_SupportingEditorPluginActive()`, `Get_Map_MetadataDisabled()`. Verify writes by re-reading the trait; `EPP_MetadataDisabled` maps refuse writes.
+
 ## Macroblocks — terrain (new)
 
 - 2026-08-29: genealogy-grid flatten fixed — the grid at challenge+0x390 is **x-major** (`ix = z + x*size.z`, verified empirically); pre-fix TerrainSpec offsets and remote peels used mirrored cells (commit 4289867).

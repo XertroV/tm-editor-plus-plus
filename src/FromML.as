@@ -24,6 +24,18 @@ void OnEppLayerCustomEvent(const string &in type, MwFastBuffer<wstring> &in rawD
         }
     } else if (type == "CustomColorTables") {
         FromML::_SetCustomColorTablesRaw(data[0]);
+    } else if (type == "MetadataDisabled") {
+        FromML::metadataDisabled = data.Length > 0 && data[0] == "True";
+    } else if (type == "EditorSaveInput") {
+        // User pressed the editor's save input/button (pre-save, best-effort:
+        // metadata writes queued now may land 1-2 frames later).
+        Event::RunOnEditorSaveMapCbs();
+    } else if (type == "MapSaved") {
+        // Post-save-dialog outcome: data[0] = map actually saved (vs cancelled),
+        // data[1] = only script metadata was modified since the last save.
+        bool saved = data.Length > 0 && data[0] == "True";
+        bool onlyMeta = data.Length > 1 && data[1] == "True";
+        Event::RunAfterEditorSaveMapCbs(saved, onlyMeta);
     }
 }
 
@@ -38,6 +50,9 @@ namespace FromML {
     bool lockedThumbnail = false;
     uint FramesWithoutEvents = 0;
     string _customColorTablesRaw;
+    // true when the current map has EPP_MetadataDisabled set (all metadata
+    // writes, including the dips++ spec, are suppressed by the editor plugin).
+    bool metadataDisabled = false;
 
     uint leftCurly = "{"[0];
     uint rightCurly = "}"[0];
@@ -88,6 +103,43 @@ namespace ToML {
 
     void SetEmbeddedCustomColors(const string &in raw) {
         SendMessage("SetCustomColorTables", {raw});
+    }
+
+    // -- dips++ editor spec (DPP_EditorSpec map metadata) --
+    // Multi-10s-of-KB payloads, chunked at one chunk per frame to smooth frame
+    // time; each chunk costs a full ML page rewrite, so chunks are large
+    // (CCT sends whole color tables through the same splice unchunked).
+    // Payload must be quote/backslash-free (the splice does no escaping).
+    const uint DPP_CHUNK_CHARS = 16384;
+    string[] _dppChunks;
+    uint _dppChunksSent = 0;
+    bool _dppSendActive = false;
+
+    void SetDipsSpecEncoded(const string &in raw) {
+        _dppChunks.RemoveRange(0, _dppChunks.Length);
+        uint offset = 0;
+        while (offset < uint(raw.Length)) {
+            _dppChunks.InsertLast(raw.SubStr(offset, DPP_CHUNK_CHARS));
+            offset += DPP_CHUNK_CHARS;
+        }
+        // an empty payload still sends one (empty) chunk so the trait is cleared
+        if (_dppChunks.Length == 0) _dppChunks.InsertLast("");
+        // restarting from chunk 0 supersedes any in-flight send; the ML side
+        // resets its accumulator on ChunkIx == 0.
+        _dppChunksSent = 0;
+        if (!_dppSendActive) {
+            _dppSendActive = true;
+            startnew(_SendDppChunksLoop);
+        }
+    }
+
+    void _SendDppChunksLoop() {
+        while (_dppChunksSent < _dppChunks.Length) {
+            SendMessage("SetDipsSpecChunk", {tostring(_dppChunksSent), tostring(_dppChunks.Length), _dppChunks[_dppChunksSent]});
+            _dppChunksSent++;
+            yield();
+        }
+        _dppSendActive = false;
     }
 
     const string TIMENOW_DELIM = "/*TIMENOW*/";
@@ -212,5 +264,35 @@ namespace Editor {
             return FromML::_customColorTablesRaw;
         }
         return "";
+    }
+
+    // Queue a (base64) dips++ editor spec for writing to the DPP_EditorSpec map
+    // metadata trait. Delivery is async (chunked over the ML page) and requires
+    // the E++ supporting editor plugin to be active; callers should verify by
+    // re-reading the trait rather than assuming success.
+    void Set_Map_DipsSpecEncoded(const string &in raw) {
+        ToML::SetDipsSpecEncoded(raw);
+    }
+
+    // true while queued SetDipsSpecChunk messages have not all been handed to
+    // the ML page yet (delivery to the trait may lag ~1 frame further).
+    bool Is_DipsSpecSendInFlight() {
+        return ToML::_dppSendActive;
+    }
+
+    // true when E++'s supporting editor plugin is the active editor plugin, i.e.
+    // metadata writes have a delivery path.
+    bool Is_SupportingEditorPluginActive() {
+        if (cast<CGameCtnEditorFree>(GetApp().Editor) is null) return false;
+        try {
+            return ToML::GetPluginPMT() !is null;
+        } catch {
+            return false;
+        }
+    }
+
+    // true when the current map has metadata writes disabled (EPP_MetadataDisabled).
+    bool Get_Map_MetadataDisabled() {
+        return FromML::metadataDisabled;
     }
 }
