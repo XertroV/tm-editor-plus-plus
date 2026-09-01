@@ -650,9 +650,26 @@ class MapEditPropsTab : Tab {
 #endif
 
         auto currVehicleStuff = Editor::GetMapPlayerModel(editor.Challenge);
+        m_ChosenVehicleCollection = currVehicleStuff.z;
+
+        UI::Columns(2);
         LabeledValue("Current Vehicle Name", GetMwIdName(currVehicleStuff.x));
         LabeledValue("Vehicle Author", GetMwIdName(currVehicleStuff.y));
-        LabeledValue("Vehicle Collection", GetMwIdName(currVehicleStuff.z));
+        UI::NextColumn();
+        LabeledValue("Vehicle Collection MwId", GetMwIdName(currVehicleStuff.z));
+        UI::SameLine();
+        bool setVehicleCol = UX::SmallButton("Common");
+        // UI::SameLine();
+        // bool setCommonCol = UX::SmallButton("Common");
+        LabeledValue("Vehicle Collection Text", editor.Challenge.VehicleCollection_Text);
+        UI::Columns(1);
+
+        if (setVehicleCol) m_ChosenVehicleCollection = 10003;
+        // if (setCommonCol) m_ChosenVehicleCollection = 26;
+        if (m_ChosenVehicleCollection != currVehicleStuff.z) {
+            currVehicleStuff.z = m_ChosenVehicleCollection;
+            Editor::SetMapPlayerModel(editor.Challenge, currVehicleStuff.x, currVehicleStuff.y, currVehicleStuff.z);
+        }
 
         UI::Separator();
 
@@ -668,6 +685,7 @@ class MapEditPropsTab : Tab {
                     m_ChosenVehicleMwId = vehicleMwIds[i];
                     m_ChosenVehicleAuthorMwId = vehicleAuthorMwIds[i];
                     m_ChosenVehicleCollection = vehicleCollections[i];
+                    // if (vehicleNames[i] == "CharacterPilot") m_ChosenVehicleCollection = ??;
                 }
                 UI::PopID();
             }
