@@ -456,7 +456,7 @@ namespace Event {
         _Log::Trace("Finished OnCopyPasteMacroblockChanged");
     }
     void OnPlacementModeChanged(CGameEditorPluginMap::EPlaceMode newMode) {
-        _Log::Trace("Running OnPlacementModeChanged");
+        _Log::Trace("Running OnPlacementModeChanged | " + tostring(newMode));
         for (uint i = 0; i < placementModeChangedCbs.Length; i++) {
             placementModeChangedCbs[i](newMode);
         }
@@ -529,7 +529,7 @@ namespace Event {
         // }
         // _Log::Trace("Finished OnEditorSaveMap callbacks");
     }
-    void RunAfterEditorSaveMapCbs() {
+    void RunAfterEditorSaveMapCbs(bool saved = false, bool onlyMeta = false) {
         throw("not enabled");
         // _Log::Trace("Running AfterEditorSaveMap callbacks");
         // for (uint i = 0; i < afterEditorSaveMapCbs.Length; i++) {
