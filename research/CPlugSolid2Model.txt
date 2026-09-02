@@ -197,14 +197,16 @@ CPlugMaterialUserInst
 0xA0: dataref (string) TexturesNormal
 
 
-for custom material colors
-need to set 0x1, mwid x2, then 0x3 early on (see Dev.as)
-            0x14c = 1,
+for custom material colors (CPlugMaterialUserInst_TryAddTargetColorParam / serialize 0x090fd000)
+need to set nParams + first slot + valueOffset=0 (see Dev.as)
+            0x14c = 1,                 // uint32 nParams (max 8)
             0x150 mwid TargetColor,
             0x154 mwid Real,
-            0x158 = 3
+            0x158 = 3,                 // nValues
+            0x15C = 0                  // valueOffset into +0x1D0; Construct fills 0xFFFFFFFF — must write 0
 
-0x1D0: buffer<u8> color (0xFF000000 0xEE000000 0xDD000000)
+0x1D0: MwFastBuffer stride-4 Reals (ptr, count, cap). Runtime is unit floats 0..1.
+On GBX load, integer bits 1..255 are converted to float (v/255). Do not read/write uint8.
 
 Custom Material -- doesn't work with others
 0x000   88 17 C4 C5 F6 7F 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
