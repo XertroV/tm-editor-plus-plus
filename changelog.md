@@ -1,5 +1,43 @@
 # 0.8.999999999.1
 
+## Plugin API — kinematic constraint exports (change)
+
+- `ItemEditor::IKinematicConstraint` is the shared identity (fluent Rot/Trans/AnglesMM/PosMM, anim presets, subfunc get/set, Copy/Clone, axis/range getters); `KinematicConstraint` impl and `SAnimFunc_*` bodies are E++-only. Dependents `import` `WrapKinematicConstraint` / `SAnimFunc_*` / `CloneKinematicConstraint` from `ItemEditor/_Exports.as`. Shared enums + `SAnimFunc_SubFunc` live in `ItemEditor/_ExportsShared.as`. Changing those function bodies no longer requires a game restart. Game restart is required to pick up shared interface signature changes.
+
+## Item Browser — Clone kinematic constraint (new)
+
+
+- On `NPlugDyna_SKinematicConstraint`, **Clone to New** (SameLine after offset/explore/ptr) allocates a fresh KC, packed-copies all fields (anim keys, axes, ShaderTc), and replaces this Model pointer so the catalog nod is left alone.
+- Same button on `CPlugDynaObjectModel`: new dyna nod, packed-copy scalars, AddRef Mesh/StaticShape/DynaShape/LocAnim/WaterModel (shared children, not deep-copied).
+
+## Item Browser — Solid2 Visuals list (fix)
+
+- Expanding `CPlugSolid2Model` visuals no longer throws `does not have a child called Visual 0` (buffer children pass the pointer-slot offset; they are not named members).
+
+## Item Browser — CPlugVisual / mesh flags (new)
+
+- Solid2 trees list each visual. `CPlugVisual` / `CPlugVisualIndexedTriangles` show UseVertexNormal (flags+0x24 bit7, labelled with smooth shading), UseVertexColor, geometry/indexation/optimize flags, AABB, subvisuals, index count in a 2-col table. RecalcSmoothNormals averages face normals into CPU Vertexes; if that MwFastBuffer is empty it steals a game-heap allocation via `CPlugCloudsParam.PointDists` (same as DrawLines ResizeBuffer) and copies positions from `CPlugVertexStream`. NegNormals / ComputeOccBox / ComputeFaceCull buttons. VisCstType + Solid2 AABB.
+
+## Item Browser — Prefab Params editors (new)
+
+- Compact editors for prefab-ent `Params`: `NPlugItemPlacement::SPlacement` (iLayout + RequiredTags), `NPlugItemPlacement::SPlacementGroup` (Placements, TQs, u16s, dup array; spectator import/export kept), `NPlugDyna::SPrefabConstraintParams` (Ent1/Ent2/Pos1/Pos2; Ent1 stays `-1`), `NPlugStaticObjectModel::SInstanceParams` (Phase01). Unknown Params classes get per-member f32/i32 (or checkbox) inputs.
+
+## Item Browser — read-only outside item editor (fix)
+
+- Map-editor Model Browser (`isEditable=false`) no longer writes `HiddenInManualCycle`, `DisableAutoCreateSound`, or clip flags. UserInst color / visual UseTgtU/V show a read-only path. Clone to New, Replace GmSurf, Prefab Params, and CPlugVisual editors were already IE-only.
+
+## Item Browser — Replace GmSurf primitive (new)
+
+- On `CPlugSurface`, **Replace GmSurf** allocates a fresh `CPlugSurface()` (game heap, 0x48), overlays a Sphere/Box/Capsule(pill)/Cylinder/VCylinder/Ellipsoid/Circle/SphereLocated/SphericalShell body (subclass vtable from unique Construct patterns), and writes `m_GmSurf` via SetOffset. Not an in-place Mesh transmute; do not assign `m_GmSurf` (that MwAddRefs). Unique old Mesh is leaked (no script path to `GmSurf_Release`).
+
+## Item Browser — GmSurf primitive editors (new)
+
+- Model Browser edits `CPlugSurface.m_GmSurf` by runtime class (Sphere, SphereLocated, Ellipsoid, Plane, Box, Mesh, Cylinder, VCylinder, Capsule, Circle, SphericalShell, MultiSphere, ConvexPolyhedron AABB, Compound children). QuadHeight / TriangleHeight / Polygon are TM2020 enum leftovers with no class. Changing `GmSurfType` still does not convert the C++ object.
+
+## Item Browser — UserInst custom color (fix)
+
+- Custom `CPlugMaterialUserInst` color is a stride-4 `Real` buffer of unit floats (GBX load converts packed bytes 1..255). The picker now reads/writes floats, Instantiate sets `valueOffset=0`, and a SameLine × removes the custom color.
+
 ## Plugin API — map save callbacks (new)
 
 - `IEppExtension`: `onEditorSaveMap` (user pressed the editor's save input; best-effort pre-save — metadata writes queued here can land 1-2 frames later) and `afterEditorSaveMap(bool mapSaved, bool onlyScriptMetadataModified)` (post-save-dialog outcome; `mapSaved=false` = cancelled). Driven by the E++ editor plugin's `PendingEvents` (`EditorInput/Save`, `MapSavedOrSaveCancelled`) — pure ManiaScript, no memory hooks — so they fire only while the E++ supporting editor plugin is active, and programmatic `PluginMapType.SaveMap()` calls from other plugins raise only `afterEditorSaveMap`.

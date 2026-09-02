@@ -117,6 +117,13 @@ for pluginSrc in ${pluginSources[@]}; do
     _colortext16 green "\n✅ Built plugin as ${BUILD_NAME} and copied to ./${RELEASE_NAME}.\n"
   }
 
+  # Always present so E++-only compile paths stay gated in every build mode.
+  function apply_defines {
+    local dest="$1"
+    local mode_define="$2"
+    sed -i "s/^#__DEFINES__/defines = [\"COMPILER_SCOPE_EPP_ONLY\", \"${mode_define}\"]/" "$dest"
+  }
+
   # this case should set both _copy_exit_code and _build_dest
 
   # common for non-release builds
@@ -143,21 +150,21 @@ for pluginSrc in ${pluginSources[@]}; do
   case $_build_mode in
     dev)
       sed -i 's/^\(name[ \t="]*\)\(.*\)"/\1\2 (Dev)"/' $_build_dest/info.toml
-      sed -i 's/^#__DEFINES__/defines = ["DEV"]/' $_build_dest/info.toml
+      apply_defines $_build_dest/info.toml DEV
       sed -i 's/^timeout = 20000/timeout = 0/' $_build_dest/info.toml
       # sed -i 's/^timeout = 15000/timeout = 0/' $_build_dest/info.toml
       ;;
     prerelease)
       sed -i 's/^\(name[ \t="]*\)\(.*\)"/\1\2 (Prerelease)"/' $_build_dest/info.toml
-      sed -i 's/^#__DEFINES__/defines = ["RELEASE"]/' $_build_dest/info.toml
+      apply_defines $_build_dest/info.toml RELEASE
       ;;
     unittest)
       sed -i 's/^\(name[ \t="]*\)\(.*\)"/\1\2 (UnitTest)"/' $_build_dest/info.toml
-      sed -i 's/^#__DEFINES__/defines = ["UNIT_TEST"]/' $_build_dest/info.toml
+      apply_defines $_build_dest/info.toml UNIT_TEST
       ;;
     release)
       cp ./info.toml ./$pluginSrc/info.toml
-      sed -i 's/^#__DEFINES__/defines = ["RELEASE"]/' ./$pluginSrc/info.toml
+      apply_defines ./$pluginSrc/info.toml RELEASE
       buildPlugin
       rm ./$pluginSrc/info.toml
       _build_dest=$PLUGIN_RELEASE_LOC
