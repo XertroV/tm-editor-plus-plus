@@ -9,7 +9,7 @@ Reporter wants the test-mode "vehicle snaps to start/CP on hover" visual while u
 **Implemented** (PR #37 review series). Final architecture:
 
 - `src/Editor/VehiclePreview.as` — `namespace Editor::VehiclePreview`: `HasSpawn` (block/item overloads), `SpawnLocalMat` (block/info/item), `EnsureForBlock`/`EnsureAt`, `Follow`, `Clear`, `GetMostRecentVis`.
-- `src/Dev/VehiclePreviewSpike.as` — `Editor::DevTest::` MCP tooling (`Spike*` JSON helpers, spawn dumps), whole-file `#if DEV`.
+- `src/Dev/VehiclePreviewSpike_Dev.as` — `Editor::DevTest::` MCP tooling (`Spike*` JSON helpers, spawn dumps), whole-file `#if DEV`.
 - `src/Components/Cursor/VehicleKeepState.as` — one-byte `je→jmp` keep-patch so the test-mode vehicle vis survives leaving `EPlaceMode::Test`. Pattern wildcarded (`74 ??`), verified unique in the live exe (`0x140EBE51C`), crash gauntlet 15/15 PASS, annotated decomp in PR #37.
 - Spawn source of truth: `CGameCtnBlockInfoVariant.SpawnTrans` (+`SpawnPitch/Yaw/Roll`) for blocks, `CGameCommonItemEntityModel.SpawnLoc` for items, item origin for gate-style items; plus live freeblock-cursor Y (`Dev::GetOffsetFloat`, default 0.25).
 - `EdNoRespawn` blocks (circle CPs, flying respawn) → no preview; Finish-only → no preview.
