@@ -165,7 +165,7 @@ at most every two seconds, and immediately whenever a report arrives.
 |---|---|---|
 | Unverified | Nothing reported for this scope yet, or a disagreement is still being rechecked | Allowed |
 | Healthy | Every report in this scope matched what the walk read back | Allowed |
-| Broken | A disagreement survived a resync, or reading a trait threw | Fail closed |
+| Broken | A disagreement survived a resync, or the same read threw twice | Fail closed |
 
 Broken is sticky within its scope: a walk that has once been shown wrong is not
 rehabilitated by a later agreement. A new scope starts over at Unverified.
@@ -187,8 +187,20 @@ map where the receiver drops writes silently, is discarded after ten seconds
 rather than either fencing the reader or muting it forever.
 
 **A first disagreement only asks for a resync.** It takes a fresh report of the
-same trait, still disagreeing, to fence anything. A read that throws is exempt,
-because a failed walk is not a latency artifact and there is nothing to wait for.
+same trait, still disagreeing, to fence anything. The resync is sent whether or
+not metadata is disabled for the map: escalation needs a fresh report and only a
+resync produces one, so skipping it there left a genuinely drifted reader parked
+at Unverified while reads kept answering from the drifted walk. It costs
+nothing, because `SendAllInfo` declares the same traits and already runs when
+the editor plugin starts on that map.
+
+**A read that threw fences only if it throws again.** It waits on no report,
+since a failed walk is not a latency artifact, but one throw can be a map being
+torn down under the read, and two never-saved maps share their identity strings.
+So the same trait or key has to fail twice, within ten seconds and in the same
+scope, before the reader is fenced. A successful check elsewhere does not clear
+that suspicion: the drift check reads scalar rows while a key read walks the
+pairs buffer, and one working path says nothing about the other.
 
 **Everything is scoped, and a map pointer is not a scope.** The allocator hands
 a freed map's address to the next one, so records are keyed on the map pointer,
@@ -220,9 +232,10 @@ to that key is in flight there is nothing meaningful to compare, so the read is
 answered from memory and simply not verified.
 
 A read that throws part way through the walk does not escape to the caller when
-an echo can answer it. The failure fences the reader and the cached value is
-returned, so a corrupt buffer degrades to the editor plugin's own copy rather
-than to an exception.
+an echo can answer it. The cached value is returned, so a corrupt buffer
+degrades to the editor plugin's own copy rather than to an exception. The
+failure fences the reader on its second occurrence, per the repeat rule above;
+the first one is recorded and this read alone is answered from the echo.
 
 A `MapKVSetLarge` entry holds only a length, so it can confirm size but never
 content, and can never answer a read. Its length is compared only when the value
@@ -255,8 +268,10 @@ Adjacent `FromML_Test.as` and `Editor/MapKV_Test.as` cover key normalization,
 invalid keys, per-key coalescing, whole-value transport beyond the former chunk
 size, escaping/Unicode, empty values, null reads, the compound type-id gate, the
 array-versus-dictionary pair check, bounds-safe reads over hand-built buffers,
-the health state machine, resync-before-fencing in both directions, immediate
-fencing on a structural failure, scope isolation of a reused map address and of
+the health state machine, resync-before-fencing in both directions, fencing on a
+repeated structural failure, fencing on a metadata-disabled map, a transient
+empty plugin pointer not counting as a map change, scope isolation of a reused
+map address and of
 a restarted editor plugin, pending writes and suspended reports and their
 expiry, the throw-to-echo fallback, echo handling for small and large writes,
 a large-value length disagreement leaving the reader working, a snapshot with no
