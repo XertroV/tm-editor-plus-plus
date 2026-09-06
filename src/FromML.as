@@ -10,6 +10,11 @@ void OnEppLayerCustomEvent(const string &in type, MwFastBuffer<wstring> &in rawD
 
 void HandleEppEvent(const string &in type, string[]@ data) {
     FromML::lastEventTime = Time::Now;
+    // Every inbound event doubles as a map-change probe. The editor plugin
+    // reports mapping time about ten times a second, so this notices a new map
+    // long before a read would, which matters because a stale observation
+    // compared against a new map is exactly what fences a healthy reader.
+    MapKVHealth::NoteEditorTick();
     if (type == "MappingTime") {
         FromML::mappingTime = Text::ParseUInt(data[0]);
         FromML::mappingTimeMapping = Text::ParseUInt(data[1]);
@@ -120,6 +125,11 @@ namespace ToML {
     }
 
     void SetEmbeddedCustomColors(const string &in raw) {
+        // Exported, so any plugin can call this at any time. The receiver writes
+        // the trait and reports it back a frame or more later; suspend the
+        // observation over that window so the drift check does not read the new
+        // value, compare it against the last report, and fence the reader.
+        MapKVHealth::SuspendObservation(MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES);
         SendMessage("SetCustomColorTables", {raw});
     }
 
@@ -177,6 +187,11 @@ namespace ToML {
         // Store raw values; the wire serializer escapes source syntax separately.
         message.kvMapPtr = Dev_GetPointerForNod(editor.Challenge);
         message.kvPluginPtr = Dev_GetPointerForNod(plugin);
+        // The queue drains when the page is spliced, before the receiver applies
+        // anything, so Is_Map_KVSendInFlight goes false while memory and the
+        // echo cache still disagree. Mark the key pending until its echo lands
+        // so a read in that window is not mistaken for reader drift.
+        MapKVHealth::NotePendingWrite(MapKVHealth::ScopeFor(editor.Challenge), message.data[0]);
         CoalesceMapKVMessage(queued, message);
         Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, ClearSendQueue);
     }

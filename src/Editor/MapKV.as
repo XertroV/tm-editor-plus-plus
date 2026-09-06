@@ -249,21 +249,51 @@ namespace MapKV {
             throw(MapKVHealth::BLOCKED_PREFIX + reason);
     }
 
+    // Seam for the dictionary read, mirroring MapKVHealth::TraitSource, so the
+    // guarded-read path below can be exercised without a live map.
+    class ValueSource {
+        bool TryRead(CGameCtnChallenge@ map, const string &in normalizedKey, string &out value) {
+            return TryReadValue(map, normalizedKey, value);
+        }
+    }
+
+    ValueSource@ g_ValueSource = ValueSource();
+
+    void SetValueSource(ValueSource@ source) {
+        @g_ValueSource = source is null ? ValueSource() : source;
+    }
+
     // The single place that decides where one key's value comes from. The
     // decision itself lives in MapKVHealth::ResolveRead, which touches no
     // memory; this only supplies it with the health verdict and the memory
     // read, then applies any mismatch it reports.
     MapKVHealth::KVRead@ ResolveKey(CGameCtnChallenge@ map, const string &in normalizedKey) {
-        uint64 mapPtr = Dev_GetPointerForNod(map);
-        uint64 pluginPtr = MapKVHealth::CurrentPluginPointer();
+        return ResolveKeyIn(MapKVHealth::ScopeFor(map), map, normalizedKey);
+    }
+
+    MapKVHealth::KVRead@ ResolveKeyIn(MapKVHealth::Scope@ scope, CGameCtnChallenge@ map,
+                                      const string &in normalizedKey) {
         string reason;
-        bool usable = MapKVHealth::Evaluate(map, reason) != MapKVHealth::STATE_BROKEN;
+        bool usable = MapKVHealth::EvaluateFor(scope, map, reason) != MapKVHealth::STATE_BROKEN;
         bool present = false;
         string value;
-        if (usable) present = TryReadValue(map, normalizedKey, value);
-        auto read = MapKVHealth::ResolveRead(mapPtr, pluginPtr, normalizedKey,
-            usable, reason, present, value);
-        if (read.mismatchReason.Length > 0) MapKVHealth::MarkBrokenFor(mapPtr, read.mismatchReason);
+        if (usable) {
+            // A walk that throws is a fenced reader that has not been told yet.
+            // Catching here keeps the echo fallback reachable, which letting the
+            // exception escape would not, and records the failure so later reads
+            // fail closed for the same reason instead of throwing one at a time.
+            try {
+                present = g_ValueSource.TryRead(map, normalizedKey, value);
+            } catch {
+                reason = "reading " + normalizedKey + " threw: " + getExceptionInfo();
+                MapKVHealth::MarkBrokenIn(scope, reason);
+                usable = false;
+                present = false;
+                value = "";
+            }
+        }
+        auto read = MapKVHealth::ResolveRead(scope, normalizedKey, usable, reason, present, value);
+        if (read.mismatchReason.Length > 0) MapKVHealth::MarkBrokenIn(scope, read.mismatchReason);
         return read;
     }
 }
