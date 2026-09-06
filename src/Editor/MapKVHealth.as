@@ -148,13 +148,16 @@ namespace MapKVHealth {
 
     // Outcome of resolving one key. `blockedReason` nonempty means the caller
     // must throw instead of answering; `mismatchReason` nonempty means the
-    // caller should fence the reader off for this scope.
+    // caller should fence the reader off for this scope. `note` carries a
+    // disagreement that is explicitly not grounds for either, so a diagnostic
+    // surface can show it without it changing what a read returns.
     class KVRead {
         string source = SOURCE_UNAVAILABLE;
         string value;
         bool present = false;
         string blockedReason;
         string mismatchReason;
+        string note;
     }
 
     // Seam for the drift check's only memory access.
@@ -646,15 +649,20 @@ namespace MapKVHealth {
             if (!echo.lengthOnly) read.source = SOURCE_MEMORY_VERIFIED;
             return read;
         }
-        if (!cacheCanAnswer) {
-            // Only the length was echoed: nothing to answer with.
-            read.source = SOURCE_UNAVAILABLE;
-            read.blockedReason = read.mismatchReason;
-            read.value = "";
-            read.present = false;
+        if (echo.lengthOnly) {
+            // Above the echo bound only a length travels, and how much a
+            // LayerCustomEvent argument carries intact is not measured. A
+            // disagreement here is as likely to be a truncated or dropped echo
+            // as a bad read, so it is recorded and the memory answer stands.
+            // Fencing on it would let an unproven transport disable a working
+            // reader, which is the worse of the two failures.
+            read.note = read.mismatchReason;
+            read.mismatchReason = "";
             return read;
         }
-        // The editor plugin's store is authoritative over our walk of it.
+        // A whole value was echoed and disagreed. It is the receiver's own read
+        // of the store, so it wins over our walk of it. Reaching here means the
+        // entry holds a value: a length-only or pending entry returned above.
         read.source = SOURCE_ML_CACHE;
         read.value = echo.value;
         read.present = true;
