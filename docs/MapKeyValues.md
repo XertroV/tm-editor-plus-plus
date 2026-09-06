@@ -146,20 +146,46 @@ cap writes enforce) are refused before any read happens.
 The editor plugin declares `EPP_MetadataDisabled` and `CCT_CustomColorTables` on
 every map and reports both at plugin start and on `ResyncPlease`. Reading those
 same traits back through the walk and comparing is a self-test of the whole
-thing: buffer header, row stride, name strings and SSO. Each report is recorded
-against the map pointer it arrived with, and only compared against that map, so
-a report that is a few frames stale after a map change cannot be mistaken for
-drift. The check is recomputed at most every two seconds per map, and
-immediately whenever a new report arrives.
+thing: buffer header, row stride, name strings and SSO. The check is recomputed
+at most every two seconds, and immediately whenever a report arrives.
 
 | State | Meaning | Reads |
 |---|---|---|
-| Unverified | The editor plugin has reported nothing for this map yet | Allowed |
-| Healthy | Every same-map report matched what the walk read back | Allowed |
-| Broken | A report disagreed, was missing from memory, or reading it threw | Fail closed |
+| Unverified | Nothing reported for this scope yet, or a disagreement is still being rechecked | Allowed |
+| Healthy | Every report in this scope matched what the walk read back | Allowed |
+| Broken | A disagreement survived a resync, or reading a trait threw | Fail closed |
 
-Broken is sticky for its map: a walk that has once been shown wrong is not
-rehabilitated by a later agreement. A new map starts over at Unverified.
+Broken is sticky within its scope: a walk that has once been shown wrong is not
+rehabilitated by a later agreement. A new scope starts over at Unverified.
+
+Detecting disagreement is the easy half. Not crying wolf is the hard half,
+because every write travels AngelScript to ManiaScript and back, and the
+receiver applies a write before it reports it. For a frame or more, memory
+legitimately holds a value newer than anything the reader has been told about,
+and a naive comparison there would fence a perfectly healthy reader on an
+ordinary write. Three rules cover that window.
+
+**A queued write suspends what it will change.** `Set_Map_KV` marks its key
+pending and `Set_Map_EmbeddedCustomColorsEncoded` suspends the
+`CCT_CustomColorTables` report, in both cases until the matching event arrives.
+Nothing suspended is compared. `Is_Map_KVSendInFlight` does not cover this: the
+queue drains when the page is spliced, which is before the receiver has applied
+anything. A suspension that is never answered, as happens on a metadata-disabled
+map where the receiver drops writes silently, is discarded after ten seconds
+rather than either fencing the reader or muting it forever.
+
+**A first disagreement only asks for a resync.** It takes a fresh report of the
+same trait, still disagreeing, to fence anything. A read that throws is exempt,
+because a failed walk is not a latency artifact and there is nothing to wait for.
+
+**Everything is scoped, and a map pointer is not a scope.** The allocator hands
+a freed map's address to the next one, so records are keyed on the map pointer,
+the supporting editor plugin instance, and the map's own identity strings
+together. Moving to a new scope drops every report and echo the old one taught.
+Inbound events double as map-change detection, at the roughly ten reports a
+second the editor plugin already sends. A read aimed at a map other than the
+open one is unverified rather than blocked, and neither inherits nor disturbs
+the open map's verdict.
 
 While Broken, `TryGet_Map_KVRaw`, `Get_Map_KVRaw`, `Get_Map_KVKeys`,
 `TryGet_Map_MetadataRaw` and `Get_Map_MetadataRaw` all throw, with a message
@@ -174,10 +200,17 @@ Every write is echoed back by the editor plugin, so a key written this session
 has a second copy of its value, keyed by the map and supporting-plugin pointers
 current when the echo arrived. The cache is dropped whenever either changes.
 
-When a read finds an echo for its key, the two are compared. If they agree, the
-read is verified. If they differ, or memory reports the key absent, the reader
-is marked Broken naming that key and the echoed value is returned: the editor
-plugin's store is authoritative over E++'s walk of it.
+When a read finds a settled echo for its key, the two are compared. If they
+agree, the read is verified. If they differ, or memory reports the key absent,
+the reader is marked Broken naming that key and the echoed value is returned:
+the editor plugin's store is authoritative over E++'s walk of it. While a write
+to that key is in flight there is nothing meaningful to compare, so the read is
+answered from memory and simply not verified.
+
+A read that throws part way through the walk does not escape to the caller when
+an echo can answer it. The failure fences the reader and the cached value is
+returned, so a corrupt buffer degrades to the editor plugin's own copy rather
+than to an exception.
 
 A `MapKVSetLarge` entry holds only a length, so it can confirm size but never
 content, and can never answer a read. Its length is compared only when the value
@@ -203,13 +236,16 @@ Adjacent `FromML_Test.as` and `Editor/MapKV_Test.as` cover key normalization,
 invalid keys, per-key coalescing, whole-value transport beyond the former chunk
 size, escaping/Unicode, empty values, null reads, the compound type-id gate, the
 array-versus-dictionary pair check, bounds-safe reads over hand-built buffers,
-the health state machine and its per-map isolation, echo handling for small and
-large writes, cache invalidation, and every read-source outcome. They use
+the health state machine, resync-before-fencing in both directions, immediate
+fencing on a structural failure, scope isolation of a reused map address and of
+a restarted editor plugin, pending writes and suspended reports and their
+expiry, the throw-to-echo fallback, echo handling for small and large writes,
+cache invalidation, and every read-source outcome. They use
 throw-style checks and run both as `[Test]` functions and as the `MapKV` Tester
 suite, which reports pass/fail lines to `Openplanet.log` on plugin load. No test
 reads or writes real map metadata: the memory tests build their own buffers with
-`Dev::Allocate`, and the supervisor tests use invented map pointers and put the
-live state back afterwards. Live consumer validation must additionally verify
+`Dev::Allocate`, and the supervisor tests use invented scopes and put the live
+state back afterwards. Live consumer validation must additionally verify
 actual dictionary read-back and consumer restoration; static checks do not prove
 disk persistence.
 
