@@ -61,37 +61,37 @@ namespace Tests {
     // live supervisor state is put back afterwards.
     void MapKV_CheckEchoEventsUpdateCache() {
         auto saved = MapKVHealth::Snapshot();
-        uint64 mapPtr = MapKVHealth::CurrentMapPointer();
-        uint64 pluginPtr = MapKVHealth::CurrentPluginPointer();
+        auto scope = MapKVHealth::CurrentScope();
         MapKVHealth::Reset();
         string[] small = {"_EKV_Plugin.small", "echoed value"};
         string[] large = {"_EKV_Plugin.large", "300000"};
         HandleEppEvent("MapKVSet", small);
         HandleEppEvent("MapKVSetLarge", large);
         uint cached = MapKVHealth::EchoCount();
-        auto smallEcho = MapKVHealth::LookupEchoFor(mapPtr, pluginPtr, "_EKV_Plugin.small");
-        auto largeEcho = MapKVHealth::LookupEchoFor(mapPtr, pluginPtr, "_EKV_Plugin.large");
+        auto smallEcho = MapKVHealth::LookupEchoFor(scope, "_EKV_Plugin.small");
+        auto largeEcho = MapKVHealth::LookupEchoFor(scope, "_EKV_Plugin.large");
         MapKVHealth::Restore(saved);
-        if (mapPtr == 0) {
+        if (!scope.IsValid) {
             MapKVCheck(cached == 0, "with no map open an echo has nothing to belong to");
             return;
         }
         MapKVCheck(cached == 2, "both echoes are cached, got " + cached);
         MapKVCheck(smallEcho !is null, "the small echo is cached under its key");
-        MapKVCheck(!smallEcho.lengthOnly, "a small echo carries its value");
+        MapKVCheck(smallEcho.hasValue && !smallEcho.lengthOnly, "a small echo carries its value");
         MapKVCheck(smallEcho.value == "echoed value", "verbatim");
+        MapKVCheck(!smallEcho.pending, "and settles the key");
         MapKVCheck(largeEcho !is null, "the large echo is cached too");
-        MapKVCheck(largeEcho.lengthOnly, "a large echo carries only a length");
+        MapKVCheck(largeEcho.lengthOnly && !largeEcho.hasValue, "a large echo carries only a length");
         MapKVCheck(largeEcho.length == 300000, "the reported length is parsed, got " + largeEcho.length);
         MapKVCheck(largeEcho.value == "", "and no value");
     }
 
-    // A trait report has to be recorded against the map it arrived with, or the
+    // A trait report has to be recorded against the scope it arrived in, or the
     // drift check would compare it against the wrong map after a switch.
     void MapKV_CheckTraitEventsAreObserved() {
         auto saved = MapKVHealth::Snapshot();
         bool savedDisabled = FromML::metadataDisabled;
-        uint64 mapPtr = MapKVHealth::CurrentMapPointer();
+        auto scope = MapKVHealth::CurrentScope();
         MapKVHealth::Reset();
         string[] disabled = {"True"};
         HandleEppEvent("MetadataDisabled", disabled);
@@ -100,15 +100,38 @@ namespace Tests {
         source.values[MapKVHealth::TRAIT_METADATA_DISABLED] = "true";
         MapKVHealth::SetTraitSource(source);
         string reason;
-        uint state = mapPtr == 0
-            ? MapKVHealth::STATE_UNVERIFIED
-            : MapKVHealth::EvaluateFor(mapPtr, null, reason);
+        uint state = scope.IsValid
+            ? MapKVHealth::EvaluateFor(scope, null, reason)
+            : MapKVHealth::STATE_UNVERIFIED;
         MapKVHealth::Restore(saved);
         FromML::metadataDisabled = savedDisabled;
         MapKVCheck(flagged, "the plugin-global flag still follows the event");
-        if (mapPtr == 0) return;
+        if (!scope.IsValid) return;
         MapKVCheck(state == MapKVHealth::STATE_HEALTHY,
-            "the reported trait becomes a same-map observation: " + reason);
+            "the reported trait becomes a same-scope observation: " + reason);
+    }
+
+    // The queue drains at the page splice, before the receiver applies
+    // anything, so the write must mark its key pending itself.
+    void MapKV_CheckQueuedWriteMarksKeyPending() {
+        auto saved = MapKVHealth::Snapshot();
+        auto scope = MapKVHealth::CurrentScope();
+        MapKVHealth::Reset();
+        if (!scope.IsValid) {
+            MapKVHealth::Restore(saved);
+            return;
+        }
+        MapKVHealth::NoteEchoIn(scope, "_EKV_Plugin.spec", "old");
+        MapKVHealth::NotePendingWrite(scope, "_EKV_Plugin.spec");
+        auto echo = MapKVHealth::LookupEchoFor(scope, "_EKV_Plugin.spec");
+        bool pending = echo !is null && echo.pending;
+        string[] landed = {"_EKV_Plugin.spec", "new"};
+        HandleEppEvent("MapKVSet", landed);
+        auto settled = MapKVHealth::LookupEchoFor(scope, "_EKV_Plugin.spec");
+        MapKVHealth::Restore(saved);
+        MapKVCheck(pending, "a queued write marks its key pending");
+        MapKVCheck(settled !is null && !settled.pending, "and the echo clears it");
+        MapKVCheck(settled.value == "new", "leaving the value the receiver stored");
     }
 
     [Test]
@@ -116,5 +139,8 @@ namespace Tests {
 
     [Test]
     void MapKV_TraitEventsAreObserved(Tests::Context@ ctx) { MapKV_CheckTraitEventsAreObserved(); }
+
+    [Test]
+    void MapKV_QueuedWriteMarksKeyPending(Tests::Context@ ctx) { MapKV_CheckQueuedWriteMarksKeyPending(); }
 }
 #endif

@@ -6,7 +6,7 @@
 //
 // Nothing here reads or writes real map metadata. The memory tests build their
 // own buffers with Dev::Allocate, and the supervisor tests drive it with
-// invented map pointers behind MapKVHealth's snapshot/restore.
+// invented scopes behind MapKVHealth's snapshot/restore.
 
 // Stands in for MapKV::TryReadScalar so the drift check can be exercised with
 // no live map: whatever is put in `values` is what the "metadata" holds.
@@ -18,6 +18,23 @@ class FakeTraitSource : MapKVHealth::TraitSource {
         if (!values.Get(trait, stored)) return false;
         value = stored;
         return true;
+    }
+}
+
+// A walk that fails outright rather than disagreeing.
+class ThrowingTraitSource : MapKVHealth::TraitSource {
+    bool TryRead(CGameCtnChallenge@ map, const string &in trait, string &out value) override {
+        value = "";
+        throw("Unable to read memory");
+        return false;
+    }
+}
+
+class ThrowingValueSource : MapKV::ValueSource {
+    bool TryRead(CGameCtnChallenge@ map, const string &in normalizedKey, string &out value) override {
+        value = "";
+        throw("Invalid _EKV_ dictionary buffer");
+        return false;
     }
 }
 
@@ -34,6 +51,24 @@ namespace Tests {
     // Verified live on 2026-09-06: a Dev::Safe* read here reports
     // "Unable to read memory" rather than returning zero.
     const uint64 MAPKV_TEST_UNMAPPED = 0x0000700000000000;
+
+    MapKVHealth::Scope@ TestScopeA() {
+        return MapKVHealth::Scope(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "map-a");
+    }
+
+    MapKVHealth::Scope@ TestScopeB() {
+        return MapKVHealth::Scope(MAPKV_TEST_MAP_B, MAPKV_TEST_PLUGIN, "map-b");
+    }
+
+    // A different map that the allocator handed the address map A just freed.
+    MapKVHealth::Scope@ TestScopeReusedAddress() {
+        return MapKVHealth::Scope(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "map-c");
+    }
+
+    // Same map, but the editor plugin was restarted under it.
+    MapKVHealth::Scope@ TestScopeNewPlugin() {
+        return MapKVHealth::Scope(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN + 8, "map-a");
+    }
 
     void MapKV_CheckNullMapDoesNotCreateMetadata() {
         MapKVCheck(MapKV::ListKeys(null).Length == 0, "absent map has no keys");
@@ -139,9 +174,10 @@ namespace Tests {
         string reason;
         MapKVHealth::Reset();
         MapKVHealth::SetTraitSource(FakeTraitSource());
-        uint state = MapKVHealth::EvaluateFor(MAPKV_TEST_MAP_A, null, reason);
+        MapKVHealth::RebindScope(TestScopeA());
+        uint state = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
         MapKVHealth::Restore(saved);
-        MapKVCheck(state == MapKVHealth::STATE_UNVERIFIED, "no observation yet means unverified");
+        MapKVCheck(state == MapKVHealth::STATE_UNVERIFIED, "no report yet means unverified");
         MapKVCheck(reason.Contains("unverified"), "unverified says why: " + reason);
     }
 
@@ -155,60 +191,144 @@ namespace Tests {
         MapKVHealth::SetTraitSource(source);
         // ManiaScript spells a Boolean True/False; the reader spells it
         // true/false. Agreement must survive that.
-        MapKVHealth::NoteTraitObservationFor(MAPKV_TEST_MAP_A, MapKVHealth::TRAIT_METADATA_DISABLED, "False");
-        MapKVHealth::NoteTraitObservationFor(MAPKV_TEST_MAP_A, MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "abc");
-        uint state = MapKVHealth::EvaluateFor(MAPKV_TEST_MAP_A, null, reason);
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_METADATA_DISABLED, "False");
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "abc");
+        uint state = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
         MapKVHealth::Restore(saved);
-        MapKVCheck(state == MapKVHealth::STATE_HEALTHY, "matching observations are healthy: " + reason);
+        MapKVCheck(state == MapKVHealth::STATE_HEALTHY, "matching reports are healthy: " + reason);
         MapKVCheck(reason == "", "a healthy reader has nothing to report");
     }
 
-    void MapKV_CheckBrokenOnDrift() {
+    // A first disagreement must not fence anything: the receiver applies a
+    // trait write a frame or more before it reports it, so a value read in
+    // between is legitimately newer than the last report.
+    void MapKV_CheckFirstMismatchResyncsBeforeFencing() {
         auto saved = MapKVHealth::Snapshot();
         auto source = FakeTraitSource();
         source.values[MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES] = "what memory says";
-        string reason;
-        string absentReason;
+        string first;
+        string repeat;
+        string confirmed;
         MapKVHealth::Reset();
         MapKVHealth::SetTraitSource(source);
-        MapKVHealth::NoteTraitObservationFor(MAPKV_TEST_MAP_A, MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "what the plugin says");
-        uint state = MapKVHealth::EvaluateFor(MAPKV_TEST_MAP_A, null, reason);
-        // Sticky: a later matching observation does not rehabilitate the walk.
-        source.values[MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES] = "what the plugin says";
-        uint again = MapKVHealth::EvaluateFor(MAPKV_TEST_MAP_A, null, reason);
-        // An observed trait that memory cannot find at all is also drift.
-        MapKVHealth::Reset();
-        auto empty = FakeTraitSource();
-        MapKVHealth::SetTraitSource(empty);
-        MapKVHealth::NoteTraitObservationFor(MAPKV_TEST_MAP_A, MapKVHealth::TRAIT_METADATA_DISABLED, "False");
-        uint absent = MapKVHealth::EvaluateFor(MAPKV_TEST_MAP_A, null, absentReason);
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "what the plugin says");
+        uint stateFirst = MapKVHealth::EvaluateFor(TestScopeA(), null, first);
+        // Nothing fresh has arrived, so re-asking must not escalate.
+        uint stateRepeat = MapKVHealth::EvaluateFor(TestScopeA(), null, repeat);
+        // A resync answering with the same value is the confirmation.
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "what the plugin says");
+        uint stateConfirmed = MapKVHealth::EvaluateFor(TestScopeA(), null, confirmed);
         MapKVHealth::Restore(saved);
-        MapKVCheck(state == MapKVHealth::STATE_BROKEN, "a disagreeing trait fences the reader off");
-        MapKVCheck(reason.Contains(MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES), "the reason names the trait: " + reason);
-        MapKVCheck(again == MapKVHealth::STATE_BROKEN, "broken is sticky for its map");
-        MapKVCheck(absent == MapKVHealth::STATE_BROKEN, "an observed trait missing from memory is drift");
-        MapKVCheck(absentReason.Contains("absent"), "the reason says it is absent: " + absentReason);
+        MapKVCheck(stateFirst == MapKVHealth::STATE_UNVERIFIED, "a first disagreement only asks for a resync");
+        MapKVCheck(first.Contains("rechecking"), "and says so: " + first);
+        MapKVCheck(stateRepeat == MapKVHealth::STATE_UNVERIFIED, "asking again without a fresh report changes nothing");
+        MapKVCheck(stateConfirmed == MapKVHealth::STATE_BROKEN, "a disagreement that survives a resync fences the reader");
+        MapKVCheck(confirmed.Contains(MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES), "the reason names the trait: " + confirmed);
+        MapKVCheck(confirmed.Contains("resync"), "and says it was confirmed: " + confirmed);
     }
 
-    // FromML's plugin globals go stale across a map change, so an observation
-    // must only ever be compared against the map it arrived with.
-    void MapKV_CheckObservationsArePerMap() {
+    // The other half of the same rule: a disagreement that a fresh report
+    // clears up must leave the reader healthy, not fenced.
+    void MapKV_CheckResyncClearsATransientMismatch() {
+        auto saved = MapKVHealth::Snapshot();
+        auto source = FakeTraitSource();
+        source.values[MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES] = "the newly written value";
+        string reason;
+        MapKVHealth::Reset();
+        MapKVHealth::SetTraitSource(source);
+        // Memory is ahead of the report, exactly as it is between a write
+        // landing and its event arriving.
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "the previous value");
+        uint suspected = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "the newly written value");
+        uint settled = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
+        MapKVHealth::Restore(saved);
+        MapKVCheck(suspected == MapKVHealth::STATE_UNVERIFIED, "the stale report is not treated as drift");
+        MapKVCheck(settled == MapKVHealth::STATE_HEALTHY, "the fresh report settles it: " + reason);
+        MapKVCheck(reason == "", "and clears the reason");
+    }
+
+    // A walk that throws is not a latency artifact, so it fences at once.
+    void MapKV_CheckStructuralFailureFencesImmediately() {
+        auto saved = MapKVHealth::Snapshot();
+        string reason;
+        MapKVHealth::Reset();
+        MapKVHealth::SetTraitSource(ThrowingTraitSource());
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_METADATA_DISABLED, "False");
+        uint state = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
+        MapKVHealth::Restore(saved);
+        MapKVCheck(state == MapKVHealth::STATE_BROKEN, "a throwing walk fences without waiting for a resync");
+        MapKVCheck(reason.Contains("threw"), "the reason says it threw: " + reason);
+    }
+
+    // A queued CCT write is exactly the window where memory is ahead of the
+    // last report, and any plugin can open it through the exported setter.
+    void MapKV_CheckSuspendedTraitIsNotCompared() {
+        auto saved = MapKVHealth::Snapshot();
+        auto source = FakeTraitSource();
+        source.values[MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES] = "the value just written";
+        string whileSuspended;
+        string afterReport;
+        MapKVHealth::Reset();
+        MapKVHealth::SetTraitSource(source);
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "the previous value");
+        MapKVHealth::SuspendObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES);
+        uint suspended = MapKVHealth::EvaluateFor(TestScopeA(), null, whileSuspended);
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "the value just written");
+        uint resumed = MapKVHealth::EvaluateFor(TestScopeA(), null, afterReport);
+        MapKVHealth::Restore(saved);
+        MapKVCheck(suspended == MapKVHealth::STATE_UNVERIFIED, "a suspended trait is skipped, not compared");
+        MapKVCheck(!whileSuspended.Contains("rechecking"), "and raises no suspicion: " + whileSuspended);
+        MapKVCheck(resumed == MapKVHealth::STATE_HEALTHY, "the report resumes comparison: " + afterReport);
+    }
+
+    // A report that never comes must not mute verification forever, and must
+    // not resume comparing against a value memory has moved past either.
+    void MapKV_CheckSuspendedTraitExpires() {
+        auto saved = MapKVHealth::Snapshot();
+        MapKVHealth::Reset();
+        MapKVHealth::SetTraitSource(FakeTraitSource());
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "queued away");
+        MapKVHealth::SuspendObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES);
+        bool presentBefore = MapKVHealth::FindObservation(MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES) !is null;
+        MapKVHealth::ExpireStaleRecords(Time::Now + MapKVHealth::PENDING_TIMEOUT_MS + 1);
+        bool presentAfter = MapKVHealth::FindObservation(MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES) !is null;
+        MapKVHealth::Restore(saved);
+        MapKVCheck(presentBefore, "the suspended report is kept while it may still be answered");
+        MapKVCheck(!presentAfter, "an unanswered suspension is dropped rather than compared");
+    }
+
+    // A map pointer is not an identity: the allocator reuses freed addresses,
+    // and the old map's report must not be compared against the new map.
+    void MapKV_CheckScopeIsolatesReusedAddresses() {
         auto saved = MapKVHealth::Snapshot();
         auto source = FakeTraitSource();
         source.values[MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES] = "map A value";
         string reasonA;
-        string reasonB;
+        string reasonReused;
+        string reasonPlugin;
+        string reasonAgain;
         MapKVHealth::Reset();
         MapKVHealth::SetTraitSource(source);
-        MapKVHealth::NoteTraitObservationFor(MAPKV_TEST_MAP_A, MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "map A value");
-        uint stateA = MapKVHealth::EvaluateFor(MAPKV_TEST_MAP_A, null, reasonA);
-        // Same observation, different map: it must not be compared at all,
-        // even though memory now reports a value that disagrees with it.
-        source.values[MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES] = "map B value";
-        uint stateB = MapKVHealth::EvaluateFor(MAPKV_TEST_MAP_B, null, reasonB);
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "map A value");
+        uint stateA = MapKVHealth::EvaluateFor(TestScopeA(), null, reasonA);
+        // Same address, different map. Memory now answers with the new map's
+        // value, which disagrees with the old map's report.
+        source.values[MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES] = "map C value";
+        uint stateReused = MapKVHealth::EvaluateFor(TestScopeReusedAddress(), null, reasonReused);
+        uint statePlugin = MapKVHealth::EvaluateFor(TestScopeNewPlugin(), null, reasonPlugin);
+        // The original scope's verdict is untouched by either probe.
+        source.values[MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES] = "map A value";
+        uint stateAgain = MapKVHealth::EvaluateFor(TestScopeA(), null, reasonAgain);
+        // A report from the new map rebinds and drops everything the old one taught.
+        MapKVHealth::NoteTraitObservationIn(TestScopeReusedAddress(), MapKVHealth::TRAIT_METADATA_DISABLED, "False");
+        bool oldReportGone = MapKVHealth::FindObservation(MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES) is null;
         MapKVHealth::Restore(saved);
-        MapKVCheck(stateA == MapKVHealth::STATE_HEALTHY, "map A verified against its own observation");
-        MapKVCheck(stateB == MapKVHealth::STATE_UNVERIFIED, "map B has no observation of its own: " + reasonB);
+        MapKVCheck(stateA == MapKVHealth::STATE_HEALTHY, "map A verified against its own report");
+        MapKVCheck(stateReused == MapKVHealth::STATE_UNVERIFIED, "a reused address is unverified, never fenced");
+        MapKVCheck(statePlugin == MapKVHealth::STATE_UNVERIFIED, "a restarted editor plugin is a new scope too");
+        MapKVCheck(stateAgain == MapKVHealth::STATE_HEALTHY, "and neither probe disturbed map A");
+        MapKVCheck(oldReportGone, "a report from the new scope drops the old scope's reports");
     }
 
     // --- echo cache and read resolution ------------------------------------
@@ -216,11 +336,9 @@ namespace Tests {
     void MapKV_CheckEchoVerifiesMemory() {
         auto saved = MapKVHealth::Snapshot();
         MapKVHealth::Reset();
-        MapKVHealth::StoreEchoFor(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.a", MapKVHealth::MLEcho("stored"));
-        auto agreed = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.a",
-            true, "", true, "stored");
-        auto unchecked = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.other",
-            true, "", true, "whatever");
+        MapKVHealth::NoteEchoIn(TestScopeA(), "_EKV_Plugin.a", "stored");
+        auto agreed = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.a", true, "", true, "stored");
+        auto unchecked = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.other", true, "", true, "whatever");
         MapKVHealth::Restore(saved);
         MapKVCheck(agreed.source == MapKVHealth::SOURCE_MEMORY_VERIFIED, "memory matching the echo is verified");
         MapKVCheck(agreed.value == "stored" && agreed.present, "the verified read returns the value");
@@ -231,11 +349,9 @@ namespace Tests {
     void MapKV_CheckEchoMismatchServesCache() {
         auto saved = MapKVHealth::Snapshot();
         MapKVHealth::Reset();
-        MapKVHealth::StoreEchoFor(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.a", MapKVHealth::MLEcho("stored"));
-        auto differs = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.a",
-            true, "", true, "something else");
-        auto missing = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.a",
-            true, "", false, "");
+        MapKVHealth::NoteEchoIn(TestScopeA(), "_EKV_Plugin.a", "stored");
+        auto differs = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.a", true, "", true, "something else");
+        auto missing = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.a", true, "", false, "");
         MapKVHealth::Restore(saved);
         MapKVCheck(differs.source == MapKVHealth::SOURCE_ML_CACHE, "a disagreeing read falls back to the echo");
         MapKVCheck(differs.value == "stored" && differs.present, "the echoed value is authoritative");
@@ -243,6 +359,49 @@ namespace Tests {
         MapKVCheck(differs.blockedReason == "", "a cached answer is not blocked");
         MapKVCheck(missing.source == MapKVHealth::SOURCE_ML_CACHE, "a key memory cannot find is also drift");
         MapKVCheck(missing.mismatchReason.Contains("absent"), "the reason says memory lost it: " + missing.mismatchReason);
+    }
+
+    // Between the receiver applying a write and its echo arriving, memory holds
+    // the new value and the cache still holds the old one. Comparing them there
+    // would fence the reader on an ordinary, correct write.
+    void MapKV_CheckPendingWriteSkipsComparison() {
+        auto saved = MapKVHealth::Snapshot();
+        MapKVHealth::Reset();
+        MapKVHealth::NoteEchoIn(TestScopeA(), "_EKV_Plugin.a", "old");
+        auto beforeWrite = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.a", true, "", true, "old");
+        MapKVHealth::NotePendingWrite(TestScopeA(), "_EKV_Plugin.a");
+        auto inFlight = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.a", true, "", true, "new");
+        // A key written for the first time has no cached value at all.
+        MapKVHealth::NotePendingWrite(TestScopeA(), "_EKV_Plugin.fresh");
+        auto firstWrite = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.fresh", true, "", true, "new");
+        MapKVHealth::NoteEchoIn(TestScopeA(), "_EKV_Plugin.a", "new");
+        auto afterEcho = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.a", true, "", true, "new");
+        MapKVHealth::Restore(saved);
+        MapKVCheck(beforeWrite.source == MapKVHealth::SOURCE_MEMORY_VERIFIED, "a settled key still verifies");
+        MapKVCheck(inFlight.mismatchReason == "", "an in-flight write is not drift");
+        MapKVCheck(inFlight.source == MapKVHealth::SOURCE_MEMORY, "and cannot claim verification");
+        MapKVCheck(inFlight.value == "new" && inFlight.present, "memory answers the read");
+        MapKVCheck(firstWrite.mismatchReason == "", "a first write to a key is not drift either");
+        MapKVCheck(firstWrite.value == "new", "and memory still answers");
+        MapKVCheck(afterEcho.source == MapKVHealth::SOURCE_MEMORY_VERIFIED, "the echo restores verification");
+    }
+
+    // An echo that never arrives must not disable verification for that key
+    // forever, nor resume comparing against a value memory has moved past.
+    void MapKV_CheckPendingWriteExpires() {
+        auto saved = MapKVHealth::Snapshot();
+        MapKVHealth::Reset();
+        MapKVHealth::NoteEchoIn(TestScopeA(), "_EKV_Plugin.a", "old");
+        MapKVHealth::NotePendingWrite(TestScopeA(), "_EKV_Plugin.a");
+        uint before = MapKVHealth::EchoCount();
+        MapKVHealth::ExpireStaleRecords(Time::Now + MapKVHealth::PENDING_TIMEOUT_MS + 1);
+        uint after = MapKVHealth::EchoCount();
+        auto read = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.a", true, "", true, "new");
+        MapKVHealth::Restore(saved);
+        MapKVCheck(before == 1, "the pending entry is kept while it may still be answered");
+        MapKVCheck(after == 0, "an unanswered write is dropped rather than compared");
+        MapKVCheck(read.mismatchReason == "", "so it cannot fence the reader later");
+        MapKVCheck(read.source == MapKVHealth::SOURCE_MEMORY, "the key is simply unverified again");
     }
 
     // ManiaScript TL::Length counts characters, AngelScript string.Length counts
@@ -255,14 +414,11 @@ namespace Tests {
         MapKVCheck(!MapKVHealth::IsAscii("café"), "anything above U+007F is not");
         auto saved = MapKVHealth::Snapshot();
         MapKVHealth::Reset();
-        MapKVHealth::StoreEchoFor(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.big", MapKVHealth::MLEcho(uint(4)));
-        auto sameLength = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.big",
-            true, "", true, "abcd");
-        auto wrongLength = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.big",
-            true, "", true, "abcde");
+        MapKVHealth::NoteEchoLengthIn(TestScopeA(), "_EKV_Plugin.big", 4);
+        auto sameLength = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.big", true, "", true, "abcd");
+        auto wrongLength = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.big", true, "", true, "abcde");
         // "café" is 4 characters but 5 bytes: the units disagree, so no verdict.
-        auto notComparable = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.big",
-            true, "", true, "café");
+        auto notComparable = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.big", true, "", true, "café");
         MapKVHealth::Restore(saved);
         MapKVCheck(sameLength.source == MapKVHealth::SOURCE_MEMORY, "a length-only echo never verifies content");
         MapKVCheck(sameLength.mismatchReason == "", "a matching ASCII length is not drift");
@@ -273,36 +429,35 @@ namespace Tests {
         MapKVCheck(notComparable.value == "café", "the memory value is still returned");
     }
 
-    void MapKV_CheckEchoCacheInvalidatedOnMapChange() {
+    void MapKV_CheckEchoCacheInvalidatedOnScopeChange() {
         auto saved = MapKVHealth::Snapshot();
         MapKVHealth::Reset();
-        MapKVHealth::StoreEchoFor(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.a", MapKVHealth::MLEcho("A"));
-        bool foundOnA = MapKVHealth::LookupEchoFor(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.a") !is null;
-        bool foundOnB = MapKVHealth::LookupEchoFor(MAPKV_TEST_MAP_B, MAPKV_TEST_PLUGIN, "_EKV_Plugin.a") !is null;
-        bool foundOtherPlugin = MapKVHealth::LookupEchoFor(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN + 8, "_EKV_Plugin.a") !is null;
-        // A write against a different map drops everything the old one cached.
-        MapKVHealth::StoreEchoFor(MAPKV_TEST_MAP_B, MAPKV_TEST_PLUGIN, "_EKV_Plugin.b", MapKVHealth::MLEcho("B"));
+        MapKVHealth::NoteEchoIn(TestScopeA(), "_EKV_Plugin.a", "A");
+        bool foundOnA = MapKVHealth::LookupEchoFor(TestScopeA(), "_EKV_Plugin.a") !is null;
+        bool foundOnB = MapKVHealth::LookupEchoFor(TestScopeB(), "_EKV_Plugin.a") !is null;
+        bool foundReused = MapKVHealth::LookupEchoFor(TestScopeReusedAddress(), "_EKV_Plugin.a") !is null;
+        bool foundOtherPlugin = MapKVHealth::LookupEchoFor(TestScopeNewPlugin(), "_EKV_Plugin.a") !is null;
+        // An echo from another scope drops everything the old one cached.
+        MapKVHealth::NoteEchoIn(TestScopeB(), "_EKV_Plugin.b", "B");
         uint sizeAfterSwitch = MapKVHealth::EchoCount();
-        bool staleSurvived = MapKVHealth::LookupEchoFor(MAPKV_TEST_MAP_B, MAPKV_TEST_PLUGIN, "_EKV_Plugin.a") !is null;
+        bool staleSurvived = MapKVHealth::LookupEchoFor(TestScopeB(), "_EKV_Plugin.a") !is null;
         MapKVHealth::Restore(saved);
-        MapKVCheck(foundOnA, "the echo is found for the map it arrived with");
+        MapKVCheck(foundOnA, "the echo is found for the scope it arrived in");
         MapKVCheck(!foundOnB, "and not for another map");
+        MapKVCheck(!foundReused, "and not for a different map at the same address");
         MapKVCheck(!foundOtherPlugin, "and not after the supporting plugin changed");
-        MapKVCheck(sizeAfterSwitch == 1, "a map change clears the cache");
-        MapKVCheck(!staleSurvived, "no entry outlives its map");
+        MapKVCheck(sizeAfterSwitch == 1, "a scope change clears the cache");
+        MapKVCheck(!staleSurvived, "no entry outlives its scope");
     }
 
     void MapKV_CheckBrokenReaderBlocksWithoutCache() {
         auto saved = MapKVHealth::Snapshot();
         MapKVHealth::Reset();
-        MapKVHealth::StoreEchoFor(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.small", MapKVHealth::MLEcho("cached"));
-        MapKVHealth::StoreEchoFor(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.big", MapKVHealth::MLEcho(uint(9999)));
-        auto served = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.small",
-            false, "row stride drifted", false, "");
-        auto blockedLarge = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.big",
-            false, "row stride drifted", false, "");
-        auto blockedUnknown = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.unknown",
-            false, "row stride drifted", false, "");
+        MapKVHealth::NoteEchoIn(TestScopeA(), "_EKV_Plugin.small", "cached");
+        MapKVHealth::NoteEchoLengthIn(TestScopeA(), "_EKV_Plugin.big", 9999);
+        auto served = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.small", false, "row stride drifted", false, "");
+        auto blockedLarge = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.big", false, "row stride drifted", false, "");
+        auto blockedUnknown = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.unknown", false, "row stride drifted", false, "");
         MapKVHealth::Restore(saved);
         MapKVCheck(served.source == MapKVHealth::SOURCE_ML_CACHE, "a cached key survives a fenced-off reader");
         MapKVCheck(served.value == "cached" && served.present, "and answers from the echo");
@@ -316,12 +471,34 @@ namespace Tests {
     void MapKV_CheckHealthyReaderNeedsNoCache() {
         auto saved = MapKVHealth::Snapshot();
         MapKVHealth::Reset();
-        auto read = MapKVHealth::ResolveRead(MAPKV_TEST_MAP_A, MAPKV_TEST_PLUGIN, "_EKV_Plugin.a",
-            true, "", false, "");
+        MapKVHealth::RebindScope(TestScopeA());
+        auto read = MapKVHealth::ResolveRead(TestScopeA(), "_EKV_Plugin.a", true, "", false, "");
         MapKVHealth::Restore(saved);
         MapKVCheck(read.source == MapKVHealth::SOURCE_MEMORY, "an unwitnessed key reads from memory");
         MapKVCheck(!read.present && read.value == "", "and is simply absent");
         MapKVCheck(read.blockedReason == "" && read.mismatchReason == "", "with nothing to report");
+    }
+
+    // A walk that throws mid-read must not escape past the echo fallback: the
+    // cached value is exactly what the caller should get, and the failure is
+    // recorded so later reads fail closed instead of throwing one at a time.
+    void MapKV_CheckThrowingWalkFallsBackToEcho() {
+        auto saved = MapKVHealth::Snapshot();
+        MapKVHealth::Reset();
+        MapKVHealth::NoteEchoIn(TestScopeA(), "_EKV_Plugin.cached", "from the editor plugin");
+        MapKV::SetValueSource(ThrowingValueSource());
+        auto served = MapKV::ResolveKeyIn(TestScopeA(), null, "_EKV_Plugin.cached");
+        string reason;
+        uint state = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
+        auto blocked = MapKV::ResolveKeyIn(TestScopeA(), null, "_EKV_Plugin.uncached");
+        MapKV::SetValueSource(null);
+        MapKVHealth::Restore(saved);
+        MapKVCheck(served.blockedReason == "", "a throwing walk does not escape when the echo can answer");
+        MapKVCheck(served.source == MapKVHealth::SOURCE_ML_CACHE, "the echo answers instead");
+        MapKVCheck(served.value == "from the editor plugin" && served.present, "with the stored value");
+        MapKVCheck(state == MapKVHealth::STATE_BROKEN, "and the failure fences the reader");
+        MapKVCheck(reason.Contains("threw"), "recording why: " + reason);
+        MapKVCheck(blocked.blockedReason.Length > 0, "a key with no echo is blocked, not silently absent");
     }
 
     [Test]
@@ -349,10 +526,22 @@ namespace Tests {
     void MapKV_HealthyWhenObservationsMatch(Tests::Context@ ctx) { MapKV_CheckHealthyWhenObservationsMatch(); }
 
     [Test]
-    void MapKV_BrokenOnDrift(Tests::Context@ ctx) { MapKV_CheckBrokenOnDrift(); }
+    void MapKV_FirstMismatchResyncsBeforeFencing(Tests::Context@ ctx) { MapKV_CheckFirstMismatchResyncsBeforeFencing(); }
 
     [Test]
-    void MapKV_ObservationsArePerMap(Tests::Context@ ctx) { MapKV_CheckObservationsArePerMap(); }
+    void MapKV_ResyncClearsATransientMismatch(Tests::Context@ ctx) { MapKV_CheckResyncClearsATransientMismatch(); }
+
+    [Test]
+    void MapKV_StructuralFailureFencesImmediately(Tests::Context@ ctx) { MapKV_CheckStructuralFailureFencesImmediately(); }
+
+    [Test]
+    void MapKV_SuspendedTraitIsNotCompared(Tests::Context@ ctx) { MapKV_CheckSuspendedTraitIsNotCompared(); }
+
+    [Test]
+    void MapKV_SuspendedTraitExpires(Tests::Context@ ctx) { MapKV_CheckSuspendedTraitExpires(); }
+
+    [Test]
+    void MapKV_ScopeIsolatesReusedAddresses(Tests::Context@ ctx) { MapKV_CheckScopeIsolatesReusedAddresses(); }
 
     [Test]
     void MapKV_EchoVerifiesMemory(Tests::Context@ ctx) { MapKV_CheckEchoVerifiesMemory(); }
@@ -361,16 +550,25 @@ namespace Tests {
     void MapKV_EchoMismatchServesCache(Tests::Context@ ctx) { MapKV_CheckEchoMismatchServesCache(); }
 
     [Test]
+    void MapKV_PendingWriteSkipsComparison(Tests::Context@ ctx) { MapKV_CheckPendingWriteSkipsComparison(); }
+
+    [Test]
+    void MapKV_PendingWriteExpires(Tests::Context@ ctx) { MapKV_CheckPendingWriteExpires(); }
+
+    [Test]
     void MapKV_LargeEchoComparesLengthOnlyForAscii(Tests::Context@ ctx) { MapKV_CheckLargeEchoComparesLengthOnlyForAscii(); }
 
     [Test]
-    void MapKV_EchoCacheInvalidatedOnMapChange(Tests::Context@ ctx) { MapKV_CheckEchoCacheInvalidatedOnMapChange(); }
+    void MapKV_EchoCacheInvalidatedOnScopeChange(Tests::Context@ ctx) { MapKV_CheckEchoCacheInvalidatedOnScopeChange(); }
 
     [Test]
     void MapKV_BrokenReaderBlocksWithoutCache(Tests::Context@ ctx) { MapKV_CheckBrokenReaderBlocksWithoutCache(); }
 
     [Test]
     void MapKV_HealthyReaderNeedsNoCache(Tests::Context@ ctx) { MapKV_CheckHealthyReaderNeedsNoCache(); }
+
+    [Test]
+    void MapKV_ThrowingWalkFallsBackToEcho(Tests::Context@ ctx) { MapKV_CheckThrowingWalkFallsBackToEcho(); }
 }
 
 Tester@ Test_MapKV = Tester("MapKV", generateMapKVTests());
@@ -385,14 +583,21 @@ TestCase@[]@ generateMapKVTests() {
     ret.InsertLast(TestCase("bounds-safe string read", Tests::MapKV_CheckBoundsSafeStringRead));
     ret.InsertLast(TestCase("health unverified until observation", Tests::MapKV_CheckHealthUnverifiedUntilObservation));
     ret.InsertLast(TestCase("healthy when observations match", Tests::MapKV_CheckHealthyWhenObservationsMatch));
-    ret.InsertLast(TestCase("broken on drift", Tests::MapKV_CheckBrokenOnDrift));
-    ret.InsertLast(TestCase("observations are per map", Tests::MapKV_CheckObservationsArePerMap));
+    ret.InsertLast(TestCase("first mismatch resyncs before fencing", Tests::MapKV_CheckFirstMismatchResyncsBeforeFencing));
+    ret.InsertLast(TestCase("resync clears a transient mismatch", Tests::MapKV_CheckResyncClearsATransientMismatch));
+    ret.InsertLast(TestCase("structural failure fences immediately", Tests::MapKV_CheckStructuralFailureFencesImmediately));
+    ret.InsertLast(TestCase("suspended trait is not compared", Tests::MapKV_CheckSuspendedTraitIsNotCompared));
+    ret.InsertLast(TestCase("suspended trait expires", Tests::MapKV_CheckSuspendedTraitExpires));
+    ret.InsertLast(TestCase("scope isolates reused addresses", Tests::MapKV_CheckScopeIsolatesReusedAddresses));
     ret.InsertLast(TestCase("echo verifies memory", Tests::MapKV_CheckEchoVerifiesMemory));
     ret.InsertLast(TestCase("echo mismatch serves cache", Tests::MapKV_CheckEchoMismatchServesCache));
+    ret.InsertLast(TestCase("pending write skips comparison", Tests::MapKV_CheckPendingWriteSkipsComparison));
+    ret.InsertLast(TestCase("pending write expires", Tests::MapKV_CheckPendingWriteExpires));
     ret.InsertLast(TestCase("large echo compares length only for ascii", Tests::MapKV_CheckLargeEchoComparesLengthOnlyForAscii));
-    ret.InsertLast(TestCase("echo cache invalidated on map change", Tests::MapKV_CheckEchoCacheInvalidatedOnMapChange));
+    ret.InsertLast(TestCase("echo cache invalidated on scope change", Tests::MapKV_CheckEchoCacheInvalidatedOnScopeChange));
     ret.InsertLast(TestCase("broken reader blocks without cache", Tests::MapKV_CheckBrokenReaderBlocksWithoutCache));
     ret.InsertLast(TestCase("healthy reader needs no cache", Tests::MapKV_CheckHealthyReaderNeedsNoCache));
+    ret.InsertLast(TestCase("throwing walk falls back to echo", Tests::MapKV_CheckThrowingWalkFallsBackToEcho));
     return ret;
 }
 #endif

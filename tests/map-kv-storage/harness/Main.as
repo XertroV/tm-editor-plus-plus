@@ -1,8 +1,13 @@
 uint64 Dev_GetPointerForNod(CMwNod@ nod) { return NodPtr::Of(nod); }
 uint64 Dev_FindPatternCached(const string &in pattern) { return Dev::FindPattern(pattern); }
-// No editor plugin in this isolated harness: MapKVHealth only uses the handle
-// to scope its echo cache, and a detached metadata node has no echoes.
-namespace ToML { CGameEditorPluginMap@ GetPluginPMT() { return null; } }
+// No editor plugin in this isolated harness: MapKVHealth uses the handle only
+// to scope its records, a detached metadata node has no echoes, and there is
+// nothing to resync with.
+namespace ToML {
+    CGameEditorPluginMap@ GetPluginPMT() { return null; }
+    void ResyncPlease() {}
+}
+namespace FromML { bool metadataDisabled = false; }
 const uint16 O_ITEM_MODEL_Id = 0x28;
 namespace ItemBuilder { string NormPath(const string &in path) { return path.Replace("/", "\\"); } }
 void Check(bool ok, const string &in message) { if (!ok) throw(message); }
