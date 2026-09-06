@@ -1,11 +1,15 @@
+// Unpacks the engine's buffer; the dispatch itself lives in HandleEppEvent so
+// it can be driven from a test, which cannot construct an MwFastBuffer.
 void OnEppLayerCustomEvent(const string &in type, MwFastBuffer<wstring> &in rawData) {
-    FromML::lastEventTime = Time::Now;
     string[] data;
-    string dataStr;
     for (uint i = 0; i < rawData.Length; i++) {
         data.InsertLast(rawData[i]);
-        dataStr += (i > 0 ? ", " : "") + data[data.Length - 1];
     }
+    HandleEppEvent(type, data);
+}
+
+void HandleEppEvent(const string &in type, string[]@ data) {
+    FromML::lastEventTime = Time::Now;
     if (type == "MappingTime") {
         FromML::mappingTime = Text::ParseUInt(data[0]);
         FromML::mappingTimeMapping = Text::ParseUInt(data[1]);
@@ -24,8 +28,17 @@ void OnEppLayerCustomEvent(const string &in type, MwFastBuffer<wstring> &in rawD
         }
     } else if (type == "CustomColorTables") {
         FromML::_SetCustomColorTablesRaw(data[0]);
+        MapKVHealth::NoteTraitObservation(MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, data[0]);
     } else if (type == "MetadataDisabled") {
         FromML::metadataDisabled = data.Length > 0 && data[0] == "True";
+        if (data.Length > 0)
+            MapKVHealth::NoteTraitObservation(MapKVHealth::TRAIT_METADATA_DISABLED, data[0]);
+    } else if (type == "MapKVSet") {
+        // The editor plugin echoing back the value it just stored under this key.
+        if (data.Length > 1) MapKVHealth::NoteEcho(data[0], data[1]);
+    } else if (type == "MapKVSetLarge") {
+        // Same, for a value past the echo bound: only its length travels.
+        if (data.Length > 1) MapKVHealth::NoteEchoLength(data[0], Text::ParseUInt(data[1]));
     } else if (type == "EditorSaveInput") {
         // User pressed the editor's save input/button (pre-save, best-effort:
         // metadata writes queued now may land 1-2 frames later).

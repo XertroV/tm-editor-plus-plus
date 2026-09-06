@@ -127,6 +127,19 @@ Void ProcessIncomingMessages() {
 			// plain strings; source escaping is handled only by the sender.
 			declare metadata Text[Text] _EKV_ for Map;
 			_EKV_[InMsg[1]] = InMsg[2];
+			// Echo what the dictionary now holds, read back rather than repeated
+			// from the message, so AngelScript can check its memory read of this
+			// key against the receiver's own view of the store. Deliberately no
+			// enumeration of _EKV_ anywhere: declaring it creates it, and reads
+			// must never create map metadata.
+			if (TL::Length(_EKV_[InMsg[1]]) <= 262144) {
+				SendEvent("MapKVSet", [InMsg[1], _EKV_[InMsg[1]]]);
+			} else {
+				// Past the bound only the length travels; copying a multi-megabyte
+				// value through the event path on every write is not worth it, and
+				// size still catches a reader that is looking at the wrong entry.
+				SendEvent("MapKVSetLarge", [InMsg[1], ""^TL::Length(_EKV_[InMsg[1]])]);
+			}
 		}
 	}
 	EPP_MsgQueue.clear();
