@@ -64,10 +64,22 @@ map switch. Metadata-disabled maps ignore writes. Reads and map initialization
 do not create the dictionary.
 
 After applying a write, the editor plugin reads the value back out of the
-dictionary and echoes it to AngelScript as a `MapKVSet` event. Above 262144
+dictionary and echoes it to AngelScript as a `MapKVSet` event. Above 16384
 characters it sends only the length, as `MapKVSetLarge`. Nothing enumerates
 `_EKV_`, at plugin start or on request: declaring the dictionary would create
 it, and reads must never create metadata.
+
+That 16384 is provisional. It is the chunk size the inbound transport is already
+known to carry, chosen because nothing yet measures how large an argument
+`LayerCustomEvent` delivers intact, and a truncated echo would read as drift.
+The transport harness in `tests/map-kv-storage` is not that measurement: its
+`singleEvent.receivedBytes` of 8003 is 8000 bytes plus a three-byte ellipsis, a
+display cap in the MLHook-to-MCP result path it observes through, and it says
+nothing about what the editor plugin delivers to E++'s own interception. To
+raise it, measure first: write values of increasing length and confirm the
+echoed `TL::Length` matches what was sent. Then change the bound in
+`ml-scripts/EditorPlugin_EditorPlusPlus.Script.txt`, regenerate the script, and
+update the number here in the same commit.
 
 Writes are asynchronous. Re-read and compare the value after delivery, then save
 the map through the normal editor flow if disk persistence is required. Writing
@@ -216,8 +228,15 @@ A `MapKVSetLarge` entry holds only a length, so it can confirm size but never
 content, and can never answer a read. Its length is compared only when the value
 read from memory is pure ASCII, because ManiaScript's `TL::Length` counts
 characters while AngelScript's `string.Length` counts UTF-8 bytes and the two
-units coincide only there. A disagreeing ASCII length marks the reader Broken
-and the read throws, since there is no cached value to fall back on.
+units coincide only there.
+
+**A length disagreement never fences the reader.** Past the echo bound the echo
+travels a path nothing has measured, so a size mismatch is at least as likely to
+be a truncated or dropped echo as a bad read. The memory answer stands, the
+source stays `memory`, and the disagreement is recorded as a note the DEV Map KV
+tab shows. Fencing on it would hand an unproven transport the power to disable a
+working reader, which is the worse of the two failures. Raising the bound, per
+the measurement above, is what turns these into ordinary verified reads.
 
 ### Read sources
 
@@ -226,7 +245,7 @@ and the read throws, since there is no cached value to fall back on.
 | Value | Meaning |
 |---|---|
 | `memory-verified` | Read from memory and matched the value the editor plugin echoed |
-| `memory` | Read from memory with nothing to check it against, or checked only for size |
+| `memory` | Read from memory with nothing to check it against, checked only for size, or past the echo bound where a size disagreement is not acted on |
 | `ml-cache` | The memory reader is fenced off, or disagreed; the echo answered |
 | `unavailable` | No map open, or nothing trustworthy to answer with |
 
@@ -240,7 +259,9 @@ the health state machine, resync-before-fencing in both directions, immediate
 fencing on a structural failure, scope isolation of a reused map address and of
 a restarted editor plugin, pending writes and suspended reports and their
 expiry, the throw-to-echo fallback, echo handling for small and large writes,
-cache invalidation, and every read-source outcome. They use
+a large-value length disagreement leaving the reader working, a snapshot with no
+trait source, one verdict slot surviving reads alternating between maps, cache
+invalidation, and every read-source outcome. They use
 throw-style checks and run both as `[Test]` functions and as the `MapKV` Tester
 suite, which reports pass/fail lines to `Openplanet.log` on plugin load. No test
 reads or writes real map metadata: the memory tests build their own buffers with
