@@ -441,6 +441,12 @@ namespace MapKVHealth {
         return g_Echo.GetSize();
     }
 
+    // When a resync was last asked for, so a test can tell a rate-limited skip
+    // from a resync that was never attempted at all.
+    uint64 LastResyncAt() {
+        return g_LastResyncAt;
+    }
+
     // --- health state machine --------------------------------------------
 
     uint Evaluate(CGameCtnChallenge@ map, string &out reason) {
@@ -526,11 +532,18 @@ namespace MapKVHealth {
         MarkBroken(mismatch + " (still disagreeing after a resync)");
     }
 
-    // Ask the editor plugin to re-report everything, rate limited. Skipped when
-    // metadata is disabled for this map, where SendAllInfo would be declaring
-    // traits on a map whose owner asked for none.
+    // Ask the editor plugin to re-report everything, rate limited.
+    //
+    // Deliberately not gated on whether metadata is disabled for this map. The
+    // gate that used to be here made a real disagreement unfenceable on such a
+    // map: escalation needs a fresh report, only a resync produces one, and
+    // skipping it parked the reader at Unverified forever while reads kept
+    // answering from a walk already known to disagree. It also bought nothing.
+    // SendAllInfo declares its nine traits and runs unconditionally when the
+    // editor plugin starts on this map, so a resync creates no metadata that is
+    // not already there, and E++ itself resyncs a disabled map from the Clear
+    // Metadata button in Map_EditProps.
     void RequestResync() {
-        if (FromML::metadataDisabled) return;
         uint64 now = Time::Now;
         if (g_LastResyncAt != 0 && now - g_LastResyncAt < RESYNC_INTERVAL_MS) return;
         g_LastResyncAt = now;
