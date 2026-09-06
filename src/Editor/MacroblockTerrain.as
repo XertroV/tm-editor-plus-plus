@@ -38,7 +38,7 @@ namespace Editor {
 
     // Signature for default-cell detection and target matching: dir + surface
     // height + current index + zone names/heights, all base-relative. The
-    // surface height (TopHeight) is load-bearing: the Frontier carve and Flat
+    // surface height (TopHeight) distinguishes terrain shapes: the Frontier carve and Flat
     // fill gestures produce identical zone stacks that differ only in it.
     string GenealogySignature(CGameCtnZoneGenealogy@ gen) {
         string sig = uint(gen.Dir) + "|" + (gen.TopHeight - gen.BaseHeight) + "|" + gen.CurrentIndex + "|";
@@ -242,7 +242,7 @@ namespace Editor {
     // MARK: Ground-mode donor placement (terrain pass)
 
     // Terrain write buffers must outlive the async terrain apply (~1s), so we
-    // leak them intentionally (bounded).
+    // Keep them alive until the asynchronous apply completes (bounded).
     CustomBuffer@[] leakedTerrainWriteBufs;
     void LeakTerrainWriteBuf(CustomBuffer@ buf) {
         if (buf is null) return;
@@ -277,21 +277,15 @@ namespace Editor {
 
     MacroblockSpecPriv@[] _terrainPlaceRestoreQueue;
 
-    // Every pass (air, ground, terrain, delete) shares ONE donor macroblock,
-    // and terrain/ground passes restore it on a ~2s delay. Temp-writing while
-    // a restore is pending snapshots the polluted variant state, and the
-    // interleaved restores then re-leak variant AutoTerrains into a later
-    // air-mode place — which crashes the game (observed live 2026-08-29).
-    // Callers wait here before touching the donor.
+    // All passes share one donor; wait for asynchronous restores before reuse.
     void WaitForDonorRestores() {
         while (_terrainPlaceRestoreQueue.Length > 0) yield();
     }
 
     // Place just the terrain of a macroblock spec: builds a terrain-only copy,
     // temp-writes the donor's AutoTerrains buffers (blocks/items stay empty so
-    // nothing is double-placed), then ground-places the donor at the spec's min
-    // terrain XZ. Donor restore is delayed (~2s) because the terrain apply is
-    // async and reads mb+0x1F8 after the call.
+    // nothing is double-placed), then ground-places the donor at the spec's minimum
+    // terrain XZ. Restore is deferred until the asynchronous apply consumes it.
     // sig of a TerrainSpec in GenealogySignature's format (base-relative), so
     // spec targets can be compared against live grid cells
     string TerrainSpecSignature(TerrainSpec@ ts) {
@@ -997,12 +991,8 @@ namespace Editor {
             }
             _terrainPlaceRestoreQueue.RemoveAt(0);
         }
-        // Remote applies' grid changes are already known to whoever sent them
-        // -- resync the snapshot so GetTerrainDiffSpec does not echo them
-        // back. (Local edits made during the ~2s window are folded in too;
-        // callers diff on a dirty-flag debounce, so this is a bounded blind
-        // spot.) Queues with only local applies skip the refresh so their
-        // changes broadcast.
+        // Remote applies are already known to the sender; refresh the snapshot so they
+        // are not echoed. Local edits during the restore window are folded in.
         bool swallow = _terrainRestoreSwallow;
         _terrainRestoreSwallow = false;
         if (swallow && _terrainSnapshotTaken) RefreshTerrainSnapshot();
@@ -1071,8 +1061,8 @@ namespace Editor {
 
     // MARK: Terrain change tracking (for sync plugins, e.g. map-together)
     //
-    // The genealogy grid changes asynchronously (terraform lands ~1s after
-    // placement) and terrain "blocks" are invisible to the placement trackers
+    // The genealogy grid changes asynchronously and terrain blocks are invisible to
+    // placement trackers
     // (IsTerrain models are skipped, but set _terrainDirty). Sync flow:
     //   RefreshTerrainSnapshot() on editor/map entry;
     //   poll IsTerrainDirty(), debounce past the async apply, then

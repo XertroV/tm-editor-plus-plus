@@ -80,9 +80,8 @@ namespace Editor {
             ProcessBlock@ onPlaceBlock;
             // Called when a block is deleted from the map.
             ProcessBlock@ onDeleteBlock;
-            // Called when a terrain (BlockInfo.IsTerrain) block is added. Terraform is
-            // async: one gesture fires a burst of these over ~1s, and terrain blocks
-            // carry no genealogy info -- for settled state use onTerrainChanged.
+            // Called when a terrain block is added. Terrain blocks have no genealogy info;
+            // use onTerrainChanged for settled state.
             ProcessBlock@ onPlaceTerrainBlock;
             // Called when a terrain block is removed. See onPlaceTerrainBlock.
             ProcessBlock@ onDeleteTerrainBlock;
@@ -91,7 +90,7 @@ namespace Editor {
             // resync/apply is pending). Sync consumers use it to checkpoint state
             // ahead of the settled diff.
             CoroutineFunc@ onTerrainDirty;
-            // Called after terrain edits settle (~1.2s debounce) with a terrain-only
+            // Called after terrain edits settle (two quiet frames) with a terrain-only
             // MacroblockSpec diff of the changed cells. Registering this makes E++ the
             // owner of the terrain snapshot: do NOT poll GetTerrainDiffSpec yourself.
             ProcessTerrainChanged@ onTerrainChanged;

@@ -71,8 +71,8 @@ class ML_Event {
     string type;
     string[]@ data;
     // Only map key-value messages use these handles; they never follow a new map.
-    CGameCtnChallenge@ kvMap;
-    CGameEditorPluginMap@ kvPlugin;
+    uint64 kvMapPtr = 0;
+    uint64 kvPluginPtr = 0;
     ML_Event(const string &in type, string[]@ data) {
         @this.data = data;
         this.type = type;
@@ -127,10 +127,11 @@ namespace ToML {
         return false;
     }
 
-    bool MapKVTargetIsCurrent(CGameCtnChallenge@ map, CGameEditorPluginMap@ plugin) {
+    bool MapKVTargetIsCurrent(uint64 mapPtr, uint64 pluginPtr) {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        return map !is null && plugin !is null && editor !is null
-            && editor.Challenge is map && GetPluginPMT() is plugin;
+        return mapPtr != 0 && pluginPtr != 0 && editor !is null
+            && Dev_GetPointerForNod(editor.Challenge) == mapPtr
+            && Dev_GetPointerForNod(GetPluginPMT()) == pluginPtr;
     }
 
     // Escape the injected ManiaScript source, not the stored value. Splitting
@@ -161,8 +162,8 @@ namespace ToML {
         auto plugin = GetPluginPMT();
         if (plugin is null) throw("E++ supporting editor plugin is unavailable");
         // Store raw values; the wire serializer escapes source syntax separately.
-        @message.kvMap = editor.Challenge;
-        @message.kvPlugin = plugin;
+        message.kvMapPtr = Dev_GetPointerForNod(editor.Challenge);
+        message.kvPluginPtr = Dev_GetPointerForNod(plugin);
         CoalesceMapKVMessage(queued, message);
         Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, ClearSendQueue);
     }
@@ -173,7 +174,7 @@ namespace ToML {
     void ClearSendQueue() {
         for (int i = int(queued.Length) - 1; i >= 0; i--) {
             auto msg = queued[i];
-            if (msg.type == "SetMapKV" && !MapKVTargetIsCurrent(msg.kvMap, msg.kvPlugin)) queued.RemoveAt(i);
+            if (msg.type == "SetMapKV" && !MapKVTargetIsCurrent(msg.kvMapPtr, msg.kvPluginPtr)) queued.RemoveAt(i);
         }
         if (queued.Length == 0) return;
         auto pluginPMT = GetPluginPMT();
