@@ -187,6 +187,10 @@ namespace MapKVHealth {
     uint g_SuspectReports = 0;
     uint64 g_LastResyncAt = 0;
 
+    // The last read that threw, and when. See NoteReadThrew.
+    string g_ThrowSuspect;
+    uint64 g_ThrowSuspectAt = 0;
+
     void Reset() {
         @g_Scope = Scope();
         g_Observations.RemoveRange(0, g_Observations.Length);
@@ -197,8 +201,34 @@ namespace MapKVHealth {
         g_CheckedAt = 0;
         g_CheckedSeq = 0;
         g_LastResyncAt = 0;
+        g_ThrowSuspect = "";
+        g_ThrowSuspectAt = 0;
         ClearSuspicion();
         @g_TraitSource = TraitSource();
+    }
+
+    // A read that threw is not by itself a broken reader. A walk can fail once
+    // against a map being torn down under it, and two never-saved maps share
+    // their identity strings (see MapIdentity), so a colliding scope can carry
+    // such a failure into a healthy session. The same read has to fail twice
+    // before the reader is fenced. Unlike a value disagreement this waits on
+    // nothing from the editor plugin, so it needs no resync, only a repeat, and
+    // it lapses after PENDING_TIMEOUT_MS so two unrelated failures far apart
+    // are not mistaken for one recurring fault. Returns true when the caller
+    // should fence. Not cleared by an unrelated successful check: the drift
+    // check reads scalar rows and a key read walks the pairs buffer, so one
+    // working path says nothing about the other.
+    bool NoteReadThrew(const string &in id) {
+        uint64 now = Time::Now;
+        bool repeated = g_ThrowSuspect == id && now - g_ThrowSuspectAt < PENDING_TIMEOUT_MS;
+        g_ThrowSuspect = id;
+        g_ThrowSuspectAt = now;
+        return repeated;
+    }
+
+    bool NoteReadThrewIn(Scope@ scope, const string &in id) {
+        if (!scope.IsValid || !g_Scope.Matches(scope)) return false;
+        return NoteReadThrew(id);
     }
 
     void SetTraitSource(TraitSource@ source) {
@@ -222,6 +252,8 @@ namespace MapKVHealth {
         string suspectTrait;
         uint suspectReports;
         uint64 lastResyncAt;
+        string throwSuspect;
+        uint64 throwSuspectAt;
         TraitSource@ traitSource;
     }
 
@@ -245,6 +277,8 @@ namespace MapKVHealth {
         snapshot.suspectTrait = g_SuspectTrait;
         snapshot.suspectReports = g_SuspectReports;
         snapshot.lastResyncAt = g_LastResyncAt;
+        snapshot.throwSuspect = g_ThrowSuspect;
+        snapshot.throwSuspectAt = g_ThrowSuspectAt;
         @snapshot.traitSource = g_TraitSource;
         return snapshot;
     }
@@ -272,6 +306,8 @@ namespace MapKVHealth {
         g_SuspectTrait = snapshot.suspectTrait;
         g_SuspectReports = snapshot.suspectReports;
         g_LastResyncAt = snapshot.lastResyncAt;
+        g_ThrowSuspect = snapshot.throwSuspect;
+        g_ThrowSuspectAt = snapshot.throwSuspectAt;
         SetTraitSource(snapshot.traitSource);
     }
 
@@ -298,6 +334,8 @@ namespace MapKVHealth {
         g_Reason = UNVERIFIED_REASON;
         g_CheckedAt = 0;
         g_CheckedSeq = 0;
+        g_ThrowSuspect = "";
+        g_ThrowSuspectAt = 0;
         ClearSuspicion();
     }
 
@@ -500,10 +538,16 @@ namespace MapKVHealth {
             g_Reason = compared > 0 ? "" : UNVERIFIED_REASON;
             return;
         }
-        // A read that threw is not a latency artifact: the walk itself failed,
-        // so there is nothing to wait for.
+        // A read that threw is not a latency artifact, so it waits on no report
+        // from the editor plugin, but it still has to happen twice before it
+        // fences: one throw against a map being freed must not outlive the map.
         if (structural) {
-            MarkBroken(mismatch);
+            if (NoteReadThrew("trait:" + mismatchTrait)) {
+                MarkBroken(mismatch);
+            } else {
+                g_State = STATE_UNVERIFIED;
+                g_Reason = "rechecking after a failed read: " + mismatch;
+            }
             return;
         }
         // A first disagreement is not proof. The receiver applies a trait write

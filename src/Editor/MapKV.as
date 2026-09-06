@@ -299,7 +299,12 @@ namespace MapKV {
                 present = g_ValueSource.TryRead(map, normalizedKey, value);
             } catch {
                 reason = "reading " + normalizedKey + " threw: " + getExceptionInfo();
-                MapKVHealth::MarkBrokenIn(scope, reason);
+                // Fenced only on a repeat, per MapKVHealth::NoteReadThrew: one
+                // throw can be a map torn down mid-walk. Either way this read
+                // cannot be answered from memory, so it falls through to the
+                // echo, and `reason` blocks it if no echo can answer.
+                if (MapKVHealth::NoteReadThrewIn(scope, "key:" + normalizedKey))
+                    MapKVHealth::MarkBrokenIn(scope, reason);
                 usable = false;
                 present = false;
                 value = "";
@@ -349,9 +354,11 @@ namespace Editor {
     // Where a read of this key gets its answer, for a consumer that wants to
     // know how much the value is worth: "memory-verified" (memory agreed with
     // the value the editor plugin reported storing), "memory" (nothing to check
-    // it against), "ml-cache" (the memory reader is fenced off and the editor
-    // plugin's echo answered instead) or "unavailable" (no map, or nothing
-    // trustworthy to answer with). Never throws.
+    // it against, or only its size was checkable), "ml-cache" (the echo
+    // answered, either because the memory reader is fenced off or because it
+    // returned a whole value that disagreed with what the editor plugin
+    // stored) or "unavailable" (no map, or nothing trustworthy to answer
+    // with). Never throws.
     string Get_Map_KVReadSource(const string &in key) {
         try {
             auto map = MapKV::CurrentMap();
