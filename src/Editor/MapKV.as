@@ -303,7 +303,7 @@ namespace MapKV {
                 // throw can be a map torn down mid-walk. Either way this read
                 // cannot be answered from memory, so it falls through to the
                 // echo, and `reason` blocks it if no echo can answer.
-                if (MapKVHealth::NoteReadThrewIn(scope, "key:" + normalizedKey))
+                if (MapKVHealth::NoteReadThrewIn(scope, MapKVHealth::THROW_KIND_KEY, normalizedKey))
                     MapKVHealth::MarkBrokenIn(scope, reason);
                 usable = false;
                 present = false;

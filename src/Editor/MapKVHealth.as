@@ -187,9 +187,11 @@ namespace MapKVHealth {
     uint g_SuspectReports = 0;
     uint64 g_LastResyncAt = 0;
 
-    // The last read that threw, and when. See NoteReadThrew.
-    string g_ThrowSuspect;
-    uint64 g_ThrowSuspectAt = 0;
+    // The last read of each kind that threw, and when. See NoteReadThrew.
+    const string THROW_KIND_TRAIT = "trait";
+    const string THROW_KIND_KEY = "key";
+    string[] g_ThrowSuspect = {"", ""};
+    uint64[] g_ThrowSuspectAt = {0, 0};
     // When records were last expired, so one read does not sweep twice.
     uint64 g_ExpiredAt = 0;
 
@@ -203,8 +205,7 @@ namespace MapKVHealth {
         g_CheckedAt = 0;
         g_CheckedSeq = 0;
         g_LastResyncAt = 0;
-        g_ThrowSuspect = "";
-        g_ThrowSuspectAt = 0;
+        ClearThrowSuspects();
         g_ExpiredAt = 0;
         ClearSuspicion();
         @g_TraitSource = TraitSource();
@@ -221,17 +222,38 @@ namespace MapKVHealth {
     // should fence. Not cleared by an unrelated successful check: the drift
     // check reads scalar rows and a key read walks the pairs buffer, so one
     // working path says nothing about the other.
-    bool NoteReadThrew(const string &in id) {
+    //
+    // Trait reads and key reads keep separate slots. Sharing one let an
+    // alternating cadence, a drift check and then a key read both throwing,
+    // overwrite each other so neither ever saw a repeat and nothing fenced.
+    // Two different keys failing alternately still overwrite one another,
+    // which is the accepted edge: the slots stay bounded at two, and a buffer
+    // broken badly enough to fail every key also fails the drift check's trait
+    // reads, which fence on their own.
+    uint ThrowSlot(const string &in kind) {
+        return kind == THROW_KIND_KEY ? 1 : 0;
+    }
+
+    bool NoteReadThrew(const string &in kind, const string &in id) {
+        uint slot = ThrowSlot(kind);
         uint64 now = Time::Now;
-        bool repeated = g_ThrowSuspect == id && now - g_ThrowSuspectAt < PENDING_TIMEOUT_MS;
-        g_ThrowSuspect = id;
-        g_ThrowSuspectAt = now;
+        bool repeated = g_ThrowSuspect[slot] == id
+            && now - g_ThrowSuspectAt[slot] < PENDING_TIMEOUT_MS;
+        g_ThrowSuspect[slot] = id;
+        g_ThrowSuspectAt[slot] = now;
         return repeated;
     }
 
-    bool NoteReadThrewIn(Scope@ scope, const string &in id) {
+    bool NoteReadThrewIn(Scope@ scope, const string &in kind, const string &in id) {
         if (!scope.IsValid || !g_Scope.Matches(scope)) return false;
-        return NoteReadThrew(id);
+        return NoteReadThrew(kind, id);
+    }
+
+    void ClearThrowSuspects() {
+        for (uint i = 0; i < g_ThrowSuspect.Length; i++) {
+            g_ThrowSuspect[i] = "";
+            g_ThrowSuspectAt[i] = 0;
+        }
     }
 
     void SetTraitSource(TraitSource@ source) {
@@ -255,8 +277,8 @@ namespace MapKVHealth {
         string suspectTrait;
         uint suspectReports;
         uint64 lastResyncAt;
-        string throwSuspect;
-        uint64 throwSuspectAt;
+        string[] throwSuspect;
+        uint64[] throwSuspectAt;
         TraitSource@ traitSource;
     }
 
@@ -280,8 +302,10 @@ namespace MapKVHealth {
         snapshot.suspectTrait = g_SuspectTrait;
         snapshot.suspectReports = g_SuspectReports;
         snapshot.lastResyncAt = g_LastResyncAt;
-        snapshot.throwSuspect = g_ThrowSuspect;
-        snapshot.throwSuspectAt = g_ThrowSuspectAt;
+        for (uint i = 0; i < g_ThrowSuspect.Length; i++) {
+            snapshot.throwSuspect.InsertLast(g_ThrowSuspect[i]);
+            snapshot.throwSuspectAt.InsertLast(g_ThrowSuspectAt[i]);
+        }
         @snapshot.traitSource = g_TraitSource;
         return snapshot;
     }
@@ -309,8 +333,10 @@ namespace MapKVHealth {
         g_SuspectTrait = snapshot.suspectTrait;
         g_SuspectReports = snapshot.suspectReports;
         g_LastResyncAt = snapshot.lastResyncAt;
-        g_ThrowSuspect = snapshot.throwSuspect;
-        g_ThrowSuspectAt = snapshot.throwSuspectAt;
+        for (uint i = 0; i < g_ThrowSuspect.Length && i < snapshot.throwSuspect.Length; i++) {
+            g_ThrowSuspect[i] = snapshot.throwSuspect[i];
+            g_ThrowSuspectAt[i] = snapshot.throwSuspectAt[i];
+        }
         SetTraitSource(snapshot.traitSource);
     }
 
@@ -344,8 +370,7 @@ namespace MapKVHealth {
         g_Reason = UNVERIFIED_REASON;
         g_CheckedAt = 0;
         g_CheckedSeq = 0;
-        g_ThrowSuspect = "";
-        g_ThrowSuspectAt = 0;
+        ClearThrowSuspects();
         ClearSuspicion();
     }
 
@@ -560,7 +585,7 @@ namespace MapKVHealth {
         // from the editor plugin, but it still has to happen twice before it
         // fences: one throw against a map being freed must not outlive the map.
         if (structural) {
-            if (NoteReadThrew("trait:" + mismatchTrait)) {
+            if (NoteReadThrew(THROW_KIND_TRAIT, mismatchTrait)) {
                 MarkBroken(mismatch);
             } else {
                 g_State = STATE_UNVERIFIED;
@@ -600,11 +625,15 @@ namespace MapKVHealth {
     // gate that used to be here made a real disagreement unfenceable on such a
     // map: escalation needs a fresh report, only a resync produces one, and
     // skipping it parked the reader at Unverified forever while reads kept
-    // answering from a walk already known to disagree. It also bought nothing.
-    // SendAllInfo declares its nine traits and runs unconditionally when the
-    // editor plugin starts on this map, so a resync creates no metadata that is
-    // not already there, and E++ itself resyncs a disabled map from the Clear
-    // Metadata button in Map_EditProps.
+    // answering from a walk already known to disagree.
+    //
+    // It declares nothing new either. On a disabled map the editor plugin runs
+    // a reduced loop that skips the start-up SendAllInfo, but that loop still
+    // answers ResyncPlease with SendAllInfo, and this is reached only once a
+    // disagreement is suspected, which takes an observation, which takes an
+    // earlier SendAllInfo on this same map. So its nine traits are already
+    // declared by the time any resync goes out. E++ itself resyncs a disabled
+    // map from the Clear Metadata button in Map_EditProps.
     void RequestResync() {
         uint64 now = Time::Now;
         if (g_LastResyncAt != 0 && now - g_LastResyncAt < RESYNC_INTERVAL_MS) return;

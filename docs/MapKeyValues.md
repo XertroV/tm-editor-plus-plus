@@ -190,9 +190,11 @@ rather than either fencing the reader or muting it forever.
 same trait, still disagreeing, to fence anything. The resync is sent whether or
 not metadata is disabled for the map: escalation needs a fresh report and only a
 resync produces one, so skipping it there left a genuinely drifted reader parked
-at Unverified while reads kept answering from the drifted walk. It costs
-nothing, because `SendAllInfo` declares the same traits and already runs when
-the editor plugin starts on that map.
+at Unverified while reads kept answering from the drifted walk. It declares no
+metadata either. A disabled map runs a reduced editor-plugin loop that skips the
+start-up `SendAllInfo`, but that loop still answers `ResyncPlease` with it, and a
+resync only ever goes out once a disagreement is suspected, which takes an
+observation, which takes an earlier `SendAllInfo` on the same map.
 
 **A read that threw fences only if it throws again.** It waits on no report,
 since a failed walk is not a latency artifact, but one throw can be a map being
@@ -200,7 +202,9 @@ torn down under the read, and two never-saved maps share their identity strings.
 So the same trait or key has to fail twice, within ten seconds and in the same
 scope, before the reader is fenced. A successful check elsewhere does not clear
 that suspicion: the drift check reads scalar rows while a key read walks the
-pairs buffer, and one working path says nothing about the other.
+pairs buffer, and one working path says nothing about the other. Trait reads and
+key reads keep separate slots, so a cadence that alternates between them still
+fences each within two strikes of its own kind.
 
 **Everything is scoped, and a map pointer is not a scope.** The allocator hands
 a freed map's address to the next one, so records are keyed on the map pointer,
@@ -269,7 +273,8 @@ invalid keys, per-key coalescing, whole-value transport beyond the former chunk
 size, escaping/Unicode, empty values, null reads, the compound type-id gate, the
 array-versus-dictionary pair check, bounds-safe reads over hand-built buffers,
 the health state machine, resync-before-fencing in both directions, fencing on a
-repeated structural failure, fencing on a metadata-disabled map, a transient
+repeated structural failure, alternating trait and key failures each fencing on
+their own second strike, fencing on a metadata-disabled map, a transient
 empty plugin pointer not counting as a map change, scope isolation of a reused
 map address and of
 a restarted editor plugin, pending writes and suspended reports and their

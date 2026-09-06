@@ -283,6 +283,50 @@ namespace Tests {
         MapKVCheck(second.Contains("threw"), "the reason says it threw: " + second);
     }
 
+    // Trait reads and key reads keep separate suspect slots. With one shared
+    // slot an alternating cadence -- a drift check, then a key read, both
+    // throwing -- overwrote it each time, so neither kind ever recorded a
+    // repeat and a genuinely broken reader was never fenced.
+    void MapKV_CheckAlternatingThrowsStillFenceEachKind() {
+        auto saved = MapKVHealth::Snapshot();
+        string traitReason;
+        MapKVHealth::Reset();
+        MapKVHealth::SetTraitSource(ThrowingTraitSource());
+        MapKV::SetValueSource(ThrowingValueSource());
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_METADATA_DISABLED, "False");
+        // Trait strike one.
+        uint afterTraitOne = MapKVHealth::EvaluateFor(TestScopeA(), null, traitReason);
+        // A key read throwing in between must not clear the trait's strike.
+        MapKV::ResolveKeyIn(TestScopeA(), null, "_EKV_Plugin.a");
+        // A fresh report is what lets the next evaluation recheck at all.
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_METADATA_DISABLED, "False");
+        // Trait strike two, which must fence.
+        uint afterTraitTwo = MapKVHealth::EvaluateFor(TestScopeA(), null, traitReason);
+
+        // The other direction: a key fences on its own second strike while a
+        // trait read throws in between.
+        string keyReason;
+        MapKVHealth::Reset();
+        MapKVHealth::SetTraitSource(ThrowingTraitSource());
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_METADATA_DISABLED, "False");
+        // This resolve evaluates first, which is the interleaved trait strike,
+        // then takes key strike one.
+        MapKV::ResolveKeyIn(TestScopeA(), null, "_EKV_Plugin.a");
+        uint afterKeyOne = MapKVHealth::EvaluateFor(TestScopeA(), null, keyReason);
+        MapKV::ResolveKeyIn(TestScopeA(), null, "_EKV_Plugin.a");
+        uint afterKeyTwo = MapKVHealth::EvaluateFor(TestScopeA(), null, keyReason);
+        MapKV::SetValueSource(null);
+        MapKVHealth::Restore(saved);
+        MapKVCheck(afterTraitOne == MapKVHealth::STATE_UNVERIFIED, "one trait failure is not a broken reader");
+        MapKVCheck(afterTraitTwo == MapKVHealth::STATE_BROKEN,
+            "a trait failing twice fences even though a key read threw in between: " + traitReason);
+        MapKVCheck(traitReason.Contains(MapKVHealth::TRAIT_METADATA_DISABLED), "naming the trait: " + traitReason);
+        MapKVCheck(afterKeyOne == MapKVHealth::STATE_UNVERIFIED, "one key failure is not a broken reader");
+        MapKVCheck(afterKeyTwo == MapKVHealth::STATE_BROKEN,
+            "a key failing twice fences even though a trait read threw in between: " + keyReason);
+        MapKVCheck(keyReason.Contains("_EKV_Plugin.a"), "naming the key: " + keyReason);
+    }
+
     // Escalation from suspicion to Broken needs a fresh report, and only a
     // resync produces one. The resync used to be skipped whenever metadata was
     // disabled, which left a genuinely drifted reader parked at Unverified on
@@ -684,6 +728,9 @@ namespace Tests {
     void MapKV_StructuralFailureFencesOnRepeat(Tests::Context@ ctx) { MapKV_CheckStructuralFailureFencesOnRepeat(); }
 
     [Test]
+    void MapKV_AlternatingThrowsStillFenceEachKind(Tests::Context@ ctx) { MapKV_CheckAlternatingThrowsStillFenceEachKind(); }
+
+    [Test]
     void MapKV_DisabledMetadataMapStillFences(Tests::Context@ ctx) { MapKV_CheckDisabledMetadataMapStillFences(); }
 
     [Test]
@@ -750,6 +797,7 @@ TestCase@[]@ generateMapKVTests() {
     ret.InsertLast(TestCase("first mismatch resyncs before fencing", Tests::MapKV_CheckFirstMismatchResyncsBeforeFencing));
     ret.InsertLast(TestCase("resync clears a transient mismatch", Tests::MapKV_CheckResyncClearsATransientMismatch));
     ret.InsertLast(TestCase("structural failure fences on repeat", Tests::MapKV_CheckStructuralFailureFencesOnRepeat));
+    ret.InsertLast(TestCase("alternating throws still fence each kind", Tests::MapKV_CheckAlternatingThrowsStillFenceEachKind));
     ret.InsertLast(TestCase("disabled metadata map still fences", Tests::MapKV_CheckDisabledMetadataMapStillFences));
     ret.InsertLast(TestCase("transient null plugin pointer keeps scope", Tests::MapKV_CheckTransientNullPluginPointerKeepsScope));
     ret.InsertLast(TestCase("suspended trait is not compared", Tests::MapKV_CheckSuspendedTraitIsNotCompared));
