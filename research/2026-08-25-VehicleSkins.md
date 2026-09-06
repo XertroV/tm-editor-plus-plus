@@ -2,7 +2,7 @@
 
 How official Test-mode silver, included/royal zips, and Nadeo-hosted URL skins are supposed to land on a `CSceneVehicleVis`, and why the current ManageVehicles car looks unfinished light metallic. Live 2026-08-25. Stay out of Test. Do not call `bind` / `createSkinned`.
 
-Prior: [`2026-08-24-SceneVehicleInstances.md`](2026-08-24-SceneVehicleInstances.md), [`2026-08-25-HmsVisInstances.md`](2026-08-25-HmsVisInstances.md), [`2026-08-24-CharacterPilotSkins.md`](2026-08-24-CharacterPilotSkins.md). Item/screen pack-desc (not cars): [`ScreenUrlSkins.md`](ScreenUrlSkins.md). Sibling naming: `tm-menu-bg-scene-randomizer` `ItemCreate(..., "CarSport", "Skins\\Models\\CarSport\\Stadium_AUS.zip", SkinUrl)`, `tm-skins-inspector` `Model_CarSport_SkinName` / `SkinUrl`.
+Prior: [`2026-08-24-SceneVehicleInstances.md`](../../../research-priv/2026-08-24-SceneVehicleInstances.md), [`2026-08-25-HmsVisInstances.md`](2026-08-25-HmsVisInstances.md), [`2026-08-24-CharacterPilotSkins.md`](2026-08-24-CharacterPilotSkins.md). Item/screen pack-desc (not cars): [`ScreenUrlSkins.md`](ScreenUrlSkins.md). Sibling naming: `tm-menu-bg-scene-randomizer` `ItemCreate(..., "CarSport", "Skins\\Models\\CarSport\\Stadium_AUS.zip", SkinUrl)`, `tm-skins-inspector` `Model_CarSport_SkinName` / `SkinUrl`.
 
 ## Short answers
 

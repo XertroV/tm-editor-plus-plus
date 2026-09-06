@@ -9,7 +9,6 @@ namespace Editor {
 
     // Set the editor cursor to a world position (block cursor free pos, coord, snapped loc; item cursor pos)
     import void SetAllCursorPos(vec3 pos) from "Editor";
-    import nat3 PosToCoord(vec3 pos) from "Editor";
 
     // None = 0, Normal = 1, FreeGround = 2, Free = 3
     import int GetItemPlacementModeInt(bool checkEditMode = true, bool checkPlacementMode = true) from "Editor";
@@ -49,6 +48,12 @@ namespace Editor {
     import vec3 GetSelectedItemSize(CGameCtnEditorFree@ editor) from "Editor";
     import CGameCtnBlock@ GetPickedBlock() from "Editor";
     import vec3 GetSelectedMacroblockSize(CGameCtnEditorFree@ editor) from "Editor";
+
+    // Saves the map to its existing filename via PluginMapType.SaveMap and
+    // restores the MapName afterwards (the save can clobber it). Returns false
+    // (with a warning) if the map has never been saved. Note: a programmatic
+    // save raises MapSavedOrSaveCancelled like any other save.
+    import bool SaveMapSameName(CGameCtnEditorFree@ editor) from "Editor";
 
     // Some special things only E++ can do really or best maintained in 1 place
     import void OpenItemEditor(CGameCtnEditorFree@ editor, CGameCtnAnchoredObject@ nodToEdit) from "Editor";
@@ -125,4 +130,9 @@ namespace Editor {
     import void LeaveCurrentItemEditor() from "Editor";
     // Magic save+reload; starts a coroutine (returns immediately).
     import void SaveAndReloadItemEditorAsync() from "Editor";
+    import void ReloadCurrentItemEditorItemAsync() from "Editor";
+    import void SaveItemAsEditorAsync(const string &in path) from "Editor";
+    import void ZeroCurrentItemModelFids(bool pushMatMod = true) from "Editor";
+    import void ZeroCurrentItemModelFidsKeepMaterials(bool pushMatMod = true) from "Editor";
+    import uint32 ItemNameToMwId(const string &in name) from "Editor";
 }

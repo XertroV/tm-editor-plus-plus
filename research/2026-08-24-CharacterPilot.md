@@ -2,6 +2,12 @@
 
 Ghidra (`Trackmania.exe` @ `0x140000000`) 2026-08-24. Skins/sync: [`2026-08-24-CharacterPilotSkins.md`](2026-08-24-CharacterPilotSkins.md). Rigs: [`2026-08-24-CharacterPilotRigs.md`](2026-08-24-CharacterPilotRigs.md).
 
+Gender/variant follow-up (2026-09-06):
+[`CharacterPilotGender`](2026-09-03-CharacterPilotGender.md) documents the
+live-verified CharVis → ModelKit cache → resolved Gender lookup, SkinOptions
+grammar, and the distinction between player preference and selected assets.
+The painter helper below has been renamed to reflect its actual role.
+
 ## Short answers
 
 | Question | Answer |
@@ -52,7 +58,7 @@ Secondary (only if Pilot is *not* a vehicle phy): `CSmPlayer_GetCharPhyFlagsFrom
    - `CarSport` → `\Vehicles\Items\CarSport.Item.gbx`
    - same table for Snow / Rally / Desert and the TM2 ObjectInfo cars.
 4. **Map model list.** `FUN_140d05db0` builds the playground model array. If the **first** model is `CarSport` / `CarDesert` / `CarRally` / `CarSnow`, it **also** loads CharacterPilot as a sidecar at `map+0x210` / `+0x218` (driver body on the car). If the first model **is** CharacterPilot, that car-check fails and no extra car is injected.
-5. **Skin list (not spawn).** `CTrackMania_CopyModelListSkipCharacterPilot` (`0x140cc1690`) copies the title model list **without** CharacterPilot for player-info skins. `CTrackMania_EnsureCarSportAndCharacterPilotSkinSlots` (`0x140cc10e0`) **adds** a CharacterPilot skin slot when CarSport is present. `VehicleSkin_AssignCarSportOrCharacterPilot` (`0x140c5f620`) still special-cases the two MwIds. These keep the Pilot **skin** working on a car vis-state.
+5. **Skin list (not spawn).** `CTrackMania_CopyModelListSkipCharacterPilot` (`0x140cc1690`) copies the title model list **without** CharacterPilot for player-info skins. `CTrackMania_EnsureCarSportAndCharacterPilotSkinSlots` (`0x140cc10e0`) **adds** a CharacterPilot skin slot when CarSport is present. Separately, `SkinPainter_BuildCarOrPilotSkinDescriptor` (`0x140c5f620`, formerly `VehicleSkin_AssignCarSportOrCharacterPilot`) builds painter descriptors; its Male/Female suffix checks are not the runtime pilot selector. Runtime variants are selected through ModelKit and SkinOptions; see the gender follow-up.
 6. **Phy choice.** `CSmArenaPhysics_Players_SyncPhyFromItem` `IsA`s the map item as `0x2e01c000` (vehicle) vs `0x2e028000` (character). Vehicle-transform-era maps put CharacterPilot through the vehicle branch → skip above.
 
 SM script `SpawnPlayer` (`0x1413442a0` thunk) still hardcodes type **4** into `FUN_141344190` → `FUN_140bf3f60` slot `this+0xbc`. Race / TM playground does **not** use that; it uses the map player-model item + `SyncPhyFromItem`. `SpawnPlayer_InVehicle` (`0x141344be0`) always goes through vehicle spawn (`FUN_141340f00` → `FUN_1412ccc90`).
@@ -135,7 +141,7 @@ Live check (when TM is up):
 
 | Addr | Name |
 |---|---|
-| `0x140c5f620` | `VehicleSkin_AssignCarSportOrCharacterPilot` |
+| `0x140c5f620` | `SkinPainter_BuildCarOrPilotSkinDescriptor` (renamed 2026-09-06) |
 | `0x140cd5590` | `NGameVehicle_ResolveVehicleId` |
 | `0x140cc10e0` | `CTrackMania_EnsureCarSportAndCharacterPilotSkinSlots` |
 | `0x140cc1690` | `CTrackMania_CopyModelListSkipCharacterPilot` |

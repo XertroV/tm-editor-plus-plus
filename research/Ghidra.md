@@ -52,7 +52,7 @@ research/ghidra_api.sh POST /endpoint '{"json":"body"}' program=Trackmania.exe
 
 GET query keys are split and each is `--data-urlencode`d. Do not hand-build a single encoded blob.
 
-List endpoints: `GET /mcp/schema` (large). Useful ones:
+List endpoints: `GET /mcp/schema` (large — 200+ endpoints; the tables here are a curated working set, not the full list). Useful ones:
 
 | Call | Use |
 |---|---|
@@ -71,6 +71,48 @@ List endpoints: `GET /mcp/schema` (large). Useful ones:
 `/get_function_callers` wants `address=` or `name=`. `function=` is rejected.
 
 Name functions after the game's own log string when one exists (`FUN_140117690(..., "S_DownloadFavoriteClubItems")` → that name). Underscores for `::` (`NGameItemUtils_InstallFavoriteClubItemArticles`). The API may warn about PascalCase; keep the Nadeo spelling anyway.
+
+### Data etiquette endpoints (2026-09-01)
+
+The schema has far more than the table above (`GET /mcp/schema`). Working set for globals/structs/enums:
+
+| Call | Notes |
+|---|---|
+| `POST /rename_global_variable` | `{"old_name":"DAT_...","new_name":"g_dw..."}`. Enforces Hungarian prefixes after `g_`: `dw`, `n`, `p`, `sz`, `ab`, `pfn` (`g_aFoo`, `g_adwFoo` are REJECTED — use `g_dwFoo` / `g_abFoo`). |
+| `POST /set_comment` | `{"address","comment","type":"plate"}` — works on **data** addresses too (unlike set_plate_comment). |
+| `POST /create_enum` | `{"name","size":4,"values":{Name:val,...}}`. Keeps Nadeo CamelCase (warns only). Enum member names must be unique — suffix dups (`Fall_Dup`). |
+| `POST /create_struct` | **IGNORES the `offset` field** — always packs sequentially. Useless for real layouts. |
+| `POST /add_struct_field` | Also ignores its `offset` param (packs at end). |
+| `POST /delete_data_type` | `{"type_name": ...}` (not `name`). |
+| `GET /get_struct_layout` | `struct_name=` — verify field offsets/sizes after any struct write. |
+| `GET /get_enum_values` | `enum_name=` — verify an enum actually landed. |
+| `POST /run_script_inline` | Enabled on x-left. Full Java, GhidraScript body: **no method definitions, no `taskMonitor` symbol**; top-level `import ghidra.program.model.data.*;` lines ARE accepted. This is the only way to build structs at real offsets: `new StructureDataType(cat,name,0)`, `setPackingEnabled(false)`, `growStructure(size)`, then **`replaceAtOffset`** (NOT `insertAtOffset` — that grows/shrinks and shifts). Embedding a composite at an offset inside another struct silently fails in this build — put it in the struct `setDescription` / plate instead. |
+
+### Inline Java recipe for populating types
+
+Build the body with python (`json.dumps({'code': ...})`) and pass it as `"$(cat /tmp/body.json)"` — do not hand-quote. Each call compiles a fresh `McpInline_<hash>.java`, so keep scripts **idempotent** (remove-then-create).
+
+```java
+import ghidra.program.model.data.*;
+DataTypeManager dtm = currentProgram.getDataTypeManager();
+CategoryPath cat = new CategoryPath("/");
+DataType eEnum = dtm.getDataType("/ECharPhyState");     // deps first (enums via /create_enum)
+DataType old = dtm.getDataType("/MyStruct");
+if (old != null) dtm.remove(old);                       // single-arg remove; taskMonitor is NOT in scope
+StructureDataType s = new StructureDataType(cat, "MyStruct", 0);
+s.setPackingEnabled(false);
+s.growStructure(0x24C);                                 // full size BEFORE fields
+s.replaceAtOffset(0x004, eEnum, 4, "CharPhyState", "plate-style comment here");
+s.replaceAtOffset(0x018, new ArrayDataType(FloatDataType.dataType, 3, 4), 12, "aPos", null);
+s.replaceAtOffset(0x008, new PointerDataType(dtm.getDataType("/CPlugCharVisModel")), 8, "pVisModel", null);
+dtm.addDataType(s, DataTypeConflictHandler.REPLACE_HANDLER);
+println("MyStruct size=" + s.getLength());              // in-script sanity print
+```
+
+- `replaceAtOffset(offset, dt, length, name, comment)` — `length` must equal the dt's own length (`st.getLength()` for composites).
+- Arrays: `new ArrayDataType(FloatDataType.dataType, 3, 4)` — there is no `float[3]` literal.
+- Dependent structs: create the element/pointee type first, resolve with `dtm.getDataType("/Name")` — a struct you built earlier in the *same* script can be passed directly.
+- Verify from the shell afterwards: `GET /get_struct_layout struct_name=...`, then `GET /save_all_programs`.
 
 ## Verifying a MemPatcher pattern
 

@@ -119,9 +119,31 @@ namespace Editor {
         return MacroblockWithSetSkins(MacroblockSpecPriv(blocks, items), skins);
     }
 
+    // While > 0, placement/removal capture is suppressed. map-together wraps
+    // its server-update applies in this so replayed edits don't get captured
+    // and rebroadcast: sync consumers read the LastFrame buffers (complete
+    // frames, immune to coroutine ordering), where apply-side hook events
+    // would otherwise surface. IsTerrain dirty flagging is deliberately NOT
+    // suppressed — the terrain snapshot resync accounts for those.
+    int _captureSuppressDepth = 0;
+    void BeginCaptureSuppress() { _captureSuppressDepth++; }
+    void EndCaptureSuppress() { if (_captureSuppressDepth > 0) _captureSuppressDepth--; }
+    // Self-healing reset for the (single) consumer's loop start: an exception
+    // mid-apply must not leave capture off for the rest of the session.
+    void ResetCaptureSuppress() { _captureSuppressDepth = 0; }
+    bool IsCaptureSuppressed() { return _captureSuppressDepth > 0; }
+
     void TrackMap_OnAddBlock(CGameCtnBlock@ block) {
-        // skip grass
-        if (block.BlockInfo.IsTerrain) return;
+        // terrain blocks are not tracked as placements, but their appearance
+        // means the genealogy grid changed (terraform tools / auto-terrain) --
+        // flag it so sync plugins can diff the grid (see GetTerrainDiffSpec).
+        if (block.BlockInfo.IsTerrain) {
+            _terrainDirty = true;
+            _lastTerrainActivityAt = Time::Now;
+            Editor::Callbacks::Exts::Run_OnPlaceTerrainBlock(block);
+            return;
+        }
+        if (_captureSuppressDepth > 0) return;
         blocksAddedThisFrame.InsertLast(BlockSpecPriv(block));
         if (block.Skin !is null && (block.Skin.PackDesc !is null || block.Skin.ForegroundPackDesc !is null)) {
             auto fg = block.Skin.ForegroundPackDesc !is null ? GetSkinPath(block.Skin.ForegroundPackDesc) : "";
@@ -140,8 +162,14 @@ namespace Editor {
     }
 
     void TrackMap_OnRemoveBlock(CGameCtnBlock@ block) {
-        // skip grass
-        if (block.BlockInfo.IsTerrain) return;
+        // see TrackMap_OnAddBlock: terrain block churn = grid change signal
+        if (block.BlockInfo.IsTerrain) {
+            _terrainDirty = true;
+            _lastTerrainActivityAt = Time::Now;
+            Editor::Callbacks::Exts::Run_OnDeleteTerrainBlock(block);
+            return;
+        }
+        if (_captureSuppressDepth > 0) return;
         auto ptr = Dev_GetPointerForNod(block);
         if (_TrackMap_RemoveBlock_IsByAPI) {
             blocksRemovedByAPIThisFrame.InsertLast(BlockSpecPriv(block));
@@ -157,6 +185,7 @@ namespace Editor {
     }
 
     void TrackMap_OnAddItem(CGameCtnAnchoredObject@ item) {
+        if (_captureSuppressDepth > 0) return;
         auto spec = ItemSpecPriv(item);
         itemsAddedThisFrame.InsertLast(spec);
         auto fgSkin = Editor::GetItemFGSkin(item);
@@ -170,6 +199,7 @@ namespace Editor {
     }
 
     void TrackMap_OnRemoveItem(CGameCtnAnchoredObject@ item) {
+        if (_captureSuppressDepth > 0) return;
         auto ptr = Dev_GetPointerForNod(item);
         for (uint i = 0; i < itemsAddedThisFrame.Length; i++) {
             if (ptr == cast<ItemSpecPriv>(itemsAddedThisFrame[i]).ObjPtr) {
@@ -248,6 +278,7 @@ namespace Editor {
         while (true) {
             yield();
             ResetTrackMapChanges();
+            TerrainHookWatcher_Tick();
         }
     }
 
@@ -423,7 +454,46 @@ namespace Editor {
             NotifyError("PlaceMacroblock: invalid macroblock or editor null");
             return false;
         }
+        Editor::WaitForDonorRestores();
         auto pmt = editor.PluginMapType;
+
+        // Terrain-only specs (e.g. relayed terraform diffs) go straight to the
+        // ground-mode terrain pass; an empty air-mode donor place would just
+        // fail and report a bogus error.
+        if (mbSpec.blocks.Length == 0 && mbSpec.items.Length == 0 && mbSpec.terrains.Length > 0) {
+            dev_trace("PlaceMacroblock: terrain-only spec (" + mbSpec.terrains.Length + " cells)");
+            bool terrainPlaced = Editor::PlaceMacroblockTerrain(mbSpec);
+            if (terrainPlaced && addUndoRedoPoint) pmt.AutoSave();
+            return terrainPlaced;
+        }
+
+        // Ground grid blocks can't place through the air-mode donor (the engine
+        // refuses them; verified on RedIsland), so peel them into a ground-mode
+        // donor pass and keep everything else on the air pass below.
+        {
+            array<BlockSpec@> groundBlocks;
+            array<BlockSpec@> airBlocks;
+            for (uint i = 0; i < mbSpec.blocks.Length; i++) {
+                auto b = mbSpec.blocks[i];
+                if (b.isGround && !b.isFree && !b.isGhost) groundBlocks.InsertLast(b);
+                else airBlocks.InsertLast(b);
+            }
+            if (groundBlocks.Length > 0) {
+                dev_trace("PlaceMacroblock: splitting " + groundBlocks.Length + " ground blocks into ground pass ("
+                    + airBlocks.Length + " air blocks remain)");
+                bool groundPlaced = Editor::PlaceMacroblockGroundBlocks(MacroblockSpecPriv(groundBlocks, array<ItemSpec@> = {}));
+                auto rest = MacroblockSpecPriv(airBlocks, mbSpec.items);
+                for (uint i = 0; i < mbSpec.skins.Length; i++) rest.skins.InsertLast(mbSpec.skins[i]);
+                for (uint i = 0; i < mbSpec.terrains.Length; i++) rest.terrains.InsertLast(mbSpec.terrains[i]);
+                bool restPlaced = true;
+                if (rest.blocks.Length + rest.items.Length + rest.skins.Length + rest.terrains.Length > 0) {
+                    restPlaced = PlaceMacroblock(rest, false);
+                }
+                if ((groundPlaced || restPlaced) && addUndoRedoPoint) pmt.AutoSave();
+                return groundPlaced && restPlaced;
+            }
+        }
+
         CGameCtnMacroBlockInfo@ mb = Editor::ResolveDonorMacroblock(editor, "PlaceMacroblock");
         if (mb is null) return false;
         dev_trace("[DEBUG] PlaceMacroblock: Writing to MB");
@@ -508,6 +578,16 @@ namespace Editor {
             // Place-vs-delete forensics: snapshot donor item buffer after regen
             MacroblockItemDeleteDiag::OnPlaceMacroblockPrePlace(mbSpec, mb);
 #endif
+            // Clear regenerated AutoTerrains before air-mode placement; restore the donor
+            // buffer from the temporary snapshot afterward.
+            Dev::Write(DGameCtnMacroBlockInfo(mb).AutoTerrains.Ptr + 0x8, nat2(0));
+            if (mb.GeneratedBlockInfo !is null && mb.GeneratedBlockInfo.VariantGround !is null) {
+                Dev::Write(DGameCtnBlockInfoVariantGround(mb.GeneratedBlockInfo.VariantGround).AutoTerrainsBuf.Ptr + 0x8, nat2(0));
+                if (mb.GeneratedBlockInfo.VariantBaseGround !is null
+                    && Dev_GetPointerForNod(mb.GeneratedBlockInfo.VariantBaseGround) != Dev_GetPointerForNod(mb.GeneratedBlockInfo.VariantGround)) {
+                    Dev::Write(DGameCtnBlockInfoVariantGround(mb.GeneratedBlockInfo.VariantBaseGround).AutoTerrainsBuf.Ptr + 0x8, nat2(0));
+                }
+            }
             placed = pmt.PlaceMacroblock_AirMode(mb, int3(0, 1, 0), CGameEditorPluginMap::ECardinalDirections::North);
             if (placed && addUndoRedoPoint) {
                 dev_trace("Placed MB -> AutoSaving");
@@ -538,6 +618,7 @@ namespace Editor {
         auto mbSpec = cast<MacroblockSpecPriv>(macroblock);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (mbSpec is null || editor is null || editor.PluginMapType is null) return false;
+        Editor::WaitForDonorRestores();
         auto pmt = editor.PluginMapType;
         // Match PlaceMacroblock donor selection + regeneration. Without regen,
         // RemoveMacroblock often no-ops for items (and some blocks) on non-Stadium

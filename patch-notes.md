@@ -2,6 +2,9 @@ TODO: item stuff with cbs
 TODO: changing props of blocks/items will cache the new values as deleted, not the old ones
 
 
+- FEAT: onEditorSaveMap / afterEditorSaveMap plugin callbacks now work (driven by editor-plugin PendingEvents; no memory hooks)
+- FEAT: generic _EKV_ map metadata dictionary with whole-value writes and raw string getter exports
+- FIX: map metadata reads are now bounds-safe, check themselves against the editor plugin every couple of seconds, and refuse to answer (rather than guess) if the two ever disagree
 - FEAT: All E++ hotkeys are now re-bindable
 - Remember which tabs you were on properly (separate records for item editor, blocks & items sub tabs, etc)
 - make nullified pillars alert clearer and add dismiss button

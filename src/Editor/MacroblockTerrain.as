@@ -36,9 +36,12 @@ namespace Editor {
         ts.topHeight = gen.TopHeight - normBase;
     }
 
-    // Signature for default-cell detection: zone names + base-relative heights + dir.
+    // Signature for default-cell detection and target matching: dir + surface
+    // height + current index + zone names/heights, all base-relative. The
+    // surface height (TopHeight) distinguishes terrain shapes: the Frontier carve and Flat
+    // fill gestures produce identical zone stacks that differ only in it.
     string GenealogySignature(CGameCtnZoneGenealogy@ gen) {
-        string sig = uint(gen.Dir) + "|";
+        string sig = uint(gen.Dir) + "|" + (gen.TopHeight - gen.BaseHeight) + "|" + gen.CurrentIndex + "|";
         for (uint i = 0; i < gen.ZoneIds.Length; i++) {
             sig += gen.ZoneIds[i].GetName() + ":" + (gen.ZoneHeights[i] - gen.BaseHeight) + ",";
         }
@@ -84,7 +87,7 @@ namespace Editor {
         for (int z = minCoord.z; z <= maxCoord.z; z++) {
             for (int x = minCoord.x; x <= maxCoord.x; x++) {
                 if (x < 0 || z < 0 || x >= size.x || z >= size.z) continue;
-                uint ix = uint(x) + uint(z) * uint(size.x);
+                uint ix = _TerrainCellIx(x, z, size.z);
                 if (ix >= cells.Length) continue;
                 auto gen = cells.GetTerrainCell(ix).Nod;
                 if (gen is null) continue;
@@ -239,7 +242,7 @@ namespace Editor {
     // MARK: Ground-mode donor placement (terrain pass)
 
     // Terrain write buffers must outlive the async terrain apply (~1s), so we
-    // leak them intentionally (bounded).
+    // Keep them alive until the asynchronous apply completes (bounded).
     CustomBuffer@[] leakedTerrainWriteBufs;
     void LeakTerrainWriteBuf(CustomBuffer@ buf) {
         if (buf is null) return;
@@ -274,83 +277,648 @@ namespace Editor {
 
     MacroblockSpecPriv@[] _terrainPlaceRestoreQueue;
 
+    // All passes share one donor; wait for asynchronous restores before reuse.
+    void WaitForDonorRestores() {
+        while (_terrainPlaceRestoreQueue.Length > 0) yield();
+    }
+
     // Place just the terrain of a macroblock spec: builds a terrain-only copy,
     // temp-writes the donor's AutoTerrains buffers (blocks/items stay empty so
-    // nothing is double-placed), then ground-places the donor at the spec's min
-    // terrain XZ. Donor restore is delayed (~2s) because the terrain apply is
-    // async and reads mb+0x1F8 after the call.
+    // nothing is double-placed), then ground-places the donor at the spec's minimum
+    // terrain XZ. Restore is deferred until the asynchronous apply consumes it.
+    // sig of a TerrainSpec in GenealogySignature's format (base-relative), so
+    // spec targets can be compared against live grid cells
+    string TerrainSpecSignature(TerrainSpec@ ts) {
+        string sig = ts.dir + "|" + (ts.topHeight - ts.baseHeight) + "|" + ts.currentIndex + "|";
+        for (uint i = 0; i < ts.zoneNames.Length; i++) {
+            sig += ts.zoneNames[i] + ":" + (ts.zoneHeights[i] - ts.baseHeight) + ",";
+        }
+        return sig;
+    }
+
     bool PlaceMacroblockTerrain(MacroblockSpecPriv@ mbSpec) {
+        WaitForDonorRestores();
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
-        if (mbSpec is null || editor is null || editor.PluginMapType is null) return false;
+        if (mbSpec is null || editor is null || editor.PluginMapType is null || editor.Challenge is null) return false;
         if (mbSpec.terrains.Length == 0) return true;
+        // Remote applies run under capture suppression: their grid changes are
+        // already known to whoever sent them, so swallow them from the diff
+        // snapshot. A LOCAL terrain apply (user placing a terrain-carrying
+        // macroblock / API call) must broadcast, so leave the dirty flag to
+        // settle into a diff.
+        bool applyIsRemote = IsCaptureSuppressed();
         auto pmt = editor.PluginMapType;
-        CGameCtnMacroBlockInfo@ mb = Editor::ResolveDonorMacroblock(editor, "PlaceMacroblockTerrain");
-        if (mb is null) return false;
-        auto tspec = MacroblockSpecPriv();
-        int3 minCoord = mbSpec.GetMinTerrainCoords();
-        tspec.terrainWriteOrigin = minCoord;
+        auto map = editor.Challenge;
+        // Fast path: when every cell already matches its target (the common
+        // case -- the ground-block replay preceding this diff terraformed the
+        // same cells), there is nothing to peel, so no need to wait for the
+        // engine job queue at all.
+        bool anyWork = false;
         for (uint i = 0; i < mbSpec.terrains.Length; i++) {
-            tspec.terrains.InsertLast(mbSpec.terrains[i].Duplicate());
+            auto ts = mbSpec.terrains[i];
+            string curSig = _CurrentCellSig(map, ts.offset.x, ts.offset.z);
+            if (curSig != "" && curSig != TerrainSpecSignature(ts)) { anyWork = true; break; }
         }
-        try {
-            tspec._TempWriteToMacroblock(mb, true);
-        } catch {
-            NotifyWarning("PlaceMacroblockTerrain: exception temp-writing donor macroblock: " + getExceptionInfo());
-            try {
-                tspec._RestoreMacroblock();
-            } catch {
-                warn("PlaceMacroblockTerrain: exception restoring donor after temp-write failure: " + getExceptionInfo());
+        if (!anyWork) {
+            dev_trace("PlaceMacroblockTerrain: " + mbSpec.terrains.Length + " cells all match; no-op @f" + Time::FrameCount);
+            return true;
+        }
+        // never peel while an engine terraform job may still be in flight:
+        // concurrent remove-vs-build has wedged the engine's terrain job
+        // queue for the rest of the session (observed live 2026-08-29)
+        uint quietWaitStart = Time::Now;
+        while (Time::Now < _lastTerrainActivityAt + 300 && Time::Now < quietWaitStart + 8000) yield();
+
+        // NATIVE-ONLY apply: RemoveTerrainBlocks peels to any truncation of
+        // the live stack; PlaceTerrainBlocks recreates tool-made raises (zone
+        // names ARE terrain model names); ground-block AutoTerrain raises are
+        // recreated by the ground-block replay preceding this diff. Long
+        // form: research/MacroblockTerrain.md (Recon pass architecture).
+        string defaultSig = GetMapDefaultGenealogySignature(DGameCtnChallenge(map).TerrainGenealogies);
+        uint nbMatched = 0, nbResetOnly = 0, nbPeelMatched = 0, nbDeferred = 0;
+        array<TerrainSpec@> deferredCells;
+        for (uint i = 0; i < mbSpec.terrains.Length; i++) {
+            auto ts = mbSpec.terrains[i];
+            string targetSig = TerrainSpecSignature(ts);
+            int3 c = int3(ts.offset.x, 0, ts.offset.z);
+            string curSig = _CurrentCellSig(map, c.x, c.z);
+            if (curSig == "") continue;
+            if (curSig == targetSig) { nbMatched++; continue; }
+            if (targetSig == defaultSig) {
+                ResetTerrainCoord(c);
+                nbResetOnly++;
+                continue;
             }
+            // Peeling only TRUNCATES the live stack: a target that tops out
+            // above the live cell, or that needs at least as many zones as the
+            // live stack has (equal length = a dir/height-only mismatch), is
+            // provably not peel-reachable. Bail before touching the cell --
+            // attempting anyway strips it toward default (and burns ~40 frames
+            // per attempt) before concluding deferred.
+            auto curGen = _CurrentCellGen(map, c.x, c.z);
+            if (curGen !is null && (ts.topHeight - ts.baseHeight > curGen.TopHeight - curGen.BaseHeight
+                    || ts.zoneNames.Length >= curGen.ZoneIds.Length)) {
+                nbDeferred++;
+                deferredCells.InsertLast(ts);
+                continue;
+            }
+            bool matched = false;
+            for (uint attempt = 0; attempt < 8; attempt++) {
+                if (!pmt.RemoveTerrainBlocks(int3(c.x, 0, c.z), int3(c.x, 40, c.z))) break;
+                string newSig = curSig;
+                for (uint w = 0; w < 40; w++) {
+                    yield();
+                    newSig = _CurrentCellSig(map, c.x, c.z);
+                    if (newSig != curSig) break;
+                }
+                if (newSig == targetSig) { matched = true; break; }
+                if (newSig == curSig) break; // fixed point; peeling does nothing more
+                curSig = newSig;
+            }
+            if (matched) nbPeelMatched++;
+            else {
+                nbDeferred++;
+                deferredCells.InsertLast(ts);
+            }
+        }
+        uint nbNativeRaised = 0;
+        if (deferredCells.Length > 0) {
+            // let this apply's own peels/resets settle before placing
+            uint reconWait = Time::Now;
+            while (Time::Now < _lastTerrainActivityAt + 300 && Time::Now < reconWait + 8000) yield();
+            nbNativeRaised = _ReconstructTerrainViaNativePlace(pmt, map, deferredCells);
+        }
+        dev_trace("PlaceMacroblockTerrain: " + mbSpec.terrains.Length + " cells -> "
+            + nbMatched + " matched, " + nbResetOnly + " reset, " + nbPeelMatched
+            + " peeled, " + nbNativeRaised + " native-placed, "
+            + (nbDeferred > nbNativeRaised ? nbDeferred - nbNativeRaised : 0) + " deferred @f" + Time::FrameCount);
+        // peels fired terrain-block hooks; for a remote apply make sure the
+        // diff snapshot resyncs (scoped to these cells) instead of
+        // broadcasting them back
+        if (applyIsRemote) {
+            for (uint i = 0; i < mbSpec.terrains.Length; i++) {
+                MarkTerrainResyncCells(mbSpec.terrains[i].offset.x, mbSpec.terrains[i].offset.z);
+            }
+            ScheduleTerrainSnapshotResync();
+        }
+        return true;
+    }
+
+    // Native reconstruction for targets peeling can't reach: ordered passes
+    // (hills tallest-first -> zone-agnostic fills -> stacked layers -> carve
+    // inference), live recheck between each, then one reset-and-rebuild
+    // round. Why each pass and its ordering exist:
+    // research/MacroblockTerrain.md (Recon pass architecture).
+    // Returns the number of work cells whose live state matches its target.
+    uint _ReconstructTerrainViaNativePlace(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<TerrainSpec@>@ cells) {
+        CGameCtnBlockInfo@ flatModel = null;
+        for (uint i = 0; i < pmt.TerrainBlockModels.Length; i++) {
+            if (cast<CGameCtnBlockInfoFlat>(pmt.TerrainBlockModels[i]) !is null) {
+                @flatModel = pmt.TerrainBlockModels[i];
+                break;
+            }
+        }
+        array<ReconCell@> work;
+        for (uint i = 0; i < cells.Length; i++) {
+            auto ts = cells[i];
+            // tool-gesture stacks: the base zone alone (a fill's interior
+            // cell), base + one zone, or a deeper stack of layered gestures
+            // (e.g. a hill placed on a beach pad) replayed by the layers pass
+            if (ts.zoneNames.Length < 1 || ts.zoneNames.Length > 6) continue;
+            string zName = ts.zoneNames[ts.zoneNames.Length - 1];
+            if (pmt.GetTerrainBlockModelFromName(zName) is null && flatModel is null) continue;
+            auto rc = ReconCell();
+            rc.x = ts.offset.x;
+            rc.z = ts.offset.z;
+            rc.zone = zName;
+            rc.relTop = ts.topHeight - ts.baseHeight;
+            rc.dir = int(ts.dir);
+            rc.targetSig = TerrainSpecSignature(ts);
+            rc.deep = ts.zoneNames.Length > 2;
+            if (rc.deep) {
+                for (uint zi = 1; zi < ts.zoneNames.Length; zi++) rc.layers.InsertLast(ts.zoneNames[zi]);
+                for (uint zi = 0; zi < ts.zoneNames.Length; zi++) rc.stackKey += ts.zoneNames[zi] + "/";
+                rc.stackKey += tostring(rc.relTop);
+            }
+            work.InsertLast(rc);
+        }
+        if (work.Length == 0) return 0;
+        uint remaining = _ReconRecheck(map, work);
+        for (uint round = 0; round < 2 && remaining > 0; round++) {
+            if (round == 1) {
+                // last resort: strip survivors to default and rebuild from scratch
+                for (uint i = 0; i < work.Length; i++) {
+                    if (!work[i].done) ResetTerrainCoord(int3(work[i].x, 0, work[i].z));
+                }
+                _ReconAwaitSettle();
+                remaining = _ReconRecheck(map, work);
+                if (remaining == 0) break;
+            }
+            _ReconPassHills(pmt, map, work);
+            remaining = _ReconRecheck(map, work);
+            if (remaining == 0) break;
+            _ReconPassFills(pmt, map, work, flatModel);
+            remaining = _ReconRecheck(map, work);
+            if (remaining == 0) break;
+            _ReconPassLayers(pmt, map, work);
+            remaining = _ReconRecheck(map, work);
+            if (remaining == 0) break;
+            _ReconPassCarves(pmt, map, work);
+            remaining = _ReconRecheck(map, work);
+        }
+        dev_trace("[TerrainRecon] " + (work.Length - remaining) + "/" + work.Length
+            + " cells reconstructed" + (remaining > 0 ? " (" + remaining + " unresolved)" : ""));
+        return work.Length - remaining;
+    }
+
+    class ReconCell {
+        int x, z;
+        string zone;    // last zone name: the gesture's terrain model name
+        int relTop;     // target surface height above base
+        int dir;        // target slope dir (0 = flat)
+        string targetSig;
+        bool done = false;
+        bool deep = false;      // stack of > 2 zones: handled by the layers pass
+        array<string> layers;   // deep only: zone names above the base zone
+        string stackKey;        // deep only: full-stack grouping key
+    }
+
+    // Re-verify not-done work cells against the live grid; returns how many
+    // still mismatch. Passes claim cells only through this, never locally.
+    uint _ReconRecheck(CGameCtnChallenge@ map, array<ReconCell@>@ work) {
+        uint remaining = 0;
+        for (uint i = 0; i < work.Length; i++) {
+            if (work[i].done) continue;
+            if (_CurrentCellSig(map, work[i].x, work[i].z) == work[i].targetSig) work[i].done = true;
+            else remaining++;
+        }
+        return remaining;
+    }
+
+    void _ReconAwaitSettle() {
+        uint start = Time::Now;
+        while (Time::Now < _lastTerrainActivityAt + 250 && Time::Now < start + 4000) yield();
+    }
+
+    // pass 1: hill targets (relTop >= 2) via their zone-name model, tallest
+    // first so a taller hill's smoothing settles before shorter neighbors.
+    void _ReconPassHills(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<ReconCell@>@ work) {
+        array<string> names;
+        array<int> tops;
+        for (uint i = 0; i < work.Length; i++) {
+            auto rc = work[i];
+            if (rc.done || rc.deep || rc.relTop < 2) continue;
+            bool seen = false;
+            for (uint g = 0; g < names.Length; g++) {
+                if (names[g] == rc.zone && tops[g] == rc.relTop) { seen = true; break; }
+            }
+            if (!seen) { names.InsertLast(rc.zone); tops.InsertLast(rc.relTop); }
+        }
+        for (uint g = 0; g < names.Length; g++) {
+            uint best = g;
+            for (uint j = g + 1; j < names.Length; j++) {
+                if (tops[j] > tops[best]) best = j;
+            }
+            if (best != g) {
+                string tn = names[g]; names[g] = names[best]; names[best] = tn;
+                int tt = tops[g]; tops[g] = tops[best]; tops[best] = tt;
+            }
+            _ReconRecheck(map, work);
+            _ReconPlaceGroupRects(pmt, map, work, names[g], tops[g], names[g], false);
+        }
+    }
+
+    // pass 2: land-level fills, grouped by relTop ALONE -- one fill gesture
+    // produces base-zone-only interior cells and shore-zone edge cells
+    // together, and splitting them leaves an unplaceable ring. The zone name
+    // of a fill edge is the Frontier shore (which as a MODEL is the carve
+    // gesture), so place with the env's Flat model when there is one.
+    void _ReconPassFills(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<ReconCell@>@ work, CGameCtnBlockInfo@ flatModel) {
+        string mName = "";
+        if (flatModel !is null) mName = flatModel.IdName;
+        else {
+            for (uint i = 0; i < work.Length; i++) {
+                if (work[i].done || work[i].relTop != 1) continue;
+                if (pmt.GetTerrainBlockModelFromName(work[i].zone) !is null) { mName = work[i].zone; break; }
+            }
+        }
+        if (mName == "") return;
+        _ReconPlaceGroupRects(pmt, map, work, "", 1, mName, true);
+    }
+
+    // pass 2.5: stacked gestures (a hill placed on a beach pad and the
+    // like). Group deep cells by their full zone stack and replay each
+    // layer's gesture bottom-up over the group's rects: the native placement
+    // takes the base y for every layer, and layers the fill pass already
+    // built are idempotent. Base zones never resolve to models and skip.
+    void _ReconPassLayers(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<ReconCell@>@ work) {
+        array<string> seen;
+        for (uint i = 0; i < work.Length; i++) {
+            if (work[i].done || !work[i].deep) continue;
+            if (seen.Find(work[i].stackKey) >= 0) continue;
+            seen.InsertLast(work[i].stackKey);
+            dictionary inSet;
+            array<uint> keys;
+            for (uint j = 0; j < work.Length; j++) {
+                auto rc = work[j];
+                if (rc.done || !rc.deep || rc.stackKey != work[i].stackKey) continue;
+                uint k = uint(rc.x) << 16 | uint(rc.z);
+                inSet.Set("" + k, 0);
+                keys.InsertLast(k);
+            }
+            auto rects = _ReconGreedyRects(inSet, keys);
+            for (uint r = 0; r < rects.Length; r++) {
+                for (uint li = 0; li < work[i].layers.Length; li++) {
+                    if (pmt.GetTerrainBlockModelFromName(work[i].layers[li]) is null) continue;
+                    _ReconPlaceRect(pmt, map, work[i].layers[li], rects[r].x, rects[r].z, rects[r].w, rects[r].h);
+                }
+            }
+        }
+    }
+
+    // pass 3: surviving low cells are carve states (slope dirs / water
+    // centers) no flat gesture expresses. Re-carve each connected mismatch
+    // region's eroded bounding box with the zone's own (Frontier) model. A
+    // rect that would land on live-raised terrain is a mis-inference (e.g.
+    // the annulus around an unresolved hill erodes onto the hill): skip it.
+    void _ReconPassCarves(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, array<ReconCell@>@ work) {
+        dictionary remain; // key -> 0 (unvisited) / 1 (claimed by a region)
+        for (uint i = 0; i < work.Length; i++) {
+            auto rc = work[i];
+            // flat land-level mismatches are never carve evidence -- carving
+            // them would sink terrain a fill pass failed to raise
+            if (!rc.done && !rc.deep && rc.relTop <= 1 && (rc.dir != 0 || rc.relTop == 0)) {
+                remain.Set("" + (uint(rc.x) << 16 | uint(rc.z)), 0);
+            }
+        }
+        for (uint i = 0; i < work.Length; i++) {
+            auto rc = work[i];
+            if (rc.done || rc.deep || rc.relTop > 1 || (rc.dir == 0 && rc.relTop != 0)) continue;
+            if (!_ReconCellUnused(remain, rc.x, rc.z)) continue;
+            // flood the 4-connected mismatch region, tracking its bounds
+            array<uint> queue = { uint(rc.x) << 16 | uint(rc.z) };
+            remain.Set("" + queue[0], 1);
+            int x0 = rc.x, x1 = rc.x, z0 = rc.z, z1 = rc.z;
+            while (queue.Length > 0) {
+                int cx = int(queue[queue.Length - 1] >> 16), cz = int(queue[queue.Length - 1] & 0xFFFF);
+                queue.RemoveLast();
+                if (cx < x0) x0 = cx;
+                if (cx > x1) x1 = cx;
+                if (cz < z0) z0 = cz;
+                if (cz > z1) z1 = cz;
+                for (uint n = 0; n < 4; n++) {
+                    int nx = cx + (n == 0 ? 1 : n == 1 ? -1 : 0);
+                    int nz = cz + (n == 2 ? 1 : n == 3 ? -1 : 0);
+                    if (!_ReconCellUnused(remain, nx, nz)) continue;
+                    remain.Set("" + (uint(nx) << 16 | uint(nz)), 1);
+                    queue.InsertLast(uint(nx) << 16 | uint(nz));
+                }
+            }
+            int cx0 = x0, cx1 = x1, cz0 = z0, cz1 = z1;
+            if (cx1 - cx0 >= 2) { cx0++; cx1--; }
+            if (cz1 - cz0 >= 2) { cz0++; cz1--; }
+            bool onRaised = false;
+            for (int zz = cz0; zz <= cz1 && !onRaised; zz++) {
+                for (int xx = cx0; xx <= cx1; xx++) {
+                    auto gen = _CurrentCellGen(map, xx, zz);
+                    if (gen !is null && gen.TopHeight - gen.BaseHeight >= 2) { onRaised = true; break; }
+                }
+            }
+            if (onRaised) {
+                dev_trace("[TerrainRecon] carve <" + cx0 + "," + cz0 + ">..<" + cx1 + "," + cz1
+                    + "> skipped (rect sits on raised terrain)");
+                continue;
+            }
+            string mName = rc.zone;
+            if (pmt.GetTerrainBlockModelFromName(mName) is null) {
+                for (uint j = 0; j < work.Length; j++) {
+                    if (work[j].done || work[j].relTop > 1) continue;
+                    if (pmt.GetTerrainBlockModelFromName(work[j].zone) !is null) { mName = work[j].zone; break; }
+                }
+            }
+            _ReconPlaceRect(pmt, map, mName, cx0, cz0, cx1 - cx0 + 1, cz1 - cz0 + 1);
+        }
+    }
+
+    class ReconRect {
+        int x, z, w, h;
+        ReconRect(int x, int z, int w, int h) { this.x = x; this.z = z; this.w = w; this.h = h; }
+    }
+
+    // Greedy maximal rectangles over the unused cells of inSet (as built by
+    // the caller from keys); marks consumed cells.
+    array<ReconRect@>@ _ReconGreedyRects(dictionary@ inSet, array<uint>@ keys) {
+        array<ReconRect@>@ rects = array<ReconRect@>();
+        for (uint i = 0; i < keys.Length; i++) {
+            int x = int(keys[i] >> 16), z = int(keys[i] & 0xFFFF);
+            if (!_ReconCellUnused(inSet, x, z)) continue;
+            int w = 1, h = 1;
+            while (_ReconCellUnused(inSet, x + w, z)) w++;
+            bool grow = true;
+            while (grow) {
+                for (int dx = 0; dx < w; dx++) {
+                    if (!_ReconCellUnused(inSet, x + dx, z + h)) { grow = false; break; }
+                }
+                if (grow) h++;
+            }
+            for (int dz = 0; dz < h; dz++) {
+                for (int dx = 0; dx < w; dx++) inSet.Set("" + (uint(x + dx) << 16 | uint(z + dz)), 1);
+            }
+            rects.InsertLast(ReconRect(x, z, w, h));
+        }
+        return rects;
+    }
+
+    // Greedy maximal rectangles over the not-done work cells of (zone,
+    // relTop), placed with modelName. widenForMin grows 1-wide rects into an
+    // adjacent row/col of live land-level cells (fill pass only).
+    void _ReconPlaceGroupRects(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map,
+            array<ReconCell@>@ work, const string &in zone, int relTop,
+            const string &in modelName, bool widenForMin) {
+        dictionary inSet;
+        array<uint> keys;
+        for (uint i = 0; i < work.Length; i++) {
+            auto rc = work[i];
+            if (rc.done || rc.deep || (zone != "" && rc.zone != zone) || rc.relTop != relTop) continue;
+            uint k = uint(rc.x) << 16 | uint(rc.z);
+            inSet.Set("" + k, 0);
+            keys.InsertLast(k);
+        }
+        auto rects = _ReconGreedyRects(inSet, keys);
+        for (uint i = 0; i < rects.Length; i++) {
+            int x = rects[i].x, z = rects[i].z, w = rects[i].w, h = rects[i].h;
+            if (widenForMin && w == 1) {
+                if (_ReconSpanIsLiveLand(map, x - 1, z, 1, h)) { x--; w = 2; }
+                else if (_ReconSpanIsLiveLand(map, x + 1, z, 1, h)) w = 2;
+            }
+            if (widenForMin && h == 1) {
+                if (_ReconSpanIsLiveLand(map, x, z - 1, w, 1)) { z--; h = 2; }
+                else if (_ReconSpanIsLiveLand(map, x, z + 1, w, 1)) h = 2;
+            }
+            _ReconPlaceRect(pmt, map, modelName, x, z, w, h);
+        }
+    }
+
+    // Place one terrain-model rect at the live base height and wait for the
+    // async terraform to land. Success/failure of the CELLS is judged by the
+    // caller's recheck, not here.
+    bool _ReconPlaceRect(CGameEditorPluginMap@ pmt, CGameCtnChallenge@ map, const string &in mName, int x, int z, int w, int h) {
+        auto model = pmt.GetTerrainBlockModelFromName(mName);
+        if (model is null) return false;
+        auto gen = _CurrentCellGen(map, x, z);
+        int y = gen is null ? 0 : gen.BaseHeight;
+        int3 lo = int3(x, y, z), hi = int3(x + w - 1, y, z + h - 1);
+        if (!pmt.CanPlaceTerrainBlocks(model, lo, hi)) {
+            dev_trace("[TerrainRecon] " + mName + " " + w + "x" + h + " @<" + x + "," + z
+                + "> refused (below the model's minimum region?)");
             return false;
         }
-        if (tspec.lastTerrainsWritten == 0) {
-            // nothing was written (missing templates/zones); do NOT ground-place
-            // an empty donor — native ground placement with a stale/empty donor
-            // crashed the game on 2026-08-18 (Openplanet.dll AV)
-            NotifyWarning("PlaceMacroblockTerrain: 0 terrain entries written; aborting ground placement");
-            try {
-                tspec._RestoreMacroblock();
-            } catch {
-                warn("PlaceMacroblockTerrain: exception restoring donor after empty write: " + getExceptionInfo());
-            }
+        string before = _CurrentCellSig(map, x, z);
+        if (!pmt.PlaceTerrainBlocks(model, lo, hi)) {
+            dev_trace("[TerrainRecon] PlaceTerrainBlocks(" + mName + ") returned false @<" + x + "," + z + ">");
             return false;
         }
+        for (uint i = 0; i < 60; i++) {
+            yield();
+            if (_CurrentCellSig(map, x, z) != before) break;
+        }
+        _ReconAwaitSettle();
+        dev_trace("[TerrainRecon] placed " + mName + " " + w + "x" + h + " @<" + x + "," + z + "> y" + y);
+        return true;
+    }
+
+    // All cells of the w x h span are live at land level with a gesture-made
+    // stack: safe to include in a widened fill rect (the fill is idempotent
+    // for them, and slope dirs re-derive from final geometry).
+    bool _ReconSpanIsLiveLand(CGameCtnChallenge@ map, int x, int z, int w, int h) {
+        for (int dz = 0; dz < h; dz++) {
+            for (int dx = 0; dx < w; dx++) {
+                auto gen = _CurrentCellGen(map, x + dx, z + dz);
+                if (gen is null || gen.ZoneIds.Length > 2) return false;
+                if (gen.TopHeight - gen.BaseHeight != 1) return false;
+            }
+        }
+        return true;
+    }
+
+    bool _ReconCellUnused(dictionary@ s, int x, int z) {
+        if (x < 0 || z < 0) return false;
+        int64 v = 0;
+        return s.Get("" + (uint(x) << 16 | uint(z)), v) && v == 0;
+    }
+
+    // True when the model's base ground variant carries AutoTerrains (i.e.
+    // native placement of it terraforms).
+    bool _GroundVariantHasAutoTerrains(CGameCtnBlockInfo@ info) {
+        if (info is null || info.VariantBaseGround is null) return false;
+        return DGameCtnBlockInfoVariantGround(info.VariantBaseGround).AutoTerrainsBuf.Length > 0;
+    }
+
+    // The genealogy grid is x-major: ix = z + x*size.z. Verified empirically:
+    // a block placed at engine coord (30,·,35) changes the grid entries whose
+    // x-major decode is (30±1, 35±1); the z-major decode mirrors them.
+    uint _TerrainCellIx(int x, int z, int sizeZ) { return uint(z) + uint(x) * uint(sizeZ); }
+    int3 _TerrainCellCoord(uint ix, int sizeZ) { return int3(int(ix) / sizeZ, 0, int(ix) % sizeZ); }
+
+    // Live genealogy nod of the cell at (x, z), null when unreadable.
+    CGameCtnZoneGenealogy@ _CurrentCellGen(CGameCtnChallenge@ map, int x, int z) {
+        if (map is null || x < 0 || z < 0) return null;
+        auto cells = DGameCtnChallenge(map).TerrainGenealogies;
+        int sizeZ = Nat3ToInt3(map.Size).z;
+        if (sizeZ <= 0) return null;
+        uint ix = _TerrainCellIx(x, z, sizeZ);
+        if (ix >= cells.Length) return null;
+        return cells.GetTerrainCell(ix).Nod;
+    }
+
+    // Base-relative signature of the live cell at (x, z), "" when unreadable.
+    string _CurrentCellSig(CGameCtnChallenge@ map, int x, int z) {
+        auto gen = _CurrentCellGen(map, x, z);
+        return gen is null ? "" : GenealogySignature(gen);
+    }
+
+    // Place ground grid blocks. The air-mode donor refuses any isGround block
+    // outright (verified on RedIsland: even a plain OpenTechRoadStraight spec
+    // with isGround=true returns placed=false), and a ground-mode donor places
+    // them WITHOUT their auto-terrain (mb+0x1F8 is authoritative for donor
+    // terraform and carries no per-model entries) — a replayed ground block
+    // then lost its terraform and desynced the grid vs the sender. So place
+    // natively per block (runs the model's own ground-variant AutoTerrains,
+    // reproducing the sender's result); blocks the engine refuses (occupied
+    // etc.) fall back to the ground-mode donor, which at least places them.
+    bool PlaceMacroblockGroundBlocks(MacroblockSpecPriv@ gspec) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (gspec is null || editor is null || editor.PluginMapType is null) return false;
+        if (gspec.Blocks.Length == 0) return true;
+        auto pmt = editor.PluginMapType;
+        string defaultSig = "";
+        bool defaultSigInit = false;
+        array<BlockSpec@> failedBlocks;
+        for (uint i = 0; i < gspec.blocks.Length; i++) {
+            auto b = gspec.blocks[i];
+            auto info = pmt.GetBlockModelFromName(b.name);
+            bool placed = false;
+            if (info is null) {
+                warn("PlaceMacroblockGroundBlocks: unknown block model: " + b.name);
+            } else {
+                // spec coords store y-1 (same convention the air pass offsets
+                // with its <0,1,0> placement coord)
+                int3 c = int3(int(b.coord.x), int(b.coord.y) + 1, int(b.coord.z));
+                auto dir = CGameEditorPluginMap::ECardinalDirections(int(b.dir));
+                // an identical block already there means this apply is already
+                // satisfied (e.g. the echo of an API placement, which has no
+                // undo point to rewind) — don't refuse into the donor fallback
+                auto existing = pmt.GetBlock(c);
+                if (existing is null) @existing = pmt.GetBlock(int3(c.x, c.y - 1, c.z));
+                if (existing !is null && existing.BlockInfo !is null
+                    && existing.BlockInfo.IdName == b.name && int(existing.Dir) == int(b.dir)) {
+                    // Heal: a sync consumer's rebase (undo-to-baseline + replay)
+                    // can kill a still-pending async terraform job after a
+                    // block landed (the job takes ~1s; an echo can rebase
+                    // within ~100ms). The block survives the rebase (API
+                    // places have no undo entry) but the ground
+                    // stays bald. If the model carries ground AutoTerrains and
+                    // the cell under the block is still the map default,
+                    // remove + re-place to re-trigger the terrain job.
+                    bool healed = false;
+                    if (_GroundVariantHasAutoTerrains(existing.BlockInfo)) {
+                        if (!defaultSigInit) {
+                            defaultSigInit = true;
+                            defaultSig = GetMapDefaultGenealogySignature(
+                                DGameCtnChallenge(editor.Challenge).TerrainGenealogies);
+                        }
+                        string cellSig = _CurrentCellSig(editor.Challenge, c.x, c.z);
+                        if (cellSig != "" && cellSig == defaultSig) {
+                            dev_trace("PlaceMacroblockGroundBlocks: " + b.name + " at " + c.ToString()
+                                + " has no terraform under it; re-placing to re-trigger the terrain job");
+                            auto exCoord = Nat3ToInt3(Editor::GetBlockCoord(existing));
+                            try {
+                                pmt.RemoveBlockSafe(existing.BlockInfo, exCoord,
+                                    CGameEditorPluginMap::ECardinalDirections(int(existing.Dir)));
+                                placed = pmt.PlaceBlock(info, c, dir);
+                                healed = true;
+                            } catch {
+                                warn("PlaceMacroblockGroundBlocks: heal re-place threw for " + b.name + ": " + getExceptionInfo());
+                            }
+                        }
+                    }
+                    if (!healed) {
+                        dev_trace("PlaceMacroblockGroundBlocks: " + b.name + " already at " + c.ToString() + "; skipping");
+                        placed = true;
+                    }
+                } else {
+                    try {
+                        placed = pmt.PlaceBlock(info, c, dir);
+                    } catch {
+                        warn("PlaceMacroblockGroundBlocks: PlaceBlock threw for " + b.name + ": " + getExceptionInfo());
+                    }
+                    dev_trace("PlaceMacroblockGroundBlocks: native place " + b.name + " @ " + c.ToString() + " dir " + tostring(dir) + " -> " + placed + " @f" + Time::FrameCount);
+                }
+            }
+            MarkTerrainResyncCells(int(b.coord.x), int(b.coord.z));
+            if (!placed) failedBlocks.InsertLast(b);
+        }
+        // native placement terraforms; resync the diff snapshot once it lands
+        ScheduleTerrainSnapshotResync();
+        if (failedBlocks.Length == 0) return true;
+        dev_trace("PlaceMacroblockGroundBlocks: " + failedBlocks.Length + " native refusals; donor fallback");
+        return _PlaceGroundBlocksViaDonor(MacroblockSpecPriv(failedBlocks, array<ItemSpec@> = {}));
+    }
+
+    // Ground-mode donor fallback: places the blocks but NOT their terraform.
+    bool _PlaceGroundBlocksViaDonor(MacroblockSpecPriv@ gspec) {
+        WaitForDonorRestores();
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (gspec is null || editor is null || editor.PluginMapType is null) return false;
+        if (gspec.Blocks.Length == 0) return true;
+        auto pmt = editor.PluginMapType;
+        CGameCtnMacroBlockInfo@ mb = Editor::ResolveDonorMacroblock(editor, "PlaceMacroblockGroundBlocks");
+        if (mb is null) return false;
         int groundBase = GetMapGroundBaseHeight();
         if (groundBase < 1) {
-            NotifyWarning("PlaceMacroblockTerrain: could not determine map ground base height; aborting ground placement");
-            try {
-                tspec._RestoreMacroblock();
-            } catch {
-                warn("PlaceMacroblockTerrain: exception restoring donor after ground-base failure: " + getExceptionInfo());
-            }
+            NotifyWarning("PlaceMacroblockGroundBlocks: could not determine map ground base height; aborting");
             return false;
         }
-        // mirror the DeleteMacroblock finding: ground-mode calls no-op while
-        // Initialized/Connected are false (temp-write clears them)
+        // the engine adds placeCoord to each block coord, and ground placement
+        // only accepts placeCoord.y = groundBase - 1 — so block Y must be
+        // stored relative to that (X/Z stay absolute; placeCoord XZ is 0).
+        // Duplicate the specs: the handles are shared with the caller's spec.
+        for (uint i = 0; i < gspec.blocks.Length; i++) {
+            auto b = gspec.blocks[i].Duplicate();
+            int by = int(b.coord.y) - (groundBase - 1);
+            b.coord.y = by < 0 ? 0 : uint(by);
+            @gspec.blocks[i] = b;
+        }
+        try {
+            gspec._TempWriteToMacroblock(mb, true);
+        } catch {
+            NotifyWarning("PlaceMacroblockGroundBlocks: exception temp-writing donor: " + getExceptionInfo());
+            try { gspec._RestoreMacroblock(); } catch { warn("PlaceMacroblockGroundBlocks: restore after temp-write failure: " + getExceptionInfo()); }
+            return false;
+        }
+        // ground-mode calls no-op while Initialized/Connected are false
+        // (temp-write clears them)
         mb.Initialized = true;
         mb.Connected = true;
-        int3 placeCoord = int3(minCoord.x, groundBase - 1, minCoord.z);
-        bool placed = false;
-        auto gbi = mb.GeneratedBlockInfo;
-        dev_trace("PlaceMacroblockTerrain: donor GeneratedBlockInfo=" + (gbi !is null)
-            + " VariantBaseGround=" + (gbi !is null && gbi.VariantBaseGround !is null)
-            + " mbAutoTerrainsLen=" + DGameCtnMacroBlockInfo(mb).AutoTerrains.Length);
+        int3 placeCoord = int3(0, groundBase - 1, 0);
         bool canPlace = false;
         try {
             canPlace = pmt.CanPlaceMacroblock(mb, placeCoord, CGameEditorPluginMap::ECardinalDirections::North);
         } catch {
-            warn("PlaceMacroblockTerrain: CanPlaceMacroblock exception: " + getExceptionInfo());
+            warn("PlaceMacroblockGroundBlocks: CanPlaceMacroblock exception: " + getExceptionInfo());
         }
-        dev_trace("PlaceMacroblockTerrain: ground-placing donor at " + placeCoord.ToString()
-            + " with " + tspec.terrains.Length + " terrain cells; canPlace=" + canPlace);
+        dev_trace("PlaceMacroblockGroundBlocks: ground-placing " + gspec.Blocks.Length
+            + " blocks at " + placeCoord.ToString() + "; canPlace=" + canPlace);
+        bool placed = false;
         try {
             placed = pmt.PlaceMacroblock(mb, placeCoord, CGameEditorPluginMap::ECardinalDirections::North);
         } catch {
-            NotifyWarning("PlaceMacroblockTerrain: exception placing donor macroblock: " + getExceptionInfo());
+            NotifyWarning("PlaceMacroblockGroundBlocks: exception placing donor: " + getExceptionInfo());
         }
-        dev_trace("PlaceMacroblockTerrain: PlaceMacroblock returned " + placed);
-        // terrain apply is async (~1s) and reads mb+0x1F8; delay the restore
-        _terrainPlaceRestoreQueue.InsertLast(tspec);
+        dev_trace("PlaceMacroblockGroundBlocks: PlaceMacroblock returned " + placed);
+        // ground placement can terraform via the blocks' own ground variants,
+        // and that apply is async — delay the donor restore like the terrain pass
+        _terrainPlaceRestoreQueue.InsertLast(gspec);
         if (_terrainPlaceRestoreQueue.Length == 1) startnew(TerrainDonorRestoreLoop);
         return placed;
     }
@@ -406,6 +974,12 @@ namespace Editor {
         return ok;
     }
 
+    // set while the restore queue contains at least one REMOTE (capture-
+    // suppressed) terrain apply: those must be swallowed from the diff
+    // snapshot when the queue drains. Local applies leave it false so their
+    // changes settle into a broadcastable diff.
+    bool _terrainRestoreSwallow = false;
+
     void TerrainDonorRestoreLoop() {
         while (_terrainPlaceRestoreQueue.Length > 0) {
             sleep(2000);
@@ -416,6 +990,217 @@ namespace Editor {
                 warn("TerrainDonorRestoreLoop: exception restoring donor: " + getExceptionInfo());
             }
             _terrainPlaceRestoreQueue.RemoveAt(0);
+        }
+        // Remote applies are already known to the sender; refresh the snapshot so they
+        // are not echoed. Local edits during the restore window are folded in.
+        bool swallow = _terrainRestoreSwallow;
+        _terrainRestoreSwallow = false;
+        if (swallow && _terrainSnapshotTaken) RefreshTerrainSnapshot();
+    }
+
+    bool _terrainResyncScheduled = false;
+    // Cells a remote/API apply touched (grid indices), awaiting a SCOPED
+    // snapshot resync. Only these are re-baselined, so a concurrent LOCAL
+    // edit elsewhere on the map is not absorbed -- it settles into a
+    // broadcast diff as soon as the pending window closes. A one-block
+    // terraform changes cells up to 2 away from the block (blending ring),
+    // hence the margin.
+    dictionary _terrainResyncCellIxs;
+    const int TERRAIN_RESYNC_MARGIN = 2;
+
+    void MarkTerrainResyncCells(int bx, int bz) {
+        auto map = GetApp().RootMap;
+        if (map is null) return;
+        int3 size = Nat3ToInt3(map.Size);
+        if (size.z <= 0) return;
+        for (int x = bx - TERRAIN_RESYNC_MARGIN; x <= bx + TERRAIN_RESYNC_MARGIN; x++) {
+            for (int z = bz - TERRAIN_RESYNC_MARGIN; z <= bz + TERRAIN_RESYNC_MARGIN; z++) {
+                if (x < 0 || z < 0 || x >= size.x || z >= size.z) continue;
+                _terrainResyncCellIxs.Set("" + _TerrainCellIx(x, z, size.z), true);
+            }
+        }
+    }
+
+    // Coalesced scoped resync: after the remote/API apply's terraform lands,
+    // re-baseline ONLY the marked cells so their churn is not diffed back to
+    // the peer who sent them.
+    void ScheduleTerrainSnapshotResync() {
+        if (_terrainResyncScheduled) return;
+        _terrainResyncScheduled = true;
+        startnew(_TerrainSnapshotResyncSoon);
+    }
+    void _TerrainSnapshotResyncSoon() {
+        // wait for terrain QUIET, not a fixed time: a burst of ground blocks
+        // terraforms over several seconds, and refreshing mid-burst leaks the
+        // late cells into the next diff (broadcast echo). An early refresh is
+        // only an echo (peers no-op it via sig-match), so a short quiet
+        // window with a hard cap is enough.
+        sleep(300);
+        uint capAt = Time::Now + 5000;
+        while (Time::Now < _lastTerrainActivityAt + 500 && Time::Now < capAt) sleep(100);
+        _terrainResyncScheduled = false;
+        auto keys = _terrainResyncCellIxs.GetKeys();
+        _terrainResyncCellIxs.DeleteAll();
+        if (!_terrainSnapshotTaken) return;
+        auto map = GetApp().RootMap;
+        if (map is null) return;
+        auto cells = DGameCtnChallenge(map).TerrainGenealogies;
+        if (cells.Length != _terrainSnapshotSigs.Length) {
+            RefreshTerrainSnapshot();
+            return;
+        }
+        uint refreshed = 0;
+        for (uint i = 0; i < keys.Length; i++) {
+            uint ix = Text::ParseUInt(keys[i]);
+            if (ix >= _terrainSnapshotSigs.Length) continue;
+            _terrainSnapshotSigs[ix] = _TerrainCellSig(cells.GetTerrainCell(ix).Nod);
+            refreshed++;
+        }
+        dev_trace("[TerrainResync] scoped refresh of " + refreshed + " cells @f" + Time::FrameCount);
+    }
+
+    // MARK: Terrain change tracking (for sync plugins, e.g. map-together)
+    //
+    // The genealogy grid changes asynchronously and terrain blocks are invisible to
+    // placement trackers
+    // (IsTerrain models are skipped, but set _terrainDirty). Sync flow:
+    //   RefreshTerrainSnapshot() on editor/map entry;
+    //   poll IsTerrainDirty(), debounce past the async apply, then
+    //   GetTerrainDiffSpec() -> terrain-only MacroblockSpec to broadcast.
+
+    bool _terrainDirty = false;
+    // last time a terrain block add/remove hook fired: engine terraform jobs
+    // are async, so recent activity means a rebuild may still be in flight
+    uint _lastTerrainActivityAt = 0;
+    bool _terrainSnapshotTaken = false;
+    array<string> _terrainSnapshotSigs;
+
+    bool IsTerrainDirty() { return _terrainDirty; }
+    void ClearTerrainDirty() { _terrainDirty = false; }
+
+    // True while a remote/API terrain apply is still settling (donor restore
+    // queue or a scheduled snapshot resync): grid changes seen in this window
+    // are someone else's edit landing, not something to broadcast.
+    bool IsTerrainResyncPending() {
+        return _terrainResyncScheduled || _terrainPlaceRestoreQueue.Length > 0;
+    }
+
+    // Full per-cell state, absolute heights (unlike GenealogySignature, which
+    // is base-relative for default-cell detection).
+    string _TerrainCellSig(CGameCtnZoneGenealogy@ gen) {
+        if (gen is null) return "";
+        string sig = uint(gen.Dir) + "|" + gen.CurrentIndex + "|" + gen.BaseHeight
+            + "|" + gen.BottomHeight + "|" + gen.TopHeight + "|";
+        for (uint i = 0; i < gen.ZoneIds.Length; i++) {
+            sig += gen.ZoneIds[i].GetName() + ":" + gen.ZoneHeights[i] + ",";
+        }
+        return sig;
+    }
+
+    void RefreshTerrainSnapshot() {
+        _terrainSnapshotTaken = false;
+        _terrainSnapshotSigs.Resize(0);
+        auto map = GetApp().RootMap;
+        if (map is null) return;
+        auto cells = DGameCtnChallenge(map).TerrainGenealogies;
+        _terrainSnapshotSigs.Resize(cells.Length);
+        for (uint i = 0; i < cells.Length; i++) {
+            _terrainSnapshotSigs[i] = _TerrainCellSig(cells.GetTerrainCell(i).Nod);
+        }
+        _terrainSnapshotTaken = true;
+        _terrainDirty = false;
+    }
+
+    // Cells that differ from the snapshot, as a terrain-only MacroblockSpec
+    // (same conventions as CaptureTerrainIntoSpec: absolute XZ offsets,
+    // heights normalized by each cell's BaseHeight). Updates the snapshot to
+    // the current grid. Returns null when no snapshot was taken or the map is
+    // gone; an empty spec when nothing changed.
+    MacroblockSpec@ GetTerrainDiffSpec() {
+        if (!_terrainSnapshotTaken) return null;
+        auto map = GetApp().RootMap;
+        if (map is null) return null;
+        auto cells = DGameCtnChallenge(map).TerrainGenealogies;
+        auto spec = MacroblockSpecPriv();
+        if (cells.Length != _terrainSnapshotSigs.Length) {
+            // map changed shape under us; resync rather than diff garbage
+            RefreshTerrainSnapshot();
+            return spec;
+        }
+        int sizeZ = Nat3ToInt3(map.Size).z;
+        if (sizeZ <= 0) return null;
+        for (uint i = 0; i < cells.Length; i++) {
+            auto gen = cells.GetTerrainCell(i).Nod;
+            string sig = _TerrainCellSig(gen);
+            if (sig == _terrainSnapshotSigs[i]) continue;
+            _terrainSnapshotSigs[i] = sig;
+            if (gen is null) continue;
+            auto ts = TerrainSpec();
+            ts.offset = _TerrainCellCoord(i, sizeZ);
+            SetTerrainSpecFromGenealogy(ts, gen, gen.BaseHeight);
+            spec.terrains.InsertLast(ts);
+        }
+        _terrainDirty = false;
+        return spec;
+    }
+
+    // MARK: Settled-terrain hook watcher
+    //
+    // When any extension registers onTerrainDirty/onTerrainChanged, E++ owns
+    // the debounce + snapshot pipeline above and fans the single settled diff
+    // out to every subscriber (so only one consumer may ever poll
+    // GetTerrainDiffSpec). No subscribers = the watcher touches nothing.
+    // Ticked from ResetTrackMapChanges_Loop (BeforeScripts). Settle is
+    // frame-based: terraform commits the same frame as placement (measured),
+    // so 2 quiet frames = 1 frame straddle margin; a premature settle
+    // self-heals. Measurement caveats:
+    // research/MacroblockTerrain.md (Settle measurement).
+    const uint TERRAIN_SETTLE_QUIET_FRAMES = 2;
+    uint _terrainQuietFrames = 0;
+    bool _terrainHookArmed = false;
+
+    bool _terrainHookWatcherAnnounced = false;
+    void TerrainHookWatcher_Tick() {
+        if (!Callbacks::Exts::HasTerrainSettleSubscribers()) return;
+        if (!_terrainHookWatcherAnnounced) {
+            _terrainHookWatcherAnnounced = true;
+            trace("[TerrainHookWatcher] active: settled-terrain subscriber registered");
+        }
+        if (cast<CGameCtnEditorFree>(GetApp().Editor) is null || GetApp().RootMap is null) {
+            _terrainHookArmed = false;
+            _terrainSnapshotTaken = false;
+            return;
+        }
+        // late-subscribe baseline: changes are reported from registration on
+        if (!_terrainSnapshotTaken) RefreshTerrainSnapshot();
+        if (_terrainDirty) {
+            _terrainDirty = false;
+            // fires every tick that edits land (not once per burst): sync
+            // consumers re-cache their undo position on each ping so an
+            // incoming update's rebase can only rewind ~1 frame of
+            // un-broadcast terraform
+            if (!IsTerrainResyncPending()) {
+                Callbacks::Exts::Run_OnTerrainDirty();
+            }
+            _terrainHookArmed = true;
+            _terrainQuietFrames = 0;
+        } else if (_terrainHookArmed) {
+            _terrainQuietFrames++;
+        }
+        if (_terrainHookArmed && _terrainQuietFrames >= TERRAIN_SETTLE_QUIET_FRAMES) {
+            if (IsTerrainResyncPending()) {
+                // a remote/API apply is still settling; its grid churn must
+                // land in the snapshot (via the restore-loop refresh), not in
+                // a broadcast diff -- hold until quiet
+                _terrainQuietFrames = 0;
+                return;
+            }
+            _terrainHookArmed = false;
+            auto diff = GetTerrainDiffSpec();
+            dev_trace("[TerrainHookWatcher] settled @f" + Time::FrameCount + "; diff cells: " + (diff is null ? -1 : int(diff.Terrains.Length)));
+            if (diff !is null && diff.Terrains.Length > 0) {
+                Callbacks::Exts::Run_OnTerrainChanged(diff);
+            }
         }
     }
 }

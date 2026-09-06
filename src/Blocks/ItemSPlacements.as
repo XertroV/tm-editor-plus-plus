@@ -166,7 +166,7 @@ namespace Blocks {
                 // parts.InsertLast(ReqTags[i].ToString());
                 parts.InsertLast(ItemPlace_StringConsts::LookupJoined(ReqTags[i]));
             }
-            return "[ " + string::Join(parts, ", ") + " ]";
+            return "[ " + Text::Join(parts, ", ") + " ]";
         }
     }
 }

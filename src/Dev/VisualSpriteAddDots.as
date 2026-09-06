@@ -356,7 +356,8 @@ namespace Editor {
             auto existingLen = vertices.Length;
             if (nb > existingCap) {
                 MemoryBuffer existing = MemoryBuffer(existingLen * elSize);
-                uint64 existingPtr = vertices.Ptr;
+                uint64 existingPtr = vertices.Ptr == 0 ? 0 : Dev::ReadUInt64(vertices.Ptr);
+                if (existingPtr == 0) existingLen = 0;
                 for (uint i = 0; i < existingLen; i++) {
                     for (uint o = 0; o < elSize; o += 0x8) {
                         existing.Write(Dev::ReadUInt64(existingPtr + i * elSize + o));

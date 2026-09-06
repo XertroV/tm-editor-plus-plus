@@ -2,6 +2,18 @@
 
 Ghidra (`Trackmania.exe` @ `0x140000000`) 2026-08-24. Controls/anims: [`2026-08-24-CharacterPilot.md`](2026-08-24-CharacterPilot.md). Custom rigs: [`2026-08-24-CharacterPilotRigs.md`](2026-08-24-CharacterPilotRigs.md).
 
+2026-09-06 follow-up: see
+[`CharacterPilotGender`](2026-09-03-CharacterPilotGender.md) for the live-verified
+ModelKit asset-selection path. `Character_SkinOptions` is the requested
+preference; a CharVis model retains a resolved signature through `+0xF20/+0xF28`.
+The native parser uses `&` separators and case-insensitive names/values. The
+observed Stadium ModelKitDb defines Gender=[Male,Female], default Male.
+
+The network conclusions below concern the described model-list/connect path.
+The follow-up rechecked the filter and serializer, but did not repeat the full
+virtual-call trace or perform a wire/server/replay test. Do not generalize the
+filter to every route by which a remote can receive pilot information.
+
 ## Verdict
 
 | Question | Answer |
@@ -78,7 +90,7 @@ Script getters for both SkinUrls (`0x308a028` / `0x308a02a`) still work locally 
 - `CZone_FindSkinSlotByModelMwId` — local CZone getter.
 - `CTrackMania_EnsureCarSportAndCharacterPilotSkinSlots` (`0x140cc10e0`) — **adds** a CharacterPilot playground slot when CarSport is present and Pilot is missing. Opposite of the network filter.
 - `FUN_140c20b50` — zone default fill writes **both** `Stadium_World.zip` rows.
-- `VehicleSkin_AssignCarSportOrCharacterPilot` (`0x140c5f620`) — local assign / Next-vs-Stadium / Male-Female. Not a net filter.
+- `SkinPainter_BuildCarOrPilotSkinDescriptor` (`0x140c5f620`, formerly `VehicleSkin_AssignCarSportOrCharacterPilot`) — painter descriptor construction. Its suffix checks write EPainterSolidType (2=Pilot_Male, 3=Pilot_Female) at output byte offset `+0xE0`. This is neither the network filter nor the runtime SkinOptions selector.
 
 ## Client patch viability
 
@@ -137,4 +149,4 @@ The `/` trick only helps when the Pilot **row actually arrived**. After the stri
 | `0x140cc18b0` | `CTrackMania_ApplyFilteredModelSkinsToPlayerInfo` |
 | `0x140ccdc20` | `CTrackMania_FillSerializeModelList_Thunk` |
 | `0x140cc10e0` | `CTrackMania_EnsureCarSportAndCharacterPilotSkinSlots` |
-| `0x140c5f620` | `VehicleSkin_AssignCarSportOrCharacterPilot` |
+| `0x140c5f620` | `SkinPainter_BuildCarOrPilotSkinDescriptor` (renamed 2026-09-06) |

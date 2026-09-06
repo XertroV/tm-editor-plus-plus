@@ -6,3 +6,4 @@ src/Editor/LibWebP.as
 Trackmani*.exe
 research/screenshots/*.jpg
 **/__pycache__
+.worktrees/
