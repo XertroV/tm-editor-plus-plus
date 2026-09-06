@@ -14,6 +14,9 @@ class IE_ManipulateMeshesTab : Tab {
     }
 
     CGameCtnArticleNodeArticle@ selectedInvNode = null;
+    string selectedInvPath;
+    uint selectedInvCacheNonce = 0;
+    bool selectedInvIsItem = false;
     CMwNod@ selectedFileSource = null;
 
     CMwNod@ GetInventorySelectionModel() {
@@ -37,6 +40,29 @@ class IE_ManipulateMeshesTab : Tab {
     }
 
     void DrawInner() override {
+        auto inv = Editor::GetInventoryCache();
+        bool selectedGenerationChanged = selectedInvNode !is null
+            && selectedInvCacheNonce != inv.cacheRefreshNonce;
+        bool selectedNodeIsCurrent = selectedInvNode is null
+            || (selectedInvIsItem
+                ? inv.IsCurrentItemNodeForPath(selectedInvPath, selectedInvNode)
+                : inv.IsCurrentBlockNodeForName(selectedInvPath, selectedInvNode));
+        bool selectedIsUsable = selectedInvNode is null
+            || Editor::InventorySelectionIsUsable(
+                selectedInvPath, string(selectedInvNode.NodeName),
+                !selectedGenerationChanged, selectedNodeIsCurrent);
+        bool queuedRefreshForSelection = false;
+        if (selectedInvNode !is null
+                && (inv.isRefreshing || !selectedIsUsable)) {
+            warn("Discarding stale Manipulate Meshes inventory selection: " + selectedInvPath);
+            OnReset();
+            if (!inv.isRefreshing && !selectedGenerationChanged) {
+                inv.RefreshCacheSoon();
+                queuedRefreshForSelection = true;
+            }
+        }
+        if (!queuedRefreshForSelection) inv.CheckSelectableCacheSyncSoon();
+
         if (UI::Button("Reset##manip-meshes-setup")) {
             OnReset();
         }
@@ -140,6 +166,9 @@ class IE_ManipulateMeshesTab : Tab {
         @source = null;
         @lookingFor = null;
         @selectedInvNode = null;
+        selectedInvPath = "";
+        selectedInvCacheNonce = 0;
+        selectedInvIsItem = false;
         @selectedFileSource = null;
         hasRunMsg = "";
     }
@@ -302,6 +331,9 @@ class IE_ManipulateMeshesTab : Tab {
         auto picked = itemPicker.DrawPrompt();
         if (picked !is null) {
             @selectedInvNode = picked;
+            selectedInvPath = string(picked.NodeName);
+            selectedInvCacheNonce = Editor::GetInventoryCache().cacheRefreshNonce;
+            selectedInvIsItem = itemPicker.lastSelectionWasItem;
         }
         return;
     }
