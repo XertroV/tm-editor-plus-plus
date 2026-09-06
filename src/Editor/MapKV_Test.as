@@ -12,7 +12,11 @@
 // no live map: whatever is put in `values` is what the "metadata" holds.
 class FakeTraitSource : MapKVHealth::TraitSource {
     dictionary values;
+    // Counts memory accesses, which is how a test sees whether the drift check
+    // actually ran rather than being served by the recheck throttle.
+    uint reads = 0;
     bool TryRead(CGameCtnChallenge@ map, const string &in trait, string &out value) override {
+        reads++;
         value = "";
         string stored;
         if (!values.Get(trait, stored)) return false;
@@ -27,6 +31,17 @@ class ThrowingTraitSource : MapKVHealth::TraitSource {
         value = "";
         throw("Unable to read memory");
         return false;
+    }
+}
+
+// Stands in for the dictionary walk with a fixed answer.
+class FakeValueSource : MapKV::ValueSource {
+    string stored;
+    bool present = true;
+    FakeValueSource(const string &in stored) { this.stored = stored; }
+    bool TryRead(CGameCtnChallenge@ map, const string &in normalizedKey, string &out value) override {
+        value = stored;
+        return present;
     }
 }
 
@@ -422,9 +437,12 @@ namespace Tests {
         MapKVHealth::Restore(saved);
         MapKVCheck(sameLength.source == MapKVHealth::SOURCE_MEMORY, "a length-only echo never verifies content");
         MapKVCheck(sameLength.mismatchReason == "", "a matching ASCII length is not drift");
-        MapKVCheck(wrongLength.mismatchReason.Length > 0, "a differing ASCII length is drift");
-        MapKVCheck(wrongLength.blockedReason.Length > 0, "a length-only echo cannot answer the read");
-        MapKVCheck(wrongLength.source == MapKVHealth::SOURCE_UNAVAILABLE, "so the source is unavailable");
+        MapKVCheck(sameLength.note == "", "and raises no note");
+        MapKVCheck(wrongLength.note.Length > 0, "a differing ASCII length is recorded: " + wrongLength.note);
+        MapKVCheck(wrongLength.mismatchReason == "", "but never fences: " + wrongLength.mismatchReason);
+        MapKVCheck(wrongLength.blockedReason == "", "and never blocks the read: " + wrongLength.blockedReason);
+        MapKVCheck(wrongLength.source == MapKVHealth::SOURCE_MEMORY, "the memory answer stands, source " + wrongLength.source);
+        MapKVCheck(wrongLength.value == "abcde" && wrongLength.present, "with what memory returned");
         MapKVCheck(notComparable.mismatchReason == "", "mismatched length units are not compared");
         MapKVCheck(notComparable.value == "café", "the memory value is still returned");
     }
@@ -501,6 +519,75 @@ namespace Tests {
         MapKVCheck(blocked.blockedReason.Length > 0, "a key with no echo is blocked, not silently absent");
     }
 
+    // Past the echo bound only a length travels, over a path nothing measures.
+    // A disagreement there must leave the reader working: a truncated echo is
+    // at least as likely as a bad read, and fencing would hand an unproven
+    // transport the power to disable a healthy reader.
+    void MapKV_CheckLargeValueMismatchNeverFences() {
+        auto saved = MapKVHealth::Snapshot();
+        MapKVHealth::Reset();
+        MapKVHealth::NoteEchoLengthIn(TestScopeA(), "_EKV_Plugin.big", 262144);
+        MapKV::SetValueSource(FakeValueSource("what memory holds"));
+        auto read = MapKV::ResolveKeyIn(TestScopeA(), null, "_EKV_Plugin.big");
+        string reason;
+        uint state = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
+        MapKV::SetValueSource(null);
+        MapKVHealth::Restore(saved);
+        MapKVCheck(read.source == MapKVHealth::SOURCE_MEMORY, "the memory answer stands, source " + read.source);
+        MapKVCheck(read.value == "what memory holds" && read.present, "and is what the caller gets");
+        MapKVCheck(read.blockedReason == "", "the read is not blocked: " + read.blockedReason);
+        MapKVCheck(read.note.Contains("262144"), "the size disagreement is recorded: " + read.note);
+        MapKVCheck(state != MapKVHealth::STATE_BROKEN, "and the reader is never fenced: " + reason);
+    }
+
+    // A default-constructed snapshot holds null in every handle it carries, and
+    // both the scope and the trait source are dereferenced unconditionally on
+    // the hot path. Restoring one must leave the supervisor working: a null
+    // scope faults the next report, and a null trait source turns every drift
+    // check into a caught null access and a sticky Broken.
+    void MapKV_CheckRestoreNeverInstallsANullHandle() {
+        auto saved = MapKVHealth::Snapshot();
+        auto empty = MapKVHealth::HealthSnapshot();
+        string reason;
+        MapKVHealth::Reset();
+        MapKVHealth::Restore(empty);
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_METADATA_DISABLED, "False");
+        uint state = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
+        MapKVHealth::Restore(saved);
+        MapKVCheck(state != MapKVHealth::STATE_BROKEN, "a null handle in a snapshot must not fence the reader: " + reason);
+        MapKVCheck(!reason.Contains("threw"), "and must not surface as a thrown walk: " + reason);
+    }
+
+    // There is one verdict slot, for the map the editor has open. Reads aimed
+    // at any other map must return unverified off that slot without re-running
+    // the drift check, which walks metadata once per reported trait.
+    void MapKV_CheckAlternatingScopesKeepOneVerdict() {
+        auto saved = MapKVHealth::Snapshot();
+        auto source = FakeTraitSource();
+        source.values[MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES] = "agreed";
+        string reason;
+        MapKVHealth::Reset();
+        MapKVHealth::SetTraitSource(source);
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "agreed");
+        uint live = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
+        uint afterFirst = source.reads;
+        uint foreign = MapKVHealth::STATE_BROKEN;
+        uint liveAgain = MapKVHealth::STATE_BROKEN;
+        for (uint i = 0; i < 8; i++) {
+            foreign = MapKVHealth::EvaluateFor(TestScopeB(), null, reason);
+            liveAgain = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
+        }
+        uint afterAlternating = source.reads;
+        MapKVHealth::Restore(saved);
+        MapKVCheck(live == MapKVHealth::STATE_HEALTHY, "the live scope verifies against its own report");
+        MapKVCheck(afterFirst == 1, "one drift check reads one reported trait, not " + afterFirst);
+        MapKVCheck(foreign == MapKVHealth::STATE_UNVERIFIED, "another map is unverified, never fenced");
+        MapKVCheck(liveAgain == MapKVHealth::STATE_HEALTHY, "and the live verdict is undisturbed");
+        MapKVCheck(afterAlternating == afterFirst,
+            "alternating scopes re-ran the drift check " + (afterAlternating - afterFirst)
+            + " times inside the recheck window");
+    }
+
     [Test]
     void MapKV_NullMapDoesNotCreateMetadata(Tests::Context@ ctx) { MapKV_CheckNullMapDoesNotCreateMetadata(); }
 
@@ -569,6 +656,15 @@ namespace Tests {
 
     [Test]
     void MapKV_ThrowingWalkFallsBackToEcho(Tests::Context@ ctx) { MapKV_CheckThrowingWalkFallsBackToEcho(); }
+
+    [Test]
+    void MapKV_LargeValueMismatchNeverFences(Tests::Context@ ctx) { MapKV_CheckLargeValueMismatchNeverFences(); }
+
+    [Test]
+    void MapKV_RestoreNeverInstallsANullHandle(Tests::Context@ ctx) { MapKV_CheckRestoreNeverInstallsANullHandle(); }
+
+    [Test]
+    void MapKV_AlternatingScopesKeepOneVerdict(Tests::Context@ ctx) { MapKV_CheckAlternatingScopesKeepOneVerdict(); }
 }
 
 Tester@ Test_MapKV = Tester("MapKV", generateMapKVTests());
@@ -598,6 +694,9 @@ TestCase@[]@ generateMapKVTests() {
     ret.InsertLast(TestCase("broken reader blocks without cache", Tests::MapKV_CheckBrokenReaderBlocksWithoutCache));
     ret.InsertLast(TestCase("healthy reader needs no cache", Tests::MapKV_CheckHealthyReaderNeedsNoCache));
     ret.InsertLast(TestCase("throwing walk falls back to echo", Tests::MapKV_CheckThrowingWalkFallsBackToEcho));
+    ret.InsertLast(TestCase("large value mismatch never fences", Tests::MapKV_CheckLargeValueMismatchNeverFences));
+    ret.InsertLast(TestCase("restore never installs a null handle", Tests::MapKV_CheckRestoreNeverInstallsANullHandle));
+    ret.InsertLast(TestCase("alternating scopes keep one verdict", Tests::MapKV_CheckAlternatingScopesKeepOneVerdict));
     return ret;
 }
 #endif
