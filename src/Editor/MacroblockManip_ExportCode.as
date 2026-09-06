@@ -97,6 +97,13 @@ namespace Editor {
     import string Get_Map_KVRaw(const string &in key, CGameCtnChallenge@ map = null) from "Editor";
     // Sorted stored keys, including their _EKV_ prefix; no metadata is created.
     import string[]@ Get_Map_KVKeys(CGameCtnChallenge@ map = null) from "Editor";
+    // How much the last resolution of this key is worth: "memory-verified" (the
+    // editor plugin echoed the same value), "memory" (nothing to check against),
+    // "ml-cache" (memory reader fenced off; the echo answered) or "unavailable".
+    import string Get_Map_KVReadSource(const string &in key) from "Editor";
+    // false once the memory reader has been fenced off for the current map, with
+    // reason naming the disagreement; reads then throw unless an echo answers.
+    import bool Get_Map_KVReaderHealthy(string &out reason) from "Editor";
     // Read a named scalar metadata trait as text (Text/Boolean/Integer/Real/vectors).
     // Absent or unsupported types return false, without creating metadata.
     import string Get_Map_MetadataRaw(const string &in key, CGameCtnChallenge@ map = null) from "Editor";

@@ -22,6 +22,9 @@ class MapKVDevTab : Tab {
     bool busy = false;
     bool loaded = false;
     bool valuePresent = false;
+    string readerHealth;
+    string descriptorCheck;
+    string readSource;
 
     MapKVDevTab(TabGroup@ parent) {
         super(parent, "[DEV] Map Key Values", Icons::List);
@@ -42,14 +45,24 @@ class MapKVDevTab : Tab {
         error = "";
         valuePresent = false;
         loaded = true;
+        readSource = "";
+        // Both diagnostics are read outside the main try so they still show
+        // when the key listing itself throws: that is exactly when they matter.
+        string healthReason;
+        readerHealth = Editor::Get_Map_KVReaderHealthy(healthReason)
+            ? (healthReason.Length == 0 ? "healthy" : healthReason)
+            : "BROKEN: " + healthReason;
+        descriptorCheck = MapKV::DevDescribeDictionaryType(snapshotMap);
         try {
             if (snapshotMap !is null) {
                 auto found = Editor::Get_Map_KVKeys(snapshotMap);
                 for (uint i = 0; i < found.Length; i++) keys.InsertLast(found[i]);
                 keys.SortAsc();
                 if (keys.Find(selectedKey) < 0) selectedKey = keys.Length > 0 ? keys[0] : "";
-                if (selectedKey.Length > 0)
+                if (selectedKey.Length > 0) {
                     valuePresent = Editor::TryGet_Map_KVRaw(selectedKey, rawValue, snapshotMap);
+                    readSource = Editor::Get_Map_KVReadSource(selectedKey);
+                }
             } else {
                 selectedKey = "";
             }
@@ -73,6 +86,9 @@ class MapKVDevTab : Tab {
             UI::TextWrapped("Reading map metadata...");
             return;
         }
+        UI::TextWrapped("Reader health: " + readerHealth);
+        UI::TextWrapped("Descriptor cross-check (DEV only, not a production gate): "
+            + (descriptorCheck.Length == 0 ? "confirms Text[Text]" : descriptorCheck));
         if (error.Length > 0) {
             UI::TextWrapped("Error reading map metadata: " + error);
             UI::TextWrapped("The error was also written to Openplanet.log. Fix the cause, then press Refresh.");
@@ -105,6 +121,7 @@ class MapKVDevTab : Tab {
             UI::TextWrapped("This key is no longer present. Press Refresh to update the list.");
             return;
         }
+        UI::TextWrapped("Read source: " + readSource);
         UI::TextWrapped("Raw value: " + rawValue.Length + " bytes");
         if (rawValue.Length == 0) {
             UI::TextWrapped("Present, empty string.");
