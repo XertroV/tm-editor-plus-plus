@@ -190,6 +190,8 @@ namespace MapKVHealth {
     // The last read that threw, and when. See NoteReadThrew.
     string g_ThrowSuspect;
     uint64 g_ThrowSuspectAt = 0;
+    // When records were last expired, so one read does not sweep twice.
+    uint64 g_ExpiredAt = 0;
 
     void Reset() {
         @g_Scope = Scope();
@@ -203,6 +205,7 @@ namespace MapKVHealth {
         g_LastResyncAt = 0;
         g_ThrowSuspect = "";
         g_ThrowSuspectAt = 0;
+        g_ExpiredAt = 0;
         ClearSuspicion();
         @g_TraitSource = TraitSource();
     }
@@ -397,7 +400,15 @@ namespace MapKVHealth {
     // not resume comparing against a value memory may have moved past either,
     // so the record is dropped outright.
     void ExpireStaleRecords(uint64 now = 0) {
-        if (now == 0) now = Time::Now;
+        if (now == 0) {
+            now = Time::Now;
+            // One read passes through both LookupEchoFor and EvaluateFor, and
+            // each sweep allocates a fresh GetKeys array. Nothing can age out
+            // twice inside one millisecond, so the second sweep is pure waste.
+            // An explicit `now` is a test forcing the clock and always runs.
+            if (g_ExpiredAt == now) return;
+            g_ExpiredAt = now;
+        }
         for (int i = int(g_Observations.Length) - 1; i >= 0; i--) {
             auto observation = g_Observations[i];
             if (!observation.suspended) continue;
