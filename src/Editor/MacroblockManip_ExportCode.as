@@ -98,8 +98,9 @@ namespace Editor {
     // Sorted stored keys, including their _EKV_ prefix; no metadata is created.
     import string[]@ Get_Map_KVKeys(CGameCtnChallenge@ map = null) from "Editor";
     // How much the last resolution of this key is worth: "memory-verified" (the
-    // editor plugin echoed the same value), "memory" (nothing to check against),
-    // "ml-cache" (memory reader fenced off; the echo answered) or "unavailable".
+    // editor plugin echoed the same value), "memory" (nothing to check against,
+    // or only its size was checkable), "ml-cache" (the echo answered, because
+    // the memory reader is fenced off or because it disagreed) or "unavailable".
     import string Get_Map_KVReadSource(const string &in key) from "Editor";
     // false once the memory reader has been fenced off for the current map, with
     // reason naming the disagreement; reads then throw unless an echo answers.
