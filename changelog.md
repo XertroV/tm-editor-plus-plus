@@ -47,6 +47,13 @@
 
 - `Set_Map_KV(key, raw)` stores a whole string value in the `_EKV_` metadata dictionary. Keys gain an `_EKV_` prefix; values are stored as plain strings, with escaping confined to transport. Writes coalesce per key and remain bound to their original map/plugin. `Get_Map_KVRaw` / `TryGet_Map_KVRaw` read actual metadata; `Get_Map_KVKeys` lists sorted keys; `Is_Map_KVSendInFlight(key)` reports queue state, not persistence. `Get_Map_MetadataRaw` / `TryGet_Map_MetadataRaw` expose existing scalar traits as strings. No trait is created by reads or map initialization. Disabled metadata refuses writes. See [API contract](docs/MapKeyValues.md).
 
+## Plugin API — map key-value reader hardening (change)
+
+- The `_EKV_` type check no longer depends on a `Dev::FindPattern` byte pattern over the game image. Production gates the trait id structurally (compound kind bits plus a nonzero interned descriptor index) and separates a `Text[Text]` dictionary from a `Text[]` array by the pairs buffer, since both share compound kind 7. The descriptor-table cross-check is now DEV-only, surfaced in the DEV Map Key Values tab.
+- String bytes are read with `Dev::SafeRead` instead of `Dev::ReadCString`: a bad address raises a catchable exception rather than faulting the process, an embedded NUL no longer truncates, and a short read is an error. Ranges are probed per 4 KiB page before the read and capped at `MAX_VALUE_BYTES`.
+- New fail-closed health check. The editor plugin's `EPP_MetadataDisabled` and `CCT_CustomColorTables` reports are compared against the same traits read back through the memory walk, per map pointer so a stale cross-map report cannot look like drift. States are Unverified (reads allowed), Healthy, and Broken; while Broken all metadata getters throw with the reason.
+- The ManiaScript `SetMapKV` handler now echoes the value it stored (`MapKVSet`, or `MapKVSetLarge` with just a length above 262144 characters). E++ caches the echo per map and supporting plugin, verifies memory reads against it, and serves it when the reader is fenced off. `Get_Map_KVReadSource(key)` and `Get_Map_KVReaderHealthy(reason)` expose this. See [API contract](docs/MapKeyValues.md).
+
 ## Macroblocks — terrain (new)
 
 - 2026-08-29: genealogy-grid flatten fixed — the grid at challenge+0x390 is **x-major** (`ix = z + x*size.z`, verified empirically); pre-fix TerrainSpec offsets and remote peels used mirrored cells (commit 4289867).
