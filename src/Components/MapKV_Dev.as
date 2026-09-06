@@ -25,6 +25,7 @@ class MapKVDevTab : Tab {
     string readerHealth;
     string descriptorCheck;
     string readSource;
+    string readNote;
 
     MapKVDevTab(TabGroup@ parent) {
         super(parent, "[DEV] Map Key Values", Icons::List);
@@ -38,7 +39,9 @@ class MapKVDevTab : Tab {
     }
 
     void Refresh() {
-        // No yields after acquiring this map: all results belong to one snapshot.
+        // No yields after acquiring this map: all results belong to one
+        // snapshot, and every read below is aimed at this map rather than at
+        // whatever CurrentMap would return by the time it is asked again.
         @snapshotMap = MapKV::CurrentMap();
         keys.RemoveRange(0, keys.Length);
         rawValue = "";
@@ -46,31 +49,54 @@ class MapKVDevTab : Tab {
         valuePresent = false;
         loaded = true;
         readSource = "";
-        // Both diagnostics are read outside the main try so they still show
-        // when the key listing itself throws: that is exactly when they matter.
-        string healthReason;
-        readerHealth = Editor::Get_Map_KVReaderHealthy(healthReason)
-            ? (healthReason.Length == 0 ? "healthy" : healthReason)
-            : "BROKEN: " + healthReason;
-        descriptorCheck = MapKV::DevDescribeDictionaryType(snapshotMap);
+        readNote = "";
         try {
-            if (snapshotMap !is null) {
-                auto found = Editor::Get_Map_KVKeys(snapshotMap);
-                for (uint i = 0; i < found.Length; i++) keys.InsertLast(found[i]);
-                keys.SortAsc();
-                if (keys.Find(selectedKey) < 0) selectedKey = keys.Length > 0 ? keys[0] : "";
-                if (selectedKey.Length > 0) {
-                    valuePresent = Editor::TryGet_Map_KVRaw(selectedKey, rawValue, snapshotMap);
-                    readSource = Editor::Get_Map_KVReadSource(selectedKey);
-                }
-            } else {
-                selectedKey = "";
-            }
+            ReadSnapshot();
         } catch {
             error = getExceptionInfo();
             warn("Map KV browser: " + error);
         }
+        // Both diagnostics run after the reads and each in its own try: the
+        // reads are exactly what can flip the health verdict, and a diagnostic
+        // that throws must still leave the other one and the listing showing.
+        try {
+            string healthReason;
+            readerHealth = MapKVHealth::Evaluate(snapshotMap, healthReason) != MapKVHealth::STATE_BROKEN
+                ? (healthReason.Length == 0 ? "healthy" : healthReason)
+                : "BROKEN: " + healthReason;
+        } catch {
+            readerHealth = "check threw: " + getExceptionInfo();
+        }
+        try {
+            descriptorCheck = MapKV::DevDescribeDictionaryType(snapshotMap);
+        } catch {
+            descriptorCheck = "check threw: " + getExceptionInfo();
+        }
+        // Reached on every path. RequestRefresh refuses to start while this is
+        // set, so leaving it set on a throw wedges the tab for the session.
         busy = false;
+    }
+
+    // Throws on a fenced reader, which Refresh reports rather than swallows.
+    void ReadSnapshot() {
+        if (snapshotMap is null) {
+            selectedKey = "";
+            return;
+        }
+        auto found = Editor::Get_Map_KVKeys(snapshotMap);
+        for (uint i = 0; i < found.Length; i++) keys.InsertLast(found[i]);
+        keys.SortAsc();
+        if (keys.Find(selectedKey) < 0) selectedKey = keys.Length > 0 ? keys[0] : "";
+        if (selectedKey.Length == 0) return;
+        // One resolve for value, presence and source together. Calling
+        // TryGet_Map_KVRaw and then Get_Map_KVReadSource walks the dictionary
+        // twice, and the second walk would target CurrentMap, not this one.
+        auto read = MapKV::ResolveKey(snapshotMap, MapKV::NormalizeKey(selectedKey));
+        if (read.blockedReason.Length > 0) throw(MapKVHealth::BLOCKED_PREFIX + read.blockedReason);
+        rawValue = read.value;
+        valuePresent = read.present;
+        readSource = read.source;
+        readNote = read.note;
     }
 
     void DrawInner() override {
@@ -122,6 +148,8 @@ class MapKVDevTab : Tab {
             return;
         }
         UI::TextWrapped("Read source: " + readSource);
+        if (readNote.Length > 0)
+            UI::TextWrapped("Note (not grounds for fencing the reader): " + readNote);
         UI::TextWrapped("Raw value: " + rawValue.Length + " bytes");
         if (rawValue.Length == 0) {
             UI::TextWrapped("Present, empty string.");
