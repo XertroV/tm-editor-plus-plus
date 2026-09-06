@@ -246,10 +246,16 @@ namespace MapKVHealth {
         return snapshot;
     }
 
+    // Every handle a snapshot carries is replaced through the same guard the
+    // live setters use. A snapshot that was default-constructed, or built
+    // before anything was installed, holds nulls, and both of these are
+    // dereferenced unconditionally on the hot path: a null scope faults the
+    // next Matches call and a null trait source turns every drift check into a
+    // caught null access and a sticky Broken.
     void Restore(HealthSnapshot@ snapshot) {
         if (snapshot is null) return;
         Reset();
-        @g_Scope = snapshot.scope;
+        @g_Scope = snapshot.scope is null ? Scope() : snapshot.scope;
         for (uint i = 0; i < snapshot.observations.Length; i++)
             g_Observations.InsertLast(snapshot.observations[i]);
         g_ObservationSeq = snapshot.observationSeq;
@@ -263,7 +269,7 @@ namespace MapKVHealth {
         g_SuspectTrait = snapshot.suspectTrait;
         g_SuspectReports = snapshot.suspectReports;
         g_LastResyncAt = snapshot.lastResyncAt;
-        @g_TraitSource = snapshot.traitSource;
+        SetTraitSource(snapshot.traitSource);
     }
 
     void ClearSuspicion() {
