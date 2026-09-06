@@ -5,6 +5,8 @@ namespace Editor {
         shared funcdef bool ProcessNewSelectedItem(CGameItemModel@ itemModel);
         shared funcdef void ProcessNewSelectedBlock(CGameCtnBlockInfo@ blockInfo);
         shared funcdef void ProcessNewSelectedMacroBlock(CGameCtnMacroBlockInfo@ mbInfo);
+        shared funcdef void ProcessTerrainChanged(MacroblockSpec@ terrainDiff);
+        shared funcdef void ProcessMapSaved(bool mapSaved, bool onlyScriptMetadataModified);
 
 #if FALSE
         // for vscode extension completion
@@ -58,8 +60,17 @@ namespace Editor {
             // Argument is a CGameEditorPluginMap::EMapElemColor cast to int64
             CoroutineFuncUserdataInt64@ onApplyColorToSelection;
 
-            // CoroutineFunc@ onEditorSaveMap;
-            // CoroutineFunc@ afterEditorSaveMap;
+            // Fired when the user triggers the editor's save input/button
+            // (EditorInput/Save via the E++ editor plugin's PendingEvents).
+            // Best-effort pre-save: metadata writes queued here may land 1-2
+            // frames later and can lose a race with a quick Ctrl+S.
+            // Only fires while E++'s supporting editor plugin is active.
+            CoroutineFunc@ onEditorSaveMap;
+            // Fired after the save dialog resolves (MapSavedOrSaveCancelled).
+            // mapSaved=false means the save was cancelled;
+            // onlyScriptMetadataModified=true means nothing but script metadata
+            // changed since the previous save. The reliable post-save backstop.
+            ProcessMapSaved@ afterEditorSaveMap;
 
             // Called when a new item is added to the map, but before the game begins rendering it.
             ProcessItem@ onPlaceItem;
@@ -69,6 +80,21 @@ namespace Editor {
             ProcessBlock@ onPlaceBlock;
             // Called when a block is deleted from the map.
             ProcessBlock@ onDeleteBlock;
+            // Called when a terrain (BlockInfo.IsTerrain) block is added. Terraform is
+            // async: one gesture fires a burst of these over ~1s, and terrain blocks
+            // carry no genealogy info -- for settled state use onTerrainChanged.
+            ProcessBlock@ onPlaceTerrainBlock;
+            // Called when a terrain block is removed. See onPlaceTerrainBlock.
+            ProcessBlock@ onDeleteTerrainBlock;
+            // Called each frame that terrain edits land on the genealogy grid (so a
+            // terraform drag fires it repeatedly; not fired while a terrain
+            // resync/apply is pending). Sync consumers use it to checkpoint state
+            // ahead of the settled diff.
+            CoroutineFunc@ onTerrainDirty;
+            // Called after terrain edits settle (~1.2s debounce) with a terrain-only
+            // MacroblockSpec diff of the changed cells. Registering this makes E++ the
+            // owner of the terrain snapshot: do NOT poll GetTerrainDiffSpec yourself.
+            ProcessTerrainChanged@ onTerrainChanged;
             // Called when a new item is selected in the editor.
             ProcessNewSelectedItem@ onNewSelectedItem;
         }

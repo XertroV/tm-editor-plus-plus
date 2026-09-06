@@ -2,6 +2,14 @@
 
 Ghidra (`Trackmania.exe` @ `0x140000000`) 2026-08-24. Sync: [`2026-08-24-CharacterPilotSkins.md`](2026-08-24-CharacterPilotSkins.md).
 
+Variant selection follow-up (2026-09-06):
+[`CharacterPilotGender`](2026-09-03-CharacterPilotGender.md) traces
+`Stadium/ModelKitDb.Gbx`, SkinOptions, and the retained model-cache signature.
+Use that signature to identify the selected Gender. A live Female pilot's
+CPlugCharVisModel still had IdName=`Man`; names and joint counts are not a
+verified morphology classifier. Requested PlayerInfo options can also differ
+from explicitly configured menu instances or model-loading fallback.
+
 ## Are they possible?
 
 **Yes in the engine.** Pilot is a skinned character, not a car vis-state:

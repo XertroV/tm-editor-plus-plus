@@ -220,3 +220,57 @@ Renamed: ProfileScope_Enter/Exit (0x140117690/0x1401176A0 — used by every scop
 - Meaning of mb+0x1E0..0x1E8 vs map+0x200..0x208 (both (3,1,3) on RedIsland) and the zone-list structs at mb+0x1D0/0x1D8 (full-map macroblocks?).
 - Whether `OffsetY` on AutoTerrain is ever nonzero (stacked terrain?).
 - Whether ground-mode placement works with a temp-written donor (the E++ donor flow currently assumes air mode).
+
+## Recon pass architecture (2026-08-30, `_ReconstructTerrainViaNativePlace`)
+
+Why the terrain apply is NATIVE-ONLY: vista terrain state can only be produced
+by three primitives —
+- `RemoveTerrainBlocks` peels the live cell to any truncation of its current
+  genealogy stack (covers block-made and tool-made lowers);
+- `PlaceTerrainBlocks` recreates tool-made raises: a genealogy's zone names
+  ARE terrain block model names, and the script API reaches the terrain tool's
+  own native routine (see 2026-08-30-TerrainPlacementRE.md; type-gated on
+  `CGameCtnBlockInfoFrontier`/`Flat` models, per-model minimum region sizes —
+  2x2 for vista land/hill models, 1x1 for most shores, 2x2 for BlueBay's Sea
+  which is that env's Flat model);
+- ground-block AutoTerrain raises are recreated by the ground-block replay
+  that precedes the terrain diff in the update stream.
+
+Most of a gesture's footprint is engine-DERIVED from its neighbors rather than
+directly placeable (support rings around hills, slope dirs around carves), so
+the rebuild runs ordered passes with a live signature recheck between each —
+passes never claim success locally; `_ReconRecheck` is the only judge:
+
+1. **Hills** (relTop >= 2), tallest first — a taller hill's smoothing
+   recreates the 1-wide support rings that arrive as unplaceable thin strips.
+2. **Land-level fills** (relTop == 1), grouped by relTop ALONE (zone-
+   agnostic): one fill gesture produces base-zone-only interior cells and
+   shore-zone edge cells together; splitting by zone leaves an unplaceable
+   1-wide ring. Placed with the env's Flat model; 1-wide rects are widened
+   into adjacent live land cells to satisfy the >= 2x2 model minimum
+   (idempotent for the widened cells).
+3. **Stacked layers** (> 2 zones, e.g. a hill on a beach pad): group by the
+   full zone stack and replay each layer's model bottom-up — native placement
+   takes the live base y for every layer, and already-correct lower layers
+   re-apply idempotently.
+4. **Carve inference**: surviving low cells are carve states (slope dirs /
+   water centers) no flat gesture expresses. The original carve rect is the
+   connected mismatch region's bounding box eroded by one; re-carving it lets
+   the engine re-derive the slopes. Restricted to dir != 0 or relTop == 0
+   cells (flat land-level mismatches are never carve evidence), and skipped
+   when the eroded rect sits on relTop >= 2 terrain (mis-inference, e.g. the
+   annulus around an unresolved hill).
+
+A second round strips survivors to default (`ResetTerrainCoord`) and rebuilds
+from scratch.
+
+### Settle measurement (TERRAIN_SETTLE_QUIET_FRAMES = 2)
+
+Terraform commits in the SAME FRAME as its block placement — measured twice:
+replay waves of 13-14 ground blocks placed in one frame landed ALL terrain as
+one dirty tick that frame (tickOffsets [0]). 2 quiet frames = 1 frame of
+straddle margin; a premature settle self-heals via a follow-up diff.
+CAUTION when re-measuring: an earlier "10 ticks over 39 frames, max gap 4f"
+reading was an artifact of MCP test calls arriving ~4 frames apart — gaps
+reflected call spacing, not engine scheduling. Measure per-block place-frame
+vs commit-frame, and use same-frame multi-place (replay waves) for burst data.

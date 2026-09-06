@@ -175,7 +175,7 @@ Minimum that matches official flags:
 
 Writes those plus `PackVisualToWorld3x4Rows` into `SCBuffer_Draw`. That is the GPU lerp of two baked sub-visual frames.
 
-Tick that *writes* `+0x48` is inherited `CFuncTree` / vis-tree motion (`AutoCreateMotion`), not a dedicated override on this subclass vtable. Not chased further this pass.
+Tick that *writes* the tween state is `CFuncTreeSubVisualSequence_Apply` `0x1413ff6b0` (2026-09-01): writes packed `idx1 | idx2<<12 | weight<<24` at **`CPlugTree+0xE8`** (SimpleMode lerp or `SubKeys`); renderer copies it to visual-instance `+0x48`. `AutoCreateMotion` defaults **true** (`CFuncTree_Construct` `0x140180a50`) and no Flag file embeds a func nod — the sequencer is auto-created at runtime. Full chain: [`2026-09-01-DynaObjectVertexTweenRequirements.md`](2026-09-01-DynaObjectVertexTweenRequirements.md).
 
 ## Extracted copies
 

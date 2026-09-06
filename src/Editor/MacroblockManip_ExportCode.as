@@ -86,6 +86,26 @@ namespace Editor {
     import void Set_Map_EmbeddedCustomColorsEncoded(const string &in raw) from "Editor";
     import string Get_Map_EmbeddedCustomColorsEncoded() from "Editor";
 
+    // Generic map key-value strings, stored in the _EKV_ metadata dictionary.
+    // Keys are prefixed automatically; use a plugin-specific key to avoid collisions.
+    // Async writes: queue drained != trait updated != saved to disk.
+    import void Set_Map_KV(const string &in key, const string &in raw) from "Editor";
+    import bool Is_Map_KVSendInFlight(const string &in key = "") from "Editor";
+    // Null map defaults to the current map; reads never create metadata.
+    // TryGet distinguishes a missing key from a present empty string.
+    import bool TryGet_Map_KVRaw(const string &in key, string &out value, CGameCtnChallenge@ map = null) from "Editor";
+    import string Get_Map_KVRaw(const string &in key, CGameCtnChallenge@ map = null) from "Editor";
+    // Sorted stored keys, including their _EKV_ prefix; no metadata is created.
+    import string[]@ Get_Map_KVKeys(CGameCtnChallenge@ map = null) from "Editor";
+    // Read a named scalar metadata trait as text (Text/Boolean/Integer/Real/vectors).
+    // Absent or unsupported types return false, without creating metadata.
+    import string Get_Map_MetadataRaw(const string &in key, CGameCtnChallenge@ map = null) from "Editor";
+    import bool TryGet_Map_MetadataRaw(const string &in key, string &out value, CGameCtnChallenge@ map = null) from "Editor";
+    // whether E++'s supporting editor plugin is active (metadata writes possible)
+    import bool Is_SupportingEditorPluginActive() from "Editor";
+    // whether the current map opted out of metadata writes (EPP_MetadataDisabled)
+    import bool Get_Map_MetadataDisabled() from "Editor";
+
     // pass in paths relative to `Trackmania/Items/` folder
     import void ReloadItemsAsync(string[]@ paths) from "Editor";
 }
@@ -116,4 +136,25 @@ namespace Editor {
     import vec3 MTCoordToPos(int3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
     import vec3 MTCoordToPos(nat3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
     import vec3 MTCoordToPos(vec3 mtCoord, vec3 mtBlockSize = vec3(10.66666, 8., 10.66666)) from "Editor";
+
+    // Terrain change tracking (terraform lands async and terrain blocks are
+    // invisible to the placement trackers): RefreshTerrainSnapshot on editor
+    // entry, poll IsTerrainDirty, debounce ~1-2s, then GetTerrainDiffSpec for
+    // a terrain-only MacroblockSpec of the changed cells (also resyncs the
+    // snapshot). PlaceMacroblock applies terrain-only specs via the ground
+    // donor pass.
+    import bool IsTerrainDirty() from "Editor";
+    import bool IsTerrainResyncPending() from "Editor";
+
+    // Capture suppression for sync plugins applying server updates: replayed
+    // edits fire the same engine hooks as user edits; wrap applies so they
+    // are not re-captured and rebroadcast. Reset at the consumer's loop start
+    // (self-healing if an apply threw mid-suppress).
+    import void BeginCaptureSuppress() from "Editor";
+    import void EndCaptureSuppress() from "Editor";
+    import void ResetCaptureSuppress() from "Editor";
+    import bool IsCaptureSuppressed() from "Editor";
+    import void ClearTerrainDirty() from "Editor";
+    import void RefreshTerrainSnapshot() from "Editor";
+    import MacroblockSpec@ GetTerrainDiffSpec() from "Editor";
 }

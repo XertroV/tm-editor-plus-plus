@@ -35,8 +35,6 @@ void Main() {
     RegisterOnEditorUnloadCallback(ClearSelectedOnEditorUnload, "ClearSelectedOnEditorUnload");
     RegisterOnEditorUnloadCallback(Gizmo::_GizmoOnCancel, "Gizmo::_GizmoOnCancel");
 
-    RegisterOnEditorLoadCallback(HookOnMapSave::OnEnterEditor, "HookOnMapSave::OnEnterEditor");
-    RegisterOnEditorUnloadCallback(HookOnMapSave::OnEditorLeave, "HookOnMapSave::OnEditorLeave");
 #if DEV
     // testing grass stuff
     // PlacementHooks::SetupHooks();
@@ -144,7 +142,6 @@ void Unload(bool freeMem = true) {
     Gizmo::_GizmoOnCancel();
     UnloadIntercepts();
     Editor::EnableMapThumbnailUpdate();
-    HookOnMapSave::OnEditorLeave();
     Editor::OffzonePatch::Unapply();
     CheckUnhookAllRegisteredHooks();
     CustomCursor::ResetSnapRadius();

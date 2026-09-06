@@ -1,7 +1,11 @@
-[DGameCtnGhost: 0x330]
+# size 0x340; was 0x330 before 2026.
+# Inputs: Validate_GameModeCustomData + 0x18 = 0x1A8
+# EntRecord: Validate_ExtraTool_Info + 0xC0 = 0x2F0
+[DGameCtnGhost: 0x340]
 NativeClass = CGameCtnGhost
 Buffer: Checkpoints = DGameCtnGhost_CPs, O_CTN_GHOST_CHECKPOINTS_BUF, 0x8, false
 Buffer: Inputs = DGameCtnGhost_PlayerInputs, O_CTN_GHOST_PLAYER_INPUTS_BUF, 0x18, false
+EntRecordData = CPlugEntRecordData, O_CTN_GHOST_ENT_RECORD_DATA, G
 
 # might be bigger, unsure
 [DGameCtnGhost_PlayerInput: 0x18]

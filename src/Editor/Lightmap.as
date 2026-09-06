@@ -66,7 +66,8 @@ namespace Editor {
         48 83 C1 48 83 3D ?? ?? ?? ?? 00 0F 84 E3 02 00 00
     */
 
-    const string Pattern_LMDebugFlagOffset = "48 83 C1 48 83 3D ?? ?? ?? ?? 00 0F 84 E3 02 00 00";
+    // JZ displacement wildcarded: it was 0x2E3, moved to 0x30D in 2026 builds and the concrete form matched nothing.
+    const string Pattern_LMDebugFlagOffset = "48 83 C1 48 83 3D ?? ?? ?? ?? 00 0F 84 ?? ?? 00 00";
     uint64 Ptr_LMDebugFlagCode = 0;
     uint64 Ptr_LMDebugFlag = 0;
 

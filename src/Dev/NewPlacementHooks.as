@@ -31,8 +31,9 @@ namespace PlacementHooks {
         0, 2, "PlacementHooks::OnBlockDeleted_Rdx", Dev::PushRegisters(0)
     );
 
+    // Anchored on the trailing `add rdx, 0x1380`: the loose prefix alone matches 7 call sites (2026-09-06 audit).
     FunctionHookHelper@ After_CGameCtnEditorPluginMap_Update_PreScript_Hook = FunctionHookHelper(
-        "E8 ?? ?? ?? ?? 48 8B 93 ?? ?? 00 00 48 8D 8B ?? ?? 00 00",
+        "E8 ?? ?? ?? ?? 48 8B 93 ?? ?? 00 00 48 8D 8B ?? ?? 00 00 48 81 C2 80 13 00 00",
         0, 0, "PlacementHooks::After_CGameCtnEditorPluginMap_Update_PreScript_EmitEvent", Dev::PushRegisters(0)
     );
 
@@ -356,7 +357,10 @@ orig: E8 F2 5C E6 FF 48 8B 93 80 08 00 00 48 8D 8B 88 08 00 00 48 81 C2 80 13 00
 call to hook:
     E8 ?? ?? ?? ?? 48 8B 93 80 08 00 00 48 8D 8B 88 08 00 00 48 81 C2 80 13 00 00 48 83 C4 20 5B E9 ?? ?? ?? ?? CC
 
-unique: E8 ?? ?? ?? ?? 48 8B 93 ?? 08 00 00 48 8D 8B ?? 08 00 00
+unique (2024): E8 ?? ?? ?? ?? 48 8B 93 ?? 08 00 00 48 8D 8B ?? 08 00 00
+2026-09: offsets moved 0x880/0x888 -> 0xfd0/0xfd8; the `?? 08` form matches 0 and the `?? ??` form matches 7.
+         Unique again with the `48 81 C2 80 13 00 00` (add rdx,0x1380) tail; site is the CGameEditorPluginMap vtbl thunk
+         @ 0x141338a19 calling Update_PreScript_Outer (0x1411a3c70) -> CGameEditorPluginMap::Update_PreScript.
 
 Trackmania.exe.text+12D2619 - E8 F25CE6FF           - call Trackmania.exe.text+1138310 { call CGameEditorPluginMap::Update_PreScript_Outer
  }

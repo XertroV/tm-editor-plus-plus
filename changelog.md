@@ -1,4 +1,77 @@
-# 0.8.99999999a
+# 0.8.999999999.1
+
+## Plugin API — kinematic constraint exports (change)
+
+- `ItemEditor::IKinematicConstraint` is the shared identity (fluent Rot/Trans/AnglesMM/PosMM, anim presets, subfunc get/set, Copy/Clone, axis/range getters); `KinematicConstraint` impl and `SAnimFunc_*` bodies are E++-only. Dependents `import` `WrapKinematicConstraint` / `SAnimFunc_*` / `CloneKinematicConstraint` from `ItemEditor/_Exports.as`. Shared enums + `SAnimFunc_SubFunc` live in `ItemEditor/_ExportsShared.as`. Changing those function bodies no longer requires a game restart. Game restart is required to pick up shared interface signature changes.
+
+## Item Browser — Clone kinematic constraint (new)
+
+
+- On `NPlugDyna_SKinematicConstraint`, **Clone to New** (SameLine after offset/explore/ptr) allocates a fresh KC, packed-copies all fields (anim keys, axes, ShaderTc), and replaces this Model pointer so the catalog nod is left alone.
+- Same button on `CPlugDynaObjectModel`: new dyna nod, packed-copy scalars, AddRef Mesh/StaticShape/DynaShape/LocAnim/WaterModel (shared children, not deep-copied).
+
+## Item Browser — Solid2 Visuals list (fix)
+
+- Expanding `CPlugSolid2Model` visuals no longer throws `does not have a child called Visual 0` (buffer children pass the pointer-slot offset; they are not named members).
+
+## Item Browser — CPlugVisual / mesh flags (new)
+
+- Solid2 trees list each visual. `CPlugVisual` / `CPlugVisualIndexedTriangles` show UseVertexNormal (flags+0x24 bit7, labelled with smooth shading), UseVertexColor, geometry/indexation/optimize flags, AABB, subvisuals, index count in a 2-col table. RecalcSmoothNormals averages face normals into CPU Vertexes; if that MwFastBuffer is empty it steals a game-heap allocation via `CPlugCloudsParam.PointDists` (same as DrawLines ResizeBuffer) and copies positions from `CPlugVertexStream`. NegNormals / ComputeOccBox / ComputeFaceCull buttons. VisCstType + Solid2 AABB.
+
+## Item Browser — Prefab Params editors (new)
+
+- Compact editors for prefab-ent `Params`: `NPlugItemPlacement::SPlacement` (iLayout + RequiredTags), `NPlugItemPlacement::SPlacementGroup` (Placements, TQs, u16s, dup array; spectator import/export kept), `NPlugDyna::SPrefabConstraintParams` (Ent1/Ent2/Pos1/Pos2; Ent1 stays `-1`), `NPlugStaticObjectModel::SInstanceParams` (Phase01). Unknown Params classes get per-member f32/i32 (or checkbox) inputs.
+
+## Item Browser — read-only outside item editor (fix)
+
+- Map-editor Model Browser (`isEditable=false`) no longer writes `HiddenInManualCycle`, `DisableAutoCreateSound`, or clip flags. UserInst color / visual UseTgtU/V show a read-only path. Clone to New, Replace GmSurf, Prefab Params, and CPlugVisual editors were already IE-only.
+
+## Item Browser — Replace GmSurf primitive (new)
+
+- On `CPlugSurface`, **Replace GmSurf** allocates a fresh `CPlugSurface()` (game heap, 0x48), overlays a Sphere/Box/Capsule(pill)/Cylinder/VCylinder/Ellipsoid/Circle/SphereLocated/SphericalShell body (subclass vtable from unique Construct patterns), and writes `m_GmSurf` via SetOffset. Not an in-place Mesh transmute; do not assign `m_GmSurf` (that MwAddRefs). Unique old Mesh is leaked (no script path to `GmSurf_Release`).
+
+## Item Browser — GmSurf primitive editors (new)
+
+- Model Browser edits `CPlugSurface.m_GmSurf` by runtime class (Sphere, SphereLocated, Ellipsoid, Plane, Box, Mesh, Cylinder, VCylinder, Capsule, Circle, SphericalShell, MultiSphere, ConvexPolyhedron AABB, Compound children). QuadHeight / TriangleHeight / Polygon are TM2020 enum leftovers with no class. Changing `GmSurfType` still does not convert the C++ object.
+
+## Item Browser — UserInst custom color (fix)
+
+- Custom `CPlugMaterialUserInst` color is a stride-4 `Real` buffer of unit floats (GBX load converts packed bytes 1..255). The picker now reads/writes floats, Instantiate sets `valueOffset=0`, and a SameLine × removes the custom color.
+
+## Plugin API — map save callbacks (new)
+
+- `IEppExtension`: `onEditorSaveMap` (user pressed the editor's save input; best-effort pre-save — metadata writes queued here can land 1-2 frames later) and `afterEditorSaveMap(bool mapSaved, bool onlyScriptMetadataModified)` (post-save-dialog outcome; `mapSaved=false` = cancelled). Driven by the E++ editor plugin's `PendingEvents` (`EditorInput/Save`, `MapSavedOrSaveCancelled`) — pure ManiaScript, no memory hooks — so they fire only while the E++ supporting editor plugin is active, and programmatic `PluginMapType.SaveMap()` calls from other plugins raise only `afterEditorSaveMap`.
+- `SaveMapSameName(editor)` exported (saves to the existing filename, restores MapName after).
+
+## Plugin API — generic map key-value metadata (new)
+
+- `Set_Map_KV(key, raw)` stores a whole string value in the `_EKV_` metadata dictionary. Keys gain an `_EKV_` prefix; values are stored as plain strings, with escaping confined to transport. Writes coalesce per key and remain bound to their original map/plugin. `Get_Map_KVRaw` / `TryGet_Map_KVRaw` read actual metadata; `Get_Map_KVKeys` lists sorted keys; `Is_Map_KVSendInFlight(key)` reports queue state, not persistence. `Get_Map_MetadataRaw` / `TryGet_Map_MetadataRaw` expose existing scalar traits as strings. No trait is created by reads or map initialization. Disabled metadata refuses writes. See [API contract](docs/MapKeyValues.md).
+
+## Macroblocks — terrain (new)
+
+- 2026-08-29: genealogy-grid flatten fixed — the grid at challenge+0x390 is **x-major** (`ix = z + x*size.z`, verified empirically); pre-fix TerrainSpec offsets and remote peels used mirrored cells (commit 4289867).
+- Macroblock specs can capture, serialize, and place **map terrain** (non-default genealogy cells). E++ placement is two-pass: air-mode for blocks/items, then a ground-mode donor pass for terrain only (air-mode + AutoTerrains crashes the game).
+- Guards: never ground-place an empty donor; abort if the map ground base cannot be resolved; terrain offsets stored absolute and normalized at place time. Zone nods resolved from the map genealogy grid (not `CompleteZoneList`).
+- Macroblock Recorder: **Record Terrain (from map)** checkbox (default off). Captures terrain under the recorded region into the spec; UI shows terrain counts. Native paste of an air macroblock that still carries AutoTerrains can crash — prefer applying the recording through E++ `PlaceMacroblock`.
+- Plugin API: `MacroblockSpec.Terrains` / `HasTerrain()`; `TerrainSpec` is part of the shared spec (network buffer includes a terrains chunk when non-empty).
+
+## Blocks & Items — Terrain tab (new)
+
+- New **Terrain** subtab lists `PluginMapType.TerrainBlocks` (includes the default fill; CSV includes terrain rows).
+- Reset a cell to the collection default (peels genealogy layers until WaterHill/Water/Grass/etc.).
+
+## Plugin API — terrain placement hooks (new)
+
+- `IEppExtension`: `onPlaceTerrainBlock` / `onDeleteTerrainBlock` (raw, per terrain block; terraform fires bursts) and `onTerrainDirty` / `onTerrainChanged(MacroblockSpec@ diff)` (settled cell diff after ~1.2s debounce). Registering a settled hook makes E++ the owner of the terrain snapshot — don't poll `GetTerrainDiffSpec` alongside it.
+
+## Plugin API — item editor / inventory / skins
+
+- `SaveAndReloadItemEditorAsync()` (coroutine; same path as the item-editor Save+reload).
+- Inventory: `GetInventoryBlockInfoByName`. Item/block skins: `GetItemModelGameSkin` / `GetBlockInfoGameSkin` / `SetItemModelGameSkin`.
+
+## Inventory patch
+
+- Skip-club / skip-club-update patch setting stays armed after a map load (one-shot export still reverts to the menu setting). Mutually exclusive skip-vs-disable so both patches cannot be on at once.
 
 ## Map cache (in-editor block/item index)
 
@@ -61,6 +134,7 @@
 - Fix #32: `RegisterExtension` declaration was in the wrong namespace — extension scripts now bind.
 - Test-vehicle window tooltip clarified (#11): the window only shows in test mode (not validating), but the chosen vehicle is saved on the map and applies to validation too.
 - New tooling/MCP exports: `SaveCurrentItemEditorItem`, `LeaveCurrentItemEditor` (native editor `Exit()`).
+- Dev menu: **Editor** nod explorer is skipped when `GetApp().Editor` is null (crash outside the editor).
 
 # 0.8.999999996
 

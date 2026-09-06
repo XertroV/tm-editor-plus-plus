@@ -404,14 +404,14 @@ namespace CreateObj {
         kc.TransMin = 0.;
         kc.TransMax = speed > 0 ? 128. : -128.;
         speed = Math::Abs(speed);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::Linear, true, uint(float(rainDuration) / speed));
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::None, false, 0);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, true, 0);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, 100);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::Linear, false, 100);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, 100);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, ItemEditor::SubFuncEasings::Linear, true, uint(float(rainDuration) / speed));
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, ItemEditor::SubFuncEasings::None, false, 0);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, true, 0);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, true, 0);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, 100);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, ItemEditor::SubFuncEasings::Linear, false, 100);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, true, 100);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, true, 0);
     }
 
     void MakeExplodingRocksLightning() {
@@ -594,14 +594,14 @@ namespace CreateObj {
         kc.TransAxis = NPlugDyna::EAxis::y;
         kc.TransMin = 0;
         kc.TransMax = -20000.;
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, true, delayFromStart - boltPreExplode);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::None, false, boltShowDuration + boltPreExplode);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, true, explodeDuration - boltShowDuration + afterExplodeResetDelay);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, delayFromStart);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::Linear, false, explodeDuration);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, true, delayFromStart - boltPreExplode);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, ItemEditor::SubFuncEasings::None, false, boltShowDuration + boltPreExplode);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, true, explodeDuration - boltShowDuration + afterExplodeResetDelay);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, true, 0);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, delayFromStart);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, ItemEditor::SubFuncEasings::Linear, false, explodeDuration);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, true, afterExplodeResetDelay);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, true, 0);
     }
 
     void SetKCBoulder(NPlugDyna_SKinematicConstraint@ kc) {
@@ -611,14 +611,14 @@ namespace CreateObj {
         kc.TransAxis = NPlugDyna::EAxis::y;
         kc.TransMin = 0;
         kc.TransMax = -20000.;
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, true, delayFromStart - boltPreExplode);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::None, false, boltShowDuration + boltPreExplode);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, true, explodeDuration - boltShowDuration + afterExplodeResetDelay);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, delayFromStart);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::Linear, false, explodeDuration);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, true, delayFromStart - boltPreExplode);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, ItemEditor::SubFuncEasings::None, false, boltShowDuration + boltPreExplode);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, true, explodeDuration - boltShowDuration + afterExplodeResetDelay);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, true, 0);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, delayFromStart);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, ItemEditor::SubFuncEasings::Linear, false, explodeDuration);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, true, afterExplodeResetDelay);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, true, 0);
     }
 
     void SetKCExplodingRock(NPlugDyna_SKinematicConstraint@ kc) {
@@ -628,14 +628,14 @@ namespace CreateObj {
         kc.TransAxis = NPlugDyna::EAxis::z;
         kc.TransMin = 0;
         kc.TransMax = 20.;
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, false, delayFromStart);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::Linear, false, explodeDuration);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, false, 0);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, delayFromStart);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::Linear, false, explodeDuration + angleExtraDuration);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, afterExplodeResetDelay - angleExtraDuration);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, true, 0);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, delayFromStart);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, ItemEditor::SubFuncEasings::Linear, false, explodeDuration);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, true, afterExplodeResetDelay);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, false, 0);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, delayFromStart);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, ItemEditor::SubFuncEasings::Linear, false, explodeDuration + angleExtraDuration);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, true, afterExplodeResetDelay - angleExtraDuration);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, true, 0);
     }
 
 
@@ -739,32 +739,32 @@ namespace CreateObj {
             _SAnimFunc_IncrementEasingCountSetDefaults(kc, rotAnimFuncOffset);
         }
         if (variant == 0) {
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, false, 1700);
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::None, true, 200);
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, false, 3423);
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, true, 400);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, 1000);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::None, false, 1000);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, false, 1000);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, false, 1000);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, 1700);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, ItemEditor::SubFuncEasings::None, true, 200);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, false, 3423);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, true, 400);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, 1000);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, ItemEditor::SubFuncEasings::None, false, 1000);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, false, 1000);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, false, 1000);
         } else if (variant == 1) {
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, false, 1700);
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::None, false, 200);
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, false, 3423);
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, false, 400);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, 1000);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::QuadInOut, ix % 2 == 0, 2500);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, false, 1000);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::QuadInOut, ix % 2 != 0, 1500);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, 1700);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, ItemEditor::SubFuncEasings::None, false, 200);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, false, 3423);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, false, 400);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, 1000);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, ItemEditor::SubFuncEasings::QuadInOut, ix % 2 == 0, 2500);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, false, 1000);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, ItemEditor::SubFuncEasings::QuadInOut, ix % 2 != 0, 1500);
         } else if (variant == 2) {
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, false, 1100);
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::QuadInOut, false, 2500);
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, true, 1200);
-            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::QuadInOut, true, 3500);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, 1100);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::QuadInOut, false, 2500);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, true, 1200);
-            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::QuadInOut, true, 3500);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, 1100);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, ItemEditor::SubFuncEasings::QuadInOut, false, 2500);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, true, 1200);
+            _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, ItemEditor::SubFuncEasings::QuadInOut, true, 3500);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, 1100);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, ItemEditor::SubFuncEasings::QuadInOut, false, 2500);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, true, 1200);
+            _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, ItemEditor::SubFuncEasings::QuadInOut, true, 3500);
         } else {
             warn("No variant with ix: " + variant);
         }
@@ -1041,14 +1041,14 @@ namespace CreateObjDownStar {
         while (_SAnimFunc_GetLength(kc, rotAnimFuncOffset) < 4) {
             _SAnimFunc_IncrementEasingCountSetDefaults(kc, rotAnimFuncOffset);
         }
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::QuadOut, false, launchDuraiton);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::None, false, starDuration);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, false, downtime);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, false, 0);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::QuadOut, false, launchDuraiton);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::None, false, starDuration);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, false, downtime);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, false, 0);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, ItemEditor::SubFuncEasings::QuadOut, false, launchDuraiton);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, ItemEditor::SubFuncEasings::None, false, starDuration);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, false, downtime);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, false, 0);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, ItemEditor::SubFuncEasings::QuadOut, false, launchDuraiton);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, ItemEditor::SubFuncEasings::None, false, starDuration);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, false, downtime);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, false, 0);
     }
 
     void SetStarProps(CPlugPrefab@ prefab, uint ix, float d) {
@@ -1095,14 +1095,14 @@ namespace CreateObjDownStar {
         int randDeviation = int(Math::Rand(-500., 500.));
 
         ExpandKCToMaxAnimFuncs(kc);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, SubFuncEasings::None, false, launchDuraiton);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, SubFuncEasings::QuadOut, false, starDuration - randDeviation);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, SubFuncEasings::None, false, downtime + randDeviation);
-        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, SubFuncEasings::None, false, 0);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, SubFuncEasings::None, false, launchDuraiton);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, SubFuncEasings::QuadOut, false, starDuration - randDeviation);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, SubFuncEasings::None, false, downtime + randDeviation);
-        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, SubFuncEasings::None, false, 0);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, launchDuraiton);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 1, ItemEditor::SubFuncEasings::QuadOut, false, starDuration - randDeviation);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, false, downtime + randDeviation);
+        _SAnimFunc_SetIx(kc, transAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, false, 0);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 0, ItemEditor::SubFuncEasings::None, false, launchDuraiton);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 1, ItemEditor::SubFuncEasings::QuadOut, false, starDuration - randDeviation);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 2, ItemEditor::SubFuncEasings::None, false, downtime + randDeviation);
+        _SAnimFunc_SetIx(kc, rotAnimFuncOffset, 3, ItemEditor::SubFuncEasings::None, false, 0);
     }
 
     void DedupStarEntities() {

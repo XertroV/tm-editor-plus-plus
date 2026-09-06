@@ -1,6 +1,6 @@
 # Vehicle vis skins (ManageVehicles add path)
 
-Ghidra + live Fids 2026-08-25. Follow-on to [`2026-08-24-SceneVehicleInstances.md`](2026-08-24-SceneVehicleInstances.md). Pack-desc analogy: [`2026-08-22-ScreenUrlVisBind.md`](2026-08-22-ScreenUrlVisBind.md), [`ScreenUrlSkins.md`](ScreenUrlSkins.md).
+Ghidra + live Fids 2026-08-25. Follow-on to [`2026-08-24-SceneVehicleInstances.md`](../../../research-priv/2026-08-24-SceneVehicleInstances.md). Pack-desc analogy: [`2026-08-22-ScreenUrlVisBind.md`](2026-08-22-ScreenUrlVisBind.md), [`ScreenUrlSkins.md`](ScreenUrlSkins.md).
 
 ## Official skin object
 
