@@ -54,8 +54,8 @@ namespace MapKV {
         // Both children must be the builtin Text type, not merely look like
         // string storage. This rejects arrays and differently typed dictionaries.
         return Dev::SafeReadUInt32(descriptor) == TYPE_KIND_COMPOUND
-            && Dev::SafeReadUInt32(descriptor + 8) == TYPE_KIND_TEXT
-            && Dev::SafeReadUInt32(descriptor + 12) == TYPE_KIND_TEXT;
+            && Dev::SafeReadUInt32(descriptor + 8) == TYPE_ID_TEXT
+            && Dev::SafeReadUInt32(descriptor + 12) == TYPE_ID_TEXT;
     }
 
     // "" when the live descriptor confirms Text[Text], otherwise a readable

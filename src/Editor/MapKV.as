@@ -25,8 +25,21 @@ namespace MapKV {
     // which is not something a production read path should rest on.
     const uint TYPE_KIND_MASK = 0x1F;
     const uint TYPE_KIND_COMPOUND = 7;
-    const uint TYPE_KIND_TEXT = 5;
     const uint TYPE_INDEX_SHIFT = 5;
+
+    // Scalar type ids, whole ids rather than kind bits: a scalar interns no
+    // descriptor, so its index is zero and the id equals its kind. They are
+    // named separately from the TYPE_KIND_ constants above because the two are
+    // only numerically interchangeable for scalars, and comparing a full id
+    // against a kind is exactly the confusion that hides a compound type.
+    const uint TYPE_ID_BOOLEAN = 1;
+    const uint TYPE_ID_INTEGER = 2;
+    const uint TYPE_ID_REAL = 3;
+    const uint TYPE_ID_TEXT = 5;
+    const uint TYPE_ID_VEC2 = 9;
+    const uint TYPE_ID_VEC3 = 10;
+    const uint TYPE_ID_INT2 = 14;
+    const uint TYPE_ID_INT3 = 15;
 
     // Metadata row and dictionary-pair layout (research/ScriptMetadata.txt).
     const uint64 ROW_STRIDE = 0x88;
@@ -222,14 +235,14 @@ namespace MapKV {
         uint type = Dev::SafeReadUInt32(row + O_ROW_TYPE);
         uint64 ptr = row + O_ROW_SCALAR_VALUE;
         switch (type) {
-            case 1: value = tostring(Dev::SafeReadInt32(ptr) != 0); break;
-            case 2: value = tostring(Dev::SafeReadInt32(ptr)); break;
-            case 3: value = tostring(Dev::SafeReadFloat(ptr)); break;
-            case TYPE_KIND_TEXT: value = ReadString(row + O_ROW_SCALAR_STRING); break;
-            case 9: value = Dev::SafeReadVec2(ptr).ToString(); break;
-            case 10: value = Dev::SafeReadVec3(ptr).ToString(); break;
-            case 14: value = int2(Dev::SafeReadInt32(ptr), Dev::SafeReadInt32(ptr + 4)).ToString(); break;
-            case 15: value = int3(Dev::SafeReadInt32(ptr), Dev::SafeReadInt32(ptr + 4), Dev::SafeReadInt32(ptr + 8)).ToString(); break;
+            case TYPE_ID_BOOLEAN: value = tostring(Dev::SafeReadInt32(ptr) != 0); break;
+            case TYPE_ID_INTEGER: value = tostring(Dev::SafeReadInt32(ptr)); break;
+            case TYPE_ID_REAL: value = tostring(Dev::SafeReadFloat(ptr)); break;
+            case TYPE_ID_TEXT: value = ReadString(row + O_ROW_SCALAR_STRING); break;
+            case TYPE_ID_VEC2: value = Dev::SafeReadVec2(ptr).ToString(); break;
+            case TYPE_ID_VEC3: value = Dev::SafeReadVec3(ptr).ToString(); break;
+            case TYPE_ID_INT2: value = int2(Dev::SafeReadInt32(ptr), Dev::SafeReadInt32(ptr + 4)).ToString(); break;
+            case TYPE_ID_INT3: value = int3(Dev::SafeReadInt32(ptr), Dev::SafeReadInt32(ptr + 4), Dev::SafeReadInt32(ptr + 8)).ToString(); break;
             default: return false;
         }
         return true;
