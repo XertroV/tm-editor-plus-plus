@@ -66,6 +66,25 @@ LSP and native compilation accepted the copied production bytes with the existin
 MapKV signed/unsigned warning. Full map-save integration remains separate from
 this metadata-node persistence result.
 
+## Hardened-reader rounds, 2026-09-06
+
+Re-run against the bounds-safe reader and the fail-closed health check. The
+harness copies `MapKVHealth.as` alongside `MapKV.as` now, and stubs
+`ToML::GetPluginPMT` (an isolated metadata node has no editor plugin and no
+echoes). Both runners resolve `tm-control-mcp` by walking up, so they work from
+a git worktree as well as the main checkout.
+
+Two rounds passed with the same payload and native GBX hashes as the rounds
+above, and `activeMapAndMetadataBindingsUnchanged`:
+
+- `20260906T132935-4d978c93`
+- `20260906T132947-749b303b`
+
+The first attempt failed with `Metadata string is unreadable at byte 0`, which
+is what this harness is for: `Dev::SafeRead` returns a hex *pattern* string, not
+raw bytes, so it cannot back a byte read. `Dev::SafeReadCString` does. See the
+comment above `MapKV::ReadBytes` for the full characterisation.
+
 ## ManiaScript transport evaluation
 
 ```sh

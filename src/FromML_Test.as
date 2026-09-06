@@ -52,5 +52,69 @@ namespace Tests {
         MapKVCheck((messages[1].data[1]) == ("keep"), "values match");
         MapKVCheck((messages[2].data[1]) == ("new"), "latest value wins");
     }
+
+    // The ML -> AS dispatch, driven through HandleEppEvent because a test
+    // cannot build the MwFastBuffer the engine hands OnEppLayerCustomEvent.
+    // Whether a live map is open decides which half of each assertion applies;
+    // both halves are checked so the test is deterministic either way. Nothing
+    // here writes map metadata: only E++'s own echo cache is touched, and the
+    // live supervisor state is put back afterwards.
+    void MapKV_CheckEchoEventsUpdateCache() {
+        auto saved = MapKVHealth::Snapshot();
+        uint64 mapPtr = MapKVHealth::CurrentMapPointer();
+        uint64 pluginPtr = MapKVHealth::CurrentPluginPointer();
+        MapKVHealth::Reset();
+        string[] small = {"_EKV_Plugin.small", "echoed value"};
+        string[] large = {"_EKV_Plugin.large", "300000"};
+        HandleEppEvent("MapKVSet", small);
+        HandleEppEvent("MapKVSetLarge", large);
+        uint cached = MapKVHealth::EchoCount();
+        auto smallEcho = MapKVHealth::LookupEchoFor(mapPtr, pluginPtr, "_EKV_Plugin.small");
+        auto largeEcho = MapKVHealth::LookupEchoFor(mapPtr, pluginPtr, "_EKV_Plugin.large");
+        MapKVHealth::Restore(saved);
+        if (mapPtr == 0) {
+            MapKVCheck(cached == 0, "with no map open an echo has nothing to belong to");
+            return;
+        }
+        MapKVCheck(cached == 2, "both echoes are cached, got " + cached);
+        MapKVCheck(smallEcho !is null, "the small echo is cached under its key");
+        MapKVCheck(!smallEcho.lengthOnly, "a small echo carries its value");
+        MapKVCheck(smallEcho.value == "echoed value", "verbatim");
+        MapKVCheck(largeEcho !is null, "the large echo is cached too");
+        MapKVCheck(largeEcho.lengthOnly, "a large echo carries only a length");
+        MapKVCheck(largeEcho.length == 300000, "the reported length is parsed, got " + largeEcho.length);
+        MapKVCheck(largeEcho.value == "", "and no value");
+    }
+
+    // A trait report has to be recorded against the map it arrived with, or the
+    // drift check would compare it against the wrong map after a switch.
+    void MapKV_CheckTraitEventsAreObserved() {
+        auto saved = MapKVHealth::Snapshot();
+        bool savedDisabled = FromML::metadataDisabled;
+        uint64 mapPtr = MapKVHealth::CurrentMapPointer();
+        MapKVHealth::Reset();
+        string[] disabled = {"True"};
+        HandleEppEvent("MetadataDisabled", disabled);
+        bool flagged = FromML::metadataDisabled;
+        auto source = FakeTraitSource();
+        source.values[MapKVHealth::TRAIT_METADATA_DISABLED] = "true";
+        MapKVHealth::SetTraitSource(source);
+        string reason;
+        uint state = mapPtr == 0
+            ? MapKVHealth::STATE_UNVERIFIED
+            : MapKVHealth::EvaluateFor(mapPtr, null, reason);
+        MapKVHealth::Restore(saved);
+        FromML::metadataDisabled = savedDisabled;
+        MapKVCheck(flagged, "the plugin-global flag still follows the event");
+        if (mapPtr == 0) return;
+        MapKVCheck(state == MapKVHealth::STATE_HEALTHY,
+            "the reported trait becomes a same-map observation: " + reason);
+    }
+
+    [Test]
+    void MapKV_EchoEventsUpdateCache(Tests::Context@ ctx) { MapKV_CheckEchoEventsUpdateCache(); }
+
+    [Test]
+    void MapKV_TraitEventsAreObserved(Tests::Context@ ctx) { MapKV_CheckTraitEventsAreObserved(); }
 }
 #endif
