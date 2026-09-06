@@ -766,6 +766,9 @@ const uint16 O_SOLID2MODEL_SKEL = 0x78;
 const uint16 O_SOLID2MODEL_VIS_IDX_TRIS_BUF = 0xA8;
 const uint16 O_SOLID2MODEL_MATERIALS_BUF = 0xC8;
 
+const uint16 O_SOLID2MODEL_AABB_CENTER = 0x50;
+const uint16 O_SOLID2MODEL_AABB_HALF = 0x5C;
+
 // 0x158: buf of indexes or something?
 
 const uint16 O_SOLID2MODEL_LIGHTS_BUF = 0x168;
@@ -878,17 +881,21 @@ const uint16 O_PACKDESC_LOADED_FLAG = 0x98;
 
 const uint16 O_MATERIAL_PHYSICS_ID = 0x28;
 const uint16 O_MATERIAL_GAMEPLAY_ID = 0x29;
+const uint16 O_MATERIAL_SHADER_TABLE = 0x38; // ptr; count at +0x8; entries stride 0x38, shader fid at +0x8
+const uint16 O_MATERIAL_PARENT = 0x48; // CPlugMaterial@ Tech3 parent
+const uint16 SZ_MATERIAL_SHADER_ENTRY = 0x38;
 // material - 0xf0, 0x12c
 
 
 const uint16 O_USERMATINST_PHYSID = 0x148;
 const uint16 O_USERMATINST_GAMEPLAY_ID = 0x149;
 const uint16 O_USERMATINST_UNK = 0x14C;
-const uint16 O_USERMATINST_COLORBUF = 0x1D0;
-const uint16 O_USERMATINST_PARAM_EXISTS = 0x14C; // bool
+const uint16 O_USERMATINST_COLORBUF = 0x1D0; // MwFastBuffer stride-4 Reals (ptr, count, cap)
+const uint16 O_USERMATINST_PARAM_EXISTS = 0x14C; // uint32 nParams (0/1 for TargetColor)
 const uint16 O_USERMATINST_PARAM_MWID_NAME = 0x150; // mwid: "TargetColor"
 const uint16 O_USERMATINST_PARAM_MWID_TYPE = 0x154; // mwid: "Real"
 const uint16 O_USERMATINST_PARAM_LEN = 0x158; // 3 for color
+const uint16 O_USERMATINST_PARAM_VALOFF = 0x15C; // index into +0x1D0; 0 for first param (Construct fills 0xFFFFFFFF)
 
 const uint32 SZ_SPLACEMENTOPTION = 0x18;
 const uint32 SZ_GMQUATTRANS = 0x1C;
@@ -994,6 +1001,10 @@ const uint16 SZ_CPlugVisualIndexedTriangles = 0x190; // 400
 const uint16 SZ_CPlugVisualQuads = 0x180; // 384
 const uint16 SZ_CPlugVisualLines = 0x180; // 384
 const uint16 SZ_CPlugVisual3D = 0x180; // 384
+const uint16 O_CPLUGVISUAL_AABB_CENTER = 0x88;
+const uint16 O_CPLUGVISUAL_AABB_HALF = 0x94; // empty sentinel: half.x < 0
+const uint16 O_CPLUGVISUAL_SUBVISUALS_BUF = 0x110; // 0x09006005 stride-12 (vertexStart, indexStart, indexCount)
+const uint16 O_CPLUGINDEXBUFFER_COUNT = 0x30;
 
 const uint16 O_CPlugTree_BoundingBoxPos = GetOffset("CPlugTree", "FuncTree") + 0x8; // 0xC8
 const uint16 O_CPlugTree_BoundingBoxHalf = O_CPlugTree_BoundingBoxPos + 0xC; // 0xD4

@@ -11,6 +11,7 @@ class ItemSearcher {
     bool drawFilteredResults = true;
     bool searchFoldersToo = false;
     string inputFieldLabel = "Name Search";
+    bool lastSelectionWasItem = false;
 
     CoroutineFunc@ updateStartCallback;
     CoroutineFunc@ updateEndCallback;
@@ -92,12 +93,15 @@ class ItemSearcher {
     }
 
     CGameCtnArticleNodeArticle@ FindItemNamed(const string &in itemPath) {
+        lastSelectionWasItem = false;
         if (itemPath.Length == 0) return null;
         auto inv = Editor::GetInventoryCache();
         CGameCtnArticleNodeArticle@ ret = null;
+        bool retIsItem = false;
         for (uint i = 0; i < inv.ItemPaths.Length; i++) {
             if (itemPath == inv.ItemPaths[i]) {
                 @ret = inv.ItemInvNodes[i];
+                retIsItem = true;
                 break;
             }
         }
@@ -107,6 +111,16 @@ class ItemSearcher {
                 @ret = inv.BlockInvNodes[i];
             }
         }
+        bool retIsCurrent = ret is null
+            || (retIsItem
+                ? inv.IsCurrentItemNodeForPath(itemPath, ret)
+                : inv.IsCurrentBlockNodeForName(itemPath, ret));
+        if (!retIsCurrent) {
+            warn("Refusing stale inventory selection for: " + itemPath);
+            inv.RefreshCacheSoon();
+            return null;
+        }
+        if (ret !is null) lastSelectionWasItem = retIsItem;
         if (ret !is null) {
             auto collector = ret.GetCollectorNod();
             trace("Collector of type: " + UnkType(collector));

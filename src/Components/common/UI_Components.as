@@ -235,6 +235,13 @@ NPlugDyna::EAxis DrawComboEAxis(const string &in label, NPlugDyna::EAxis val) {
         })
     );
 }
+NPlugDyna::EShaderTcType DrawComboEShaderTcType(const string &in label, NPlugDyna::EShaderTcType val) {
+    return NPlugDyna::EShaderTcType(
+        DrawArbitraryEnum(label, int(val), 2, function(int v) {
+            return tostring(NPlugDyna::EShaderTcType(v));
+        })
+    );
+}
 CGxLightBall::EStaticShadow DrawComboEStaticShadow(const string &in label, CGxLightBall::EStaticShadow val) {
     return CGxLightBall::EStaticShadow(
         DrawArbitraryEnum(label, int(val), 2, function(int v) {

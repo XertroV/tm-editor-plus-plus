@@ -1,6 +1,24 @@
 
 namespace MeshDuplication {
 
+    // New CPlugDynaObjectModel; packed-copy body; AddRef Mesh/Shape/LocAnim/WaterModel.
+    // Catalog dyna nod is left alone. Children are shared, not deep-copied.
+    CPlugDynaObjectModel@ CloneDynaObjectModel(CPlugDynaObjectModel@ src) {
+        if (src is null) throw("CloneDynaObjectModel: src is null");
+        auto dst = CPlugDynaObjectModel();
+        uint hdr = Reflection::GetType("CMwNod").Size;
+        uint sz = Reflection::GetType("CPlugDynaObjectModel").Size;
+        for (uint o = hdr; o + 8 <= sz; o += 8) {
+            Dev::SetOffset(dst, o, Dev::GetOffsetUint64(src, o));
+        }
+        if (dst.Mesh !is null) dst.Mesh.MwAddRef();
+        if (dst.StaticShape !is null) dst.StaticShape.MwAddRef();
+        if (dst.DynaShape !is null) dst.DynaShape.MwAddRef();
+        if (dst.LocAnim !is null) dst.LocAnim.MwAddRef();
+        if (dst.WaterModel !is null) dst.WaterModel.MwAddRef();
+        return dst;
+    }
+
     bool SafetyCheck(CGameItemModel@ model) {
         if (model.EntityModelEdition !is null) {
             NotifyWarning("Item's EntityModelEdition !is null. It's probably a crystal. Not sure what to do.");
@@ -303,6 +321,7 @@ namespace MeshDuplication {
         } else {
             FixMatsOnMesh(mesh);
         }
+        FixSolid2VertexTweenLods(mesh);
 // #if DEV
 //         return;
 // #endif

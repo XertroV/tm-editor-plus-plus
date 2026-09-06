@@ -11,10 +11,10 @@ class IE_AdvancedTab : Tab {
         auto im = ieditor.ItemModel;
 
         if (UI::Button("Open Item")) {
-            Editor::DoItemEditorAction(ieditor, Editor::ItemEditorAction::OpenItem);
+            IE_StartOpenItemDialog();
         }
         if (UI::Button("Save and Reopen Item")) {
-            startnew(ItemEditor::SaveAndReloadItem);
+            IE_StartSaveAndReloadItem();
         }
 
         UI::Separator();
@@ -132,7 +132,7 @@ void SetAllItemPhysicsNoCollide(CGameItemModel@ im = null) {
                 staticObj.Shape.UpdateSurfMaterialIdsFromMaterialIndexs();
             }
             if (staticObj.Mesh !is null) {
-                auto mesh = Solid2Model(staticObj.Mesh);
+                auto mesh = ItemEditor::Solid2Model(staticObj.Mesh);
                 mesh.SetAllUserMatPhysics(EPlugSurfaceMaterialId::NotCollidable);
                 mesh.SetAllCustomMatPhysics(EPlugSurfaceMaterialId::NotCollidable);
             }
@@ -142,55 +142,5 @@ void SetAllItemPhysicsNoCollide(CGameItemModel@ im = null) {
         }
     } catch {
         NotifyWarning("Something went wrong: " + getExceptionInfo());
-    }
-}
-
-
-class Solid2Model {
-    CPlugSolid2Model@ s2m;
-    Solid2Model(CPlugSolid2Model@ s2m) {
-        @this.s2m = s2m;
-    }
-
-    CPlugMaterialUserInst@[]@ get_UserMaterials() {
-        CPlugMaterialUserInst@[] ret;
-        uint len = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_USERMAT_BUF + 0x8);
-        auto buf = Dev::GetOffsetNod(s2m, O_SOLID2MODEL_USERMAT_BUF);
-        uint elSize = 0x18;
-        uint16 elOffset = 0x0;
-        for (uint i = 0; i < len; i++) {
-            ret.InsertLast(cast<CPlugMaterialUserInst>(Dev::GetOffsetNod(buf, elSize * i + elOffset)));
-        }
-        return ret;
-    }
-
-    CPlugMaterial@[]@ get_CustomMaterials() {
-        CPlugMaterial@[] ret;
-        uint len = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_CUSTMAT_BUF + 0x8);
-        auto buf = Dev::GetOffsetNod(s2m, O_SOLID2MODEL_CUSTMAT_BUF);
-        uint elSize = 0x8;
-        uint16 elOffset = 0x0;
-        for (uint i = 0; i < len; i++) {
-            ret.InsertLast(cast<CPlugMaterial>(Dev::GetOffsetNod(buf, elSize * i + elOffset)));
-        }
-        return ret;
-    }
-
-    void SetAllUserMatPhysics(EPlugSurfaceMaterialId id) {
-        auto mats = UserMaterials;
-        for (uint i = 0; i < mats.Length; i++) {
-            Dev::SetOffset(mats[i], O_USERMATINST_PHYSID, uint8(id));
-        }
-    }
-
-    void SetAllCustomMatPhysics(EPlugSurfaceMaterialId id) {
-        auto mats = CustomMaterials;
-        for (uint i = 0; i < mats.Length; i++) {
-            if (GetFidFromNod(mats[i]) is null) {
-                Dev::SetOffset(mats[i], O_MATERIAL_PHYSICS_ID, uint8(id));
-            } else {
-                NotifyWarning("Skipping material with FID at " + i);
-            }
-        }
     }
 }

@@ -12,6 +12,42 @@ const UI::TreeNodeFlags DEFAULT_OPEN = UI::TreeNodeFlags::DefaultOpen;
 
 const UI::TreeNodeFlags TREE_F_NONE = UI::TreeNodeFlags::None;
 
+class ItemBrowser_KinDynaEnt {
+    CPlugPrefab@ owner;
+    uint localIx;
+}
+
+class ItemBrowser_KinDynaMap {
+    CPlugPrefab@ root;
+    array<ItemBrowser_KinDynaEnt@> ents;
+
+    void Add(CPlugPrefab@ owner, uint localIx) {
+        auto e = ItemBrowser_KinDynaEnt();
+        @e.owner = owner;
+        e.localIx = localIx;
+        ents.InsertLast(e);
+    }
+
+    int IxForEnt(CPlugPrefab@ owner, uint localIx) {
+        if (owner is null) return -1;
+        for (uint i = 0; i < ents.Length; i++) {
+            if (ents[i].owner is owner && ents[i].localIx == localIx) return int(i);
+        }
+        return -1;
+    }
+}
+
+ItemBrowser_KinDynaMap@ g_IB_ActiveKinMap;
+int g_IB_KinHoverDraw = -1;
+int g_IB_KinHoverAcc = -1;
+uint64 g_IB_KinHoverRootDraw = 0;
+uint64 g_IB_KinHoverRootAcc = 0;
+
+UI::TreeNodeFlags ItemBrowser_NamedChildTreeFlags(const string &in childName) {
+    if (childName == "StaticShape") return TREE_F_NONE;
+    return DEFAULT_OPEN;
+}
+
 class ItemModel {
     CGameItemModel@ item;
     bool drawProperties;
@@ -32,6 +68,7 @@ class ItemModel {
     }
 
     void DrawTree() {
+        ItemBrowser_KinHoverBeginFrame();
         // UI::TreeNodeFlags::OpenOnArrow
         if (UI::TreeNode(item.IdName, DEFAULT_OPEN)) {
             UI::PushStyleVar(UI::StyleVar::FramePadding, vec2(2, 0));
@@ -51,9 +88,13 @@ class ItemModel {
             }
             if (TmGameVersion >= "2024-06-28_13_46") {
                 bool disableAutoCreateSound = Editor::GetItemModel_DisableAutoCreateSound(item);
-                bool setDACS = UI::Checkbox("DisableAutoCreateSound", disableAutoCreateSound);
-                if (setDACS != disableAutoCreateSound) {
-                    Editor::SetItemModel_DisableAutoCreateSound(item, setDACS);
+                if (isEditable) {
+                    bool setDACS = UI::Checkbox("DisableAutoCreateSound", disableAutoCreateSound);
+                    if (setDACS != disableAutoCreateSound) {
+                        Editor::SetItemModel_DisableAutoCreateSound(item, setDACS);
+                    }
+                } else {
+                    LabeledValue("DisableAutoCreateSound", disableAutoCreateSound);
                 }
             }
             DrawSkin();
@@ -159,6 +200,10 @@ class ItemModelTreeElement {
     CGameCommonItemEntityModel@ cieModel;
     CPlugSurface@ surf;
     CPlugSolid2Model@ s2m;
+    CPlugVisual@ visual;
+    CPlugVisualIndexedTriangles@ visIxTris;
+    vec2 uvShift = vec2(0.1, 0.0);
+    int uvShiftSem = int(VisualUVs::SEM_TEXCOORD0);
     CPlugGameSkin@ skin;
     CPlugMaterial@ mat;
     CPlugLight@ light;
@@ -211,6 +256,8 @@ class ItemModelTreeElement {
         @this.cieModel = cast<CGameCommonItemEntityModel>(nod);
         @this.surf = cast<CPlugSurface>(nod);
         @this.s2m = cast<CPlugSolid2Model>(nod);
+        @this.visIxTris = cast<CPlugVisualIndexedTriangles>(nod);
+        @this.visual = cast<CPlugVisual>(nod);
         @this.skin = cast<CPlugGameSkin>(nod);
         @this.mat = cast<CPlugMaterial>(nod);
         @this.light = cast<CPlugLight>(nod);
@@ -277,6 +324,43 @@ class ItemModelTreeElement {
         MeshDuplication::ZeroFidsUnknownModelNod(nod);
     }
 
+    bool ReplaceThisModel(CMwNod@ dst) {
+        if (dst is null) return false;
+        if (parent is null) {
+            NotifyError("Clone to New: no parent to attach the new nod");
+            return false;
+        }
+        auto prefab = cast<CPlugPrefab>(parent.nod);
+        if (prefab !is null && parentIx >= 0) {
+            MeshDuplication::SetEntRefModel(prefab, parentIx, dst);
+            return true;
+        }
+        if (parent.nod !is null && nodOffset < 0xFFFF) {
+            ManipPtrs::Replace(parent.nod, nodOffset, dst, true);
+            return true;
+        }
+        NotifyError("Clone to New: cannot replace parent Model pointer");
+        return false;
+    }
+
+    void CloneKcToNew() {
+        if (kenematicConstraint is null) return;
+        auto dst = ItemEditor::CloneKinematicConstraint(kenematicConstraint);
+        if (!ReplaceThisModel(dst)) return;
+        @nod = dst;
+        @kenematicConstraint = dst;
+        NotifySuccess("Cloned kinematic constraint to a new nod");
+    }
+
+    void CloneDynaToNew() {
+        if (dynaObject is null) return;
+        auto dst = MeshDuplication::CloneDynaObjectModel(dynaObject);
+        if (!ReplaceThisModel(dst)) return;
+        @nod = dst;
+        @dynaObject = dst;
+        NotifySuccess("Cloned dyna object to a new nod (Mesh/Shape shared)");
+    }
+
     void Draw() {
         currentIndex = -1;
         if (nod is null) {
@@ -314,6 +398,10 @@ class ItemModelTreeElement {
             Draw(cieModel);
         } else if (s2m !is null) {
             Draw(s2m);
+        } else if (visIxTris !is null) {
+            Draw(visIxTris);
+        } else if (visual !is null) {
+            Draw(visual);
         } else if (surf !is null) {
             Draw(surf);
         } else if (skin !is null) {
@@ -551,27 +639,27 @@ class ItemModelTreeElement {
         UI::SameLine();
         CopiableLabeledValue("TopBottomMultiDir", tostring(clip.TopBottomMultiDir));
 
-#if SIG_DEVELOPER
-        clip.IsFullFreeClip = UI::Checkbox("IsFullFreeClip", clip.IsFullFreeClip);
-        UI::SameLine();
-        clip.IsExclusiveFreeClip = UI::Checkbox("IsExclusiveFreeClip", clip.IsExclusiveFreeClip);
-        clip.CanBeDeletedByFullFreeClip = UI::Checkbox("CanBeDeletedByFullFreeClip", clip.CanBeDeletedByFullFreeClip);
-        UI::SameLine();
-        clip.IsAlwaysVisibleFreeClip = UI::Checkbox("IsAlwaysVisibleFreeClip", clip.IsAlwaysVisibleFreeClip);
-        clip.IsFCTOrFCBIgnoredByVFC = UI::Checkbox("IsFCTOrFCBIgnoredByVFC", clip.IsFCTOrFCBIgnoredByVFC);
-        UI::SameLine();
-        clip.IsAntiClip = UI::Checkbox("IsAntiClip", clip.IsAntiClip);
-#else
-        LabeledValue("IsFullFreeClip", tostring(clip.IsFullFreeClip));
-        UI::SameLine();
-        LabeledValue("IsExclusiveFreeClip", tostring(clip.IsExclusiveFreeClip));
-        LabeledValue("CanBeDeletedByFullFreeClip", tostring(clip.CanBeDeletedByFullFreeClip));
-        UI::SameLine();
-        LabeledValue("IsAlwaysVisibleFreeClip", tostring(clip.IsAlwaysVisibleFreeClip));
-        LabeledValue("IsFCTOrFCBIgnoredByVFC", tostring(clip.IsFCTOrFCBIgnoredByVFC));
-        UI::SameLine();
-        LabeledValue("IsAntiClip", tostring(clip.IsAntiClip));
-#endif
+        if (isEditable) {
+            clip.IsFullFreeClip = UI::Checkbox("IsFullFreeClip", clip.IsFullFreeClip);
+            UI::SameLine();
+            clip.IsExclusiveFreeClip = UI::Checkbox("IsExclusiveFreeClip", clip.IsExclusiveFreeClip);
+            clip.CanBeDeletedByFullFreeClip = UI::Checkbox("CanBeDeletedByFullFreeClip", clip.CanBeDeletedByFullFreeClip);
+            UI::SameLine();
+            clip.IsAlwaysVisibleFreeClip = UI::Checkbox("IsAlwaysVisibleFreeClip", clip.IsAlwaysVisibleFreeClip);
+            clip.IsFCTOrFCBIgnoredByVFC = UI::Checkbox("IsFCTOrFCBIgnoredByVFC", clip.IsFCTOrFCBIgnoredByVFC);
+            UI::SameLine();
+            clip.IsAntiClip = UI::Checkbox("IsAntiClip", clip.IsAntiClip);
+        } else {
+            LabeledValue("IsFullFreeClip", tostring(clip.IsFullFreeClip));
+            UI::SameLine();
+            LabeledValue("IsExclusiveFreeClip", tostring(clip.IsExclusiveFreeClip));
+            LabeledValue("CanBeDeletedByFullFreeClip", tostring(clip.CanBeDeletedByFullFreeClip));
+            UI::SameLine();
+            LabeledValue("IsAlwaysVisibleFreeClip", tostring(clip.IsAlwaysVisibleFreeClip));
+            LabeledValue("IsFCTOrFCBIgnoredByVFC", tostring(clip.IsFCTOrFCBIgnoredByVFC));
+            UI::SameLine();
+            LabeledValue("IsAntiClip", tostring(clip.IsAntiClip));
+        }
 
         LabeledValue("HasMesh", Editor::DoesBlockInfoHaveMesh(clip));
 
@@ -744,6 +832,10 @@ class ItemModelTreeElement {
     void Draw(CPlugPrefab@ prefab) {
         hasElements = true;
         if (StartTreeNode(name + " :: \\$f8fCPlugPrefab", DEFAULT_OPEN)) {
+            ItemBrowser_KinDynaMap@ prevKinMap = g_IB_ActiveKinMap;
+            if (parent is null || parent.prefab is null) {
+                @g_IB_ActiveKinMap = ItemBrowser_BuildKinDynaMap(prefab);
+            }
             if (parent !is null && parent.parent !is null) {
                 // for BIMobil, parent is CGameCtnBlockInfoMobil::PrefabFid
                 auto pp = parent.parent;
@@ -790,15 +882,19 @@ class ItemModelTreeElement {
                             auto nameNod = Dev::GetOffsetNod(entsBuf, elSize * i + 0x40);
                             string nameBytes = ""; // nameNod is null ? "<null>" : Dev::GetOffsetString(nameNod, 0x0);
                             auto nameLen = Dev::GetOffsetUint32(entsBuf, elSize * i + 0x48);
-                            CopiableLabeledValue(".Name", string(prefab.Ents[i].Name));
-                            if (isEditable) {
-                                prefab.Ents[i].Location.Quat = UX::InputQuat(".Location.Quat", prefab.Ents[i].Location.Quat);
-                                prefab.Ents[i].Location.Trans = UI::InputFloat3(".Location.Trans", prefab.Ents[i].Location.Trans);
-                                prefab.Ents[i].LodGroupId = UI::InputInt(".LodGroupId", prefab.Ents[i].LodGroupId);
-                            } else {
-                                CopiableLabeledValue(".Location.Quat", prefab.Ents[i].Location.Quat.ToString());
-                                CopiableLabeledValue(".Location.Trans", prefab.Ents[i].Location.Trans.ToString());
-                                CopiableLabeledValue(".LodGroupId", tostring(prefab.Ents[i].LodGroupId));
+                            string nllTitle = ItemBrowser_EntNllTreeTitle(string(prefab.Ents[i].Name), prefab.Ents[i].Location.Quat, prefab.Ents[i].Location.Trans, int(prefab.Ents[i].LodGroupId));
+                            if (StartTreeNode(nllTitle + "###ent-nll-" + i, true, TREE_F_NONE)) {
+                                CopiableLabeledValue(".Name", string(prefab.Ents[i].Name));
+                                if (isEditable) {
+                                    ItemBrowser_DrawEntLocationQuatEuler(prefab, i, true);
+                                    prefab.Ents[i].Location.Trans = UI::InputFloat3(".Location.Trans", prefab.Ents[i].Location.Trans);
+                                    prefab.Ents[i].LodGroupId = UI::InputInt(".LodGroupId", prefab.Ents[i].LodGroupId);
+                                } else {
+                                    ItemBrowser_DrawEntLocationQuatEuler(prefab, i, false);
+                                    CopiableLabeledValue(".Location.Trans", prefab.Ents[i].Location.Trans.ToString());
+                                    CopiableLabeledValue(".LodGroupId", tostring(prefab.Ents[i].LodGroupId));
+                                }
+                                EndTreeNode();
                             }
                             // name always len 0?
                             // CopiableLabeledValue(".Name.Length / bytes", tostring(nameLen) + " / " + nameBytes);
@@ -814,6 +910,7 @@ class ItemModelTreeElement {
                 EndTreeNode();
             }
             EndTreeNode();
+            @g_IB_ActiveKinMap = prevKinMap;
         }
     }
     void Draw(NPlugItem_SVariantList@ varList) {
@@ -829,7 +926,11 @@ class ItemModelTreeElement {
                 if (StartTreeNode(".Variant["+i+"]:", true)) {
                     if (drawProperties) {
                         UI::Text("nbPlacementTags: " + varList.Variants[i].Tags.Length + "  { " + GetVariantTagsStr(varList, i) + " }");
-                        varList.Variants[i].HiddenInManualCycle = UI::Checkbox("HiddenInManualCycle", varList.Variants[i].HiddenInManualCycle);
+                        if (isEditable) {
+                            varList.Variants[i].HiddenInManualCycle = UI::Checkbox("HiddenInManualCycle", varList.Variants[i].HiddenInManualCycle);
+                        } else {
+                            LabeledValue("HiddenInManualCycle", varList.Variants[i].HiddenInManualCycle);
+                        }
                     }
                     MkAndDrawChildNode(varList.Variants[i].EntityModel, "EntityModel");
                     EndTreeNode();
@@ -888,7 +989,13 @@ class ItemModelTreeElement {
         }
     }
     void Draw(CPlugDynaObjectModel@ dynaObject) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugDynaObjectModel", DEFAULT_OPEN)) {
+        int kix = -1;
+        int hoverKix = ItemBrowser_KinHoverIxFor(g_IB_ActiveKinMap);
+        if (g_IB_ActiveKinMap !is null && parent !is null && parent.prefab !is null && parentIx >= 0) {
+            kix = g_IB_ActiveKinMap.IxForEnt(parent.prefab, uint(parentIx));
+        }
+        string extra = ItemBrowser_KinDynaLabelExtra(kix, hoverKix);
+        if (StartTreeNode(name + " :: \\$f8fCPlugDynaObjectModel" + extra + "###dyna", ItemBrowser_KinDynaTreeFlags(kix, hoverKix))) {
             MkAndDrawChildNode(dynaObject.Mesh, "Mesh");
             MkAndDrawChildNode(dynaObject.StaticShape, "StaticShape");
             MkAndDrawChildNode(dynaObject.DynaShape, "DynaShape");
@@ -898,28 +1005,7 @@ class ItemModelTreeElement {
     void Draw(NPlugDyna_SKinematicConstraint@ kc) {
         if (StartTreeNode(name + " :: \\$f8fNPlugDyna_SKinematicConstraint", DEFAULT_OPEN)) {
             if (drawProperties) {
-                if (isEditable) {
-                    DrawKinematicConstraint(kc);
-                } else {
-                    auto tmp = kc;
-                    UI::Text("TransAxis: " + tostring(tmp.TransAxis));
-                    UI::Text("TransMin: " + tostring(tmp.TransMin));
-                    UI::Text("TransMax: " + tostring(tmp.TransMax));
-                    UI::Text("RotAxis: " + tostring(tmp.RotAxis));
-                    UI::Text("AngleMinDeg: " + tostring(tmp.AngleMinDeg));
-                    UI::Text("AngleMaxDeg: " + tostring(tmp.AngleMaxDeg));
-                    UI::Text("ShaderTcType: " + tostring(tmp.ShaderTcType));
-                    // print("ShaderTcAnimFunc: " + tostring(tmp.ShaderTcAnimFunc));
-                    // print("ShaderTcData_TransSub: " + tostring(tmp.ShaderTcData_TransSub));
-                    if (StartTreeNode("TransAnimFunc", true, UI::TreeNodeFlags::None)) {
-                        Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "TransAnimFunc"));
-                        EndTreeNode();
-                    }
-                    if (StartTreeNode("RotAnimFunc", true, UI::TreeNodeFlags::None)) {
-                        Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "RotAnimFunc"));
-                        EndTreeNode();
-                    }
-                }
+                Draw_NPlugDyna_SKinematicConstraint_Props(kc, isEditable);
             }
             EndTreeNode();
         }
@@ -1002,6 +1088,24 @@ class ItemModelTreeElement {
                 uint nbLightUserModels = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_USERLIGHTS_BUF + 0x8);
                 uint nbCustomMaterials = Dev::GetOffsetUint32(s2m, O_SOLID2MODEL_CUSTMAT_BUF + 0x8);
                 UI::Text("nbVisualIndexedTriangles: " + nbVisualIndexedTriangles);
+                auto ds2mFlags = DPlugSolid2Model(s2m);
+                if (isEditable) {
+                    UI::PushItemWidth(PREFAB_PARAMS_W);
+                    int vt = UI::InputInt("VisCstType", int(ds2mFlags.VisCstType), 0);
+                    if (vt < 0) vt = 0;
+                    ds2mFlags.VisCstType = uint(vt);
+                    AddSimpleTooltip("0/1 static-ish, 2=Dynamic (cloth/tween), 3=car, 4=sm body.");
+                    int fl = UI::InputInt("Flags+0x34", int(ds2mFlags.Flags), 0);
+                    ds2mFlags.Flags = uint(fl);
+                    UI::PopItemWidth();
+                } else {
+                    LabeledValue("VisCstType", ds2mFlags.VisCstType);
+                    LabeledValue("Flags+0x34", ds2mFlags.Flags);
+                }
+                LabeledValue("AABB center", Dev::GetOffsetVec3(s2m, O_SOLID2MODEL_AABB_CENTER).ToString());
+                LabeledValue("AABB half", Dev::GetOffsetVec3(s2m, O_SOLID2MODEL_AABB_HALF).ToString());
+                DrawVisualsAt("Visuals (" + nbVisualIndexedTriangles + ")", s2m);
+                DrawShadedGeomsAt(s2m, nbVisualIndexedTriangles);
                 DrawLightsAt("nbLights: " + nbLights, nod, O_SOLID2MODEL_LIGHTS_BUF);
                 DrawUserLightsAt("nbLightUserModels: " + nbLightUserModels, nod, O_SOLID2MODEL_USERLIGHTS_BUF);
                 DrawMaterialsAt("nbMaterials: " + nbMaterials, nod, O_SOLID2MODEL_MATERIALS_BUF);
@@ -1021,6 +1125,237 @@ class ItemModelTreeElement {
                 }
             } else {
                 UI::Text("PreLightGenerator is null");
+            }
+            EndTreeNode();
+        }
+    }
+
+    // ShadedGeoms (+0x158): which material each visual is drawn with, plus its TexCoord0 range.
+    void DrawShadedGeomsAt(CPlugSolid2Model@ mesh, uint nbVis) {
+        if (!StartTreeNode("Visual -> Material / UVs (" + nbVis + ")", true, UI::TreeNodeFlags::None)) return;
+        auto visBuf = Dev::GetOffsetNod(mesh, O_SOLID2MODEL_VIS_IDX_TRIS_BUF);
+        if (UI::BeginTable("shgeo##" + Text::FormatPointer(Dev_GetPointerForNod(mesh)), 4, UI::TableFlags::SizingStretchProp | UI::TableFlags::NoSavedSettings | UI::TableFlags::RowBg)) {
+            UI::TableSetupColumn("Vis", UI::TableColumnFlags::WidthFixed, 40.);
+            UI::TableSetupColumn("Mat", UI::TableColumnFlags::WidthFixed, 40.);
+            UI::TableSetupColumn("Material");
+            UI::TableSetupColumn("TexCoord0 u / v range");
+            UI::TableHeadersRow();
+            for (uint i = 0; i < nbVis && visBuf !is null; i++) {
+                auto vis = cast<CPlugVisual>(Dev::GetOffsetNod(visBuf, i * 0x8));
+                int mi = VisualUVs::MaterialIndexOfVisual(mesh, i);
+                UI::TableNextRow();
+                UI::TableNextColumn(); UI::Text(tostring(i));
+                UI::TableNextColumn(); UI::Text(mi < 0 ? "-" : tostring(mi));
+                UI::TableNextColumn(); UI::Text(VisualUVs::MaterialName(mesh, mi));
+                UI::TableNextColumn();
+                string uvs = "-";
+                auto attrs = VisualUVs::Scan(vis);
+                for (uint a = 0; a < attrs.Length; a++) {
+                    if (attrs[a].semantic != VisualUVs::SEM_TEXCOORD0) continue;
+                    uvs = attrs[a].IsFloat2()
+                        ? Text::Format("%.3f", attrs[a].uvMin.x) + ".." + Text::Format("%.3f", attrs[a].uvMax.x) + " / " + Text::Format("%.3f", attrs[a].uvMin.y) + ".." + Text::Format("%.3f", attrs[a].uvMax.y)
+                        : "fmt " + attrs[a].declType;
+                }
+                UI::Text(uvs);
+            }
+            UI::EndTable();
+        }
+        EndTreeNode();
+    }
+
+    // TexCoord attributes of one visual, with an optional in-place shift (persisted on save).
+    void DrawVisualUVs(CPlugVisual@ vis) {
+        auto attrs = VisualUVs::Scan(vis);
+        if (attrs.Length == 0) { UI::TextDisabled("UVs: no TexCoord attribute on the vertex stream"); return; }
+        string id = Text::FormatPointer(Dev_GetPointerForNod(vis));
+        if (UI::BeginTable("uvs##" + id, 5, UI::TableFlags::SizingStretchProp | UI::TableFlags::NoSavedSettings | UI::TableFlags::RowBg)) {
+            UI::TableSetupColumn("UV set"); UI::TableSetupColumn("Format"); UI::TableSetupColumn("Verts");
+            UI::TableSetupColumn("u min..max"); UI::TableSetupColumn("v min..max");
+            UI::TableHeadersRow();
+            for (uint a = 0; a < attrs.Length; a++) {
+                auto at = attrs[a];
+                UI::TableNextRow();
+                UI::TableNextColumn(); UI::Text(at.SemName() + (at.semantic == 11 ? " \\$888(lightmap)" : ""));
+                UI::TableNextColumn(); UI::Text(at.IsFloat2() ? "Float2" : "fmt " + at.declType);
+                UI::TableNextColumn(); UI::Text(tostring(at.nv));
+                UI::TableNextColumn(); UI::Text(at.IsFloat2() ? Text::Format("%.4f", at.uvMin.x) + " .. " + Text::Format("%.4f", at.uvMax.x) : "-");
+                UI::TableNextColumn(); UI::Text(at.IsFloat2() ? Text::Format("%.4f", at.uvMin.y) + " .. " + Text::Format("%.4f", at.uvMax.y) : "-");
+            }
+            UI::EndTable();
+        }
+        if (isEditable) {
+            UI::PushItemWidth(PREFAB_PARAMS_W);
+            uvShiftSem = Math::Clamp(UI::InputInt("UV set (10=TexCoord0)", uvShiftSem, 0), int(VisualUVs::SEM_TEXCOORD0), int(VisualUVs::SEM_TEXCOORD_LAST));
+            uvShift = UI::InputFloat2("Shift du, dv", uvShift);
+            UI::PopItemWidth();
+            UI::SameLine();
+            if (UX::SmallButton("Apply UV shift")) {
+                uint n = VisualUVs::Shift(vis, uint(uvShiftSem), uvShift.x, uvShift.y);
+                if (n == 0) NotifyWarning("No Float2 TexCoord" + (uvShiftSem - 10) + " attribute on this visual.");
+                else NotifySuccess("Shifted " + n + " UVs by " + uvShift.ToString() + ". Save and reopen the item to see it.");
+            }
+            AddSimpleTooltip("Adds du/dv to every vertex of that UV set in the CPU vertex stream. Persistent after Save; the GPU buffer only refreshes on Save and Reopen. TexCoord1 is normally the lightmap set - leave it alone.");
+        }
+    }
+
+    void DrawVisualsAt(const string &in title, CPlugSolid2Model@ mesh) {
+        if (mesh is null) return;
+        auto visBuf = Dev::GetOffsetNod(mesh, O_SOLID2MODEL_VIS_IDX_TRIS_BUF);
+        uint nb = Dev::GetOffsetUint32(mesh, O_SOLID2MODEL_VIS_IDX_TRIS_BUF + 0x8);
+        if (!StartTreeNode(title, true, UI::TreeNodeFlags::None)) return;
+        if (visBuf is null || nb == 0) {
+            UI::TextDisabled("no visuals");
+        } else {
+            UI::BeginDisabled(VisualNormals::IsRecalcRunning());
+            if (isEditable && UX::SmallButton("Recalc all fully smooth normals")) {
+                array<CPlugVisualIndexedTriangles@> visuals;
+                for (uint i = 0; i < nb; i++) {
+                    auto vis = cast<CPlugVisualIndexedTriangles>(Dev::GetOffsetNod(visBuf, i * 0x8));
+                    if (vis !is null) visuals.InsertLast(vis);
+                }
+                VisualNormals::StartRecalc(visuals);
+            }
+            UI::EndDisabled();
+            if (isEditable) {
+                AddSimpleTooltip("Groups duplicate local positions before averaging face normals. This replaces populated-but-flat normals too. Save and reopen after running it: the saved CPU stream is persistent, while the already-created GPU buffer is not refreshed by this button.");
+                UI::TextDisabled("Next: click once for each Solid2, wait for the green success notification, then Advanced > Save and Reopen Item. Do not click NegNormals or toggle UseVertexNormal.");
+            }
+            for (uint i = 0; i < nb; i++) {
+                auto vis = cast<CPlugVisual>(Dev::GetOffsetNod(visBuf, i * 0x8));
+                if (vis is null) {
+                    UI::Text("Visual " + i + ". null");
+                } else {
+                    MkAndDrawChildNode(vis, uint16(i * 0x8), "Visual " + i);
+                }
+            }
+        }
+        EndTreeNode();
+    }
+
+    void DrawVisualFlagProps(CPlugVisual@ vis) {
+        if (vis is null) return;
+        uint32 raw = VisualFlags::Read(vis);
+        string id = Text::FormatPointer(Dev_GetPointerForNod(vis));
+        auto v3 = cast<CPlugVisual3D>(vis);
+        uint nNorm = VisualNormals::CountUsableNormals(vis);
+        if (UI::BeginTable("visFlags##" + id, 2, UI::TableFlags::SizingStretchSame | UI::TableFlags::NoSavedSettings)) {
+            if (isEditable) {
+                UI::TableNextColumn();
+                vis.IsGeometryStatic = UI::Checkbox("IsGeometryStatic", vis.IsGeometryStatic);
+                UI::TableNextColumn();
+                vis.IsIndexationStatic = UI::Checkbox("IsIndexationStatic", vis.IsIndexationStatic);
+                UI::TableNextColumn();
+                vis.OptimizeInVision = UI::Checkbox("OptimizeInVision", vis.OptimizeInVision);
+                UI::TableNextColumn();
+                vis.UseVertexNormal = UI::Checkbox("UseVertexNormal \\$888\\$i(uses stored normals)", vis.UseVertexNormal);
+                AddSimpleTooltip("This flag only tells the shader to use the stored normals. It does not mean those normals are smooth or correct.");
+                AddSimpleTooltip("flags+0x24 bit7. Lighting uses per-vertex normals. Off = faceted (no vertex normals). Does not generate missing normals.");
+                DrawMissingNormalsWarn(vis, nNorm);
+                UI::TableNextColumn();
+                vis.UseVertexColor = UI::Checkbox("UseVertexColor", vis.UseVertexColor);
+                AddSimpleTooltip("flags+0x24 bit8. Shader uses per-vertex color (CPU Vertexes[+0x18], semantic 8). Off = ignore vertex colors. Does not invent missing colors.");
+                if (v3 !is null) {
+                    UI::TableNextColumn();
+                    v3.UseTgtU = UI::Checkbox("UseTgtU", v3.UseTgtU);
+                    UI::TableNextColumn();
+                    v3.UseTgtV = UI::Checkbox("UseTgtV", v3.UseTgtV);
+                }
+            } else {
+                UI::TableNextColumn();
+                LabeledValue("IsGeometryStatic", vis.IsGeometryStatic);
+                UI::TableNextColumn();
+                LabeledValue("IsIndexationStatic", vis.IsIndexationStatic);
+                UI::TableNextColumn();
+                LabeledValue("OptimizeInVision", vis.OptimizeInVision);
+                UI::TableNextColumn();
+                LabeledValue("UseVertexNormal \\$888\\$i(uses stored normals)", vis.UseVertexNormal);
+                DrawMissingNormalsWarn(vis, nNorm);
+                UI::TableNextColumn();
+                LabeledValue("UseVertexColor", vis.UseVertexColor);
+                if (v3 !is null) {
+                    UI::TableNextColumn();
+                    LabeledValue("UseTgtU", v3.UseTgtU);
+                    UI::TableNextColumn();
+                    LabeledValue("UseTgtV", v3.UseTgtV);
+                }
+            }
+            UI::TableNextColumn();
+            LabeledValue("IsGeometryDynaPart", vis.IsGeometryDynaPart);
+            UI::TableNextColumn();
+            LabeledValue("UseUvGroup", vis.UseUvGroup);
+            UI::TableNextColumn();
+            LabeledValue("flags+0x24", Text::Format("0x%x", raw));
+            UI::TableNextColumn();
+            LabeledValue("SkinIndexCount", raw & VisualFlags::SKIN_INDEX_MASK);
+            UI::TableNextColumn();
+            LabeledValue("AABB center", Dev::GetOffsetVec3(vis, O_CPLUGVISUAL_AABB_CENTER).ToString());
+            UI::TableNextColumn();
+            LabeledValue("AABB half", Dev::GetOffsetVec3(vis, O_CPLUGVISUAL_AABB_HALF).ToString());
+            UI::TableNextColumn();
+            uint nSub = Dev::GetOffsetUint32(vis, O_CPLUGVISUAL_SUBVISUALS_BUF + 0x8);
+            LabeledValue("SubVisuals (frames)", nSub);
+            UI::TableNextColumn();
+            LabeledValue("Nonzero stored normals", nNorm);
+            UI::EndTable();
+        }
+    }
+
+    void DrawMissingNormalsWarn(CPlugVisual@ vis, uint nNorm) {
+        if (vis is null) return;
+        if (!vis.UseVertexNormal) return;
+        if (nNorm > 0) return;
+        UI::SameLine();
+        UI::Text("\\$f80" + Icons::ExclamationTriangle);
+        if (isEditable) {
+            AddSimpleTooltip("UseVertexNormal is on but this visual has 0 stored normals (CPU Vertexes[+0xC] and VertexStream semantic 5 are empty/zero). Press Recalc fully smooth normals below.");
+        } else {
+            AddSimpleTooltip("UseVertexNormal is on but this visual has 0 normals. Open the item in the Item Editor and press RecalcSmoothNormals.");
+        }
+    }
+
+    void Draw(CPlugVisual@ vis) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugVisual", DEFAULT_OPEN)) {
+            if (drawProperties) { DrawVisualFlagProps(vis); DrawVisualUVs(vis); }
+            EndTreeNode();
+        }
+    }
+
+    void Draw(CPlugVisualIndexedTriangles@ vis) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugVisualIndexedTriangles", DEFAULT_OPEN)) {
+            if (drawProperties) {
+                DrawVisualFlagProps(vis);
+                string id = Text::FormatPointer(Dev_GetPointerForNod(vis));
+                auto dIx = DPlugVisualIndexedTriangles(vis);
+                auto ib = dIx.IndexBuffer;
+                auto d3 = DPlugVisual3D(cast<CPlugVisual3D>(vis));
+                if (UI::BeginTable("visIx##" + id, 2, UI::TableFlags::SizingStretchSame | UI::TableFlags::NoSavedSettings)) {
+                    if (ib !is null) {
+                        UI::TableNextColumn();
+                        LabeledValue("IndexCount", ib.GetUint32(0x30));
+                        UI::TableNextColumn();
+                        LabeledValue("IndexType", ib.get_IndexType());
+                    } else {
+                        UI::TableNextColumn();
+                        UI::TextDisabled("IndexBuffer null");
+                        UI::TableNextColumn();
+                    }
+                    UI::TableNextColumn();
+                    LabeledValue("CpuVertexes", d3.Vertexes.Length);
+                    UI::EndTable();
+                }
+                DrawVisualUVs(vis);
+                if (isEditable) {
+                    auto v3 = cast<CPlugVisual3D>(vis);
+                    if (v3 !is null) {
+                        if (UX::SmallButton("NegNormals")) v3.NegNormals();
+                        if (UX::SmallButton("ComputeOccBox")) v3.ComputeOccBox();
+                        if (UX::SmallButton("ComputeFaceCull")) v3.ComputeFaceCull();
+                    }
+                    UI::BeginDisabled(VisualNormals::IsRecalcRunning());
+                    if (UX::SmallButton("Recalc fully smooth normals")) VisualNormals::StartRecalc(vis);
+                    UI::EndDisabled();
+                    AddSimpleTooltip("Groups duplicate local positions and averages their incident face normals into the persistent VertexStream Normal slot (Dec3N or Float3). Save and reopen to upload the changed CPU stream. Never creates CPU Vertexes beside the stream.");
+                }
             }
             EndTreeNode();
         }
@@ -1435,38 +1770,33 @@ class ItemModelTreeElement {
                 Dev::SetOffset(userMat, O_USERMATINST_PHYSID, uint8(DrawComboEPlugSurfaceMaterialId("PhysicsID", EPlugSurfaceMaterialId(userMat.PhysicsID))));
                 auto newGameplayID = uint8(DrawComboEPlugSurfaceGameplayId("GameplayID", EPlugSurfaceGameplayId(origGPID)));
                 Dev::SetOffset(userMat, O_USERMATINST_GAMEPLAY_ID, newGameplayID);
-                if (colorLen == 3) {
-                    auto r = Dev::ReadUInt32(colorPtr + 0x0),
-                        g = Dev::ReadUInt32(colorPtr + 0x4),
-                        b = Dev::ReadUInt32(colorPtr + 0x8);
-                    auto col = vec3(r, g, b) / vec3(255);
-                    col = UI::InputColor3("Color", col) * 255;
-                    Dev::Write(colorPtr + 0x0, uint8(Math::Clamp(uint32(Math::Round(col.x)), 0, 255)));
-                    Dev::Write(colorPtr + 0x4, uint8(Math::Clamp(uint32(Math::Round(col.y)), 0, 255)));
-                    Dev::Write(colorPtr + 0x8, uint8(Math::Clamp(uint32(Math::Round(col.z)), 0, 255)));
+                if (colorLen == 3 && colorPtr != 0) {
+                    auto col = UserMatInstColor::ReadColor(colorPtr);
+                    col = UI::InputColor3("Color", col);
+                    UserMatInstColor::WriteColor(colorPtr, col);
+                    UI::SameLine();
+                    if (UX::SmallButton(Icons::Times + "##rmUserMatColor" + Dev_GetPointerForNod(nod), "Remove custom color")) {
+                        UserMatInstColor::Clear(nod);
+                    }
                 } else {
                     UI::TextDisabled("unsupported color buffer length: " + colorLen);
                     UI::SameLine();
                     if (UI::Button("Instantiate Color")) {
-                        auto newColorPtr = RequestMemory(0x10);
-                        Dev::SetOffset(nod, O_USERMATINST_COLORBUF, newColorPtr);
-                        Dev::SetOffset(nod, O_USERMATINST_COLORBUF + 0x8, uint32(0x3));
-                        Dev::SetOffset(nod, O_USERMATINST_COLORBUF + 0xC, uint32(0x3));
-                        auto tyid = MwId();
-                        tyid.SetName("Real");
-                        auto targetid = MwId();
-                        targetid.SetName("TargetColor");
-                        Dev::SetOffset(nod, O_USERMATINST_PARAM_EXISTS, 1);
-                        Dev::SetOffset(nod, O_USERMATINST_PARAM_MWID_NAME, targetid.Value);
-                        Dev::SetOffset(nod, O_USERMATINST_PARAM_MWID_TYPE, tyid.Value);
-                        Dev::SetOffset(nod, O_USERMATINST_PARAM_LEN, 3);
+                        UserMatInstColor::Instantiate(nod);
                     }
-                    AddSimpleTooltip("\\$f80Warning!\\$z The game will crash at some point (leaving editor, etc) after clicking this button. Be sure to save etc.");
                 }
             } else {
                 CopiableLabeledValue("LinkFull", userMat._LinkFull);
                 CopiableLabeledValue("PhysicsID", tostring(EPlugSurfaceMaterialId(userMat.PhysicsID)));
                 CopiableLabeledValue("GameplayID", tostring(EPlugSurfaceGameplayId(userMat.GameplayID)));
+                if (colorLen == 3 && colorPtr != 0) {
+                    auto col = UserMatInstColor::ReadColor(colorPtr);
+                    UI::BeginDisabled();
+                    UI::InputColor3("Color", col);
+                    UI::EndDisabled();
+                } else {
+                    UI::TextDisabled("no custom color");
+                }
             }
             EndTreeNode();
         }
@@ -1503,7 +1833,7 @@ class ItemModelTreeElement {
 
 
     void Draw(CPlugSurface@ surf) {
-        if (StartTreeNode(name + " :: \\$f8fCPlugSurface", DEFAULT_OPEN)) {
+        if (StartTreeNode(name + " :: \\$f8fCPlugSurface", ItemBrowser_NamedChildTreeFlags(name))) {
             if (drawProperties) {
                 DrawMaterialsAt("nbMaterials: " + surf.Materials.Length, surf, GetOffset(surf, "Materials"));
                 DrawMaterialIdsAt("nbMaterialIds: " + surf.MaterialIds.Length, surf, GetOffset(surf, "MaterialIds"));
@@ -1517,6 +1847,7 @@ class ItemModelTreeElement {
                         surf.UpdateSurfMaterialIdsFromMaterialIndexs();
                     }
                     AddSimpleTooltip("This will update the material IDs on the surface itself. It should be run automatically after changing one of the surface's MaterialIds.");
+                    GmSurfUi::DrawReplace(surf);
                 }
                 Draw("m_GmSurf", surf.m_GmSurf);
                 MkAndDrawChildNode(surf.Skel, GetOffset(surf, "Skel"), "Skel");
@@ -1527,35 +1858,31 @@ class ItemModelTreeElement {
 
     void Draw(const string &in _name, GmSurf@ gmSurf) {
         if (StartTreeNode(_name + " :: \\$f8fGmSurf", true, DEFAULT_OPEN)) {
-            if (isEditable) {
-                gmSurf.GmSurfType = DrawComboEGmSurfType("GmSurfType", gmSurf.GmSurfType);
-                AddSimpleTooltip("MUST match the type of this surface -- do not touch if you don't know what you're doing. Game will crash for incorrect values.");
-                gmSurf.GameplayMainDir = UI::InputFloat3("GameplayMainDir", gmSurf.GameplayMainDir);
-                AddSimpleTooltip("Allows customizing bumper and booster parameters");
-#if SIG_DEVELOPER
-                // UI::SameLine();
-                // if (UI::Button("Y=NaN")) {
-                //     Dev::SetOffset(gmSurf, GetOffset("GmSurf", "GameplayMainDir") + 0x4, uint32(0x7fc00000));
-                // }
-#endif
+            if (gmSurf is null) {
+                UI::Text("null");
             } else {
-                UI::Text("GmSurfType: " + tostring(gmSurf.GmSurfType));
-                UI::Text("GameplayMainDir: " + tostring(gmSurf.GameplayMainDir));
-            }
+                if (isEditable) {
+                    gmSurf.GmSurfType = DrawComboEGmSurfType("GmSurfType", gmSurf.GmSurfType);
+                    AddSimpleTooltip("MUST match the runtime class (see 'class' below). Game will crash for incorrect values. To convert to a sphere/box/capsule/etc, use Replace GmSurf on the CPlugSurface.");
+                    gmSurf.GameplayMainDir = UI::InputFloat3("GameplayMainDir", gmSurf.GameplayMainDir);
+                    AddSimpleTooltip("Allows customizing bumper and booster parameters");
+                } else {
+                    UI::Text("GmSurfType: " + tostring(gmSurf.GmSurfType));
+                    UI::Text("GameplayMainDir: " + tostring(gmSurf.GameplayMainDir));
+                }
+                GmSurfUi::DrawFields(gmSurf, isEditable, _name);
 
-            if (gmSurf.GmSurfType == EGmSurfType::Mesh) {
-                auto nbVerts = Dev::GetOffsetUint32(gmSurf, 0x28);
-                auto nbTris = Dev::GetOffsetUint32(gmSurf, 0x38);
-                LabeledValue("Nb Verts", nbVerts);
-                LabeledValue("Nb Tris", nbTris);
-                if (isEditable && UI::Button("Zero Vert/Tris Buffers")) {
-                    // ManipPtrs::Replace(gmSurf, 0x28, 0, false);
-                    // ManipPtrs::Replace(gmSurf, 0x38, 0, false);
-                    Dev::SetOffset(gmSurf, 0x28, uint(0));
-                    Dev::SetOffset(gmSurf, 0x38, uint(0));
+                auto compound = cast<GmSurfCompound>(gmSurf);
+                if (compound !is null) {
+                    for (uint i = 0; i < compound.Surfs.Length; i++) {
+                        Draw("Surfs[" + i + "]", compound.Surfs[i]);
+                    }
+                }
+                auto inst = cast<GmSurfCompoundInstance>(gmSurf);
+                if (inst !is null && inst.Compound !is null) {
+                    Draw("Compound", inst.Compound);
                 }
             }
-
             EndTreeNode();
         }
     }
@@ -1923,6 +2250,23 @@ class ItemModelTreeElement {
             auto fid = cast<CSystemFidFile>(Dev::GetOffsetNod(nod, 0x8));
 #if SIG_DEVELOPER
             Draw_IB_DevBtnPtr(title, nod, nodOffset);
+#endif
+            if (isEditable && kenematicConstraint !is null) {
+#if SIG_DEVELOPER
+                UI::SameLine();
+#endif
+                if (UX::SmallButton("Clone to New", "New NPlugDyna_SKinematicConstraint; copies all fields (anim keys, axes, ShaderTc). Replaces this Model so the original catalog nod is left alone.")) {
+                    CloneKcToNew();
+                }
+            } else if (isEditable && dynaObject !is null) {
+#if SIG_DEVELOPER
+                UI::SameLine();
+#endif
+                if (UX::SmallButton("Clone to New", "New CPlugDynaObjectModel; copies flags/mass/etc and AddRefs Mesh/StaticShape/DynaShape/LocAnim/WaterModel (shared, not deep-copied). Replaces this Model so the catalog dyna nod is left alone.")) {
+                    CloneDynaToNew();
+                }
+            }
+#if SIG_DEVELOPER
             if (fid !is null) UI::SameLine();
 #endif
             if (fid !is null) {
@@ -1950,9 +2294,12 @@ class ItemModelTreeElement {
         if (ptr2 > 0 && ptr2 % 8 == 0) {
             type = Dev::ReadCString(Dev::ReadUInt64(ptr2));
             paramsClsId = Dev::ReadUInt32(ptr2 + 0x10);
-            if (StartTreeNode("\\$888Params: ClsId / Type: " + Text::Format("%08x / " + type, paramsClsId),
-                true, UI::TreeNodeFlags::None
-            )) {
+            string tags = ItemBrowser_ParamsTagsFor(paramsClsId, type, ptr1);
+            if (g_IB_ActiveKinMap !is null) {
+                tags += ItemBrowser_KinIndexTag(g_IB_ActiveKinMap.IxForEnt(prefab, i));
+            }
+            string title = ItemBrowser_ParamsTreeTitle(tags, ItemBrowser_ParamsShortType(paramsClsId, type));
+            if (StartTreeNode(title + "###ent-params-" + i, true, UI::TreeNodeFlags::None)) {
                 DrawSMetaPtr(ptr1, paramsClsId, type, isEditable);
                 EndTreeNode();
             }
@@ -2024,111 +2371,559 @@ void DrawSMetaPtr(uint64 ptr, uint32 clsId, const string &in type, bool isEditab
     CopiableLabeledValue("\\$888Data", Dev::Read(ptr, maxOffset));
 
     if (clsId == 0x2f0b6000 || type == "NPlugDynaObjectModel::SInstanceParams") {
-        auto offsetCSS = GetOffset("NPlugDynaObjectModel_SInstanceParams", "CastStaticShadow");
-        auto offsetIK = GetOffset("NPlugDynaObjectModel_SInstanceParams", "IsKinematic");
-        bool castsShadow = Dev::ReadUInt8(ptr + offsetCSS) > 0;
-        bool IsKinematic = Dev::ReadUInt8(ptr + offsetIK) > 0;
-        if (isEditable) {
-            castsShadow = UI::Checkbox("CastStaticShadow", castsShadow);
-            Dev::Write(ptr + offsetCSS, castsShadow ? 0x1 : 0x0);
-            IsKinematic = UI::Checkbox("IsKinematic", IsKinematic);
-            Dev::Write(ptr + offsetIK, IsKinematic ? 0x1 : 0x0);
-        } else {
-            LabeledValue("CastStaticShadow", castsShadow);
-            LabeledValue("IsKinematic", IsKinematic);
-        }
+        Draw_NPlugDynaObjectModel_SInstanceParams(ptr, isEditable);
+    } else if (clsId == 0x2f0d9000 || type == "NPlugStaticObjectModel::SInstanceParams") {
+        Draw_NPlugStaticObjectModel_SInstanceParams(ptr, isEditable);
     } else if (clsId == 0x2f0d8000 || type == "NPlugItemPlacement::SPlacementGroup") {
         DrawSPlacementGroup(ptr, isEditable);
     } else if (clsId == 0x2f0c8000 || type == "NPlugDyna::SPrefabConstraintParams") {
         Draw_SPrefabConstraintParams(ptr, isEditable);
     } else if (clsId == CLSID_NPlugItemPlacement_SPlacement || type == "NPlugItemPlacement::SPlacement") {
         Draw_SPlacement(ptr, isEditable);
+    } else {
+        DrawSMetaPtr_UnknownScalars(ptr, ty, isEditable);
+    }
+}
+
+// Memory layout (not RTTI order): PeriodSc, PeriodScMax, Phase01, Phase01Max,
+// TextureId, IsKinematic, CastStaticShadow. Size 0x1C. Bools are u32.
+const uint16 O_SINSTPARAMS_PeriodSc = 0x00;
+const uint16 O_SINSTPARAMS_PeriodScMax = 0x04;
+const uint16 O_SINSTPARAMS_Phase01 = 0x08;
+const uint16 O_SINSTPARAMS_Phase01Max = 0x0C;
+const uint16 O_SINSTPARAMS_TextureId = 0x10;
+const uint16 O_SINSTPARAMS_IsKinematic = 0x14;
+const uint16 O_SINSTPARAMS_CastStaticShadow = 0x18;
+
+const uint16 O_SPCP_Ent1 = 0x00;
+const uint16 O_SPCP_Ent2 = 0x04;
+const uint16 O_SPCP_Pos1 = 0x08;
+const uint16 O_SPCP_Pos2 = 0x14;
+
+const uint16 O_SPG_Placements = 0x00;
+const uint16 O_SPG_TQs = 0x10;
+const uint16 O_SPG_U16s = 0x20;
+const uint16 O_SPG_PlacementsDup = 0x30;
+const uint PREFAB_PARAMS_LIST_CAP = 24;
+const float PREFAB_PARAMS_W = 72.;
+const float PREFAB_PARAMS_W3 = 180.;
+
+const string TIP_PERIOD_SC = "PeriodSc: vertex-tween / cloth wave period in seconds (min). With PeriodScMax, each placed instance picks a random period in [PeriodSc, PeriodScMax]. Official Flag8m cloth uses 8..16. Not LocAnim.";
+const string TIP_PERIOD_SC_MAX = "PeriodScMax: upper bound of the per-instance period range (seconds). Same as PeriodSc → every instance uses that period.";
+const string TIP_PHASE01 = "Phase01: vertex-tween phase in 0..1 (where in the wave this instance starts). With Phase01Max, randomized per instance.";
+const string TIP_PHASE01_MAX = "Phase01Max: upper bound of the per-instance phase range (0..1). Same as Phase01 → every instance shares that phase.";
+const string TIP_TEXTURE_ID = "TextureId: per-instance texture/shader id (Int32, not EShaderTcType). Official flags use 0.";
+const string TIP_IS_KINEMATIC = "IsKinematic: on = kinematic (KC / scripted motion). Off = free rigid body.";
+const string TIP_CAST_STATIC_SHADOW = "CastStaticShadow: distant static shadow. It does not animate.";
+
+// Params tree tags (ManiaLink colors): K $0f8, S $fd0, T $6cf, Pe $c8f, Ph $af8.
+// Constraint: T $f80, P $88f (gray $888 when -1). kin# $888. Hover uses TreeNode Selected.
+
+void ItemBrowser_KinHoverBeginFrame() {
+    g_IB_KinHoverDraw = g_IB_KinHoverAcc;
+    g_IB_KinHoverRootDraw = g_IB_KinHoverRootAcc;
+    g_IB_KinHoverAcc = -1;
+    g_IB_KinHoverRootAcc = 0;
+}
+
+void ItemBrowser_KinHover(int kix) {
+    if (g_IB_ActiveKinMap is null || g_IB_ActiveKinMap.root is null || kix < 0) return;
+    g_IB_KinHoverAcc = kix;
+    g_IB_KinHoverRootAcc = Dev_GetPointerForNod(g_IB_ActiveKinMap.root);
+}
+
+int ItemBrowser_KinHoverIxFor(ItemBrowser_KinDynaMap@ map) {
+    if (map is null || map.root is null) return -1;
+    if (Dev_GetPointerForNod(map.root) != g_IB_KinHoverRootDraw) return -1;
+    return g_IB_KinHoverDraw;
+}
+
+void ItemBrowser_MaybeKinHover(int kix) {
+    if (UI::IsItemHovered()) ItemBrowser_KinHover(kix);
+}
+
+string ItemBrowser_TreeTag(const string &in color, const string &in body) {
+    return "\\$" + color + "[" + body + "]";
+}
+
+string ItemBrowser_KinIndexTag(int kix) {
+    if (kix < 0) return "";
+    return ItemBrowser_TreeTag("888", "kin#" + tostring(kix));
+}
+
+string ItemBrowser_KinDynaLabelExtra(int kix, int hoverKix) {
+    string t = ItemBrowser_KinIndexTag(kix);
+    if (t.Length == 0) return "";
+    return "  " + t;
+}
+
+UI::TreeNodeFlags ItemBrowser_KinDynaTreeFlags(int kix, int hoverKix) {
+    UI::TreeNodeFlags f = DEFAULT_OPEN;
+    if (kix >= 0 && kix == hoverKix) {
+        f = UI::TreeNodeFlags(int(f) | int(UI::TreeNodeFlags::Selected));
+    }
+    return f;
+}
+
+bool ItemBrowser_FloatNonZero(float v) {
+    return Math::Abs(v) > 1e-6;
+}
+
+string ItemBrowser_SInstParamsTags(bool isKinematic, bool castStaticShadow, uint textureId, float periodSc, float periodScMax, float phase01, float phase01Max) {
+    string t;
+    if (isKinematic) t += ItemBrowser_TreeTag("0f8", "K");
+    if (castStaticShadow) t += ItemBrowser_TreeTag("fd0", "S");
+    if (textureId != 0) t += ItemBrowser_TreeTag("6cf", "T" + tostring(textureId));
+    if (ItemBrowser_FloatNonZero(periodSc) || ItemBrowser_FloatNonZero(periodScMax)) t += ItemBrowser_TreeTag("c8f", "Pe");
+    if (ItemBrowser_FloatNonZero(phase01) || ItemBrowser_FloatNonZero(phase01Max)) t += ItemBrowser_TreeTag("af8", "Ph");
+    return t;
+}
+
+string ItemBrowser_SStaticInstParamsTags(float phase01) {
+    if (!ItemBrowser_FloatNonZero(phase01)) return "";
+    return ItemBrowser_TreeTag("af8", "Ph");
+}
+
+string ItemBrowser_SPrefabConstraintParamsTags(int parentEntIx, int targetEntIx) {
+    string t = ItemBrowser_TreeTag("f80", "T" + tostring(targetEntIx));
+    string pCol = parentEntIx < 0 ? "888" : "88f";
+    t += ItemBrowser_TreeTag(pCol, "P" + tostring(parentEntIx));
+    return t;
+}
+
+string ItemBrowser_ParamsShortType(uint32 clsId, const string &in type) {
+    if (clsId == 0x2f0b6000) return "SInstanceParams";
+    if (clsId == 0x2f0c8000) return "SPrefabConstraintParams";
+    if (clsId == 0x2f0d9000) return "SStaticInstanceParams";
+    if (clsId == 0x2f0d8000) return "SPlacementGroup";
+    if (clsId == CLSID_NPlugItemPlacement_SPlacement) return "SPlacement";
+    int sep = type.IndexOf("::");
+    if (sep >= 0) return type.SubStr(sep + 2);
+    if (type.Length > 0) return type;
+    return Text::Format("%08x", clsId);
+}
+
+string ItemBrowser_ParamsTreeTitle(const string &in tags, const string &in shortType) {
+    string t = "\\$888Params";
+    if (tags.Length > 0) t += "  " + tags;
+    t += "  \\$888" + shortType;
+    return t;
+}
+
+string ItemBrowser_ParamsTagsFor(uint32 clsId, const string &in type, uint64 ptr) {
+    if (ptr == 0) return "";
+    if (clsId == 0x2f0b6000 || type == "NPlugDynaObjectModel::SInstanceParams") {
+        return ItemBrowser_SInstParamsTags(
+            Dev::ReadUInt32(ptr + O_SINSTPARAMS_IsKinematic) != 0,
+            Dev::ReadUInt32(ptr + O_SINSTPARAMS_CastStaticShadow) != 0,
+            Dev::ReadUInt32(ptr + O_SINSTPARAMS_TextureId),
+            Dev::ReadFloat(ptr + O_SINSTPARAMS_PeriodSc),
+            Dev::ReadFloat(ptr + O_SINSTPARAMS_PeriodScMax),
+            Dev::ReadFloat(ptr + O_SINSTPARAMS_Phase01),
+            Dev::ReadFloat(ptr + O_SINSTPARAMS_Phase01Max)
+        );
+    }
+    if (clsId == 0x2f0c8000 || type == "NPlugDyna::SPrefabConstraintParams") {
+        return ItemBrowser_SPrefabConstraintParamsTags(Dev::ReadInt32(ptr + O_SPCP_Ent1), Dev::ReadInt32(ptr + O_SPCP_Ent2));
+    }
+    if (clsId == 0x2f0d9000 || type == "NPlugStaticObjectModel::SInstanceParams") {
+        return ItemBrowser_SStaticInstParamsTags(Dev::ReadFloat(ptr));
+    }
+    return "";
+}
+
+bool ItemBrowser_IsKinematicDynaCandidate(CMwNod@ model, uint32 paramsClsId, bool isKinematic) {
+    if (cast<CPlugPrefab>(model) !is null) return false;
+    if (cast<CPlugDynaObjectModel>(model) is null) return false;
+    if (paramsClsId != 0x2f0b6000) return false;
+    return isKinematic;
+}
+
+bool ItemBrowser_EntIsKinematicDyna(CPlugPrefab@ prefab, uint i) {
+    if (prefab is null || i >= prefab.Ents.Length) return false;
+    auto ents = Dev::GetOffsetNod(prefab, O_PREFAB_ENTS);
+    if (ents is null) return false;
+    uint64 ptr = Dev::GetOffsetUint64(ents, SZ_ENT_REF * i + O_ENTREF_PARAMS);
+    uint64 ptr2 = Dev::GetOffsetUint64(ents, SZ_ENT_REF * i + O_ENTREF_PARAMS + 0x8);
+    uint32 clsId = 0;
+    bool kin = false;
+    if (ptr2 > 0 && ptr2 % 8 == 0) {
+        clsId = Dev::ReadUInt32(ptr2 + 0x10);
+        if (ptr != 0 && clsId == 0x2f0b6000) {
+            kin = Dev::ReadUInt32(ptr + O_SINSTPARAMS_IsKinematic) != 0;
+        }
+    }
+    return ItemBrowser_IsKinematicDynaCandidate(prefab.Ents[i].Model, clsId, kin);
+}
+
+// Matches Populate Ent1/Ent2: flatten nested prefabs, then index IsKinematic CPlugDynaObjectModel ents.
+// Game FlattenNestedPrefabs (0x140598cf0) is one-level splice; we recurse so 2-deep authoring still lists inner dynas.
+void ItemBrowser_FlattenKinDynas(CPlugPrefab@ prefab, ItemBrowser_KinDynaMap@ map, uint depth) {
+    if (prefab is null || map is null || depth > 8) return;
+    for (uint i = 0; i < prefab.Ents.Length; i++) {
+        auto inner = cast<CPlugPrefab>(prefab.Ents[i].Model);
+        if (inner !is null) {
+            ItemBrowser_FlattenKinDynas(inner, map, depth + 1);
+            continue;
+        }
+        if (ItemBrowser_EntIsKinematicDyna(prefab, i)) {
+            map.Add(prefab, i);
+        }
+    }
+}
+
+ItemBrowser_KinDynaMap@ ItemBrowser_BuildKinDynaMap(CPlugPrefab@ root) {
+    auto map = ItemBrowser_KinDynaMap();
+    @map.root = root;
+    ItemBrowser_FlattenKinDynas(root, map, 0);
+    return map;
+}
+
+void Draw_NPlugDynaObjectModel_SInstanceParams(uint64 ptr, bool isEditable) {
+    if (ptr == 0) return;
+    float periodSc = Dev::ReadFloat(ptr + O_SINSTPARAMS_PeriodSc);
+    float periodScMax = Dev::ReadFloat(ptr + O_SINSTPARAMS_PeriodScMax);
+    float phase01 = Dev::ReadFloat(ptr + O_SINSTPARAMS_Phase01);
+    float phase01Max = Dev::ReadFloat(ptr + O_SINSTPARAMS_Phase01Max);
+    uint textureId = Dev::ReadUInt32(ptr + O_SINSTPARAMS_TextureId);
+    bool isKinematic = Dev::ReadUInt32(ptr + O_SINSTPARAMS_IsKinematic) != 0;
+    bool castStaticShadow = Dev::ReadUInt32(ptr + O_SINSTPARAMS_CastStaticShadow) != 0;
+
+    if (isEditable) {
+        string id = Text::FormatPointer(ptr);
+        UI::PushID(id);
+        isKinematic = UI::Checkbox("IsKinematic", isKinematic);
+        AddSimpleTooltip(TIP_IS_KINEMATIC);
+        UI::SameLine();
+        castStaticShadow = UI::Checkbox("CastStaticShadow", castStaticShadow);
+        AddSimpleTooltip(TIP_CAST_STATIC_SHADOW);
+        UI::PushItemWidth(PREFAB_PARAMS_W);
+        if (UI::BeginTable("sinstEq##" + id, 2, UI::TableFlags::SizingStretchSame | UI::TableFlags::NoSavedSettings)) {
+            UI::TableNextColumn();
+            periodSc = UI::InputFloat("PeriodSc", periodSc);
+            AddSimpleTooltip(TIP_PERIOD_SC);
+            UI::TableNextColumn();
+            periodScMax = UI::InputFloat("PeriodScMax", periodScMax);
+            AddSimpleTooltip(TIP_PERIOD_SC_MAX);
+            UI::TableNextColumn();
+            phase01 = UI::InputFloat("Phase01", phase01);
+            AddSimpleTooltip(TIP_PHASE01);
+            UI::TableNextColumn();
+            phase01Max = UI::InputFloat("Phase01Max", phase01Max);
+            AddSimpleTooltip(TIP_PHASE01_MAX);
+            UI::TableNextColumn();
+            textureId = uint(Math::Max(0, UI::InputInt("TextureId", int(textureId), 0)));
+            AddSimpleTooltip(TIP_TEXTURE_ID);
+            UI::EndTable();
+        }
+        UI::PopItemWidth();
+        UI::PopID();
+
+        Dev::Write(ptr + O_SINSTPARAMS_PeriodSc, periodSc);
+        Dev::Write(ptr + O_SINSTPARAMS_PeriodScMax, periodScMax);
+        Dev::Write(ptr + O_SINSTPARAMS_Phase01, phase01);
+        Dev::Write(ptr + O_SINSTPARAMS_Phase01Max, phase01Max);
+        Dev::Write(ptr + O_SINSTPARAMS_TextureId, textureId);
+        Dev::Write(ptr + O_SINSTPARAMS_IsKinematic, isKinematic ? uint(1) : uint(0));
+        Dev::Write(ptr + O_SINSTPARAMS_CastStaticShadow, castStaticShadow ? uint(1) : uint(0));
+    } else {
+        LabeledValue("IsKinematic", isKinematic);
+        AddSimpleTooltip(TIP_IS_KINEMATIC);
+        LabeledValue("CastStaticShadow", castStaticShadow);
+        AddSimpleTooltip(TIP_CAST_STATIC_SHADOW);
+        LabeledValue("PeriodSc", periodSc);
+        AddSimpleTooltip(TIP_PERIOD_SC);
+        LabeledValue("PeriodScMax", periodScMax);
+        AddSimpleTooltip(TIP_PERIOD_SC_MAX);
+        LabeledValue("Phase01", phase01);
+        AddSimpleTooltip(TIP_PHASE01);
+        LabeledValue("Phase01Max", phase01Max);
+        AddSimpleTooltip(TIP_PHASE01_MAX);
+        LabeledValue("TextureId", textureId);
+        AddSimpleTooltip(TIP_TEXTURE_ID);
+    }
+}
+
+void Draw_NPlugStaticObjectModel_SInstanceParams(uint64 ptr, bool isEditable) {
+    if (ptr == 0) return;
+    float phase01 = Dev::ReadFloat(ptr);
+    if (isEditable) {
+        UI::PushItemWidth(PREFAB_PARAMS_W);
+        phase01 = UI::InputFloat("Phase01", phase01);
+        AddSimpleTooltip(TIP_PHASE01);
+        UI::PopItemWidth();
+        Dev::Write(ptr, phase01);
+    } else {
+        LabeledValue("Phase01", phase01);
+        AddSimpleTooltip(TIP_PHASE01);
     }
 }
 
 void Draw_SPlacement(uint64 ptr, bool isEditable) {
+    if (ptr == 0) return;
     auto placement = DPlugItemPlacement_SPlacement(ptr);
-    if (isEditable && false) {
-
+    string id = Text::FormatPointer(ptr);
+    UI::PushID(id);
+    if (isEditable) {
+        UI::PushItemWidth(72);
+        int layout = UI::InputInt("iLayout", int(placement.iLayout), 0);
+        if (layout < 0) layout = 0;
+        placement.iLayout = uint(layout);
+        UI::PopItemWidth();
     } else {
         LabeledValue("iLayout", placement.iLayout);
-        auto opts = placement.Options;
-        auto nbOpts = opts.Length;
-        if (UI::TreeNode("Options (" + nbOpts + ")##" + ptr, UI::TreeNodeFlags::DefaultOpen)) {
-            for (uint i = 0; i < nbOpts; i++) {
-                auto opt = opts.GetSPlacementOption(i);
-                if (opt is null) continue;
-                auto optPtr = opt.Ptr;
-                auto reqTags = opt.RequiredTags;
-                auto nbReqTags = reqTags.Length;
-                if (UI::TreeNode("RequiredTags (" + nbReqTags + ")##" + optPtr, UI::TreeNodeFlags::DefaultOpen)) {
-                    for (uint j = 0; j < nbReqTags; j++) {
-                        auto tag = reqTags.GetDRequiredTag(j);
-                        if (tag is null) continue;
-                        auto tagPtr = tag.Ptr;
-                        UI::Text(ItemPlace_StringConsts::LookupJoined(tag.xy));
-                        // LabeledValue("Tag["+j+"]", Text::FormatPointer(tagPtr));
-                        // LabeledValue("Tag["+j+"]<x, y>", "" + tag.x + ", " + tag.y);
-                        // LabeledValue("TagType##" + j, tag.Type);
-                    }
-                    UI::TreePop();
-                }
-            }
-            UI::TreePop();
-        }
     }
+    auto opts = placement.Options;
+    auto nbOpts = opts.Length;
+    auto optFlags = nbOpts <= 4 ? UI::TreeNodeFlags::DefaultOpen : UI::TreeNodeFlags::None;
+    if (UI::TreeNode("Options (" + nbOpts + ")##" + id, optFlags)) {
+        uint showN = Math::Min(nbOpts, PREFAB_PARAMS_LIST_CAP);
+        for (uint i = 0; i < showN; i++) {
+            auto opt = opts.GetSPlacementOption(i);
+            if (opt is null) continue;
+            auto reqTags = opt.RequiredTags;
+            auto nbReqTags = reqTags.Length;
+            if (UI::TreeNode("RequiredTags (" + nbReqTags + ")##" + i, UI::TreeNodeFlags::DefaultOpen)) {
+                for (uint j = 0; j < nbReqTags; j++) {
+                    auto tag = reqTags.GetDRequiredTag(j);
+                    if (tag is null) continue;
+                    if (isEditable) {
+                        UI::PushItemWidth(48);
+                        uint x = uint(Math::Max(0, UI::InputInt("x##" + j, int(tag.x), 0)));
+                        UI::SameLine();
+                        uint y = uint(Math::Max(0, UI::InputInt("y##" + j, int(tag.y), 0)));
+                        UI::PopItemWidth();
+                        UI::SameLine();
+                        UI::TextDisabled(ItemPlace_StringConsts::LookupJoined(nat2(x, y)));
+                        tag.x = x;
+                        tag.y = y;
+                    } else {
+                        UI::Text(ItemPlace_StringConsts::LookupJoined(tag.xy));
+                    }
+                }
+                UI::TreePop();
+            }
+        }
+        if (nbOpts > showN) UI::TextDisabled("... " + (nbOpts - showN) + " more");
+        UI::TreePop();
+    }
+    UI::PopID();
 }
 
+const string TIP_PARENT_ENT_IX = "ParentEntIx (native Ent1): index into the flattened kinematic-dyna list (CPlugDynaObjectModel ents with SInstanceParams.IsKinematic, after nested prefabs are flattened). Not a raw Ents[i] index. -1 = no parent (root of the chain). Compound motion is this parent chain.";
+const string TIP_TARGET_ENT_IX = "TargetEntIx (native Ent2): same kinematic-dyna list as ParentEntIx (kin# on the CPlugDynaObjectModel label). The dyna this KC drives, not Ents[n].";
+const string TIP_PARENT_POS = "ParentPos (Pos1): point on the parent dyna (ParentEntIx), paired with ParentEntIx the same way TargetPos pairs with TargetEntIx. Rest offset of the child is usually the KC/dyna SEntRef.Location; this is the extra constraint point on the parent. Official items often leave it at 0.";
+const string TIP_TARGET_POS = "TargetPos (Pos2): point on the target dyna (TargetEntIx). Extra constraint point on the driven mesh; rest pose is usually SEntRef.Location. Official items often leave it at 0.";
+
 void Draw_SPrefabConstraintParams(uint64 ptr, bool isEditable) {
-    uint dynaObjIx = Dev::ReadUInt32(ptr + 0x4);
+    if (ptr == 0) return;
+    // ParentEntIx is often -1 (no parent). Do not clamp to >= 0.
+    int ent1 = Dev::ReadInt32(ptr + O_SPCP_Ent1);
+    int ent2 = Dev::ReadInt32(ptr + O_SPCP_Ent2);
+    vec3 pos1 = Dev::ReadVec3(ptr + O_SPCP_Pos1);
+    vec3 pos2 = Dev::ReadVec3(ptr + O_SPCP_Pos2);
     if (isEditable) {
-        dynaObjIx = UI::InputInt("DynaObject Ix", dynaObjIx);
-        Dev::Write(ptr + 0x4, dynaObjIx);
+        string id = Text::FormatPointer(ptr);
+        UI::PushID(id);
+        if (UI::BeginTable("pcpEq##" + id, 2, UI::TableFlags::SizingStretchSame | UI::TableFlags::NoSavedSettings)) {
+            // do target first, intuitive
+            UI::TableNextColumn();
+            UI::Text("\\$iTarget (This/Self)");
+            UI::PushItemWidth(-1);
+            ent2 = UI::InputInt("##TargetEntIx", ent2);
+            ItemBrowser_MaybeKinHover(ent2);
+            AddSimpleTooltip(TIP_TARGET_ENT_IX);
+            pos2 = UI::InputFloat3("##TargetPos", pos2);
+            AddSimpleTooltip(TIP_TARGET_POS);
+            UI::PopItemWidth();
+            // do parent 2nd, gray out if ix is -1
+            UI::TableNextColumn();
+            UI::BeginDisabled(ent1 == -1);
+            UI::Text("\\$iParent");
+            UI::PushItemWidth(-1);
+            ent1 = UI::InputInt("##ParentEntIx", ent1);
+            ItemBrowser_MaybeKinHover(ent1);
+            AddSimpleTooltip(TIP_PARENT_ENT_IX);
+            pos1 = UI::InputFloat3("##ParentPos", pos1);
+            AddSimpleTooltip(TIP_PARENT_POS);
+            UI::PopItemWidth();
+            UI::EndDisabled();
+            UI::EndTable();
+        }
+        UI::PopID();
+        Dev::Write(ptr + O_SPCP_Ent1, uint(ent1));
+        Dev::Write(ptr + O_SPCP_Ent2, uint(ent2));
+        Dev::Write(ptr + O_SPCP_Pos1, pos1);
+        Dev::Write(ptr + O_SPCP_Pos2, pos2);
     } else {
-        LabeledValue("DynaObject Ix", dynaObjIx);
+        if (UI::BeginTable("pcpRo##" + Text::FormatPointer(ptr), 2, UI::TableFlags::SizingStretchSame | UI::TableFlags::NoSavedSettings)) {
+            UI::TableNextColumn();
+            LabeledValue("ParentEntIx", ent1);
+            ItemBrowser_MaybeKinHover(ent1);
+            AddSimpleTooltip(TIP_PARENT_ENT_IX);
+            LabeledValue("ParentPos", pos1.ToString());
+            AddSimpleTooltip(TIP_PARENT_POS);
+            UI::TableNextColumn();
+            LabeledValue("TargetEntIx", ent2);
+            ItemBrowser_MaybeKinHover(ent2);
+            AddSimpleTooltip(TIP_TARGET_ENT_IX);
+            LabeledValue("TargetPos", pos2.ToString());
+            AddSimpleTooltip(TIP_TARGET_POS);
+            UI::EndTable();
+        }
     }
 }
 
 void DrawSPlacementGroup(uint64 ptr, bool isEditable = false) {
-    // Placements MmSArray<NPlugItemPlacement_SPlacementOption> at 0x0
-    // MmSArray at 0x10: GmTransQuat?; Struct of [quat, vec3] i think (0.71, 0.0, -0.71, 0.0, x, y, z); length 0x1C
-    // Total size might be 0x40 bytes (gets updated on save if main placements group length is shortened)
-
-    // Read placement options
-    auto placementsPtr = Dev::ReadUInt64(ptr);
-    // CopiableLabeledValue("placementsPtr", Text::FormatPointer(placementsPtr));
-    auto buf = Dev_GetNodFromPointer(placementsPtr);
-    // LabeledValue("buf is null", buf is null);
-    auto len = Dev::ReadUInt32(ptr + 0x8);
-    // LabeledValue("Placements ptr", Text::FormatPointer(ptr));
+    // RTTI only exposes Placements. Extra arrays from save/double-spectator:
+    // +0x00 MwSArray<SPlacement> stride 0x18; +0x10 MwSArray<GmQuatTrans> 0x1C;
+    // +0x20 MwSArray<u16>; +0x30 SPlacement dup. Size 0x40.
+    auto placementsPtr = Dev::ReadUInt64(ptr + O_SPG_Placements);
+    auto len = Dev::ReadUInt32(ptr + O_SPG_Placements + 0x8);
+    uint8 pgType = GetPlacementGroupType(ptr);
     LabeledValue("Placements.Length", len);
-    LabeledValue("Placements Type", Text::Format("0x%02x", GetPlacementGroupType(ptr)));
-    uint elSize = SZ_SPLACEMENTOPTION;
-    for (int i = 0; i < Math::Min(5, len); i++) {
-        uint layout = Dev::GetOffsetUint32(buf, elSize * i + 0x0);
-        // MwSArray<NPlugItemPlacement_SPlacementOption>
-        auto placementOpts = Dev::GetOffsetNod(buf, elSize * i + 0x8);
-        auto placementOptsNb = Dev::GetOffsetUint32(buf, elSize * i + 0x10);
-        // works but useless atm
-        if (false) {
-            DrawSPlacementOption(i, layout, placementOpts, placementOptsNb);
+    LabeledValue("Placements Type", Text::Format("0x%02x", pgType) + " " + PlacementTypeToString(pgType));
+
+    uint showN = Math::Min(len, PREFAB_PARAMS_LIST_CAP);
+    if (placementsPtr != 0 && showN > 0) {
+        auto plFlags = len <= 4 ? UI::TreeNodeFlags::DefaultOpen : UI::TreeNodeFlags::None;
+        if (UI::TreeNode("Placements##" + Text::FormatPointer(ptr), plFlags)) {
+            for (uint i = 0; i < showN; i++) {
+                if (UI::TreeNode("[" + i + "]##pl" + i)) {
+                    Draw_SPlacement(placementsPtr + i * SZ_SPLACEMENTOPTION, isEditable);
+                    UI::TreePop();
+                }
+            }
+            if (len > showN) UI::TextDisabled("... " + (len - showN) + " more");
+            UI::TreePop();
         }
     }
 
-    // Read MwSArray<GmTransQuat>
-    auto tqsPtr = Dev::ReadUInt64(ptr + 0x10);
-    // CopiableLabeledValue("TQs Ptr", Text::FormatPointer(tqsPtr));
-    // auto tqs = Dev_GetNodFromPointer(tqsPtr);
-    // LabeledValue("TQs is null", tqs is null);
-    auto nbTqs = Dev::ReadUInt32(ptr + 0x18);
+    auto tqsPtr = Dev::ReadUInt64(ptr + O_SPG_TQs);
+    auto nbTqs = Dev::ReadUInt32(ptr + O_SPG_TQs + 0x8);
     auto newNb = Draw_SPlacementGroup_TQs(tqsPtr, nbTqs, isEditable, ptr);
-    // check if we need to alter array lengths
     if (isEditable && newNb < nbTqs && newNb < len) {
-        // update first 2 arrays -- updating first one will update the rest on save, but not the second one
-        Dev::Write(ptr + 0x8, newNb);
-        Dev::Write(ptr + 0x18, newNb);
+        Dev::Write(ptr + O_SPG_Placements + 0x8, newNb);
+        Dev::Write(ptr + O_SPG_TQs + 0x8, newNb);
         NotifySuccess("Updated item spectator count, please save the item");
     }
+
+    Draw_SPlacementGroup_U16s(ptr, isEditable);
+    Draw_SPlacementGroup_PlacementsDup(ptr, isEditable);
+}
+
+void Draw_SPlacementGroup_U16s(uint64 ptr, bool isEditable) {
+    auto buf = Dev::ReadUInt64(ptr + O_SPG_U16s);
+    auto n = Dev::ReadUInt32(ptr + O_SPG_U16s + 0x8);
+    LabeledValue("U16s.Length", n);
+    if (buf == 0 || n == 0) return;
+    uint showN = Math::Min(n, PREFAB_PARAMS_LIST_CAP);
+    if (UI::TreeNode("U16s##" + Text::FormatPointer(ptr))) {
+        UI::PushItemWidth(64);
+        for (uint i = 0; i < showN; i++) {
+            uint16 v = Dev::ReadUInt16(buf + i * 2);
+            if (isEditable) {
+                int nv = UI::InputInt("[" + i + "]", int(v), 0);
+                if (nv < 0) nv = 0;
+                if (nv > 0xFFFF) nv = 0xFFFF;
+                Dev::Write(buf + i * 2, uint8(nv & 0xFF));
+                Dev::Write(buf + i * 2 + 1, uint8((nv >> 8) & 0xFF));
+            } else {
+                LabeledValue("[" + i + "]", v);
+            }
+        }
+        UI::PopItemWidth();
+        if (n > showN) UI::TextDisabled("... " + (n - showN) + " more");
+        UI::TreePop();
+    }
+}
+
+void Draw_SPlacementGroup_PlacementsDup(uint64 ptr, bool isEditable) {
+    auto buf = Dev::ReadUInt64(ptr + O_SPG_PlacementsDup);
+    auto n = Dev::ReadUInt32(ptr + O_SPG_PlacementsDup + 0x8);
+    LabeledValue("PlacementsDup.Length", n);
+    if (buf == 0 || n == 0) return;
+    uint showN = Math::Min(n, PREFAB_PARAMS_LIST_CAP);
+    if (UI::TreeNode("PlacementsDup##" + Text::FormatPointer(ptr))) {
+        for (uint i = 0; i < showN; i++) {
+            if (UI::TreeNode("[" + i + "]##dup" + i)) {
+                Draw_SPlacement(buf + i * SZ_SPLACEMENTOPTION, isEditable);
+                UI::TreePop();
+            }
+        }
+        if (n > showN) UI::TextDisabled("... " + (n - showN) + " more");
+        UI::TreePop();
+    }
+}
+
+void Draw_GmQuatTrans(uint64 ptr, bool isEditable, uint i) {
+    if (ptr == 0) return;
+    vec4 q = Dev::ReadVec4(ptr);
+    vec3 t = Dev::ReadVec3(ptr + 0x10);
+    UI::PushID("tq" + i);
+    if (isEditable) {
+        UI::PushItemWidth(220);
+        q = UI::InputFloat4("Q", q);
+        t = UI::InputFloat3("T", t);
+        UI::PopItemWidth();
+        Dev::Write(ptr, q);
+        Dev::Write(ptr + 0x10, t);
+    } else {
+        LabeledValue("Q", q.ToString());
+        LabeledValue("T", t.ToString());
+    }
+    UI::PopID();
+}
+
+bool PrefabParams_NameLooksLikeBuffer(const string &in n) {
+    return n.Contains("Array") || n.Contains("Buf") || n.Contains("Options")
+        || n.Contains("Placements") || n.Contains("Tags");
+}
+
+bool PrefabParams_NameLooksLikeBool(const string &in n) {
+    return n.StartsWith("Is") || n.StartsWith("Has") || n.StartsWith("Can")
+        || n.StartsWith("Cast") || n.StartsWith("Use");
+}
+
+void DrawSMetaPtr_UnknownScalars(uint64 ptr, const Reflection::MwClassInfo@ ty, bool isEditable) {
+    if (ptr == 0 || ty is null) return;
+    UI::TextDisabled("Unhandled Params class; scalar members:");
+    UI::PushItemWidth(72);
+    for (uint i = 0; i < ty.Members.Length; i++) {
+        auto mem = ty.Members[i];
+        if (mem.Offset >= 0xFFFF) continue;
+        string n = mem.Name;
+        uint16 o = mem.Offset;
+        if (PrefabParams_NameLooksLikeBuffer(n)) {
+            LabeledValue(n + " @+" + Text::Format("%x", o), "(buffer)");
+            continue;
+        }
+        if (PrefabParams_NameLooksLikeBool(n)) {
+            bool b = Dev::ReadUInt32(ptr + o) != 0;
+            if (isEditable) {
+                b = UI::Checkbox(n, b);
+                Dev::Write(ptr + o, b ? uint(1) : uint(0));
+            } else {
+                LabeledValue(n, b);
+            }
+            continue;
+        }
+        float f0 = Dev::ReadFloat(ptr + o);
+        int i0 = Dev::ReadInt32(ptr + o);
+        if (isEditable) {
+            UI::PushID(n + o);
+            float f1 = UI::InputFloat("f32 " + n, f0);
+            UI::SameLine();
+            int i1 = UI::InputInt("i32 " + n, i0, 0);
+            UI::PopID();
+            if (f1 != f0) Dev::Write(ptr + o, f1);
+            else if (i1 != i0) Dev::Write(ptr + o, uint(i1));
+        } else {
+            LabeledValue(n + " f32", f0);
+            LabeledValue(n + " i32", i0);
+        }
+    }
+    UI::PopItemWidth();
 }
 
 void DrawSPlacementOption(uint i, uint layout, CMwNod@ buf, uint len) {
@@ -2140,7 +2935,6 @@ uint Draw_SPlacementGroup_TQs(uint64 tqsPtr, uint nbTqs, bool isEditable, uint64
     auto ret = nbTqs;
     UI::Text("TQs.Length: " + nbTqs);
     if (IsPlacementGroupForSpectators(placementGroupPtr)) {
-        // UI::SameLine();
         UI::Indent();
         if (UI::Button("Export Spectators")) {
             ExportItemSpectators(tqsPtr, nbTqs);
@@ -2170,6 +2964,19 @@ uint Draw_SPlacementGroup_TQs(uint64 tqsPtr, uint nbTqs, bool isEditable, uint64
             }
         }
         UI::Unindent();
+    } else if (tqsPtr != 0 && nbTqs > 0) {
+        uint showN = Math::Min(nbTqs, PREFAB_PARAMS_LIST_CAP);
+        auto tqFlags = nbTqs <= 4 ? UI::TreeNodeFlags::DefaultOpen : UI::TreeNodeFlags::None;
+        if (UI::TreeNode("TQs##" + Text::FormatPointer(tqsPtr), tqFlags)) {
+            for (uint i = 0; i < showN; i++) {
+                if (UI::TreeNode("[" + i + "]##tq" + i, nbTqs <= 4 ? UI::TreeNodeFlags::DefaultOpen : UI::TreeNodeFlags::None)) {
+                    Draw_GmQuatTrans(tqsPtr + i * SZ_GMQUATTRANS, isEditable, i);
+                    UI::TreePop();
+                }
+            }
+            if (nbTqs > showN) UI::TextDisabled("... " + (nbTqs - showN) + " more");
+            UI::TreePop();
+        }
     }
     return ret;
 }
@@ -2210,10 +3017,274 @@ void Draw_NPlugDyna_SAnimFunc01(CMwNod@ nod, uint16 offset) {
     for (uint i = 0; i < len; i++) {
         // each subfunc is 0x8 long
         auto sfOffset = startOffset + 0x8 * i;
-        auto type = SubFuncEasings(Dev::GetOffsetUint8(nod, sfOffset));
+        auto type = ItemEditor::SubFuncEasings(Dev::GetOffsetUint8(nod, sfOffset));
         auto reverse = Dev::GetOffsetUint8(nod, sfOffset + 0x1) == 1;
         auto duration = Dev::GetOffsetUint32(nod, sfOffset + 0x4);
         UI::Text(tostring(type) + ", Rev: " + reverse + ", Duration: " + duration);
+    }
+}
+
+const quat ITEM_BROWSER_ENT_IDENTITY_QUAT = quat(0, 0, 0, 1);
+const int ITEM_BROWSER_ENT_LODGROUPID_DEFAULT = -1;
+const string ITEM_BROWSER_ENT_NLL_ALL_DEFAULTS = " \\$888\\$i all defaults";
+
+bool ItemBrowser_QuatComponentsClose(const quat &in a, const quat &in b, float eps = 1e-4) {
+    return Math::Abs(a.x - b.x) < eps && Math::Abs(a.y - b.y) < eps && Math::Abs(a.z - b.z) < eps && Math::Abs(a.w - b.w) < eps;
+}
+
+bool ItemBrowser_EulerIsZero(const vec3 &in e, float eps = 1e-4) {
+    return Math::Abs(e.x) < eps && Math::Abs(e.y) < eps && Math::Abs(e.z) < eps;
+}
+
+bool ItemBrowser_QuatIsDefault(const quat &in q) {
+    return ItemBrowser_EulerIsZero(q.Euler());
+}
+
+void ItemBrowser_ApplyEntLocRot(quat &out q, bool &out lastWasQuat, const quat &in qBefore, const quat &in qAfter, const vec3 &in eulerBefore, const vec3 &in eulerAfter, bool lastWasQuatIn) {
+    if (!ItemBrowser_QuatComponentsClose(qBefore, qAfter)) {
+        q = qAfter;
+        lastWasQuat = true;
+        return;
+    }
+    if (!MathX::Vec3Eq(eulerBefore, eulerAfter)) {
+        q = quat(eulerAfter);
+        lastWasQuat = false;
+        return;
+    }
+    q = qBefore;
+    lastWasQuat = lastWasQuatIn;
+}
+
+class ItemBrowser_EntLocEulerCache {
+    vec3 euler;
+    bool lastWasQuat = true;
+}
+
+dictionary g_IB_EntLocEulerCache;
+
+ItemBrowser_EntLocEulerCache@ ItemBrowser_GetEntLocEulerCache(const string &in key) {
+    ItemBrowser_EntLocEulerCache@ cache;
+    if (!g_IB_EntLocEulerCache.Get(key, @cache) || cache is null) {
+        @cache = ItemBrowser_EntLocEulerCache();
+        @g_IB_EntLocEulerCache[key] = cache;
+    }
+    return cache;
+}
+
+void ItemBrowser_DrawEntLocationQuatEuler(CPlugPrefab@ prefab, uint i, bool isEditable) {
+    quat q0 = prefab.Ents[i].Location.Quat;
+    if (!isEditable) {
+        CopiableLabeledValue(".Location.Quat", q0.ToString());
+        CopiableLabeledValue(".Location.Euler (deg)", MathX::ToDeg(q0.Euler()).ToString());
+        return;
+    }
+    string key = Text::FormatPointer(Dev_GetPointerForNod(prefab)) + "/" + i;
+    auto cache = ItemBrowser_GetEntLocEulerCache(key);
+    quat q1 = UX::InputQuat(".Location.Quat", q0, ITEM_BROWSER_ENT_IDENTITY_QUAT);
+    vec3 euler0 = cache.lastWasQuat ? q0.Euler() : cache.euler;
+    vec3 euler1 = UX::InputAngles3(".Location.Euler (deg)", euler0);
+    quat qOut;
+    bool lastWasQuat;
+    ItemBrowser_ApplyEntLocRot(qOut, lastWasQuat, q0, q1, euler0, euler1, cache.lastWasQuat);
+    prefab.Ents[i].Location.Quat = qOut;
+    cache.lastWasQuat = lastWasQuat;
+    if (!lastWasQuat) cache.euler = euler1;
+}
+
+string ItemBrowser_EntNllTreeTitle(const string &in name, const quat &in q, const vec3 &in trans, int lodGroupId) {
+    array<string> parts;
+    if (name.Length > 0) parts.InsertLast("Name=\"" + name + "\"");
+    if (!ItemBrowser_QuatIsDefault(q)) parts.InsertLast("Quat=" + q.ToString());
+    if (trans.LengthSquared() > 1e-10) parts.InsertLast("Trans=" + trans.ToString());
+    if (lodGroupId != ITEM_BROWSER_ENT_LODGROUPID_DEFAULT) parts.InsertLast("LodGroupId=" + tostring(lodGroupId));
+    string t = "Name/Location/LodGroupId";
+    if (parts.Length > 0) t += "  " + Text::Join(parts, "  ");
+    else t += ITEM_BROWSER_ENT_NLL_ALL_DEFAULTS;
+    return t;
+}
+
+void ItemBrowser_ReadShaderTcData(NPlugDyna_SKinematicConstraint@ kc, uint &out nb, uint &out perLine, uint &out perCol) {
+    uint16 off = GetOffset(kc, "ShaderTcData_TransSub");
+    nb = Dev::GetOffsetUint32(kc, off);
+    perLine = Dev::GetOffsetUint32(kc, off + 0x4);
+    perCol = Dev::GetOffsetUint32(kc, off + 0x8);
+}
+
+string ItemBrowser_ShaderTcAnimFuncTreeTitle(NPlugDyna::EShaderTcType ty, uint len, uint nb, uint perLine, uint perCol) {
+    string t = "ShaderTcAnimFunc (" + len + ") " + tostring(ty);
+    if (nb != 1) t += "  NbSubTexture=" + nb;
+    if (perLine != 1) t += "  NbSubTexturePerLine=" + perLine;
+    if (perCol != 1) t += "  NbSubTexturePerColumn=" + perCol;
+    return t;
+}
+
+void Draw_NPlugDyna_SKinematicConstraint_Props(NPlugDyna_SKinematicConstraint@ kc, bool isEditable) {
+    if (kc is null) return;
+    string id = Text::FormatPointer(Dev_GetPointerForNod(kc));
+    UI::PushID(id);
+
+    if (isEditable) {
+        UI::PushItemWidth(72);
+        if (UI::BeginTable("kc##" + id, 3, UI::TableFlags::SizingStretchProp)) {
+            UI::TableNextColumn();
+            kc.TransAxis = DrawComboEAxis("TransAxis", kc.TransAxis);
+            UI::TableNextColumn();
+            kc.TransMin = UI::InputFloat("TransMin", kc.TransMin);
+            UI::TableNextColumn();
+            kc.TransMax = UI::InputFloat("TransMax", kc.TransMax);
+            UI::TableNextColumn();
+            kc.RotAxis = DrawComboEAxis("RotAxis", kc.RotAxis);
+            UI::TableNextColumn();
+            kc.AngleMinDeg = UI::InputFloat("AngleMinDeg", kc.AngleMinDeg);
+            UI::TableNextColumn();
+            kc.AngleMaxDeg = UI::InputFloat("AngleMaxDeg", kc.AngleMaxDeg);
+            UI::EndTable();
+        }
+        UI::PopItemWidth();
+        Draw_NPlugDyna_SAnimFunc01_Inputs(kc, GetOffset(kc, "TransAnimFunc"), "TransAnimFunc", 4);
+        Draw_NPlugDyna_SAnimFunc01_Inputs(kc, GetOffset(kc, "RotAnimFunc"), "RotAnimFunc", 4);
+        Draw_NPlugDyna_SAnimFuncNat_Inputs(kc, GetOffset(kc, "ShaderTcAnimFunc"), "ShaderTcAnimFunc", 12, true);
+    } else {
+        LabeledValue("TransAxis", tostring(kc.TransAxis));
+        LabeledValue("TransMin", kc.TransMin);
+        LabeledValue("TransMax", kc.TransMax);
+        LabeledValue("RotAxis", tostring(kc.RotAxis));
+        LabeledValue("AngleMinDeg", kc.AngleMinDeg);
+        LabeledValue("AngleMaxDeg", kc.AngleMaxDeg);
+        if (UI::TreeNode("TransAnimFunc")) {
+            Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "TransAnimFunc"));
+            UI::TreePop();
+        }
+        if (UI::TreeNode("RotAnimFunc")) {
+            Draw_NPlugDyna_SAnimFunc01(kc, GetOffset(kc, "RotAnimFunc"));
+            UI::TreePop();
+        }
+        uint nb, perLine, perCol;
+        ItemBrowser_ReadShaderTcData(kc, nb, perLine, perCol);
+        uint8 stcLen = Dev::GetOffsetUint8(kc, GetOffset(kc, "ShaderTcAnimFunc"));
+        if (UI::TreeNode(ItemBrowser_ShaderTcAnimFuncTreeTitle(kc.ShaderTcType, stcLen, nb, perLine, perCol) + "###stcaf-ro")) {
+            LabeledValue("ShaderTcType", tostring(kc.ShaderTcType));
+            Draw_NPlugDyna_SAnimFuncNat_Read(kc, GetOffset(kc, "ShaderTcAnimFunc"));
+            Draw_NPlugDyna_ShaderTcData_Inputs(kc, false);
+            UI::TreePop();
+        }
+    }
+
+    UI::PopID();
+}
+
+void Draw_NPlugDyna_SAnimFunc01_Inputs(NPlugDyna_SKinematicConstraint@ nod, uint16 offset, const string &in label, uint8 maxLen) {
+    uint8 len = Dev::GetOffsetUint8(nod, offset);
+    if (UI::TreeNode(label + " (" + len + ")##" + offset, UI::TreeNodeFlags::DefaultOpen)) {
+        if (len < maxLen && UX::SmallButton("+##add" + label + offset)) {
+            _SAnimFunc_IncrementEasingCountSetDefaults(nod, offset);
+            len = Dev::GetOffsetUint8(nod, offset);
+        }
+        if (len > 1) {
+            UI::SameLine();
+            if (UX::SmallButton("-##rm" + label + offset)) {
+                _SAnimFunc_DecrementEasingCount(nod, offset);
+                len = Dev::GetOffsetUint8(nod, offset);
+            }
+        }
+        auto arrStart = offset + 0x4;
+        for (uint i = 0; i < len; i++) {
+            auto sf = arrStart + i * 0x8;
+            auto type = ItemEditor::SubFuncEasings(Dev::GetOffsetUint8(nod, sf));
+            bool reverse = Dev::GetOffsetUint8(nod, sf + 0x1) != 0;
+            uint duration = Dev::GetOffsetUint32(nod, sf + 0x4);
+            UI::PushItemWidth(110);
+            type = DrawComboSubFuncEasings("##e" + i + label, type);
+            UI::PopItemWidth();
+            UI::SameLine();
+            reverse = UI::Checkbox("Rev##" + i + label, reverse);
+            UI::SameLine();
+            UI::PushItemWidth(64);
+            duration = Math::Clamp(UI::InputInt("ms##" + i + label, duration, 0), 0, 2000000000);
+            UI::PopItemWidth();
+            Dev::SetOffset(nod, sf + 0x0, uint8(type));
+            Dev::SetOffset(nod, sf + 0x1, reverse ? 0x1 : 0x0);
+            Dev::SetOffset(nod, sf + 0x4, duration);
+        }
+        UI::TreePop();
+    }
+}
+
+void Draw_NPlugDyna_SAnimFuncNat_Read(CMwNod@ nod, uint16 offset) {
+    uint8 len = Dev::GetOffsetUint8(nod, offset);
+    auto arrStart = offset + 0x4;
+    for (uint i = 0; i < len; i++) {
+        auto sf = arrStart + i * 0x8;
+        UI::Text("[" + i + "] DurationMs: " + Dev::GetOffsetUint32(nod, sf) + ", Value: " + Dev::GetOffsetUint32(nod, sf + 0x4));
+    }
+}
+
+void Draw_NPlugDyna_SAnimFuncNat_Inputs(NPlugDyna_SKinematicConstraint@ nod, uint16 offset, const string &in label, uint8 maxLen, bool withShaderTc = false) {
+    uint8 len = Dev::GetOffsetUint8(nod, offset);
+    string title = label + " (" + len + ")";
+    if (withShaderTc) {
+        uint nb, perLine, perCol;
+        ItemBrowser_ReadShaderTcData(nod, nb, perLine, perCol);
+        title = ItemBrowser_ShaderTcAnimFuncTreeTitle(nod.ShaderTcType, len, nb, perLine, perCol);
+    }
+    if (UI::TreeNode(title + "###stcaf-" + offset)) {
+        if (withShaderTc) {
+            UI::PushItemWidth(140);
+            nod.ShaderTcType = DrawComboEShaderTcType("ShaderTcType", nod.ShaderTcType);
+            UI::PopItemWidth();
+        }
+        if (len < maxLen && UX::SmallButton("+##add" + label + offset)) {
+            auto sf = offset + 0x4 + len * 0x8;
+            Dev::SetOffset(nod, sf, uint32(1000));
+            Dev::SetOffset(nod, sf + 0x4, uint32(0));
+            Dev::SetOffset(nod, offset, uint32(len + 1));
+            len = len + 1;
+        }
+        if (len > 0) {
+            UI::SameLine();
+            if (UX::SmallButton("-##rm" + label + offset)) {
+                Dev::SetOffset(nod, offset, uint32(len - 1));
+                len = len - 1;
+            }
+        }
+        auto arrStart = offset + 0x4;
+        for (uint i = 0; i < len; i++) {
+            auto sf = arrStart + i * 0x8;
+            uint duration = Dev::GetOffsetUint32(nod, sf);
+            uint value = Dev::GetOffsetUint32(nod, sf + 0x4);
+            UI::PushItemWidth(64);
+            duration = Math::Clamp(UI::InputInt("ms##" + i + label, duration, 0), 0, 2000000000);
+            UI::SameLine();
+            value = UI::InputInt("val##" + i + label, value, 0);
+            UI::PopItemWidth();
+            Dev::SetOffset(nod, sf, duration);
+            Dev::SetOffset(nod, sf + 0x4, value);
+        }
+        if (withShaderTc) {
+            Draw_NPlugDyna_ShaderTcData_Inputs(nod, true);
+        }
+        UI::TreePop();
+    }
+}
+
+void Draw_NPlugDyna_ShaderTcData_Inputs(NPlugDyna_SKinematicConstraint@ kc, bool isEditable) {
+    uint16 off = GetOffset(kc, "ShaderTcData_TransSub");
+    uint nb = Dev::GetOffsetUint32(kc, off);
+    uint perLine = Dev::GetOffsetUint32(kc, off + 0x4);
+    uint perCol = Dev::GetOffsetUint32(kc, off + 0x8);
+    if (isEditable) {
+        UI::PushItemWidth(PREFAB_PARAMS_W);
+        nb = Math::Max(0, UI::InputInt("NbSubTexture", nb, 0));
+        perLine = Math::Max(0, UI::InputInt("NbSubTexturePerLine", perLine, 0));
+        perCol = Math::Max(0, UI::InputInt("NbSubTexturePerColumn", perCol, 0));
+        UI::PopItemWidth();
+        Dev::SetOffset(kc, off, nb);
+        Dev::SetOffset(kc, off + 0x4, perLine);
+        Dev::SetOffset(kc, off + 0x8, perCol);
+    } else {
+        LabeledValue("NbSubTexture", nb);
+        LabeledValue("NbSubTexturePerLine", perLine);
+        LabeledValue("NbSubTexturePerColumn", perCol);
     }
 }
 
