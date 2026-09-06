@@ -256,8 +256,8 @@ for pluginSrc in ${pluginSources[@]}; do
         # Reload a staged plugin folder via RemoteBuild. No-ops if the folder is
         # absent. Timeouts warn and return 0. Compile/load failure returns 1.
         # Openplanet can still emit "Loaded plugin" after a failed compile
-        # (old module stays registered), so folder-specific `:  ERR :` lines
-        # are treated as a failed load.
+        # (old module stays registered). RemoteBuild logs errors as
+        # `file.as (line, col) :  ERR :` without a Plugins/<folder>/ prefix.
         # Usage: remote_reload_folder <plugin_folder> [why]
         function remote_reload_folder {
           local _folder="$1"
@@ -276,7 +276,7 @@ for pluginSrc in ${pluginSources[@]}; do
           if [[ "$_reload_exit_code" == "0" ]] && grep -Eq "ERROR:tm_remote_build|Problem commanding" "$_reload_log"; then
             _reload_exit_code=1
           fi
-          if grep -Eq "Plugins/${_folder}/.*:  ERR :" "$_reload_log"; then
+          if grep -Eq ':  ERR :|[0-9]+ errors found|Script compilation failed|Shared type .* doesn.t match' "$_reload_log"; then
             _reload_exit_code=1
           fi
           set -e
