@@ -263,7 +263,7 @@ void DrawSAnimFunc(const string &in label, NPlugDyna_SKinematicConstraint@ model
             auto reverse = Dev::GetOffsetUint8(model, sfOffset + 0x1) == 1;
             auto duration = Dev::GetOffsetUint32(model, sfOffset + 0x4);
 
-            type = uint8(DrawComboSubFuncEasings("Easing##"+i+label, SubFuncEasings(type)));
+            type = uint8(DrawComboSubFuncEasings("Easing##"+i+label, ItemEditor::SubFuncEasings(type)));
             reverse = UI::Checkbox("Reverse##"+i+label, reverse);
             duration = Math::Clamp(UI::InputInt("Duration##"+i+label, duration), 0, 2000000000);
 
@@ -276,10 +276,10 @@ void DrawSAnimFunc(const string &in label, NPlugDyna_SKinematicConstraint@ model
 }
 
 
-SubFuncEasings DrawComboSubFuncEasings(const string &in label, SubFuncEasings val) {
-    return SubFuncEasings(
+ItemEditor::SubFuncEasings DrawComboSubFuncEasings(const string &in label, ItemEditor::SubFuncEasings val) {
+    return ItemEditor::SubFuncEasings(
         DrawArbitraryEnum(label, int(val), 5, function(int v) {
-            return tostring(SubFuncEasings(v));
+            return tostring(ItemEditor::SubFuncEasings(v));
         })
     );
 }

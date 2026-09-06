@@ -1,5 +1,37 @@
 # 0.8.999999999.1
 
+## Item Browser — RecalcSmoothNormals GPU-stream intern crash (fix)
+
+- RecalcSmoothNormals no longer steals CPU `Vertexes` on a visual that already has `CPlugVertexStream`. That interned a `0902C004` vertex blob while streams stayed nonempty; leaving the item editor reloaded the GBX, skipped the blob (`Vertexes.Length` still 0), then `CPlugVisual3D_SerializeVec3Array` treated the first position float as `tangentsU` count and `memcpy`'d into null (`LogCrash_00000000018D74FB`, RIP `0x1418D74FB`, `Starter_Dip_Animated_2a.Item.Gbx`). Item-editor meshes always have a live GPU stream: Recalc writes semantic 5 in the existing decl type (`Dec3N` 4-byte or `Float3`), never CPU Vertexes. Stream attr data pointers that are leftover unaligned garbage (`ptr % 8 != 0` every Item Browser frame) fall through to the vertex blob + offset instead of failing Recalc.
+- `Starter_Dip_Animated_2.Item.Gbx` (saved 19:29) has the same visual-2 blob as the crashed `2a` file — do not load it until re-saved without CPU Vertexes.
+
+## Item Browser — empty visual Vertexes ptr (fix)
+
+- `CPlugVisualIndexedTriangles` / Visual3D CPU Vertexes with Length 0 no longer reads the leftover MwFastBuffer data pointer (`ptr % 8 != 0` in the log when normals are uncounted).
+
+## Item Browser — Params tags + kin-dyna index (change)
+
+- Prefab Ent Params tree labels use compact tags: SInstanceParams `[K]` kinematic / `[S]` shadow / `[T#]` / `[Pe]` / `[Ph]`; SPrefabConstraintParams `[Tn][Pn]` (kin-dyna indices, not raw Ents[i]). Kinematic dynas are numbered `kin#N` after flattening nested prefabs and filtering `IsKinematic` + `CPlugDynaObjectModel`. Hover TargetEntIx/ParentEntIx highlights that dyna. Ghidra: Ent1/Ent2 index type-group `0x17` (Classify `IsKinematic`) after `FlattenNestedPrefabs`, not raw `Ents[i]`.
+
+## Item Browser — constraint params + StaticShape (change)
+
+- SPrefabConstraintParams is two columns: ParentEntIx+ParentPos | TargetEntIx+TargetPos. EntIx inputs use step-1 +/- buttons.
+- DynaObject `StaticShape` trees start closed (`Mesh` / `DynaShape` stay default-open).
+
+## Item Browser — Ent + ShaderTc tree labels (change)
+
+- Prefab Ent `.Name` / `.Location` / `.LodGroupId` live under a closed tree; the node label lists non-default values (empty Name, quat whose Euler is 0,0,0, zero Trans, LodGroupId `-1` omitted). All-default nodes append gray italic `all defaults`. Editable Location has Euler (deg) under Quat; last-edited wins, Quat takes precedence.
+- ShaderTcAnimFunc label includes ShaderTcType and NbSubTexture* when != 1; ShaderTcType and NbSubTexture* stay inside the (closed) tree.
+
+## Plugin API — WrapKinematicConstraint / Solid2Model refs (fix)
+
+- `WrapKinematicConstraint` no longer pads subfuncs or runs `AnimDoNothing`; CreateObj construction still does. Fluent anim presets pad to 4 slots on write. `Solid2Model` `MwAddRef`s in the ctor and `MwRelease`s in the dtor.
+- `build.sh` treats `:  ERR :` / `N errors found` / `Script compilation failed` as a failed reload (RemoteBuild paths are not `Plugins/<folder>/...`).
+
+## Plugin API — GmSurf + Solid2Model exports (change)
+
+- `ItemEditor::ReplaceGmSurf` / `GmSurfTypeSupported` / `GmSurfSizeForType` are ordinary exports (impl in `ItemEditor/GmSurf.as`; Item Browser UI stays in `IE_GmSurf.as`). `ItemEditor::ISolid2Model` is the shared identity for user/custom mats + physics; `WrapSolid2Model` is the ordinary factory. Same split as kinematic constraints: change the bodies without a game restart; interface signature changes still need one.
+
 ## Plugin API — kinematic constraint exports (change)
 
 - `ItemEditor::IKinematicConstraint` is the shared identity (fluent Rot/Trans/AnglesMM/PosMM, anim presets, subfunc get/set, Copy/Clone, axis/range getters); `KinematicConstraint` impl and `SAnimFunc_*` bodies are E++-only. Dependents `import` `WrapKinematicConstraint` / `SAnimFunc_*` / `CloneKinematicConstraint` from `ItemEditor/_Exports.as`. Shared enums + `SAnimFunc_SubFunc` live in `ItemEditor/_ExportsShared.as`. Changing those function bodies no longer requires a game restart. Game restart is required to pick up shared interface signature changes.
