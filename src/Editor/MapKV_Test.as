@@ -263,17 +263,73 @@ namespace Tests {
         MapKVCheck(reason == "", "and clears the reason");
     }
 
-    // A walk that throws is not a latency artifact, so it fences at once.
-    void MapKV_CheckStructuralFailureFencesImmediately() {
+    // A walk that throws waits on no report from the editor plugin, but one
+    // throw can be a map torn down mid-read, so it takes a repeat to fence.
+    void MapKV_CheckStructuralFailureFencesOnRepeat() {
         auto saved = MapKVHealth::Snapshot();
-        string reason;
+        string first;
+        string second;
         MapKVHealth::Reset();
         MapKVHealth::SetTraitSource(ThrowingTraitSource());
         MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_METADATA_DISABLED, "False");
-        uint state = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
+        uint stateFirst = MapKVHealth::EvaluateFor(TestScopeA(), null, first);
+        // A fresh report is what makes the next evaluation recheck at all.
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_METADATA_DISABLED, "False");
+        uint stateSecond = MapKVHealth::EvaluateFor(TestScopeA(), null, second);
         MapKVHealth::Restore(saved);
-        MapKVCheck(state == MapKVHealth::STATE_BROKEN, "a throwing walk fences without waiting for a resync");
-        MapKVCheck(reason.Contains("threw"), "the reason says it threw: " + reason);
+        MapKVCheck(stateFirst == MapKVHealth::STATE_UNVERIFIED, "one failed read is not yet a broken reader");
+        MapKVCheck(first.Contains("rechecking"), "and says it is rechecking: " + first);
+        MapKVCheck(stateSecond == MapKVHealth::STATE_BROKEN, "a failed read that repeats fences the reader");
+        MapKVCheck(second.Contains("threw"), "the reason says it threw: " + second);
+    }
+
+    // Escalation from suspicion to Broken needs a fresh report, and only a
+    // resync produces one. The resync used to be skipped whenever metadata was
+    // disabled, which left a genuinely drifted reader parked at Unverified on
+    // exactly those maps while reads kept answering from the drifted walk.
+    void MapKV_CheckDisabledMetadataMapStillFences() {
+        auto saved = MapKVHealth::Snapshot();
+        bool savedDisabled = FromML::metadataDisabled;
+        auto source = FakeTraitSource();
+        source.values[MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES] = "what memory says";
+        string first;
+        string confirmed;
+        MapKVHealth::Reset();
+        MapKVHealth::SetTraitSource(source);
+        FromML::metadataDisabled = true;
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "what the plugin says");
+        uint stateFirst = MapKVHealth::EvaluateFor(TestScopeA(), null, first);
+        bool askedForResync = MapKVHealth::LastResyncAt() != 0;
+        // The resync answering with the same value is the confirmation.
+        MapKVHealth::NoteTraitObservationIn(TestScopeA(), MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, "what the plugin says");
+        uint stateConfirmed = MapKVHealth::EvaluateFor(TestScopeA(), null, confirmed);
+        FromML::metadataDisabled = savedDisabled;
+        MapKVHealth::Restore(saved);
+        MapKVCheck(stateFirst == MapKVHealth::STATE_UNVERIFIED, "a first disagreement still only asks for a resync");
+        MapKVCheck(askedForResync, "and the resync goes out even though metadata is disabled");
+        MapKVCheck(stateConfirmed == MapKVHealth::STATE_BROKEN, "a confirmed disagreement fences on a disabled map too");
+        MapKVCheck(confirmed.Contains(MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES), "naming the trait: " + confirmed);
+    }
+
+    // The supporting-plugin pointer comes from a cache that can answer empty
+    // for a frame. That must not read as a map change and drop the pending
+    // markers that keep an in-flight write from looking like drift.
+    void MapKV_CheckTransientNullPluginPointerKeepsScope() {
+        auto saved = MapKVHealth::Snapshot();
+        MapKVHealth::Reset();
+        MapKVHealth::NoteEchoIn(TestScopeA(), "_EKV_Plugin.a", "old");
+        MapKVHealth::NotePendingWrite(TestScopeA(), "_EKV_Plugin.a");
+        // Same map, same identity, but the plugin pointer came back empty.
+        MapKVHealth::RebindScope(MapKVHealth::Scope(MAPKV_TEST_MAP_A, 0, "map-a"));
+        uint keptOverBlip = MapKVHealth::EchoCount();
+        auto stillPending = MapKVHealth::LookupEchoFor(TestScopeA(), "_EKV_Plugin.a");
+        // A different, real plugin pointer is a genuine change and drops it.
+        MapKVHealth::RebindScope(TestScopeNewPlugin());
+        uint keptOverRestart = MapKVHealth::EchoCount();
+        MapKVHealth::Restore(saved);
+        MapKVCheck(keptOverBlip == 1, "an empty plugin pointer is not a map change");
+        MapKVCheck(stillPending !is null && stillPending.pending, "so the pending write marker survives");
+        MapKVCheck(keptOverRestart == 0, "but a restarted editor plugin still drops everything");
     }
 
     // A queued CCT write is exactly the window where memory is ahead of the
@@ -506,6 +562,10 @@ namespace Tests {
         MapKVHealth::NoteEchoIn(TestScopeA(), "_EKV_Plugin.cached", "from the editor plugin");
         MapKV::SetValueSource(ThrowingValueSource());
         auto served = MapKV::ResolveKeyIn(TestScopeA(), null, "_EKV_Plugin.cached");
+        string afterOne;
+        uint stateAfterOne = MapKVHealth::EvaluateFor(TestScopeA(), null, afterOne);
+        // The same read failing again is what fences it.
+        auto servedAgain = MapKV::ResolveKeyIn(TestScopeA(), null, "_EKV_Plugin.cached");
         string reason;
         uint state = MapKVHealth::EvaluateFor(TestScopeA(), null, reason);
         auto blocked = MapKV::ResolveKeyIn(TestScopeA(), null, "_EKV_Plugin.uncached");
@@ -514,7 +574,9 @@ namespace Tests {
         MapKVCheck(served.blockedReason == "", "a throwing walk does not escape when the echo can answer");
         MapKVCheck(served.source == MapKVHealth::SOURCE_ML_CACHE, "the echo answers instead");
         MapKVCheck(served.value == "from the editor plugin" && served.present, "with the stored value");
-        MapKVCheck(state == MapKVHealth::STATE_BROKEN, "and the failure fences the reader");
+        MapKVCheck(stateAfterOne != MapKVHealth::STATE_BROKEN, "one failure does not fence: " + afterOne);
+        MapKVCheck(servedAgain.source == MapKVHealth::SOURCE_ML_CACHE, "the echo still answers on the repeat");
+        MapKVCheck(state == MapKVHealth::STATE_BROKEN, "and the repeated failure fences the reader");
         MapKVCheck(reason.Contains("threw"), "recording why: " + reason);
         MapKVCheck(blocked.blockedReason.Length > 0, "a key with no echo is blocked, not silently absent");
     }
@@ -619,7 +681,13 @@ namespace Tests {
     void MapKV_ResyncClearsATransientMismatch(Tests::Context@ ctx) { MapKV_CheckResyncClearsATransientMismatch(); }
 
     [Test]
-    void MapKV_StructuralFailureFencesImmediately(Tests::Context@ ctx) { MapKV_CheckStructuralFailureFencesImmediately(); }
+    void MapKV_StructuralFailureFencesOnRepeat(Tests::Context@ ctx) { MapKV_CheckStructuralFailureFencesOnRepeat(); }
+
+    [Test]
+    void MapKV_DisabledMetadataMapStillFences(Tests::Context@ ctx) { MapKV_CheckDisabledMetadataMapStillFences(); }
+
+    [Test]
+    void MapKV_TransientNullPluginPointerKeepsScope(Tests::Context@ ctx) { MapKV_CheckTransientNullPluginPointerKeepsScope(); }
 
     [Test]
     void MapKV_SuspendedTraitIsNotCompared(Tests::Context@ ctx) { MapKV_CheckSuspendedTraitIsNotCompared(); }
@@ -681,7 +749,9 @@ TestCase@[]@ generateMapKVTests() {
     ret.InsertLast(TestCase("healthy when observations match", Tests::MapKV_CheckHealthyWhenObservationsMatch));
     ret.InsertLast(TestCase("first mismatch resyncs before fencing", Tests::MapKV_CheckFirstMismatchResyncsBeforeFencing));
     ret.InsertLast(TestCase("resync clears a transient mismatch", Tests::MapKV_CheckResyncClearsATransientMismatch));
-    ret.InsertLast(TestCase("structural failure fences immediately", Tests::MapKV_CheckStructuralFailureFencesImmediately));
+    ret.InsertLast(TestCase("structural failure fences on repeat", Tests::MapKV_CheckStructuralFailureFencesOnRepeat));
+    ret.InsertLast(TestCase("disabled metadata map still fences", Tests::MapKV_CheckDisabledMetadataMapStillFences));
+    ret.InsertLast(TestCase("transient null plugin pointer keeps scope", Tests::MapKV_CheckTransientNullPluginPointerKeepsScope));
     ret.InsertLast(TestCase("suspended trait is not compared", Tests::MapKV_CheckSuspendedTraitIsNotCompared));
     ret.InsertLast(TestCase("suspended trait expires", Tests::MapKV_CheckSuspendedTraitExpires));
     ret.InsertLast(TestCase("scope isolates reused addresses", Tests::MapKV_CheckScopeIsolatesReusedAddresses));
