@@ -272,6 +272,21 @@ bool SF_EggRun = false;
 namespace MenuBar {
     string m_MenuSearch;
 
+#if DEV
+    void RebuildArticleInventoryFromDevMenu() {
+        string registerErr;
+        string registered = ItemInventory::RegisterFolder("Items", registerErr);
+        string rebuildErr;
+        if (!ItemInventory::RebuildEditorItemsTree(rebuildErr)) {
+            NotifyWarning("Registered " + registered + " .Item.Gbx files, but RebuildArticleInventory failed: " + rebuildErr);
+        } else if (registerErr.Length > 0) {
+            NotifyWarning("Article inventory rebuilt after registering " + registered + " .Item.Gbx files; some registrations failed: " + registerErr);
+        } else {
+            NotifySuccess("Article inventory rebuilt after registering " + registered + " .Item.Gbx files.");
+        }
+    }
+#endif
+
     void Draw() {
         if (UI::BeginMenuBar()) {
             if (UI::BeginMenu("Search")) {
@@ -455,6 +470,13 @@ namespace MenuBar {
 
 #if SIG_DEVELOPER
             if (UI::BeginMenu("Dev")) {
+#if DEV
+                UI::BeginDisabled(!ItemInventory::InMapEditor());
+                if (UI::MenuItem(Icons::Refresh + " Rebuild Article Inventory"))
+                    startnew(RebuildArticleInventoryFromDevMenu);
+                UI::EndDisabled();
+                UI::Separator();
+#endif
                 if (UI::MenuItem(Icons::Cube + " Editor") && GetApp().Editor !is null)
                     ExploreNod(GetApp().Editor);
                 CGameCtnEditorFree@ editor;

@@ -15,6 +15,9 @@ void Main() {
     Editor::_getMapDetailsToCache();
 
     startnew(LoadFonts);
+#if DEV
+    startnew(ItemBuilder::Runner);
+#endif
     // check permissions and version
     UserHasPermissions = Permissions::OpenAdvancedMapEditor();
     if (!UserHasPermissions) {
@@ -312,6 +315,9 @@ void Render() {
     // }
 
     PillarsChoice::Render();
+#if DEV
+    ItemBuilderUI::Render();
+#endif
     if (IsInEditor) {
         Gizmo::Render();
         FillBlocks::RenderFillPrompt();
