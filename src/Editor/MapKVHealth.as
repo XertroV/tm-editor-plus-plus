@@ -329,6 +329,13 @@ namespace MapKVHealth {
     // because a read may legitimately target some map other than the open one.
     void RebindScope(Scope@ scope) {
         if (g_Scope.Matches(scope)) return;
+        // A momentarily empty supporting-plugin pointer is not a map change.
+        // This runs on every inbound event, about ten times a second, and each
+        // one re-scans the active plugins; treating one empty answer as a new
+        // scope would silently drop the pending markers that stop an in-flight
+        // write reading as drift. Only a different non-null pointer counts.
+        if (scope !is null && scope.pluginPtr == 0 && g_Scope.pluginPtr != 0
+            && g_Scope.mapPtr == scope.mapPtr && g_Scope.identity == scope.identity) return;
         @g_Scope = scope;
         g_Observations.RemoveRange(0, g_Observations.Length);
         g_Echo.DeleteAll();
