@@ -86,10 +86,21 @@ namespace Editor {
     import void Set_Map_EmbeddedCustomColorsEncoded(const string &in raw) from "Editor";
     import string Get_Map_EmbeddedCustomColorsEncoded() from "Editor";
 
-    // dips++ editor spec -> DPP_EditorSpec map metadata trait. Delivery is
-    // async and chunked; verify by re-reading the trait, not by assuming.
-    import void Set_Map_DipsSpecEncoded(const string &in raw) from "Editor";
-    import bool Is_DipsSpecSendInFlight() from "Editor";
+    // Generic map key-value strings, stored in the _EKV_ metadata dictionary.
+    // Keys are prefixed automatically; use a plugin-specific key to avoid collisions.
+    // Async writes: queue drained != trait updated != saved to disk.
+    import void Set_Map_KV(const string &in key, const string &in raw) from "Editor";
+    import bool Is_Map_KVSendInFlight(const string &in key = "") from "Editor";
+    // Null map defaults to the current map; reads never create metadata.
+    // TryGet distinguishes a missing key from a present empty string.
+    import bool TryGet_Map_KVRaw(const string &in key, string &out value, CGameCtnChallenge@ map = null) from "Editor";
+    import string Get_Map_KVRaw(const string &in key, CGameCtnChallenge@ map = null) from "Editor";
+    // Sorted stored keys, including their _EKV_ prefix; no metadata is created.
+    import string[]@ Get_Map_KVKeys(CGameCtnChallenge@ map = null) from "Editor";
+    // Read a named scalar metadata trait as text (Text/Boolean/Integer/Real/vectors).
+    // Absent or unsupported types return false, without creating metadata.
+    import string Get_Map_MetadataRaw(const string &in key, CGameCtnChallenge@ map = null) from "Editor";
+    import bool TryGet_Map_MetadataRaw(const string &in key, string &out value, CGameCtnChallenge@ map = null) from "Editor";
     // whether E++'s supporting editor plugin is active (metadata writes possible)
     import bool Is_SupportingEditorPluginActive() from "Editor";
     // whether the current map opted out of metadata writes (EPP_MetadataDisabled)

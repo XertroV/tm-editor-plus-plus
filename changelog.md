@@ -43,9 +43,9 @@
 - `IEppExtension`: `onEditorSaveMap` (user pressed the editor's save input; best-effort pre-save — metadata writes queued here can land 1-2 frames later) and `afterEditorSaveMap(bool mapSaved, bool onlyScriptMetadataModified)` (post-save-dialog outcome; `mapSaved=false` = cancelled). Driven by the E++ editor plugin's `PendingEvents` (`EditorInput/Save`, `MapSavedOrSaveCancelled`) — pure ManiaScript, no memory hooks — so they fire only while the E++ supporting editor plugin is active, and programmatic `PluginMapType.SaveMap()` calls from other plugins raise only `afterEditorSaveMap`.
 - `SaveMapSameName(editor)` exported (saves to the existing filename, restores MapName after).
 
-## Plugin API — dips++ editor spec in map metadata (new)
+## Plugin API — generic map key-value metadata (new)
 
-- `Set_Map_DipsSpecEncoded(raw)` writes the `DPP_EditorSpec` map metadata trait via the editor plugin script (chunked ML transport; payload must be quote/backslash-free — base64 it). The trait is only ever created when a write happens (no CCT-style init-on-every-map). Helpers: `Is_DipsSpecSendInFlight()`, `Is_SupportingEditorPluginActive()`, `Get_Map_MetadataDisabled()`. Verify writes by re-reading the trait; `EPP_MetadataDisabled` maps refuse writes.
+- `Set_Map_KV(key, raw)` stores a whole string value in the `_EKV_` metadata dictionary. Keys gain an `_EKV_` prefix; values are stored as plain strings, with escaping confined to transport. Writes coalesce per key and remain bound to their original map/plugin. `Get_Map_KVRaw` / `TryGet_Map_KVRaw` read actual metadata; `Get_Map_KVKeys` lists sorted keys; `Is_Map_KVSendInFlight(key)` reports queue state, not persistence. `Get_Map_MetadataRaw` / `TryGet_Map_MetadataRaw` expose existing scalar traits as strings. No trait is created by reads or map initialization. Disabled metadata refuses writes. See [API contract](docs/MapKeyValues.md).
 
 ## Macroblocks — terrain (new)
 

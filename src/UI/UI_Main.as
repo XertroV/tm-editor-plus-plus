@@ -43,6 +43,9 @@ TabGroup@ ToolsTG = CreateToolsTabGroup();
 
 bool _disableUiMainRenderOnException = false;
 void UI_Main_Render() {
+#if DEV
+    MapKVDev_ProcessRequest();
+#endif
     _UI_Main_Render();
     // if (_disableUiMainRenderOnException) return;
     // try {
@@ -836,6 +839,7 @@ TabGroup@ CreateRootTabGroup() {
 
 #if DEV
     LaunchedCPsTab(root);
+    MapKVDevTab(root);
 #endif
 
     root.FinalizeCategories();

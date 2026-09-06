@@ -1,0 +1,8 @@
+[meta]
+name = "E++ detached metadata storage test"
+author = "XertroV"
+category = "Development"
+version = "0.0.1"
+[script]
+defines = ["DEV"]
+timeout = 15000

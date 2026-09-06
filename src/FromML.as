@@ -51,7 +51,7 @@ namespace FromML {
     uint FramesWithoutEvents = 0;
     string _customColorTablesRaw;
     // true when the current map has EPP_MetadataDisabled set (all metadata
-    // writes, including the dips++ spec, are suppressed by the editor plugin).
+    // writes, including embedded key-value data, are suppressed by the editor plugin).
     bool metadataDisabled = false;
 
     uint leftCurly = "{"[0];
@@ -70,11 +70,16 @@ namespace FromML {
 class ML_Event {
     string type;
     string[]@ data;
+    // Only map key-value messages use these handles; they never follow a new map.
+    CGameCtnChallenge@ kvMap;
+    CGameEditorPluginMap@ kvPlugin;
     ML_Event(const string &in type, string[]@ data) {
         @this.data = data;
         this.type = type;
     }
     string ToMLEventString() {
+        if (type == "SetMapKV")
+            return '["SetMapKV", ' + ToML::MapKVStringLiteral(data[0]) + ', ' + ToML::MapKVStringLiteral(data[1]) + ']';
         string ret = '["' + type;
         for (uint i = 0; i < data.Length; i++) {
             ret += '", "' + data[i];
@@ -105,47 +110,71 @@ namespace ToML {
         SendMessage("SetCustomColorTables", {raw});
     }
 
-    // -- dips++ editor spec (DPP_EditorSpec map metadata) --
-    // Multi-10s-of-KB payloads, chunked at one chunk per frame to smooth frame
-    // time; each chunk costs a full ML page rewrite, so chunks are large
-    // (CCT sends whole color tables through the same splice unchunked).
-    // Payload must be quote/backslash-free (the splice does no escaping).
-    const uint DPP_CHUNK_CHARS = 16384;
-    string[] _dppChunks;
-    uint _dppChunksSent = 0;
-    bool _dppSendActive = false;
-
-    void SetDipsSpecEncoded(const string &in raw) {
-        _dppChunks.RemoveRange(0, _dppChunks.Length);
-        uint offset = 0;
-        while (offset < uint(raw.Length)) {
-            _dppChunks.InsertLast(raw.SubStr(offset, DPP_CHUNK_CHARS));
-            offset += DPP_CHUNK_CHARS;
+    // Map-scoped whole-value writes; a newer value only supersedes its own key.
+    void CoalesceMapKVMessage(ML_Event@[] &inout messages, ML_Event@ message) {
+        for (int i = int(messages.Length) - 1; i >= 0; i--) {
+            if (messages[i].type == "SetMapKV" && messages[i].data[0] == message.data[0])
+                messages.RemoveAt(i);
         }
-        // an empty payload still sends one (empty) chunk so the trait is cleared
-        if (_dppChunks.Length == 0) _dppChunks.InsertLast("");
-        // restarting from chunk 0 supersedes any in-flight send; the ML side
-        // resets its accumulator on ChunkIx == 0.
-        _dppChunksSent = 0;
-        if (!_dppSendActive) {
-            _dppSendActive = true;
-            startnew(_SendDppChunksLoop);
-        }
+        messages.InsertLast(message);
     }
 
-    void _SendDppChunksLoop() {
-        while (_dppChunksSent < _dppChunks.Length) {
-            SendMessage("SetDipsSpecChunk", {tostring(_dppChunksSent), tostring(_dppChunks.Length), _dppChunks[_dppChunksSent]});
-            _dppChunksSent++;
-            yield();
+    bool HasQueuedMapKVMessages(const string &in key = "") {
+        for (uint i = 0; i < queued.Length; i++) {
+            if (queued[i].type == "SetMapKV" && (key.Length == 0 || queued[i].data[0] == key))
+                return true;
         }
-        _dppSendActive = false;
+        return false;
+    }
+
+    bool MapKVTargetIsCurrent(CGameCtnChallenge@ map, CGameEditorPluginMap@ plugin) {
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        return map !is null && plugin !is null && editor !is null
+            && editor.Challenge is map && GetPluginPMT() is plugin;
+    }
+
+    // Escape the injected ManiaScript source, not the stored value. Splitting
+    // delimiter text with concatenation keeps it out of the XML/splice parser.
+    string MapKVStringLiteral(const string &in raw) {
+        string literal = raw.Replace("\\", "\\\\").Replace("\"", "\\\"")
+            .Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
+        literal = literal.Replace("-->", "--\" ^ \">")
+            .Replace("/*EVENTS*/", "/*EVENTS\" ^ \"*/")
+            .Replace("/*TIMENOW*/", "/*TIMENOW\" ^ \"*/");
+        return "\"" + literal + "\"";
+    }
+
+    ML_Event@ MakeMapKVMessage(const string &in key, const string &in raw) {
+        if (raw.Length > MapKV::MAX_VALUE_BYTES) throw("Map metadata value exceeds 8 MiB");
+        for (uint i = 0; i < raw.Length; i++) {
+            uint8 c = raw[i];
+            if (c < 32 && c != 9 && c != 10 && c != 13)
+                throw("Map metadata values are text: unsupported control byte at " + i);
+        }
+        return ML_Event("SetMapKV", {MapKV::NormalizeKey(key), raw});
+    }
+
+    void SetMapKV(const string &in key, const string &in raw) {
+        auto message = MakeMapKVMessage(key, raw);
+        auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null || editor.Challenge is null) throw("No map open for metadata");
+        auto plugin = GetPluginPMT();
+        if (plugin is null) throw("E++ supporting editor plugin is unavailable");
+        // Store raw values; the wire serializer escapes source syntax separately.
+        @message.kvMap = editor.Challenge;
+        @message.kvPlugin = plugin;
+        CoalesceMapKVMessage(queued, message);
+        Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, ClearSendQueue);
     }
 
     const string TIMENOW_DELIM = "/*TIMENOW*/";
     const string EVENTS_DELIM = "/*EVENTS*/";
     const string PageAttachId = "E++ Supporting Plugin";
     void ClearSendQueue() {
+        for (int i = int(queued.Length) - 1; i >= 0; i--) {
+            auto msg = queued[i];
+            if (msg.type == "SetMapKV" && !MapKVTargetIsCurrent(msg.kvMap, msg.kvPlugin)) queued.RemoveAt(i);
+        }
         if (queued.Length == 0) return;
         auto pluginPMT = GetPluginPMT();
         if (pluginPMT is null) return;
@@ -168,7 +197,9 @@ namespace ToML {
 
     CGameEditorPluginMap@ GetPluginPMT() {
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
+        if (editor is null || editor.Challenge is null) return null;
         auto pmm = Editor::GetPluginMapManager(editor);
+        if (pmm is null) return null;
         for (uint i = 0; i < pmm.ActivePluginsCache.Length; i++) {
             auto _pmt = pmm.ActivePluginsCache[i];
             if (_pmt.UILayers.Length > 0 && _pmt.UILayers[0].AttachId == PageAttachId) {
@@ -266,18 +297,15 @@ namespace Editor {
         return "";
     }
 
-    // Queue a (base64) dips++ editor spec for writing to the DPP_EditorSpec map
-    // metadata trait. Delivery is async (chunked over the ML page) and requires
-    // the E++ supporting editor plugin to be active; callers should verify by
-    // re-reading the trait rather than assuming success.
-    void Set_Map_DipsSpecEncoded(const string &in raw) {
-        ToML::SetDipsSpecEncoded(raw);
+    // Queue a complete raw string under an automatically prefixed _EKV_ key.
+    // Delivery is async; verify with TryGet_Map_KVRaw after the queue drains.
+    void Set_Map_KV(const string &in key, const string &in raw) {
+        ToML::SetMapKV(key, raw);
     }
 
-    // true while queued SetDipsSpecChunk messages have not all been handed to
-    // the ML page yet (delivery to the trait may lag ~1 frame further).
-    bool Is_DipsSpecSendInFlight() {
-        return ToML::_dppSendActive;
+    // Queue state only, not a persistence acknowledgment. Empty key checks all.
+    bool Is_Map_KVSendInFlight(const string &in key = "") {
+        return ToML::HasQueuedMapKVMessages(key.Length == 0 ? "" : MapKV::NormalizeKey(key));
     }
 
     // true when E++'s supporting editor plugin is the active editor plugin, i.e.

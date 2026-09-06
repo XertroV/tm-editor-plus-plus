@@ -83,9 +83,6 @@ Void SendAllInfo() {
 
 declare Boolean ShouldBreakLoop;
 declare Boolean DisableMetadata;
-// Reassembly buffer for chunked SetDipsSpecChunk messages (dips++ editor spec).
-declare Text DPP_SpecAccum;
-declare Integer DPP_SpecNextChunk;
 
 Void ProcessIncomingMessages() {
 	declare Text[][] EPP_MsgQueue for ManialinkPage = [];
@@ -119,32 +116,14 @@ Void ProcessIncomingMessages() {
 			CCT_CustomColorTables = InMsg[1];
 			log("CCT_CustomColorTables after: " ^ CCT_CustomColorTables);
 			SendEvent("CustomColorTables", [""^CCT_CustomColorTables]);
-		} else if (MsgType == "SetDipsSpecChunk") {
-			// ["SetDipsSpecChunk", ChunkIx, NbChunks, Data]; ChunkIx 0 resets the
-			// accumulator so an interrupted/superseded send self-heals.
-			if (DisableMetadata) continue;
-			if (InMsg.count < 4) continue;
-			declare Integer ChunkIx = TL::ToInteger(InMsg[1]);
-			declare Integer NbChunks = TL::ToInteger(InMsg[2]);
-			if (ChunkIx == 0) {
-				DPP_SpecAccum = "";
-				DPP_SpecNextChunk = 0;
-			}
-			if (ChunkIx != DPP_SpecNextChunk) {
-				log("E++ EditorPlugin: dropping out-of-order dips spec chunk " ^ ChunkIx ^ " (expected " ^ DPP_SpecNextChunk ^ ")");
-				continue;
-			}
-			DPP_SpecAccum = DPP_SpecAccum ^ InMsg[3];
-			DPP_SpecNextChunk += 1;
-			if (DPP_SpecNextChunk >= NbChunks) {
-				// The ONLY assignment of DPP_EditorSpec: the trait must never be
-				// created on maps that had no dips++ spec written (so no "nil"
-				// sentinel init in main() and no declare in SendAllInfo, unlike CCT).
-				declare metadata Text DPP_EditorSpec for Map = "";
-				DPP_EditorSpec = DPP_SpecAccum;
-				DPP_SpecAccum = "";
-				DPP_SpecNextChunk = 0;
-			}
+		} else if (MsgType == "SetMapKV") {
+			if (DisableMetadata || InMsg.count != 3) continue;
+			if (TL::Length(InMsg[1]) <= 5) continue;
+			if (TL::SubString(InMsg[1], 0, 5) != "_EKV_") continue;
+			// Only create this dictionary on an explicit write. Values are whole
+			// plain strings; source escaping is handled only by the sender.
+			declare metadata Text[Text] _EKV_ for Map;
+			_EKV_[InMsg[1]] = InMsg[2];
 		}
 	}
 	EPP_MsgQueue.clear();
