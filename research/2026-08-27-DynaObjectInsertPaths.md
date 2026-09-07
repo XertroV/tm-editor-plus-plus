@@ -63,7 +63,7 @@ ItemTypeE=1
 2. `GetEntityVisRoot` type 1/5/0xD: Prefab `0x9145000` accepted.
 3. Prefab branch: `NGamePrefab_SceneEntTypeId` + `NScene_CreateEnt` / `NGamePrefab_CreateInstFromEntRecord` → `NGamePrefab_CreateInst` → **`NGamePrefab_PopulateInstFromPrefabEnts`** (`0x140b72d20`).
 4. Populate walks the **derived type-group table** (`CPlugPrefab+0x68/+0x70`, not raw Ents+0x40). Group **1** = Dyna → `NScene_CreateEnt` on **`Dyna.Mesh` (+0x20)**. Group **2** = StaticObject → Mesh at +0x18. Group **0x19** = KC → `NGamePrefab_AllocKinVisConstraintForEnt`.
-5. Every frame: `NSceneDyna_KinematicConstraintsUpdate` (`0x140801e20`) evaluates KC funcs and writes Iso3 into `NSceneKinematicVis` (stride 0x58). That is Crown’s motion. **Not** rigid-body phy.
+5. Every frame: `NSceneKinematicVis_UpdateConstraintLocations` (`0x140b6ef50`) evaluates KC funcs and writes the HMS inst location; `NSceneDyna_KinematicConstraintsUpdate` (`0x140801e20`) is the physics-side twin (writes `NSceneDyna_SItemState`, stride 0x58, plus HMS phy inst). That is Crown’s motion. **Not** rigid-body phy. See [`2026-09-07-KinematicUpdateAndOptimizations.md`](../../../research/tm2020/2026-09-07-KinematicUpdateAndOptimizations.md).
 
 `VisCstType=1` on Crown’s mesh is correct for this path: the mesh is a static Solid2 that a kinematic constraint **moves**. It is not a `VisCst=2` free-body mesh.
 

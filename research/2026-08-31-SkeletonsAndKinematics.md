@@ -26,7 +26,7 @@ EntityModel = CPlugPrefab
   Ents[1] = NPlugDyna_SKinematicConstraint
 ```
 
-Every frame: `NSceneDyna_KinematicConstraintsUpdate` (`0x140801e20`) → `NPlugDyna_SKinematicConstraint_EvalTransRot` (`0x1404a9270`) → Iso3 into `NSceneKinematicVis::SConstraint` (stride `0x58`).
+Every rendered frame: `NSceneKinematicVis_UpdateConstraintLocations` (`0x140b6ef50`, PreCamera) → `NPlugDyna_SKinematicConstraint_EvalTransRot` (`0x1404a9270`) per shared signal → composed Iso3 → HMS inst-dyna location. The physics twin `NSceneDyna_KinematicConstraintsUpdate` (`0x140801e20`) writes `NSceneDyna_SItemState` (also stride `0x58`), not the vis `SConstraint`. Update paths + call frequency: [`2026-09-07-KinematicUpdateAndOptimizations.md`](../../../research/tm2020/2026-09-07-KinematicUpdateAndOptimizations.md).
 
 ### What the constraint actually is
 
