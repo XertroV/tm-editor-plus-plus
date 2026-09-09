@@ -47,6 +47,8 @@ namespace Editor {
     // Will get the size from the cache, otherwise the Item Mgr, otherwise will use the cursor
     import vec3 GetSelectedItemSize(CGameCtnEditorFree@ editor) from "Editor";
     import CGameCtnBlock@ GetPickedBlock() from "Editor";
+    // Last picked in-map item (survives leaving pick hover). Null if none.
+    import CGameCtnAnchoredObject@ GetPickedItem() from "Editor";
     import vec3 GetSelectedMacroblockSize(CGameCtnEditorFree@ editor) from "Editor";
 
     // Saves the map to its existing filename via PluginMapType.SaveMap and

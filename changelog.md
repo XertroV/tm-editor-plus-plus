@@ -1,5 +1,9 @@
 # 0.8.999999999.1
 
+## Plugin API — GetPickedItem (new)
+
+- `Editor::GetPickedItem()` returns the last picked in-map item (`lastPickedItem`), same shape as `GetPickedBlock()`. Survives leaving pick hover; null if none.
+
 ## Plugin API — kinematic constraint exports (change)
 
 - `ItemEditor::IKinematicConstraint` is the shared identity (fluent Rot/Trans/AnglesMM/PosMM, anim presets, subfunc get/set, Copy/Clone, axis/range getters); `KinematicConstraint` impl and `SAnimFunc_*` bodies are E++-only. Dependents `import` `WrapKinematicConstraint` / `SAnimFunc_*` / `CloneKinematicConstraint` from `ItemEditor/_Exports.as`. Shared enums + `SAnimFunc_SubFunc` live in `ItemEditor/_ExportsShared.as`. Changing those function bodies no longer requires a game restart. Game restart is required to pick up shared interface signature changes.

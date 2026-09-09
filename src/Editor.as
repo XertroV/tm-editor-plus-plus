@@ -515,6 +515,13 @@ namespace Editor {
         return null;
     }
 
+    CGameCtnAnchoredObject@ GetPickedItem() {
+        if (lastPickedItem !is null) {
+            return lastPickedItem.AsItem();
+        }
+        return null;
+    }
+
     const vec3 DEFAULT_COORD_SIZE = vec3(32, 8, 32);
 
     vec3 GetSelectedMacroblockSize(CGameCtnEditorFree@ editor) {
