@@ -279,7 +279,25 @@ namespace Editor {
 
     // All passes share one donor; wait for asynchronous restores before reuse.
     void WaitForDonorRestores() {
-        while (_terrainPlaceRestoreQueue.Length > 0) yield();
+        auto app = GetApp();
+        if (app is null) throw("WaitForDonorRestores: app unavailable");
+        auto editor = app.Editor;
+        auto map = app.RootMap;
+        auto playground = app.CurrentPlayground;
+        if (editor is null || map is null) throw("WaitForDonorRestores: editor or map unavailable");
+        // Same reflected Editor-0x24 exit flag used by ManageVehicles and ghosts-pp.
+        uint editorOffset = GetOffset("CGameCtnApp", "Editor");
+        if (editorOffset < 0x24) throw("WaitForDonorRestores: back-to-menu flag unavailable");
+        while (true) {
+            if (GetApp() !is app || app.Editor !is editor || app.RootMap !is map
+                    || app.CurrentPlayground !is playground)
+                throw("WaitForDonorRestores: editor scene changed");
+            if (Dev::GetOffsetUint32(app, editorOffset - 0x24) != 0)
+                throw("WaitForDonorRestores: editor exit requested");
+            // Validate even when the final yield drained the queue.
+            if (_terrainPlaceRestoreQueue.Length == 0) return;
+            yield();
+        }
     }
 
     // Place just the terrain of a macroblock spec: builds a terrain-only copy,
