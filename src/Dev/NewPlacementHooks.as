@@ -1,63 +1,35 @@
-
 namespace PlacementHooks {
     HookHelper@ OnItemPlacedHook = HookHelper(
         "E8 ?? ?? ?? ?? FF 86 ?? ?? 00 00 48 8B C3 48 8B 5C 24 ?? 48 8B 74 24 ?? 48 83 C4 ?? 5F C3",
-        // E8 67 00 64 FF FF 86 C8 04 00 00 48 8B C3 48 8B 5C 24 30 48 8B 74 24 38 48 83 C4 20 5F C3
         5, 1, "PlacementHooks::OnItemPlaced_RbxRdx"
     );
 
-    // call to delete item from map. rdx is the item pointer
-    // 4a0 offset = editor.Challenge
-    // 2nd call: decrements map.AnchoredObjects len
-    // test, je, mov eax 1, stack ptr, stack ptr, pop, ret
     FunctionHookHelper@ OnItemDeletedHook = FunctionHookHelper(
-          "E8 ?? ?? ?? ?? 48 8B 8B A0 04 00 00 E8 ?? ?? ?? ?? 85 C0 74 10 B8 01 00 00 00 48 8B 5C 24 ?? 48 83 C4 ?? 5F C3",
-        // E8 51 02 A2 FF 48 8B 8B A0 04 00 00 E8 E5 B4 A1 FF 85 C0 74 10 B8 01 00 00 00 48 8B 5C 24 40 48 83 C4 30 5F C3,
+        "E8 ?? ?? ?? ?? 48 8B 8B A0 04 00 00 E8 ?? ?? ?? ?? 85 C0 74 10 B8 01 00 00 00 48 8B 5C 24 ?? 48 83 C4 ?? 5F C3",
         0, 0, "PlacementHooks::OnItemDeleted_Rdx", Dev::PushRegisters(0)
     );
 
-    // rbp: map
     HookHelper@ OnBlockPlacedHook = HookHelper(
         "E8 ?? ?? ?? ?? 48 8B 9C 24 ?? ?? 00 00 C7 85 ?? ?? 00 00 01 00 00 00 48 85 DB",
-        // E8 02 11 64 FF 48 8B 9C 24 28 01 00 00 C7 85 00 06 00 00 01 00 00 00 48 85 DB
         5, 3, "PlacementHooks::OnAddBlockHook_RdxRdi"
     );
 
     HookHelper@ OnBlockDeletedHook = HookHelper(
-        // mov to stack, mov cx bx, call delete block, jmp, mov from stack, to stack x2, mov cx bx,      call,
         "89 4C 24 ?? 48 8B CB E8 ?? ?? ?? ?? EB 17 8B 84 24 ?? 00 00 00 89 44 24 ?? 89 4C 24",
-        // "89 4C 24 ?? 48 8B CB E8 ?? ?? ?? ?? EB 17 8B 84 24 ?? 00 00 00 89 44 24 ?? 89 4C 24 ?? 48 8B CB E8 ?? ?? ?? ?? 48 8B 5C 24",
-        //"89 4C 24 28 48 8B CB E8 43 03 00 00 EB 17 8B 84 24 98 00 00 00 89 44 24 38 89 4C 24 28 48 8B CB E8 0A 08 00 00 48 8B 5C 24 60 48 8B 6C 24 68 48 8B 74 24 70 48 83 C4 50 5F C3",
         0, 2, "PlacementHooks::OnBlockDeleted_Rdx", Dev::PushRegisters(0)
     );
 
-    // Anchored on the trailing `add rdx, 0x1380`: the loose prefix alone matches 7 call sites (2026-09-06 audit).
     FunctionHookHelper@ After_CGameCtnEditorPluginMap_Update_PreScript_Hook = FunctionHookHelper(
-        "E8 ?? ?? ?? ?? 48 8B 93 ?? ?? 00 00 48 8D 8B ?? ?? 00 00 48 81 C2 80 13 00 00",
+        "E8 ?? ?? ?? ?? 48 8B 93 ?? ?? 00 00 48 8D 8B ?? ?? 00 00",
         0, 0, "PlacementHooks::After_CGameCtnEditorPluginMap_Update_PreScript_EmitEvent", Dev::PushRegisters(0)
     );
 
-    // HookHelper@ After_CGameCtnEditorPluginMap_Update_PostScript_Hook = HookHelper(
-    //     // 75 bytes of calls before this
-    //     "74 12 48 8B 8E ?? 04 00 00 E8 ?? ?? ?? ?? 89 AE ?? 07 00 00 48 8B CE E8",
-    //     -80, 0, "PlacementHooks::After_CGameCtnEditorPluginMap_Update_PostScript_EmitEvent", Dev::PushRegisters::Basic
-    // );
-    // FunctionHookHelper@ After_CGameCtnEditorPluginMap_Update_PostScript_Hook = FunctionHookHelper(
-    //     // v jmp we want to hook after                                        v jmps to here, which is a function call
-    //     "74 12 48 8B 8E ?? 04 00 00 E8 ?? ?? ?? ?? 89 AE ?? 07 00 00 48 8B CE E8",
-    //     23, 0, "PlacementHooks::After_CGameCtnEditorPluginMap_Update_PostScript_EmitEvent", Dev::PushRegisters::Basic
-    // );
-
-    // Hooks over a call to QuaternionFromEuler, note: we don't use this atm
     FunctionHookHelper@ OnGetCursorRotation = FunctionHookHelper(
-        //                       vv this byte is the offset for Rbp, so keep it here so we know if it changes
-        "E8 ?? ?? ?? ?? 0F 28 45 70 48 8D 55 ?? 48 8D 8D ?? ?? 00 00 66 0F 7F 45 ?? E8 ?? ?? ?? ?? 8B 86 ?? ?? 00 00", // 45 8B F5 44 89 6C 24 50 83 F8 04 0F 85 E8 02 00 00 85 FF",
-        // E8 6A FF 3A FF 0F 28 45 70 48 8D 55 80 48 8D 8D 08 01 00 00 66 0F 7F 45 80 E8 61 88 3A FF 8B 86 E8 0B 00 00
+        "E8 ?? ?? ?? ?? 0F 28 45 70 48 8D 55 ?? 48 8D 8D ?? ?? 00 00 66 0F 7F 45 ?? E8 ?? ?? ?? ?? 8B 86 ?? ?? 00 00",
         0, 0, "CustomCursorRotations::OnGetCursorRotation_Rbp70"
     );
 
     FunctionHookHelper@ OnSetBlockSkin = FunctionHookHelper(
-        // some docs below near EOF
         "E8 ?? ?? ?? ?? 49 8B 8D A0 04 00 00 49 8B D6 E8 ?? ?? ?? ?? 48 8D 4C 24",
         0, 0, "PlacementHooks::OnSetBlockSkin_r14", Dev::PushRegisters(0)
     );
@@ -74,7 +46,6 @@ namespace PlacementHooks {
 
     void SetupHooks() {
         trace("PlacementHooks::SetupHooks");
-        // dev_trace("PlacementHooks::SetupHooks");
         OnItemPlacedHook.Apply();
         OnItemDeletedHook.Apply();
         OnBlockPlacedHook.Apply();
@@ -83,10 +54,7 @@ namespace PlacementHooks {
         OnSetItemBgSkin.Apply();
         OnSetItemFgSkin.Apply();
         After_CGameCtnEditorPluginMap_Update_PreScript_Hook.Apply();
-        // After_CGameCtnEditorPluginMap_Update_PostScript_Hook.Apply();
-        // dev_trace("PlacementHooks::SetupHooks Done");
         trace("PlacementHooks::SetupHooks Done");
-        // OnGetCursorRotation.Apply();
     }
 
     void UnloadHooks() {
@@ -98,31 +66,6 @@ namespace PlacementHooks {
         OnSetItemBgSkin.Unapply();
         OnSetItemFgSkin.Unapply();
         After_CGameCtnEditorPluginMap_Update_PreScript_Hook.Unapply();
-        // After_CGameCtnEditorPluginMap_Update_PostScript_Hook.Unapply();
-        // OnGetCursorRotation.Unapply();
-    }
-
-    // Wine-safe pointer validation shared by placement hooks. Matches the
-    // E15 OnAddBlockHook guard (Dev_PointerLooksBad + SafeReadUInt64 + vtable
-    // check) so the rest of the hook family can't dereference a bad pointer
-    // delivered by native placement callbacks in cross-collection edits.
-    bool _ValidatePlacementPtr(uint64 ptr, const string &in hookName, uint64 expectedVTable) {
-        if (Dev_PointerLooksBad(ptr)) {
-            _Log::Trace(hookName + " ignoring bad ptr: " + Text::FormatPointer(ptr));
-            return false;
-        }
-        uint64 vtablePtr = 0;
-        try {
-            vtablePtr = Dev::SafeReadUInt64(ptr);
-        } catch {
-            _Log::Trace(hookName + " failed reading vtable from ptr: " + Text::FormatPointer(ptr));
-            return false;
-        }
-        if (!VTables::CheckVTable(vtablePtr, expectedVTable)) {
-            _Log::Trace(hookName + " bad vtable ptr: " + Text::FormatPointer(vtablePtr));
-            return false;
-        }
-        return true;
     }
 
     void After_CGameCtnEditorPluginMap_Update_PreScript_EmitEvent() {
@@ -146,9 +89,7 @@ namespace PlacementHooks {
             warn_every_60_s("OnSetItemFgSkin_rbx: called outside editor! (this is a bug)");
             return;
         }
-        // item at rbx
         dev_trace("OnSetItemFgSkin_rbx: " + Text::FormatPointer(rbx));
-        if (!_ValidatePlacementPtr(rbx, "OnSetItemFgSkin_rbx", VTables::CGameCtnAnchoredObject)) return;
         auto nod = Dev_GetNodFromPointer(rbx);
         if (nod is null) {
             dev_trace("OnSetItemFgSkin: null item");
@@ -168,9 +109,7 @@ namespace PlacementHooks {
             warn_every_60_s("OnSetItemBgSkin_rbx: called outside editor! (this is a bug)");
             return;
         }
-        // item at rbx
         dev_trace("OnSetItemBgSkin_rbx: " + Text::FormatPointer(rbx));
-        if (!_ValidatePlacementPtr(rbx, "OnSetItemBgSkin_rbx", VTables::CGameCtnAnchoredObject)) return;
         auto nod = Dev_GetNodFromPointer(rbx);
         if (nod is null) {
             dev_trace("OnSetItemBgSkin: null item");
@@ -190,9 +129,7 @@ namespace PlacementHooks {
             warn_every_60_s("OnSetBlockSkin_r14: called outside editor! (this is a bug)");
             return;
         }
-        // block at r14
         dev_trace("OnSetBlockSkin_r14: " + Text::FormatPointer(r14));
-        if (!_ValidatePlacementPtr(r14, "OnSetBlockSkin_r14", VTables::CGameCtnBlock)) return;
         auto nod = Dev_GetNodFromPointer(r14);
         if (nod is null) {
             dev_trace("OnSetBlockSkin: null block");
@@ -212,8 +149,10 @@ namespace PlacementHooks {
             warn_every_60_s("OnBlockDeleted_Rdx: called outside editor! (this is a bug)");
             return;
         }
+        if (rdx < 0x1000FFFF || rdx > 0xFFF0000FFFF) {
+            return;
+        }
         dev_trace("OnBlockDeleted! rdx: " + Text::FormatPointer(rdx));
-        if (!_ValidatePlacementPtr(rdx, "OnBlockDeleted_Rdx", VTables::CGameCtnBlock)) return;
         auto nod = Dev_GetNodFromPointer(rdx);
         if (nod is null) {
             dev_trace("OnBlockDeleted_Rdx rdx nod null");
@@ -235,8 +174,10 @@ namespace PlacementHooks {
             warn_every_60_s("OnItemDeleted_Rdx: called outside editor! (this is a bug)");
             return;
         }
+        if (rdx < 0x1000FFFF || rdx > 0xFFF0000FFFF) {
+            return;
+        }
         dev_trace("OnItemDeleted! rdx: " + Text::FormatPointer(rdx));
-        if (!_ValidatePlacementPtr(rdx, "OnItemDeleted_Rdx", VTables::CGameCtnAnchoredObject)) return;
         auto nod = Dev_GetNodFromPointer(rdx);
         if (nod is null) {
             dev_trace("OnItemDeleted_Rdx rdx nod null");
@@ -254,18 +195,12 @@ namespace PlacementHooks {
     }
 
     void OnItemPlaced_RbxRdx(uint64 rbx) {
-        // if (!IsInEditor) {
-        //     warn_every_60_s("OnItemPlaced_RbxRdx: called outside editor! (this is a bug)");
-        //     return;
-        // }
 #if DEV
         dev_trace("OnItemPlaced! rbx: " + Text::FormatPointer(rbx));
 #endif
-        // if (rbx != rdx) {
-        //     dev_trace("rbx != rdx: " + Text::FormatPointer(rbx) + " != " + Text::FormatPointer(rdx));
-        // }
-        // often they are not equal, in this case rbx is correct
-        if (!_ValidatePlacementPtr(rbx, "OnItemPlaced_RbxRdx", VTables::CGameCtnAnchoredObject)) return;
+        if (rbx < 0x1000FFFF || rbx > 0xFFF0000FFFF) {
+            return;
+        }
         auto nod = Dev_GetNodFromPointer(rbx);
         if (nod is null) {
             dev_trace("OnItemPlaced_RbxRdx rbx nod null");
@@ -283,37 +218,18 @@ namespace PlacementHooks {
     }
 
     void OnAddBlockHook_RdxRdi(uint64 rdx) {
-        // if (!IsInEditor) {
-        //     warn_every_60_s("OnAddBlockHook_RdxRdi: called outside editor! (this is a bug)");
-        //     return;
-        // }
 #if DEV
         dev_trace("OnAddBlockHook! rdx : " + Text::FormatPointer(rdx));
 #endif
-#if WINDOWS_WINE
-        trace("OnAddBlockHook, wine detected.");
-        if (Dev_PointerLooksBad(rdx)) {
-            _Log::Trace("OnAddBlockHook_RdxRdi ignoring bad rdx: " + Text::FormatPointer(rdx));
+        if (rdx < 0x1000FFFF || rdx > 0xFFF0000FFFF) {
             return;
         }
-#else
-        if (Dev_PointerLooksBad(rdx)) {
-            _Log::Trace("OnAddBlockHook_RdxRdi ignoring bad rdx: " + Text::FormatPointer(rdx));
-            return;
-        }
-#endif
-        uint64 vtablePtr = 0;
-        try {
-            vtablePtr = Dev::SafeReadUInt64(rdx);
-        } catch {
-            _Log::Trace("OnAddBlockHook_RdxRdi failed reading vtable from rdx: " + Text::FormatPointer(rdx));
-            return;
-        }
+        auto vtablePtr = Dev::ReadUInt64(rdx);
         if (!VTables::CheckVTable(vtablePtr, VTables::CGameCtnBlock)) {
             _Log::Trace("Got bad vtable ptr: " + Text::FormatPointer(vtablePtr));
             return;
         }
-        _Log::Debug("VTable Addr: " + Text::FormatPointer(vtablePtr));
+        _Log::Debug("VTable Addr: " + Text::FormatPointer(Dev::ReadUInt64(rdx)));
         auto nod = Dev_GetNodFromPointer(rdx);
         _Log::Debug("OnAddBlockHook_RdxRdi got nod.");
 
@@ -331,10 +247,6 @@ namespace PlacementHooks {
         }
         Event::OnNewBlock(block);
     }
-
-
-
-
 
     bool Debug_OnBlockPlaced(CGameCtnBlock@ b) {
         if (b is null) {
@@ -357,10 +269,7 @@ orig: E8 F2 5C E6 FF 48 8B 93 80 08 00 00 48 8D 8B 88 08 00 00 48 81 C2 80 13 00
 call to hook:
     E8 ?? ?? ?? ?? 48 8B 93 80 08 00 00 48 8D 8B 88 08 00 00 48 81 C2 80 13 00 00 48 83 C4 20 5B E9 ?? ?? ?? ?? CC
 
-unique (2024): E8 ?? ?? ?? ?? 48 8B 93 ?? 08 00 00 48 8D 8B ?? 08 00 00
-2026-09: offsets moved 0x880/0x888 -> 0xfd0/0xfd8; the `?? 08` form matches 0 and the `?? ??` form matches 7.
-         Unique again with the `48 81 C2 80 13 00 00` (add rdx,0x1380) tail; site is the CGameEditorPluginMap vtbl thunk
-         @ 0x141338a19 calling Update_PreScript_Outer (0x1411a3c70) -> CGameEditorPluginMap::Update_PreScript.
+unique: E8 ?? ?? ?? ?? 48 8B 93 ?? 08 00 00 48 8D 8B ?? 08 00 00
 
 Trackmania.exe.text+12D2619 - E8 F25CE6FF           - call Trackmania.exe.text+1138310 { call CGameEditorPluginMap::Update_PreScript_Outer
  }
