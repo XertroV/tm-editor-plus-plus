@@ -59,6 +59,42 @@
 
 - Skip-club / skip-club-update patch setting stays armed after a map load (one-shot export still reverts to the menu setting). Mutually exclusive skip-vs-disable so both patches cannot be on at once.
 
+## Macroblocks — terrain apply & replay (change)
+
+- Ground blocks replay natively per block (`PlaceBlock`), so their own auto-terrain runs and the result matches the sender; the ground-mode donor is only a fallback. Blocks already present at the coord are skipped.
+- Terrain apply can lower cells: cells already matching are skipped, differing cells are peeled natively, and a target above the current stack is deferred instead of stripping the cell.
+- Tool-made raises are rebuilt with the terrain tool's native routine (`PlaceTerrainBlocks`): hills tallest-first, land fills, carve inference, stacked layers bottom-up. Fill-vs-carve model choice is verified against the target surface height.
+- Waits for engine terraform jobs to go quiet before peeling (concurrent jobs wedged the terrain queue), and re-triggers terraform on "bald" ground blocks.
+- Settle detection uses quiet frames instead of a 1.2s timer: place-to-diff latency is ~250ms (was ~2.2s).
+
+## Macroblocks — air-mode place crash (fix)
+
+- Fixed a game crash when stale variant AutoTerrains leaked onto the shared donor before an air-mode place. Passes now wait for pending donor restores, and stale AutoTerrains are scrubbed before an air-mode place.
+
+## Plugin API — sync helpers (new)
+
+- `BeginCaptureSuppress` / `EndCaptureSuppress` / `ResetCaptureSuppress` / `IsCaptureSuppressed`: sync plugins can exclude their own applies from placement capture while still reading complete LastFrame buffers.
+- `IsTerrainResyncPending()`: hold a terrain diff until a replayed terraform settles, so it is not echoed back.
+
+## Plugin API — item-editor exports (fix)
+
+- `ItemNameToMwId`, `ReloadCurrentItemEditorItemAsync`, `SaveItemAsEditorAsync`, `ZeroCurrentItemModelFids` and `ZeroCurrentItemModelFidsKeepMaterials` are now importable (the import declarations were missing, so dependents failed to compile).
+- Removed a stale 1-arg `PosToCoord` import that made `PosToCoord` calls ambiguous in dependents.
+
+## Map Properties — vehicle (fix)
+
+- Setting CharacterPilot as the map vehicle works; the vehicle collection can be set from Map Properties.
+
+## Misc
+
+- Dev menu: **Editor** nod explorer is skipped when `GetApp().Editor` is null (crash outside the editor).
+
+## Compatibility
+
+- Openplanet 1.29.14 (`string::Join` -> `Text::Join`).
+
+# 0.8.99999999a
+
 ## Map cache (in-editor block/item index)
 
 - The in-map block/item cache now updates on place/delete instead of going stale until a manual refresh. Identity is the live nod pointer (two identical free blocks stay distinct).
@@ -120,7 +156,6 @@
 - Fix #32: `RegisterExtension` declaration was in the wrong namespace — extension scripts now bind.
 - Test-vehicle window tooltip clarified (#11): the window only shows in test mode (not validating), but the chosen vehicle is saved on the map and applies to validation too.
 - New tooling/MCP exports: `SaveCurrentItemEditorItem`, `LeaveCurrentItemEditor` (native editor `Exit()`).
-- Dev menu: **Editor** nod explorer is skipped when `GetApp().Editor` is null (crash outside the editor).
 
 # 0.8.999999996
 
