@@ -1037,6 +1037,7 @@ uint16 SZ_MEDIABLOCKENTITY_KEY = 0x1C;
 
 const uint16 O_CTN_GHOST_CHECKPOINTS_BUF = GetOffset("CGameCtnGhost", "NbRespawns") + 0x8;
 const uint16 O_CTN_GHOST_PLAYER_INPUTS_BUF = GetOffset("CGameCtnGhost", "Validate_GameModeCustomData") + (0x1A0 - 0x188);
+const uint16 O_CTN_GHOST_ENT_RECORD_DATA = GetOffset("CGameCtnGhost", "Validate_ExtraTool_Info") + 0xC0; // 0x2F0
 
 // MARK: Misc
 
