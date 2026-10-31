@@ -818,6 +818,7 @@ TestCase@[]@ generateMapKVTests() {
     ret.InsertLast(TestCase("store: snapshot then echo", Tests::MapKVStore_CheckSnapshotThenEcho));
     ret.InsertLast(TestCase("store: malformed and disabled snapshots", Tests::MapKVStore_CheckMalformedAndDisabledSnapshots));
     ret.InsertLast(TestCase("store: pending until echo or rejection", Tests::MapKVStore_CheckPendingUntilEchoOrRejection));
+    ret.InsertLast(TestCase("large value splits into parts", Tests::MapKV_CheckLargeValueSplitsIntoParts));
     return ret;
 }
 #endif

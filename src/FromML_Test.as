@@ -15,10 +15,7 @@ namespace Tests {
     [Test]
     void MapKV_WholeRawValueRoundTrip(Tests::Context@ ctx) {
         string raw = "quotes \"\\\n\r\t Unicode: café 😀";
-        // Larger than the old 16 KiB chunks; still exactly one complete message.
-        string unit = raw;
-        for (uint i = 1; i < 1024; i++) raw += unit;
-        auto message = ToML::MakeMapKVMessage("Plugin.spec", raw);
+        auto message = ToML::MakeMapKVMessages("Plugin.spec", raw)[0];
         auto wire = Json::Parse(message.ToMLEventString());
         MapKVCheck((wire.Length) == (uint(3)), "one type, one key, one whole value");
         MapKVCheck((string(wire[0])) == ("SetMapKV"), "values match");
@@ -26,27 +23,53 @@ namespace Tests {
         MapKVCheck((string(wire[2])) == (raw), "values match");
         MapKVCheck(!(message.ToMLEventString().Contains("/*EVENTS*/")), "payload cannot corrupt splice markers");
         MapKVCheck(!(message.ToMLEventString().Contains("-->")), "payload cannot close the XML comment");
-        auto delimiters = ToML::MakeMapKVMessage("Plugin.spec", "<!-- --> </script> /*EVENTS*/ /*TIMENOW*/");
+        auto delimiters = ToML::MakeMapKVMessages("Plugin.spec", "<!-- --> </script> /*EVENTS*/ /*TIMENOW*/")[0];
         MapKVCheck(!delimiters.ToMLEventString().Contains("-->"), "XML comment terminator must be split");
         MapKVCheck(!delimiters.ToMLEventString().Contains("/*EVENTS*/"), "event splice marker must be split");
         MapKVCheck(!delimiters.ToMLEventString().Contains("/*TIMENOW*/"), "nonce splice marker must be split");
         bool rejected = false;
-        try { ToML::MakeMapKVMessage("Plugin.spec", Text::DecodeBase64("AAE=")); }
+        try { ToML::MakeMapKVMessages("Plugin.spec", Text::DecodeBase64("AAE=")); }
         catch { rejected = true; }
         MapKVCheck(rejected, "NUL and unsupported controls are rejected before enqueue");
-        auto empty = ToML::MakeMapKVMessage("Plugin.spec", "");
-        MapKVCheck((empty.data[1]) == (""), "empty value is a write");
+        auto empty = ToML::MakeMapKVMessages("Plugin.spec", "");
+        MapKVCheck(empty.Length == 1 && empty[0].data[1] == "", "empty value is a write");
     }
+
+    // Large values travel as ordered parts that rejoin to the exact value and
+    // never split a multi-byte character.
+    void MapKV_CheckLargeValueSplitsIntoParts() {
+        string unit = "ab😀é\"\n";
+        string raw;
+        while (raw.Length < 100) raw += unit;
+        auto parts = ToML::MakeMapKVMessages("Plugin.big", raw, 16);
+        MapKVCheck(parts.Length > 1, "split into parts, got " + parts.Length);
+        string joined;
+        for (uint i = 0; i < parts.Length; i++) {
+            MapKVCheck(parts[i].type == "SetMapKVPart", "part type");
+            MapKVCheck(parts[i].data[0] == "_EKV_Plugin.big", "part key");
+            MapKVCheck(parts[i].data[1] == tostring(i) && parts[i].data[2] == tostring(parts.Length), "part index/count");
+            MapKVCheck(parts[i].data[3].Length <= 16, "part within bound");
+            MapKVCheck(parts[i].data[3].Length == 0 || (parts[i].data[3][0] & 0xC0) != 0x80, "part starts on a character boundary");
+            auto wire = Json::Parse(parts[i].ToMLEventString());
+            MapKVCheck(wire.Length == 5 && string(wire[4]) == parts[i].data[3], "part literal round-trips");
+            joined += parts[i].data[3];
+        }
+        MapKVCheck(joined == raw, "parts rejoin to the value");
+        MapKVCheck(ToML::MakeMapKVMessages("Plugin.big", raw.SubStr(0, 16), 16).Length == 1, "a value at the bound is one message");
+    }
+
+    [Test]
+    void MapKV_LargeValueSplitsIntoParts(Tests::Context@ ctx) { MapKV_CheckLargeValueSplitsIntoParts(); }
 
     [Test]
     void MapKV_CoalescesOnlyMatchingKey(Tests::Context@ ctx) {
         ML_Event@[] messages;
         auto other = ML_Event("ResyncPlease", {});
         messages.InsertLast(other);
-        ToML::CoalesceMapKVMessage(messages, ToML::MakeMapKVMessage("Plugin.a", "old"));
-        ToML::CoalesceMapKVMessage(messages, ToML::MakeMapKVMessage("Plugin.b", "keep"));
-        ToML::CoalesceMapKVMessage(messages, ToML::MakeMapKVMessage("_EKV_Plugin.a", "new"));
-        MapKVCheck((messages.Length) == (uint(3)), "values match");
+        ToML::CoalesceMapKVMessages(messages, ToML::MakeMapKVMessages("Plugin.a", "old value in parts", 4));
+        ToML::CoalesceMapKVMessages(messages, ToML::MakeMapKVMessages("Plugin.b", "keep"));
+        ToML::CoalesceMapKVMessages(messages, ToML::MakeMapKVMessages("_EKV_Plugin.a", "new"));
+        MapKVCheck((messages.Length) == (uint(3)), "older parts are superseded too, got " + messages.Length);
         MapKVCheck(messages[0] is other, "unrelated message retained");
         MapKVCheck((messages[1].data[0]) == ("_EKV_Plugin.b"), "other key retained");
         MapKVCheck((messages[1].data[1]) == ("keep"), "values match");

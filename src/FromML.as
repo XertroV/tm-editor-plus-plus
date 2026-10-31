@@ -110,6 +110,9 @@ class ML_Event {
     string ToMLEventString() {
         if (type == "SetMapKV")
             return '["SetMapKV", ' + ToML::MapKVStringLiteral(data[0]) + ', ' + ToML::MapKVStringLiteral(data[1]) + ']';
+        if (type == "SetMapKVPart")
+            return '["SetMapKVPart", ' + ToML::MapKVStringLiteral(data[0]) + ', "' + data[1] + '", "' + data[2] + '", '
+                + ToML::MapKVStringLiteral(data[3]) + ']';
         string ret = '["' + type;
         for (uint i = 0; i < data.Length; i++) {
             ret += '", "' + data[i];
@@ -125,7 +128,7 @@ namespace ToML {
     void SendMessage(const string &in type, string[]@ data) {
         dev_trace("Queueing msg to ML of type " + type);
         queued.InsertLast(ML_Event(type, data));
-        Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, ClearSendQueue);
+        ScheduleDrain();
     }
 
     void ResyncPlease() {
@@ -147,18 +150,23 @@ namespace ToML {
         SendMessage("SetCustomColorTables", {raw});
     }
 
-    // Map-scoped whole-value writes; a newer value only supersedes its own key.
-    void CoalesceMapKVMessage(ML_Event@[] &inout messages, ML_Event@ message) {
+    bool IsMapKVMessage(ML_Event@ message) {
+        return message.type == "SetMapKV" || message.type == "SetMapKVPart";
+    }
+
+    // Map-scoped whole-value writes; a newer value only supersedes its own key,
+    // including any parts of an older value still queued.
+    void CoalesceMapKVMessages(ML_Event@[] &inout messages, ML_Event@[]@ write) {
         for (int i = int(messages.Length) - 1; i >= 0; i--) {
-            if (messages[i].type == "SetMapKV" && messages[i].data[0] == message.data[0])
+            if (IsMapKVMessage(messages[i]) && messages[i].data[0] == write[0].data[0])
                 messages.RemoveAt(i);
         }
-        messages.InsertLast(message);
+        for (uint i = 0; i < write.Length; i++) messages.InsertLast(write[i]);
     }
 
     bool HasQueuedMapKVMessages(const string &in key = "") {
         for (uint i = 0; i < queued.Length; i++) {
-            if (queued[i].type == "SetMapKV" && (key.Length == 0 || queued[i].data[0] == key))
+            if (IsMapKVMessage(queued[i]) && (key.Length == 0 || queued[i].data[0] == key))
                 return true;
         }
         return false;
@@ -182,34 +190,92 @@ namespace ToML {
         return "\"" + literal + "\"";
     }
 
-    ML_Event@ MakeMapKVMessage(const string &in key, const string &in raw) {
+    // Each page splice carries at most this much value text. A 1 MiB value in
+    // one splice crashed the game (2026-10-31); 8 KiB per frame is what the
+    // original chunked channel (ea9a284c) used.
+    const uint MAPKV_PART_BYTES = 8192;
+
+    // One SetMapKV message, or SetMapKVPart messages that the editor plugin
+    // joins and applies only once the last part arrives. Parts split on UTF-8
+    // character boundaries so each part's literal is valid text on its own.
+    ML_Event@[]@ MakeMapKVMessages(const string &in key, const string &in raw, uint partBytes = MAPKV_PART_BYTES) {
         if (raw.Length > MapKV::MAX_VALUE_BYTES) throw("Map metadata value exceeds 8 MiB");
         for (uint i = 0; i < raw.Length; i++) {
             uint8 c = raw[i];
             if (c < 32 && c != 9 && c != 10 && c != 13)
                 throw("Map metadata values are text: unsupported control byte at " + i);
         }
-        return ML_Event("SetMapKV", {MapKV::NormalizeKey(key), raw});
+        string normalized = MapKV::NormalizeKey(key);
+        ML_Event@[] messages;
+        if (uint(raw.Length) <= partBytes) {
+            messages.InsertLast(ML_Event("SetMapKV", {normalized, raw}));
+            return messages;
+        }
+        string[] parts;
+        uint offset = 0;
+        while (offset < uint(raw.Length)) {
+            uint end = Math::Min(offset + partBytes, uint(raw.Length));
+            while (end < uint(raw.Length) && end > offset + 1 && (raw[end] & 0xC0) == 0x80) end--;
+            parts.InsertLast(raw.SubStr(offset, end - offset));
+            offset = end;
+        }
+        for (uint i = 0; i < parts.Length; i++) {
+            messages.InsertLast(ML_Event("SetMapKVPart", {normalized, tostring(i), tostring(parts.Length), parts[i]}));
+        }
+        return messages;
     }
 
     void SetMapKV(const string &in key, const string &in raw) {
-        auto message = MakeMapKVMessage(key, raw);
+        auto messages = MakeMapKVMessages(key, raw);
         auto editor = cast<CGameCtnEditorFree>(GetApp().Editor);
         if (editor is null || editor.Challenge is null) throw("No map open for metadata");
         auto plugin = GetPluginPMT();
         if (plugin is null) throw("E++ supporting editor plugin is unavailable");
         if (MapKVStore::IsDisabled()) throw("Metadata is disabled for this map");
         // Store raw values; the wire serializer escapes source syntax separately.
-        message.kvMapPtr = Dev_GetPointerForNod(editor.Challenge);
-        message.kvPluginPtr = Dev_GetPointerForNod(plugin);
+        for (uint i = 0; i < messages.Length; i++) {
+            messages[i].kvMapPtr = Dev_GetPointerForNod(editor.Challenge);
+            messages[i].kvPluginPtr = Dev_GetPointerForNod(plugin);
+        }
         // The queue drains when the page is spliced, before the receiver applies
         // anything; the key stays in flight until its echo (or rejection) lands.
-        MapKVStore::NotePendingWrite(message.data[0]);
+        string normalized = messages[0].data[0];
+        MapKVStore::NotePendingWrite(normalized);
 #if DEV
-        MapKVHealth::NotePendingWrite(MapKVHealth::ScopeFor(editor.Challenge), message.data[0]);
+        MapKVHealth::NotePendingWrite(MapKVHealth::ScopeFor(editor.Challenge), normalized);
 #endif
-        CoalesceMapKVMessage(queued, message);
-        Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, ClearSendQueue);
+        CoalesceMapKVMessages(queued, messages);
+        ScheduleDrain();
+    }
+
+    // One splice per frame: the page script reads each splice once, and a
+    // second splice before it runs would replace the first unread. A splice
+    // stops adding messages once it holds SPLICE_BUDGET characters.
+    const uint SPLICE_BUDGET = 3 * MAPKV_PART_BYTES;
+    bool _draining = false;
+
+    void ScheduleDrain() {
+        if (_draining) return;
+        _draining = true;
+        Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, DrainSendQueue);
+    }
+
+    void DrainSendQueue() {
+        try {
+            ClearSendQueue();
+        } catch {
+            warn("ToML send failed: " + getExceptionInfo());
+        }
+        if (queued.Length == 0 || GetPluginPMT() is null) {
+            _draining = false;
+            return;
+        }
+        startnew(DrainNextFrame);
+    }
+
+    void DrainNextFrame() {
+        yield();
+        Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, DrainSendQueue);
     }
 
     const string TIMENOW_DELIM = "/*TIMENOW*/";
@@ -218,26 +284,29 @@ namespace ToML {
     void ClearSendQueue() {
         for (int i = int(queued.Length) - 1; i >= 0; i--) {
             auto msg = queued[i];
-            if (msg.type == "SetMapKV" && !MapKVTargetIsCurrent(msg.kvMapPtr, msg.kvPluginPtr)) queued.RemoveAt(i);
+            if (IsMapKVMessage(msg) && !MapKVTargetIsCurrent(msg.kvMapPtr, msg.kvPluginPtr)) queued.RemoveAt(i);
         }
         if (queued.Length == 0) return;
         auto pluginPMT = GetPluginPMT();
         if (pluginPMT is null) return;
-        dev_trace("Outgoing msgs to ML " + queued.Length);
         auto layer = pluginPMT.UILayers[0];
         auto nonceParts = layer.ManialinkPageUtf8.Split(TIMENOW_DELIM);
         nonceParts[1] = tostring(Time::Now);
         auto eventParts = Text::Join(nonceParts, TIMENOW_DELIM).Split(EVENTS_DELIM);
         string eventsStr = '[';
-        for (uint i = 0; i < queued.Length; i++) {
-            dev_trace("adding msg of type " + queued[i].type);
-            eventsStr += (i > 0 ? ", " : "") + queued[i].ToMLEventString();
+        uint sent = 0;
+        while (sent < queued.Length) {
+            string next = queued[sent].ToMLEventString();
+            if (sent > 0 && uint(eventsStr.Length + next.Length) > SPLICE_BUDGET) break;
+            eventsStr += (sent > 0 ? ", " : "") + next;
+            sent++;
         }
         eventsStr += ']';
+        dev_trace("Outgoing msgs to ML " + sent + " of " + queued.Length + " (" + eventsStr.Length + " chars)");
         eventParts[1] = eventsStr;
         layer.ManialinkPageUtf8 = Text::Join(eventParts, EVENTS_DELIM);
         // dev_trace("Set new page ML: " + layer.ManialinkPageUtf8);
-        queued.RemoveRange(0, queued.Length);
+        queued.RemoveRange(0, sent);
     }
 
     CGameEditorPluginMap@ GetPluginPMT() {

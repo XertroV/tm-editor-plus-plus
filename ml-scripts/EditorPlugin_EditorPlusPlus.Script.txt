@@ -102,6 +102,27 @@ Void SendAllInfo() {
 
 declare Boolean ShouldBreakLoop;
 declare Boolean DisableMetadata;
+// SetMapKVPart assembly: the value so far, and the next part index expected.
+declare Text[Text] MapKVParts;
+declare Integer[Text] MapKVNextPart;
+
+Boolean MapKVKeyAccepted(Text _Key) {
+	return !DisableMetadata && TL::Length(_Key) > 5 && TL::SubString(_Key, 0, 5) == "_EKV_";
+}
+
+Void ApplyMapKV(Text _Key, Text _Value) {
+	// Values are whole plain strings; source escaping is handled only by the sender.
+	declare metadata Text[Text] _EKV_ for Map;
+	_EKV_[_Key] = _Value;
+	// Echo what the dictionary now holds, read back rather than repeated from the
+	// message; this echo is what updates E++'s cache.
+	SendEvent("MapKVSet", [_Key, _EKV_[_Key]]);
+}
+
+Void DropMapKVParts(Text _Key) {
+	MapKVParts.removekey(_Key);
+	MapKVNextPart.removekey(_Key);
+}
 
 Void ProcessIncomingMessages() {
 	declare Text[][] EPP_MsgQueue for ManialinkPage = [];
@@ -139,17 +160,40 @@ Void ProcessIncomingMessages() {
 			SendEvent("CustomColorTables", [""^CCT_CustomColorTables]);
 		} else if (MsgType == "SetMapKV") {
 			if (InMsg.count != 3) continue;
-			if (DisableMetadata || TL::Length(InMsg[1]) <= 5 || TL::SubString(InMsg[1], 0, 5) != "_EKV_") {
+			if (!MapKVKeyAccepted(InMsg[1])) {
 				// Tell E++ so the key stops reading as in flight.
 				SendEvent("MapKVSetRejected", [InMsg[1]]);
 				continue;
 			}
-			// Values are whole plain strings; source escaping is handled only by the sender.
-			declare metadata Text[Text] _EKV_ for Map;
-			_EKV_[InMsg[1]] = InMsg[2];
-			// Echo what the dictionary now holds, read back rather than repeated from the
-			// message; this echo is what updates E++'s cache.
-			SendEvent("MapKVSet", [InMsg[1], _EKV_[InMsg[1]]]);
+			DropMapKVParts(InMsg[1]);
+			ApplyMapKV(InMsg[1], InMsg[2]);
+		} else if (MsgType == "SetMapKVPart") {
+			// [key, index, count, text]: part 0 starts (or restarts) a value; it is
+			// applied once the last part arrives in order.
+			if (InMsg.count != 5) continue;
+			declare Text PartKey = InMsg[1];
+			declare Integer PartIx = TL::ToInteger(InMsg[2]);
+			declare Integer PartCount = TL::ToInteger(InMsg[3]);
+			if (!MapKVKeyAccepted(PartKey)) {
+				DropMapKVParts(PartKey);
+				SendEvent("MapKVSetRejected", [PartKey]);
+				continue;
+			}
+			if (PartIx == 0) {
+				MapKVParts[PartKey] = InMsg[4];
+			} else if (MapKVNextPart.existskey(PartKey) && MapKVNextPart[PartKey] == PartIx) {
+				MapKVParts[PartKey] = MapKVParts[PartKey] ^ InMsg[4];
+			} else {
+				DropMapKVParts(PartKey);
+				SendEvent("MapKVSetRejected", [PartKey]);
+				continue;
+			}
+			MapKVNextPart[PartKey] = PartIx + 1;
+			if (PartIx + 1 >= PartCount) {
+				declare Text Joined = MapKVParts[PartKey];
+				DropMapKVParts(PartKey);
+				ApplyMapKV(PartKey, Joined);
+			}
 		}
 	}
 	EPP_MsgQueue.clear();
