@@ -350,8 +350,9 @@ namespace Editor {
     }
 
     // true once reads of the editor's map can be answered. Never throws.
+    // While not ready, asks the editor plugin for its values (rate-limited).
     bool Is_Map_KVReady() {
-        return MapKVStore::IsReady();
+        return MapKVStore::UnavailableReason().Length == 0;
     }
 
     // Yields until reads can be answered, at most timeoutMs. Must be called
