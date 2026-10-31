@@ -8,94 +8,128 @@ The prefix isolates this store from ordinary map metadata; plugin-specific
 suffixes prevent clients from overwriting each other.
 
 ```angelscript
-Editor::Set_Map_KV("DPP_EditorSpec", Json::Write(project));
-// Later, after delivery (the queue draining alone is not an acknowledgment):
+// In a coroutine: reads fail until E++'s editor plugin has reported the map.
 string raw;
-if (Editor::TryGet_Map_KVRaw("DPP_EditorSpec", raw)) {
+if (Editor::WaitTryGet_Map_KVRaw("DPP_EditorSpec", raw)) {
     auto restored = Json::Parse(raw);
 }
+Editor::Set_Map_KV("DPP_EditorSpec", Json::Write(project));
+// Delivery is asynchronous: poll Is_Map_KVSendInFlight, then read it back.
 ```
 
 ## Exports
 
-- `Set_Map_KV(key, raw)`: queue one complete value (up to 8 MiB of raw bytes).
-  Values may include Unicode, quotes, backslashes, LF, CR and tabs. Other
-  control bytes (including NUL) are rejected before enqueueing.
-  Requires an open map and E++'s supporting editor plugin. Invalid keys, an
-  oversized value or a missing delivery target throw before queue mutation.
-- `Is_Map_KVSendInFlight(key = "")`: whether a matching write is still queued;
-  an empty argument checks all keys. It does not confirm receiver application
-  or a disk save.
-- `TryGet_Map_KVRaw(key, value, map = null)`: return true for a present value,
-  including an empty string, or false for an absent key/map/store. Reads the
-  actual metadata, never a pending value. Corrupt or incompatible store data
-  throws instead of silently appearing absent or returning partial data.
-- `Get_Map_KVKeys(map = null)`: sorted stored keys, including the `_EKV_` prefix.
-  Returns an empty list for absent storage without creating metadata.
-- `Get_Map_KVRaw(key, map = null)`: convenience getter; absent keys return
-  `""`. Use TryGet when absence and an explicit empty value differ.
-- `TryGet_Map_MetadataRaw(key, value, map = null)` and
-  `Get_Map_MetadataRaw(key, map = null)`: read an ordinary metadata trait by
-  its exact name, without prefixing or base64 decoding. Text is returned
-  verbatim; Boolean, Integer, Real, Vec2/3 and Int2/3 are converted to strings.
-  TryGet returns false for absent or unsupported (e.g. array/struct) traits.
-  The convenience getter returns `""` in those cases.
-- `Get_Map_KVReadSource(key)`: how much the current answer for this key is
-  worth. See [Read sources](#read-sources). Never throws.
-- `Get_Map_KVReaderHealthy(reason)`: false once the memory reader has been
-  fenced off for the current map, with `reason` naming the disagreement. See
-  [Reader health](#reader-health).
+Reads answer only for the map open in the map editor. A null map argument means
+that map; any other map throws.
+
+- `Is_Map_KVReady()`: true once reads can be answered. While not ready it asks
+  the editor plugin for its values (at most every 500 ms). Never throws.
+- `Wait_Map_KVReady(timeoutMs = 5000)`: yields until ready, at most `timeoutMs`;
+  returns whether it is. Returns early when no map is open or metadata is
+  disabled, since waiting cannot change either. Coroutines only.
+- `TryGet_Map_KVRaw(key, value, map = null)`: true for a present value, including
+  an empty string; false for an absent key. Throws, with a message beginning
+  "E++ map key-values unavailable: ", until ready. Never returns a value whose
+  write is still in flight.
+- `WaitTryGet_Map_KVRaw(key, value, timeoutMs = 5000)`: `Wait_Map_KVReady`, then
+  `TryGet_Map_KVRaw`. Still throws if not ready by the deadline.
+- `Get_Map_KVRaw(key, map = null)`: convenience getter; absent keys return `""`.
+  Use TryGet when absence and an explicit empty value differ.
+- `Get_Map_KVKeys(map = null)`: sorted stored keys, including the `_EKV_`
+  prefix. Throws until ready.
+- `Set_Map_KV(key, raw)`: queue one complete value. Values may include Unicode,
+  quotes, backslashes, LF, CR and tabs; other control bytes (including NUL) are
+  rejected. Requires an open map, E++'s supporting editor plugin, and a ready
+  store. Throws, before anything is queued, on an invalid key, disabled
+  metadata, a store that is not ready, or a write that would take the whole
+  dictionary past the [size limit](#size-limit).
+- `Is_Map_KVSendInFlight(key = "")`: whether a matching write is queued or not
+  yet acknowledged by the editor plugin; an empty argument checks all keys. It
+  says nothing about a disk save.
+- `Get_Map_KVReadSource(key = "")`: `maniascript` (ready), `pending` (waiting
+  for the editor plugin's report), `disabled` (metadata disabled for this map)
+  or `unavailable` (no editor map). Never throws.
+- `Get_Map_KVReaderHealthy(reason)`: same as `Is_Map_KVReady`, with `reason`
+  saying why not. Never throws.
 - `Is_SupportingEditorPluginActive()`: whether E++'s supporting editor plugin is
-  active in the map editor, i.e. whether `Set_Map_KV` can deliver.
+  active in the map editor.
 - `Get_Map_MetadataDisabled()`: whether the current map opted out of metadata
   writes (`EPP_MetadataDisabled`, as reported by the editor plugin).
 
-A null map argument resolves to the current editor map, or RootMap outside the
-map editor. Reads need no supporting editor plugin and never create traits.
-
-## Delivery and storage
-
-ManiaScript requires a fixed metadata declaration, so values live in one
-`Text[Text] _EKV_` dictionary. Its keys are automatically prefixed with `_EKV_`.
-Each value is exactly the string supplied by the caller; there is no chunk
-buffer or base64 storage wrapper. Source escaping is solely a delivery concern.
-Any application-level encoding inside a value belongs to its caller.
-
-Each accepted message replaces one whole dictionary value in one assignment.
-Different queued keys coexist; a newer queued value supersedes only the same
-key. Captured map and plugin identity prevent pending writes from following a
-map switch. Metadata-disabled maps ignore writes. Reads and map initialization
-do not create the dictionary.
-
-After applying a write, the editor plugin reads the value back out of the
-dictionary and echoes it to AngelScript as a `MapKVSet` event. Above 16384
-characters it sends only the length, as `MapKVSetLarge`. Nothing enumerates
-`_EKV_`, at plugin start or on request: declaring the dictionary would create
-it, and reads must never create metadata.
-
-That 16384 is provisional. It is the chunk size the inbound transport is already
-known to carry, chosen because nothing yet measures how large an argument
-`LayerCustomEvent` delivers intact, and a truncated echo would read as drift.
-The transport harness in `tests/map-kv-storage` is not that measurement: its
-`singleEvent.receivedBytes` of 8003 is 8000 bytes plus a three-byte ellipsis, a
-display cap in the MLHook-to-MCP result path it observes through, and it says
-nothing about what the editor plugin delivers to E++'s own interception. To
-raise it, measure first: write values of increasing length and confirm the
-echoed `TL::Length` matches what was sent. Then change the bound in
-`ml-scripts/EditorPlugin_EditorPlusPlus.Script.txt`, regenerate the script, and
-update the number here in the same commit.
-
-Writes are asynchronous. Re-read and compare the value after delivery, then save
-the map through the normal editor flow if disk persistence is required. Writing
-an empty value records a present empty value; it does not delete the key. This
-also lets a migrated consumer mask a legacy trait without resurrecting it.
-
-The former Dips-specific writer and in-flight functions are replaced by this
-API. A consumer can read its legacy scalar trait with
-`TryGet_Map_MetadataRaw` only when its generic key is absent, then migrate by
-writing the unchanged payload under its own key.
+`TryGet_Map_MetadataRaw` and `Get_Map_MetadataRaw` were removed before release.
+Nothing reads ordinary (non-`_EKV_`) traits any more.
 
 ## Reads
+
+ManiaScript requires a fixed metadata declaration, so values live in one
+`Text[Text] _EKV_` dictionary. E++ does not read it from memory. Instead the
+editor plugin sends the whole dictionary to AngelScript in one `MapKVSnapshot`
+event: when it starts, on `ResyncPlease`, and whenever E++ asks for it with
+`GetMapKVSnapshot`. E++ caches that, and answers every read from the cache.
+
+Until a snapshot for the current editor map arrives, reads fail closed: they
+throw rather than report an absent key. That is usually about 0.4 s after the
+editor opens. Leaving the editor, switching maps or clearing metadata resets the
+cache, and the next read or `Is_Map_KVReady` asks for a fresh snapshot. At most
+one request waits in the outgoing queue, since an editor plugin that has stopped
+consumes none.
+
+Sending the snapshot declares `_EKV_`, which creates an empty dictionary on any
+map that lacks one. That is accepted as the price of not walking memory. On a
+metadata-disabled map the editor plugin sends `["disabled"]` and declares
+nothing; reads then stay unavailable.
+
+One event carries far more than the store can hold: an 8 MiB argument arrived
+intact from ManiaScript to AngelScript (measured 2026-10-31), so the snapshot is
+never chunked.
+
+## Writes
+
+Each `Set_Map_KV` replaces one whole dictionary value. Different queued keys
+coexist; a newer queued value supersedes only the same key, including any parts
+of an older one. Captured map and plugin identity keep pending writes from
+following a map switch.
+
+A value up to 8 KiB travels as one `SetMapKV` message. A longer one is split on
+UTF-8 boundaries into 8 KiB `SetMapKVPart` messages `[key, index, count, text]`,
+which the editor plugin reassembles in order and applies after the last part.
+Out-of-order or interrupted parts discard the value. The outgoing queue is
+spliced into the plugin page at most 24 KiB per frame, so a 100 KiB value takes
+a few frames (about 0.4 s round trip, measured).
+
+After applying a write, the editor plugin reads the value back out of the
+dictionary and echoes it as `MapKVSet`; E++ updates its cache from the echo. A
+write the editor plugin refuses (bad key, disabled metadata, over budget) is
+answered with `MapKVSetRejected` and leaves the cache unchanged. Either way the
+key stops being in flight.
+
+Writes are asynchronous: wait for `Is_Map_KVSendInFlight(key)` to clear, read the
+value back, then save the map through the normal editor flow if it must reach
+disk. Writing an empty value records a present empty value; it does not delete
+the key.
+
+## Size limit
+
+Map metadata holds about 128 KiB in total, counted in UTF-8 bytes. Measured
+2026-10-31 with `_EKV_` as the only large trait: one 130048-byte value stored and
+131000 did not; two 70 KiB values failed together; 50000 three-byte characters
+(150 KB) failed and 40000 (120 KB) stored.
+
+Past the limit the assignment kills the editor plugin's script, with the
+ManiaScript runtime error "Variable _EKV_ has been undefined since its
+declaration", and it stays dead until the editor reopens. So E++ keeps the
+dictionary's keys plus values under `MapKV::MAX_TOTAL_BYTES` (112 KiB), leaving
+room for the map's other traits. `Set_Map_KV` checks the exact byte total,
+counting writes still in flight at their new size, and throws before sending.
+The editor plugin repeats the check in characters (which never exceed bytes) as
+a backstop for anything that bypasses E++, and rejects instead of dying.
+
+## DEV memory reader
+
+DEV builds keep the earlier memory walk as a diagnostic: the DEV Map KV tab
+shows it, and every snapshot is compared against it (logged as
+"MapKVStore snapshot: N keys, memory walk has M, mismatches: K"). Release builds
+do not contain it.
 
 Openplanet exposes no read API for `CScriptTraitsMetadata`, so every read is a
 memory walk over `map.ScriptMetadata`: a buffer of 0x88-byte rows (pointer at
@@ -154,8 +188,7 @@ silently truncated value. It validates the whole range rather than only its
 start, so no page-boundary probing is needed: a 0x40-byte read starting 0x10
 before the end of a 0x1000-byte allocation threw, while that allocation's own
 last byte read fine. And its documented "significant overhead" is not a problem
-in practice, at 1 MiB in 2 ms. Lengths above `MAX_VALUE_BYTES` (8 MiB, the same
-cap writes enforce) are refused before any read happens.
+in practice, at 1 MiB in 2 ms. Lengths above `MAX_VALUE_BYTES` (8 MiB) are refused before any read happens.
 
 ### Reader health
 
@@ -219,84 +252,29 @@ second the editor plugin already sends. A read aimed at a map other than the
 open one is unverified rather than blocked, and neither inherits nor disturbs
 the open map's verdict.
 
-While Broken, `TryGet_Map_KVRaw`, `Get_Map_KVRaw`, `Get_Map_KVKeys`,
-`TryGet_Map_MetadataRaw` and `Get_Map_MetadataRaw` all throw, with a message
-beginning "Map metadata reader is unreliable: " followed by what disagreed. The
-one exception is a key whose value was echoed this session: that value came from
-the receiver rather than from the walk, so it is served instead of throwing.
-`Get_Map_KVReaderHealthy` and `Get_Map_KVReadSource` never throw.
-
-### Verification against the echo
-
-Every write is echoed back by the editor plugin, so a key written this session
-has a second copy of its value, keyed by the map and supporting-plugin pointers
-current when the echo arrived. The cache is dropped whenever either changes.
-
-When a read finds a settled echo for its key, the two are compared. If they
-agree, the read is verified. If they differ, or memory reports the key absent,
-the reader is marked Broken naming that key and the echoed value is returned:
-the editor plugin's store is authoritative over E++'s walk of it. While a write
-to that key is in flight there is nothing meaningful to compare, so the read is
-answered from memory and simply not verified.
-
-A read that throws part way through the walk does not escape to the caller when
-an echo can answer it. The cached value is returned, so a corrupt buffer
-degrades to the editor plugin's own copy rather than to an exception. The
-failure fences the reader on its second occurrence, per the repeat rule above;
-the first one is recorded and this read alone is answered from the echo.
-
-A `MapKVSetLarge` entry holds only a length, so it can confirm size but never
-content, and can never answer a read. Its length is compared only when the value
-read from memory is pure ASCII, because ManiaScript's `TL::Length` counts
-characters while AngelScript's `string.Length` counts UTF-8 bytes and the two
-units coincide only there.
-
-**A length disagreement never fences the reader.** Past the echo bound the echo
-travels a path nothing has measured, so a size mismatch is at least as likely to
-be a truncated or dropped echo as a bad read. The memory answer stands, the
-source stays `memory`, and the disagreement is recorded as a note the DEV Map KV
-tab shows. Fencing on it would hand an unproven transport the power to disable a
-working reader, which is the worse of the two failures. Raising the bound, per
-the measurement above, is what turns these into ordinary verified reads.
-
-### Read sources
-
-`Get_Map_KVReadSource(key)` reports which of those paths answers right now:
-
-| Value | Meaning |
-|---|---|
-| `memory-verified` | Read from memory and matched the value the editor plugin echoed |
-| `memory` | Read from memory with nothing to check it against, checked only for size, or past the echo bound where a size disagreement is not acted on |
-| `ml-cache` | The memory reader is fenced off, or disagreed; the echo answered |
-| `unavailable` | No map open, or nothing trustworthy to answer with |
+While Broken, the DEV walk throws with a message beginning "Map metadata
+reader is unreliable: " followed by what disagreed. Release reads never touch
+it.
 
 ## Checks
 
 Adjacent `FromML_Test.as` and `Editor/MapKV_Test.as` cover key normalization,
-invalid keys, per-key coalescing, whole-value transport beyond the former chunk
-size, escaping/Unicode, empty values, null reads, the compound type-id gate, the
-array-versus-dictionary pair check, bounds-safe reads over hand-built buffers,
-the health state machine, resync-before-fencing in both directions, fencing on a
-repeated structural failure, alternating trait and key failures each fencing on
-their own second strike, fencing on a metadata-disabled map, a transient
-empty plugin pointer not counting as a map change, scope isolation of a reused
-map address and of
-a restarted editor plugin, pending writes and suspended reports and their
-expiry, the throw-to-echo fallback, echo handling for small and large writes,
-a large-value length disagreement leaving the reader working, a snapshot with no
-trait source, one verdict slot surviving reads alternating between maps, cache
-invalidation, and every read-source outcome. They use
-throw-style checks and run both as `[Test]` functions and as the `MapKV` Tester
-suite, which reports pass/fail lines to `Openplanet.log` on plugin load. No test
-reads or writes real map metadata: the memory tests build their own buffers with
-`Dev::Allocate`, and the supervisor tests use invented scopes and put the live
-state back afterwards. Live consumer validation must additionally verify
-actual dictionary read-back and consumer restoration; static checks do not prove
-disk persistence.
+invalid keys, per-key coalescing, splitting large values into parts on UTF-8
+boundaries, escaping/Unicode, empty values, snapshot then echo, malformed and
+disabled snapshots, pending writes until echo or rejection, the projected total
+size, and (DEV) the memory walk and its health state machine. They run both as
+`[Test]` functions and as the `MapKV` Tester suite, which reports pass/fail lines
+to `Openplanet.log` on plugin load. No test reads or writes real map metadata.
+
+Live validation (2026-10-31, `epp-mapkv-smoke` against `EppTest\EppKvTest`):
+reads before the snapshot throw and `WaitTryGet` waits for it; 51-byte, Unicode,
+empty, 100 KiB and 3.8 KB Unicode values round-trip; over-budget writes throw
+before sending and the editor plugin survives. The dips++ editor stores and
+restores its project spec through a map save and reopen.
 
 ## DEV browser
 
 The DEV-only Map KV tab lists the current map's keys and displays the selected
-raw value, along with the reader health verdict, the read source for the
-selected key, and the DEV descriptor cross-check. Read failures are shown and
-logged; the browser does not write or create metadata.
+raw value as the memory walk sees it, along with the reader health verdict and
+the DEV descriptor cross-check. Read failures are shown and logged; the browser
+does not write or create metadata.
