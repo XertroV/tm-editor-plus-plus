@@ -60,16 +60,9 @@ namespace Editor {
             // Argument is a CGameEditorPluginMap::EMapElemColor cast to int64
             CoroutineFuncUserdataInt64@ onApplyColorToSelection;
 
-            // Fired when the user triggers the editor's save input/button
-            // (EditorInput/Save via the E++ editor plugin's PendingEvents).
-            // Best-effort pre-save: metadata writes queued here may land 1-2
-            // frames later and can lose a race with a quick Ctrl+S.
-            // Only fires while E++'s supporting editor plugin is active.
+            // Called when the user presses the editor's save input (needs E++'s editor plugin). Best-effort: metadata writes queued here can land 1-2 frames late and lose a race with a quick save.
             CoroutineFunc@ onEditorSaveMap;
-            // Fired after the save dialog resolves (MapSavedOrSaveCancelled).
-            // mapSaved=false means the save was cancelled;
-            // onlyScriptMetadataModified=true means nothing but script metadata
-            // changed since the previous save. The reliable post-save backstop.
+            // Called after the save dialog resolves. mapSaved=false: cancelled. onlyScriptMetadataModified: only script metadata changed since the last save.
             ProcessMapSaved@ afterEditorSaveMap;
 
             // Called when a new item is added to the map, but before the game begins rendering it.

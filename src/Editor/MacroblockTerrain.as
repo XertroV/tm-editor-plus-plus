@@ -241,8 +241,7 @@ namespace Editor {
 
     // MARK: Ground-mode donor placement (terrain pass)
 
-    // Terrain write buffers must outlive the async terrain apply (~1s), so we
-    // Keep them alive until the asynchronous apply completes (bounded).
+    // Terrain write buffers must outlive the asynchronous terrain apply, so they are kept alive (bounded).
     CustomBuffer@[] leakedTerrainWriteBufs;
     void LeakTerrainWriteBuf(CustomBuffer@ buf) {
         if (buf is null) return;
@@ -759,6 +758,7 @@ namespace Editor {
         return true;
     }
 
+    // Cell keys pack x and z into 16 bits each. Map size is limited by x*z < 255^2, so either axis can exceed 255 but neither reaches 65536.
     bool _ReconCellUnused(dictionary@ s, int x, int z) {
         if (x < 0 || z < 0) return false;
         int64 v = 0;

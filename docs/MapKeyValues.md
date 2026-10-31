@@ -45,6 +45,10 @@ if (Editor::TryGet_Map_KVRaw("DPP_EditorSpec", raw)) {
 - `Get_Map_KVReaderHealthy(reason)`: false once the memory reader has been
   fenced off for the current map, with `reason` naming the disagreement. See
   [Reader health](#reader-health).
+- `Is_SupportingEditorPluginActive()`: whether E++'s supporting editor plugin is
+  active in the map editor, i.e. whether `Set_Map_KV` can deliver.
+- `Get_Map_MetadataDisabled()`: whether the current map opted out of metadata
+  writes (`EPP_MetadataDisabled`, as reported by the editor plugin).
 
 A null map argument resolves to the current editor map, or RootMap outside the
 map editor. Reads need no supporting editor plugin and never create traits.

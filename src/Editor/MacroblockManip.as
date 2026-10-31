@@ -159,10 +159,7 @@ namespace Editor {
         protected uint64 tmpMacroblockSkinsBufLenCap = 0;
         protected uint64 tmpMacroblockAutoTerrainsBuf = 0;
         protected uint64 tmpMacroblockAutoTerrainsBufLenCap = 0;
-        // one entry per distinct ground-variant nod on the donor's generated
-        // blockinfo: VariantGround and VariantBaseGround can be DIFFERENT nods
-        // after regeneration, and the engine's terrain apply gate reads
-        // VariantBaseGround -- mirroring to only one silently no-ops applies.
+        // One entry per distinct ground-variant nod on the donor. After regeneration VariantGround and VariantBaseGround can differ, and the engine reads VariantBaseGround, so both are mirrored.
         protected array<uint64> tmpVariantATBufs;
         protected array<uint64> tmpVariantATLenCaps;
         protected array<int> tmpVariantATHeightOffsets;
