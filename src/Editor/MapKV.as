@@ -1,5 +1,5 @@
 // _EKV_ is ManiaScript Text[Text]; release reads use MapKVStore, the DEV memory walk cross-checks it.
-// layout/SSO: public-domain tm-metadata-gateway/src/MetadataReader.as and research/ScriptMetadata.txt.
+// layout/SSO: tm-metadata-gateway/src/MetadataReader.as and research/ScriptMetadata.txt.
 // hard-coded layout: validate buffers/pointers, check for drift, reacquire the metadata buffer each read.
 namespace MapKV {
     const string PREFIX = "_EKV_";
@@ -51,7 +51,7 @@ namespace MapKV {
     string NormalizeKey(const string &in key) {
         string suffix = key.StartsWith(PREFIX) ? key.SubStr(PREFIX.Length) : key;
         if (suffix.Length == 0) throw("Map metadata key must not be empty");
-        for (uint i = 0; i < suffix.Length; i++) {
+        for (uint i = 0; int(i) < suffix.Length; i++) {
             uint8 c = suffix[i];
             if (!((c >= 48 && c <= 57) || (c >= 65 && c <= 90)
                 || (c >= 97 && c <= 122) || c == 95 || c == 45 || c == 46 || c == 58))
