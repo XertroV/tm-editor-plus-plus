@@ -815,6 +815,9 @@ TestCase@[]@ generateMapKVTests() {
     ret.InsertLast(TestCase("large value mismatch never fences", Tests::MapKV_CheckLargeValueMismatchNeverFences));
     ret.InsertLast(TestCase("restore never installs a null handle", Tests::MapKV_CheckRestoreNeverInstallsANullHandle));
     ret.InsertLast(TestCase("alternating scopes keep one verdict", Tests::MapKV_CheckAlternatingScopesKeepOneVerdict));
+    ret.InsertLast(TestCase("store: snapshot then echo", Tests::MapKVStore_CheckSnapshotThenEcho));
+    ret.InsertLast(TestCase("store: malformed and disabled snapshots", Tests::MapKVStore_CheckMalformedAndDisabledSnapshots));
+    ret.InsertLast(TestCase("store: pending until echo or rejection", Tests::MapKVStore_CheckPendingUntilEchoOrRejection));
     return ret;
 }
 #endif

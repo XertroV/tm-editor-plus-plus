@@ -10,11 +10,13 @@ void OnEppLayerCustomEvent(const string &in type, MwFastBuffer<wstring> &in rawD
 
 void HandleEppEvent(const string &in type, string[]@ data) {
     FromML::lastEventTime = Time::Now;
+#if DEV
     // Every inbound event doubles as a map-change probe. The editor plugin
     // reports mapping time about ten times a second, so this notices a new map
     // long before a read would, which matters because a stale observation
     // compared against a new map is exactly what fences a healthy reader.
     MapKVHealth::NoteEditorTick();
+#endif
     if (type == "MappingTime") {
         FromML::mappingTime = Text::ParseUInt(data[0]);
         FromML::mappingTimeMapping = Text::ParseUInt(data[1]);
@@ -33,17 +35,27 @@ void HandleEppEvent(const string &in type, string[]@ data) {
         }
     } else if (type == "CustomColorTables") {
         FromML::_SetCustomColorTablesRaw(data[0]);
+#if DEV
         MapKVHealth::NoteTraitObservation(MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES, data[0]);
+#endif
     } else if (type == "MetadataDisabled") {
         FromML::metadataDisabled = data.Length > 0 && data[0] == "True";
+#if DEV
         if (data.Length > 0)
             MapKVHealth::NoteTraitObservation(MapKVHealth::TRAIT_METADATA_DISABLED, data[0]);
+#endif
+    } else if (type == "MapKVSnapshot") {
+        MapKVStore::OnSnapshot(data);
     } else if (type == "MapKVSet") {
         // The editor plugin echoing back the value it just stored under this key.
-        if (data.Length > 1) MapKVHealth::NoteEcho(data[0], data[1]);
-    } else if (type == "MapKVSetLarge") {
-        // Same, for a value past the echo bound: only its length travels.
-        if (data.Length > 1) MapKVHealth::NoteEchoLength(data[0], Text::ParseUInt(data[1]));
+        if (data.Length > 1) {
+            MapKVStore::OnEcho(data[0], data[1]);
+#if DEV
+            MapKVHealth::NoteEcho(data[0], data[1]);
+#endif
+        }
+    } else if (type == "MapKVSetRejected") {
+        if (data.Length > 0) MapKVStore::OnRejected(data[0]);
     } else if (type == "EditorSaveInput") {
         // User pressed the editor's save input/button (pre-save, best-effort:
         // metadata writes queued now may land 1-2 frames later).
@@ -129,7 +141,9 @@ namespace ToML {
         // the trait and reports it back a frame or more later; suspend the
         // observation over that window so the drift check does not read the new
         // value, compare it against the last report, and fence the reader.
+#if DEV
         MapKVHealth::SuspendObservation(MapKVHealth::TRAIT_CUSTOM_COLOR_TABLES);
+#endif
         SendMessage("SetCustomColorTables", {raw});
     }
 
@@ -184,14 +198,16 @@ namespace ToML {
         if (editor is null || editor.Challenge is null) throw("No map open for metadata");
         auto plugin = GetPluginPMT();
         if (plugin is null) throw("E++ supporting editor plugin is unavailable");
+        if (MapKVStore::IsDisabled()) throw("Metadata is disabled for this map");
         // Store raw values; the wire serializer escapes source syntax separately.
         message.kvMapPtr = Dev_GetPointerForNod(editor.Challenge);
         message.kvPluginPtr = Dev_GetPointerForNod(plugin);
         // The queue drains when the page is spliced, before the receiver applies
-        // anything, so Is_Map_KVSendInFlight goes false while memory and the
-        // echo cache still disagree. Mark the key pending until its echo lands
-        // so a read in that window is not mistaken for reader drift.
+        // anything; the key stays in flight until its echo (or rejection) lands.
+        MapKVStore::NotePendingWrite(message.data[0]);
+#if DEV
         MapKVHealth::NotePendingWrite(MapKVHealth::ScopeFor(editor.Challenge), message.data[0]);
+#endif
         CoalesceMapKVMessage(queued, message);
         Meta::StartWithRunContext(Meta::RunContext::BeforeScripts, ClearSendQueue);
     }
@@ -332,9 +348,11 @@ namespace Editor {
         ToML::SetMapKV(key, raw);
     }
 
-    // Queue state only, not a persistence acknowledgment. Empty key checks all.
+    // true from Set_Map_KV until the editor plugin echoes (or rejects) the
+    // write; not a save acknowledgment. Empty key checks all.
     bool Is_Map_KVSendInFlight(const string &in key = "") {
-        return ToML::HasQueuedMapKVMessages(key.Length == 0 ? "" : MapKV::NormalizeKey(key));
+        string normalized = key.Length == 0 ? "" : MapKV::NormalizeKey(key);
+        return ToML::HasQueuedMapKVMessages(normalized) || MapKVStore::HasPendingWrite(normalized);
     }
 
     // true when E++'s supporting editor plugin is the active editor plugin, i.e.

@@ -1,11 +1,13 @@
-// Generic, read-only access to map metadata. Layout/SSO handling follows the
-// public-domain tm-metadata-gateway/src/MetadataReader.as and research/ScriptMetadata.txt.
-// No retained pointers: reacquire the current metadata buffer on every read.
+// Map key-values live in one ManiaScript Text[Text] dictionary trait, _EKV_.
+// Release reads come from MapKVStore, which caches what the E++ editor plugin
+// reports. The memory walk below is DEV-only: a diagnostic and a cross-check.
 //
-// Openplanet exposes no read API for CScriptTraitsMetadata, so every read here
-// is a memory walk over hard-coded offsets. Two things keep that honest:
-// structural validation of every buffer and pointer before it is followed
-// (below), and MapKVHealth's fail-closed supervision of the walk as a whole.
+// The walk's layout/SSO handling follows the public-domain
+// tm-metadata-gateway/src/MetadataReader.as and research/ScriptMetadata.txt.
+// No retained pointers: reacquire the current metadata buffer on every read.
+// Openplanet exposes no read API for CScriptTraitsMetadata, so every walk is
+// over hard-coded offsets, guarded by structural validation of every buffer
+// and pointer and by MapKVHealth's supervision of the walk as a whole.
 namespace MapKV {
     const string PREFIX = "_EKV_";
     // The single ManiaScript dictionary trait every key lives in.
@@ -72,6 +74,7 @@ namespace MapKV {
         return PREFIX + suffix;
     }
 
+#if DEV
     bool BytePointerValid(uint64 ptr) {
         return ptr > 0xFFFF && ptr < 0x0000800000000000;
     }
@@ -314,23 +317,22 @@ namespace MapKV {
         if (read.mismatchReason.Length > 0) MapKVHealth::MarkBrokenIn(scope, read.mismatchReason);
         return read;
     }
+#endif
 }
 
 namespace Editor {
+    // Reads answer only for the map open in the editor (null map = that map),
+    // and throw until the E++ editor plugin has reported its values.
     string[]@ Get_Map_KVKeys(CGameCtnChallenge@ map = null) {
-        if (map is null) @map = MapKV::CurrentMap();
-        MapKV::RequireReaderUsable(map);
-        return MapKV::ListKeys(map);
+        MapKVStore::RequireReady(map);
+        return MapKVStore::Keys();
     }
 
     bool TryGet_Map_KVRaw(const string &in key, string &out value, CGameCtnChallenge@ map = null) {
         value = "";
         string normalized = MapKV::NormalizeKey(key);
-        if (map is null) @map = MapKV::CurrentMap();
-        auto read = MapKV::ResolveKey(map, normalized);
-        if (read.blockedReason.Length > 0) throw(MapKVHealth::BLOCKED_PREFIX + read.blockedReason);
-        value = read.value;
-        return read.present;
+        MapKVStore::RequireReady(map);
+        return MapKVStore::TryGet(normalized, value);
     }
 
     string Get_Map_KVRaw(const string &in key, CGameCtnChallenge@ map = null) {
@@ -339,42 +341,54 @@ namespace Editor {
         return value;
     }
 
-    string Get_Map_MetadataRaw(const string &in key, CGameCtnChallenge@ map = null) {
-        string value;
-        TryGet_Map_MetadataRaw(key, value, map);
-        return value;
+    // true once reads of the editor's map can be answered. Never throws.
+    bool Is_Map_KVReady() {
+        return MapKVStore::IsReady();
     }
 
-    bool TryGet_Map_MetadataRaw(const string &in key, string &out value, CGameCtnChallenge@ map = null) {
-        if (map is null) @map = MapKV::CurrentMap();
-        MapKV::RequireReaderUsable(map);
-        return MapKV::TryReadScalar(map, key, value);
+    // Yields until reads can be answered, at most timeoutMs. Must be called
+    // from a coroutine. Returns Is_Map_KVReady().
+    bool Wait_Map_KVReady(uint timeoutMs = 5000) {
+        uint64 deadline = Time::Now + timeoutMs;
+        while (MapKVStore::UnavailableReason().Length > 0) {
+            // Disabled metadata or no editor map will not change by waiting here.
+            if (MapKVStore::IsDisabled() || MapKVStore::EditorMap() is null) return false;
+            if (Time::Now >= deadline) return false;
+            yield();
+        }
+        return true;
     }
 
-    // Where a read of this key gets its answer, for a consumer that wants to
-    // know how much the value is worth: "memory-verified" (memory agreed with
-    // the value the editor plugin reported storing), "memory" (nothing to check
-    // it against, or only its size was checkable), "ml-cache" (the echo
-    // answered, either because the memory reader is fenced off or because it
-    // returned a whole value that disagreed with what the editor plugin
-    // stored) or "unavailable" (no map, or nothing trustworthy to answer
-    // with). Never throws.
-    string Get_Map_KVReadSource(const string &in key) {
+    // TryGet_Map_KVRaw after Wait_Map_KVReady; throws like TryGet if still not ready.
+    bool WaitTryGet_Map_KVRaw(const string &in key, string &out value, uint timeoutMs = 5000) {
+        value = "";
+        string normalized = MapKV::NormalizeKey(key);
+        Wait_Map_KVReady(timeoutMs);
+        return TryGet_Map_KVRaw(normalized, value);
+    }
+
+    // "maniascript" (reads answer from the editor plugin's reported values),
+    // "pending" (waiting for its report), "disabled" (metadata disabled for
+    // this map) or "unavailable" (no editor map). Never throws.
+    string Get_Map_KVReadSource(const string &in key = "") {
         try {
-            auto map = MapKV::CurrentMap();
-            if (map is null) return "unavailable";
-            return MapKV::ResolveKey(map, MapKV::NormalizeKey(key)).source;
+            if (MapKVStore::IsReady()) return "maniascript";
+            if (MapKVStore::IsDisabled()) return "disabled";
+            if (MapKVStore::EditorMap() is null) return "unavailable";
+            return "pending";
         } catch {
             return "unavailable";
         }
     }
 
-    // false once the metadata memory reader has been fenced off for the current
-    // map, with `reason` saying what disagreed. A true return with a nonempty
-    // reason means the reader is usable but has not yet been able to check
-    // itself, because the E++ editor plugin has reported nothing for this map.
+    // Same as Is_Map_KVReady, with `reason` saying why not.
     bool Get_Map_KVReaderHealthy(string &out reason) {
         reason = "";
-        return MapKVHealth::Evaluate(MapKV::CurrentMap(), reason) != MapKVHealth::STATE_BROKEN;
+        try {
+            reason = MapKVStore::UnavailableReason();
+        } catch {
+            reason = getExceptionInfo();
+        }
+        return reason.Length == 0;
     }
 }

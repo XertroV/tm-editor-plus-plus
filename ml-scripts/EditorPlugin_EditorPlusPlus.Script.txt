@@ -63,6 +63,24 @@ Void LoadCameraState() {
 	CameraToTargetDistance = EPP_CameraToTargetDistance;
 }
 
+// The whole _EKV_ dictionary in one event: ["ok", count, key1, value1, ...], or ["disabled"].
+// Declaring _EKV_ creates it on maps that lack it; that is accepted so reads never walk memory.
+// E++ intercepts LayerCustomEvent directly, so a single argument carries 8 MiB intact (measured 2026-10-31).
+Void SendMapKVSnapshot() {
+	declare metadata Boolean EPP_MetadataDisabled for Map = False;
+	if (EPP_MetadataDisabled) {
+		SendEvent("MapKVSnapshot", ["disabled"]);
+		return;
+	}
+	declare metadata Text[Text] _EKV_ for Map;
+	declare Text[] Args = ["ok", ""^_EKV_.count];
+	foreach (Key => Value in _EKV_) {
+		Args.add(Key);
+		Args.add(Value);
+	}
+	SendEvent("MapKVSnapshot", Args);
+}
+
 Void SendAllInfo() {
 	declare metadata Integer EPP_EditorPluginLoads for Map = 0;
 	declare metadata Integer EPP_PlaygroundSwitches for Map = 0;
@@ -79,6 +97,7 @@ Void SendAllInfo() {
 	SendEvent("LockedThumbnail", [""^EPP_ThumbnailLocked]);
 	SendEvent("MetadataDisabled", [""^EPP_MetadataDisabled]);
 	SendEvent("CustomColorTables", [""^CCT_CustomColorTables]);
+	SendMapKVSnapshot();
 }
 
 declare Boolean ShouldBreakLoop;
@@ -92,6 +111,8 @@ Void ProcessIncomingMessages() {
 		log("E++ EditorPlugin got incoming msg of type: " ^ MsgType);
 		if (MsgType == "ResyncPlease") {
 			SendAllInfo();
+		} else if (MsgType == "GetMapKVSnapshot") {
+			SendMapKVSnapshot();
 		} else if (MsgType == "MetadataCleared") {
 			ShouldBreakLoop = True;
 			if (DisableMetadata) {
@@ -117,36 +138,18 @@ Void ProcessIncomingMessages() {
 			log("CCT_CustomColorTables after: " ^ CCT_CustomColorTables);
 			SendEvent("CustomColorTables", [""^CCT_CustomColorTables]);
 		} else if (MsgType == "SetMapKV") {
-			if (DisableMetadata || InMsg.count != 3) continue;
-			if (TL::Length(InMsg[1]) <= 5) continue;
-			if (TL::SubString(InMsg[1], 0, 5) != "_EKV_") continue;
-			// Only create this dictionary on an explicit write. Values are whole
-			// plain strings; source escaping is handled only by the sender.
+			if (InMsg.count != 3) continue;
+			if (DisableMetadata || TL::Length(InMsg[1]) <= 5 || TL::SubString(InMsg[1], 0, 5) != "_EKV_") {
+				// Tell E++ so the key stops reading as in flight.
+				SendEvent("MapKVSetRejected", [InMsg[1]]);
+				continue;
+			}
+			// Values are whole plain strings; source escaping is handled only by the sender.
 			declare metadata Text[Text] _EKV_ for Map;
 			_EKV_[InMsg[1]] = InMsg[2];
-			// Echo what the dictionary now holds, read back rather than repeated
-			// from the message, so AngelScript can check its memory read of this
-			// key against the receiver's own view of the store. Deliberately no
-			// enumeration of _EKV_ anywhere: declaring it creates it, and reads
-			// must never create map metadata.
-			// 16384 is provisional and deliberately conservative: it is the
-			// chunk size the inbound transport is already known to carry, and
-			// nothing yet measures how large an argument LayerCustomEvent
-			// delivers intact. A truncated echo would read as drift, so the
-			// bound stays where a value is known to survive. To raise it,
-			// measure first: write values of increasing length and confirm the
-			// echoed TL::Length matches what was sent, then move this number
-			// and the matching one in docs/MapKeyValues.md together.
-			if (TL::Length(_EKV_[InMsg[1]]) <= 16384) {
-				SendEvent("MapKVSet", [InMsg[1], _EKV_[InMsg[1]]]);
-			} else {
-				// Past the bound only the length travels; copying a multi-megabyte
-				// value through the event path on every write is not worth it, and
-				// size still catches a reader that is looking at the wrong entry.
-				// A length disagreement never fences the reader, because at this
-				// size the echo itself is the unmeasured part.
-				SendEvent("MapKVSetLarge", [InMsg[1], ""^TL::Length(_EKV_[InMsg[1]])]);
-			}
+			// Echo what the dictionary now holds, read back rather than repeated from the
+			// message; this echo is what updates E++'s cache.
+			SendEvent("MapKVSet", [InMsg[1], _EKV_[InMsg[1]]]);
 		}
 	}
 	EPP_MsgQueue.clear();
@@ -156,7 +159,6 @@ Boolean EPP_GetMetadataDisabled() {
 	declare metadata Boolean EPP_MetadataDisabled for Map = False;
 	return EPP_MetadataDisabled;
 }
-
 
 Void InitializeCustomSelectionCoords() {
 	// ShowCustomSelection();
@@ -220,6 +222,7 @@ main() {
 			log("E++ EditorPlugin: metadata disabled");
 			declare metadata Boolean EPP_MetadataDisabled for Map = False;
 			EPP_MetadataDisabled = True;
+			SendMapKVSnapshot();
 			while (True) {
 				if (EPP_MsgQueue.count > 0) {
 					ProcessIncomingMessages();

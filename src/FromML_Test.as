@@ -64,26 +64,21 @@ namespace Tests {
         auto scope = MapKVHealth::CurrentScope();
         MapKVHealth::Reset();
         string[] small = {"_EKV_Plugin.small", "echoed value"};
-        string[] large = {"_EKV_Plugin.large", "300000"};
         HandleEppEvent("MapKVSet", small);
-        HandleEppEvent("MapKVSetLarge", large);
+        // The echo also lands in the live MapKVStore; drop it so no test key is served.
+        MapKVStore::Reset();
         uint cached = MapKVHealth::EchoCount();
         auto smallEcho = MapKVHealth::LookupEchoFor(scope, "_EKV_Plugin.small");
-        auto largeEcho = MapKVHealth::LookupEchoFor(scope, "_EKV_Plugin.large");
         MapKVHealth::Restore(saved);
         if (!scope.IsValid) {
             MapKVCheck(cached == 0, "with no map open an echo has nothing to belong to");
             return;
         }
-        MapKVCheck(cached == 2, "both echoes are cached, got " + cached);
-        MapKVCheck(smallEcho !is null, "the small echo is cached under its key");
-        MapKVCheck(smallEcho.hasValue && !smallEcho.lengthOnly, "a small echo carries its value");
+        MapKVCheck(cached == 1, "the echo is cached, got " + cached);
+        MapKVCheck(smallEcho !is null, "the echo is cached under its key");
+        MapKVCheck(smallEcho.hasValue && !smallEcho.lengthOnly, "an echo carries its value");
         MapKVCheck(smallEcho.value == "echoed value", "verbatim");
         MapKVCheck(!smallEcho.pending, "and settles the key");
-        MapKVCheck(largeEcho !is null, "the large echo is cached too");
-        MapKVCheck(largeEcho.lengthOnly && !largeEcho.hasValue, "a large echo carries only a length");
-        MapKVCheck(largeEcho.length == 300000, "the reported length is parsed, got " + largeEcho.length);
-        MapKVCheck(largeEcho.value == "", "and no value");
     }
 
     // A trait report has to be recorded against the scope it arrived in, or the
@@ -127,12 +122,88 @@ namespace Tests {
         bool pending = echo !is null && echo.pending;
         string[] landed = {"_EKV_Plugin.spec", "new"};
         HandleEppEvent("MapKVSet", landed);
+        MapKVStore::Reset();
         auto settled = MapKVHealth::LookupEchoFor(scope, "_EKV_Plugin.spec");
         MapKVHealth::Restore(saved);
         MapKVCheck(pending, "a queued write marks its key pending");
         MapKVCheck(settled !is null && !settled.pending, "and the echo clears it");
         MapKVCheck(settled.value == "new", "leaving the value the receiver stored");
     }
+
+    // MapKVStore is live state, so each check resets it on the way out; the
+    // next read then asks the editor plugin for a fresh snapshot. With no
+    // editor map open, nothing may become readable.
+    void MapKVStore_CheckSnapshotThenEcho() {
+        MapKVStore::Reset();
+        bool hasMap = MapKVStore::EditorMap() !is null;
+        string[] tooEarly = {"_EKV_Plugin.early", "x"};
+        HandleEppEvent("MapKVSet", tooEarly);
+        bool readyBefore = MapKVStore::IsReady();
+        string[] snapshot = {"ok", "2", "_EKV_Plugin.a", "1", "_EKV_Plugin.b", ""};
+        HandleEppEvent("MapKVSnapshot", snapshot);
+        bool readyAfter = MapKVStore::IsReady();
+        string a, b, early;
+        bool hasA = MapKVStore::TryGet("_EKV_Plugin.a", a);
+        bool hasB = MapKVStore::TryGet("_EKV_Plugin.b", b);
+        bool hasEarly = MapKVStore::TryGet("_EKV_Plugin.early", early);
+        string[] echo = {"_EKV_Plugin.c", "3"};
+        HandleEppEvent("MapKVSet", echo);
+        auto keys = MapKVStore::Keys();
+        MapKVStore::Reset();
+        MapKVCheck(!readyBefore, "not ready before a snapshot");
+        if (!hasMap) {
+            MapKVCheck(!readyAfter, "no editor map: a snapshot has nothing to belong to");
+            return;
+        }
+        MapKVCheck(readyAfter, "ready after a snapshot");
+        MapKVCheck(hasA && a == "1", "snapshot value served");
+        MapKVCheck(hasB && b == "", "present empty value is distinct from missing");
+        MapKVCheck(!hasEarly, "an echo before the snapshot is left to the snapshot");
+        MapKVCheck(keys.Length == 3 && keys[2] == "_EKV_Plugin.c", "a later echo is applied, keys sorted");
+    }
+
+    void MapKVStore_CheckMalformedAndDisabledSnapshots() {
+        MapKVStore::Reset();
+        bool hasMap = MapKVStore::EditorMap() !is null;
+        string[] shortSnapshot = {"ok", "2", "_EKV_Plugin.a", "1"};
+        HandleEppEvent("MapKVSnapshot", shortSnapshot);
+        bool readyMalformed = MapKVStore::IsReady();
+        string[] disabled = {"disabled"};
+        HandleEppEvent("MapKVSnapshot", disabled);
+        bool isDisabled = MapKVStore::IsDisabled();
+        string reason = MapKVStore::UnavailableReason();
+        MapKVStore::Reset();
+        MapKVCheck(!readyMalformed, "a malformed snapshot is ignored");
+        if (!hasMap) return;
+        MapKVCheck(isDisabled, "disabled snapshot recorded");
+        MapKVCheck(reason.Contains("disabled"), "reads explain the disabled map: " + reason);
+    }
+
+    void MapKVStore_CheckPendingUntilEchoOrRejection() {
+        MapKVStore::Reset();
+        MapKVStore::NotePendingWrite("_EKV_Plugin.p");
+        MapKVStore::NotePendingWrite("_EKV_Plugin.q");
+        bool pendingBoth = MapKVStore::HasPendingWrite("_EKV_Plugin.p") && MapKVStore::HasPendingWrite("_EKV_Plugin.q");
+        string[] echo = {"_EKV_Plugin.p", "v"};
+        HandleEppEvent("MapKVSet", echo);
+        bool pAfterEcho = MapKVStore::HasPendingWrite("_EKV_Plugin.p");
+        string[] rejected = {"_EKV_Plugin.q"};
+        HandleEppEvent("MapKVSetRejected", rejected);
+        bool anyAfterReject = MapKVStore::HasPendingWrite();
+        MapKVStore::Reset();
+        MapKVCheck(pendingBoth, "writes are pending");
+        MapKVCheck(!pAfterEcho, "an echo settles its key");
+        MapKVCheck(!anyAfterReject, "a rejection settles its key");
+    }
+
+    [Test]
+    void MapKVStore_SnapshotThenEcho(Tests::Context@ ctx) { MapKVStore_CheckSnapshotThenEcho(); }
+
+    [Test]
+    void MapKVStore_MalformedAndDisabledSnapshots(Tests::Context@ ctx) { MapKVStore_CheckMalformedAndDisabledSnapshots(); }
+
+    [Test]
+    void MapKVStore_PendingUntilEchoOrRejection(Tests::Context@ ctx) { MapKVStore_CheckPendingUntilEchoOrRejection(); }
 
     [Test]
     void MapKV_EchoEventsUpdateCache(Tests::Context@ ctx) { MapKV_CheckEchoEventsUpdateCache(); }

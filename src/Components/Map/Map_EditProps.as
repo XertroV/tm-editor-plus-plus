@@ -183,6 +183,7 @@ class MapEditPropsTab : Tab {
             // send MetadataCleared
             editor.PluginMapType.ClearMapMetadata();
             ToML::TellMetadataCleared();
+            MapKVStore::Reset();
             ToML::ResyncPlease();
         }
         UI::EndDisabled();

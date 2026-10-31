@@ -88,27 +88,28 @@ namespace Editor {
 
     // Generic map key-value strings, stored in the _EKV_ metadata dictionary.
     // Keys are prefixed automatically; use a plugin-specific key to avoid collisions.
-    // Async writes: queue drained != trait updated != saved to disk.
+    // Async writes: Is_Map_KVSendInFlight is true until the editor plugin
+    // echoes the stored value; that is still not a save to disk.
     import void Set_Map_KV(const string &in key, const string &in raw) from "Editor";
     import bool Is_Map_KVSendInFlight(const string &in key = "") from "Editor";
-    // Null map defaults to the current map; reads never create metadata.
+    // Reads come from the E++ editor plugin's report of the map open in the
+    // editor (null map = that map; any other map throws). Until that report
+    // arrives (a frame or two after the editor plugin starts), reads throw:
+    // check Is_Map_KVReady, or yield with Wait_Map_KVReady / WaitTryGet_Map_KVRaw.
     // TryGet distinguishes a missing key from a present empty string.
     import bool TryGet_Map_KVRaw(const string &in key, string &out value, CGameCtnChallenge@ map = null) from "Editor";
     import string Get_Map_KVRaw(const string &in key, CGameCtnChallenge@ map = null) from "Editor";
-    // Sorted stored keys, including their _EKV_ prefix; no metadata is created.
+    // Sorted stored keys, including their _EKV_ prefix.
     import string[]@ Get_Map_KVKeys(CGameCtnChallenge@ map = null) from "Editor";
-    // How much the last resolution of this key is worth: "memory-verified" (the
-    // editor plugin echoed the same value), "memory" (nothing to check against,
-    // or only its size was checkable), "ml-cache" (the echo answered, because
-    // the memory reader is fenced off or because it disagreed) or "unavailable".
-    import string Get_Map_KVReadSource(const string &in key) from "Editor";
-    // false once the memory reader has been fenced off for the current map, with
-    // reason naming the disagreement; reads then throw unless an echo answers.
+    import bool Is_Map_KVReady() from "Editor";
+    // Coroutine only: yield until ready or timeout; returns readiness.
+    import bool Wait_Map_KVReady(uint timeoutMs = 5000) from "Editor";
+    // Coroutine only: Wait_Map_KVReady then TryGet_Map_KVRaw (throws if still not ready).
+    import bool WaitTryGet_Map_KVRaw(const string &in key, string &out value, uint timeoutMs = 5000) from "Editor";
+    // "maniascript", "pending", "disabled" (metadata disabled for this map) or "unavailable".
+    import string Get_Map_KVReadSource(const string &in key = "") from "Editor";
+    // Is_Map_KVReady, with reason saying why not.
     import bool Get_Map_KVReaderHealthy(string &out reason) from "Editor";
-    // Read a named scalar metadata trait as text (Text/Boolean/Integer/Real/vectors).
-    // Absent or unsupported types return false, without creating metadata.
-    import string Get_Map_MetadataRaw(const string &in key, CGameCtnChallenge@ map = null) from "Editor";
-    import bool TryGet_Map_MetadataRaw(const string &in key, string &out value, CGameCtnChallenge@ map = null) from "Editor";
     // whether E++'s supporting editor plugin is active (metadata writes possible)
     import bool Is_SupportingEditorPluginActive() from "Editor";
     // whether the current map opted out of metadata writes (EPP_MetadataDisabled)

@@ -1,3 +1,4 @@
+#if DEV
 // Fail-closed supervision of the MapKV memory reader.
 //
 // MapKV walks CScriptTraitsMetadata by hard-coded offsets, so a game update can
@@ -773,3 +774,4 @@ namespace MapKVHealth {
         return read;
     }
 }
+#endif

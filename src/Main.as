@@ -48,6 +48,7 @@ void Main() {
     RegisterOnEditorStartingUpCallback(PillarsChoice::OnEditorStartingUp, "PillarsChoice::OnEditorStartingUp");
     RegisterOnEditorLoadCallback(PillarsChoice::OnEditorLoad, "PillarsChoice::OnEditorLoad");
     RegisterOnEditorUnloadCallback(PillarsChoice::OnEditorUnload, "PillarsChoice::OnEditorUnload");
+    RegisterOnEditorUnloadCallback(MapKVStore::Reset, "MapKVStore::Reset");
     // RegisterNewBlockCallback_Private(PillarsChoice::OnBlockPlaced, "PillarsChoice::OnBlockPlaced", 0);
     RegisterOnEditorLoadCallback(Editor::_OnEnterEditor_ResetMbHeightOffset, "Editor::_OnEnterEditor_ResetMbHeightOffset");
 
