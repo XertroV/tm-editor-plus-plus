@@ -88,27 +88,24 @@ namespace Editor {
 
     // Generic map key-value strings, stored in the _EKV_ metadata dictionary.
     // Keys are prefixed automatically; use a plugin-specific key to avoid collisions.
-    // Async writes: Is_Map_KVSendInFlight is true until the editor plugin
-    // echoes the stored value; that is still not a save to disk.
+    // in flight until echoed by the editor plugin; still not saved to disk
     import void Set_Map_KV(const string &in key, const string &in raw) from "Editor";
     import bool Is_Map_KVSendInFlight(const string &in key = "") from "Editor";
-    // Reads come from the E++ editor plugin's report of the map open in the
-    // editor (null map = that map; any other map throws). Until that report
-    // arrives (a frame or two after the editor plugin starts), reads throw:
-    // check Is_Map_KVReady, or yield with Wait_Map_KVReady / WaitTryGet_Map_KVRaw.
+    // editor map only (null = current, other maps throw); reads throw until its report arrives.
+    // usually 1-2 frames after startup; check Is_Map_KVReady or use either Wait helper.
     // TryGet distinguishes a missing key from a present empty string.
     import bool TryGet_Map_KVRaw(const string &in key, string &out value, CGameCtnChallenge@ map = null) from "Editor";
     import string Get_Map_KVRaw(const string &in key, CGameCtnChallenge@ map = null) from "Editor";
-    // Sorted stored keys, including their _EKV_ prefix.
+    // sorted keys, including the _EKV_ prefix
     import string[]@ Get_Map_KVKeys(CGameCtnChallenge@ map = null) from "Editor";
     import bool Is_Map_KVReady() from "Editor";
-    // Coroutine only: yield until ready or timeout; returns readiness.
+    // coroutine only; returns false on timeout
     import bool Wait_Map_KVReady(uint timeoutMs = 5000) from "Editor";
-    // Coroutine only: Wait_Map_KVReady then TryGet_Map_KVRaw (throws if still not ready).
+    // coroutine only; waits, then reads (still throws if not ready)
     import bool WaitTryGet_Map_KVRaw(const string &in key, string &out value, uint timeoutMs = 5000) from "Editor";
-    // "maniascript", "pending", "disabled" (metadata disabled for this map) or "unavailable".
+    // "maniascript", "pending", "disabled" (map opted out), or "unavailable"
     import string Get_Map_KVReadSource(const string &in key = "") from "Editor";
-    // Is_Map_KVReady, with reason saying why not.
+    // same readiness check, with a reason if not ready
     import bool Get_Map_KVReaderHealthy(string &out reason) from "Editor";
     // whether E++'s supporting editor plugin is active (metadata writes possible)
     import bool Is_SupportingEditorPluginActive() from "Editor";

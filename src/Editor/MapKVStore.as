@@ -1,11 +1,6 @@
-// Release read path for map key-values: a cache of the _EKV_ dictionary as the
-// E++ editor plugin reports it. The editor plugin sends the whole dictionary
-// (MapKVSnapshot) when it starts and on request, and echoes every write it
-// applies (MapKVSet), so the cache mirrors its view without touching memory.
-// Until a snapshot for the current editor map arrives, reads fail closed.
-//
-// Scope is the editor's map pointer. Leaving the editor or clearing metadata
-// resets the cache; a reset cache asks for a fresh snapshot on the next read.
+// _EKV_ cache: startup/request snapshots plus write echoes from the editor plugin.
+// reads throw until a snapshot arrives for this editor map.
+// map changes, leaving the editor, or clearing metadata reset it; next read requests a snapshot.
 namespace MapKVStore {
     const string UNAVAILABLE_PREFIX = "E++ map key-values unavailable: ";
     const uint64 SNAPSHOT_REQUEST_INTERVAL_MS = 500;
@@ -14,8 +9,7 @@ namespace MapKVStore {
     bool g_Ready = false;
     bool g_Disabled = false;
     dictionary g_Values;
-    // Keys written but not yet echoed or rejected by the editor plugin, with
-    // the byte length of the value in flight.
+    // key -> byte length of the write awaiting echo/rejection
     dictionary g_Pending;
     uint64 g_LastRequestAt = 0;
 
@@ -33,7 +27,6 @@ namespace MapKVStore {
         return editor is null ? null : editor.Challenge;
     }
 
-    // Rebind to the editor's current map, dropping everything learned about another.
     void Sync() {
         auto map = EditorMap();
         uint64 mapPtr = map is null ? 0 : Dev_GetPointerForNod(map);
@@ -57,15 +50,14 @@ namespace MapKVStore {
         uint64 now = Time::Now;
         if (g_LastRequestAt != 0 && now - g_LastRequestAt < SNAPSHOT_REQUEST_INTERVAL_MS) return;
         g_LastRequestAt = now;
-        // Without the attached layer there is nothing to deliver to; the editor
-        // plugin sends a snapshot on its own when it starts.
+        // no layer to send to yet; the editor plugin sends a snapshot on startup
         if (ToML::GetPluginPMT() is null) return;
-        // One undelivered request is enough (a stopped editor script consumes none).
+        // don't pile up requests while the editor script is stopped
         if (ToML::HasQueued("GetMapKVSnapshot")) return;
         ToML::SendMessage("GetMapKVSnapshot", {});
     }
 
-    // Empty when reads can be answered, else why not. Asks for a snapshot if one is missing.
+    // empty = ready; requests a missing snapshot
     string UnavailableReason(CGameCtnChallenge@ map = null) {
         Sync();
         if (g_MapPtr == 0) return "no map is open in the editor";
@@ -98,8 +90,7 @@ namespace MapKVStore {
         g_Pending[normalizedKey] = valueBytes;
     }
 
-    // Bytes of keys plus values once `normalizedKey` holds `valueBytes`, with
-    // writes still in flight counted at their new size.
+    // keys + values after this write, counting pending writes at their new size
     uint ProjectedTotalBytes(const string &in normalizedKey, uint valueBytes) {
         dictionary sizes;
         auto keys = g_Values.GetKeys();
@@ -153,9 +144,7 @@ namespace MapKVStore {
 #endif
     }
 
-    // The editor plugin read this value back after storing it. Events arrive in
-    // the order the editor plugin handled their messages, so an echo either
-    // precedes the snapshot that already contains it or follows a ready cache.
+    // events stay ordered: an early echo is in the next snapshot; later echoes update the cache
     void OnEcho(const string &in normalizedKey, const string &in value) {
         Sync();
         g_Pending.Delete(normalizedKey);
@@ -168,7 +157,6 @@ namespace MapKVStore {
     }
 
 #if DEV
-    // Compare the snapshot with the memory walk, as evidence for either reader.
     void DevCrossCheck() {
         auto map = EditorMap();
         try {

@@ -1,25 +1,18 @@
-// Map key-values live in one ManiaScript Text[Text] dictionary trait, _EKV_.
-// Release reads come from MapKVStore, which caches what the E++ editor plugin
-// reports. The memory walk below is DEV-only: a diagnostic and a cross-check.
+// _EKV_ is a ManiaScript Text[Text] dictionary; release reads use MapKVStore.
+// the memory walk is DEV-only, for cross-checking the editor plugin.
 //
-// The walk's layout/SSO handling follows the public-domain
-// tm-metadata-gateway/src/MetadataReader.as and research/ScriptMetadata.txt.
-// No retained pointers: reacquire the current metadata buffer on every read.
-// Openplanet exposes no read API for CScriptTraitsMetadata, so every walk is
-// over hard-coded offsets, guarded by structural validation of every buffer
-// and pointer and by MapKVHealth's supervision of the walk as a whole.
+// layout/SSO: public-domain tm-metadata-gateway/src/MetadataReader.as and research/ScriptMetadata.txt.
+// no read API, so offsets are hard-coded; validate buffers/pointers and let MapKVHealth check for drift.
+// reacquire the metadata buffer on each read; never keep pointers.
 namespace MapKV {
     const string PREFIX = "_EKV_";
     // The single ManiaScript dictionary trait every key lives in.
     const string DICTIONARY_TRAIT = "_EKV_";
-    // Bound for the DEV memory walk's string reads, not for what can be stored.
+    // DEV read limit; separate from the storage budget below
     const uint MAX_VALUE_BYTES = 8 * 1024 * 1024;
-    // Map metadata holds about 128 KiB in total, counted in UTF-8 bytes
-    // (measured 2026-10-31: one 130048-byte value stored, 131000 did not; two
-    // 70 KiB values failed together; 50000 three-byte characters failed).
-    // Past it the editor plugin's script dies on the assignment, until the
-    // editor reopens. _EKV_ keys plus values stay under this, leaving room for
-    // the map's other traits.
+    // ~128 KiB total UTF-8; measured 2026-10-31: 130048 bytes worked, 131000 failed.
+    // two 70 KiB values or 50000 three-byte chars also failed; overflow kills the script until editor reopen.
+    // budget keys + values below that, leaving room for other traits
     const uint MAX_TOTAL_BYTES = 112 * 1024;
     const uint MAX_ENTRIES = 65536;
 
@@ -329,8 +322,7 @@ namespace MapKV {
 }
 
 namespace Editor {
-    // Reads answer only for the map open in the editor (null map = that map),
-    // and throw until the E++ editor plugin has reported its values.
+    // editor map only (null = current); throws until the editor plugin reports its values
     string[]@ Get_Map_KVKeys(CGameCtnChallenge@ map = null) {
         MapKVStore::RequireReady(map);
         return MapKVStore::Keys();
@@ -349,18 +341,16 @@ namespace Editor {
         return value;
     }
 
-    // true once reads of the editor's map can be answered. Never throws.
-    // While not ready, asks the editor plugin for its values (rate-limited).
+    // requests a snapshot if needed (rate-limited); never throws
     bool Is_Map_KVReady() {
         return MapKVStore::UnavailableReason().Length == 0;
     }
 
-    // Yields until reads can be answered, at most timeoutMs. Must be called
-    // from a coroutine. Returns Is_Map_KVReady().
+    // coroutine only; returns readiness after waiting up to timeoutMs
     bool Wait_Map_KVReady(uint timeoutMs = 5000) {
         uint64 deadline = Time::Now + timeoutMs;
         while (MapKVStore::UnavailableReason().Length > 0) {
-            // Disabled metadata or no editor map will not change by waiting here.
+            // waiting won't fix these
             if (MapKVStore::IsDisabled() || MapKVStore::EditorMap() is null) return false;
             if (Time::Now >= deadline) return false;
             yield();
@@ -368,7 +358,7 @@ namespace Editor {
         return true;
     }
 
-    // TryGet_Map_KVRaw after Wait_Map_KVReady; throws like TryGet if still not ready.
+    // waits, then reads; still throws if not ready
     bool WaitTryGet_Map_KVRaw(const string &in key, string &out value, uint timeoutMs = 5000) {
         value = "";
         string normalized = MapKV::NormalizeKey(key);
@@ -376,9 +366,8 @@ namespace Editor {
         return TryGet_Map_KVRaw(normalized, value);
     }
 
-    // "maniascript" (reads answer from the editor plugin's reported values),
-    // "pending" (waiting for its report), "disabled" (metadata disabled for
-    // this map) or "unavailable" (no editor map). Never throws.
+    // "maniascript" = reported values, "pending" = waiting, "disabled" = map opted out
+    // "unavailable" = no editor map; never throws
     string Get_Map_KVReadSource(const string &in key = "") {
         try {
             if (MapKVStore::IsReady()) return "maniascript";
@@ -390,7 +379,7 @@ namespace Editor {
         }
     }
 
-    // Same as Is_Map_KVReady, with `reason` saying why not.
+    // same readiness check, with a reason if not ready
     bool Get_Map_KVReaderHealthy(string &out reason) {
         reason = "";
         try {

@@ -35,8 +35,6 @@ namespace Tests {
         MapKVCheck(empty.Length == 1 && empty[0].data[1] == "", "empty value is a write");
     }
 
-    // Large values travel as ordered parts that rejoin to the exact value and
-    // never split a multi-byte character.
     void MapKV_CheckLargeValueSplitsIntoParts() {
         string unit = "ab😀é\"\n";
         string raw;
@@ -88,7 +86,7 @@ namespace Tests {
         MapKVHealth::Reset();
         string[] small = {"_EKV_Plugin.small", "echoed value"};
         HandleEppEvent("MapKVSet", small);
-        // The echo also lands in the live MapKVStore; drop it so no test key is served.
+        // don't leave test keys in the live cache
         MapKVStore::Reset();
         uint cached = MapKVHealth::EchoCount();
         auto smallEcho = MapKVHealth::LookupEchoFor(scope, "_EKV_Plugin.small");
@@ -153,9 +151,8 @@ namespace Tests {
         MapKVCheck(settled.value == "new", "leaving the value the receiver stored");
     }
 
-    // MapKVStore is live state, so each check resets it on the way out; the
-    // next read then asks the editor plugin for a fresh snapshot. With no
-    // editor map open, nothing may become readable.
+    // reset the live cache after each check so the next read gets a fresh snapshot.
+    // no editor map means nothing should become readable.
     void MapKVStore_CheckSnapshotThenEcho() {
         MapKVStore::Reset();
         bool hasMap = MapKVStore::EditorMap() !is null;

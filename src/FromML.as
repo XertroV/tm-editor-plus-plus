@@ -161,8 +161,7 @@ namespace ToML {
         return message.type == "SetMapKV" || message.type == "SetMapKVPart";
     }
 
-    // Map-scoped whole-value writes; a newer value only supersedes its own key,
-    // including any parts of an older value still queued.
+    // replace only this key, including any older queued parts
     void CoalesceMapKVMessages(ML_Event@[] &inout messages, ML_Event@[]@ write) {
         for (int i = int(messages.Length) - 1; i >= 0; i--) {
             if (IsMapKVMessage(messages[i]) && messages[i].data[0] == write[0].data[0])
@@ -197,14 +196,10 @@ namespace ToML {
         return "\"" + literal + "\"";
     }
 
-    // Each page splice carries at most this much value text. A 1 MiB value in
-    // one splice crashed the game (2026-10-31); 8 KiB per frame is what the
-    // original chunked channel (ea9a284c) used.
+    // 1 MiB in one splice crashed the game (2026-10-31); keep the old 8 KiB chunks (ea9a284c)
     const uint MAPKV_PART_BYTES = 8192;
 
-    // One SetMapKV message, or SetMapKVPart messages that the editor plugin
-    // joins and applies only once the last part arrives. Parts split on UTF-8
-    // character boundaries so each part's literal is valid text on its own.
+    // split at UTF-8 boundaries; the editor plugin applies the value after the last part
     ML_Event@[]@ MakeMapKVMessages(const string &in key, const string &in raw, uint partBytes = MAPKV_PART_BYTES) {
         if (uint(raw.Length) > MapKV::MAX_TOTAL_BYTES) throw("Map metadata value exceeds " + MapKV::MAX_TOTAL_BYTES + " bytes");
         for (uint i = 0; i < raw.Length; i++) {
@@ -238,7 +233,7 @@ namespace ToML {
         if (editor is null || editor.Challenge is null) throw("No map open for metadata");
         auto plugin = GetPluginPMT();
         if (plugin is null) throw("E++ supporting editor plugin is unavailable");
-        // The size budget needs the current values, so writes wait for them too.
+        // need current values to check the size budget
         MapKVStore::RequireReady();
         string normalized = messages[0].data[0];
         uint projected = MapKVStore::ProjectedTotalBytes(normalized, raw.Length);
@@ -259,9 +254,7 @@ namespace ToML {
         ScheduleDrain();
     }
 
-    // One splice per frame: the page script reads each splice once, and a
-    // second splice before it runs would replace the first unread. A splice
-    // stops adding messages once it holds SPLICE_BUDGET characters.
+    // one splice per frame or the next overwrites unread events; stop at SPLICE_BUDGET chars
     const uint SPLICE_BUDGET = 3 * MAPKV_PART_BYTES;
     bool _draining = false;
 
@@ -428,8 +421,7 @@ namespace Editor {
         ToML::SetMapKV(key, raw);
     }
 
-    // true from Set_Map_KV until the editor plugin echoes (or rejects) the
-    // write; not a save acknowledgment. Empty key checks all.
+    // pending until echo/rejection, not a disk save; empty key checks all
     bool Is_Map_KVSendInFlight(const string &in key = "") {
         string normalized = key.Length == 0 ? "" : MapKV::NormalizeKey(key);
         return ToML::HasQueuedMapKVMessages(normalized) || MapKVStore::HasPendingWrite(normalized);
