@@ -20,8 +20,7 @@ void FindPatternCached_CheckRoundtrip() {
 }
 
 void FindPatternCached_CheckKnown() {
-    string pat = GmSurfReplace::ConstructPattern(EGmSurfType::Sphere);
-    assert(pat.Length > 0, "Sphere construct pattern");
+    string pat = Editor::Pattern_LMDebugFlagOffset;
     uint64 direct = Dev::FindPattern(pat);
     assert(direct != 0, "FindPattern hit");
     uint64 first = Dev_FindPatternCached(pat);
