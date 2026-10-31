@@ -66,7 +66,7 @@ Void LoadCameraState() {
 	CameraToTargetDistance = EPP_CameraToTargetDistance;
 }
 
-// The whole _EKV_ dictionary in one event: ["ok", count, key1, value1, ...], or ["disabled"].
+// The whole _EKV_ dictionary in one event: ["ok2", count, key1, value1, ...], or ["disabled"].
 // Declaring _EKV_ creates it on maps that lack it; that is accepted so reads never walk memory.
 // E++ intercepts LayerCustomEvent directly, so a single argument carries 8 MiB intact (measured 2026-10-31).
 Void SendMapKVSnapshot() {
@@ -76,7 +76,7 @@ Void SendMapKVSnapshot() {
 		return;
 	}
 	declare metadata Text[Text] _EKV_ for Map;
-	declare Text[] Args = ["ok", ""^_EKV_.count];
+	declare Text[] Args = ["ok2", ""^_EKV_.count];
 	foreach (Key => Value in _EKV_) {
 		Args.add(Key);
 		Args.add(Value);
@@ -108,35 +108,37 @@ declare Boolean DisableMetadata;
 // SetMapKVPart assembly: the value so far, and the next part index expected.
 declare Text[Text] MapKVParts;
 declare Integer[Text] MapKVNextPart;
+declare Text[Text] MapKVPartWriteId;
 
 Boolean MapKVKeyAccepted(Text _Key) {
 	return !DisableMetadata && TL::Length(_Key) > 5 && TL::SubString(_Key, 0, 5) == "_EKV_";
 }
 
-Void ApplyMapKV(Text _Key, Text _Value) {
-	// Values are whole plain strings; source escaping is handled only by the sender.
-	declare metadata Text[Text] _EKV_ for Map;
-	// Map metadata holds about 128 KiB of UTF-8, and overflowing it kills this
-	// script. E++ enforces MapKV::MAX_TOTAL_BYTES exactly before sending; this
-	// counts characters (never more than bytes), so it only stops writes that
-	// got past that check.
-	declare Integer Total = TL::Length(_Key) + TL::Length(_Value);
-	foreach (Key => Value in _EKV_) {
-		if (Key != _Key) Total += TL::Length(Key) + TL::Length(Value);
-	}
-	if (Total > 114688) {
-		SendEvent("MapKVSetRejected", [_Key]);
-		return;
-	}
-	_EKV_[_Key] = _Value;
-	// Echo what the dictionary now holds, read back rather than repeated from the
-	// message; this echo is what updates E++'s cache.
-	SendEvent("MapKVSet", [_Key, _EKV_[_Key]]);
+// URLEncode emits one ASCII character per safe byte, or %hh per encoded byte.
+Integer MapKVUtf8Bytes(Text _Value) {
+    if (_Value == "") return 0;
+    declare Text Encoded = TL::URLEncode(_Value);
+    return TL::Length(Encoded) - 2 * (TL::Split("%", Encoded).count - 1);
+}
+
+Void ApplyMapKV(Text _Key, Text _Value, Text _WriteId) {
+    declare metadata Text[Text] _EKV_ for Map;
+    declare Integer Total = MapKVUtf8Bytes(_Key) + MapKVUtf8Bytes(_Value);
+    foreach (Key => Value in _EKV_) {
+        if (Key != _Key) Total += MapKVUtf8Bytes(Key) + MapKVUtf8Bytes(Value);
+    }
+    if (Total > 114688) {
+        SendEvent("MapKVSetRejected", [_Key, _WriteId]);
+        return;
+    }
+    _EKV_[_Key] = _Value;
+    SendEvent("MapKVSet", [_Key, _EKV_[_Key], _WriteId]);
 }
 
 Void DropMapKVParts(Text _Key) {
 	MapKVParts.removekey(_Key);
 	MapKVNextPart.removekey(_Key);
+	MapKVPartWriteId.removekey(_Key);
 }
 
 Void ProcessIncomingMessages() {
@@ -174,40 +176,43 @@ Void ProcessIncomingMessages() {
 			log("CCT_CustomColorTables after: " ^ CCT_CustomColorTables);
 			SendEvent("CustomColorTables", [""^CCT_CustomColorTables]);
 		} else if (MsgType == "SetMapKV") {
-			if (InMsg.count != 3) continue;
+			if (InMsg.count != 4) continue;
 			if (!MapKVKeyAccepted(InMsg[1])) {
 				// Tell E++ so the key stops reading as in flight.
-				SendEvent("MapKVSetRejected", [InMsg[1]]);
+				SendEvent("MapKVSetRejected", [InMsg[1], InMsg[3]]);
 				continue;
 			}
 			DropMapKVParts(InMsg[1]);
-			ApplyMapKV(InMsg[1], InMsg[2]);
+			ApplyMapKV(InMsg[1], InMsg[2], InMsg[3]);
 		} else if (MsgType == "SetMapKVPart") {
-			// [key, index, count, text]: part 0 starts (or restarts) a value; it is
+			// [key, index, count, text, writeId]: part 0 starts (or restarts) a value; it is
 			// applied once the last part arrives in order.
-			if (InMsg.count != 5) continue;
+			if (InMsg.count != 6) continue;
 			declare Text PartKey = InMsg[1];
 			declare Integer PartIx = TL::ToInteger(InMsg[2]);
 			declare Integer PartCount = TL::ToInteger(InMsg[3]);
+			declare Text WriteId = InMsg[5];
 			if (!MapKVKeyAccepted(PartKey)) {
 				DropMapKVParts(PartKey);
-				SendEvent("MapKVSetRejected", [PartKey]);
+				SendEvent("MapKVSetRejected", [PartKey, WriteId]);
 				continue;
 			}
 			if (PartIx == 0) {
 				MapKVParts[PartKey] = InMsg[4];
-			} else if (MapKVNextPart.existskey(PartKey) && MapKVNextPart[PartKey] == PartIx) {
+                MapKVPartWriteId[PartKey] = WriteId;
+			} else if (MapKVNextPart.existskey(PartKey) && MapKVNextPart[PartKey] == PartIx
+                && MapKVPartWriteId[PartKey] == WriteId) {
 				MapKVParts[PartKey] = MapKVParts[PartKey] ^ InMsg[4];
 			} else {
 				DropMapKVParts(PartKey);
-				SendEvent("MapKVSetRejected", [PartKey]);
+				SendEvent("MapKVSetRejected", [PartKey, WriteId]);
 				continue;
 			}
 			MapKVNextPart[PartKey] = PartIx + 1;
 			if (PartIx + 1 >= PartCount) {
 				declare Text Joined = MapKVParts[PartKey];
 				DropMapKVParts(PartKey);
-				ApplyMapKV(PartKey, Joined);
+				ApplyMapKV(PartKey, Joined, WriteId);
 			}
 		}
 	}

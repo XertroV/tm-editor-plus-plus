@@ -49,13 +49,13 @@ void HandleEppEvent(const string &in type, string[]@ data) {
     } else if (type == "MapKVSet") {
         // The editor plugin echoing back the value it just stored under this key.
         if (data.Length > 1) {
-            MapKVStore::OnEcho(data[0], data[1]);
+            MapKVStore::OnEcho(data[0], data[1], data.Length > 2 ? Text::ParseUInt64(data[2]) : 0);
 #if DEV
             MapKVHealth::NoteEcho(data[0], data[1]);
 #endif
         }
     } else if (type == "MapKVSetRejected") {
-        if (data.Length > 0) MapKVStore::OnRejected(data[0]);
+        if (data.Length > 0) MapKVStore::OnRejected(data[0], data.Length > 1 ? Text::ParseUInt64(data[1]) : 0);
     } else if (type == "EditorSaveInput") {
         // User pressed the editor's save input/button (pre-save, best-effort:
         // metadata writes queued now may land 1-2 frames later).
@@ -103,16 +103,17 @@ class ML_Event {
     // Only map key-value messages use these handles; they never follow a new map.
     uint64 kvMapPtr = 0;
     uint64 kvPluginPtr = 0;
+    uint64 kvWriteId = 0;
     ML_Event(const string &in type, string[]@ data) {
         @this.data = data;
         this.type = type;
     }
     string ToMLEventString() {
         if (type == "SetMapKV")
-            return '["SetMapKV", ' + ToML::MapKVStringLiteral(data[0]) + ', ' + ToML::MapKVStringLiteral(data[1]) + ']';
+            return '["SetMapKV", ' + ToML::MapKVStringLiteral(data[0]) + ', ' + ToML::MapKVStringLiteral(data[1]) + ', "' + kvWriteId + '"]';
         if (type == "SetMapKVPart")
             return '["SetMapKVPart", ' + ToML::MapKVStringLiteral(data[0]) + ', "' + data[1] + '", "' + data[2] + '", '
-                + ToML::MapKVStringLiteral(data[3]) + ']';
+                + ToML::MapKVStringLiteral(data[3]) + ', "' + kvWriteId + '"]';
         string ret = '["' + type;
         for (uint i = 0; i < data.Length; i++) {
             ret += '", "' + data[i];
@@ -240,13 +241,14 @@ namespace ToML {
         if (projected > MapKV::MAX_TOTAL_BYTES)
             throw("Map metadata is limited to " + MapKV::MAX_TOTAL_BYTES + " bytes of keys and values; this write would make it " + projected);
         // Store raw values; the wire serializer escapes source syntax separately.
+        uint64 writeId = MapKVStore::NotePendingWrite(normalized, raw.Length);
         for (uint i = 0; i < messages.Length; i++) {
+            messages[i].kvWriteId = writeId;
             messages[i].kvMapPtr = Dev_GetPointerForNod(editor.Challenge);
             messages[i].kvPluginPtr = Dev_GetPointerForNod(plugin);
         }
         // The queue drains when the page is spliced, before the receiver applies
         // anything; the key stays in flight until its echo (or rejection) lands.
-        MapKVStore::NotePendingWrite(normalized, raw.Length);
 #if DEV
         MapKVHealth::NotePendingWrite(MapKVHealth::ScopeFor(editor.Challenge), normalized);
 #endif
@@ -286,6 +288,7 @@ namespace ToML {
     const string EVENTS_DELIM = "/*EVENTS*/";
     const string PageAttachId = "E++ Supporting Plugin";
     void ClearSendQueue() {
+        MapKVStore::Sync();
         for (int i = int(queued.Length) - 1; i >= 0; i--) {
             auto msg = queued[i];
             if (IsMapKVMessage(msg) && !MapKVTargetIsCurrent(msg.kvMapPtr, msg.kvPluginPtr)) queued.RemoveAt(i);

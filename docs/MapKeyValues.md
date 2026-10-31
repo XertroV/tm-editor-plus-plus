@@ -88,10 +88,12 @@ never chunked.
 Each `Set_Map_KV` replaces one whole dictionary value. Different queued keys
 coexist; a newer queued value supersedes only the same key, including any parts
 of an older one. Captured map and plugin identity keep pending writes from
-following a map switch.
+following a map switch. Restarting the supporting plugin clears abandoned writes
+and requires a fresh snapshot. After updating E++, reopen the editor if readiness
+reports an older supporting-plugin protocol.
 
 A value up to 8 KiB travels as one `SetMapKV` message. A longer one is split on
-UTF-8 boundaries into 8 KiB `SetMapKVPart` messages `[key, index, count, text]`,
+UTF-8 boundaries into 8 KiB `SetMapKVPart` messages `[key, index, count, text, writeId]`,
 which the editor plugin reassembles in order and applies after the last part.
 Out-of-order or interrupted parts discard the value. The outgoing queue is
 spliced into the plugin page at most 24 KiB per frame, so a 100 KiB value takes
@@ -101,7 +103,8 @@ After applying a write, the editor plugin reads the value back out of the
 dictionary and echoes it as `MapKVSet`; E++ updates its cache from the echo. A
 write the editor plugin refuses (bad key, disabled metadata, over budget) is
 answered with `MapKVSetRejected` and leaves the cache unchanged. Either way the
-key stops being in flight.
+key stops being in flight only when that response matches its latest write ID.
+An older response cannot settle a newer write to the same key.
 
 Writes are asynchronous: wait for `Is_Map_KVSendInFlight(key)` to clear, read the
 value back, then save the map through the normal editor flow if it must reach
@@ -120,9 +123,10 @@ ManiaScript runtime error "Variable _EKV_ has been undefined since its
 declaration", and it stays dead until the editor reopens. So E++ keeps the
 dictionary's keys plus values under `MapKV::MAX_TOTAL_BYTES` (112 KiB), leaving
 room for the map's other traits. `Set_Map_KV` checks the exact byte total,
-counting writes still in flight at their new size, and throws before sending.
-The editor plugin repeats the check in characters (which never exceed bytes) as
-a backstop for anything that bypasses E++, and rejects instead of dying.
+reserving the larger stored or pending value for other keys until acknowledgement,
+and throws before sending. A shrink cannot fund another write before it lands.
+The editor plugin also checks UTF-8 bytes before assignment and rejects an
+over-budget write instead of dying.
 
 ## DEV memory reader
 

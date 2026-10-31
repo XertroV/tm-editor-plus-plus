@@ -16,11 +16,13 @@ namespace Tests {
     void MapKV_WholeRawValueRoundTrip(Tests::Context@ ctx) {
         string raw = "quotes \"\\\n\r\t Unicode: café 😀";
         auto message = ToML::MakeMapKVMessages("Plugin.spec", raw)[0];
+        message.kvWriteId = 0xFEDCBA9876543210;
         auto wire = Json::Parse(message.ToMLEventString());
-        MapKVCheck((wire.Length) == (uint(3)), "one type, one key, one whole value");
+        MapKVCheck((wire.Length) == (uint(4)), "type, key, whole value and write id");
         MapKVCheck((string(wire[0])) == ("SetMapKV"), "values match");
         MapKVCheck((string(wire[1])) == ("_EKV_Plugin.spec"), "values match");
         MapKVCheck((string(wire[2])) == (raw), "values match");
+        MapKVCheck(string(wire[3]) == tostring(message.kvWriteId), "write id stays an exact string");
         MapKVCheck(!(message.ToMLEventString().Contains("/*EVENTS*/")), "payload cannot corrupt splice markers");
         MapKVCheck(!(message.ToMLEventString().Contains("-->")), "payload cannot close the XML comment");
         auto delimiters = ToML::MakeMapKVMessages("Plugin.spec", "<!-- --> </script> /*EVENTS*/ /*TIMENOW*/")[0];
@@ -43,13 +45,15 @@ namespace Tests {
         MapKVCheck(parts.Length > 1, "split into parts, got " + parts.Length);
         string joined;
         for (uint i = 0; i < parts.Length; i++) {
+            parts[i].kvWriteId = 0xFEDCBA9876543210;
             MapKVCheck(parts[i].type == "SetMapKVPart", "part type");
             MapKVCheck(parts[i].data[0] == "_EKV_Plugin.big", "part key");
             MapKVCheck(parts[i].data[1] == tostring(i) && parts[i].data[2] == tostring(parts.Length), "part index/count");
             MapKVCheck(parts[i].data[3].Length <= 16, "part within bound");
             MapKVCheck(parts[i].data[3].Length == 0 || (parts[i].data[3][0] & 0xC0) != 0x80, "part starts on a character boundary");
             auto wire = Json::Parse(parts[i].ToMLEventString());
-            MapKVCheck(wire.Length == 5 && string(wire[4]) == parts[i].data[3], "part literal round-trips");
+            MapKVCheck(wire.Length == 6 && string(wire[4]) == parts[i].data[3], "part literal round-trips");
+            MapKVCheck(string(wire[5]) == tostring(parts[i].kvWriteId), "part retains the write id");
             joined += parts[i].data[3];
         }
         MapKVCheck(joined == raw, "parts rejoin to the value");
@@ -159,7 +163,7 @@ namespace Tests {
         string[] tooEarly = {"_EKV_Plugin.early", "x"};
         HandleEppEvent("MapKVSet", tooEarly);
         bool readyBefore = MapKVStore::IsReady();
-        string[] snapshot = {"ok", "2", "_EKV_Plugin.a", "1", "_EKV_Plugin.b", ""};
+        string[] snapshot = {"ok2", "2", "_EKV_Plugin.a", "1", "_EKV_Plugin.b", ""};
         HandleEppEvent("MapKVSnapshot", snapshot);
         bool readyAfter = MapKVStore::IsReady();
         string a, b, early;
@@ -185,7 +189,7 @@ namespace Tests {
     void MapKVStore_CheckMalformedAndDisabledSnapshots() {
         MapKVStore::Reset();
         bool hasMap = MapKVStore::EditorMap() !is null;
-        string[] shortSnapshot = {"ok", "2", "_EKV_Plugin.a", "1"};
+        string[] shortSnapshot = {"ok2", "2", "_EKV_Plugin.a", "1"};
         HandleEppEvent("MapKVSnapshot", shortSnapshot);
         bool readyMalformed = MapKVStore::IsReady();
         string[] disabled = {"disabled"};
@@ -201,13 +205,13 @@ namespace Tests {
 
     void MapKVStore_CheckPendingUntilEchoOrRejection() {
         MapKVStore::Reset();
-        MapKVStore::NotePendingWrite("_EKV_Plugin.p");
-        MapKVStore::NotePendingWrite("_EKV_Plugin.q");
+        uint64 pId = MapKVStore::NotePendingWrite("_EKV_Plugin.p");
+        uint64 qId = MapKVStore::NotePendingWrite("_EKV_Plugin.q");
         bool pendingBoth = MapKVStore::HasPendingWrite("_EKV_Plugin.p") && MapKVStore::HasPendingWrite("_EKV_Plugin.q");
-        string[] echo = {"_EKV_Plugin.p", "v"};
+        string[] echo = {"_EKV_Plugin.p", "v", tostring(pId)};
         HandleEppEvent("MapKVSet", echo);
         bool pAfterEcho = MapKVStore::HasPendingWrite("_EKV_Plugin.p");
-        string[] rejected = {"_EKV_Plugin.q"};
+        string[] rejected = {"_EKV_Plugin.q", tostring(qId)};
         HandleEppEvent("MapKVSetRejected", rejected);
         bool anyAfterReject = MapKVStore::HasPendingWrite();
         MapKVStore::Reset();
@@ -219,7 +223,7 @@ namespace Tests {
     void MapKVStore_CheckProjectedTotalBytes() {
         MapKVStore::Reset();
         bool hasMap = MapKVStore::EditorMap() !is null;
-        string[] snapshot = {"ok", "2", "_EKV_A", "12345", "_EKV_B", "日本"};
+        string[] snapshot = {"ok2", "2", "_EKV_A", "12345", "_EKV_B", "日本"};
         HandleEppEvent("MapKVSnapshot", snapshot);
         uint same = MapKVStore::ProjectedTotalBytes("_EKV_A", 5);
         uint replaced = MapKVStore::ProjectedTotalBytes("_EKV_A", 100);

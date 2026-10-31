@@ -5,8 +5,12 @@ namespace MapKVStore {
     const uint64 SNAPSHOT_REQUEST_INTERVAL_MS = 500;
 
     uint64 g_MapPtr = 0;
+    uint64 g_PluginPtr = 0;
+    uint64 g_NextWriteId = uint64(Time::Now) << 32;
+    dictionary g_PendingIds;
     bool g_Ready = false;
     bool g_Disabled = false;
+    bool g_OldProtocol = false;
     dictionary g_Values;
     // key -> byte length of the write awaiting echo/rejection
     dictionary g_Pending;
@@ -14,8 +18,11 @@ namespace MapKVStore {
 
     void Reset() {
         g_MapPtr = 0;
+        g_PluginPtr = 0;
+        g_PendingIds.DeleteAll();
         g_Ready = false;
         g_Disabled = false;
+        g_OldProtocol = false;
         g_Values.DeleteAll();
         g_Pending.DeleteAll();
         g_LastRequestAt = 0;
@@ -29,9 +36,15 @@ namespace MapKVStore {
     void Sync() {
         auto map = EditorMap();
         uint64 mapPtr = map is null ? 0 : Dev_GetPointerForNod(map);
-        if (mapPtr != g_MapPtr) {
+        uint64 pluginPtr = Dev_GetPointerForNod(ToML::GetPluginPMT());
+        SyncScope(mapPtr, pluginPtr);
+    }
+
+    void SyncScope(uint64 mapPtr, uint64 pluginPtr) {
+        if (mapPtr != g_MapPtr || pluginPtr != g_PluginPtr) {
             Reset();
             g_MapPtr = mapPtr;
+            g_PluginPtr = pluginPtr;
         }
     }
 
@@ -63,6 +76,7 @@ namespace MapKVStore {
         if (map !is null && Dev_GetPointerForNod(map) != g_MapPtr)
             return "only the map open in the editor can be read";
         if (g_Disabled) return "metadata is disabled for this map";
+        if (g_OldProtocol) return "reopen the editor to update the E++ supporting plugin";
         if (g_Ready) return "";
         RequestSnapshot();
         return "waiting for the E++ editor plugin to report this map's values";
@@ -84,12 +98,18 @@ namespace MapKVStore {
         return keys;
     }
 
-    void NotePendingWrite(const string &in normalizedKey, uint valueBytes = 0) {
+    uint64 NotePendingWrite(const string &in normalizedKey, uint valueBytes = 0) {
         Sync();
-        g_Pending[normalizedKey] = valueBytes;
+        uint reserved = 0;
+        if (!g_Pending.Get(normalizedKey, reserved)) reserved = 0;
+        g_Pending[normalizedKey] = Math::Max(reserved, valueBytes);
+        uint64 writeId = ++g_NextWriteId;
+        g_PendingIds[normalizedKey] = writeId;
+        return writeId;
     }
 
-    // keys + values after this write, counting pending writes at their new size
+    // Do not spend capacity from a shrink until it is acknowledged. Coalescing
+    // can reorder queued keys, and older writes can still be in the receiver.
     uint ProjectedTotalBytes(const string &in normalizedKey, uint valueBytes) {
         dictionary sizes;
         auto keys = g_Values.GetKeys();
@@ -100,9 +120,13 @@ namespace MapKVStore {
         }
         auto pending = g_Pending.GetKeys();
         for (uint i = 0; i < pending.Length; i++) {
-            sizes[pending[i]] = uint(g_Pending[pending[i]]);
+            uint stored = 0;
+            if (!sizes.Get(pending[i], stored)) stored = 0;
+            sizes[pending[i]] = Math::Max(stored, uint(g_Pending[pending[i]]));
         }
-        sizes[normalizedKey] = valueBytes;
+        uint reserved = 0;
+        if (!g_Pending.Get(normalizedKey, reserved)) reserved = 0;
+        sizes[normalizedKey] = Math::Max(reserved, valueBytes);
         uint total = 0;
         auto all = sizes.GetKeys();
         for (uint i = 0; i < all.Length; i++) {
@@ -116,19 +140,25 @@ namespace MapKVStore {
         return normalizedKey.Length == 0 ? !g_Pending.IsEmpty() : g_Pending.Exists(normalizedKey);
     }
 
-    // data: ["ok", count, key1, value1, ...] or ["disabled"].
+    // data: ["ok2", count, key1, value1, ...] or ["disabled"].
     void OnSnapshot(string[]@ data) {
         Sync();
         if (g_MapPtr == 0 || data.Length == 0) return;
         if (data[0] == "disabled") {
             g_Values.DeleteAll();
             g_Pending.DeleteAll();
+            g_PendingIds.DeleteAll();
             g_Ready = false;
             g_Disabled = true;
             return;
         }
+        if (data[0] == "ok") {
+            g_OldProtocol = true;
+            g_Ready = false;
+            return;
+        }
         uint count = data.Length > 1 ? Text::ParseUInt(data[1]) : 0;
-        if (data[0] != "ok" || data.Length != 2 + count * 2) {
+        if (data[0] != "ok2" || data.Length != 2 + count * 2) {
             warn("Ignoring malformed MapKVSnapshot (" + data.Length + " args)");
             return;
         }
@@ -137,6 +167,7 @@ namespace MapKVStore {
             g_Values[data[2 + i * 2]] = data[3 + i * 2];
         }
         g_Disabled = false;
+        g_OldProtocol = false;
         g_Ready = true;
 #if DEV
         DevCrossCheck();
@@ -144,15 +175,22 @@ namespace MapKVStore {
     }
 
     // ordered events: early echoes are in the snapshot; later ones update the cache.
-    void OnEcho(const string &in normalizedKey, const string &in value) {
-        Sync();
+    void FinishPending(const string &in normalizedKey, uint64 writeId) {
+        uint64 latest = 0;
+        if (!g_PendingIds.Get(normalizedKey, latest) || latest != writeId) return;
         g_Pending.Delete(normalizedKey);
+        g_PendingIds.Delete(normalizedKey);
+    }
+
+    void OnEcho(const string &in normalizedKey, const string &in value, uint64 writeId = 0) {
+        Sync();
+        FinishPending(normalizedKey, writeId);
         if (g_Ready) g_Values[normalizedKey] = value;
     }
 
-    void OnRejected(const string &in normalizedKey) {
+    void OnRejected(const string &in normalizedKey, uint64 writeId = 0) {
         Sync();
-        g_Pending.Delete(normalizedKey);
+        FinishPending(normalizedKey, writeId);
     }
 
 #if DEV

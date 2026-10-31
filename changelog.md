@@ -1,3 +1,10 @@
+# 0.10.0
+
+- Fix overlapping map-key-value writes: acknowledgements identify their write, and pending shrinks cannot release capacity early.
+- Enforce the metadata budget in UTF-8 bytes in the supporting editor plugin too.
+- Clear abandoned writes when the supporting plugin restarts; request a fresh snapshot. After updating, reopen the editor if the old supporting plugin is still running.
+- Repair the transport test runner and add accounting regression coverage.
+
 # 0.8.999999999.2
 
 ## Fixes since the last release

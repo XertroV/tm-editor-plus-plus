@@ -13,7 +13,7 @@ python3 - "$repo/src/FromML.as" "$stage/TransportLiteral.as" <<'PY'
 import pathlib,sys
 source=pathlib.Path(sys.argv[1]).read_text()
 start=source.index('    string MapKVStringLiteral(')
-end=source.index('\n    ML_Event@ MakeMapKVMessage',start)
+end=source.index('\n    }',start)+len('\n    }')
 pathlib.Path(sys.argv[2]).write_text('namespace ToML {\n'+source[start:end]+'\n}\n')
 PY
 printf 'const string FixtureDir = "Tests/EppKVTransport/%s/";\n' "$run_id" > "$stage/Config.as"
