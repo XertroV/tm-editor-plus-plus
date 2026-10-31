@@ -85,7 +85,7 @@ namespace MapKVHealth {
         MLObservation(const string &in trait) { this.trait = trait; }
     }
 
-    // above the echo bound we only get length, which can't answer a read or verify content.
+    // lengthOnly = old MapKVSetLarge echoes (no longer sent); a length can't answer a read or verify content.
     // pending writes can't be compared with memory yet.
     class MLEcho {
         string value;
@@ -627,7 +627,7 @@ namespace MapKVHealth {
             return read;
         }
         if (echo.lengthOnly) {
-            // LayerCustomEvent's intact payload limit isn't measured; this could be a truncated/dropped echo.
+            // legacy length-only echo: could be truncated/dropped, so don't trust it enough to fence.
             // record the mismatch without fencing a possibly healthy reader.
             read.note = read.mismatchReason;
             read.mismatchReason = "";

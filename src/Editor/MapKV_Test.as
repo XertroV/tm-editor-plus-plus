@@ -573,7 +573,7 @@ namespace Tests {
         MapKVCheck(blocked.blockedReason.Length > 0, "a key with no echo is blocked, not silently absent");
     }
 
-    // unmeasured echo transport may truncate/drop data; a length mismatch must not fence.
+    // length-only echoes may be truncated; a length mismatch must not fence.
     void MapKV_CheckLargeValueMismatchNeverFences() {
         auto saved = MapKVHealth::Snapshot();
         MapKVHealth::Reset();
