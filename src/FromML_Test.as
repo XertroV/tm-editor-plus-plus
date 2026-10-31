@@ -219,6 +219,28 @@ namespace Tests {
         MapKVCheck(!anyAfterReject, "a rejection settles its key");
     }
 
+    void MapKVStore_CheckProjectedTotalBytes() {
+        MapKVStore::Reset();
+        bool hasMap = MapKVStore::EditorMap() !is null;
+        string[] snapshot = {"ok", "2", "_EKV_A", "12345", "_EKV_B", "日本"};
+        HandleEppEvent("MapKVSnapshot", snapshot);
+        uint same = MapKVStore::ProjectedTotalBytes("_EKV_A", 5);
+        uint replaced = MapKVStore::ProjectedTotalBytes("_EKV_A", 100);
+        uint added = MapKVStore::ProjectedTotalBytes("_EKV_C", 1);
+        MapKVStore::NotePendingWrite("_EKV_B", 50);
+        uint withPending = MapKVStore::ProjectedTotalBytes("_EKV_A", 5);
+        MapKVStore::Reset();
+        if (!hasMap) return;
+        // _EKV_A (6) + 5, _EKV_B (6) + 6 bytes of UTF-8
+        MapKVCheck(same == 23, "keys plus values in bytes, got " + same);
+        MapKVCheck(replaced == 118, "a rewrite counts the new size only, got " + replaced);
+        MapKVCheck(added == 30, "a new key adds key and value, got " + added);
+        MapKVCheck(withPending == 67, "a write in flight counts at its new size, got " + withPending);
+    }
+
+    [Test]
+    void MapKVStore_ProjectedTotalBytes(Tests::Context@ ctx) { MapKVStore_CheckProjectedTotalBytes(); }
+
     [Test]
     void MapKVStore_SnapshotThenEcho(Tests::Context@ ctx) { MapKVStore_CheckSnapshotThenEcho(); }
 

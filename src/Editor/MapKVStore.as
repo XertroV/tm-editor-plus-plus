@@ -14,7 +14,8 @@ namespace MapKVStore {
     bool g_Ready = false;
     bool g_Disabled = false;
     dictionary g_Values;
-    // Keys written but not yet echoed or rejected by the editor plugin.
+    // Keys written but not yet echoed or rejected by the editor plugin, with
+    // the byte length of the value in flight.
     dictionary g_Pending;
     uint64 g_LastRequestAt = 0;
 
@@ -90,9 +91,32 @@ namespace MapKVStore {
         return keys;
     }
 
-    void NotePendingWrite(const string &in normalizedKey) {
+    void NotePendingWrite(const string &in normalizedKey, uint valueBytes = 0) {
         Sync();
-        g_Pending[normalizedKey] = true;
+        g_Pending[normalizedKey] = valueBytes;
+    }
+
+    // Bytes of keys plus values once `normalizedKey` holds `valueBytes`, with
+    // writes still in flight counted at their new size.
+    uint ProjectedTotalBytes(const string &in normalizedKey, uint valueBytes) {
+        dictionary sizes;
+        auto keys = g_Values.GetKeys();
+        for (uint i = 0; i < keys.Length; i++) {
+            string value;
+            g_Values.Get(keys[i], value);
+            sizes[keys[i]] = uint(value.Length);
+        }
+        auto pending = g_Pending.GetKeys();
+        for (uint i = 0; i < pending.Length; i++) {
+            sizes[pending[i]] = uint(g_Pending[pending[i]]);
+        }
+        sizes[normalizedKey] = valueBytes;
+        uint total = 0;
+        auto all = sizes.GetKeys();
+        for (uint i = 0; i < all.Length; i++) {
+            total += all[i].Length + uint(sizes[all[i]]);
+        }
+        return total;
     }
 
     bool HasPendingWrite(const string &in normalizedKey = "") {

@@ -12,7 +12,15 @@ namespace MapKV {
     const string PREFIX = "_EKV_";
     // The single ManiaScript dictionary trait every key lives in.
     const string DICTIONARY_TRAIT = "_EKV_";
+    // Bound for the DEV memory walk's string reads, not for what can be stored.
     const uint MAX_VALUE_BYTES = 8 * 1024 * 1024;
+    // Map metadata holds about 128 KiB in total, counted in UTF-8 bytes
+    // (measured 2026-10-31: one 130048-byte value stored, 131000 did not; two
+    // 70 KiB values failed together; 50000 three-byte characters failed).
+    // Past it the editor plugin's script dies on the assignment, until the
+    // editor reopens. _EKV_ keys plus values stay under this, leaving room for
+    // the map's other traits.
+    const uint MAX_TOTAL_BYTES = 112 * 1024;
     const uint MAX_ENTRIES = 65536;
 
     // A ScriptTraits type id packs the kind in its low 5 bits and an index into

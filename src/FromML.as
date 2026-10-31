@@ -199,7 +199,7 @@ namespace ToML {
     // joins and applies only once the last part arrives. Parts split on UTF-8
     // character boundaries so each part's literal is valid text on its own.
     ML_Event@[]@ MakeMapKVMessages(const string &in key, const string &in raw, uint partBytes = MAPKV_PART_BYTES) {
-        if (raw.Length > MapKV::MAX_VALUE_BYTES) throw("Map metadata value exceeds 8 MiB");
+        if (uint(raw.Length) > MapKV::MAX_TOTAL_BYTES) throw("Map metadata value exceeds " + MapKV::MAX_TOTAL_BYTES + " bytes");
         for (uint i = 0; i < raw.Length; i++) {
             uint8 c = raw[i];
             if (c < 32 && c != 9 && c != 10 && c != 13)
@@ -231,7 +231,12 @@ namespace ToML {
         if (editor is null || editor.Challenge is null) throw("No map open for metadata");
         auto plugin = GetPluginPMT();
         if (plugin is null) throw("E++ supporting editor plugin is unavailable");
-        if (MapKVStore::IsDisabled()) throw("Metadata is disabled for this map");
+        // The size budget needs the current values, so writes wait for them too.
+        MapKVStore::RequireReady();
+        string normalized = messages[0].data[0];
+        uint projected = MapKVStore::ProjectedTotalBytes(normalized, raw.Length);
+        if (projected > MapKV::MAX_TOTAL_BYTES)
+            throw("Map metadata is limited to " + MapKV::MAX_TOTAL_BYTES + " bytes of keys and values; this write would make it " + projected);
         // Store raw values; the wire serializer escapes source syntax separately.
         for (uint i = 0; i < messages.Length; i++) {
             messages[i].kvMapPtr = Dev_GetPointerForNod(editor.Challenge);
@@ -239,8 +244,7 @@ namespace ToML {
         }
         // The queue drains when the page is spliced, before the receiver applies
         // anything; the key stays in flight until its echo (or rejection) lands.
-        string normalized = messages[0].data[0];
-        MapKVStore::NotePendingWrite(normalized);
+        MapKVStore::NotePendingWrite(normalized, raw.Length);
 #if DEV
         MapKVHealth::NotePendingWrite(MapKVHealth::ScopeFor(editor.Challenge), normalized);
 #endif

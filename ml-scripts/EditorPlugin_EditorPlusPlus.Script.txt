@@ -113,6 +113,18 @@ Boolean MapKVKeyAccepted(Text _Key) {
 Void ApplyMapKV(Text _Key, Text _Value) {
 	// Values are whole plain strings; source escaping is handled only by the sender.
 	declare metadata Text[Text] _EKV_ for Map;
+	// Map metadata holds about 128 KiB of UTF-8, and overflowing it kills this
+	// script. E++ enforces MapKV::MAX_TOTAL_BYTES exactly before sending; this
+	// counts characters (never more than bytes), so it only stops writes that
+	// got past that check.
+	declare Integer Total = TL::Length(_Key) + TL::Length(_Value);
+	foreach (Key => Value in _EKV_) {
+		if (Key != _Key) Total += TL::Length(Key) + TL::Length(Value);
+	}
+	if (Total > 114688) {
+		SendEvent("MapKVSetRejected", [_Key]);
+		return;
+	}
 	_EKV_[_Key] = _Value;
 	// Echo what the dictionary now holds, read back rather than repeated from the
 	// message; this echo is what updates E++'s cache.
