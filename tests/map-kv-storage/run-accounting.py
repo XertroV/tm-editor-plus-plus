@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Run shipped MapKV accounting and adjacent regression tests in an isolated module.
-
-Requires an open editor map. No map metadata is written; only the isolated
-module's cache changes. The module is loaded from /tmp and unloaded afterward.
-"""
+"""Test MapKV accounting in a /tmp module; no map writes. Requires an editor map."""
 import json
 import pathlib
 import re
@@ -31,7 +27,7 @@ def call(args):
 for name in ("MapKV.as", "MapKVStore.as"):
     (stage / name).write_bytes((repo / "src/Editor" / name).read_bytes())
 source = (repo / "src/Editor/MapKVStore_Test.as").read_text()
-# Keep the synchronous checks, without enabling the full DEV memory reader.
+# Run checks without the DEV memory reader.
 source = source.replace("#if DEV", "").replace("#endif", "")
 source = re.sub(r"    \[Test\]\n    void [^\n]+\n", "", source)
 checks = re.findall(r"void (MapKVStore_Check\w+)\(\)", source)

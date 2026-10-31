@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the shipped receiver against page-local data, never map metadata."""
+"""Test the receiver with page-local data; no map writes."""
 import json
 import pathlib
 import subprocess

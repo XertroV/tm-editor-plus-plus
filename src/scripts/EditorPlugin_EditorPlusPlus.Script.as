@@ -66,7 +66,7 @@ Void LoadCameraState() {
 	CameraToTargetDistance = EPP_CameraToTargetDistance;
 }
 
-// The whole _EKV_ dictionary in one event: ["ok2", count, key1, value1, ...], or ["disabled"].
+// snapshot: ["ok2", count, key, value, ...] or ["disabled"]
 // Declaring _EKV_ creates it on maps that lack it; that is accepted so reads never walk memory.
 // E++ intercepts LayerCustomEvent directly, so a single argument carries 8 MiB intact (measured 2026-10-31).
 Void SendMapKVSnapshot() {
@@ -114,7 +114,7 @@ Boolean MapKVKeyAccepted(Text _Key) {
 	return !DisableMetadata && TL::Length(_Key) > 5 && TL::SubString(_Key, 0, 5) == "_EKV_";
 }
 
-// URLEncode emits one ASCII character per safe byte, or %hh per encoded byte.
+// %hh encodes one UTF-8 byte.
 Integer MapKVUtf8Bytes(Text _Value) {
     if (_Value == "") return 0;
     declare Text Encoded = TL::URLEncode(_Value);
@@ -185,8 +185,7 @@ Void ProcessIncomingMessages() {
 			DropMapKVParts(InMsg[1]);
 			ApplyMapKV(InMsg[1], InMsg[2], InMsg[3]);
 		} else if (MsgType == "SetMapKVPart") {
-			// [key, index, count, text, writeId]: part 0 starts (or restarts) a value; it is
-			// applied once the last part arrives in order.
+			// [key, index, count, text, writeId]; apply after the final part.
 			if (InMsg.count != 6) continue;
 			declare Text PartKey = InMsg[1];
 			declare Integer PartIx = TL::ToInteger(InMsg[2]);

@@ -108,8 +108,7 @@ namespace MapKVStore {
         return writeId;
     }
 
-    // Do not spend capacity from a shrink until it is acknowledged. Coalescing
-    // can reorder queued keys, and older writes can still be in the receiver.
+    // Reserve other keys' peak sizes until their writes are acknowledged.
     uint ProjectedTotalBytes(const string &in normalizedKey, uint valueBytes) {
         dictionary sizes;
         auto keys = g_Values.GetKeys();
@@ -140,7 +139,7 @@ namespace MapKVStore {
         return normalizedKey.Length == 0 ? !g_Pending.IsEmpty() : g_Pending.Exists(normalizedKey);
     }
 
-    // data: ["ok2", count, key1, value1, ...] or ["disabled"].
+    // snapshot: ["ok2", count, key, value, ...] or ["disabled"]
     void OnSnapshot(string[]@ data) {
         Sync();
         if (g_MapPtr == 0 || data.Length == 0) return;
