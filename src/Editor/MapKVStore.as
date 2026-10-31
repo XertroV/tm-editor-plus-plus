@@ -60,6 +60,8 @@ namespace MapKVStore {
         // Without the attached layer there is nothing to deliver to; the editor
         // plugin sends a snapshot on its own when it starts.
         if (ToML::GetPluginPMT() is null) return;
+        // One undelivered request is enough (a stopped editor script consumes none).
+        if (ToML::HasQueued("GetMapKVSnapshot")) return;
         ToML::SendMessage("GetMapKVSnapshot", {});
     }
 

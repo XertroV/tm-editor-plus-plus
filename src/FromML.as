@@ -131,6 +131,13 @@ namespace ToML {
         ScheduleDrain();
     }
 
+    bool HasQueued(const string &in type) {
+        for (uint i = 0; i < queued.Length; i++) {
+            if (queued[i].type == type) return true;
+        }
+        return false;
+    }
+
     void ResyncPlease() {
         SendMessage("ResyncPlease", {});
     }
