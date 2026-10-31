@@ -3,7 +3,7 @@
 bool S_Dev_OpenMapKVBrowser = false;
 MapKVDevTab@ g_MapKVDevTab;
 
-// A one-shot semantic request lets MCP open the same read-only tab as the UI.
+// one-shot MCP request to open the same read-only tab
 void MapKVDev_ProcessRequest() {
     if (!S_Dev_OpenMapKVBrowser || g_MapKVDevTab is null) return;
     S_Dev_OpenMapKVBrowser = false;
@@ -12,7 +12,6 @@ void MapKVDev_ProcessRequest() {
     g_MapKVDevTab.RequestRefresh();
 }
 
-// Read-only inspection of the current map through the public metadata API.
 class MapKVDevTab : Tab {
     CGameCtnChallenge@ snapshotMap;
     string[] keys;
@@ -39,9 +38,7 @@ class MapKVDevTab : Tab {
     }
 
     void Refresh() {
-        // No yields after acquiring this map: all results belong to one
-        // snapshot, and every read below is aimed at this map rather than at
-        // whatever CurrentMap would return by the time it is asked again.
+        // no yields; keep every read on this map so the snapshot stays consistent.
         @snapshotMap = MapKV::CurrentMap();
         keys.RemoveRange(0, keys.Length);
         rawValue = "";
@@ -56,9 +53,8 @@ class MapKVDevTab : Tab {
             error = getExceptionInfo();
             warn("Map KV browser: " + error);
         }
-        // Both diagnostics run after the reads and each in its own try: the
-        // reads are exactly what can flip the health verdict, and a diagnostic
-        // that throws must still leave the other one and the listing showing.
+        // reads can change the health verdict, so check diagnostics afterwards.
+        // separate catches keep either diagnostic failure from hiding the other or the listing.
         try {
             string healthReason;
             readerHealth = MapKVHealth::Evaluate(snapshotMap, healthReason) != MapKVHealth::STATE_BROKEN
@@ -72,12 +68,11 @@ class MapKVDevTab : Tab {
         } catch {
             descriptorCheck = "check threw: " + getExceptionInfo();
         }
-        // Reached on every path. RequestRefresh refuses to start while this is
-        // set, so leaving it set on a throw wedges the tab for the session.
+        // always clear busy, even after throws, or the tab can't refresh again
         busy = false;
     }
 
-    // Throws on a fenced reader, which Refresh reports rather than swallows.
+    // let Refresh report a fenced reader
     void ReadSnapshot() {
         if (snapshotMap is null) {
             selectedKey = "";
@@ -88,9 +83,7 @@ class MapKVDevTab : Tab {
         keys.SortAsc();
         if (keys.Find(selectedKey) < 0) selectedKey = keys.Length > 0 ? keys[0] : "";
         if (selectedKey.Length == 0) return;
-        // One resolve for value, presence and source together. Calling
-        // TryGet_Map_KVRaw and then Get_Map_KVReadSource walks the dictionary
-        // twice, and the second walk would target CurrentMap, not this one.
+        // resolve once on snapshotMap; separate value/source calls walk twice and the source call uses CurrentMap.
         auto read = MapKV::ResolveKey(snapshotMap, MapKV::NormalizeKey(selectedKey));
         if (read.blockedReason.Length > 0) throw(MapKVHealth::BLOCKED_PREFIX + read.blockedReason);
         rawValue = read.value;
@@ -155,8 +148,7 @@ class MapKVDevTab : Tab {
             UI::TextWrapped("Present, empty string.");
             return;
         }
-        // A read-only input preserves literal formatting codes and permits
-        // selecting/copying the complete value, with both scroll directions.
+        // keep formatting codes literal, with full-value copying and scrolling both ways
         UI::InputTextMultiline("##map-kv-value", rawValue,
             vec2(-1, Math::Max(UI::GetTextLineHeightWithSpacing() * 3, UI::GetContentRegionAvail().y)),
             UI::InputTextFlags::ReadOnly);

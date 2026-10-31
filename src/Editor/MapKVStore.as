@@ -1,6 +1,5 @@
-// _EKV_ cache: startup/request snapshots plus write echoes from the editor plugin.
-// reads throw until a snapshot arrives for this editor map.
-// map changes, leaving the editor, or clearing metadata reset it; next read requests a snapshot.
+// _EKV_ cache from editor-plugin snapshots + write echoes; reads throw until the map's snapshot arrives.
+// map changes, editor exit and metadata clear reset it; the next read requests a snapshot.
 namespace MapKVStore {
     const string UNAVAILABLE_PREFIX = "E++ map key-values unavailable: ";
     const uint64 SNAPSHOT_REQUEST_INTERVAL_MS = 500;
@@ -144,7 +143,7 @@ namespace MapKVStore {
 #endif
     }
 
-    // events stay ordered: an early echo is in the next snapshot; later echoes update the cache
+    // ordered events: early echoes are in the snapshot; later ones update the cache.
     void OnEcho(const string &in normalizedKey, const string &in value) {
         Sync();
         g_Pending.Delete(normalizedKey);

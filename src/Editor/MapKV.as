@@ -1,12 +1,8 @@
-// _EKV_ is a ManiaScript Text[Text] dictionary; release reads use MapKVStore.
-// the memory walk is DEV-only, for cross-checking the editor plugin.
-//
+// _EKV_ is ManiaScript Text[Text]; release reads use MapKVStore, the DEV memory walk cross-checks it.
 // layout/SSO: public-domain tm-metadata-gateway/src/MetadataReader.as and research/ScriptMetadata.txt.
-// no read API, so offsets are hard-coded; validate buffers/pointers and let MapKVHealth check for drift.
-// reacquire the metadata buffer on each read; never keep pointers.
+// hard-coded layout: validate buffers/pointers, check for drift, reacquire the metadata buffer each read.
 namespace MapKV {
     const string PREFIX = "_EKV_";
-    // The single ManiaScript dictionary trait every key lives in.
     const string DICTIONARY_TRAIT = "_EKV_";
     // DEV read limit; separate from the storage budget below
     const uint MAX_VALUE_BYTES = 8 * 1024 * 1024;
@@ -16,25 +12,14 @@ namespace MapKV {
     const uint MAX_TOTAL_BYTES = 112 * 1024;
     const uint MAX_ENTRIES = 65536;
 
-    // A ScriptTraits type id packs the kind in its low 5 bits and an index into
-    // the session's interned descriptor table above them. Kind 7 covers every
-    // compound type, arrays and dictionaries alike (observed live on
-    // 2026-09-06: Text[] = 0x227, Text[Text] = 0x467), and a real compound type
-    // always carries a nonzero interned index. That is the whole of what the id
-    // itself is asked to prove here; separating an array from a dictionary is
-    // done structurally in ReadPair, because the id cannot
-    // do it. MapKV_Types_Dev.as keeps the descriptor-table cross-check as a DEV
-    // diagnostic: it depends on a byte pattern that any game update can break,
-    // which is not something a production read path should rest on.
+    // low 5 bits = kind, rest = session descriptor index (nonzero for compounds).
+    // kind 7 covers arrays too; live 2026-09-06: Text[] = 0x227, Text[Text] = 0x467.
+    // ReadPair checks the layout; the DEV descriptor check relies on an update-sensitive byte pattern.
     const uint TYPE_KIND_MASK = 0x1F;
     const uint TYPE_KIND_COMPOUND = 7;
     const uint TYPE_INDEX_SHIFT = 5;
 
-    // Scalar type ids, whole ids rather than kind bits: a scalar interns no
-    // descriptor, so its index is zero and the id equals its kind. They are
-    // named separately from the TYPE_KIND_ constants above because the two are
-    // only numerically interchangeable for scalars, and comparing a full id
-    // against a kind is exactly the confusion that hides a compound type.
+    // scalar ids equal their kind (no descriptor index); compound ids don't, so keep them separate.
     const uint TYPE_ID_BOOLEAN = 1;
     const uint TYPE_ID_INTEGER = 2;
     const uint TYPE_ID_REAL = 3;
@@ -44,7 +29,7 @@ namespace MapKV {
     const uint TYPE_ID_INT2 = 14;
     const uint TYPE_ID_INT3 = 15;
 
-    // Metadata row and dictionary-pair layout (research/ScriptMetadata.txt).
+    // row/pair layout: research/ScriptMetadata.txt
     const uint64 ROW_STRIDE = 0x88;
     const uint64 PAIR_STRIDE = 0x10;
     const uint O_ROW_TYPE = 0x10;
@@ -56,11 +41,11 @@ namespace MapKV {
     const uint O_META_BUFFER_PTR = 0x28;
     const uint O_META_BUFFER_LEN = 0x30;
     const uint O_META_BUFFER_CAP = 0x34;
-    // Strings are SSO: flag bit 0 at +0xB selects heap storage, length at +0xC.
+    // SSO: bit 0 at +0xB selects heap storage; length at +0xC.
     const uint O_STRING_FLAGS = 0xB;
     const uint O_STRING_LENGTH = 0xC;
     const uint MAX_INLINE_STRING_BYTES = 11;
-    // Inner structs place their string 0x10 bytes in.
+    // inner structs have their string at +0x10
     const uint64 O_PAIR_STRING = 0x10;
 
     string NormalizeKey(const string &in key) {
@@ -84,38 +69,15 @@ namespace MapKV {
         return BytePointerValid(ptr) && ptr % 8 == 0;
     }
 
-    // Structural gate for a compound trait's type id: the right kind, and an
-    // interned descriptor index that exists. Deliberately weak on its own; see
-    // the TYPE_* comment above.
+    // only checks kind + nonzero index; ReadPair still needs to rule out arrays.
     bool CompoundTypeIdIsPlausible(uint typeId) {
         return (typeId & TYPE_KIND_MASK) == TYPE_KIND_COMPOUND
             && (typeId >> TYPE_INDEX_SHIFT) != 0;
     }
 
-    // Dev::SafeReadCString(ptr, length) is the bounds-safe primitive here.
-    // Openplanet's Dev:: readers split three ways, and only this one does what
-    // a metadata value needs. Characterised live against Trackmania with
-    // Openplanet 1.29.14 on 2026-09-06, by an isolated plugin writing
-    // "hello\0A" into its own Dev::Allocate buffer:
-    //
-    //   Dev::Read / Dev::SafeRead(ptr, n) return a *hex pattern* string, the
-    //     inverse of Dev::Write(ptr, pattern): 7 bytes came back as the
-    //     20-character text "68 65 6C 6C 6F 00 41". Not a byte reader at all.
-    //   Dev::ReadCString(ptr, n) returns the raw n bytes but dereferences
-    //     blindly, so a bad address takes the process down.
-    //   Dev::SafeReadCString(ptr, n) returns the same raw n bytes and raises a
-    //     catchable AngelScript exception ("Unable to read memory") instead of
-    //     faulting.
-    //
-    // Three properties of SafeReadCString were confirmed in that run and are
-    // what the code below relies on. It does not stop at a NUL: the 7-byte read
-    // came back 7 bytes long with the NUL at index 5 intact, so a successful
-    // read is exactly `length` bytes and the exact length is a usable
-    // postcondition. It validates the whole range, not just its start: a 0x40
-    // byte read starting 0x10 before the end of a 0x1000 byte allocation threw,
-    // while the allocation's own last byte read fine, so no page-boundary
-    // probing is needed here. And it is not slow enough to matter: 1 MiB read
-    // in 2 ms, against the documented warning of "significant overhead".
+    // live Openplanet 1.29.14, 2026-09-06: SafeReadCString kept 7 bytes of "hello\0A" (NUL at 5); 1 MiB took 2 ms.
+    // Read/SafeRead gave 20 hex chars ("68 65 6C 6C 6F 00 41"); ReadCString can crash on bad pointers.
+    // SafeReadCString: 0x40 bytes from 0x10 before a 0x1000 allocation's end threw; last byte read fine. No page probing.
     string ReadBytes(uint64 ptr, uint len) {
         if (len == 0) return "";
         if (len > MAX_VALUE_BYTES) throw("Metadata string is too large");
@@ -132,8 +94,7 @@ namespace MapKV {
         if (len > MAX_VALUE_BYTES) throw("Metadata string is too large");
         if ((Dev::SafeReadUInt8(ptr + O_STRING_FLAGS) & 1) != 0) {
             uint64 data = Dev::SafeReadUInt64(ptr);
-            // Character data is byte-aligned, unlike metadata rows. Live map
-            // names can start at addresses ending in 0x21 (SSO heap storage).
+            // string data can be unaligned: live SSO heap names had addresses ending in 0x21.
             if (!BytePointerValid(data)) throw("Invalid metadata string data");
             return ReadBytes(data, len);
         }
@@ -160,12 +121,8 @@ namespace MapKV {
         return 0;
     }
 
-    // Arrays and dictionaries share compound kind 7, so the type id cannot tell
-    // them apart. research/ScriptMetadata.txt records where they do differ: an
-    // ordinary Text[] leaves the first slot of every 0x10-byte pair null and
-    // keeps its element in the second, while a Text[Text] dictionary stores a
-    // real key pointer in the first slot. Rejecting a null first slot therefore
-    // rejects an array, with a message that says so.
+    // kind 7 can't distinguish arrays: Text[] has a null first slot in each 0x10-byte pair,
+    // with the value in the second; Text[Text] has a key pointer. See research/ScriptMetadata.txt.
     void ReadPair(uint64 pairs, uint index, uint64 &out keyPtr, uint64 &out valuePtr) {
         uint64 pair = pairs + uint64(index) * PAIR_STRIDE;
         keyPtr = Dev::SafeReadUInt64(pair);
@@ -190,8 +147,7 @@ namespace MapKV {
         if (len > cap || cap > MAX_ENTRIES) throw("Invalid _EKV_ dictionary buffer");
         uint64 pairs = Dev::SafeReadUInt64(row + O_ROW_PAIRS_PTR);
         if (!PointerValid(pairs)) throw("Invalid _EKV_ dictionary pointer");
-        // One pair settles array-versus-dictionary; every pair is rechecked as
-        // it is actually read below.
+        // check for an array now; recheck each pair when reading.
         uint64 firstKey, firstValue;
         ReadPair(pairs, 0, firstKey, firstValue);
         return pairs;
@@ -257,17 +213,14 @@ namespace MapKV {
         return editor is null ? GetApp().RootMap : editor.Challenge;
     }
 
-    // Fail closed: a walk that has been shown to disagree with the editor
-    // plugin must refuse to answer rather than hand back a plausible wrong
-    // value. Per-key callers consult the echo cache before reaching here.
+    // refuse known-bad memory reads; per-key reads try the echo cache first.
     void RequireReaderUsable(CGameCtnChallenge@ map) {
         string reason;
         if (MapKVHealth::Evaluate(map, reason) == MapKVHealth::STATE_BROKEN)
             throw(MapKVHealth::BLOCKED_PREFIX + reason);
     }
 
-    // Seam for the dictionary read, mirroring MapKVHealth::TraitSource, so the
-    // guarded-read path below can be exercised without a live map.
+    // swappable like TraitSource so tests need no live map
     class ValueSource {
         bool TryRead(CGameCtnChallenge@ map, const string &in normalizedKey, string &out value) {
             return TryReadValue(map, normalizedKey, value);
@@ -280,10 +233,7 @@ namespace MapKV {
         @g_ValueSource = source is null ? ValueSource() : source;
     }
 
-    // The single place that decides where one key's value comes from. The
-    // decision itself lives in MapKVHealth::ResolveRead, which touches no
-    // memory; this only supplies it with the health verdict and the memory
-    // read, then applies any mismatch it reports.
+    // ResolveRead decides without touching memory; this supplies the reads and applies mismatches.
     MapKVHealth::KVRead@ ResolveKey(CGameCtnChallenge@ map, const string &in normalizedKey) {
         return ResolveKeyIn(MapKVHealth::ScopeFor(map), map, normalizedKey);
     }
@@ -295,18 +245,13 @@ namespace MapKV {
         bool present = false;
         string value;
         if (usable) {
-            // A walk that throws is a fenced reader that has not been told yet.
-            // Catching here keeps the echo fallback reachable, which letting the
-            // exception escape would not, and records the failure so later reads
-            // fail closed for the same reason instead of throwing one at a time.
+            // catch here so a failed walk can still fall back to the echo.
             try {
                 present = g_ValueSource.TryRead(map, normalizedKey, value);
             } catch {
                 reason = "reading " + normalizedKey + " threw: " + getExceptionInfo();
-                // Fenced only on a repeat, per MapKVHealth::NoteReadThrew: one
-                // throw can be a map torn down mid-walk. Either way this read
-                // cannot be answered from memory, so it falls through to the
-                // echo, and `reason` blocks it if no echo can answer.
+                // one throw may be map teardown; only a repeat fences (NoteReadThrew).
+                // this read still needs an echo, or reason blocks it.
                 if (MapKVHealth::NoteReadThrewIn(scope, MapKVHealth::THROW_KIND_KEY, normalizedKey))
                     MapKVHealth::MarkBrokenIn(scope, reason);
                 usable = false;
