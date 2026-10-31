@@ -196,7 +196,7 @@ namespace ToML {
         return "\"" + literal + "\"";
     }
 
-    // 1 MiB in one splice crashed the game (2026-10-31); keep the old 8 KiB chunks (ea9a284c)
+    // same 8 KiB chunks as the old channel (ea9a284c); keeps each page splice small
     const uint MAPKV_PART_BYTES = 8192;
 
     // split at UTF-8 boundaries; the editor plugin applies the value after the last part

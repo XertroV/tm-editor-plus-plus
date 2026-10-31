@@ -92,7 +92,7 @@ namespace Editor {
     import void Set_Map_KV(const string &in key, const string &in raw) from "Editor";
     import bool Is_Map_KVSendInFlight(const string &in key = "") from "Editor";
     // editor map only (null = current, other maps throw); reads throw until its report arrives.
-    // usually 1-2 frames after startup; check Is_Map_KVReady or use either Wait helper.
+    // ~0.4s after the editor opens; check Is_Map_KVReady or use either Wait helper.
     // TryGet distinguishes a missing key from a present empty string.
     import bool TryGet_Map_KVRaw(const string &in key, string &out value, CGameCtnChallenge@ map = null) from "Editor";
     import string Get_Map_KVRaw(const string &in key, CGameCtnChallenge@ map = null) from "Editor";
