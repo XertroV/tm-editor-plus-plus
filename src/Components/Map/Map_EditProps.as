@@ -706,9 +706,6 @@ class MapEditPropsTab : Tab {
         if (UI::Button("Reset##map-vehicle")) {
             ResetMapPlayerModel();
         }
-
-        UI::SeparatorText("\\$f80\\$iWarning!");
-        UI::TextWrapped("Make sure you have car gates in the map! Otherwise the game will crash.");
     }
 
     void DrawMediaTrackerSettings() {
