@@ -651,7 +651,7 @@ class MapEditPropsTab : Tab {
 #endif
 
         auto currVehicleStuff = Editor::GetMapPlayerModel(editor.Challenge);
-        m_ChosenVehicleCollection = currVehicleStuff.z;
+        // m_ChosenVehicleCollection = currVehicleStuff.z;
 
         UI::Columns(2);
         LabeledValue("Current Vehicle Name", GetMwIdName(currVehicleStuff.x));
