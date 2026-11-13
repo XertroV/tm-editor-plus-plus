@@ -651,7 +651,7 @@ class MapEditPropsTab : Tab {
 #endif
 
         auto currVehicleStuff = Editor::GetMapPlayerModel(editor.Challenge);
-        m_ChosenVehicleCollection = currVehicleStuff.z;
+        // m_ChosenVehicleCollection = currVehicleStuff.z;
 
         UI::Columns(2);
         LabeledValue("Current Vehicle Name", GetMwIdName(currVehicleStuff.x));
@@ -706,9 +706,6 @@ class MapEditPropsTab : Tab {
         if (UI::Button("Reset##map-vehicle")) {
             ResetMapPlayerModel();
         }
-
-        UI::SeparatorText("\\$f80\\$iWarning!");
-        UI::TextWrapped("Make sure you have car gates in the map! Otherwise the game will crash.");
     }
 
     void DrawMediaTrackerSettings() {
